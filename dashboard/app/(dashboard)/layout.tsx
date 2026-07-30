@@ -35,6 +35,7 @@ import { ThemeToggle } from "@/components/theme-toggle"
 import { showToast } from "@/lib/toast"
 import { PermissionProvider, usePermissionContext } from "@/lib/permission-context"
 import { UsersResponse } from "@/types/backend-types"
+import { usersService } from "@/services/user-management.service"
 
 export default function DashboardLayout({
   children,
@@ -48,7 +49,7 @@ export default function DashboardLayout({
   React.useEffect(() => {
     const authUser = getCurrentUser()
     if (!authUser?.id) return
-    getBackendClient().resource("users").getOne(authUser.id)
+    usersService.get<UsersResponse>(String(authUser.id))
       .then(u => setCurrentUser(u as UsersResponse))
       .catch(() => {})
   }, [])

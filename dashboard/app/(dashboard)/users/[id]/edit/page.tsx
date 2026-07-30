@@ -18,6 +18,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { useQueryClient } from "@tanstack/react-query"
 import { showToast } from "@/lib/toast"
 import { getBackendClient } from "@/lib/backend-client"
+import { usersService } from "@/services/user-management.service"
 import { backendRecordKeyPrefix } from "@/hooks/use-backend-record"
 import { 
   UsersStatusOptions, 
@@ -127,13 +128,13 @@ export default function EditUserPage() {
         
         // Test connection first
         try {
-          const testConnection = await backend.resource('users').getList(1, 1)
-          console.log('Connection test successful, found users:', testConnection.totalItems)
+          const testConnection = await usersService.list({ page: 1, per_page: 1 })
+          console.log('Connection test successful, found users:', testConnection.total_items)
         } catch (connError) {
           console.error('Connection test failed:', connError)
         }
         
-        const userData = await backend.resource('users').getOne(userId)
+        const userData = await usersService.get<UsersResponse>(userId)
         console.log('Loaded user data:', userData)
         setUser(userData as UsersResponse)
         
@@ -148,7 +149,9 @@ export default function EditUserPage() {
           department: userData.department || '',
           jobTitle: userData.jobTitle || '',
           licenseNumber: userData.licenseNumber || '',
-          specialization: userData.specialization || [],
+          specialization: Array.isArray(userData.specialization)
+            ? userData.specialization.join(", ")
+            : userData.specialization || "",
           country: userData.country || '',
           state: userData.state || '',
           city: userData.city || '',
@@ -238,7 +241,7 @@ export default function EditUserPage() {
         emailVisibility: true,
       }
       
-      await backend.resource('users').update(userId, userData)
+      await usersService.update(userId, userData)
 
       await queryClient.invalidateQueries({ queryKey: backendRecordKeyPrefix('users', userId) })
 

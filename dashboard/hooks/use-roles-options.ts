@@ -1,8 +1,8 @@
 "use client"
 
 import { useState, useEffect, useMemo } from "react"
-import { getBackendClient } from "@/lib/backend-client"
 import { RolesResponse } from "@/types/backend-types"
+import { rolesService } from "@/services/user-management.service"
 
 export interface RoleOption {
   label: string
@@ -24,18 +24,13 @@ export function useRoleOptions(): UseRoleOptionsReturn {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<Error | null>(null)
 
-  const backend = useMemo(() => getBackendClient(), [])
-
   const fetchRoles = async () => {
     try {
       setLoading(true)
       setError(null)
 
       // Fetch only active roles, sorted by name
-      const rolesList = await backend.resource('roles').getFullList<RolesResponse>({
-        filter: 'isActive = true',
-        sort: 'name',
-      })
+      const rolesList = await rolesService.all<RolesResponse>({ is_active: true })
 
       setRoles(rolesList)
     } catch (err) {

@@ -16,7 +16,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Separator } from "@/components/ui/separator"
 import { showToast } from "@/lib/toast"
-import { getBackendClient } from "@/lib/backend-client"
+import { usersService } from "@/services/user-management.service"
 import { 
   UsersStatusOptions, 
  
@@ -117,8 +117,6 @@ export default function CreateUserPage() {
     setIsLoading(true)
     
     try {
-      const backend = getBackendClient()
-      
       // Create user record in legacy collection API
       const userData = {
         ...data,
@@ -128,7 +126,7 @@ export default function CreateUserPage() {
         emailVisibility: true,
       }
       
-      await backend.resource('users').create(userData)
+      await usersService.create(userData)
       
       showToast.success(
         "User Created Successfully",

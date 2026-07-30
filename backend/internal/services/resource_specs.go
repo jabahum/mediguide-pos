@@ -454,45 +454,6 @@ var resourceSpecs = map[string]resourceSpec{
 			return query.Where("l.deleted_at IS NULL")
 		},
 	},
-	"users": {
-		Table:        "users u",
-		IDColumn:     "u.id",
-		Select:       "u.*, coalesce(r.role_key, r.name) AS role",
-		DefaultOrder: "u.updated_at DESC",
-		SearchColumns: []string{
-			"u.name", "u.email", "coalesce(u.phone, '')",
-		},
-		FilterColumns: map[string]string{
-			"status": "u.status",
-			"role":   "coalesce(r.role_key, r.name)",
-		},
-		Access: resourceAccessAuth,
-		Joins: []string{
-			"LEFT JOIN user_roles ur ON ur.user_id = u.id",
-			"LEFT JOIN roles r ON r.id = ur.role_id",
-		},
-		ApplyScopes: func(query *gorm.DB) *gorm.DB {
-			return query.Where("u.deleted_at IS NULL")
-		},
-	},
-	"roles": {
-		Table:        "roles r",
-		IDColumn:     "r.id",
-		Select:       "r.*, r.role_key AS key, r.permissions_json AS permissions, r.is_active AS \"isActive\"",
-		DefaultOrder: "r.created_at DESC",
-		SearchColumns: []string{
-			"r.name", "coalesce(r.role_key, '')", "coalesce(r.description, '')",
-		},
-		FilterColumns: map[string]string{
-			"is_active": "r.is_active::text",
-			"isActive":  "r.is_active::text",
-			"key":       "r.role_key",
-		},
-		Access: resourceAccessAuth,
-		ApplyScopes: func(query *gorm.DB) *gorm.DB {
-			return query.Where("r.deleted_at IS NULL")
-		},
-	},
 	"notifications": {
 		Table:        "notifications n",
 		IDColumn:     "n.id",

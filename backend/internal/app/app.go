@@ -84,6 +84,7 @@ func New(cfg config.Config) (*App, error) {
 	calculatorSvc := services.CalculatorService{DB: database, StaticSamplesDir: cfg.StaticSamplesDir}
 	drugSvc := services.DrugService{DB: database}
 	drugReferenceSvc := services.DrugReferenceService{DB: database}
+	userSvc := services.UserService{DB: database}
 	legacyAPISvc := services.LegacyAPIService{DB: database}
 	resourceSvc := services.ResourceService{DB: database}
 
@@ -98,6 +99,7 @@ func New(cfg config.Config) (*App, error) {
 	calculatorH := handlers.CalculatorHandler{Service: calculatorSvc}
 	drugH := handlers.DrugHandler{Service: drugSvc}
 	drugReferenceH := handlers.DrugReferenceHandler{Service: drugReferenceSvc}
+	userH := handlers.UserHandler{Service: userSvc}
 	legacyAPIH := handlers.LegacyAPIHandler{Service: legacyAPISvc, Cfg: cfg}
 	resourceH := handlers.ResourceHandler{Service: resourceSvc, Cfg: cfg}
 
@@ -147,6 +149,20 @@ func New(cfg config.Config) (*App, error) {
 		protected.PATCH("/drugs/:id", middleware.RequireAnyPermission("drug.write", "guideline.write"), drugH.Update)
 		protected.DELETE("/drugs/:id", middleware.RequireAnyPermission("drug.write", "guideline.write"), drugH.Delete)
 		protected.POST("/drugs/:id/usage", drugH.RecordUsage)
+
+		protected.GET("/users", middleware.RequirePermission("admin.all"), userH.List)
+		protected.GET("/users/:id", userH.Get)
+		protected.POST("/users", middleware.RequirePermission("admin.all"), userH.Create)
+		protected.PATCH("/users/:id", userH.Update)
+		protected.DELETE("/users/:id", middleware.RequirePermission("admin.all"), userH.Delete)
+		protected.GET("/roles", middleware.RequirePermission("admin.all"), userH.ListRoles)
+		protected.GET("/roles/:id", middleware.RequirePermission("admin.all"), userH.GetRole)
+		protected.POST("/roles", middleware.RequirePermission("admin.all"), userH.CreateRole)
+		protected.PATCH("/roles/:id", middleware.RequirePermission("admin.all"), userH.UpdateRole)
+		protected.DELETE("/roles/:id", middleware.RequirePermission("admin.all"), userH.DeleteRole)
+		protected.GET("/permissions", middleware.RequirePermission("admin.all"), userH.ListPermissions)
+		protected.GET("/roles/:id/permissions", middleware.RequirePermission("admin.all"), userH.GetRolePermissions)
+		protected.PUT("/roles/:id/permissions", middleware.RequirePermission("admin.all"), userH.SetRolePermissions)
 
 		protected.GET("/drug-categories", middleware.RequireAnyPermission("drug.read", "guideline.read"), drugReferenceH.ListCategories)
 		protected.GET("/drug-categories/:id", middleware.RequireAnyPermission("drug.read", "guideline.read"), drugReferenceH.GetCategory)
@@ -231,8 +247,6 @@ func registerResourceRoutes(group *gin.RouterGroup, handler handlers.ResourceHan
 		"authorities":             "/authorities",
 		"ministry_directory":      "/ministry-directory",
 		"languages":               "/reference-languages",
-		"users":                   "/users",
-		"roles":                   "/roles",
 		"notifications":           "/notifications",
 		"notification_templates":  "/notification-templates",
 		"notification_campaigns":  "/notification-campaigns",

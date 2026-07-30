@@ -81,10 +81,10 @@ export default function DecisionToolTestPage({
   React.useEffect(() => {
     const fetchTool = async () => {
       try {
-        const backend = getBackendClient()
+        const backend = getBackendClient();
         const toolData = await backend.resource("calculators").getOne(id, {
           expand: "addedBy",
-        })) as DecisionToolWithRelations;
+        }) as DecisionToolWithRelations;
 
         setTool(toolData);
       } catch (error) {
@@ -117,10 +117,10 @@ export default function DecisionToolTestPage({
     setHtml(null);
     setPreviewError(null);
 
-    const pb = getBackendClient();
+    const backend = getBackendClient();
     const headers: HeadersInit = {};
-    if (pb.authStore.token) {
-      headers.Authorization = pb.authStore.token;
+    if (backend.authStore.token) {
+      headers.Authorization = backend.authStore.token;
     }
 
     fetch(fileUrl, { headers })

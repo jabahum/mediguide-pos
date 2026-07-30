@@ -93,6 +93,23 @@ class BackendApiService extends GetxService {
     return ApiRecord(user);
   }
 
+  Future<ApiRecord> updateCurrentUser(
+    String userId,
+    Map<String, dynamic> data,
+  ) async {
+    final response = await _requestJson(
+      '/api/v2/users/$userId',
+      method: 'PATCH',
+      body: _normalizeOutgoingPayload(data),
+    );
+    return ApiRecord(
+      _normalizeRecord(
+        collectionName: User.collection,
+        raw: _unwrapData(response),
+      ),
+    );
+  }
+
   Future<ApiRecord> loginWithOAuth2({
     required String provider,
     required Future<void> Function(Uri url) urlCallback,

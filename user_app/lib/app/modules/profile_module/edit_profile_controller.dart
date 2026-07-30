@@ -3,10 +3,10 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'package:toastification/toastification.dart';
-import 'package:http/http.dart' as http;
 import '../../data/models/models.dart';
 import '../../data/services/auth_service.dart';
 import '../../data/services/backend_api_service.dart';
+import '../../data/repositories/user_repository.dart';
 import '../../translations/app_translations.dart';
 import '../../utils/common.dart';
 
@@ -78,12 +78,9 @@ class EditProfileController extends GetxController {
       // Debug: Print the final update data being sent
       debugPrint('Update data being sent: $updateData');
 
-      // Update user profile via backend resource API
-      final updatedRecord = await BackendApiService.to.updateResource(
-        collectionName: User.collection,
-        recordId: user.id,
-        data: updateData,
-      );
+      final updatedRecord = await UserRepository(
+        BackendApiService.to,
+      ).updateProfile(user.id, updateData);
 
       // Update AuthService with new user data
       final updatedUser = User.fromRecord(updatedRecord);
@@ -154,17 +151,8 @@ class EditProfileController extends GetxController {
     required String userId,
     required File avatarFile,
   }) async {
-    final multipartFile = await http.MultipartFile.fromPath(
-      'avatar',
-      avatarFile.path,
+    throw UnsupportedError(
+      'Avatar upload requires a dedicated backend upload endpoint',
     );
-
-    final record = await BackendApiService.to.updateResource(
-      collectionName: User.collection,
-      recordId: userId,
-      data: {},
-      files: [multipartFile],
-    );
-    return User.fromRecord(record);
   }
 }

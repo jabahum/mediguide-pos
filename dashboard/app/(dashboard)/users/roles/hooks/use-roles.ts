@@ -1,8 +1,8 @@
 "use client"
 
-import { useState, useEffect, useCallback, useMemo } from "react"
-import { getBackendClient } from "@/lib/backend-client"
+import { useState, useEffect, useCallback } from "react"
 import { showToast } from "@/lib/toast"
+import { rolesService, usersService } from "@/services/user-management.service"
 import { 
   Role, 
   RoleStats, 
@@ -24,17 +24,13 @@ export function useRoles(): UseRolesReturn {
   })
   const [error, setError] = useState<Error | null>(null)
 
-  const backend = useMemo(() => getBackendClient(), [])
-
   // Fetch all roles
   const fetchRoles = useCallback(async () => {
     try {
       setLoading(prev => ({ ...prev, roles: true }))
       setError(null)
 
-      const rolesList = await backend.resource('roles').getFullList<Role>({
-        sort: '-created',
-      })
+      const rolesList = await rolesService.all<Role>()
 
       setRoles(rolesList)
     } catch (err) {
@@ -44,7 +40,7 @@ export function useRoles(): UseRolesReturn {
     } finally {
       setLoading(prev => ({ ...prev, roles: false }))
     }
-  }, [ backend])
+  }, [])
 
   // Fetch role statistics
   const fetchStats = useCallback(async () => {
@@ -52,13 +48,13 @@ export function useRoles(): UseRolesReturn {
       setLoading(prev => ({ ...prev, stats: true }))
       
       // Get roles count
-      const rolesData = await backend.resource('roles').getList(1, 1)
-      const totalRoles = rolesData.totalItems
+      const rolesData = await rolesService.list<Role>({ page: 1, per_page: 1 })
+      const totalRoles = rolesData.total_items
       const activeRoles = roles.filter(role => role.isActive).length
 
       // Get users count
-      const usersData = await backend.resource('users').getList(1, 1)
-      const totalUsers = usersData.totalItems
+      const usersData = await usersService.list<{ role?: string }>({ page: 1, per_page: 1 })
+      const totalUsers = usersData.total_items
 
       // Get most assigned role
       let mostAssignedRole: { name: string; count: number } | null = null
@@ -68,11 +64,10 @@ export function useRoles(): UseRolesReturn {
         const roleCounts = new Map<string, number>()
         
         // Get all users with their roles
-        const allUsers = await backend.resource('users').getFullList({
-          fields: 'role',
-        })
+        const allUsers = await usersService.all<{ role?: string }>()
         
         allUsers.forEach(user => {
+          if (!user.role) return
           const count = roleCounts.get(user.role) || 0
           roleCounts.set(user.role, count + 1)
         })
@@ -114,7 +109,7 @@ export function useRoles(): UseRolesReturn {
     } finally {
       setLoading(prev => ({ ...prev, stats: false }))
     }
-  }, [ backend, roles])
+  }, [roles])
 
   // Create new role
   const createRole = useCallback(async (data: CreateRoleFormData & { key: string }): Promise<RoleOperationResult> => {
@@ -122,8 +117,8 @@ export function useRoles(): UseRolesReturn {
       setLoading(prev => ({ ...prev, operation: true }))
 
       // Check if role key already exists
-      const existingRole = await backend.resource('roles').getFirstListItem(`key="${data.key}"`)
-        .catch(() => null)
+      const existingRole = (await rolesService.all<Role>({ search: data.key }))
+        .find(role => role.key === data.key)
 
       if (existingRole) {
         const errorMsg = `Role with key "${data.key}" already exists`
@@ -131,7 +126,7 @@ export function useRoles(): UseRolesReturn {
         return { success: false, message: errorMsg }
       }
 
-      const newRole = await backend.resource('roles').create<Role>(data)
+      const newRole = await rolesService.create<Role>(data)
       
       // Update local state
       setRoles(prev => [newRole, ...prev])
@@ -149,14 +144,14 @@ export function useRoles(): UseRolesReturn {
     } finally {
       setLoading(prev => ({ ...prev, operation: false }))
     }
-  }, [ backend, fetchStats])
+  }, [fetchStats])
 
   // Update existing role
   const updateRole = useCallback(async (id: string, data: EditRoleFormData): Promise<RoleOperationResult> => {
     try {
       setLoading(prev => ({ ...prev, operation: true }))
 
-      const updatedRole = await backend.resource('roles').update<Role>(id, data)
+      const updatedRole = await rolesService.update<Role>(id, data)
       
       // Update local state
       setRoles(prev => prev.map(role => 
@@ -176,7 +171,7 @@ export function useRoles(): UseRolesReturn {
     } finally {
       setLoading(prev => ({ ...prev, operation: false }))
     }
-  }, [ backend, fetchStats])
+  }, [fetchStats])
 
   // Get role assignment information
   const getRoleAssignmentInfo = useCallback(async (roleId: string): Promise<RoleAssignmentInfo> => {
@@ -187,10 +182,12 @@ export function useRoles(): UseRolesReturn {
       }
 
       // Count users assigned to this role
-      const usersWithRole = await backend.resource('users').getFullList({
-        filter: `role="${role.key}"`,
-        fields: 'id,name,email',
-      })
+      const usersWithRole = (await usersService.all<{
+        id: string
+        name?: string
+        email: string
+        role?: string
+      }>()).filter(user => user.role === role.key)
 
       const userCount = usersWithRole.length
       const canDelete = userCount === 0
@@ -213,7 +210,7 @@ export function useRoles(): UseRolesReturn {
         canDelete: false,
       }
     }
-  }, [ backend, roles])
+  }, [roles])
 
   // Delete role
   const deleteRole = useCallback(async (id: string): Promise<RoleOperationResult> => {
@@ -229,7 +226,7 @@ export function useRoles(): UseRolesReturn {
         return { success: false, message: errorMsg }
       }
 
-      await backend.resource('roles').delete(id)
+      await rolesService.delete(id)
       
       // Update local state
       setRoles(prev => prev.filter(role => role.id !== id))
@@ -247,7 +244,7 @@ export function useRoles(): UseRolesReturn {
     } finally {
       setLoading(prev => ({ ...prev, operation: false }))
     }
-  }, [ backend, fetchStats, getRoleAssignmentInfo])
+  }, [fetchStats, getRoleAssignmentInfo])
 
   // Refresh all data
   const refresh = useCallback(async () => {

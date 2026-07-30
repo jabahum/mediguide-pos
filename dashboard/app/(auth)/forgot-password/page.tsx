@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { CheckCircle, AlertCircle, Mail, ArrowLeft, KeyRound } from 'lucide-react'
+import { usersService } from "@/services/user-management.service"
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState("")
@@ -21,11 +22,7 @@ export default function ForgotPasswordPage() {
     setError("")
 
     try {
-      const { getBackendClient } = await import('@/lib/backend-client')
-      const backend = getBackendClient()
-      
-      // Use legacy collection API's built-in password reset functionality
-      await backend.resource('users').requestPasswordReset(email)
+      await usersService.requestPasswordReset(email)
       
       setSuccess(true)
       

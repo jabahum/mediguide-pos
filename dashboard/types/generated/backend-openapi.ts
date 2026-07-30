@@ -378,6 +378,17 @@ export interface HandlersPaginatedTherapeuticCategoriesEnvelope {
   success?: boolean;
 }
 
+export interface HandlersPasswordResetConfirmRequest {
+  password?: string;
+  password_confirm?: string;
+  token?: string;
+}
+
+export interface HandlersPasswordResetRequest {
+  /** @example "user@example.com" */
+  email?: string;
+}
+
 export interface HandlersProtocolRunEnvelope {
   data?: ServicesRunProtocolResult;
   /** @example true */
@@ -776,6 +787,12 @@ export interface ModelsUser {
   timezone?: string;
   updated_at?: string;
   verified?: boolean;
+}
+
+export interface ServicesAccountActionResult {
+  accepted?: boolean;
+  delivery_required?: boolean;
+  development_token?: string;
 }
 
 export interface ServicesAskRequest {

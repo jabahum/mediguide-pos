@@ -571,6 +571,21 @@ definitions:
         example: true
         type: boolean
     type: object
+  handlers.PasswordResetConfirmRequest:
+    properties:
+      password:
+        type: string
+      password_confirm:
+        type: string
+      token:
+        type: string
+    type: object
+  handlers.PasswordResetRequest:
+    properties:
+      email:
+        example: user@example.com
+        type: string
+    type: object
   handlers.ProtocolRunEnvelope:
     properties:
       data:
@@ -1272,6 +1287,15 @@ definitions:
       verified:
         type: boolean
     type: object
+  services.AccountActionResult:
+    properties:
+      accepted:
+        type: boolean
+      delivery_required:
+        type: boolean
+      development_token:
+        type: string
+    type: object
   services.AskRequest:
     properties:
       country:
@@ -1857,6 +1881,52 @@ paths:
       security:
       - BearerAuth: []
       summary: Log out current session
+      tags:
+      - auth
+  /api/v2/auth/password-reset/confirm:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Reset confirmation
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.PasswordResetConfirmRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.LogoutResult'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+      summary: Confirm a password reset
+      tags:
+      - auth
+  /api/v2/auth/password-reset/request:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Reset request
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.PasswordResetRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/services.AccountActionResult'
+      summary: Request a password reset
       tags:
       - auth
   /api/v2/auth/refresh:

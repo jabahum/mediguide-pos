@@ -28,6 +28,29 @@ export interface RoleQuery {
 const client = () => getBackendClient()
 
 export const usersService = {
+  requestPasswordReset(email: string) {
+    return client().send<{
+      accepted: boolean
+      delivery_required: boolean
+      development_token?: string
+    }>("/api/v2/auth/password-reset/request", {
+      method: "POST",
+      body: JSON.stringify({ email }),
+    })
+  },
+  confirmPasswordReset(token: string, password: string, passwordConfirm: string) {
+    return client().send<{ logged_out: boolean }>(
+      "/api/v2/auth/password-reset/confirm",
+      {
+        method: "POST",
+        body: JSON.stringify({
+          token,
+          password,
+          password_confirm: passwordConfirm,
+        }),
+      },
+    )
+  },
   list<T>(query: UserQuery = {}) {
     return client().send<PageResult<T>>("/api/v2/users", { query: { ...query } })
   },
@@ -52,6 +75,11 @@ export const usersService = {
   },
   delete(id: string) {
     return client().send<void>(`/api/v2/users/${id}`, { method: "DELETE" })
+  },
+  verify<T>(id: string) {
+    return client().send<T>(`/api/v2/users/${id}/verification`, {
+      method: "POST",
+    })
   },
 }
 

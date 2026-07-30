@@ -1657,8 +1657,6 @@ class BackendApiService extends GetxService {
       'authorities' => '/api/v2/authorities',
       'ministry_directory' => '/api/v2/ministry-directory',
       'languages' => '/api/v2/reference-languages',
-      'users' => '/api/v2/users',
-      'roles' => '/api/v2/roles',
       'notifications' => '/api/v2/notifications',
       'notification_templates' => '/api/v2/notification-templates',
       'notification_campaigns' => '/api/v2/notification-campaigns',

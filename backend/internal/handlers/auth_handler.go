@@ -155,3 +155,47 @@ func (h AuthHandler) Me(c *gin.Context) {
 	}
 	httpx.OK(c, u)
 }
+
+// RequestPasswordReset godoc
+// @Summary Request a password reset
+// @Tags auth
+// @Accept json
+// @Produce json
+// @Param payload body handlers.PasswordResetRequest true "Reset request"
+// @Success 200 {object} services.AccountActionResult
+// @Router /api/v2/auth/password-reset/request [post]
+func (h AuthHandler) RequestPasswordReset(c *gin.Context) {
+	var req PasswordResetRequest
+	if c.ShouldBindJSON(&req) != nil {
+		httpx.Error(c, http.StatusBadRequest, "invalid request body")
+		return
+	}
+	result, err := h.Service.RequestPasswordReset(req.Email)
+	if err != nil {
+		httpx.Error(c, http.StatusInternalServerError, "password reset request failed")
+		return
+	}
+	httpx.OK(c, result)
+}
+
+// ConfirmPasswordReset godoc
+// @Summary Confirm a password reset
+// @Tags auth
+// @Accept json
+// @Produce json
+// @Param payload body handlers.PasswordResetConfirmRequest true "Reset confirmation"
+// @Success 200 {object} handlers.LogoutResult
+// @Failure 400 {object} handlers.ErrorResponse
+// @Router /api/v2/auth/password-reset/confirm [post]
+func (h AuthHandler) ConfirmPasswordReset(c *gin.Context) {
+	var req PasswordResetConfirmRequest
+	if c.ShouldBindJSON(&req) != nil || req.Password != req.PasswordConfirm {
+		httpx.Error(c, http.StatusBadRequest, "invalid request body")
+		return
+	}
+	if err := h.Service.ConfirmPasswordReset(req.Token, req.Password); err != nil {
+		httpx.Error(c, http.StatusBadRequest, "invalid or expired reset token")
+		return
+	}
+	httpx.OK(c, LogoutResult{LoggedOut: true})
+}

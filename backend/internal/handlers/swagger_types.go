@@ -36,6 +36,16 @@ type RefreshRequest struct {
 	RefreshToken string `json:"refresh_token" example:"Gm8m3Wq2oJ7l6p4XnYx9QbT2f1WvL0H1v2z3k4m5n6o"`
 }
 
+type PasswordResetRequest struct {
+	Email string `json:"email" example:"user@example.com"`
+}
+
+type PasswordResetConfirmRequest struct {
+	Token           string `json:"token"`
+	Password        string `json:"password"`
+	PasswordConfirm string `json:"password_confirm"`
+}
+
 type PublishResult struct {
 	Published bool `json:"published" example:"true"`
 }

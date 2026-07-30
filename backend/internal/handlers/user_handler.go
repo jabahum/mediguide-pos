@@ -112,6 +112,16 @@ func (h UserHandler) Delete(c *gin.Context) {
 	c.Status(http.StatusNoContent)
 }
 
+func (h UserHandler) Verify(c *gin.Context) {
+	id, ok := typedID(c, "user")
+	if !ok {
+		return
+	}
+	verified := true
+	result, err := h.Service.UpdateUser(id, services.UserUpdateInput{Verified: &verified})
+	h.respond(c, result, err)
+}
+
 func (h UserHandler) ListRoles(c *gin.Context) {
 	page, err := parsePageQuery(c, 20, 100)
 	if err != nil {

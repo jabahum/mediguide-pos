@@ -11,7 +11,7 @@ import {
   Download,
 } from "lucide-react"
 
-import { getBackendClient } from "@/lib/backend-client"
+import { usersService } from "@/services/user-management.service"
 import { showToast } from "@/lib/toast"
 import { RowAction, BulkAction } from "@/types/data-table"
 import { User as UserType } from "./columns"
@@ -151,10 +151,9 @@ export const userBulkActions: BulkAction<UserType>[] = [
 
 // Action implementations
 async function toggleUserStatus(user: UserType): Promise<void> {
-  const backend = getBackendClient()
   try {
     const newStatus = user.status === 'active' ? 'inactive' : 'active'
-    await backend.resource('users').update(user.id, { status: newStatus })
+    await usersService.update(user.id, { status: newStatus })
     
     showToast.success(
       "Status Updated",
@@ -168,11 +167,10 @@ async function toggleUserStatus(user: UserType): Promise<void> {
 }
 
 async function resetUserPassword(user: UserType): Promise<void> {
-  const backend = getBackendClient()
   try {
     // Generate a temporary password
     const tempPassword = generateTempPassword()
-    await backend.resource('users').update(user.id, {
+    await usersService.update(user.id, {
       password: tempPassword,
       passwordConfirm: tempPassword 
     })
@@ -192,9 +190,8 @@ async function resetUserPassword(user: UserType): Promise<void> {
 }
 
 async function sendVerificationEmail(user: UserType): Promise<void> {
-  const backend = getBackendClient()
   try {
-    await backend.resource('users').requestVerification(user.email)
+    await usersService.verify(user.id)
     
     showToast.success(
       "Verification Sent",
@@ -208,9 +205,8 @@ async function sendVerificationEmail(user: UserType): Promise<void> {
 }
 
 async function archiveUser(user: UserType): Promise<void> {
-  const backend = getBackendClient()
   try {
-    await backend.resource('users').update(user.id, {
+    await usersService.update(user.id, {
       status: 'archived',
       archivedAt: new Date().toISOString()
     })
@@ -227,9 +223,8 @@ async function archiveUser(user: UserType): Promise<void> {
 }
 
 async function deleteUser(user: UserType): Promise<void> {
-  const backend = getBackendClient()
   try {
-    await backend.resource('users').delete(user.id)
+    await usersService.delete(user.id)
     
     showToast.success(
       "User Deleted",
@@ -244,13 +239,12 @@ async function deleteUser(user: UserType): Promise<void> {
 
 // Bulk action implementations
 async function bulkUpdateUserStatus(users: UserType[], status: string): Promise<void> {
-  const backend = getBackendClient()
   let successCount = 0
   let errorCount = 0
 
   for (const user of users) {
     try {
-      await backend.resource('users').update(user.id, { status })
+      await usersService.update(user.id, { status })
       successCount++
     } catch (error) {
       errorCount++
@@ -294,7 +288,6 @@ async function exportUsers(users: UserType[]): Promise<void> {
 }
 
 async function bulkSendVerificationEmails(users: UserType[]): Promise<void> {
-  const backend = getBackendClient()
   const unverifiedUsers = users.filter(user => !user.verified)
   
   if (unverifiedUsers.length === 0) {
@@ -307,7 +300,7 @@ async function bulkSendVerificationEmails(users: UserType[]): Promise<void> {
 
   for (const user of unverifiedUsers) {
     try {
-      await backend.resource('users').requestVerification(user.email)
+      await usersService.verify(user.id)
       successCount++
     } catch (error) {
       errorCount++

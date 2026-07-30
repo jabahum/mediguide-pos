@@ -1076,6 +1076,41 @@ final class HandlersPaginatedTherapeuticCategoriesEnvelope {
   Map<String, dynamic> toJson() => Map.of(value);
 }
 
+final class HandlersPasswordResetConfirmRequest {
+  HandlersPasswordResetConfirmRequest(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory HandlersPasswordResetConfirmRequest.fromJson(
+    Map<String, dynamic> json,
+  ) => HandlersPasswordResetConfirmRequest(json);
+
+  static const schemaName = 'handlers.PasswordResetConfirmRequest';
+  final Map<String, dynamic> value;
+
+  String? get password => value['password']?.toString();
+
+  String? get passwordConfirm => value['password_confirm']?.toString();
+
+  String? get token => value['token']?.toString();
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
+final class HandlersPasswordResetRequest {
+  HandlersPasswordResetRequest(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory HandlersPasswordResetRequest.fromJson(Map<String, dynamic> json) =>
+      HandlersPasswordResetRequest(json);
+
+  static const schemaName = 'handlers.PasswordResetRequest';
+  final Map<String, dynamic> value;
+
+  String? get email => value['email']?.toString();
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
 final class HandlersProtocolRunEnvelope {
   HandlersProtocolRunEnvelope(Map<String, dynamic> value)
     : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
@@ -2112,6 +2147,25 @@ final class ModelsUser {
   String? get updatedAt => value['updated_at']?.toString();
 
   bool? get verified => value['verified'] as bool?;
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
+final class ServicesAccountActionResult {
+  ServicesAccountActionResult(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory ServicesAccountActionResult.fromJson(Map<String, dynamic> json) =>
+      ServicesAccountActionResult(json);
+
+  static const schemaName = 'services.AccountActionResult';
+  final Map<String, dynamic> value;
+
+  bool? get accepted => value['accepted'] as bool?;
+
+  bool? get deliveryRequired => value['delivery_required'] as bool?;
+
+  String? get developmentToken => value['development_token']?.toString();
 
   Map<String, dynamic> toJson() => Map.of(value);
 }

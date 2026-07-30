@@ -10,6 +10,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { CheckCircle, AlertCircle, Lock, KeyRound, ArrowLeft } from 'lucide-react'
 import { showToast } from "@/lib/toast"
+import { usersService } from "@/services/user-management.service"
 
 function ResetPasswordForm() {
   const [formData, setFormData] = useState({
@@ -71,11 +72,7 @@ function ResetPasswordForm() {
     }
 
     try {
-      const { getBackendClient } = await import('@/lib/backend-client')
-      const backend = getBackendClient()
-      
-      // Use legacy collection API's built-in password reset confirmation
-      await backend.resource('users').confirmPasswordReset(
+      await usersService.confirmPasswordReset(
         formData.token,
         formData.password,
         formData.confirmPassword

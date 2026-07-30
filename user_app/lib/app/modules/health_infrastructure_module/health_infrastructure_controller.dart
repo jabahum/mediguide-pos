@@ -6,11 +6,14 @@ import 'package:user_app/app/widgets/generic_filter_bottom_sheet.dart';
 
 import '../../data/models/models.dart';
 import '../../data/services/backend_api_service.dart';
+import '../../data/repositories/facility_repository.dart';
 import '../../utils/constants.dart';
 import '../../utils/common.dart';
 import 'health_facility_detail_page.dart';
 
 class HealthInfrastructureController extends GetxController {
+  FacilityRepository get _repository =>
+      FacilityRepository(BackendApiService.to);
   late final PagingController<int, HealthFacility> pagingController;
 
   // ==================== FILTER STATE ====================
@@ -68,14 +71,14 @@ class HealthInfrastructureController extends GetxController {
 
   Future<List<HealthFacility>> _loadPage(int pageKey) async {
     try {
-      final result = await BackendApiService.to.getResourceList(
-        collectionName: 'health_facilities',
+      final result = await _repository.listFacilities(
         page: pageKey,
         perPage: pageSize,
-        filter: _buildFilter(),
-        sort: 'name',
-        expand:
-            'region,district,county,subcounty,parish,facility_level,ownership_type,authority,health_sub_district',
+        search: _filters.query,
+        regionId: _filters.regionId,
+        districtId: _filters.districtId,
+        facilityLevelId: _filters.facilityLevelId,
+        ownershipTypeId: _filters.ownershipTypeId,
       );
 
       return result.items.map((r) => HealthFacility.fromRecord(r)).toList();
@@ -83,45 +86,6 @@ class HealthInfrastructureController extends GetxController {
       Common.quickToast(title: 'errorLoadingFacilities'.tr);
       rethrow;
     }
-  }
-
-  // ==================== FILTER BUILD ====================
-
-  String _buildFilter() {
-    final f = <String>[];
-
-    if (_filters.query.isNotEmpty) {
-      final q = BackendApiService.escapeFilterValue(_filters.query);
-      f.add('(name ~ "$q" || nhpi_code ~ "$q" || hsdt_code ~ "$q")');
-    }
-
-    if (_filters.regionId.isNotEmpty) {
-      final regionId = BackendApiService.escapeFilterValue(_filters.regionId);
-      f.add('region = "$regionId"');
-    }
-
-    if (_filters.districtId.isNotEmpty) {
-      final districtId = BackendApiService.escapeFilterValue(
-        _filters.districtId,
-      );
-      f.add('district = "$districtId"');
-    }
-
-    if (_filters.facilityLevelId.isNotEmpty) {
-      final facilityLevelId = BackendApiService.escapeFilterValue(
-        _filters.facilityLevelId,
-      );
-      f.add('facility_level = "$facilityLevelId"');
-    }
-
-    if (_filters.ownershipTypeId.isNotEmpty) {
-      final ownershipTypeId = BackendApiService.escapeFilterValue(
-        _filters.ownershipTypeId,
-      );
-      f.add('ownership_type = "$ownershipTypeId"');
-    }
-
-    return f.join(' && ');
   }
 
   // ==================== ACTIONS ====================
@@ -205,21 +169,17 @@ class HealthInfrastructureController extends GetxController {
     try {
       isLoadingFilters.value = true;
 
-      final regions = await getRegions(sort: 'name');
+      final regions = await getRegions();
 
       availableRegions.assignAll(regions);
 
-      final levels = await BackendApiService.to.getResourceList(
-        collectionName: 'facility_levels',
-      );
+      final levels = await _repository.levels();
 
       availableFacilityLevels.assignAll(
         levels.items.map((e) => FacilityLevel.fromRecord(e)),
       );
 
-      final ownership = await BackendApiService.to.getResourceList(
-        collectionName: 'ownership_types',
-      );
+      final ownership = await _repository.ownershipTypes();
 
       availableOwnershipTypes.assignAll(
         ownership.items.map((e) => OwnershipType.fromRecord(e)),
@@ -234,21 +194,13 @@ class HealthInfrastructureController extends GetxController {
   }
 
   Future<List<Region>> getRegions({String? filter, String? sort}) async {
-    final result = await BackendApiService.to.getResourceList(
-      collectionName: 'regions',
-      filter: filter,
-      sort: sort,
-    );
+    final result = await _repository.regions();
 
     return result.items.map((e) => Region.fromRecord(e)).toList();
   }
 
   Future<void> _loadDistricts(String regionId) async {
-    final districts = await BackendApiService.to.getResourceList(
-      collectionName: 'districts',
-      filter: 'region_id = "$regionId"',
-      sort: 'name',
-    );
+    final districts = await _repository.districts(regionId: regionId);
 
     availableDistricts.value = districts.items
         .map((e) => District.fromRecord(e))

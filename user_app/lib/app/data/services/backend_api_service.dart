@@ -340,6 +340,96 @@ class BackendApiService extends GetxService {
     );
   }
 
+  Future<PagedResult<ApiRecord>> getFacilities({
+    int page = 1,
+    int perPage = 30,
+    String? search,
+    String? regionId,
+    String? districtId,
+    String? facilityLevelId,
+    String? ownershipTypeId,
+  }) {
+    return _getTypedPage(
+      path: '/api/v2/facilities',
+      collectionName: HealthFacility.collection,
+      page: page,
+      perPage: perPage,
+      query: {
+        if (search != null && search.trim().isNotEmpty) 'search': search.trim(),
+        if (regionId != null && regionId.isNotEmpty) 'region_id': regionId,
+        if (districtId != null && districtId.isNotEmpty)
+          'district_id': districtId,
+        if (facilityLevelId != null && facilityLevelId.isNotEmpty)
+          'facility_level_id': facilityLevelId,
+        if (ownershipTypeId != null && ownershipTypeId.isNotEmpty)
+          'ownership_type_id': ownershipTypeId,
+        'sort': 'name',
+        'order': 'asc',
+      },
+    );
+  }
+
+  Future<PagedResult<ApiRecord>> getFacilityReference({
+    required String path,
+    required String collectionName,
+    int page = 1,
+    int perPage = 100,
+    String? search,
+    String? regionId,
+  }) {
+    const allowedPaths = {
+      '/api/v2/regions',
+      '/api/v2/districts',
+      '/api/v2/facility-levels',
+      '/api/v2/ownership-types',
+    };
+    if (!allowedPaths.contains(path)) {
+      throw ArgumentError.value(path, 'path', 'unsupported facility reference');
+    }
+    return _getTypedPage(
+      path: path,
+      collectionName: collectionName,
+      page: page,
+      perPage: perPage,
+      query: {
+        if (search != null && search.trim().isNotEmpty) 'search': search.trim(),
+        if (regionId != null && regionId.isNotEmpty) 'region_id': regionId,
+        'sort': 'name',
+        'order': 'asc',
+      },
+    );
+  }
+
+  Future<PagedResult<ApiRecord>> _getTypedPage({
+    required String path,
+    required String collectionName,
+    required int page,
+    required int perPage,
+    Map<String, String> query = const {},
+  }) async {
+    final response = await _requestJson(
+      path,
+      method: 'GET',
+      query: {'page': '$page', 'per_page': '$perPage', ...query},
+    );
+    final data = _unwrapData(response);
+    final items = (data['items'] as List? ?? const [])
+        .whereType<Map>()
+        .map(
+          (item) => ApiRecord(
+            _normalizeRecord(collectionName: collectionName, raw: _asMap(item)),
+          ),
+        )
+        .toList();
+    return PagedResult<ApiRecord>(
+      page: (data['page'] as num?)?.toInt() ?? page,
+      perPage: (data['per_page'] as num?)?.toInt() ?? perPage,
+      totalItems: (data['total_items'] as num?)?.toInt() ?? items.length,
+      totalPages: (data['total_pages'] as num?)?.toInt() ?? 0,
+      items: items,
+    );
+  }
+
   Future<ApiRecord?> getDrug(String drugId) async {
     try {
       final response = await _requestJson(

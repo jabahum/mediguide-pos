@@ -47,6 +47,10 @@ history and must not be rewritten or deleted.
   the browser.
 - JSON application fields such as `app_file_json` are structured payloads and
   must not be treated as filename strings.
+- The Flutter health-infrastructure list and its region, district, facility
+  level, and ownership filters now use `FacilityRepository` with explicit
+  query parameters. Dashboard facility administration and the remaining
+  geographic resources still use the transitional resource service.
 
 These are explicit follow-up tasks. Compatibility clients must throw or degrade
 honestly; they must not report successful realtime, upload, OAuth, or recovery

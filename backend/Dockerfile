@@ -19,5 +19,5 @@ COPY --from=build /out/seed /app/seed
 COPY migrations /app/migrations
 COPY docs /app/docs
 EXPOSE 8080
-CMD ["sh", "-c", "/app/migrate up && /app/importpb && /app/seed && /app/api"]
-# CMD ["sh", "-c", "/app/migrate up && /app/api"]
+# CMD ["sh", "-c", "/app/migrate up && /app/importpb && /app/seed && /app/api"]
+CMD ["sh", "-c", "/app/migrate up && /app/api"]

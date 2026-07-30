@@ -11,7 +11,7 @@ import { getPB } from "@/lib/pocketbase"
 import { showToast } from "@/lib/toast"
 import { DecisionToolWithRelations } from "../../types"
 import { usePermissionContext } from "@/lib/permission-context"
-import { getAppFileLabel } from "../../app-file"
+import { getAppFileLabel, getBundledAppFileUrl } from "../../app-file"
 
 interface DecisionToolTestPageProps {
   params: Promise<{ id: string }>
@@ -90,14 +90,7 @@ export default function DecisionToolTestPage({ params }: DecisionToolTestPagePro
   }, [id, router])
 
   const fileUrl = React.useMemo(() => {
-    if (!tool?.appFile) {
-      return null
-    }
-
-    return getPB().files.getUrl(
-      tool as unknown as Record<string, string>,
-      tool.appFile
-    )
+    return getBundledAppFileUrl(tool?.appFile) || null
   }, [tool])
 
   React.useEffect(() => {

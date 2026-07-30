@@ -36,6 +36,7 @@ import type { CalculatorsResponse } from "@/types/pocketbase-types"
 import { showToast } from "@/lib/toast"
 import { Skeleton } from "@/components/ui/skeleton"
 import { usePermissionContext } from "@/lib/permission-context"
+import { getBundledAppFileUrl } from "../app-file"
 
 // Built-in calculators that don't require uploaded files
 const builtInCalculators = [
@@ -210,7 +211,7 @@ interface CalculatorDef {
   }>
   formula?: string
   isBuiltIn?: boolean
-  appFile?: string
+  appFile?: unknown
 }
 
 export default function CalculatorsPage() {
@@ -670,7 +671,7 @@ export default function CalculatorsPage() {
                 <p className="text-sm text-muted-foreground">
                   This is a custom calculator application. Click below to launch it.
                 </p>
-                <Button className="w-full" onClick={async () => {
+                <Button className="w-full" onClick={() => {
                   const record = dbCalculators.find(c => c.id === calculator.id)
                   if (!record) {
                     showToast.error("Launch failed", "Calculator record not found")
@@ -680,25 +681,14 @@ export default function CalculatorsPage() {
                     showToast.error("Launch failed", "No application file is attached to this calculator")
                     return
                   }
-                  try {
-                    const fileUrl = pb.files.getURL(record, calculator.appFile)
-                    const headers: HeadersInit = {}
-                    if (pb.authStore.token) headers.Authorization = pb.authStore.token
-                    const res = await fetch(fileUrl, { headers })
-                    if (!res.ok) throw new Error(`Request failed with status ${res.status}`)
-                    const html = await res.text()
-                    const blob = new Blob([html], { type: "text/html" })
-                    const url = URL.createObjectURL(blob)
-                    const win = window.open(url, "_blank", "noopener,noreferrer")
-                    if (!win) {
-                      URL.revokeObjectURL(url)
-                      showToast.error("Popup blocked", "Allow popups for this site to launch the calculator")
-                      return
-                    }
-                    setTimeout(() => URL.revokeObjectURL(url), 60_000)
-                  } catch (error) {
-                    console.error("Failed to launch calculator:", error)
-                    showToast.error("Launch failed", "Could not load the calculator")
+                  const fileUrl = getBundledAppFileUrl(calculator.appFile)
+                  if (!fileUrl) {
+                    showToast.error("Launch failed", "The attached application file is not a supported HTML tool")
+                    return
+                  }
+                  const win = window.open(fileUrl, "_blank", "noopener,noreferrer")
+                  if (!win) {
+                    showToast.error("Popup blocked", "Allow popups for this site to launch the calculator")
                   }
                 }}>
                   <Play className="h-4 w-4 mr-2" />

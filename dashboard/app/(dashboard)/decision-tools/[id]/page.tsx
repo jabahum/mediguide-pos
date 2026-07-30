@@ -15,6 +15,7 @@ import { usePbRecord } from "@/hooks/use-pb-record"
 import { formatDistanceToNow } from "date-fns"
 import { Edit, Copy, Trash2, Play, Calculator, Brain, CheckSquare, Info, Settings, Activity, Calendar } from "lucide-react"
 import { usePermissionContext } from "@/lib/permission-context"
+import { getAppFileLabel } from "../app-file"
 
 interface DecisionToolViewPageProps {
   params: Promise<{ id: string }>
@@ -127,6 +128,7 @@ export default function DecisionToolViewPage({ params }: DecisionToolViewPagePro
   }
 
   const addedByUsers = tool.expand?.addedBy || []
+  const appFileLabel = getAppFileLabel(tool.appFile)
 
   return (
     <div className="space-y-6">
@@ -327,7 +329,9 @@ export default function DecisionToolViewPage({ params }: DecisionToolViewPagePro
               <div className="space-y-2">
                 <Label className="text-sm font-medium text-muted-foreground">App File Path</Label>
                 <div className="bg-muted p-3 rounded-md">
-                  <code className="text-sm font-mono">{tool.appFile}</code>
+                  <code className="text-sm font-mono">
+                    {appFileLabel || "—"}
+                  </code>
                 </div>
               </div>
 

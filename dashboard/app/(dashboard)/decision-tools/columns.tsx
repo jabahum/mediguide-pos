@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge"
 import { DataTableColumnHeader } from "@/components/ui/datatable-column-header"
 import { ExtendedColumnDef } from "@/types/data-table"
 import { DecisionToolWithRelations } from "./types"
+import { getAppFileLabel } from "./app-file"
 import { CalculatorsTypeOptions, CalculatorsStatusOptions } from "@/types/pocketbase-types"
 import { Calculator, Brain, CheckSquare } from "lucide-react"
 
@@ -202,7 +203,7 @@ export const columns: ExtendedColumnDef<DecisionToolWithRelations>[] = [
       />
     ),
     cell: ({ row }) => {
-      const appFile = row.getValue("appFile") as string
+      const appFile = getAppFileLabel(row.getValue("appFile"))
       return appFile ? (
         <div className="max-w-xs truncate font-mono text-xs" title={appFile}>
           {appFile}

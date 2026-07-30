@@ -183,7 +183,9 @@ export function PocketBaseDataTable<TData extends BaseRecord = BaseRecord>({
 
     columns.forEach((column) => {
       const id = getColumnId(column)
-      if (id && hidden.has(id)) {
+      const configuredAsHidden =
+        "defaultVisible" in column && column.defaultVisible === false
+      if (id && (hidden.has(id) || configuredAsHidden)) {
         visibility[id] = false
       }
     })

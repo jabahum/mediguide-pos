@@ -11,6 +11,7 @@ import { getPB } from "@/lib/pocketbase"
 import { showToast } from "@/lib/toast"
 import { DecisionToolWithRelations } from "../../types"
 import { usePermissionContext } from "@/lib/permission-context"
+import { getAppFileLabel } from "../../app-file"
 
 interface DecisionToolTestPageProps {
   params: Promise<{ id: string }>
@@ -155,6 +156,8 @@ export default function DecisionToolTestPage({ params }: DecisionToolTestPagePro
     return null
   }
 
+  const appFileLabel = getAppFileLabel(tool.appFile)
+
   return (
     <div className="space-y-6">
       <PageHeader
@@ -203,7 +206,9 @@ export default function DecisionToolTestPage({ params }: DecisionToolTestPagePro
                   <Play className="mr-2 h-4 w-4" />
                   Launch Tool
                 </Button>
-                <span className="text-sm text-muted-foreground">{tool.appFile}</span>
+                <span className="text-sm text-muted-foreground">
+                  {appFileLabel}
+                </span>
               </div>
 
               <div className="overflow-hidden rounded-lg border bg-background">

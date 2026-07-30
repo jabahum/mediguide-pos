@@ -6,7 +6,7 @@ import { Plus, Tags, Edit, Trash2, Eye } from "lucide-react"
 
 // Components
 import { PageHeader } from "@/components/ui/page-header"
-import { PocketBaseDataTable } from "@/components/ui/pocketbase-datatable-simple"
+import { BackendDataTable } from "@/components/ui/backend-data-table"
 
 // Dialogs
 import { TagCreateDialog } from "@/components/dialogs/tag-create-dialog"
@@ -14,9 +14,9 @@ import { TagEditDialog } from "@/components/dialogs/tag-edit-dialog"
 import { TagViewDialog } from "@/components/dialogs/tag-view-dialog"
 
 // Types
-import { DrugTagsResponse } from "@/types/pocketbase-types"
+import { DrugTagsResponse } from "@/types/backend-types"
 import { RowAction, BulkAction, FieldOption } from "@/types/data-table"
-import { usePocketBaseCrud } from "@/hooks/use-pocketbase-crud"
+import { useBackendCrud } from "@/hooks/use-backend-crud"
 
 // Page-specific imports
 import { tagColumns } from "../columns"
@@ -138,7 +138,7 @@ export default function DrugTagsPage() {
   const [refreshTrigger, setRefreshTrigger] = React.useState(0)
 
   // Delete functionality
-  const { deleteRecord } = usePocketBaseCrud({
+  const { deleteRecord } = useBackendCrud({
     collectionName: "drug_tags",
     onSuccess: () => setRefreshTrigger(prev => prev + 1)
   })
@@ -187,7 +187,7 @@ export default function DrugTagsPage() {
       />
 
       {/* Simplified DataTable */}
-      <PocketBaseDataTable<DrugTagsResponse>
+      <BackendDataTable<DrugTagsResponse>
         collection="drug_tags"
         columns={tagColumns}
         searchFields={["name", "description"]}

@@ -1,6 +1,6 @@
 // ignore_for_file: unused_field
 
-import 'package:pocketbase/pocketbase.dart';
+import 'package:user_app/app/data/models/api_record.dart';
 import 'base_model.dart';
 import 'user.dart';
 import 'abbreviation.dart';
@@ -9,7 +9,7 @@ import 'abbreviation.dart';
 class AbbreviationUsageLog extends BaseModel {
   AbbreviationUsageLog(super.data);
 
-  /// PocketBase collection name
+  /// legacy collection API collection name
   static const String collection = 'abbreviation_usage_logs';
 
   // Self-registration for dynamic model creation
@@ -18,8 +18,8 @@ class AbbreviationUsageLog extends BaseModel {
     return true;
   })();
 
-  /// Create AbbreviationUsageLog from PocketBase record
-  static AbbreviationUsageLog fromRecord(RecordModel record) =>
+  /// Create AbbreviationUsageLog from legacy collection API record
+  static AbbreviationUsageLog fromRecord(ApiRecord record) =>
       AbbreviationUsageLog(record.data);
 
   /// Create JSON for new usage log record

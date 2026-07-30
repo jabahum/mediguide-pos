@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation"
 import { Plus } from "lucide-react"
 
 import { PageHeader } from "@/components/ui/page-header"
-import { PocketBaseDataTable } from "@/components/ui/pocketbase-datatable-simple"
+import { BackendDataTable } from "@/components/ui/backend-data-table"
 import { createColumns, Consultant } from "./columns"
 import { createConsultantRowActions, consultantBulkActions } from "./consultant-actions"
 import { consultantsAvailableFields } from "./fields"
@@ -29,7 +29,7 @@ export default function ConsultantsPage() {
   // Create columns
   const columns = React.useMemo(() => createColumns(), [])
   
-  // Convert URL filter to PocketBase filter syntax
+  // Convert URL filter to legacy collection API filter syntax
   const getInitialFilter = React.useMemo(() => {
     switch (urlFilter) {
       case 'verified':
@@ -112,7 +112,7 @@ export default function ConsultantsPage() {
       />
 
       {/* Simplified DataTable */}
-      <PocketBaseDataTable<Consultant>
+      <BackendDataTable<Consultant>
         collection="consultants"
         columns={columns}
         searchFields={["name", "email", "specialty", "organization", "city", "country"]}
@@ -120,7 +120,7 @@ export default function ConsultantsPage() {
         rowActions={consultantRowActions}
         bulkActions={consultantBulkActions}
         availableFields={consultantsAvailableFields}
-        pocketbase={{
+        query={{
           sort: "-created",
           filter: getInitialFilter,
         }}

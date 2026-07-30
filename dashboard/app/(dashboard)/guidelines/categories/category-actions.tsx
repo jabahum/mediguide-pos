@@ -2,8 +2,8 @@
 
 import { Eye, Edit, Trash2, Copy, ToggleLeft, ToggleRight } from "lucide-react"
 import type { RowAction, BulkAction } from "@/types/data-table"
-import type { GuidelineCategoriesResponse } from "@/types/pocketbase-types"
-import { getPB } from "@/lib/pocketbase"
+import type { GuidelineCategoriesResponse } from "@/types/backend-types"
+import { getBackendClient } from "@/lib/backend-client"
 import { showToast } from "@/lib/toast"
 
 // Row Actions Factory
@@ -116,7 +116,7 @@ export const categoryBulkActions: BulkAction<GuidelineCategoriesResponse>[] = [
 
 // Action implementation functions
 async function duplicateCategory(category: GuidelineCategoriesResponse): Promise<void> {
-  const pb = getPB()
+  const pb = getBackendClient()
   
   const duplicateData = {
     name: `${category.name} (Copy)`,
@@ -140,7 +140,7 @@ async function duplicateCategory(category: GuidelineCategoriesResponse): Promise
 }
 
 async function toggleCategoryStatus(category: GuidelineCategoriesResponse): Promise<void> {
-  const pb = getPB()
+  const pb = getBackendClient()
   
   try {
     const newStatus = category.status === "active" ? "inactive" : "active"
@@ -158,7 +158,7 @@ async function toggleCategoryStatus(category: GuidelineCategoriesResponse): Prom
 }
 
 async function deleteCategory(category: GuidelineCategoriesResponse): Promise<void> {
-  const pb = getPB()
+  const pb = getBackendClient()
   
   try {
     await pb.collection("guideline_categories").delete(category.id)
@@ -176,7 +176,7 @@ async function deleteCategory(category: GuidelineCategoriesResponse): Promise<vo
 
 // Bulk action implementation functions
 async function bulkUpdateCategoryStatus(categories: GuidelineCategoriesResponse[], status: "active" | "inactive"): Promise<void> {
-  const pb = getPB()
+  const pb = getBackendClient()
   const targetCategories = categories.filter(cat => cat.status !== status)
   
   if (targetCategories.length === 0) {
@@ -251,7 +251,7 @@ async function exportCategories(categories: GuidelineCategoriesResponse[]): Prom
 }
 
 async function bulkDeleteCategories(categories: GuidelineCategoriesResponse[]): Promise<void> {
-  const pb = getPB()
+  const pb = getBackendClient()
   let successCount = 0
   let errorCount = 0
 

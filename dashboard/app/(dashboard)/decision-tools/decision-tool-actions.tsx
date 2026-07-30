@@ -1,6 +1,6 @@
 import { RowAction, BulkAction } from "@/types/data-table"
 import { DecisionToolWithRelations } from "./types"
-import { CalculatorsStatusOptions } from "@/types/pocketbase-types"
+import { CalculatorsStatusOptions } from "@/types/backend-types"
 import {
   Eye,
   Edit,
@@ -11,11 +11,11 @@ import {
   Archive,
   Clock,
 } from "lucide-react"
-import { getPB } from "@/lib/pocketbase"
+import { getBackendClient } from "@/lib/backend-client"
 import { showToast } from "@/lib/toast"
 import { downloadJson } from "@/lib/client-download"
 
-const pb = getPB()
+const pb = getBackendClient()
 
 function getExportFilename(prefix: string) {
   return `${prefix}-${new Date().toISOString().slice(0, 10)}.json`

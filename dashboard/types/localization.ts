@@ -1,13 +1,13 @@
 /**
  * Extended types for localization service operations
- * Based on PocketBase Languages collection with additional helper types
+ * Based on legacy collection API Languages collection with additional helper types
  */
 
 import type { 
   LanguagesRecord, 
   LanguagesResponse, 
   LanguagesStatusOptions 
-} from "@/types/pocketbase-types"
+} from "@/types/backend-types"
 
 // Data types for creating new languages
 export type LanguageCreateData = Omit<LanguagesRecord, 'id' | 'created' | 'updated'>

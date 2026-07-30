@@ -7,9 +7,9 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { PageHeader } from "@/components/ui/page-header"
 import { Phone, Plus, AlertTriangle, Heart, Zap, MoreVertical, Loader2 } from "lucide-react"
-import { pb } from "@/lib/pocketbase"
-import { Collections } from "@/types/pocketbase-types"
-import type { EmergencyProtocolsResponse, EmergencyProtocolsCategoryOptions, EmergencyProtocolsPriorityOptions } from "@/types/pocketbase-types"
+import { backendClient } from "@/lib/backend-client"
+import { Collections } from "@/types/backend-types"
+import type { EmergencyProtocolsResponse, EmergencyProtocolsCategoryOptions, EmergencyProtocolsPriorityOptions } from "@/types/backend-types"
 import { showToast } from "@/lib/toast"
 import { usePermissionContext } from "@/lib/permission-context"
 
@@ -38,7 +38,7 @@ export default function EmergencyProtocolsPage() {
 
   const fetchProtocols = async () => {
     try {
-      const result = await pb.collection(Collections.EmergencyProtocols).getList(1, 50, {
+      const result = await backendClient.collection(Collections.EmergencyProtocols).getList(1, 50, {
         sort: "-priority,title",
         filter: "status = 'active'"
       })
@@ -110,7 +110,7 @@ export default function EmergencyProtocolsPage() {
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 backendClient-2">
             <CardTitle className="text-sm font-medium">Total Protocols</CardTitle>
             <Phone className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
@@ -123,7 +123,7 @@ export default function EmergencyProtocolsPage() {
         </Card>
 
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 backendClient-2">
             <CardTitle className="text-sm font-medium">Critical</CardTitle>
             <AlertTriangle className="h-4 w-4 text-red-500" />
           </CardHeader>
@@ -136,7 +136,7 @@ export default function EmergencyProtocolsPage() {
         </Card>
 
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 backendClient-2">
             <CardTitle className="text-sm font-medium">Resuscitation</CardTitle>
             <Heart className="h-4 w-4 text-pink-500" />
           </CardHeader>
@@ -149,7 +149,7 @@ export default function EmergencyProtocolsPage() {
         </Card>
 
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 backendClient-2">
             <CardTitle className="text-sm font-medium">Trauma</CardTitle>
             <Zap className="h-4 w-4 text-orange-500" />
           </CardHeader>

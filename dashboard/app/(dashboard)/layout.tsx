@@ -30,11 +30,11 @@ import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Bell, User, Settings, LogOut } from "lucide-react"
 import AuthGuard from "@/components/auth-guard"
-import { logout, getUserRole, getCurrentUser, getPB } from "@/lib/pocketbase"
+import { logout, getUserRole, getCurrentUser, getBackendClient } from "@/lib/backend-client"
 import { ThemeToggle } from "@/components/theme-toggle"
 import { showToast } from "@/lib/toast"
 import { PermissionProvider, usePermissionContext } from "@/lib/permission-context"
-import { UsersResponse } from "@/types/pocketbase-types"
+import { UsersResponse } from "@/types/backend-types"
 
 export default function DashboardLayout({
   children,
@@ -48,7 +48,7 @@ export default function DashboardLayout({
   React.useEffect(() => {
     const authUser = getCurrentUser()
     if (!authUser?.id) return
-    getPB().collection("users").getOne(authUser.id)
+    getBackendClient().collection("users").getOne(authUser.id)
       .then(u => setCurrentUser(u as UsersResponse))
       .catch(() => {})
   }, [])
@@ -58,7 +58,7 @@ export default function DashboardLayout({
     : "?"
 
   const avatarSrc = currentUser?.avatar
-    ? getPB().files.getURL(currentUser, currentUser.avatar as string)
+    ? getBackendClient().files.getURL(currentUser, currentUser.avatar as string)
     : ""
 
   const handleLogout = async () => {

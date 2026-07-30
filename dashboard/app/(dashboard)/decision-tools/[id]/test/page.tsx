@@ -1,20 +1,26 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import { useRouter } from "next/navigation"
-import { PageHeader } from "@/components/ui/page-header"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
-import { Play } from "lucide-react"
-import { getPB } from "@/lib/pocketbase"
-import { showToast } from "@/lib/toast"
-import { DecisionToolWithRelations } from "../../types"
-import { usePermissionContext } from "@/lib/permission-context"
-import { getAppFileLabel, getBundledAppFileUrl } from "../../app-file"
+import * as React from "react";
+import { useRouter } from "next/navigation";
+import { PageHeader } from "@/components/ui/page-header";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Play } from "lucide-react";
+import { getBackendClient } from "@/lib/backend-client";
+import { showToast } from "@/lib/toast";
+import { DecisionToolWithRelations } from "../../types";
+import { usePermissionContext } from "@/lib/permission-context";
+import { getAppFileLabel, getBundledAppFileUrl } from "../../app-file";
 
 interface DecisionToolTestPageProps {
-  params: Promise<{ id: string }>
+  params: Promise<{ id: string }>;
 }
 
 function renderPreview({
@@ -22,9 +28,9 @@ function renderPreview({
   previewError,
   title,
 }: {
-  html: string | null
-  previewError: string | null
-  title: string
+  html: string | null;
+  previewError: string | null;
+  title: string;
 }) {
   if (html === null) {
     if (previewError) {
@@ -32,14 +38,14 @@ function renderPreview({
         <div className="p-8 text-center text-sm text-muted-foreground">
           {previewError}
         </div>
-      )
+      );
     }
 
     return (
       <div className="flex h-[70vh] items-center justify-center text-sm text-muted-foreground">
         Loading preview…
       </div>
-    )
+    );
   }
 
   return (
@@ -49,88 +55,97 @@ function renderPreview({
       className="h-[70vh] w-full"
       sandbox="allow-scripts allow-forms allow-popups allow-same-origin"
     />
-  )
+  );
 }
 
-export default function DecisionToolTestPage({ params }: DecisionToolTestPageProps) {
-  const router = useRouter()
-  const { hasPermission, loading: permLoading } = usePermissionContext()
-  const { id } = React.use(params)
-  const [tool, setTool] = React.useState<DecisionToolWithRelations | null>(null)
-  const [loading, setLoading] = React.useState(true)
-  const [html, setHtml] = React.useState<string | null>(null)
-  const [previewError, setPreviewError] = React.useState<string | null>(null)
+export default function DecisionToolTestPage({
+  params,
+}: DecisionToolTestPageProps) {
+  const router = useRouter();
+  const { hasPermission, loading: permLoading } = usePermissionContext();
+  const { id } = React.use(params);
+  const [tool, setTool] = React.useState<DecisionToolWithRelations | null>(
+    null,
+  );
+  const [loading, setLoading] = React.useState(true);
+  const [html, setHtml] = React.useState<string | null>(null);
+  const [previewError, setPreviewError] = React.useState<string | null>(null);
 
   React.useEffect(() => {
-    if (permLoading) return
+    if (permLoading) return;
     if (!hasPermission("content", "read:any")) {
-      router.replace("/decision-tools")
+      router.replace("/decision-tools");
     }
-  }, [permLoading, hasPermission, router])
+  }, [permLoading, hasPermission, router]);
 
   React.useEffect(() => {
     const fetchTool = async () => {
       try {
-        const pb = getPB()
-        const toolData = await pb.collection("calculators").getOne(id, {
+        const pb = getBackendClient();
+        const toolData = (await pb.collection("calculators").getOne(id, {
           expand: "addedBy",
-        }) as DecisionToolWithRelations
+        })) as DecisionToolWithRelations;
 
-        setTool(toolData)
+        setTool(toolData);
       } catch (error) {
-        console.error("Failed to load decision tool test page:", error)
-        showToast.error("Load Failed", "Could not load the selected decision tool")
-        router.push("/decision-tools")
+        console.error("Failed to load decision tool test page:", error);
+        showToast.error(
+          "Load Failed",
+          "Could not load the selected decision tool",
+        );
+        router.push("/decision-tools");
       } finally {
-        setLoading(false)
+        setLoading(false);
       }
-    }
+    };
 
-    fetchTool()
-  }, [id, router])
+    fetchTool();
+  }, [id, router]);
 
   const fileUrl = React.useMemo(() => {
-    return getBundledAppFileUrl(tool?.appFile) || null
-  }, [tool])
+    return getBundledAppFileUrl(tool?.appFile) || null;
+  }, [tool]);
 
   React.useEffect(() => {
     if (!fileUrl) {
-      setHtml(null)
-      setPreviewError(null)
-      return
+      setHtml(null);
+      setPreviewError(null);
+      return;
     }
 
-    let cancelled = false
-    setHtml(null)
-    setPreviewError(null)
+    let cancelled = false;
+    setHtml(null);
+    setPreviewError(null);
 
-    const pb = getPB()
-    const headers: HeadersInit = {}
+    const pb = getBackendClient();
+    const headers: HeadersInit = {};
     if (pb.authStore.token) {
-      headers.Authorization = pb.authStore.token
+      headers.Authorization = pb.authStore.token;
     }
 
     fetch(fileUrl, { headers })
       .then(async (res) => {
         if (!res.ok) {
-          throw new Error(`Request failed with status ${res.status}`)
+          throw new Error(`Request failed with status ${res.status}`);
         }
-        return res.text()
+        return res.text();
       })
       .then((text) => {
-        if (!cancelled) setHtml(text)
+        if (!cancelled) setHtml(text);
       })
       .catch((error) => {
-        console.error("Failed to fetch tool preview:", error)
+        console.error("Failed to fetch tool preview:", error);
         if (!cancelled) {
-          setPreviewError("Could not load the preview. Try reloading the page.")
+          setPreviewError(
+            "Could not load the preview. Try reloading the page.",
+          );
         }
-      })
+      });
 
     return () => {
-      cancelled = true
-    }
-  }, [fileUrl])
+      cancelled = true;
+    };
+  }, [fileUrl]);
 
   if (loading) {
     return (
@@ -142,14 +157,14 @@ export default function DecisionToolTestPage({ params }: DecisionToolTestPagePro
           onBack={() => router.push(`/decision-tools/${id}`)}
         />
       </div>
-    )
+    );
   }
 
   if (!tool) {
-    return null
+    return null;
   }
 
-  const appFileLabel = getAppFileLabel(tool.appFile)
+  const appFileLabel = getAppFileLabel(tool.appFile);
 
   return (
     <div className="space-y-6">
@@ -181,19 +196,23 @@ export default function DecisionToolTestPage({ params }: DecisionToolTestPagePro
                   type="button"
                   disabled={html === null}
                   onClick={() => {
-                    if (html === null) return
-                    const blob = new Blob([html], { type: "text/html" })
-                    const url = URL.createObjectURL(blob)
-                    const win = window.open(url, "_blank", "noopener,noreferrer")
+                    if (html === null) return;
+                    const blob = new Blob([html], { type: "text/html" });
+                    const url = URL.createObjectURL(blob);
+                    const win = window.open(
+                      url,
+                      "_blank",
+                      "noopener,noreferrer",
+                    );
                     if (!win) {
-                      URL.revokeObjectURL(url)
+                      URL.revokeObjectURL(url);
                       showToast.error(
                         "Popup Blocked",
-                        "Allow popups for this site to launch the tool in a new tab."
-                      )
-                      return
+                        "Allow popups for this site to launch the tool in a new tab.",
+                      );
+                      return;
                     }
-                    setTimeout(() => URL.revokeObjectURL(url), 60_000)
+                    setTimeout(() => URL.revokeObjectURL(url), 60_000);
                   }}
                 >
                   <Play className="mr-2 h-4 w-4" />
@@ -210,11 +229,12 @@ export default function DecisionToolTestPage({ params }: DecisionToolTestPagePro
             </>
           ) : (
             <div className="rounded-lg border border-dashed p-8 text-center text-sm text-muted-foreground">
-              No uploaded app file is attached to this tool, so there is nothing to preview.
+              No uploaded app file is attached to this tool, so there is nothing
+              to preview.
             </div>
           )}
         </CardContent>
       </Card>
     </div>
-  )
+  );
 }

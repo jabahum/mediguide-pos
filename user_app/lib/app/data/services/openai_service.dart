@@ -7,14 +7,14 @@ import '../../utils/common.dart';
 import '../../utils/constants.dart';
 import '../../utils/preference_utils.dart';
 import 'auth_service.dart';
-import 'pocketbase_service.dart';
+import 'backend_api_service.dart';
 
 class OpenAiService extends GetxService {
   static OpenAiService get to => Get.find();
 
   String? _sessionId;
 
-  bool get isConfigured => PocketBaseService.to.isAuthenticated;
+  bool get isConfigured => BackendApiService.to.isAuthenticated;
   String? get sessionId => _sessionId;
 
   Future<OpenAiService> init() async {
@@ -40,7 +40,7 @@ class OpenAiService extends GetxService {
         headers: <String, String>{
           'Accept': 'application/json',
           'Content-Type': 'application/json',
-          'Authorization': 'Bearer ${PocketBaseService.to.accessToken}',
+          'Authorization': 'Bearer ${BackendApiService.to.accessToken}',
         },
         body: jsonEncode({
           'question': _buildQuestion(

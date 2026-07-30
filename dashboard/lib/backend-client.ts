@@ -1,7 +1,5 @@
 const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_BASE_URL?.trim() ||
-  process.env.NEXT_PUBLIC_POCKETBASE_URL?.trim() ||
-  "http://127.0.0.1:8080"
+  process.env.NEXT_PUBLIC_API_BASE_URL?.trim() || "http://127.0.0.1:8080"
 
 const AUTH_COOKIE_NAME = "mediguide_auth"
 const LIST_PAGE_SIZE = 100
@@ -162,9 +160,9 @@ class BackendAuthStore {
   }
 }
 
-class BackendCollection {
+class CollectionClient {
   constructor(
-    private readonly client: BackendPocketBase,
+    private readonly client: BackendClient,
     private readonly name: string
   ) {}
 
@@ -351,7 +349,7 @@ class BackendCollection {
   }
 }
 
-class BackendPocketBase {
+class BackendClient {
   readonly baseUrl = API_BASE_URL
   readonly authStore = new BackendAuthStore()
   readonly files = {
@@ -365,14 +363,14 @@ class BackendPocketBase {
     },
   }
 
-  private readonly collections = new Map<string, BackendCollection>()
+  private readonly collections = new Map<string, CollectionClient>()
   private readonly relationCache = new Map<string, Map<string, JsonRecord>>()
 
   autoCancellation(_enabled: boolean) {}
 
   collection(name: string) {
     if (!this.collections.has(name)) {
-      this.collections.set(name, new BackendCollection(this, name))
+      this.collections.set(name, new CollectionClient(this, name))
     }
     return this.collections.get(name)!
   }
@@ -470,36 +468,37 @@ class BackendPocketBase {
   }
 }
 
-let pbInstance: BackendPocketBase | null = null
+let backendClientInstance: BackendClient | null = null
 
-export function createPB(): BackendPocketBase {
-  if (pbInstance) return pbInstance
+export function createBackendClient(): BackendClient {
+  if (backendClientInstance) return backendClientInstance
 
-  const pb = new BackendPocketBase()
+  const client = new BackendClient()
   if (typeof document !== "undefined") {
-    pb.authStore.loadFromCookie(document.cookie || "")
-    pb.authStore.onChange(() => {
-      document.cookie = pb.authStore.exportToCookie()
+    client.authStore.loadFromCookie(document.cookie || "")
+    client.authStore.onChange(() => {
+      document.cookie = client.authStore.exportToCookie()
     })
   }
 
-  pbInstance = pb
-  return pb
+  backendClientInstance = client
+  return client
 }
 
-export function getPB(): BackendPocketBase {
-  return pbInstance || createPB()
+export function getBackendClient(): BackendClient {
+  return backendClientInstance || createBackendClient()
 }
 
-export const pb = getPB()
+export const backendClient = getBackendClient()
 
 if (typeof window !== "undefined") {
-  ;(window as unknown as { __pb: unknown }).__pb = pb
+  ;(window as unknown as { __backendClient: unknown }).__backendClient =
+    backendClient
 }
 
 export function isAuthenticated(): boolean {
   if (typeof window === "undefined") return false
-  return getPB().authStore.isValid && isUserActive()
+  return getBackendClient().authStore.isValid && isUserActive()
 }
 
 export function isUserActive(): boolean {
@@ -510,7 +509,7 @@ export function isUserActive(): boolean {
 
 export function getCurrentUser() {
   if (typeof window === "undefined") return null
-  return getPB().authStore.record
+  return getBackendClient().authStore.record
 }
 
 export function getUserRole(): string | null {
@@ -546,7 +545,7 @@ export function canAccessMobile(): boolean {
 
 export function logout() {
   if (typeof window === "undefined") return
-  getPB().authStore.clear()
+  getBackendClient().authStore.clear()
 }
 
 function normalizeRecord(collection: string, raw: JsonRecord) {

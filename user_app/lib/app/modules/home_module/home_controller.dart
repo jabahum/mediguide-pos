@@ -4,7 +4,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../data/models/models.dart';
 import '../../data/services/auth_service.dart';
-import '../../data/services/pocketbase_service.dart';
+import '../../data/services/backend_api_service.dart';
 import '../../routes/app_pages.dart';
 import './models/stats_model.dart';
 
@@ -13,7 +13,7 @@ class HomeController extends GetxController {
   // SERVICES
   // =========================
   AuthService get _authService => AuthService.to;
-  PocketBaseService get _pbService => PocketBaseService.to;
+  BackendApiService get _apiService => BackendApiService.to;
 
   // =========================
   // GUIDELINE CONSTANTS
@@ -95,7 +95,7 @@ class HomeController extends GetxController {
     try {
       isLoadingGuidelines.value = true;
 
-      final result = await _pbService.getRecordList(
+      final result = await _apiService.getRecordList(
         collectionName: GuidelineCategory.collection,
         perPage: 30,
         filter: 'status="active" && parent_category=""',
@@ -117,7 +117,7 @@ class HomeController extends GetxController {
   // =====================================================
   Future<void> _loadPinnedGuidelines() async {
     try {
-      final result = await _pbService.getRecordList(
+      final result = await _apiService.getRecordList(
         collectionName: Guideline.collection,
         perPage: 5,
         filter: 'is_published=true && status="published" && pinned=true',
@@ -138,7 +138,7 @@ class HomeController extends GetxController {
   // =====================================================
   Future<void> _loadRecentlyUpdatedGuidelines() async {
     try {
-      final result = await _pbService.getRecordList(
+      final result = await _apiService.getRecordList(
         collectionName: Guideline.collection,
         perPage: 5,
         filter: 'is_published=true && status="published"',
@@ -163,7 +163,7 @@ class HomeController extends GetxController {
 
       if (user == null) return;
 
-      final records = await _pbService.getRecordList(
+      final records = await _apiService.getRecordList(
         collectionName: 'reading_progress',
         perPage: 6,
         filter:
@@ -434,7 +434,7 @@ class HomeController extends GetxController {
 
   Future<void> navigateToContinueReading(ReadingProgress progress) async {
     try {
-      final record = await _pbService.getRecord(
+      final record = await _apiService.getRecord(
         collectionName: Guideline.collection,
         recordId: progress.guidelineId,
         expand: 'categories,tags,index_item',
@@ -460,7 +460,7 @@ class HomeController extends GetxController {
     String? sort,
     String? expand,
   }) async {
-    final result = await _pbService.getRecordList(
+    final result = await _apiService.getRecordList(
       collectionName: Calculator.collection,
       page: page,
       perPage: perPage,
@@ -473,7 +473,7 @@ class HomeController extends GetxController {
   }
 
   Future<Calculator> createCalculator(Map<String, dynamic> data) async {
-    final record = await _pbService.createRecord(
+    final record = await _apiService.createRecord(
       collectionName: Calculator.collection,
       data: data,
     );
@@ -485,7 +485,7 @@ class HomeController extends GetxController {
     String id,
     Map<String, dynamic> data,
   ) async {
-    final record = await _pbService.updateRecord(
+    final record = await _apiService.updateRecord(
       collectionName: Calculator.collection,
       recordId: id,
       data: data,
@@ -505,7 +505,7 @@ class HomeController extends GetxController {
     try {
       isLoadingStats.value = true;
 
-      final response = await _pbService.getCustomEndpoint(
+      final response = await _apiService.getCustomEndpoint(
         path: '/api/stats',
         forceRefresh: forceRefresh,
       );

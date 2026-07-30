@@ -3,7 +3,7 @@
 import * as React from "react"
 import { Plus } from "lucide-react"
 import { PageHeader } from "@/components/ui/page-header"
-import { EnhancedPocketBaseDataTable } from "@/components/ui/pocketbase-datatable"
+import { EnhancedBackendDataTable } from "@/components/ui/enhanced-backend-data-table"
 import { CategoryCreateModal } from "./components/category-create-modal"
 import { CategoryEditModal } from "./components/category-edit-modal"
 import { CategoryViewModal } from "./components/category-view-modal"
@@ -50,7 +50,7 @@ export default function GuidelineCategoriesPage() {
   // Handle successful operations
   const handleSuccess = React.useCallback(() => {
     // This will trigger a refetch of the data table
-    // The EnhancedPocketBaseDataTable handles this automatically
+    // The EnhancedBackendDataTable handles this automatically
   }, [])
 
   return (
@@ -69,7 +69,7 @@ export default function GuidelineCategoriesPage() {
       />
 
       {/* Enhanced DataTable */}
-      <EnhancedPocketBaseDataTable<GuidelineCategoriesWithParent>
+      <EnhancedBackendDataTable<GuidelineCategoriesWithParent>
         collectionName="guideline_categories"
         columns={columns}
         expand="parent_category"

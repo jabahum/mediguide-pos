@@ -2,7 +2,7 @@ import { FieldOption } from "@/types/data-table"
 
 /**
  * Available fields for facility levels table advanced filtering
- * Based on PocketBase facility_levels schema
+ * Based on legacy collection API facility_levels schema
  */
 export const facilityLevelsAvailableFields: FieldOption[] = [
   // Basic Information

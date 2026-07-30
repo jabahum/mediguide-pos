@@ -1,8 +1,8 @@
 "use client"
 
 import { useState, useEffect, useMemo, useCallback } from "react"
-import { getPB } from "@/lib/pocketbase"
-import type { GuidelineCategoriesResponse } from "@/types/pocketbase-types"
+import { getBackendClient } from "@/lib/backend-client"
+import type { GuidelineCategoriesResponse } from "@/types/backend-types"
 
 export interface CategoryTreeNode extends GuidelineCategoriesResponse {
   children: CategoryTreeNode[]
@@ -23,7 +23,7 @@ export function useGuidelineCategories(options: UseGuidelineCategoriesOptions = 
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  // Fetch categories from PocketBase
+  // Fetch categories from the backend compatibility API.
   const fetchCategories = useCallback(async () => {
     try {
       setLoading(true)
@@ -55,7 +55,7 @@ export function useGuidelineCategories(options: UseGuidelineCategoriesOptions = 
         filter = filterParts.join(" && ")
       }
 
-      const pb = getPB()
+      const pb = getBackendClient()
       const records = await pb.collection("guideline_categories").getFullList<GuidelineCategoriesResponse>({
         sort: "parent_category,sort_order,name",
         filter,

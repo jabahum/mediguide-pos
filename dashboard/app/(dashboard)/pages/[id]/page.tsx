@@ -14,9 +14,9 @@ import { RichContent } from "@/components/ui/rich-content";
 import { ConfirmDialog } from "@/components/dialogs/confirm-dialog";
 import { GenericPagesService } from "@/services/generic-pages.service";
 import { showToast } from "@/lib/toast";
-import { getPB } from "@/lib/pocketbase";
-import { usePbRecord } from "@/hooks/use-pb-record";
-import { GenericPagesResponse } from "@/types/pocketbase-types";
+import { getBackendClient } from "@/lib/backend-client";
+import { useBackendRecord } from "@/hooks/use-backend-record";
+import { GenericPagesResponse } from "@/types/backend-types";
 
 export default function PageDetailsPage({
   params,
@@ -25,7 +25,7 @@ export default function PageDetailsPage({
 }) {
   const router = useRouter();
   const resolvedParams = use(params);
-  const { record: page, loading, error, refresh: loadPage } = usePbRecord<GenericPagesResponse>(
+  const { record: page, loading, error, refresh: loadPage } = useBackendRecord<GenericPagesResponse>(
     "generic_pages",
     resolvedParams.id,
     { fields: "id,title,key,description,content,created,updated" }
@@ -82,7 +82,7 @@ export default function PageDetailsPage({
     if (!page) return;
 
     try {
-      const pb = getPB();
+      const pb = getBackendClient();
       await pb.collection("generic_pages").delete(page.id);
       showToast.success(
         "Page Deleted",

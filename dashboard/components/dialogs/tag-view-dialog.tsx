@@ -11,7 +11,7 @@ import {
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Label } from "@/components/ui/label"
-import { DrugTagsResponse } from "@/types/pocketbase-types"
+import { DrugTagsResponse } from "@/types/backend-types"
 import { formatDistanceToNow } from "date-fns"
 
 interface TagViewDialogProps {

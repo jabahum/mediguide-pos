@@ -21,7 +21,7 @@ import {
   EmergencyProtocolsCategoryOptions,
   EmergencyProtocolsPriorityOptions,
   EmergencyProtocolsStatusOptions,
-} from "@/types/pocketbase-types"
+} from "@/types/backend-types"
 import {
   EmergencyProtocolRecord,
   parseOptionalJsonField,

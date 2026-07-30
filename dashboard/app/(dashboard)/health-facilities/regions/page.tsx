@@ -6,8 +6,8 @@ import { useRouter } from "next/navigation"
 import { usePermissionContext } from "@/lib/permission-context"
 
 import { PageHeader } from "@/components/ui/page-header"
-import { EnhancedPocketBaseDataTable } from "@/components/ui/pocketbase-datatable"
-import { RegionsResponse } from "@/types/pocketbase-types"
+import { EnhancedBackendDataTable } from "@/components/ui/enhanced-backend-data-table"
+import { RegionsResponse } from "@/types/backend-types"
 
 import { regionsColumns } from "./columns"
 import { regionsAvailableFields } from "./fields"
@@ -83,7 +83,7 @@ export default function RegionsPage() {
         ]}
       />
 
-      <EnhancedPocketBaseDataTable<RegionsResponse>
+      <EnhancedBackendDataTable<RegionsResponse>
         collectionName="regions"
         columns={regionsColumns}
         searchable={true}

@@ -5,7 +5,7 @@ import 'package:toastification/toastification.dart';
 import '../../routes/app_pages.dart';
 import '../../translations/app_translations.dart';
 import '../../data/models/models.dart';
-import '../../data/services/pocketbase_service.dart';
+import '../../data/services/backend_api_service.dart';
 import '../../data/services/auth_service.dart';
 import '../../utils/common.dart';
 
@@ -54,7 +54,7 @@ class RegisterController extends GetxController {
           preferredLanguage: PreferredLanguage.english,
         );
 
-        final userRecord = await PocketBaseService.to.register(
+        final userRecord = await BackendApiService.to.register(
           email: formData['email'] as String,
           password: formData['password'] as String,
           passwordConfirm: formData['password'] as String,

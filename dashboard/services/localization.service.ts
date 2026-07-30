@@ -3,9 +3,9 @@
  * Handles all database interactions and business logic for language management
  */
 
-import { getPB } from "@/lib/pocketbase"
+import { getBackendClient } from "@/lib/backend-client"
 import { showToast } from "@/lib/toast"
-import { Collections, type LanguagesRecord, type LanguagesResponse, LanguagesStatusOptions } from "@/types/pocketbase-types"
+import { Collections, type LanguagesRecord, type LanguagesResponse, LanguagesStatusOptions } from "@/types/backend-types"
 import type {
   LanguageCreateData,
   LanguageUpdateData,
@@ -32,7 +32,7 @@ export class LocalizationService {
     perPage?: number
   ): Promise<LanguagesResponse[]> {
     try {
-      const pb = getPB()
+      const pb = getBackendClient()
       
       // Build filter string
       const filterConditions: string[] = []
@@ -97,7 +97,7 @@ export class LocalizationService {
    */
   static async getLanguageById(id: string): Promise<LanguagesResponse | null> {
     try {
-      const pb = getPB()
+      const pb = getBackendClient()
       const language = await pb.collection(Collections.Languages).getOne(id) as LanguagesResponse
       return language
     } catch (error) {
@@ -111,7 +111,7 @@ export class LocalizationService {
    */
   static async getLanguageByCode(code: string): Promise<LanguagesResponse | null> {
     try {
-      const pb = getPB()
+      const pb = getBackendClient()
       const languages = await pb.collection(Collections.Languages).getFullList({
         filter: `code = "${code}"`
       }) as LanguagesResponse[]
@@ -128,7 +128,7 @@ export class LocalizationService {
    */
   static async createLanguage(data: LanguageCreateData): Promise<LanguagesResponse> {
     try {
-      const pb = getPB()
+      const pb = getBackendClient()
       
       // Validate the data
       const validation = this.validateLanguageData(data)
@@ -170,7 +170,7 @@ export class LocalizationService {
    */
   static async updateLanguage(id: string, data: LanguageUpdateData): Promise<LanguagesResponse> {
     try {
-      const pb = getPB()
+      const pb = getBackendClient()
       
       // Get current language to validate
       const currentLang = await this.getLanguageById(id)
@@ -214,7 +214,7 @@ export class LocalizationService {
    */
   static async deleteLanguage(id: string): Promise<boolean> {
     try {
-      const pb = getPB()
+      const pb = getBackendClient()
       
       // Get language to validate deletion
       const language = await this.getLanguageById(id)
@@ -477,7 +477,7 @@ export class LocalizationService {
     try {
       const currentDefault = await this.getDefaultLanguage()
       if (currentDefault) {
-        const pb = getPB()
+        const pb = getBackendClient()
         await pb.collection(Collections.Languages).update(currentDefault.id, { is_default: false })
       }
     } catch (error) {

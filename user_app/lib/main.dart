@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:responsive_framework/responsive_framework.dart';
 import 'package:toastification/toastification.dart';
-import 'package:user_app/app/data/services/pocketbase_service.dart';
+import 'package:user_app/app/data/services/backend_api_service.dart';
 import 'package:user_app/app/data/services/auth_service.dart';
 import 'package:user_app/app/data/services/main_service.dart';
 import 'package:user_app/app/data/services/openai_service.dart';
@@ -33,11 +33,11 @@ Future<void> _initServices() async {
   // Initialize core services in order
   await Get.putAsync(() => AuthService().init());
 
-  // Initialize MainService first (connectivity monitoring needed by PocketBase)
+  // Initialize connectivity monitoring before the backend API client.
   await Get.putAsync(() => MainService().init());
 
-  // Initialize PocketBase service (offline-first via pocketbase_drift)
-  await Get.putAsync(() => PocketBaseService().init());
+  // Initialize the Go backend compatibility client.
+  await Get.putAsync(() => BackendApiService().init());
 
   // Initialize OpenAI service for AI assistant
   await Get.putAsync(() => OpenAiService().init());

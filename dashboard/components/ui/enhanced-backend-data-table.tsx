@@ -1,14 +1,14 @@
 "use client"
 
 import * as React from "react"
-import { PocketBaseDataTable } from "@/components/ui/pocketbase-datatable-simple"
+import { BackendDataTable } from "@/components/ui/backend-data-table"
 import {
   BaseRecord,
-  EnhancedPocketBaseDataTableProps,
+  EnhancedBackendDataTableProps,
 } from "@/types/data-table"
 
-export function EnhancedPocketBaseDataTable<TData extends BaseRecord = BaseRecord>(
-  props: EnhancedPocketBaseDataTableProps<TData>
+export function EnhancedBackendDataTable<TData extends BaseRecord = BaseRecord>(
+  props: EnhancedBackendDataTableProps<TData>
 ) {
   // Map legacy props to new simplified structure
   const {
@@ -16,7 +16,7 @@ export function EnhancedPocketBaseDataTable<TData extends BaseRecord = BaseRecor
     collection = collectionName, // fallback to legacy prop
     columns,
 
-    // Legacy PocketBase settings
+    // Legacy collection query settings
     expand = "",
     filter = "",
     sort = "-created",
@@ -56,7 +56,7 @@ export function EnhancedPocketBaseDataTable<TData extends BaseRecord = BaseRecor
   } = props
   // Use the new simplified DataTable component
   return (
-    <PocketBaseDataTable<TData>
+    <BackendDataTable<TData>
       collection={collection!}
       columns={columns}
       searchFields={searchable ? searchFields : []}
@@ -64,7 +64,7 @@ export function EnhancedPocketBaseDataTable<TData extends BaseRecord = BaseRecor
       rowActions={rowActions}
       bulkActions={selectable ? bulkActions : []}
       availableFields={availableFields}
-      pocketbase={{
+      query={{
         expand,
         filter,
         sort,

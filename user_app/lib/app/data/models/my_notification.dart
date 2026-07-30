@@ -1,7 +1,7 @@
-import 'package:pocketbase/pocketbase.dart';
+import 'package:user_app/app/data/models/api_record.dart';
 import 'base_model.dart';
 
-/// MyNotification model representing a notification from PocketBase
+/// MyNotification model representing a notification from legacy collection API
 class MyNotification extends BaseModel {
   MyNotification(super.data);
 
@@ -16,8 +16,8 @@ class MyNotification extends BaseModel {
   // Timestamps inherited from BaseModel (created, updated as String)
   // Use createdDate and updatedDate for DateTime values
 
-  /// Factory constructor to create MyNotification from PocketBase record
-  static MyNotification fromRecord(RecordModel record) {
+  /// Factory constructor to create MyNotification from legacy collection API record
+  static MyNotification fromRecord(ApiRecord record) {
     return MyNotification(record.data);
   }
 

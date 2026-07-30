@@ -5,7 +5,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'dart:convert';
 import '../translations/app_translations.dart';
 import '../utils/app_spacing.dart';
-import '../data/services/pocketbase_service.dart';
+import '../data/services/backend_api_service.dart';
 import '../data/models/language_model.dart';
 import '../utils/preference_utils.dart';
 import '../utils/constants.dart';
@@ -28,7 +28,7 @@ class LanguageController extends GetxController {
       'en',
     );
     // Only fetch if user is authenticated
-    if (PocketBaseService.to.isAuthenticated) {
+    if (BackendApiService.to.isAuthenticated) {
       fetchAvailableLanguages();
     }
   }
@@ -38,7 +38,7 @@ class LanguageController extends GetxController {
     try {
       isLoading.value = true;
 
-      final response = await PocketBaseService.to.getRecordList(
+      final response = await BackendApiService.to.getRecordList(
         collectionName: 'languages',
         filter: 'is_active = true || enabled_for_users = true',
         sort: 'is_default desc, name asc',

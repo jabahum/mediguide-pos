@@ -3,6 +3,7 @@
 library;
 
 // Core models
+export 'api_record.dart';
 export 'base_model.dart';
 export 'user.dart';
 export 'role.dart';

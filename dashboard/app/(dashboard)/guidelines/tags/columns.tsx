@@ -2,7 +2,7 @@
 
 import type { Column, Row } from "@tanstack/react-table"
 import { DataTableColumnHeader } from "@/components/ui/datatable-column-header"
-import type { GuidelineTagsResponse } from "@/types/pocketbase-types"
+import type { GuidelineTagsResponse } from "@/types/backend-types"
 import { ExtendedColumnDef } from "@/types/data-table"
 
 // Export for use in other components  

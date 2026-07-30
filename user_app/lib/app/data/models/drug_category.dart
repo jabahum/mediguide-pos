@@ -1,14 +1,14 @@
 // ignore_for_file: unused_field
 
-import 'package:pocketbase/pocketbase.dart';
+import 'package:user_app/app/data/models/api_record.dart';
 import '../enums/common_enums.dart';
 import 'base_model.dart';
 
-/// Drug category model based on PocketBase drug_categories collection
+/// Drug category model based on legacy collection API drug_categories collection
 class DrugCategory extends BaseModel {
   DrugCategory(super.data);
 
-  /// PocketBase collection name
+  /// legacy collection API collection name
   static const String collection = 'drug_categories';
 
   // Self-registration for dynamic model creation
@@ -17,9 +17,8 @@ class DrugCategory extends BaseModel {
     return true;
   })();
 
-  /// Create DrugCategory from PocketBase record
-  static DrugCategory fromRecord(RecordModel record) =>
-      DrugCategory(record.data);
+  /// Create DrugCategory from legacy collection API record
+  static DrugCategory fromRecord(ApiRecord record) => DrugCategory(record.data);
 
   /// Create JSON for new drug category record (excludes system fields)
   static Map<String, dynamic> forCreate({

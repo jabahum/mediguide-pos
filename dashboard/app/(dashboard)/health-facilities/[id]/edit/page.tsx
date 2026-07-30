@@ -6,9 +6,9 @@ import { useParams, useRouter } from "next/navigation"
 import { PageHeader } from "@/components/ui/page-header"
 import { usePermissionContext } from "@/lib/permission-context"
 import { FacilityForm } from "../../components/facility-form"
-import { getPB } from "@/lib/pocketbase"
+import { getBackendClient } from "@/lib/backend-client"
 import { showToast } from "@/lib/toast"
-import { HealthFacilitiesResponse } from "@/types/pocketbase-types"
+import { HealthFacilitiesResponse } from "@/types/backend-types"
 
 export default function EditFacilityPage() {
   const params = useParams()
@@ -30,7 +30,7 @@ export default function EditFacilityPage() {
     const loadFacility = async () => {
       if (!facilityId) return
 
-      const pb = getPB()
+      const pb = getBackendClient()
       try {
         const facilityData = await pb.collection('health_facilities').getOne(facilityId)
         setFacility(facilityData as HealthFacilitiesResponse)

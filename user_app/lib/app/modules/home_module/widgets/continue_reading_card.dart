@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../../data/models/models.dart';
-import '../../../data/services/pocketbase_service.dart';
+import '../../../data/services/backend_api_service.dart';
 import '../../../utils/app_spacing.dart';
 import '../../../utils/responsive.dart';
 
@@ -35,7 +35,7 @@ class _ContinueReadingCardState extends State<ContinueReadingCard> {
 
   Future<void> _loadGuidelineTitle() async {
     try {
-      final record = await PocketBaseService.to.getRecord(
+      final record = await BackendApiService.to.getRecord(
         collectionName: Guideline.collection,
         recordId: widget.progress.guidelineId,
       );

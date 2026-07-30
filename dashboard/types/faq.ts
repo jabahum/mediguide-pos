@@ -8,7 +8,7 @@ import type {
   FaqsStatusOptions,
   FaqsPriorityOptions,
   FaqsTargetAudienceOptions
-} from "./pocketbase-types"
+} from "./backend-types"
 import type { FaqsWithExpanded } from "./expanded"
 
 // FAQ Tag with usage statistics

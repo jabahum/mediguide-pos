@@ -2,7 +2,7 @@ import { FieldOption } from "@/types/data-table"
 
 /**
  * Available fields for roles table advanced filtering
- * Based on PocketBase roles schema
+ * Based on legacy collection API roles schema
  */
 export const rolesAvailableFields: FieldOption[] = [
   // Basic Information

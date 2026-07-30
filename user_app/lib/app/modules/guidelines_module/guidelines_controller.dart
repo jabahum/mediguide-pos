@@ -6,7 +6,7 @@ import 'package:infinite_scroll_pagination/infinite_scroll_pagination.dart';
 import 'package:user_app/app/data/models/filter_models.dart';
 
 import '../../data/models/models.dart';
-import '../../data/services/pocketbase_service.dart';
+import '../../data/services/backend_api_service.dart';
 import '../../utils/common.dart';
 import '../../utils/constants.dart';
 import '../../widgets/generic_filter_bottom_sheet.dart';
@@ -346,11 +346,11 @@ class GuidelinesController extends GetxController {
 
   Future<void> _loadChildCategoryIds(String parentCategoryId) async {
     try {
-      final result = await PocketBaseService.to.getRecordList(
+      final result = await BackendApiService.to.getRecordList(
         collectionName: GuidelineCategory.collection,
         perPage: 100,
         filter:
-            'status="active" && parent_category="${PocketBaseService.escapeFilterValue(parentCategoryId)}"',
+            'status="active" && parent_category="${BackendApiService.escapeFilterValue(parentCategoryId)}"',
         sort: 'sort_order,name',
       );
 
@@ -374,11 +374,11 @@ class GuidelinesController extends GetxController {
 
     for (final parentCategoryId in parentCategoryIds) {
       try {
-        final result = await PocketBaseService.to.getRecordList(
+        final result = await BackendApiService.to.getRecordList(
           collectionName: GuidelineCategory.collection,
           perPage: 100,
           filter:
-              'status="active" && parent_category="${PocketBaseService.escapeFilterValue(parentCategoryId)}"',
+              'status="active" && parent_category="${BackendApiService.escapeFilterValue(parentCategoryId)}"',
           sort: 'sort_order,name',
         );
 
@@ -479,7 +479,7 @@ class GuidelinesController extends GetxController {
 
       debugPrint('Guidelines filter: $filter');
 
-      final result = await PocketBaseService.to.getRecordList(
+      final result = await BackendApiService.to.getRecordList(
         collectionName: Guideline.collection,
         page: pageKey,
         perPage: pageSize,
@@ -506,7 +506,7 @@ class GuidelinesController extends GetxController {
 
     if (isInIndexMode.value && selectedIndex.value != null) {
       filters.add(
-        'index_item="${PocketBaseService.escapeFilterValue(selectedIndex.value!.id)}"',
+        'index_item="${BackendApiService.escapeFilterValue(selectedIndex.value!.id)}"',
       );
     }
 
@@ -520,7 +520,7 @@ class GuidelinesController extends GetxController {
       if (categoryIds.isNotEmpty) {
         final categoryFilter = categoryIds
             .map(
-              (id) => 'categories~"${PocketBaseService.escapeFilterValue(id)}"',
+              (id) => 'categories~"${BackendApiService.escapeFilterValue(id)}"',
             )
             .join(' || ');
 
@@ -530,19 +530,19 @@ class GuidelinesController extends GetxController {
 
     if (!isInCategoryMode.value && selectedCategoryId.value.isNotEmpty) {
       filters.add(
-        'categories~"${PocketBaseService.escapeFilterValue(selectedCategoryId.value)}"',
+        'categories~"${BackendApiService.escapeFilterValue(selectedCategoryId.value)}"',
       );
     }
 
     if (isInTagMode.value && selectedTagId.value.isNotEmpty) {
       filters.add(
-        'tags~"${PocketBaseService.escapeFilterValue(selectedTagId.value)}"',
+        'tags~"${BackendApiService.escapeFilterValue(selectedTagId.value)}"',
       );
     }
 
     final search = searchQuery.value.trim();
     if (search.isNotEmpty) {
-      final q = PocketBaseService.escapeFilterValue(search);
+      final q = BackendApiService.escapeFilterValue(search);
 
       filters.add(
         '('
@@ -558,7 +558,7 @@ class GuidelinesController extends GetxController {
 
     if (selectedTagIds.isNotEmpty) {
       final tagFilter = selectedTagIds
-          .map((id) => 'tags~"${PocketBaseService.escapeFilterValue(id)}"')
+          .map((id) => 'tags~"${BackendApiService.escapeFilterValue(id)}"')
           .join(' || ');
 
       filters.add('($tagFilter)');
@@ -566,19 +566,19 @@ class GuidelinesController extends GetxController {
 
     if (selectedPriority.value.isNotEmpty) {
       filters.add(
-        'priority="${PocketBaseService.escapeFilterValue(selectedPriority.value)}"',
+        'priority="${BackendApiService.escapeFilterValue(selectedPriority.value)}"',
       );
     }
 
     if (selectedHealthcareLevel.value.isNotEmpty) {
       filters.add(
-        'healthcare_level_required~"${PocketBaseService.escapeFilterValue(selectedHealthcareLevel.value)}"',
+        'healthcare_level_required~"${BackendApiService.escapeFilterValue(selectedHealthcareLevel.value)}"',
       );
     }
 
     if (selectedTargetPopulation.value.isNotEmpty) {
       filters.add(
-        'target_population~"${PocketBaseService.escapeFilterValue(selectedTargetPopulation.value)}"',
+        'target_population~"${BackendApiService.escapeFilterValue(selectedTargetPopulation.value)}"',
       );
     }
 
@@ -808,7 +808,7 @@ class GuidelinesController extends GetxController {
   }
 
   Future<List<GuidelineCategory>> getGuidelineCategories() async {
-    final result = await PocketBaseService.to.getRecordList(
+    final result = await BackendApiService.to.getRecordList(
       collectionName: GuidelineCategory.collection,
       perPage: 100,
       filter: 'status="active"',
@@ -819,7 +819,7 @@ class GuidelinesController extends GetxController {
   }
 
   Future<List<GuidelineTag>> getGuidelineTags() async {
-    final result = await PocketBaseService.to.getRecordList(
+    final result = await BackendApiService.to.getRecordList(
       collectionName: GuidelineTag.collection,
       perPage: 100,
       sort: 'name',

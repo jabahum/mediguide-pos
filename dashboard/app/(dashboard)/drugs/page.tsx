@@ -6,7 +6,7 @@ import { Plus } from "lucide-react"
 
 // Components
 import { PageHeader } from "@/components/ui/page-header"
-import { PocketBaseDataTable } from "@/components/ui/pocketbase-datatable-simple"
+import { BackendDataTable } from "@/components/ui/backend-data-table"
 
 // Page-specific imports
 import { columns, DrugWithRelations } from "./columns"
@@ -49,14 +49,14 @@ export default function DrugsPage() {
       />
 
       {/* Simplified DataTable */}
-      <PocketBaseDataTable<DrugWithRelations>
+      <BackendDataTable<DrugWithRelations>
         collection="drugs"
         columns={columns}
         searchFields={["name", "brand_names", "drug_class", "therapeutic_category", "search_keywords"]}
         rowActions={drugRowActions}
         bulkActions={drugBulkActions}
         availableFields={drugAvailableFields}
-        pocketbase={{
+        query={{
           expand: "categories,tags,drug_class,therapeutic_category"
         }}
         ui={{

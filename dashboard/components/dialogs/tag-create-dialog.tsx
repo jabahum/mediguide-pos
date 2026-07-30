@@ -9,7 +9,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { TagForm } from "@/components/forms/tag-form"
-import { usePocketBaseCrud } from "@/hooks/use-pocketbase-crud"
+import { useBackendCrud } from "@/hooks/use-backend-crud"
 
 type TagFormData = {
   name: string
@@ -31,7 +31,7 @@ export function TagCreateDialog({
   onOpenChange,
   onSuccess
 }: TagCreateDialogProps) {
-  const { create, loading } = usePocketBaseCrud({
+  const { create, loading } = useBackendCrud({
     collectionName: "drug_tags",
     onSuccess: () => {
       onOpenChange(false)

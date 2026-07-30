@@ -6,7 +6,7 @@ import { usePermissionContext } from "@/lib/permission-context"
 import { Plus } from "lucide-react"
 
 import { PageHeader } from "@/components/ui/page-header"
-import { EnhancedPocketBaseDataTable } from "@/components/ui/pocketbase-datatable"
+import { EnhancedBackendDataTable } from "@/components/ui/enhanced-backend-data-table"
 import { documentationColumns, DocumentationType } from "./columns"
 import { createDocumentationRowActions, documentationBulkActions } from "./documentation-actions"
 import { documentationAvailableFields } from "./fields"
@@ -32,7 +32,7 @@ export default function DocumentationPage() {
   // Event handlers (React 19 automatically optimizes these)
   const handleAdvancedFilter = (filters: AdvancedFilter[]) => {
     console.log('Advanced filters applied:', filters)
-    // Here you would convert the advanced filters to PocketBase filter syntax
+    // Here you would convert the advanced filters to legacy collection API filter syntax
     // and pass them to the data table hook
   }
 
@@ -63,7 +63,7 @@ export default function DocumentationPage() {
       />
 
       {/* Enhanced DataTable */}
-      <EnhancedPocketBaseDataTable<DocumentationType>
+      <EnhancedBackendDataTable<DocumentationType>
         // Collection settings
         collectionName="documentation"
         columns={documentationColumns}

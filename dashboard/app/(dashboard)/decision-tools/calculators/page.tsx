@@ -1,11 +1,23 @@
-'use client'
+"use client";
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { PageHeader } from "@/components/ui/page-header"
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { PageHeader } from "@/components/ui/page-header";
 import {
   Dialog,
   DialogContent,
@@ -13,9 +25,9 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog"
-import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Calculator,
   Plus,
@@ -25,18 +37,18 @@ import {
   Target,
   Loader2,
   ExternalLink,
-  Play
-} from "lucide-react"
-import { useState, useEffect, useCallback } from "react"
-import * as React from "react"
-import { useRouter } from "next/navigation"
-import { pb, getCurrentUser } from "@/lib/pocketbase"
-import { Collections } from "@/types/pocketbase-types"
-import type { CalculatorsResponse } from "@/types/pocketbase-types"
-import { showToast } from "@/lib/toast"
-import { Skeleton } from "@/components/ui/skeleton"
-import { usePermissionContext } from "@/lib/permission-context"
-import { getBundledAppFileUrl } from "../app-file"
+  Play,
+} from "lucide-react";
+import { useState, useEffect, useCallback } from "react";
+import * as React from "react";
+import { useRouter } from "next/navigation";
+import { backendClient, getCurrentUser } from "@/lib/backend-client";
+import { Collections } from "@/types/backend-types";
+import type { CalculatorsResponse } from "@/types/backend-types";
+import { showToast } from "@/lib/toast";
+import { Skeleton } from "@/components/ui/skeleton";
+import { usePermissionContext } from "@/lib/permission-context";
+import { getBundledAppFileUrl } from "../app-file";
 
 // Built-in calculators that don't require uploaded files
 const builtInCalculators = [
@@ -48,11 +60,21 @@ const builtInCalculators = [
     type: "calculator" as const,
     status: "active" as const,
     fields: [
-      { name: "weight", label: "Weight (kg)", type: "number", placeholder: "70" },
-      { name: "height", label: "Height (cm)", type: "number", placeholder: "170" }
+      {
+        name: "weight",
+        label: "Weight (kg)",
+        type: "number",
+        placeholder: "70",
+      },
+      {
+        name: "height",
+        label: "Height (cm)",
+        type: "number",
+        placeholder: "170",
+      },
     ],
     formula: "BMI = weight(kg) / height(m)²",
-    isBuiltIn: true
+    isBuiltIn: true,
   },
   {
     id: "gcs",
@@ -63,34 +85,43 @@ const builtInCalculators = [
     status: "active" as const,
     fields: [
       {
-        name: "eye", label: "Eye Opening", type: "select", options: [
+        name: "eye",
+        label: "Eye Opening",
+        type: "select",
+        options: [
           { value: "4", label: "Spontaneous (4)" },
           { value: "3", label: "To speech (3)" },
           { value: "2", label: "To pain (2)" },
-          { value: "1", label: "None (1)" }
-        ]
+          { value: "1", label: "None (1)" },
+        ],
       },
       {
-        name: "verbal", label: "Verbal Response", type: "select", options: [
+        name: "verbal",
+        label: "Verbal Response",
+        type: "select",
+        options: [
           { value: "5", label: "Oriented (5)" },
           { value: "4", label: "Confused (4)" },
           { value: "3", label: "Inappropriate words (3)" },
           { value: "2", label: "Incomprehensible sounds (2)" },
-          { value: "1", label: "None (1)" }
-        ]
+          { value: "1", label: "None (1)" },
+        ],
       },
       {
-        name: "motor", label: "Motor Response", type: "select", options: [
+        name: "motor",
+        label: "Motor Response",
+        type: "select",
+        options: [
           { value: "6", label: "Obeys commands (6)" },
           { value: "5", label: "Localizes pain (5)" },
           { value: "4", label: "Withdrawal from pain (4)" },
           { value: "3", label: "Flexion to pain (3)" },
           { value: "2", label: "Extension to pain (2)" },
-          { value: "1", label: "None (1)" }
-        ]
-      }
+          { value: "1", label: "None (1)" },
+        ],
+      },
     ],
-    isBuiltIn: true
+    isBuiltIn: true,
   },
   {
     id: "apgar",
@@ -101,42 +132,57 @@ const builtInCalculators = [
     status: "active" as const,
     fields: [
       {
-        name: "appearance", label: "Appearance (Color)", type: "select", options: [
+        name: "appearance",
+        label: "Appearance (Color)",
+        type: "select",
+        options: [
           { value: "2", label: "Pink all over (2)" },
           { value: "1", label: "Pink body, blue extremities (1)" },
-          { value: "0", label: "Blue/pale all over (0)" }
-        ]
+          { value: "0", label: "Blue/pale all over (0)" },
+        ],
       },
       {
-        name: "pulse", label: "Pulse (Heart Rate)", type: "select", options: [
+        name: "pulse",
+        label: "Pulse (Heart Rate)",
+        type: "select",
+        options: [
           { value: "2", label: ">100 bpm (2)" },
           { value: "1", label: "<100 bpm (1)" },
-          { value: "0", label: "Absent (0)" }
-        ]
+          { value: "0", label: "Absent (0)" },
+        ],
       },
       {
-        name: "grimace", label: "Grimace (Reflex)", type: "select", options: [
+        name: "grimace",
+        label: "Grimace (Reflex)",
+        type: "select",
+        options: [
           { value: "2", label: "Cough/sneeze/cry (2)" },
           { value: "1", label: "Grimace (1)" },
-          { value: "0", label: "No response (0)" }
-        ]
+          { value: "0", label: "No response (0)" },
+        ],
       },
       {
-        name: "activity", label: "Activity (Muscle Tone)", type: "select", options: [
+        name: "activity",
+        label: "Activity (Muscle Tone)",
+        type: "select",
+        options: [
           { value: "2", label: "Active movement (2)" },
           { value: "1", label: "Some flexion (1)" },
-          { value: "0", label: "Limp (0)" }
-        ]
+          { value: "0", label: "Limp (0)" },
+        ],
       },
       {
-        name: "respiration", label: "Respiration", type: "select", options: [
+        name: "respiration",
+        label: "Respiration",
+        type: "select",
+        options: [
           { value: "2", label: "Strong cry (2)" },
           { value: "1", label: "Weak cry (1)" },
-          { value: "0", label: "Absent (0)" }
-        ]
-      }
+          { value: "0", label: "Absent (0)" },
+        ],
+      },
     ],
-    isBuiltIn: true
+    isBuiltIn: true,
   },
   {
     id: "wells",
@@ -147,16 +193,51 @@ const builtInCalculators = [
     status: "active" as const,
     fields: [
       { name: "cancer", label: "Active cancer", type: "checkbox", points: 1 },
-      { name: "paralysis", label: "Paralysis/paresis/immobilization", type: "checkbox", points: 1 },
-      { name: "bedrest", label: "Bedrest >3 days or surgery <4 weeks", type: "checkbox", points: 1 },
-      { name: "tenderness", label: "Localized tenderness along deep veins", type: "checkbox", points: 1 },
-      { name: "swelling", label: "Entire leg swollen", type: "checkbox", points: 1 },
-      { name: "calf", label: "Calf swelling >3cm compared to other leg", type: "checkbox", points: 1 },
+      {
+        name: "paralysis",
+        label: "Paralysis/paresis/immobilization",
+        type: "checkbox",
+        points: 1,
+      },
+      {
+        name: "bedrest",
+        label: "Bedrest >3 days or surgery <4 weeks",
+        type: "checkbox",
+        points: 1,
+      },
+      {
+        name: "tenderness",
+        label: "Localized tenderness along deep veins",
+        type: "checkbox",
+        points: 1,
+      },
+      {
+        name: "swelling",
+        label: "Entire leg swollen",
+        type: "checkbox",
+        points: 1,
+      },
+      {
+        name: "calf",
+        label: "Calf swelling >3cm compared to other leg",
+        type: "checkbox",
+        points: 1,
+      },
       { name: "pitting", label: "Pitting edema", type: "checkbox", points: 1 },
-      { name: "veins", label: "Collateral superficial veins", type: "checkbox", points: 1 },
-      { name: "alternative", label: "Alternative diagnosis as likely", type: "checkbox", points: -2 }
+      {
+        name: "veins",
+        label: "Collateral superficial veins",
+        type: "checkbox",
+        points: 1,
+      },
+      {
+        name: "alternative",
+        label: "Alternative diagnosis as likely",
+        type: "checkbox",
+        points: -2,
+      },
     ],
-    isBuiltIn: true
+    isBuiltIn: true,
   },
   {
     id: "creatinine",
@@ -167,89 +248,126 @@ const builtInCalculators = [
     status: "active" as const,
     fields: [
       { name: "age", label: "Age (years)", type: "number", placeholder: "65" },
-      { name: "weight", label: "Weight (kg)", type: "number", placeholder: "70" },
       {
-        name: "sex", label: "Sex", type: "select", options: [
-          { value: "male", label: "Male" },
-          { value: "female", label: "Female" }
-        ]
+        name: "weight",
+        label: "Weight (kg)",
+        type: "number",
+        placeholder: "70",
       },
-      { name: "creatinine", label: "Serum Creatinine (mg/dL)", type: "number", placeholder: "1.2" }
+      {
+        name: "sex",
+        label: "Sex",
+        type: "select",
+        options: [
+          { value: "male", label: "Male" },
+          { value: "female", label: "Female" },
+        ],
+      },
+      {
+        name: "creatinine",
+        label: "Serum Creatinine (mg/dL)",
+        type: "number",
+        placeholder: "1.2",
+      },
     ],
     formula: "CrCl = [(140-age) × weight] / (72 × SCr) × 0.85 (if female)",
-    isBuiltIn: true
+    isBuiltIn: true,
   },
   {
     id: "hba1c",
     name: "HbA1c Converter",
     category: "Diabetes",
-    description: "Convert between HbA1c percentage and estimated average glucose",
+    description:
+      "Convert between HbA1c percentage and estimated average glucose",
     type: "calculator" as const,
     status: "active" as const,
     fields: [
-      { name: "hba1c", label: "HbA1c (%)", type: "number", placeholder: "7.0" }
+      { name: "hba1c", label: "HbA1c (%)", type: "number", placeholder: "7.0" },
     ],
     formula: "eAG (mg/dL) = 28.7 × HbA1c - 46.7",
-    isBuiltIn: true
-  }
-]
+    isBuiltIn: true,
+  },
+];
 
 interface CalculatorDef {
-  id: string
-  name: string
-  category: string
-  description: string
-  type: string
-  status: string
+  id: string;
+  name: string;
+  category: string;
+  description: string;
+  type: string;
+  status: string;
   fields?: Array<{
-    name: string
-    label: string
-    type: string
-    placeholder?: string
-    options?: Array<{ value: string; label: string }>
-    points?: number
-  }>
-  formula?: string
-  isBuiltIn?: boolean
-  appFile?: unknown
+    name: string;
+    label: string;
+    type: string;
+    placeholder?: string;
+    options?: Array<{ value: string; label: string }>;
+    points?: number;
+  }>;
+  formula?: string;
+  isBuiltIn?: boolean;
+  appFile?: unknown;
 }
 
 export default function CalculatorsPage() {
-  const router = useRouter()
-  const { hasPermission, loading: permLoading } = usePermissionContext()
-  const [dbCalculators, setDbCalculators] = useState<CalculatorsResponse[]>([])
-  const [selectedCalculator, setSelectedCalculator] = useState<string>("bmi")
-  const [calculatorInputs, setCalculatorInputs] = useState<Record<string, Record<string, string | number | boolean>>>({})
-  const [results, setResults] = useState<Record<string, { value: number; category?: string; description?: string; recommendation?: string }>>({})
-  const [loading, setLoading] = useState(true)
-  const [requestOpen, setRequestOpen] = useState(false)
-  const [requestSubmitting, setRequestSubmitting] = useState(false)
+  const router = useRouter();
+  const { hasPermission, loading: permLoading } = usePermissionContext();
+  const [dbCalculators, setDbCalculators] = useState<CalculatorsResponse[]>([]);
+  const [selectedCalculator, setSelectedCalculator] = useState<string>("bmi");
+  const [calculatorInputs, setCalculatorInputs] = useState<
+    Record<string, Record<string, string | number | boolean>>
+  >({});
+  const [results, setResults] = useState<
+    Record<
+      string,
+      {
+        value: number;
+        category?: string;
+        description?: string;
+        recommendation?: string;
+      }
+    >
+  >({});
+  const [loading, setLoading] = useState(true);
+  const [requestOpen, setRequestOpen] = useState(false);
+  const [requestSubmitting, setRequestSubmitting] = useState(false);
   const [requestForm, setRequestForm] = useState({
     name: "",
     category: "",
     description: "",
     justification: "",
-  })
+  });
 
   const resetRequestForm = () => {
-    setRequestForm({ name: "", category: "", description: "", justification: "" })
-  }
+    setRequestForm({
+      name: "",
+      category: "",
+      description: "",
+      justification: "",
+    });
+  };
 
   const handleSubmitRequest = async () => {
-    const name = requestForm.name.trim()
-    const description = requestForm.description.trim()
+    const name = requestForm.name.trim();
+    const description = requestForm.description.trim();
     if (!name || !description) {
-      showToast.error("Missing fields", "Please provide a name and description")
-      return
+      showToast.error(
+        "Missing fields",
+        "Please provide a name and description",
+      );
+      return;
     }
-    const user = getCurrentUser()
+    const user = getCurrentUser();
     if (!user?.id) {
-      showToast.error("Authentication required", "Please log in to submit a request")
-      return
+      showToast.error(
+        "Authentication required",
+        "Please log in to submit a request",
+      );
+      return;
     }
 
-    const category = requestForm.category.trim()
-    const justification = requestForm.justification.trim()
+    const category = requestForm.category.trim();
+    const justification = requestForm.justification.trim();
 
     const ticketDescription = [
       `<p><strong>Calculator name:</strong> ${name}</p>`,
@@ -260,231 +378,279 @@ export default function CalculatorsPage() {
         : "",
     ]
       .filter(Boolean)
-      .join("")
+      .join("");
 
-    setRequestSubmitting(true)
-    let requestRecordId: string | null = null
+    setRequestSubmitting(true);
+    let requestRecordId: string | null = null;
     try {
-      const requestRecord = await pb.collection("calculator_requests").create({
-        name,
-        category: category || undefined,
-        description,
-        justification: justification || undefined,
-        requestedBy: user.id,
-        status: "pending",
-      })
-      requestRecordId = requestRecord.id
+      const requestRecord = await backendClient
+        .collection("calculator_requests")
+        .create({
+          name,
+          category: category || undefined,
+          description,
+          justification: justification || undefined,
+          requestedBy: user.id,
+          status: "pending",
+        });
+      requestRecordId = requestRecord.id;
 
-      const ticket = await pb.collection("support_tickets").create({
+      const ticket = await backendClient.collection("support_tickets").create({
         subject: `Calculator Request: ${name}`,
         description: ticketDescription,
         status: "open",
         priority: "normal",
         category: "Calculator Request",
         user_id: user.id,
-      })
+      });
 
       try {
-        await pb.collection("calculator_requests").update(requestRecord.id, {
-          supportTicket: ticket.id,
-        })
+        await backendClient
+          .collection("calculator_requests")
+          .update(requestRecord.id, {
+            supportTicket: ticket.id,
+          });
       } catch (linkError) {
-        console.warn("Created ticket but failed to link it back to the request:", linkError)
+        console.warn(
+          "Created ticket but failed to link it back to the request:",
+          linkError,
+        );
       }
 
       showToast.success(
         "Request submitted",
-        "Your calculator request was logged as a support ticket"
-      )
-      setRequestOpen(false)
-      resetRequestForm()
+        "Your calculator request was logged as a support ticket",
+      );
+      setRequestOpen(false);
+      resetRequestForm();
     } catch (error) {
-      console.error("Failed to submit calculator request:", error)
+      console.error("Failed to submit calculator request:", error);
       if (requestRecordId) {
         showToast.error(
           "Partial submission",
-          "Request saved but creating the support ticket failed. An admin will follow up."
-        )
-        setRequestOpen(false)
-        resetRequestForm()
+          "Request saved but creating the support ticket failed. An admin will follow up.",
+        );
+        setRequestOpen(false);
+        resetRequestForm();
       } else {
-        showToast.error("Submission failed", "Could not submit your request. Try again later.")
+        showToast.error(
+          "Submission failed",
+          "Could not submit your request. Try again later.",
+        );
       }
     } finally {
-      setRequestSubmitting(false)
+      setRequestSubmitting(false);
     }
-  }
+  };
 
   useEffect(() => {
-    if (permLoading) return
+    if (permLoading) return;
     if (!hasPermission("content", "read:any")) {
-      router.replace("/decision-tools")
+      router.replace("/decision-tools");
     }
-  }, [permLoading, hasPermission, router])
+  }, [permLoading, hasPermission, router]);
 
   React.useEffect(() => {
-    if (permLoading) return
+    if (permLoading) return;
     if (!hasPermission("content", "read:any")) {
-      router.replace("/decision-tools")
+      router.replace("/decision-tools");
     }
-  }, [permLoading, hasPermission, router])
+  }, [permLoading, hasPermission, router]);
 
   const fetchCalculators = useCallback(async () => {
     try {
-      const result = await pb.collection(Collections.Calculators).getList(1, 50, {
-        filter: "status = 'active'",
-        sort: "-featured,name"
-      })
-      setDbCalculators(result.items as CalculatorsResponse[])
+      const result = await backendClient
+        .collection(Collections.Calculators)
+        .getList(1, 50, {
+          filter: "status = 'active'",
+          sort: "-featured,name",
+        });
+      setDbCalculators(result.items as CalculatorsResponse[]);
     } catch (error) {
-      console.error("Failed to fetch calculators:", error)
-      showToast.error("Error", "Failed to load calculators")
+      console.error("Failed to fetch calculators:", error);
+      showToast.error("Error", "Failed to load calculators");
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }, [])
+  }, []);
 
   useEffect(() => {
-    fetchCalculators()
-  }, [fetchCalculators])
+    fetchCalculators();
+  }, [fetchCalculators]);
 
   // Combine built-in calculators with database calculators
   const allCalculators: CalculatorDef[] = [
     ...builtInCalculators,
-    ...dbCalculators.map(c => ({
+    ...dbCalculators.map((c) => ({
       id: c.id,
       name: c.name,
-      category: c.type === "decision_tool" ? "Decision Tool" : c.type === "checklist" ? "Checklist" : "Calculator",
+      category:
+        c.type === "decision_tool"
+          ? "Decision Tool"
+          : c.type === "checklist"
+            ? "Checklist"
+            : "Calculator",
       description: c.description || "",
       type: c.type,
       status: c.status,
       appFile: c.appFile,
-      isBuiltIn: false
-    }))
-  ]
+      isBuiltIn: false,
+    })),
+  ];
 
-  const calculator = allCalculators.find(c => c.id === selectedCalculator)
-  const isBuiltIn = calculator?.isBuiltIn
+  const calculator = allCalculators.find((c) => c.id === selectedCalculator);
+  const isBuiltIn = calculator?.isBuiltIn;
 
   const handleInputChange = (field: string, value: string | boolean) => {
-    setCalculatorInputs(prev => ({
+    setCalculatorInputs((prev) => ({
       ...prev,
       [selectedCalculator]: {
         ...prev[selectedCalculator],
-        [field]: value
-      }
-    }))
-  }
+        [field]: value,
+      },
+    }));
+  };
 
   const calculate = () => {
-    const inputs = calculatorInputs[selectedCalculator] || {}
-    let result: { value: number; category?: string; description?: string; recommendation?: string } = { value: 0 }
+    const inputs = calculatorInputs[selectedCalculator] || {};
+    let result: {
+      value: number;
+      category?: string;
+      description?: string;
+      recommendation?: string;
+    } = { value: 0 };
 
     switch (selectedCalculator) {
       case "bmi":
-        const weight = parseFloat(String(inputs.weight))
-        const height = parseFloat(String(inputs.height)) / 100
+        const weight = parseFloat(String(inputs.weight));
+        const height = parseFloat(String(inputs.height)) / 100;
         if (weight && height) {
-          const bmi = weight / (height * height)
-          let category = ""
-          if (bmi < 18.5) { category = "Underweight" }
-          else if (bmi < 25) { category = "Normal weight" }
-          else if (bmi < 30) { category = "Overweight" }
-          else { category = "Obese" }
+          const bmi = weight / (height * height);
+          let category = "";
+          if (bmi < 18.5) {
+            category = "Underweight";
+          } else if (bmi < 25) {
+            category = "Normal weight";
+          } else if (bmi < 30) {
+            category = "Overweight";
+          } else {
+            category = "Obese";
+          }
 
-          result = { value: parseFloat(bmi.toFixed(1)), category }
+          result = { value: parseFloat(bmi.toFixed(1)), category };
         }
-        break
+        break;
 
       case "gcs":
-        const eye = parseInt(String(inputs.eye) || "0")
-        const verbal = parseInt(String(inputs.verbal) || "0")
-        const motor = parseInt(String(inputs.motor) || "0")
-        const total = eye + verbal + motor
-        let interpretation = ""
-        if (total >= 13) interpretation = "Mild brain injury"
-        else if (total >= 9) interpretation = "Moderate brain injury"
-        else if (total >= 3) interpretation = "Severe brain injury"
+        const eye = parseInt(String(inputs.eye) || "0");
+        const verbal = parseInt(String(inputs.verbal) || "0");
+        const motor = parseInt(String(inputs.motor) || "0");
+        const total = eye + verbal + motor;
+        let interpretation = "";
+        if (total >= 13) interpretation = "Mild brain injury";
+        else if (total >= 9) interpretation = "Moderate brain injury";
+        else if (total >= 3) interpretation = "Severe brain injury";
 
-        result = { value: total, category: interpretation, description: `E${eye} V${verbal} M${motor}` }
-        break
+        result = {
+          value: total,
+          category: interpretation,
+          description: `E${eye} V${verbal} M${motor}`,
+        };
+        break;
 
       case "apgar":
-        const appearance = parseInt(String(inputs.appearance) || "0")
-        const pulse = parseInt(String(inputs.pulse) || "0")
-        const grimace = parseInt(String(inputs.grimace) || "0")
-        const activity = parseInt(String(inputs.activity) || "0")
-        const respiration = parseInt(String(inputs.respiration) || "0")
-        const apgarTotal = appearance + pulse + grimace + activity + respiration
-        let apgarInterpretation = ""
-        if (apgarTotal >= 7) apgarInterpretation = "Normal"
-        else if (apgarTotal >= 4) apgarInterpretation = "Moderate depression"
-        else apgarInterpretation = "Severe depression"
+        const appearance = parseInt(String(inputs.appearance) || "0");
+        const pulse = parseInt(String(inputs.pulse) || "0");
+        const grimace = parseInt(String(inputs.grimace) || "0");
+        const activity = parseInt(String(inputs.activity) || "0");
+        const respiration = parseInt(String(inputs.respiration) || "0");
+        const apgarTotal =
+          appearance + pulse + grimace + activity + respiration;
+        let apgarInterpretation = "";
+        if (apgarTotal >= 7) apgarInterpretation = "Normal";
+        else if (apgarTotal >= 4) apgarInterpretation = "Moderate depression";
+        else apgarInterpretation = "Severe depression";
 
-        result = { value: apgarTotal, category: apgarInterpretation }
-        break
+        result = { value: apgarTotal, category: apgarInterpretation };
+        break;
 
       case "wells":
-        let wellsScore = 0
-        const builtInCalc = builtInCalculators.find(c => c.id === "wells")
-        builtInCalc?.fields?.forEach(field => {
-          if (inputs[field.name] && 'points' in field && field.points) {
-            wellsScore += field.points
+        let wellsScore = 0;
+        const builtInCalc = builtInCalculators.find((c) => c.id === "wells");
+        builtInCalc?.fields?.forEach((field) => {
+          if (inputs[field.name] && "points" in field && field.points) {
+            wellsScore += field.points;
           }
-        })
-        let dvtProbability = ""
-        if (wellsScore >= 3) dvtProbability = "High probability (>75%)"
-        else if (wellsScore >= 1) dvtProbability = "Moderate probability (17-33%)"
-        else dvtProbability = "Low probability (<5%)"
+        });
+        let dvtProbability = "";
+        if (wellsScore >= 3) dvtProbability = "High probability (>75%)";
+        else if (wellsScore >= 1)
+          dvtProbability = "Moderate probability (17-33%)";
+        else dvtProbability = "Low probability (<5%)";
 
-        result = { value: wellsScore, category: dvtProbability }
-        break
+        result = { value: wellsScore, category: dvtProbability };
+        break;
 
       case "creatinine":
-        const age = parseInt(String(inputs.age))
-        const weightKg = parseFloat(String(inputs.weight))
-        const creatinine = parseFloat(String(inputs.creatinine))
-        const isFemale = inputs.sex === "female"
+        const age = parseInt(String(inputs.age));
+        const weightKg = parseFloat(String(inputs.weight));
+        const creatinine = parseFloat(String(inputs.creatinine));
+        const isFemale = inputs.sex === "female";
 
         if (age && weightKg && creatinine) {
-          let crCl = ((140 - age) * weightKg) / (72 * creatinine)
-          if (isFemale) crCl *= 0.85
+          let crCl = ((140 - age) * weightKg) / (72 * creatinine);
+          if (isFemale) crCl *= 0.85;
 
-          let stage = ""
-          if (crCl >= 90) stage = "Normal (Stage 1)"
-          else if (crCl >= 60) stage = "Mild CKD (Stage 2)"
-          else if (crCl >= 30) stage = "Moderate CKD (Stage 3)"
-          else if (crCl >= 15) stage = "Severe CKD (Stage 4)"
-          else stage = "End-stage CKD (Stage 5)"
+          let stage = "";
+          if (crCl >= 90) stage = "Normal (Stage 1)";
+          else if (crCl >= 60) stage = "Mild CKD (Stage 2)";
+          else if (crCl >= 30) stage = "Moderate CKD (Stage 3)";
+          else if (crCl >= 15) stage = "Severe CKD (Stage 4)";
+          else stage = "End-stage CKD (Stage 5)";
 
-          result = { value: parseFloat(crCl.toFixed(1)), category: stage, description: "mL/min" }
+          result = {
+            value: parseFloat(crCl.toFixed(1)),
+            category: stage,
+            description: "mL/min",
+          };
         }
-        break
+        break;
 
       case "hba1c":
-        const hba1cValue = parseFloat(String(inputs.hba1c))
+        const hba1cValue = parseFloat(String(inputs.hba1c));
         if (hba1cValue) {
-          const eag = 28.7 * hba1cValue - 46.7
-          result = { value: parseFloat(eag.toFixed(0)), category: `HbA1c: ${hba1cValue}%`, description: "mg/dL estimated average glucose" }
+          const eag = 28.7 * hba1cValue - 46.7;
+          result = {
+            value: parseFloat(eag.toFixed(0)),
+            category: `HbA1c: ${hba1cValue}%`,
+            description: "mg/dL estimated average glucose",
+          };
         }
-        break
+        break;
     }
 
-    setResults(prev => ({
+    setResults((prev) => ({
       ...prev,
-      [selectedCalculator]: result
-    }))
-  }
+      [selectedCalculator]: result,
+    }));
+  };
 
-  const currentInputs = calculatorInputs[selectedCalculator] || {}
-  const currentResult = results[selectedCalculator]
+  const currentInputs = calculatorInputs[selectedCalculator] || {};
+  const currentResult = results[selectedCalculator];
 
   // Calculate stats
-  const totalCalculations = dbCalculators.reduce((sum, c) => sum + (c.usageCount || 0), 0)
-  const mostUsed = dbCalculators.length > 0
-    ? dbCalculators.reduce((max, c) => (c.usageCount || 0) > (max.usageCount || 0) ? c : max, dbCalculators[0])?.name
-    : "BMI Calculator"
-  const activeCalculators = allCalculators.length
+  const totalCalculations = dbCalculators.reduce(
+    (sum, c) => sum + (c.usageCount || 0),
+    0,
+  );
+  const mostUsed =
+    dbCalculators.length > 0
+      ? dbCalculators.reduce(
+          (max, c) => ((c.usageCount || 0) > (max.usageCount || 0) ? c : max),
+          dbCalculators[0],
+        )?.name
+      : "BMI Calculator";
+  const activeCalculators = allCalculators.length;
 
   if (loading) {
     return (
@@ -497,7 +663,7 @@ export default function CalculatorsPage() {
           <Loader2 className="h-8 w-8 animate-spin" />
         </div>
       </div>
-    )
+    );
   }
 
   return (
@@ -523,41 +689,53 @@ export default function CalculatorsPage() {
       {/* Overview Cards */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Calculations</CardTitle>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 backendClient-2">
+            <CardTitle className="text-sm font-medium">
+              Total Calculations
+            </CardTitle>
             <Calculator className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{totalCalculations.toLocaleString()}</div>
+            <div className="text-2xl font-bold">
+              {totalCalculations.toLocaleString()}
+            </div>
             <p className="text-xs text-muted-foreground">All time</p>
           </CardContent>
         </Card>
 
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 backendClient-2">
             <CardTitle className="text-sm font-medium">Most Popular</CardTitle>
             <TrendingUp className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{mostUsed}</div>
-            <p className="text-xs text-muted-foreground">Most frequently used</p>
+            <p className="text-xs text-muted-foreground">
+              Most frequently used
+            </p>
           </CardContent>
         </Card>
 
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 backendClient-2">
             <CardTitle className="text-sm font-medium">Daily Average</CardTitle>
             <Activity className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{Math.round(totalCalculations / 30) || 156}</div>
-            <p className="text-xs text-muted-foreground">Calculations per day</p>
+            <div className="text-2xl font-bold">
+              {Math.round(totalCalculations / 30) || 156}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Calculations per day
+            </p>
           </CardContent>
         </Card>
 
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Available Tools</CardTitle>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 backendClient-2">
+            <CardTitle className="text-sm font-medium">
+              Available Tools
+            </CardTitle>
             <Target className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -580,15 +758,18 @@ export default function CalculatorsPage() {
                 <button
                   key={calc.id}
                   onClick={() => setSelectedCalculator(calc.id)}
-                  className={`w-full text-left p-3 rounded-lg border transition-colors ${selectedCalculator === calc.id
-                      ? 'bg-primary/5 border-primary'
-                      : 'hover:bg-muted border-border'
-                    }`}
+                  className={`w-full text-left p-3 rounded-lg border transition-colors ${
+                    selectedCalculator === calc.id
+                      ? "bg-primary/5 border-primary"
+                      : "hover:bg-muted border-border"
+                  }`}
                 >
                   <div className="flex items-center justify-between">
                     <div>
                       <h4 className="font-medium">{calc.name}</h4>
-                      <p className="text-sm text-muted-foreground">{calc.description}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {calc.description}
+                      </p>
                     </div>
                     <Badge variant="outline">{calc.category}</Badge>
                   </div>
@@ -616,40 +797,56 @@ export default function CalculatorsPage() {
                     {field.type === "number" && (
                       <Input
                         type="number"
-                        placeholder={'placeholder' in field ? field.placeholder : ''}
+                        placeholder={
+                          "placeholder" in field ? field.placeholder : ""
+                        }
                         value={String(currentInputs[field.name] || "")}
-                        onChange={(e) => handleInputChange(field.name, e.target.value)}
+                        onChange={(e) =>
+                          handleInputChange(field.name, e.target.value)
+                        }
                         className="mt-1"
                       />
                     )}
-                    {field.type === "select" && 'options' in field && field.options && (
-                      <Select
-                        value={String(currentInputs[field.name] || "")}
-                        onValueChange={(value) => handleInputChange(field.name, value)}
-                      >
-                        <SelectTrigger className="mt-1">
-                          <SelectValue placeholder="Select..." />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {field.options.map((option) => (
-                            <SelectItem key={option.value} value={option.value}>
-                              {option.label}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    )}
+                    {field.type === "select" &&
+                      "options" in field &&
+                      field.options && (
+                        <Select
+                          value={String(currentInputs[field.name] || "")}
+                          onValueChange={(value) =>
+                            handleInputChange(field.name, value)
+                          }
+                        >
+                          <SelectTrigger className="mt-1">
+                            <SelectValue placeholder="Select..." />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {field.options.map((option) => (
+                              <SelectItem
+                                key={option.value}
+                                value={option.value}
+                              >
+                                {option.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      )}
                     {field.type === "checkbox" && (
                       <div className="flex items-center space-x-2 mt-1">
                         <input
                           id={`checkbox-${field.name}`}
                           type="checkbox"
                           checked={Boolean(currentInputs[field.name]) || false}
-                          onChange={(e) => handleInputChange(field.name, e.target.checked)}
+                          onChange={(e) =>
+                            handleInputChange(field.name, e.target.checked)
+                          }
                           className="rounded"
                         />
-                        <label htmlFor={`checkbox-${field.name}`} className="text-sm cursor-pointer">
-                          +{'points' in field ? field.points : 0} points
+                        <label
+                          htmlFor={`checkbox-${field.name}`}
+                          className="text-sm cursor-pointer"
+                        >
+                          +{"points" in field ? field.points : 0} points
                         </label>
                       </div>
                     )}
@@ -669,28 +866,50 @@ export default function CalculatorsPage() {
             ) : calculator?.appFile ? (
               <div className="space-y-4">
                 <p className="text-sm text-muted-foreground">
-                  This is a custom calculator application. Click below to launch it.
+                  This is a custom calculator application. Click below to launch
+                  it.
                 </p>
-                <Button className="w-full" onClick={() => {
-                  const record = dbCalculators.find(c => c.id === calculator.id)
-                  if (!record) {
-                    showToast.error("Launch failed", "Calculator record not found")
-                    return
-                  }
-                  if (!calculator.appFile) {
-                    showToast.error("Launch failed", "No application file is attached to this calculator")
-                    return
-                  }
-                  const fileUrl = getBundledAppFileUrl(calculator.appFile)
-                  if (!fileUrl) {
-                    showToast.error("Launch failed", "The attached application file is not a supported HTML tool")
-                    return
-                  }
-                  const win = window.open(fileUrl, "_blank", "noopener,noreferrer")
-                  if (!win) {
-                    showToast.error("Popup blocked", "Allow popups for this site to launch the calculator")
-                  }
-                }}>
+                <Button
+                  className="w-full"
+                  onClick={() => {
+                    const record = dbCalculators.find(
+                      (c) => c.id === calculator.id,
+                    );
+                    if (!record) {
+                      showToast.error(
+                        "Launch failed",
+                        "Calculator record not found",
+                      );
+                      return;
+                    }
+                    if (!calculator.appFile) {
+                      showToast.error(
+                        "Launch failed",
+                        "No application file is attached to this calculator",
+                      );
+                      return;
+                    }
+                    const fileUrl = getBundledAppFileUrl(calculator.appFile);
+                    if (!fileUrl) {
+                      showToast.error(
+                        "Launch failed",
+                        "The attached application file is not a supported HTML tool",
+                      );
+                      return;
+                    }
+                    const win = window.open(
+                      fileUrl,
+                      "_blank",
+                      "noopener,noreferrer",
+                    );
+                    if (!win) {
+                      showToast.error(
+                        "Popup blocked",
+                        "Allow popups for this site to launch the calculator",
+                      );
+                    }
+                  }}
+                >
                   <Play className="h-4 w-4 mr-2" />
                   Launch Calculator
                 </Button>
@@ -707,15 +926,16 @@ export default function CalculatorsPage() {
         <Dialog
           open={requestOpen}
           onOpenChange={(open) => {
-            setRequestOpen(open)
-            if (!open) resetRequestForm()
+            setRequestOpen(open);
+            if (!open) resetRequestForm();
           }}
         >
           <DialogContent className="sm:max-w-lg">
             <DialogHeader>
               <DialogTitle>Request a Calculator</DialogTitle>
               <DialogDescription>
-                Submit a request for a new clinical calculator. Our content team will review it.
+                Submit a request for a new clinical calculator. Our content team
+                will review it.
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4 py-2">
@@ -727,7 +947,9 @@ export default function CalculatorsPage() {
                   id="req-name"
                   placeholder="e.g. CHA₂DS₂-VASc Score"
                   value={requestForm.name}
-                  onChange={(e) => setRequestForm((f) => ({ ...f, name: e.target.value }))}
+                  onChange={(e) =>
+                    setRequestForm((f) => ({ ...f, name: e.target.value }))
+                  }
                   disabled={requestSubmitting}
                 />
               </div>
@@ -737,7 +959,9 @@ export default function CalculatorsPage() {
                   id="req-category"
                   placeholder="e.g. Cardiology, Renal, Obstetrics"
                   value={requestForm.category}
-                  onChange={(e) => setRequestForm((f) => ({ ...f, category: e.target.value }))}
+                  onChange={(e) =>
+                    setRequestForm((f) => ({ ...f, category: e.target.value }))
+                  }
                   disabled={requestSubmitting}
                 />
               </div>
@@ -750,18 +974,30 @@ export default function CalculatorsPage() {
                   placeholder="What does this calculator do? What inputs and outputs does it need?"
                   rows={3}
                   value={requestForm.description}
-                  onChange={(e) => setRequestForm((f) => ({ ...f, description: e.target.value }))}
+                  onChange={(e) =>
+                    setRequestForm((f) => ({
+                      ...f,
+                      description: e.target.value,
+                    }))
+                  }
                   disabled={requestSubmitting}
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="req-justification">Clinical justification</Label>
+                <Label htmlFor="req-justification">
+                  Clinical justification
+                </Label>
                 <Textarea
                   id="req-justification"
                   placeholder="Why is this needed? Link to the source or guideline if available."
                   rows={3}
                   value={requestForm.justification}
-                  onChange={(e) => setRequestForm((f) => ({ ...f, justification: e.target.value }))}
+                  onChange={(e) =>
+                    setRequestForm((f) => ({
+                      ...f,
+                      justification: e.target.value,
+                    }))
+                  }
                   disabled={requestSubmitting}
                 />
               </div>
@@ -774,7 +1010,10 @@ export default function CalculatorsPage() {
               >
                 Cancel
               </Button>
-              <Button onClick={handleSubmitRequest} disabled={requestSubmitting}>
+              <Button
+                onClick={handleSubmitRequest}
+                disabled={requestSubmitting}
+              >
                 {requestSubmitting ? (
                   <>
                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />
@@ -792,13 +1031,17 @@ export default function CalculatorsPage() {
         <Card>
           <CardHeader>
             <CardTitle>Results</CardTitle>
-            <CardDescription>Calculation results and interpretation</CardDescription>
+            <CardDescription>
+              Calculation results and interpretation
+            </CardDescription>
           </CardHeader>
           <CardContent>
             {currentResult ? (
               <div className="space-y-4">
                 <div>
-                  <div className="text-3xl font-bold">{currentResult.value}</div>
+                  <div className="text-3xl font-bold">
+                    {currentResult.value}
+                  </div>
                   {currentResult.description && (
                     <div className="text-sm text-muted-foreground">
                       {currentResult.description}
@@ -821,5 +1064,5 @@ export default function CalculatorsPage() {
         </Card>
       </div>
     </div>
-  )
+  );
 }

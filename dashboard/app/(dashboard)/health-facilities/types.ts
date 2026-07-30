@@ -10,7 +10,7 @@ import {
   HealthSubDistrictsResponse,
   SubcountiesResponse,
   ParishesResponse
-} from "@/types/pocketbase-types"
+} from "@/types/backend-types"
 
 // Extended Health Facility type with all possible expanded relations
 export interface HealthFacilityWithExpand extends HealthFacilitiesResponse {

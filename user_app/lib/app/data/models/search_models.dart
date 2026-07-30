@@ -193,8 +193,8 @@ class SearchFilter {
     );
   }
 
-  /// Generate PocketBase filter string
-  String toPocketBaseFilter() {
+  /// Generate a compatibility-API filter string.
+  String toCompatibilityFilter() {
     final List<String> filters = [];
 
     if (category != SearchCategory.all) {
@@ -212,8 +212,8 @@ class SearchFilter {
     return filters.join(' && ');
   }
 
-  /// Generate PocketBase sort string
-  String toPocketBaseSort() {
+  /// Generate a compatibility-API sort string.
+  String toCompatibilitySort() {
     if (sortBy == null) return '-created';
 
     final prefix = sortAscending ? '+' : '-';

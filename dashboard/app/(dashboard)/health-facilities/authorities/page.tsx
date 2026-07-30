@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation"
 import { usePermissionContext } from "@/lib/permission-context"
 
 import { PageHeader } from "@/components/ui/page-header"
-import { EnhancedPocketBaseDataTable } from "@/components/ui/pocketbase-datatable"
+import { EnhancedBackendDataTable } from "@/components/ui/enhanced-backend-data-table"
 import { AuthoritiesWithOwnershipType } from "@/types/expanded"
 
 import { authoritiesColumns } from "./columns"
@@ -88,7 +88,7 @@ export default function AuthoritiesPage() {
         ]}
       />
 
-      <EnhancedPocketBaseDataTable<AuthoritiesWithOwnershipType>
+      <EnhancedBackendDataTable<AuthoritiesWithOwnershipType>
         collectionName="authorities"
         columns={authoritiesColumns}
         expand="ownership_type"

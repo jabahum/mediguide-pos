@@ -2,7 +2,7 @@ import 'package:get/get.dart';
 import 'package:flutter_gen_ai_chat_ui/flutter_gen_ai_chat_ui.dart';
 import '../../data/services/auth_service.dart';
 import '../../data/services/openai_service.dart';
-import '../../data/services/pocketbase_service.dart';
+import '../../data/services/backend_api_service.dart';
 import '../../data/services/ai_context_service.dart';
 import '../../data/models/ai_usage_log.dart';
 import '../../data/models/ai_context.dart';
@@ -220,8 +220,8 @@ class AiAssistantController extends GetxController {
 
       final usageData = AiUsageLog.forCreate(userId: currentUser.id);
 
-      // Save to PocketBase asynchronously (don't block UI)
-      PocketBaseService.to.createRecord(
+      // Save to legacy collection API asynchronously (don't block UI)
+      BackendApiService.to.createRecord(
         collectionName: AiUsageLog.collection,
         data: usageData,
       );

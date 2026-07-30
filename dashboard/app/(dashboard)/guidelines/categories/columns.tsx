@@ -25,7 +25,7 @@ import {
   LucideIcon
 } from "lucide-react"
 import { DataTableColumnHeader } from "@/components/ui/datatable-column-header"
-import type { GuidelineCategoriesResponse } from "@/types/pocketbase-types"
+import type { GuidelineCategoriesResponse } from "@/types/backend-types"
 import { GuidelineCategoriesWithParent } from "@/types/expanded"
 import { ExtendedColumnDef } from "@/types/data-table"
 import { useGuidelineCategories } from "@/hooks/use-guideline-categories"

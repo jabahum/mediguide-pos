@@ -21,7 +21,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 
 import { DocumentationService } from "@/services/documentation.service"
-import { DocumentationResponse, DocumentationStatusOptions } from "@/types/pocketbase-types"
+import { DocumentationResponse, DocumentationStatusOptions } from "@/types/backend-types"
 import { showToast } from "@/lib/toast"
 import { ConfirmDialog } from "@/components/dialogs/confirm-dialog"
 

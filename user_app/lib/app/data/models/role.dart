@@ -1,13 +1,13 @@
 // ignore_for_file: unused_field
 
-import 'package:pocketbase/pocketbase.dart';
+import 'package:user_app/app/data/models/api_record.dart';
 import 'base_model.dart';
 
-/// Role model based on PocketBase roles collection
+/// Role model based on legacy collection API roles collection
 class Role extends BaseModel {
   Role(super.data);
 
-  /// PocketBase collection name
+  /// legacy collection API collection name
   static const String collection = 'roles';
 
   // Self-registration for dynamic model creation
@@ -16,8 +16,8 @@ class Role extends BaseModel {
     return true;
   })();
 
-  /// Create Role from PocketBase record
-  static Role fromRecord(RecordModel record) => Role(record.data);
+  /// Create Role from legacy collection API record
+  static Role fromRecord(ApiRecord record) => Role(record.data);
 
   /// Create JSON for new role record (excludes system fields)
   static Map<String, dynamic> forCreate({

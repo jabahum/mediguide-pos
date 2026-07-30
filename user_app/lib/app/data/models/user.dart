@@ -1,14 +1,14 @@
 // ignore_for_file: unused_field
 
-import 'package:pocketbase/pocketbase.dart';
+import 'package:user_app/app/data/models/api_record.dart';
 import '../enums/user_enums.dart';
 import 'base_model.dart';
 
-/// User model based on PocketBase users collection
+/// User model based on legacy collection API users collection
 class User extends BaseModel {
   User(super.data);
 
-  /// PocketBase collection name
+  /// legacy collection API collection name
   static const String collection = 'users';
 
   // Self-registration for dynamic model creation
@@ -23,8 +23,8 @@ class User extends BaseModel {
     _registered;
   }
 
-  /// Create User from PocketBase record
-  static User fromRecord(RecordModel record) => User(record.data);
+  /// Create User from legacy collection API record
+  static User fromRecord(ApiRecord record) => User(record.data);
 
   /// Create JSON for new user record (excludes system fields)
   static Map<String, dynamic> forCreate({

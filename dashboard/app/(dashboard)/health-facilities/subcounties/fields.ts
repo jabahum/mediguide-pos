@@ -2,7 +2,7 @@ import { FieldOption } from "@/types/data-table"
 
 /**
  * Available fields for subcounties table advanced filtering
- * Based on PocketBase subcounties schema
+ * Based on legacy collection API subcounties schema
  */
 export const subcountiesAvailableFields: FieldOption[] = [
   // Basic Information

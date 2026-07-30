@@ -10,8 +10,8 @@ import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Skeleton } from "@/components/ui/skeleton"
 import { showToast } from "@/lib/toast"
-import { usePbRecord } from "@/hooks/use-pb-record"
-import { UsersResponse } from "@/types/pocketbase-types"
+import { useBackendRecord } from "@/hooks/use-backend-record"
+import { UsersResponse } from "@/types/backend-types"
 import { usePermissionContext } from "@/lib/permission-context"
 
 export default function UserProfilePage() {
@@ -19,7 +19,7 @@ export default function UserProfilePage() {
   const params = useParams()
   const userId = params.id as string
 
-  const { record: user, loading: isLoading, error } = usePbRecord<UsersResponse>(
+  const { record: user, loading: isLoading, error } = useBackendRecord<UsersResponse>(
     "users",
     userId
   )

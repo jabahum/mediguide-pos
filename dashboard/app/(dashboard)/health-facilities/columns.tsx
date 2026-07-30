@@ -5,10 +5,10 @@ import { CalendarDays, Shield, MapPin, Hash, Stethoscope } from "lucide-react"
 
 import { Badge } from "@/components/ui/badge"
 import { DataTableColumnHeader } from "@/components/ui/datatable-column-header"
-import { HealthFacilitiesResponse, FacilityLevelsResponse, AuthoritiesResponse, OwnershipTypesResponse, RegionsResponse, DistrictsResponse, CountiesResponse, SubcountiesResponse, ParishesResponse } from "@/types/pocketbase-types"
+import { HealthFacilitiesResponse, FacilityLevelsResponse, AuthoritiesResponse, OwnershipTypesResponse, RegionsResponse, DistrictsResponse, CountiesResponse, SubcountiesResponse, ParishesResponse } from "@/types/backend-types"
 import { ExtendedColumnDef } from "@/types/data-table"
 
-// Use the proper PocketBase generated type
+// Use the proper legacy collection API generated type
 export type HealthFacility = HealthFacilitiesResponse<{
   facility_level: FacilityLevelsResponse
   authority: AuthoritiesResponse

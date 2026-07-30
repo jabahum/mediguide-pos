@@ -16,12 +16,12 @@ import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Separator } from "@/components/ui/separator"
 import { showToast } from "@/lib/toast"
-import { getPB } from "@/lib/pocketbase"
+import { getBackendClient } from "@/lib/backend-client"
 import { 
   UsersStatusOptions, 
  
   UsersPreferredLanguageOptions 
-} from "@/types/pocketbase-types"
+} from "@/types/backend-types"
 import { useRoleOptions, useRoleValidation } from "@/hooks/use-roles-options"
 
 // Create the schema as a function that accepts role validation
@@ -117,9 +117,9 @@ export default function CreateUserPage() {
     setIsLoading(true)
     
     try {
-      const pb = getPB()
+      const pb = getBackendClient()
       
-      // Create user record in PocketBase
+      // Create user record in legacy collection API
       const userData = {
         ...data,
         // Specialization as string
@@ -141,12 +141,12 @@ export default function CreateUserPage() {
     } catch (error: unknown) {
       console.error('Failed to create user:', error)
       if (error && typeof error === 'object' && 'data' in error) {
-        console.error('PocketBase field errors:', JSON.stringify(error.data, null, 2))
+        console.error('legacy collection API field errors:', JSON.stringify(error.data, null, 2))
       }
       
       let errorMessage = 'Failed to create user'
       if (error && typeof error === 'object' && 'data' in error) {
-        // Handle PocketBase validation errors
+        // Handle legacy collection API validation errors
         const errorData = error.data as Record<string, unknown>
         const pbErrors = Object.entries(errorData).map(([field, msgs]) => {
           const message = typeof msgs === 'object' && msgs !== null && 'message' in msgs 

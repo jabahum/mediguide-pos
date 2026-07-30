@@ -9,8 +9,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { CategoryForm } from "@/components/forms/category-form"
-import { DrugCategoriesResponse } from "@/types/pocketbase-types"
-import { usePocketBaseCrud } from "@/hooks/use-pocketbase-crud"
+import { DrugCategoriesResponse } from "@/types/backend-types"
+import { useBackendCrud } from "@/hooks/use-backend-crud"
 
 type CategoryFormData = {
   name: string
@@ -35,7 +35,7 @@ export function CategoryCreateDialog({
   parentCategories = [],
   onSuccess
 }: CategoryCreateDialogProps) {
-  const { create, loading } = usePocketBaseCrud({
+  const { create, loading } = useBackendCrud({
     collectionName: "drug_categories",
     onSuccess: () => {
       onOpenChange(false)

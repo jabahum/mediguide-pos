@@ -1,8 +1,8 @@
 import { z } from "zod"
-import { RolesResponse } from "@/types/pocketbase-types"
+import { RolesResponse } from "@/types/backend-types"
 
 /**
- * Role type from PocketBase
+ * Role type from legacy collection API
  */
 export type Role = RolesResponse
 

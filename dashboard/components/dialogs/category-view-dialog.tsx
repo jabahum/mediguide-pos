@@ -11,7 +11,7 @@ import {
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Label } from "@/components/ui/label"
-import { DrugCategoriesResponse } from "@/types/pocketbase-types"
+import { DrugCategoriesResponse } from "@/types/backend-types"
 import { formatDistanceToNow } from "date-fns"
 
 interface CategoryViewDialogProps {

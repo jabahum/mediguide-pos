@@ -4,13 +4,13 @@ import 'package:infinite_scroll_pagination/infinite_scroll_pagination.dart';
 
 import '../../data/models/models.dart';
 import '../../data/models/filter_models.dart';
-import '../../data/services/pocketbase_service.dart';
+import '../../data/services/backend_api_service.dart';
 import '../../utils/common.dart';
 import '../../utils/constants.dart';
 import '../../widgets/generic_filter_bottom_sheet.dart';
 
 class ToolsController extends GetxController {
-  final PocketBaseService _pbService = PocketBaseService.to;
+  final BackendApiService _apiService = BackendApiService.to;
 
   late final PagingController<int, Calculator> pagingController;
 
@@ -54,7 +54,7 @@ class ToolsController extends GetxController {
     try {
       final filter = _buildFilter();
 
-      final result = await _pbService.getRecordList(
+      final result = await _apiService.getRecordList(
         collectionName: Calculator.collection,
         page: page,
         perPage: pageSize,
@@ -78,7 +78,7 @@ class ToolsController extends GetxController {
 
     // search
     if (searchQuery.value.isNotEmpty) {
-      final q = PocketBaseService.escapeFilterValue(searchQuery.value);
+      final q = BackendApiService.escapeFilterValue(searchQuery.value);
       parts.add('(name ~ "$q" || description ~ "$q")');
     }
 
@@ -242,7 +242,7 @@ class ToolsController extends GetxController {
     String? sort,
     String? expand,
   }) async {
-    final result = await _pbService.getRecordList(
+    final result = await _apiService.getRecordList(
       collectionName: Calculator.collection,
       page: page,
       perPage: perPage,

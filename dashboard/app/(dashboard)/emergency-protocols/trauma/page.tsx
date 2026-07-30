@@ -27,9 +27,9 @@ import {
   Loader2,
   ArrowLeft
 } from "lucide-react"
-import { pb } from "@/lib/pocketbase"
-import { Collections } from "@/types/pocketbase-types"
-import type { EmergencyProtocolsResponse } from "@/types/pocketbase-types"
+import { backendClient } from "@/lib/backend-client"
+import { Collections } from "@/types/backend-types"
+import type { EmergencyProtocolsResponse } from "@/types/backend-types"
 import { showToast } from "@/lib/toast"
 import { useRouter } from "next/navigation"
 import { usePermissionContext } from "@/lib/permission-context"
@@ -56,7 +56,7 @@ export default function TraumaProtocolsPage() {
 
   const fetchTraumaProtocols = async () => {
     try {
-      const result = await pb.collection(Collections.EmergencyProtocols).getList(1, 50, {
+      const result = await backendClient.collection(Collections.EmergencyProtocols).getList(1, 50, {
         filter: "category = 'Trauma' && status = 'active'",
         sort: "priority"
       })

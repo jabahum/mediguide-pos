@@ -20,14 +20,14 @@ import {
 } from "lucide-react"
 import { useCallback, useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
-import { pb } from "@/lib/pocketbase"
+import { backendClient } from "@/lib/backend-client"
 import {
   Collections,
   CalculatorsStatusOptions,
   CalculatorsTypeOptions,
   CalculatorsCategoryOptions,
-} from "@/types/pocketbase-types"
-import type { CalculatorsResponse } from "@/types/pocketbase-types"
+} from "@/types/backend-types"
+import type { CalculatorsResponse } from "@/types/backend-types"
 import { showToast } from "@/lib/toast"
 import { formatDistanceToNow } from "date-fns"
 import * as React from "react"
@@ -65,7 +65,7 @@ export default function ChecklistsPage() {
   const fetchChecklists = useCallback(async () => {
     try {
       setIsFetching(true)
-      const result = await pb.collection(Collections.Calculators).getList(1, 100, {
+      const result = await backendClient.collection(Collections.Calculators).getList(1, 100, {
         filter: `type = "${CalculatorsTypeOptions.checklist}"`,
         sort: "-updated",
       })

@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import type { CSSProperties } from "react";
 import { ThemeProvider } from "@/components/theme-provider";
-import { PocketBaseInit } from "@/components/pocketbase-init";
+import { BackendClientInit } from "@/components/backend-client-init";
 import { Toaster } from "@/components/ui/sonner";
 import { QueryProvider } from "@/components/query-provider";
 import "./globals.css";
@@ -34,7 +34,7 @@ export default function RootLayout({
           disableTransitionOnChange
         >
           <QueryProvider>
-            <PocketBaseInit />
+            <BackendClientInit />
             {children}
             <Toaster />
           </QueryProvider>

@@ -8,7 +8,7 @@ import '../../utils/app_spacing.dart';
 import '../../utils/common.dart';
 import '../../utils/responsive.dart';
 import '../../widgets/app_button.dart';
-import '../../data/services/pocketbase_service.dart';
+import '../../data/services/backend_api_service.dart';
 import '../../translations/app_translations.dart';
 
 /// Controller for password change bottom sheet
@@ -30,7 +30,7 @@ class ChangePasswordController extends GetxController {
 
       final formValues = formKey.currentState!.value;
 
-      await PocketBaseService.to.changePassword(
+      await BackendApiService.to.changePassword(
         currentPassword: formValues['currentPassword']?.toString() ?? '',
         newPassword: formValues['newPassword']?.toString() ?? '',
         newPasswordConfirm: formValues['confirmPassword']?.toString() ?? '',

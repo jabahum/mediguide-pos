@@ -1,6 +1,6 @@
 /**
  * Backup management type definitions
- * Based on PocketBase backup API endpoints
+ * Based on legacy collection API backup API endpoints
  */
 
 export interface BackupFile {

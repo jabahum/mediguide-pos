@@ -4,18 +4,9 @@ const String _configuredApiBaseUrl = String.fromEnvironment(
   'MEDIGUIDE_API_BASE_URL',
   defaultValue: '',
 );
-const String _configuredPocketbaseUrl = String.fromEnvironment(
-  'MEDIGUIDE_POCKETBASE_URL',
-  defaultValue: '',
-);
-
 final String mediguideApiBaseUrl = _configuredApiBaseUrl.isNotEmpty
     ? _configuredApiBaseUrl
-    : _configuredPocketbaseUrl.isNotEmpty
-    ? _configuredPocketbaseUrl
     : _defaultLocalApiBaseUrl();
-
-final String pocketbaseUrl = mediguideApiBaseUrl;
 
 String _defaultLocalApiBaseUrl() {
   if (kIsWeb) {

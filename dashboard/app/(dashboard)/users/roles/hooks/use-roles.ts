@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect, useCallback, useMemo } from "react"
-import { getPB } from "@/lib/pocketbase"
+import { getBackendClient } from "@/lib/backend-client"
 import { showToast } from "@/lib/toast"
 import { 
   Role, 
@@ -24,7 +24,7 @@ export function useRoles(): UseRolesReturn {
   })
   const [error, setError] = useState<Error | null>(null)
 
-  const pb = useMemo(() => getPB(), [])
+  const pb = useMemo(() => getBackendClient(), [])
 
   // Fetch all roles
   const fetchRoles = useCallback(async () => {

@@ -1,13 +1,17 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import { Badge } from "@/components/ui/badge"
-import { DataTableColumnHeader } from "@/components/ui/datatable-column-header"
-import { ExtendedColumnDef } from "@/types/data-table"
-import { DecisionToolWithRelations } from "./types"
-import { getAppFileLabel } from "./app-file"
-import { CalculatorsTypeOptions, CalculatorsStatusOptions } from "@/types/pocketbase-types"
-import { Calculator, Brain, CheckSquare } from "lucide-react"
+import * as React from "react";
+import { Badge } from "@/components/ui/badge";
+import { DataTableColumnHeader } from "@/components/ui/datatable-column-header";
+import { ExtendedColumnDef } from "@/types/data-table";
+import { DecisionToolWithRelations } from "./types";
+import { getAppFileLabel } from "./app-file";
+
+import {
+  CalculatorsTypeOptions,
+  CalculatorsStatusOptions,
+} from "@/types/backend-types";
+import { Calculator, Brain, CheckSquare } from "lucide-react";
 
 /**
  * Get icon component for decision tool type
@@ -15,15 +19,15 @@ import { Calculator, Brain, CheckSquare } from "lucide-react"
 const getTypeIcon = (type: CalculatorsTypeOptions) => {
   switch (type) {
     case CalculatorsTypeOptions.calculator:
-      return <Calculator className="h-4 w-4" />
+      return <Calculator className="h-4 w-4" />;
     case CalculatorsTypeOptions.decision_tool:
-      return <Brain className="h-4 w-4" />
+      return <Brain className="h-4 w-4" />;
     case CalculatorsTypeOptions.checklist:
-      return <CheckSquare className="h-4 w-4" />
+      return <CheckSquare className="h-4 w-4" />;
     default:
-      return <Calculator className="h-4 w-4" />
+      return <Calculator className="h-4 w-4" />;
   }
-}
+};
 
 /**
  * Get badge variant for status
@@ -31,15 +35,15 @@ const getTypeIcon = (type: CalculatorsTypeOptions) => {
 const getStatusVariant = (status: CalculatorsStatusOptions) => {
   switch (status) {
     case CalculatorsStatusOptions.active:
-      return "default"
+      return "default";
     case CalculatorsStatusOptions.draft:
-      return "secondary"
+      return "secondary";
     case CalculatorsStatusOptions.archived:
-      return "destructive"
+      return "destructive";
     default:
-      return "secondary"
+      return "secondary";
   }
-}
+};
 
 /**
  * Get badge variant for type
@@ -47,15 +51,15 @@ const getStatusVariant = (status: CalculatorsStatusOptions) => {
 const getTypeVariant = (type: CalculatorsTypeOptions) => {
   switch (type) {
     case CalculatorsTypeOptions.calculator:
-      return "default"
+      return "default";
     case CalculatorsTypeOptions.decision_tool:
-      return "secondary"
+      return "secondary";
     case CalculatorsTypeOptions.checklist:
-      return "outline"
+      return "outline";
     default:
-      return "secondary"
+      return "secondary";
   }
-}
+};
 
 export const columns: ExtendedColumnDef<DecisionToolWithRelations>[] = [
   // ESSENTIAL COLUMNS (Always Visible)
@@ -71,20 +75,16 @@ export const columns: ExtendedColumnDef<DecisionToolWithRelations>[] = [
       />
     ),
     cell: ({ row }) => {
-      const name = row.getValue("name") as string
-      const type = row.original.type
-      const icon = row.original.icon
-      
+      const name = row.getValue("name") as string;
+      const type = row.original.type;
+      const icon = row.original.icon;
+
       return (
         <div className="flex items-center gap-2 font-medium">
-          {icon ? (
-            <span className="text-lg">{icon}</span>
-          ) : (
-            getTypeIcon(type)
-          )}
+          {icon ? <span className="text-lg">{icon}</span> : getTypeIcon(type)}
           <span>{name}</span>
         </div>
-      )
+      );
     },
   },
   {
@@ -99,21 +99,30 @@ export const columns: ExtendedColumnDef<DecisionToolWithRelations>[] = [
         filterOptions={[
           { label: "Calculator", value: "calculator" },
           { label: "Decision Tool", value: "decision_tool" },
-          { label: "Checklist", value: "checklist" }
+          { label: "Checklist", value: "checklist" },
         ]}
       />
     ),
     cell: ({ row }) => {
-      const type = row.getValue("type") as CalculatorsTypeOptions
-      const displayType = type === CalculatorsTypeOptions.decision_tool 
-        ? "Decision Tool" 
-        : type.charAt(0).toUpperCase() + type.slice(1)
-      
+      const type = row.getValue("type") as CalculatorsTypeOptions;
+      const displayType =
+        type === CalculatorsTypeOptions.decision_tool
+          ? "Decision Tool"
+          : type.charAt(0).toUpperCase() + type.slice(1);
+
       return (
-        <Badge variant={getTypeVariant(type) as "default" | "secondary" | "destructive" | "outline"}>
+        <Badge
+          variant={
+            getTypeVariant(type) as
+              | "default"
+              | "secondary"
+              | "destructive"
+              | "outline"
+          }
+        >
           {displayType}
         </Badge>
-      )
+      );
     },
   },
   {
@@ -128,19 +137,27 @@ export const columns: ExtendedColumnDef<DecisionToolWithRelations>[] = [
         filterOptions={[
           { label: "Active", value: "active" },
           { label: "Draft", value: "draft" },
-          { label: "Archived", value: "archived" }
+          { label: "Archived", value: "archived" },
         ]}
       />
     ),
     cell: ({ row }) => {
-      const status = row.getValue("status") as CalculatorsStatusOptions
-      const displayStatus = status.charAt(0).toUpperCase() + status.slice(1)
-      
+      const status = row.getValue("status") as CalculatorsStatusOptions;
+      const displayStatus = status.charAt(0).toUpperCase() + status.slice(1);
+
       return (
-        <Badge variant={getStatusVariant(status) as "default" | "secondary" | "destructive" | "outline"}>
+        <Badge
+          variant={
+            getStatusVariant(status) as
+              | "default"
+              | "secondary"
+              | "destructive"
+              | "outline"
+          }
+        >
           {displayStatus}
         </Badge>
-      )
+      );
     },
   },
   {
@@ -155,14 +172,14 @@ export const columns: ExtendedColumnDef<DecisionToolWithRelations>[] = [
       />
     ),
     cell: ({ row }) => {
-      const description = row.getValue("description") as string
+      const description = row.getValue("description") as string;
       return description ? (
         <div className="max-w-xs truncate text-sm" title={description}>
           {description}
         </div>
       ) : (
         <span className="text-muted-foreground">—</span>
-      )
+      );
     },
   },
 
@@ -180,14 +197,14 @@ export const columns: ExtendedColumnDef<DecisionToolWithRelations>[] = [
       />
     ),
     cell: ({ row }) => {
-      const version = row.getValue("version") as string
+      const version = row.getValue("version") as string;
       return version ? (
         <Badge variant="outline" className="font-mono text-xs">
           v{version}
         </Badge>
       ) : (
         <span className="text-muted-foreground">—</span>
-      )
+      );
     },
   },
   {
@@ -203,30 +220,26 @@ export const columns: ExtendedColumnDef<DecisionToolWithRelations>[] = [
       />
     ),
     cell: ({ row }) => {
-      const appFile = getAppFileLabel(row.getValue("appFile"))
+      const appFile = getAppFileLabel(row.getValue("appFile"));
       return appFile ? (
         <div className="max-w-xs truncate font-mono text-xs" title={appFile}>
           {appFile}
         </div>
       ) : (
         <span className="text-muted-foreground">—</span>
-      )
+      );
     },
   },
-  
+
   // VISUAL PROPERTIES (Hidden by default)
   {
     accessorKey: "color",
     defaultVisible: false,
     header: ({ column }) => (
-      <DataTableColumnHeader
-        column={column}
-        title="Color"
-        canSort={false}
-      />
+      <DataTableColumnHeader column={column} title="Color" canSort={false} />
     ),
     cell: ({ row }) => {
-      const color = row.getValue("color") as string
+      const color = row.getValue("color") as string;
       return color ? (
         <div className="flex items-center gap-2">
           <div
@@ -238,7 +251,7 @@ export const columns: ExtendedColumnDef<DecisionToolWithRelations>[] = [
         </div>
       ) : (
         <span className="text-muted-foreground">—</span>
-      )
+      );
     },
   },
   {
@@ -252,7 +265,7 @@ export const columns: ExtendedColumnDef<DecisionToolWithRelations>[] = [
       />
     ),
     cell: ({ row }) => {
-      const bgColor = row.getValue("backgroundColor") as string
+      const bgColor = row.getValue("backgroundColor") as string;
       return bgColor ? (
         <div className="flex items-center gap-2">
           <div
@@ -264,7 +277,7 @@ export const columns: ExtendedColumnDef<DecisionToolWithRelations>[] = [
         </div>
       ) : (
         <span className="text-muted-foreground">—</span>
-      )
+      );
     },
   },
 
@@ -272,34 +285,30 @@ export const columns: ExtendedColumnDef<DecisionToolWithRelations>[] = [
   {
     id: "addedBy",
     header: ({ column }) => (
-      <DataTableColumnHeader
-        column={column}
-        title="Added By"
-        canSort={false}
-      />
+      <DataTableColumnHeader column={column} title="Added By" canSort={false} />
     ),
     accessorFn: (row) => {
-      const addedBy = row.expand?.addedBy
+      const addedBy = row.expand?.addedBy;
       if (Array.isArray(addedBy) && addedBy.length > 0) {
-        return addedBy.map(user => user.name || user.email).join(", ")
+        return addedBy.map((user) => user.name || user.email).join(", ");
       }
-      return ""
+      return "";
     },
     cell: ({ row }) => {
-      const addedBy = row.original.expand?.addedBy
+      const addedBy = row.original.expand?.addedBy;
       if (Array.isArray(addedBy) && addedBy.length > 0) {
-        const names = addedBy.map(user => user.name || user.email)
+        const names = addedBy.map((user) => user.name || user.email);
         if (names.length === 1) {
-          return <span className="text-sm">{names[0]}</span>
+          return <span className="text-sm">{names[0]}</span>;
         } else {
           return (
             <span className="text-sm" title={names.join(", ")}>
               {names[0]} +{names.length - 1}
             </span>
-          )
+          );
         }
       }
-      return <span className="text-muted-foreground">—</span>
+      return <span className="text-muted-foreground">—</span>;
     },
     defaultVisible: false,
   },
@@ -318,14 +327,14 @@ export const columns: ExtendedColumnDef<DecisionToolWithRelations>[] = [
       />
     ),
     cell: ({ row }) => {
-      const date = row.getValue("created") as string
+      const date = row.getValue("created") as string;
       return date ? (
         <span className="text-xs text-muted-foreground">
           {new Date(date).toLocaleDateString()}
         </span>
       ) : (
         <span className="text-muted-foreground">—</span>
-      )
+      );
     },
   },
   {
@@ -341,17 +350,17 @@ export const columns: ExtendedColumnDef<DecisionToolWithRelations>[] = [
       />
     ),
     cell: ({ row }) => {
-      const date = row.getValue("updated") as string
+      const date = row.getValue("updated") as string;
       return date ? (
         <span className="text-xs text-muted-foreground">
           {new Date(date).toLocaleDateString()}
         </span>
       ) : (
         <span className="text-muted-foreground">—</span>
-      )
+      );
     },
   },
-]
+];
 
 // Re-export the type for use in other files
-export type { DecisionToolWithRelations }
+export type { DecisionToolWithRelations };

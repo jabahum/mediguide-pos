@@ -1,7 +1,7 @@
 import { ColumnDef } from "@tanstack/react-table"
 import { LucideIcon } from "lucide-react"
 
-// Base record type that all PocketBase records extend
+// Base shape shared by records returned from the backend compatibility API.
 export interface BaseRecord {
   id: string
   created: string
@@ -30,7 +30,7 @@ export interface FieldOption {
   /** Static options for select-type fields */
   options?: FilterOption[]
   /**
-   * Dynamic options sourced from a PocketBase collection. Use this for
+   * Dynamic options sourced from a backend collection. Use this for
    * relation fields so the filter UI shows human-readable labels while the
    * underlying filter value remains the related record id.
    */
@@ -136,8 +136,8 @@ export interface BulkAction<TData = BaseRecord> {
 // Simplified Export types
 export type ExportFormat = 'csv' | 'json' | 'xlsx'
 
-// Simplified PocketBase options
-export interface PocketBaseOptions {
+// Query options supported by the temporary collection compatibility API.
+export interface BackendQueryOptions {
   expand?: string
   filter?: string
   sort?: string
@@ -154,7 +154,7 @@ export interface UIOptions {
 }
 
 // Main DataTable props - SIMPLIFIED
-export interface PocketBaseDataTableProps<TData = BaseRecord> {
+export interface BackendDataTableProps<TData = BaseRecord> {
   // Core required
   collection: string
   columns: ColumnDef<TData>[]
@@ -170,8 +170,8 @@ export interface PocketBaseDataTableProps<TData = BaseRecord> {
   // Filtering (explicit)
   availableFields?: FieldOption[]
 
-  // PocketBase options (grouped, realtime always enabled)
-  pocketbase?: PocketBaseOptions
+  // Backend collection query options
+  query?: BackendQueryOptions
   refreshSignal?: number | string
 
   // UI options (grouped)
@@ -184,7 +184,7 @@ export interface PocketBaseDataTableProps<TData = BaseRecord> {
 }
 
 // Legacy interface for backward compatibility
-export interface EnhancedPocketBaseDataTableProps<TData = BaseRecord> {
+export interface EnhancedBackendDataTableProps<TData = BaseRecord> {
   // Required
   columns: ColumnDef<TData>[]
 
@@ -192,7 +192,7 @@ export interface EnhancedPocketBaseDataTableProps<TData = BaseRecord> {
   collection?: string
   collectionName?: string // fallback to this if collection not provided
 
-  // Legacy PocketBase settings
+  // Legacy collection query settings
   expand?: string
   filter?: string
   sort?: string
@@ -284,13 +284,13 @@ export interface TableError {
 }
 
 // Simplified hook interface
-export interface UsePocketBaseTableConfig<TData = BaseRecord> {
+export interface UseBackendTableConfig<TData = BaseRecord> {
   collection: string
   searchFields?: string[]
   rowActions?: RowAction<TData>[]
   bulkActions?: BulkAction<TData>[]
   availableFields?: FieldOption[]
-  pocketbase?: PocketBaseOptions
+  query?: BackendQueryOptions
   refreshSignal?: number | string
   ui?: UIOptions
   onRowClick?: (row: TData) => void
@@ -299,7 +299,7 @@ export interface UsePocketBaseTableConfig<TData = BaseRecord> {
 }
 
 // Hook return type (compatible with legacy usage)
-export interface UsePocketBaseTableReturn<TData = BaseRecord> {
+export interface UseBackendTableReturn<TData = BaseRecord> {
   // Data
   data: TData[]
   totalItems: number

@@ -2,7 +2,7 @@ import { FieldOption } from "@/types/data-table"
 
 /**
  * Available fields for consultants table advanced filtering
- * Based on PocketBase consultants collection schema
+ * Based on legacy collection API consultants collection schema
  */
 export const consultantsAvailableFields: FieldOption[] = [
   // Basic Information
@@ -46,7 +46,7 @@ export const consultantsAvailableFields: FieldOption[] = [
   { label: "Updated", value: "updated", type: "date" },
 ]
 
-// Specialty options for filtering (matches PocketBase schema)
+// Specialty options for filtering (matches legacy collection API schema)
 export const SpecialtyFilterOptions = [
   "General Practice",
   "Internal Medicine",
@@ -77,7 +77,7 @@ export const SpecialtyFilterOptions = [
   "Other"
 ]
 
-// Qualification options for filtering (matches PocketBase schema)
+// Qualification options for filtering (matches legacy collection API schema)
 export const QualificationFilterOptions = [
   "MD",
   "MBBS", 
@@ -99,7 +99,7 @@ export const QualificationFilterOptions = [
   "Other"
 ]
 
-// Language options for filtering (matches PocketBase schema)
+// Language options for filtering (matches legacy collection API schema)
 export const LanguageFilterOptions = [
   "English",
   "French",
@@ -111,7 +111,7 @@ export const LanguageFilterOptions = [
   "Other"
 ]
 
-// Consultation type options for filtering (matches PocketBase schema)
+// Consultation type options for filtering (matches legacy collection API schema)
 export const ConsultationTypeFilterOptions = [
   "In-Person",
   "Telemedicine",
@@ -125,7 +125,7 @@ export const ConsultationTypeFilterOptions = [
   "Health Education"
 ]
 
-// Status options for filtering (matches PocketBase schema)
+// Status options for filtering (matches legacy collection API schema)
 export const StatusFilterOptions = [
   { label: "Active", value: "active" },
   { label: "Inactive", value: "inactive" },

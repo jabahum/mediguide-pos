@@ -1,9 +1,9 @@
 /**
  * Extended types for Generic Pages functionality
- * Builds on top of PocketBase generated types
+ * Builds on top of legacy collection API generated types
  */
 
-import type { GenericPagesRecord, GenericPagesResponse } from "@/types/pocketbase-types"
+import type { GenericPagesRecord, GenericPagesResponse } from "@/types/backend-types"
 
 // Content structure for the JSON field
 export interface GenericPageContent {

@@ -2,39 +2,39 @@
 
 import { useState, useCallback } from "react"
 import { useQueryClient } from "@tanstack/react-query"
-import { getPB } from "@/lib/pocketbase"
+import { getBackendClient } from "@/lib/backend-client"
 import { showToast } from "@/lib/toast"
-import { pbRecordKeyPrefix } from "@/hooks/use-pb-record"
+import { backendRecordKeyPrefix } from "@/hooks/use-backend-record"
 
-interface UsePocketBaseCrudOptions {
+interface UseBackendCrudOptions {
   collectionName: string
   onSuccess?: () => void
   onError?: (error: any) => void
 }
 
-export function usePocketBaseCrud({
+export function useBackendCrud({
   collectionName,
   onSuccess,
   onError
-}: UsePocketBaseCrudOptions) {
+}: UseBackendCrudOptions) {
   const [loading, setLoading] = useState(false)
-  const pb = getPB()
+  const backendClient = getBackendClient()
   const queryClient = useQueryClient()
 
   const invalidateList = useCallback(() => {
-    return queryClient.invalidateQueries({ queryKey: ["pb", collectionName] })
+    return queryClient.invalidateQueries({ queryKey: ["backend", collectionName] })
   }, [queryClient, collectionName])
 
   const invalidateRecord = useCallback(
     (id: string) =>
-      queryClient.invalidateQueries({ queryKey: pbRecordKeyPrefix(collectionName, id) }),
+      queryClient.invalidateQueries({ queryKey: backendRecordKeyPrefix(collectionName, id) }),
     [queryClient, collectionName]
   )
 
   const create = useCallback(async (data: any) => {
     setLoading(true)
     try {
-      const record = await pb.collection(collectionName).create(data)
+      const record = await backendClient.collection(collectionName).create(data)
       await invalidateList()
       showToast.success("Success", "Record created successfully")
       onSuccess?.()
@@ -47,12 +47,12 @@ export function usePocketBaseCrud({
     } finally {
       setLoading(false)
     }
-  }, [pb, collectionName, onSuccess, onError, invalidateList])
+  }, [backendClient, collectionName, onSuccess, onError, invalidateList])
 
   const update = useCallback(async (id: string, data: any) => {
     setLoading(true)
     try {
-      const record = await pb.collection(collectionName).update(id, data)
+      const record = await backendClient.collection(collectionName).update(id, data)
       await Promise.all([invalidateRecord(id), invalidateList()])
       showToast.success("Success", "Record updated successfully")
       onSuccess?.()
@@ -65,12 +65,12 @@ export function usePocketBaseCrud({
     } finally {
       setLoading(false)
     }
-  }, [pb, collectionName, onSuccess, onError, invalidateRecord, invalidateList])
+  }, [backendClient, collectionName, onSuccess, onError, invalidateRecord, invalidateList])
 
   const deleteRecord = useCallback(async (id: string) => {
     setLoading(true)
     try {
-      await pb.collection(collectionName).delete(id)
+      await backendClient.collection(collectionName).delete(id)
       await Promise.all([invalidateRecord(id), invalidateList()])
       showToast.success("Success", "Record deleted successfully")
       onSuccess?.()
@@ -83,12 +83,12 @@ export function usePocketBaseCrud({
     } finally {
       setLoading(false)
     }
-  }, [pb, collectionName, onSuccess, onError, invalidateRecord, invalidateList])
+  }, [backendClient, collectionName, onSuccess, onError, invalidateRecord, invalidateList])
 
   const getOne = useCallback(async (id: string, options?: any) => {
     setLoading(true)
     try {
-      const record = await pb.collection(collectionName).getOne(id, options)
+      const record = await backendClient.collection(collectionName).getOne(id, options)
       return record
     } catch (error: any) {
       console.error(`Failed to get ${collectionName}:`, error)
@@ -98,12 +98,12 @@ export function usePocketBaseCrud({
     } finally {
       setLoading(false)
     }
-  }, [pb, collectionName, onError])
+  }, [backendClient, collectionName, onError])
 
   const getList = useCallback(async (page = 1, perPage = 50, options?: any) => {
     setLoading(true)
     try {
-      const records = await pb.collection(collectionName).getList(page, perPage, options)
+      const records = await backendClient.collection(collectionName).getList(page, perPage, options)
       return records
     } catch (error: any) {
       console.error(`Failed to list ${collectionName}:`, error)
@@ -112,7 +112,7 @@ export function usePocketBaseCrud({
     } finally {
       setLoading(false)
     }
-  }, [pb, collectionName, onError])
+  }, [backendClient, collectionName, onError])
 
   return {
     create,

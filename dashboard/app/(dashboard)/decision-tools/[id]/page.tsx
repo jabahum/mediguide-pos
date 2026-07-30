@@ -9,9 +9,9 @@ import { Label } from "@/components/ui/label"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { DecisionToolWithRelations } from "../types"
-import { CalculatorsStatusOptions, CalculatorsTypeOptions } from "@/types/pocketbase-types"
-import { getPB } from "@/lib/pocketbase"
-import { usePbRecord } from "@/hooks/use-pb-record"
+import { CalculatorsStatusOptions, CalculatorsTypeOptions } from "@/types/backend-types"
+import { getBackendClient } from "@/lib/backend-client"
+import { useBackendRecord } from "@/hooks/use-backend-record"
 import { formatDistanceToNow } from "date-fns"
 import { Edit, Copy, Trash2, Play, Calculator, Brain, CheckSquare, Info, Settings, Activity, Calendar } from "lucide-react"
 import { usePermissionContext } from "@/lib/permission-context"
@@ -46,7 +46,7 @@ export default function DecisionToolViewPage({ params }: DecisionToolViewPagePro
     }
   }
 
-  const { record: tool, loading, error } = usePbRecord<DecisionToolWithRelations>(
+  const { record: tool, loading, error } = useBackendRecord<DecisionToolWithRelations>(
     "calculators",
     id,
     { expand: "addedBy" }
@@ -68,7 +68,7 @@ export default function DecisionToolViewPage({ params }: DecisionToolViewPagePro
   const handleDelete = async () => {
     if (window.confirm("Are you sure you want to delete this decision tool? This action cannot be undone.")) {
       try {
-        const pb = getPB()
+        const pb = getBackendClient()
         await pb.collection("calculators").delete(id)
         router.push(getListPath(tool?.type))
       } catch (error) {

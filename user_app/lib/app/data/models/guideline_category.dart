@@ -1,14 +1,14 @@
 // ignore_for_file: unused_field
 
-import 'package:pocketbase/pocketbase.dart';
+import 'package:user_app/app/data/models/api_record.dart';
 import '../enums/common_enums.dart';
 import 'base_model.dart';
 
-/// Guideline category model based on PocketBase guideline_categories collection
+/// Guideline category model based on legacy collection API guideline_categories collection
 class GuidelineCategory extends BaseModel {
   GuidelineCategory(super.data);
 
-  /// PocketBase collection name
+  /// legacy collection API collection name
   static const String collection = 'guideline_categories';
 
   // Self-registration for dynamic model creation
@@ -17,8 +17,8 @@ class GuidelineCategory extends BaseModel {
     return true;
   })();
 
-  /// Create GuidelineCategory from PocketBase record
-  static GuidelineCategory fromRecord(RecordModel record) =>
+  /// Create GuidelineCategory from legacy collection API record
+  static GuidelineCategory fromRecord(ApiRecord record) =>
       GuidelineCategory(record.data);
 
   /// Create JSON for new guideline category record (excludes system fields)
@@ -64,7 +64,7 @@ class GuidelineCategory extends BaseModel {
   GuidelineCategory? _getParentCategory() {
     final parentData = get<Map<String, dynamic>>("expand.parent_category");
     if (parentData.isEmpty) return null;
-    return GuidelineCategory.fromRecord(RecordModel(parentData));
+    return GuidelineCategory.fromRecord(ApiRecord(parentData));
   }
 
   /// Check if this category has a parent

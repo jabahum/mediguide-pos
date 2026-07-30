@@ -1,6 +1,6 @@
 "use client"
 
-import { getPB } from "@/lib/pocketbase"
+import { getBackendClient } from "@/lib/backend-client"
 
 export interface GuidelineVersionRecord {
   id: string
@@ -106,7 +106,7 @@ function normalizeDocument(document: GuidelineDocumentRecord): GuidelineDocument
 
 export class GuidelineDocumentsService {
   static async listDocuments(programArea?: string): Promise<GuidelineDocumentsPage> {
-    const pb = getPB()
+    const pb = getBackendClient()
     const data = await pb.send<GuidelineDocumentsPage>("/api/v2/guidelines", {
       method: "GET",
       query: {
@@ -126,7 +126,7 @@ export class GuidelineDocumentsService {
     documentId: string,
     payload: CreateGuidelineVersionInput
   ): Promise<GuidelineVersionRecord> {
-    const pb = getPB()
+    const pb = getBackendClient()
     return pb.send<GuidelineVersionRecord>(`/api/v2/guidelines/${documentId}/versions`, {
       method: "POST",
       body: JSON.stringify(payload),
@@ -134,7 +134,7 @@ export class GuidelineDocumentsService {
   }
 
   static async getDocument(documentId: string): Promise<GuidelineDocumentRecord> {
-    const pb = getPB()
+    const pb = getBackendClient()
     const document = await pb.send<GuidelineDocumentRecord>(`/api/v2/guidelines/${documentId}`, {
       method: "GET",
     })
@@ -145,7 +145,7 @@ export class GuidelineDocumentsService {
     versionId: string,
     file: File
   ): Promise<IngestionJobRecord> {
-    const pb = getPB()
+    const pb = getBackendClient()
     const formData = new FormData()
     formData.append("file", file)
 
@@ -156,7 +156,7 @@ export class GuidelineDocumentsService {
   }
 
   static async publishVersion(versionId: string): Promise<{ published: boolean }> {
-    const pb = getPB()
+    const pb = getBackendClient()
     return pb.send<{ published: boolean }>(`/api/v2/guideline-versions/${versionId}/publish`, {
       method: "POST",
     })

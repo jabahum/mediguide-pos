@@ -2,7 +2,7 @@ import { FieldOption } from "@/types/data-table"
 
 /**
  * Available fields for abbreviations table advanced filtering
- * Based on PocketBase abbreviations schema
+ * Based on legacy collection API abbreviations schema
  */
 export const abbreviationsAvailableFields: FieldOption[] = [
   // Basic Information

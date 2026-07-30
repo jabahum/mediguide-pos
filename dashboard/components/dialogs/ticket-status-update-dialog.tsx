@@ -34,7 +34,7 @@ import { Badge } from "@/components/ui/badge"
 
 import { SupportTicketsService } from "@/services/support-tickets.service"
 import type { SupportTicketsWithExpanded } from "@/types/expanded"
-import type { SupportTicketsStatusOptions, SupportTicketsPriorityOptions } from "@/types/pocketbase-types"
+import type { SupportTicketsStatusOptions, SupportTicketsPriorityOptions } from "@/types/backend-types"
 import { TICKET_STATUS_CONFIG, TICKET_PRIORITY_CONFIG } from "@/types/support-tickets"
 import { showToast } from "@/lib/toast"
 

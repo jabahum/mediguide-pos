@@ -7,9 +7,8 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { getPB } from "@/lib/pocketbase"
+import { getBackendClient } from "@/lib/backend-client"
 import { showToast } from "@/lib/toast"
-// import { RecordModel } from "pocketbase"
 
 interface CreateDrugClassDialogProps {
   open: boolean
@@ -31,7 +30,7 @@ export function CreateDrugClassDialog({ open, onOpenChange, onSuccess }: CreateD
     setLoading(true)
 
     try {
-      const pb = getPB()
+      const pb = getBackendClient()
       const drugClass = await pb.collection("drug_classes").create(formData)
       
       showToast.success("Success", "Drug class created successfully")

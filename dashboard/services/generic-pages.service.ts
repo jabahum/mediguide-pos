@@ -3,14 +3,14 @@
  * Handles all database interactions for the generic_pages collection
  */
 
-import { getPB } from "@/lib/pocketbase"
+import { getBackendClient } from "@/lib/backend-client"
 import type {
   TypedGenericPagesRecord,
   TypedGenericPagesResponse,
   GenericPageContent,
   GenericPageContentCollection
 } from "@/types/generic-pages"
-import { Collections } from "@/types/pocketbase-types"
+import { Collections } from "@/types/backend-types"
 
 export class GenericPagesService {
   /**
@@ -18,7 +18,7 @@ export class GenericPagesService {
    */
   static async getPageByKey(pageKey: string): Promise<TypedGenericPagesResponse | null> {
     try {
-      const pb = getPB()
+      const pb = getBackendClient()
 
       const records = await pb.collection(Collections.GenericPages).getFullList({
         filter: `key = "${pageKey}"`
@@ -40,7 +40,7 @@ export class GenericPagesService {
     description?: string
   ): Promise<TypedGenericPagesResponse> {
     try {
-      const pb = getPB()
+      const pb = getBackendClient()
 
       const createData = {
         key: key,
@@ -67,7 +67,7 @@ export class GenericPagesService {
     description?: string
   ): Promise<TypedGenericPagesResponse> {
     try {
-      const pb = getPB()
+      const pb = getBackendClient()
 
       // Find the page
       const page = await this.getPageByKey(pageKey)
@@ -97,7 +97,7 @@ export class GenericPagesService {
     content: GenericPageContent
   ): Promise<TypedGenericPagesResponse> {
     try {
-      const pb = getPB()
+      const pb = getBackendClient()
 
       // Find the page
       const page = await this.getPageByKey(pageKey)
@@ -173,7 +173,7 @@ export class GenericPagesService {
     content: GenericPageContent
   ): Promise<TypedGenericPagesResponse> {
     try {
-      const pb = getPB()
+      const pb = getBackendClient()
 
       // Find the page
       const page = await this.getPageByKey(pageKey)
@@ -215,7 +215,7 @@ export class GenericPagesService {
     contentKey: string
   ): Promise<TypedGenericPagesResponse> {
     try {
-      const pb = getPB()
+      const pb = getBackendClient()
 
       // Find the page
       const page = await this.getPageByKey(pageKey)
@@ -312,7 +312,7 @@ export class GenericPagesService {
     content: string
   ): Promise<TypedGenericPagesResponse> {
     try {
-      const pb = getPB()
+      const pb = getBackendClient()
 
       // Find the page
       const page = await this.getPageByKey(pageKey)

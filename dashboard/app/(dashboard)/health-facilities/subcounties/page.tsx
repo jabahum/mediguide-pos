@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation"
 import { usePermissionContext } from "@/lib/permission-context"
 
 import { PageHeader } from "@/components/ui/page-header"
-import { EnhancedPocketBaseDataTable } from "@/components/ui/pocketbase-datatable"
+import { EnhancedBackendDataTable } from "@/components/ui/enhanced-backend-data-table"
 import { SubcountiesWithExpanded } from "@/types/expanded"
 
 import { subcountiesColumns } from "./columns"
@@ -95,7 +95,7 @@ export default function SubcountiesPage() {
         ]}
       />
 
-      <EnhancedPocketBaseDataTable<SubcountiesWithExpanded>
+      <EnhancedBackendDataTable<SubcountiesWithExpanded>
         collectionName="subcounties"
         columns={subcountiesColumns}
         expand="county,district"

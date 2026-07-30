@@ -4,9 +4,9 @@ import * as React from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { PageHeader } from "@/components/ui/page-header"
 import { DecisionToolForm } from "@/components/forms/decision-tool-form"
-import { CalculatorsResponse } from "@/types/pocketbase-types"
-import { usePocketBaseCrud } from "@/hooks/use-pocketbase-crud"
-import { getPB } from "@/lib/pocketbase"
+import { CalculatorsResponse } from "@/types/backend-types"
+import { useBackendCrud } from "@/hooks/use-backend-crud"
+import { getBackendClient } from "@/lib/backend-client"
 import { usePermissionContext } from "@/lib/permission-context"
 
 export default function CreateDecisionToolPage() {
@@ -25,7 +25,7 @@ export default function CreateDecisionToolPage() {
   const [duplicateData, setDuplicateData] = React.useState<CalculatorsResponse | null>(null)
   const [loadingDuplicate, setLoadingDuplicate] = React.useState(!!duplicateId)
 
-  const { create, loading } = usePocketBaseCrud({
+  const { create, loading } = useBackendCrud({
     collectionName: "calculators",
     onSuccess: () => {
       router.push("/decision-tools")
@@ -41,7 +41,7 @@ export default function CreateDecisionToolPage() {
       }
 
       try {
-        const pb = getPB()
+        const pb = getBackendClient()
         const duplicateResult = await pb.collection("calculators").getOne(duplicateId, {
           expand: "addedBy"
         }) as CalculatorsResponse
@@ -59,7 +59,7 @@ export default function CreateDecisionToolPage() {
 
   const handleSubmit = async (data: Record<string, unknown>) => {
     try {
-      const pb = getPB()
+      const pb = getBackendClient()
       const currentUser = pb.authStore.model
       
       if (!currentUser) {

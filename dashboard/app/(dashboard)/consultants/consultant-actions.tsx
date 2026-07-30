@@ -14,7 +14,7 @@ import {
   UserCheck
 } from "lucide-react"
 
-import { getPB } from "@/lib/pocketbase"
+import { getBackendClient } from "@/lib/backend-client"
 import { showToast } from "@/lib/toast"
 import { RowAction, BulkAction } from "@/types/data-table"
 import { Consultant } from "./columns"
@@ -166,7 +166,7 @@ export const consultantBulkActions: BulkAction<Consultant>[] = [
 
 // Action implementations
 async function toggleConsultantStatus(consultant: Consultant): Promise<void> {
-  const pb = getPB()
+  const pb = getBackendClient()
   try {
     const newStatus = consultant.status === 'active' ? 'inactive' : 'active'
     await pb.collection('consultants').update(consultant.id, { status: newStatus })
@@ -183,7 +183,7 @@ async function toggleConsultantStatus(consultant: Consultant): Promise<void> {
 }
 
 async function toggleConsultantVerification(consultant: Consultant): Promise<void> {
-  const pb = getPB()
+  const pb = getBackendClient()
   try {
     const newVerificationStatus = !consultant.isVerified
     await pb.collection('consultants').update(consultant.id, { isVerified: newVerificationStatus })
@@ -217,7 +217,7 @@ async function sendWelcomeEmail(consultant: Consultant): Promise<void> {
 }
 
 async function archiveConsultant(consultant: Consultant): Promise<void> {
-  const pb = getPB()
+  const pb = getBackendClient()
   try {
     await pb.collection('consultants').update(consultant.id, { 
       status: 'inactive',
@@ -236,7 +236,7 @@ async function archiveConsultant(consultant: Consultant): Promise<void> {
 }
 
 async function deleteConsultant(consultant: Consultant): Promise<void> {
-  const pb = getPB()
+  const pb = getBackendClient()
   try {
     await pb.collection('consultants').delete(consultant.id)
     
@@ -253,7 +253,7 @@ async function deleteConsultant(consultant: Consultant): Promise<void> {
 
 // Bulk action implementations
 async function bulkUpdateConsultantStatus(consultants: Consultant[], status: string): Promise<void> {
-  const pb = getPB()
+  const pb = getBackendClient()
   let successCount = 0
   let errorCount = 0
 
@@ -287,7 +287,7 @@ async function bulkUpdateConsultantStatus(consultants: Consultant[], status: str
 }
 
 async function bulkVerifyConsultants(consultants: Consultant[]): Promise<void> {
-  const pb = getPB()
+  const pb = getBackendClient()
   const unverifiedConsultants = consultants.filter(consultant => !consultant.isVerified)
   
   if (unverifiedConsultants.length === 0) {

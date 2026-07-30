@@ -1,6 +1,6 @@
 // ignore_for_file: unused_field
 
-import 'package:pocketbase/pocketbase.dart';
+import 'package:user_app/app/data/models/api_record.dart';
 import 'base_model.dart';
 import 'user.dart';
 
@@ -8,7 +8,7 @@ import 'user.dart';
 class AiUsageLog extends BaseModel {
   AiUsageLog(super.data);
 
-  /// PocketBase collection name
+  /// legacy collection API collection name
   static const String collection = 'ai_usage_logs';
 
   // Self-registration for dynamic model creation
@@ -17,8 +17,8 @@ class AiUsageLog extends BaseModel {
     return true;
   })();
 
-  /// Create AiUsageLog from PocketBase record
-  static AiUsageLog fromRecord(RecordModel record) => AiUsageLog(record.data);
+  /// Create AiUsageLog from legacy collection API record
+  static AiUsageLog fromRecord(ApiRecord record) => AiUsageLog(record.data);
 
   /// Create JSON for new AI usage log record
   static Map<String, dynamic> forCreate({required String userId}) {

@@ -4,7 +4,7 @@ import 'package:get/get.dart';
 import 'package:toastification/toastification.dart';
 import 'package:infinite_scroll_pagination/infinite_scroll_pagination.dart';
 import '../../data/models/models.dart';
-import '../../data/services/pocketbase_service.dart';
+import '../../data/services/backend_api_service.dart';
 import '../../data/services/auth_service.dart';
 import '../../utils/common.dart';
 import '../../utils/constants.dart';
@@ -59,10 +59,10 @@ class HelpCenterController extends GetxController {
   @override
   void onClose() {
     pagingController.dispose();
-    PocketBaseService.to.unsubscribeFromCollection(
+    BackendApiService.to.unsubscribeFromCollection(
       collectionName: 'support_tickets',
     );
-    PocketBaseService.to.unsubscribeFromCollection(
+    BackendApiService.to.unsubscribeFromCollection(
       collectionName: 'support_ticket_replies',
     );
     super.onClose();
@@ -407,7 +407,7 @@ class HelpCenterController extends GetxController {
 
     final combinedFilter = filters.join(' && ');
 
-    final result = await PocketBaseService.to.getRecordList(
+    final result = await BackendApiService.to.getRecordList(
       collectionName: 'support_tickets',
       page: page,
       perPage: perPage,
@@ -433,7 +433,7 @@ class HelpCenterController extends GetxController {
     }
 
     try {
-      final record = await PocketBaseService.to.getRecord(
+      final record = await BackendApiService.to.getRecord(
         collectionName: 'support_tickets',
         recordId: ticketId,
         expand: expand ?? 'user_id',
@@ -478,7 +478,7 @@ class HelpCenterController extends GetxController {
       'user_id': currentUser.id,
     };
 
-    final record = await PocketBaseService.to.createRecord(
+    final record = await BackendApiService.to.createRecord(
       collectionName: 'support_tickets',
       data: ticketData,
     );
@@ -498,7 +498,7 @@ class HelpCenterController extends GetxController {
     await getMyTicketById(ticketId);
 
     // Get replies for this ticket (exclude internal replies)
-    final result = await PocketBaseService.to.getRecordList(
+    final result = await BackendApiService.to.getRecordList(
       collectionName: 'support_ticket_replies',
       page: page,
       perPage: perPage,
@@ -533,7 +533,7 @@ class HelpCenterController extends GetxController {
       'is_internal': false, // User replies are always public
     };
 
-    final record = await PocketBaseService.to.createRecord(
+    final record = await BackendApiService.to.createRecord(
       collectionName: 'support_ticket_replies',
       data: replyData,
     );
@@ -560,7 +560,7 @@ class HelpCenterController extends GetxController {
 
     // Search in subject and description
     if (query.isNotEmpty) {
-      final q = PocketBaseService.escapeFilterValue(query);
+      final q = BackendApiService.escapeFilterValue(query);
       filters.add('(subject ~ "$q" || description ~ "$q")');
     }
 
@@ -576,13 +576,13 @@ class HelpCenterController extends GetxController {
 
     // Category filter
     if (categoryFilter != null && categoryFilter.isNotEmpty) {
-      final category = PocketBaseService.escapeFilterValue(categoryFilter);
+      final category = BackendApiService.escapeFilterValue(categoryFilter);
       filters.add('category = "$category"');
     }
 
     final combinedFilter = filters.join(' && ');
 
-    final result = await PocketBaseService.to.getRecordList(
+    final result = await BackendApiService.to.getRecordList(
       collectionName: 'support_tickets',
       page: page,
       perPage: perPage,
@@ -604,7 +604,7 @@ class HelpCenterController extends GetxController {
       throw Exception('User must be authenticated to subscribe to tickets');
     }
 
-    PocketBaseService.to.subscribeToCollection('support_tickets', (event) {
+    BackendApiService.to.subscribeToCollection('support_tickets', (event) {
       if (event.record != null) {
         final ticket = SupportTicket.fromRecord(event.record!);
         // Only notify if ticket belongs to current user
@@ -623,7 +623,7 @@ class HelpCenterController extends GetxController {
       throw Exception('User must be authenticated to subscribe to replies');
     }
 
-    PocketBaseService.to.subscribeToCollection('support_ticket_replies', (
+    BackendApiService.to.subscribeToCollection('support_ticket_replies', (
       event,
     ) {
       if (event.record != null) {

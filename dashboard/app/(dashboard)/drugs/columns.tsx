@@ -4,7 +4,7 @@ import * as React from "react"
 import { Badge } from "@/components/ui/badge"
 import { DataTableColumnHeader } from "@/components/ui/datatable-column-header"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { DrugsResponse, DrugCategoriesResponse, DrugTagsResponse, DrugClassesResponse, TherapeuticCategoriesResponse } from "@/types/pocketbase-types"
+import { DrugsResponse, DrugCategoriesResponse, DrugTagsResponse, DrugClassesResponse, TherapeuticCategoriesResponse } from "@/types/backend-types"
 import { ExtendedColumnDef } from "@/types/data-table"
 
 // Define the expanded drug type with relations based on actual database structure  

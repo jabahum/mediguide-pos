@@ -2,7 +2,7 @@ import { FieldOption } from "@/types/data-table"
 
 /**
  * Available fields for authorities table advanced filtering
- * Based on PocketBase authorities schema
+ * Based on legacy collection API authorities schema
  */
 export const authoritiesAvailableFields: FieldOption[] = [
   // Basic Information

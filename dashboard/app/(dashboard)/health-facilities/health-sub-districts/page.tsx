@@ -6,8 +6,8 @@ import { useRouter } from "next/navigation"
 import { usePermissionContext } from "@/lib/permission-context"
 
 import { PageHeader } from "@/components/ui/page-header"
-import { EnhancedPocketBaseDataTable } from "@/components/ui/pocketbase-datatable"
-import { HealthSubDistrictsResponse } from "@/types/pocketbase-types"
+import { EnhancedBackendDataTable } from "@/components/ui/enhanced-backend-data-table"
+import { HealthSubDistrictsResponse } from "@/types/backend-types"
 import { ExtendedColumnDef } from "@/types/data-table"
 
 import { healthSubDistrictsColumns } from "./columns"
@@ -90,7 +90,7 @@ export default function HealthSubDistrictsPage() {
         ]}
       />
 
-      <EnhancedPocketBaseDataTable<HealthSubDistrictsResponse>
+      <EnhancedBackendDataTable<HealthSubDistrictsResponse>
         collectionName="health_sub_districts"
         columns={healthSubDistrictsColumns as ExtendedColumnDef<HealthSubDistrictsResponse>[]}
         expand="district"

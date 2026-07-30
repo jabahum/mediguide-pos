@@ -2,7 +2,7 @@
 
 import { Badge } from "@/components/ui/badge"
 import { DataTableColumnHeader } from "@/components/ui/datatable-column-header"
-import { AbbreviationsResponse } from "@/types/pocketbase-types"
+import { AbbreviationsResponse } from "@/types/backend-types"
 import { AbbreviationsWithExpanded } from "@/types/expanded"
 import { ExtendedColumnDef } from "@/types/data-table"
 import { CheckCircle, Clock } from "lucide-react"

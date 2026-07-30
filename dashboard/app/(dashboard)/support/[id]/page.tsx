@@ -20,7 +20,7 @@ import { TicketAssignDialog } from "@/components/dialogs/ticket-assign-dialog"
 
 import { SupportTicketsService } from "@/services/support-tickets.service"
 import type { SupportTicketsWithExpanded, SupportTicketRepliesWithExpanded } from "@/types/expanded"
-import type { SupportTicketsStatusOptions } from "@/types/pocketbase-types"
+import type { SupportTicketsStatusOptions } from "@/types/backend-types"
 import { TICKET_STATUS_CONFIG, TICKET_PRIORITY_CONFIG } from "@/types/support-tickets"
 import { showToast } from "@/lib/toast"
 

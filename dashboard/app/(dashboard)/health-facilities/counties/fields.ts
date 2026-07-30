@@ -2,7 +2,7 @@ import { FieldOption } from "@/types/data-table"
 
 /**
  * Available fields for counties table advanced filtering
- * Based on PocketBase counties schema
+ * Based on legacy collection API counties schema
  */
 export const countiesAvailableFields: FieldOption[] = [
   // Basic Information

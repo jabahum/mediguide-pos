@@ -2,12 +2,12 @@
 
 import { useState, useCallback, useEffect, useMemo, useRef } from 'react'
 import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-query"
-import { getPB } from '@/lib/pocketbase'
+import { getBackendClient } from '@/lib/backend-client'
 import { showToast } from '@/lib/toast'
 import {
   BaseRecord,
-  UsePocketBaseTableConfig,
-  UsePocketBaseTableReturn,
+  UseBackendTableConfig,
+  UseBackendTableReturn,
   LoadingStates,
   TableError,
   PaginationInfo,
@@ -15,9 +15,9 @@ import {
   AdvancedFilter
 } from '@/types/data-table'
 
-export function usePocketBaseTableSimple<TData extends BaseRecord = BaseRecord>(
-  config: UsePocketBaseTableConfig<TData>
-): UsePocketBaseTableReturn<TData> {
+export function useBackendTable<TData extends BaseRecord = BaseRecord>(
+  config: UseBackendTableConfig<TData>
+): UseBackendTableReturn<TData> {
   // State management
   const [data, setData] = useState<TData[]>([])
   const [totalItems, setTotalItems] = useState(0)
@@ -34,7 +34,7 @@ export function usePocketBaseTableSimple<TData extends BaseRecord = BaseRecord>(
     bulkAction: false,
   })
 
-  const pb = useMemo(() => getPB(), [])
+  const backendClient = useMemo(() => getBackendClient(), [])
   const hasLoadedRef = useRef(false)
   const actionRef = useRef<'initial' | 'pagination' | 'table' | 'refresh'>('initial')
   const queryClient = useQueryClient()
@@ -49,7 +49,7 @@ export function usePocketBaseTableSimple<TData extends BaseRecord = BaseRecord>(
     hasPreviousPage: currentPage > 1
   }), [currentPage, currentPageSize, totalItems])
 
-  // Convert advanced filter condition to PocketBase syntax
+  // Convert advanced filters to the temporary compatibility query syntax.
   const convertAdvancedFilterCondition = useCallback((filter: AdvancedFilter) => {
     const { field, condition, value } = filter
 
@@ -86,8 +86,8 @@ export function usePocketBaseTableSimple<TData extends BaseRecord = BaseRecord>(
     const filters: string[] = []
 
     // Add base filter if provided
-    if (config.pocketbase?.filter) {
-      filters.push(`(${config.pocketbase.filter})`)
+    if (config.query?.filter) {
+      filters.push(`(${config.query.filter})`)
     }
 
     // Add search filters
@@ -107,37 +107,37 @@ export function usePocketBaseTableSimple<TData extends BaseRecord = BaseRecord>(
     }
 
     return filters.join(' && ')
-  }, [config.pocketbase?.filter, config.searchFields, globalFilter, advancedFilters, convertAdvancedFilterCondition])
+  }, [config.query?.filter, config.searchFields, globalFilter, advancedFilters, convertAdvancedFilterCondition])
 
   // Build sort query
   const buildSortQuery = useCallback(() => {
-    return config.pocketbase?.sort || '-created'
-  }, [config.pocketbase?.sort])
+    return config.query?.sort || '-created'
+  }, [config.query?.sort])
 
   const filterQuery = useMemo(() => buildFilterQuery(), [buildFilterQuery])
   const sortQuery = useMemo(() => buildSortQuery(), [buildSortQuery])
 
   const queryKey = useMemo(() => [
-    "pb",
+    "backend",
     config.collection,
     {
       page: currentPage,
       perPage: currentPageSize,
       filter: filterQuery,
       sort: sortQuery,
-      expand: config.pocketbase?.expand || "",
-      fields: config.pocketbase?.fields || "",
+      expand: config.query?.expand || "",
+      fields: config.query?.fields || "",
     }
-  ], [config.collection, currentPage, currentPageSize, filterQuery, sortQuery, config.pocketbase?.expand, config.pocketbase?.fields])
+  ], [config.collection, currentPage, currentPageSize, filterQuery, sortQuery, config.query?.expand, config.query?.fields])
 
   const query = useQuery({
     queryKey,
     queryFn: async () => {
-      return pb.collection(config.collection).getList(currentPage, currentPageSize, {
+      return backendClient.collection(config.collection).getList(currentPage, currentPageSize, {
         filter: filterQuery || undefined,
         sort: sortQuery,
-        expand: config.pocketbase?.expand || undefined,
-        fields: config.pocketbase?.fields || undefined,
+        expand: config.query?.expand || undefined,
+        fields: config.query?.fields || undefined,
       })
     },
     placeholderData: keepPreviousData,
@@ -169,7 +169,7 @@ export function usePocketBaseTableSimple<TData extends BaseRecord = BaseRecord>(
   // Refresh data
   const refresh = useCallback(async () => {
     actionRef.current = 'refresh'
-    await queryClient.invalidateQueries({ queryKey: ["pb", config.collection] })
+    await queryClient.invalidateQueries({ queryKey: ["backend", config.collection] })
   }, [queryClient, config.collection])
 
   useEffect(() => {
@@ -249,7 +249,7 @@ export function usePocketBaseTableSimple<TData extends BaseRecord = BaseRecord>(
 
   // Realtime subscriptions (always enabled)
   useEffect(() => {
-    const unsubscribe = pb.collection(config.collection).subscribe('*', (e) => {
+    const unsubscribe = backendClient.collection(config.collection).subscribe('*', (e) => {
       if (e.action === 'create') {
         setData(prev => [e.record as unknown as TData, ...prev.slice(0, currentPageSize - 1)])
         setTotalItems(prev => prev + 1)
@@ -268,9 +268,9 @@ export function usePocketBaseTableSimple<TData extends BaseRecord = BaseRecord>(
     })
 
     return () => {
-      pb.collection(config.collection).unsubscribe('*')
+      backendClient.collection(config.collection).unsubscribe('*')
     }
-  }, [config.collection, currentPageSize, pb])
+  }, [config.collection, currentPageSize, backendClient])
 
   // Effects for data fetching
   useEffect(() => {

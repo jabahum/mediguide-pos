@@ -2,7 +2,7 @@
 
 import { Badge } from "@/components/ui/badge"
 import { DataTableColumnHeader } from "@/components/ui/datatable-column-header"
-import { RegionsResponse } from "@/types/pocketbase-types"
+import { RegionsResponse } from "@/types/backend-types"
 import { ExtendedColumnDef } from "@/types/data-table"
 
 export const regionsColumns: ExtendedColumnDef<RegionsResponse>[] = [

@@ -19,7 +19,7 @@ import { Badge } from "@/components/ui/badge"
 import { DataTableColumnHeader } from "@/components/ui/datatable-column-header"
 import { ExtendedColumnDef } from "@/types/data-table"
 
-// Define Consultant type based on our PocketBase schema
+// Define Consultant type based on our legacy collection API schema
 export interface Consultant {
   [key: string]: unknown
   id: string

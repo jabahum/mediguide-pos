@@ -7,9 +7,8 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { getPB } from "@/lib/pocketbase"
+import { getBackendClient } from "@/lib/backend-client"
 import { showToast } from "@/lib/toast"
-// import { RecordModel } from "pocketbase"
 
 interface CreateTherapeuticCategoryDialogProps {
   open: boolean
@@ -31,7 +30,7 @@ export function CreateTherapeuticCategoryDialog({ open, onOpenChange, onSuccess 
     setLoading(true)
 
     try {
-      const pb = getPB()
+      const pb = getBackendClient()
       const category = await pb.collection("therapeutic_categories").create(formData)
       
       showToast.success("Success", "Therapeutic category created successfully")

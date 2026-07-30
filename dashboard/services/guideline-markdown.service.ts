@@ -1,6 +1,6 @@
 "use client"
 
-import { BackendRequestError, getPB } from "@/lib/pocketbase"
+import { BackendRequestError, getBackendClient } from "@/lib/backend-client"
 
 export interface MarkdownUpdateResult {
   updated: boolean
@@ -30,7 +30,7 @@ function toGuidelineMarkdownError(error: unknown, fallback: string) {
 export class GuidelineMarkdownService {
   static async load(versionId: string): Promise<string> {
     try {
-      return await getPB().send<string>(
+      return await getBackendClient().send<string>(
         `/api/v2/guideline-versions/${versionId}/extracted/markdown`,
         { method: "GET", responseType: "text" },
       )
@@ -41,7 +41,7 @@ export class GuidelineMarkdownService {
 
   static async update(versionId: string, content: string): Promise<MarkdownUpdateResult> {
     try {
-      return await getPB().send<MarkdownUpdateResult>(
+      return await getBackendClient().send<MarkdownUpdateResult>(
         `/api/v2/guideline-versions/${versionId}/extracted/markdown`,
         {
           method: "PUT",

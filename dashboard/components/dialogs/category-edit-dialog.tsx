@@ -9,7 +9,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { CategoryForm } from "@/components/forms/category-form"
-import { DrugCategoriesResponse } from "@/types/pocketbase-types"
+import { DrugCategoriesResponse } from "@/types/backend-types"
 
 // Import the form data type
 type CategoryFormData = {
@@ -21,7 +21,7 @@ type CategoryFormData = {
   sort_order?: number
   status: "active" | "inactive"
 }
-import { usePocketBaseCrud } from "@/hooks/use-pocketbase-crud"
+import { useBackendCrud } from "@/hooks/use-backend-crud"
 
 interface CategoryEditDialogProps {
   open: boolean
@@ -38,7 +38,7 @@ export function CategoryEditDialog({
   parentCategories = [],
   onSuccess
 }: CategoryEditDialogProps) {
-  const { update, loading } = usePocketBaseCrud({
+  const { update, loading } = useBackendCrud({
     collectionName: "drug_categories",
     onSuccess: () => {
       onOpenChange(false)

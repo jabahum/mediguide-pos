@@ -5,7 +5,7 @@ import 'package:user_app/app/data/models/filter_models.dart';
 import 'package:user_app/app/widgets/generic_filter_bottom_sheet.dart';
 
 import '../../data/models/models.dart';
-import '../../data/services/pocketbase_service.dart';
+import '../../data/services/backend_api_service.dart';
 import '../../utils/constants.dart';
 import '../../utils/common.dart';
 import 'health_facility_detail_page.dart';
@@ -68,7 +68,7 @@ class HealthInfrastructureController extends GetxController {
 
   Future<List<HealthFacility>> _loadPage(int pageKey) async {
     try {
-      final result = await PocketBaseService.to.getRecordList(
+      final result = await BackendApiService.to.getRecordList(
         collectionName: 'health_facilities',
         page: pageKey,
         perPage: pageSize,
@@ -91,31 +91,31 @@ class HealthInfrastructureController extends GetxController {
     final f = <String>[];
 
     if (_filters.query.isNotEmpty) {
-      final q = PocketBaseService.escapeFilterValue(_filters.query);
+      final q = BackendApiService.escapeFilterValue(_filters.query);
       f.add('(name ~ "$q" || nhpi_code ~ "$q" || hsdt_code ~ "$q")');
     }
 
     if (_filters.regionId.isNotEmpty) {
-      final regionId = PocketBaseService.escapeFilterValue(_filters.regionId);
+      final regionId = BackendApiService.escapeFilterValue(_filters.regionId);
       f.add('region = "$regionId"');
     }
 
     if (_filters.districtId.isNotEmpty) {
-      final districtId = PocketBaseService.escapeFilterValue(
+      final districtId = BackendApiService.escapeFilterValue(
         _filters.districtId,
       );
       f.add('district = "$districtId"');
     }
 
     if (_filters.facilityLevelId.isNotEmpty) {
-      final facilityLevelId = PocketBaseService.escapeFilterValue(
+      final facilityLevelId = BackendApiService.escapeFilterValue(
         _filters.facilityLevelId,
       );
       f.add('facility_level = "$facilityLevelId"');
     }
 
     if (_filters.ownershipTypeId.isNotEmpty) {
-      final ownershipTypeId = PocketBaseService.escapeFilterValue(
+      final ownershipTypeId = BackendApiService.escapeFilterValue(
         _filters.ownershipTypeId,
       );
       f.add('ownership_type = "$ownershipTypeId"');
@@ -209,7 +209,7 @@ class HealthInfrastructureController extends GetxController {
 
       availableRegions.assignAll(regions);
 
-      final levels = await PocketBaseService.to.getRecordList(
+      final levels = await BackendApiService.to.getRecordList(
         collectionName: 'facility_levels',
       );
 
@@ -217,7 +217,7 @@ class HealthInfrastructureController extends GetxController {
         levels.items.map((e) => FacilityLevel.fromRecord(e)),
       );
 
-      final ownership = await PocketBaseService.to.getRecordList(
+      final ownership = await BackendApiService.to.getRecordList(
         collectionName: 'ownership_types',
       );
 
@@ -234,7 +234,7 @@ class HealthInfrastructureController extends GetxController {
   }
 
   Future<List<Region>> getRegions({String? filter, String? sort}) async {
-    final result = await PocketBaseService.to.getRecordList(
+    final result = await BackendApiService.to.getRecordList(
       collectionName: 'regions',
       filter: filter,
       sort: sort,
@@ -244,7 +244,7 @@ class HealthInfrastructureController extends GetxController {
   }
 
   Future<void> _loadDistricts(String regionId) async {
-    final districts = await PocketBaseService.to.getRecordList(
+    final districts = await BackendApiService.to.getRecordList(
       collectionName: 'districts',
       filter: 'region_id = "$regionId"',
       sort: 'name',

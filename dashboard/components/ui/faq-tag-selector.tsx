@@ -19,7 +19,7 @@ import { Badge } from "@/components/ui/badge"
 import { Check, ChevronDown, X } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { FaqTagsService } from "@/services/faq-tags.service"
-import type { FaqTagsResponse } from "@/types/pocketbase-types"
+import type { FaqTagsResponse } from "@/types/backend-types"
 
 export interface FaqTagSelectorProps {
   /**

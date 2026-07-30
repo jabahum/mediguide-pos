@@ -1,9 +1,9 @@
 /**
  * Backup Service
- * Handles PocketBase backup operations following project best practices
+ * Handles legacy collection API backup operations following project best practices
  */
 
-import { getPB } from "@/lib/pocketbase"
+import { getBackendClient } from "@/lib/backend-client"
 import { showToast } from "@/lib/toast"
 import type {
   BackupFile,
@@ -34,7 +34,7 @@ export class BackupService {
    */
   async listBackups(page = 1, perPage = 100): Promise<BackupListResponse> {
     try {
-      const pb = getPB()
+      const pb = getBackendClient()
       if (!pb.authStore.model?.id) {
         throw new Error("Authentication required for backup operations")
       }
@@ -57,7 +57,7 @@ export class BackupService {
    */
   async createBackup(data: BackupCreateData = {}): Promise<BackupOperationResult> {
     try {
-      const pb = getPB()
+      const pb = getBackendClient()
       if (!pb.authStore.model?.id) {
         throw new Error("Authentication required for backup operations")
       }
@@ -93,7 +93,7 @@ export class BackupService {
    */
   async uploadBackup(data: BackupUploadData): Promise<BackupOperationResult> {
     try {
-      const pb = getPB()
+      const pb = getBackendClient()
       if (!pb.authStore.model?.id) {
         throw new Error("Authentication required for backup operations")
       }
@@ -136,7 +136,7 @@ export class BackupService {
    */
   async restoreBackup(data: BackupRestoreData): Promise<BackupOperationResult> {
     try {
-      const pb = getPB()
+      const pb = getBackendClient()
       if (!pb.authStore.model?.id) {
         throw new Error("Authentication required for backup operations")
       }
@@ -174,7 +174,7 @@ export class BackupService {
    */
   async downloadBackup(options: BackupDownloadOptions): Promise<string> {
     try {
-      const pb = getPB()
+      const pb = getBackendClient()
       if (!pb.authStore.model?.id) {
         throw new Error("Authentication required for backup operations")
       }
@@ -202,7 +202,7 @@ export class BackupService {
    */
   async deleteBackup(key: string): Promise<BackupOperationResult> {
     try {
-      const pb = getPB()
+      const pb = getBackendClient()
       if (!pb.authStore.model?.id) {
         throw new Error("Authentication required for backup operations")
       }

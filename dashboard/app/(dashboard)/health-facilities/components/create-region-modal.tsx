@@ -17,8 +17,8 @@ import {
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
 import { showToast } from "@/lib/toast"
-import { getPB } from "@/lib/pocketbase"
-import { RegionsResponse } from "@/types/pocketbase-types"
+import { getBackendClient } from "@/lib/backend-client"
+import { RegionsResponse } from "@/types/backend-types"
 
 const regionFormSchema = z.object({
   name: z.string().min(1, "Region name is required"),
@@ -62,7 +62,7 @@ export function CreateRegionModal({ open, onClose, onSuccess, region }: CreateRe
 
   const onSubmit = async (data: RegionFormValues) => {
     setIsLoading(true)
-    const pb = getPB()
+    const pb = getBackendClient()
 
     try {
       if (isEdit && region) {

@@ -2,7 +2,7 @@ import { FieldOption } from "@/types/data-table"
 
 /**
  * Available fields for guideline categories table advanced filtering
- * Based on PocketBase guideline_categories schema
+ * Based on legacy collection API guideline_categories schema
  * 
  * Note: Column filtering is handled directly in columns.tsx using DataTableColumnHeader
  * This is only for advanced filtering dialog if implemented

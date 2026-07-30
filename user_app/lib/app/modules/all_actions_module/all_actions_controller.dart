@@ -3,7 +3,7 @@ import 'package:get/get.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:toastification/toastification.dart';
 
-import '../../data/services/pocketbase_service.dart';
+import '../../data/services/backend_api_service.dart';
 import '../../models/generic_page.dart';
 import '../../routes/app_pages.dart';
 import '../../translations/app_translations.dart';
@@ -120,7 +120,7 @@ class AllActionsController extends GetxController {
     try {
       isLoadingPages.value = true;
 
-      final records = await PocketBaseService.to.getRecordList(
+      final records = await BackendApiService.to.getRecordList(
         collectionName: 'generic_pages',
         perPage: 50,
       );

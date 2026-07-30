@@ -3,14 +3,14 @@
 import * as React from "react"
 import { Plus } from "lucide-react"
 import { PageHeader } from "@/components/ui/page-header"
-import { EnhancedPocketBaseDataTable } from "@/components/ui/pocketbase-datatable"
+import { EnhancedBackendDataTable } from "@/components/ui/enhanced-backend-data-table"
 import { TagCreateModal } from "./components/tag-create-modal"
 import { TagEditModal } from "./components/tag-edit-modal"
 import { TagViewModal } from "./components/tag-view-modal"
 import { columns } from "./columns"
 import { createTagRowActions, tagBulkActions } from "./tag-actions"
 import { guidelineTagAvailableFields } from "./fields"
-import type { GuidelineTagsResponse } from "@/types/pocketbase-types"
+import type { GuidelineTagsResponse } from "@/types/backend-types"
 import { useRouter } from "next/navigation"
 import { usePermissionContext } from "@/lib/permission-context"
 
@@ -50,7 +50,7 @@ export default function GuidelineTagsPage() {
   // Handle successful operations
   const handleSuccess = React.useCallback(() => {
     // This will trigger a refetch of the data table
-    // The EnhancedPocketBaseDataTable handles this automatically
+    // The EnhancedBackendDataTable handles this automatically
   }, [])
 
   return (
@@ -69,7 +69,7 @@ export default function GuidelineTagsPage() {
       />
 
       {/* Enhanced DataTable */}
-      <EnhancedPocketBaseDataTable<GuidelineTagsResponse>
+      <EnhancedBackendDataTable<GuidelineTagsResponse>
         collectionName="guideline_tags"
         columns={columns}
         searchable={true}

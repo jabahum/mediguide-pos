@@ -1,6 +1,6 @@
 // ignore_for_file: unused_field
 
-import 'package:pocketbase/pocketbase.dart';
+import 'package:user_app/app/data/models/api_record.dart';
 import 'base_model.dart';
 import 'user.dart';
 import 'message.dart';
@@ -9,7 +9,7 @@ import 'message.dart';
 class Conversation extends BaseModel {
   Conversation(super.data);
 
-  /// PocketBase collection name
+  /// legacy collection API collection name
   static const String collection = 'conversations';
 
   // Self-registration for dynamic model creation
@@ -24,9 +24,8 @@ class Conversation extends BaseModel {
     _registered;
   }
 
-  /// Create Conversation from PocketBase record
-  static Conversation fromRecord(RecordModel record) =>
-      Conversation(record.data);
+  /// Create Conversation from legacy collection API record
+  static Conversation fromRecord(ApiRecord record) => Conversation(record.data);
 
   /// Create JSON for new conversation record
   static Map<String, dynamic> forCreate({

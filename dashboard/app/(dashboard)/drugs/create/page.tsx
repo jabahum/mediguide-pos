@@ -4,9 +4,9 @@ import * as React from "react"
 import { useRouter } from "next/navigation"
 import { PageHeader } from "@/components/ui/page-header"
 import { DrugForm } from "@/components/forms/drug-form"
-import { DrugCategoriesResponse, DrugTagsResponse } from "@/types/pocketbase-types"
-import { usePocketBaseCrud } from "@/hooks/use-pocketbase-crud"
-import { getPB } from "@/lib/pocketbase"
+import { DrugCategoriesResponse, DrugTagsResponse } from "@/types/backend-types"
+import { useBackendCrud } from "@/hooks/use-backend-crud"
+import { getBackendClient } from "@/lib/backend-client"
 import { usePermissionContext } from "@/lib/permission-context"
 
 export default function CreateDrugPage() {
@@ -22,7 +22,7 @@ export default function CreateDrugPage() {
   const [categories, setCategories] = React.useState<DrugCategoriesResponse[]>([])
   const [tags, setTags] = React.useState<DrugTagsResponse[]>([])
 
-  const { create, loading } = usePocketBaseCrud({
+  const { create, loading } = useBackendCrud({
     collectionName: "drugs",
     onSuccess: () => {
       router.push("/drugs")
@@ -32,7 +32,7 @@ export default function CreateDrugPage() {
   React.useEffect(() => {
     const fetchData = async () => {
       try {
-        const pb = getPB()
+        const pb = getBackendClient()
         const [categoriesResult, tagsResult] = await Promise.all([
           pb.collection("drug_categories").getFullList({
             filter: "status = 'active'",

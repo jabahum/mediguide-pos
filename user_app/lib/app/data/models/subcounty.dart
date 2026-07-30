@@ -1,15 +1,15 @@
 // ignore_for_file: unused_field
 
-import 'package:pocketbase/pocketbase.dart';
+import 'package:user_app/app/data/models/api_record.dart';
 import 'base_model.dart';
 import 'county.dart';
 import 'district.dart';
 
-/// Subcounty model based on PocketBase subcounties collection
+/// Subcounty model based on legacy collection API subcounties collection
 class Subcounty extends BaseModel {
   Subcounty(super.data);
 
-  /// PocketBase collection name
+  /// legacy collection API collection name
   static const String collection = 'subcounties';
 
   // Self-registration for dynamic model creation
@@ -18,8 +18,8 @@ class Subcounty extends BaseModel {
     return true;
   })();
 
-  /// Create Subcounty from PocketBase record
-  static Subcounty fromRecord(RecordModel record) => Subcounty(record.data);
+  /// Create Subcounty from legacy collection API record
+  static Subcounty fromRecord(ApiRecord record) => Subcounty(record.data);
 
   /// Create JSON for new subcounty record (excludes system fields)
   static Map<String, dynamic> forCreate({

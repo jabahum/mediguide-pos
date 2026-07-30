@@ -1,15 +1,15 @@
 // ignore_for_file: unused_field
 
-import 'package:pocketbase/pocketbase.dart';
+import 'package:user_app/app/data/models/api_record.dart';
 import '../enums/calculator_enums.dart';
 import 'base_model.dart';
 import 'user.dart';
 
-/// Calculator model based on PocketBase calculators collection
+/// Calculator model based on legacy collection API calculators collection
 class Calculator extends BaseModel {
   Calculator(super.data);
 
-  /// PocketBase collection name
+  /// legacy collection API collection name
   static const String collection = 'calculators';
 
   // Self-registration for dynamic model creation
@@ -18,8 +18,8 @@ class Calculator extends BaseModel {
     return true;
   })();
 
-  /// Create Calculator from PocketBase record
-  static Calculator fromRecord(RecordModel record) => Calculator(record.data);
+  /// Create Calculator from legacy collection API record
+  static Calculator fromRecord(ApiRecord record) => Calculator(record.data);
 
   /// Create JSON for new calculator record (excludes system fields)
   static Map<String, dynamic> forCreate({

@@ -1,8 +1,8 @@
-import { CalculatorsResponse, UsersResponse } from "@/types/pocketbase-types"
+import { CalculatorsResponse, UsersResponse } from "@/types/backend-types"
 
 /**
  * Enhanced decision tool type with relations
- * Based on PocketBase calculators collection schema
+ * Based on legacy collection API calculators collection schema
  */
 export type DecisionToolWithRelations = CalculatorsResponse<{
   addedBy: UsersResponse[]

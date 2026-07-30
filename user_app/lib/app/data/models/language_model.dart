@@ -1,4 +1,4 @@
-import 'package:pocketbase/pocketbase.dart';
+import 'package:user_app/app/data/models/api_record.dart';
 
 /// Model representing a language available in the system
 class LanguageModel {
@@ -29,8 +29,8 @@ class LanguageModel {
   }) : created = created ?? DateTime.fromMillisecondsSinceEpoch(0),
        updated = updated ?? DateTime.fromMillisecondsSinceEpoch(0);
 
-  /// Create from PocketBase record
-  factory LanguageModel.fromRecord(RecordModel record) {
+  /// Create from legacy collection API record
+  factory LanguageModel.fromRecord(ApiRecord record) {
     return LanguageModel(
       id: record.id,
       code: record.getStringValue('code'),

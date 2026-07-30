@@ -1,10 +1,10 @@
 // ignore_for_file: unused_field
 
-import 'package:pocketbase/pocketbase.dart';
+import 'package:user_app/app/data/models/api_record.dart';
 import 'base_model.dart';
 import 'user.dart';
 
-/// Enum for message types matching PocketBase collection schema
+/// Enum for message types matching legacy collection API collection schema
 enum MessageType {
   text(label: 'Text'),
   image(label: 'Image'),
@@ -20,7 +20,7 @@ enum MessageType {
 class Message extends BaseModel {
   Message(super.data);
 
-  /// PocketBase collection name
+  /// legacy collection API collection name
   static const String collection = 'messages';
 
   // Self-registration for dynamic model creation
@@ -35,8 +35,8 @@ class Message extends BaseModel {
     _registered;
   }
 
-  /// Create Message from PocketBase record
-  static Message fromRecord(RecordModel record) => Message(record.data);
+  /// Create Message from legacy collection API record
+  static Message fromRecord(ApiRecord record) => Message(record.data);
 
   /// Create JSON for new message record
   static Map<String, dynamic> forCreate({
@@ -120,7 +120,7 @@ class Message extends BaseModel {
     return DateTime.tryParse(dateStr);
   }
 
-  /// Safe helper for getting map fields from PocketBase
+  /// Safe helper for getting map fields from legacy collection API
   Map<String, dynamic> _getMapField(String fieldName) {
     try {
       final value = data[fieldName];

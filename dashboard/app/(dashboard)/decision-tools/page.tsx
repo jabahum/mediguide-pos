@@ -6,7 +6,7 @@ import { Plus } from "lucide-react"
 
 // Components
 import { PageHeader } from "@/components/ui/page-header"
-import { PocketBaseDataTable } from "@/components/ui/pocketbase-datatable-simple"
+import { BackendDataTable } from "@/components/ui/backend-data-table"
 
 // Page-specific imports
 import { columns, DecisionToolWithRelations } from "./columns"
@@ -35,7 +35,7 @@ export default function DecisionToolsPage() {
     [router]
   )
 
-  const pocketbaseOptions = React.useMemo(() => {
+  const backendQueryOptions = React.useMemo(() => {
     const opts: { expand: string; filter?: string } = { expand: "addedBy" }
     if (typeFilter) {
       opts.filter = `type = "${typeFilter.replace(/"/g, '\\"')}"`
@@ -71,7 +71,7 @@ export default function DecisionToolsPage() {
       />
 
       {/* Simplified DataTable */}
-      <PocketBaseDataTable<DecisionToolWithRelations>
+      <BackendDataTable<DecisionToolWithRelations>
         key={typeFilter ?? "all"}
         collection="calculators"
         columns={columns}
@@ -79,7 +79,7 @@ export default function DecisionToolsPage() {
         rowActions={decisionToolRowActions}
         bulkActions={decisionToolBulkActions}
         availableFields={decisionToolsAvailableFields}
-        pocketbase={pocketbaseOptions}
+        query={backendQueryOptions}
         ui={{
           exportable: true
         }}

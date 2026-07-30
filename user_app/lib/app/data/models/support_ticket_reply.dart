@@ -1,6 +1,6 @@
 // ignore_for_file: unused_field
 
-import 'package:pocketbase/pocketbase.dart';
+import 'package:user_app/app/data/models/api_record.dart';
 import 'base_model.dart';
 import 'user.dart';
 
@@ -8,7 +8,7 @@ import 'user.dart';
 class SupportTicketReply extends BaseModel {
   SupportTicketReply(super.data);
 
-  /// PocketBase collection name
+  /// legacy collection API collection name
   static const String collection = 'support_ticket_replies';
 
   // Self-registration for dynamic model creation
@@ -17,8 +17,8 @@ class SupportTicketReply extends BaseModel {
     return true;
   })();
 
-  /// Create SupportTicketReply from PocketBase record
-  factory SupportTicketReply.fromRecord(RecordModel record) {
+  /// Create SupportTicketReply from legacy collection API record
+  factory SupportTicketReply.fromRecord(ApiRecord record) {
     return SupportTicketReply(record.data);
   }
 

@@ -17,7 +17,7 @@ import {
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { PocketBaseDataTable } from "@/components/ui/pocketbase-datatable-simple"
+import { BackendDataTable } from "@/components/ui/backend-data-table"
 import { PageHeader } from "@/components/ui/page-header"
 import {
   Select,
@@ -27,13 +27,13 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
-import { getPB, hasAnyRole } from "@/lib/pocketbase"
+import { getBackendClient, hasAnyRole } from "@/lib/backend-client"
 import { showToast } from "@/lib/toast"
 import {
   NotificationsPriorityOptions,
   NotificationsResponse,
   NotificationsTypeOptions,
-} from "@/types/pocketbase-types"
+} from "@/types/backend-types"
 import { usePermissionContext } from "@/lib/permission-context"
 
 const columns: ColumnDef<NotificationsResponse>[] = [
@@ -148,7 +148,7 @@ export default function NotificationsPage() {
     setCreating(true)
 
     try {
-      const pb = getPB()
+      const pb = getBackendClient()
 
       await pb.collection("notifications").create({
         title,
@@ -321,12 +321,12 @@ export default function NotificationsPage() {
         )}
       </div>
 
-      <PocketBaseDataTable<NotificationsResponse>
+      <BackendDataTable<NotificationsResponse>
         collection="notifications"
         columns={columns}
         searchFields={["title", "message"]}
         refreshSignal={tableRefreshSignal}
-        pocketbase={{
+        query={{
           sort: "-created",
         }}
         ui={{

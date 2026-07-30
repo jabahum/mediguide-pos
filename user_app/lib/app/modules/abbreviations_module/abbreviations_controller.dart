@@ -10,7 +10,7 @@ import 'package:user_app/app/data/models/guideline_tag.dart';
 import '../../data/models/abbreviation.dart';
 import '../../data/models/filter_models.dart';
 import '../../data/services/auth_service.dart';
-import '../../data/services/pocketbase_service.dart';
+import '../../data/services/backend_api_service.dart';
 import '../../utils/constants.dart';
 import '../../utils/common.dart';
 import '../../widgets/generic_filter_bottom_sheet.dart';
@@ -204,7 +204,7 @@ class AbbreviationsController extends GetxController {
     int page = 1,
     int perPage = 30,
   }) async {
-    final result = await PocketBaseService.to.getRecordList(
+    final result = await BackendApiService.to.getRecordList(
       collectionName: Abbreviation.collection,
       page: page,
       perPage: perPage,
@@ -216,7 +216,7 @@ class AbbreviationsController extends GetxController {
   }
 
   Future<List<Abbreviation>> getCommonAbbreviations() async {
-    final result = await PocketBaseService.to.getRecordList(
+    final result = await BackendApiService.to.getRecordList(
       collectionName: Abbreviation.collection,
       perPage: 50,
       filter: 'common_usage = true',
@@ -235,7 +235,7 @@ class AbbreviationsController extends GetxController {
     final filters = <String>[];
 
     if (query.search.isNotEmpty) {
-      final q = PocketBaseService.escapeFilterValue(query.search);
+      final q = BackendApiService.escapeFilterValue(query.search);
       filters.add(
         '(abbreviation ~ "$q" || '
         'meaning ~ "$q" || '
@@ -244,19 +244,19 @@ class AbbreviationsController extends GetxController {
     }
 
     if (query.categoryId != null) {
-      final categoryId = PocketBaseService.escapeFilterValue(query.categoryId);
+      final categoryId = BackendApiService.escapeFilterValue(query.categoryId);
       filters.add('category = "$categoryId"');
     }
 
     if (query.tagIds.isNotEmpty) {
       final tagFilter = query.tagIds
-          .map((e) => 'tags ~ "${PocketBaseService.escapeFilterValue(e)}"')
+          .map((e) => 'tags ~ "${BackendApiService.escapeFilterValue(e)}"')
           .join(' || ');
 
       filters.add('($tagFilter)');
     }
 
-    final result = await PocketBaseService.to.getRecordList(
+    final result = await BackendApiService.to.getRecordList(
       collectionName: Abbreviation.collection,
       page: page,
       perPage: perPage,
@@ -286,7 +286,7 @@ class AbbreviationsController extends GetxController {
 
       if (user == null) return;
 
-      await PocketBaseService.to.createRecord(
+      await BackendApiService.to.createRecord(
         collectionName: AbbreviationUsageLog.collection,
         data: AbbreviationUsageLog.forCreate(
           userId: user.id,
@@ -294,7 +294,7 @@ class AbbreviationsController extends GetxController {
         ),
       );
 
-      await PocketBaseService.to.incrementUsageCount(
+      await BackendApiService.to.incrementUsageCount(
         Abbreviation.collection,
         id,
       );
@@ -306,7 +306,7 @@ class AbbreviationsController extends GetxController {
     String? filter,
     String? sort,
   }) async {
-    final result = await PocketBaseService.to.getRecordList(
+    final result = await BackendApiService.to.getRecordList(
       collectionName: GuidelineCategory.collection,
       filter: filter ?? 'status = "active"',
       sort: sort ?? 'sort_order,name',
@@ -322,7 +322,7 @@ class AbbreviationsController extends GetxController {
     String? filter,
     String? sort,
   }) async {
-    final result = await PocketBaseService.to.getRecordList(
+    final result = await BackendApiService.to.getRecordList(
       collectionName: GuidelineTag.collection,
       filter: filter,
       sort: sort ?? 'name',

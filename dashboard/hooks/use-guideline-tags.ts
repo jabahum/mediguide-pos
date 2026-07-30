@@ -1,8 +1,8 @@
 "use client"
 
 import { useState, useEffect, useMemo, useCallback } from "react"
-import { getPB } from "@/lib/pocketbase"
-import type { GuidelineTagsResponse } from "@/types/pocketbase-types"
+import { getBackendClient } from "@/lib/backend-client"
+import type { GuidelineTagsResponse } from "@/types/backend-types"
 
 interface UseGuidelineTagsOptions {
   searchTerm?: string
@@ -15,7 +15,7 @@ export function useGuidelineTags(options: UseGuidelineTagsOptions = {}) {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  // Fetch tags from PocketBase
+  // Fetch tags from the backend compatibility API.
   const fetchTags = useCallback(async () => {
     try {
       setLoading(true)
@@ -28,7 +28,7 @@ export function useGuidelineTags(options: UseGuidelineTagsOptions = {}) {
         filter = `(name ~ "${searchTerm}" || description ~ "${searchTerm}")`
       }
 
-      const pb = getPB()
+      const pb = getBackendClient()
       const records = await pb.collection("guideline_tags").getFullList<GuidelineTagsResponse>({
         sort: "name",
         filter: filter || undefined

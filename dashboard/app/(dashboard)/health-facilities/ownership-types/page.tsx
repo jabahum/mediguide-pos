@@ -6,8 +6,8 @@ import { useRouter } from "next/navigation"
 import { usePermissionContext } from "@/lib/permission-context"
 
 import { PageHeader } from "@/components/ui/page-header"
-import { EnhancedPocketBaseDataTable } from "@/components/ui/pocketbase-datatable"
-import { OwnershipTypesResponse } from "@/types/pocketbase-types"
+import { EnhancedBackendDataTable } from "@/components/ui/enhanced-backend-data-table"
+import { OwnershipTypesResponse } from "@/types/backend-types"
 
 import { ownershipTypesColumns } from "./columns"
 import { ownershipTypesAvailableFields } from "./fields"
@@ -82,7 +82,7 @@ export default function OwnershipTypesPage() {
         ]}
       />
 
-      <EnhancedPocketBaseDataTable<OwnershipTypesResponse>
+      <EnhancedBackendDataTable<OwnershipTypesResponse>
         collectionName="ownership_types"
         columns={ownershipTypesColumns}
         searchable={true}

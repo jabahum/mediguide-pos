@@ -21,7 +21,7 @@ import { MultiSelect } from "@/components/ui/multi-select"
 import { SelectWithCreate } from "@/components/ui/select-with-create"
 import { CreateDrugClassDialog } from "@/components/dialogs/create-drug-class-dialog"
 import { CreateTherapeuticCategoryDialog } from "@/components/dialogs/create-therapeutic-category-dialog"
-import { DrugsResponse, DrugCategoriesResponse, DrugTagsResponse } from "@/types/pocketbase-types"
+import { DrugsResponse, DrugCategoriesResponse, DrugTagsResponse } from "@/types/backend-types"
 
 const drugSchema = z.object({
   name: z.string().min(1, "Name is required").max(200, "Name must be less than 200 characters"),

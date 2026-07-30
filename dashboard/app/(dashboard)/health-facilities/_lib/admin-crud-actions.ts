@@ -2,7 +2,7 @@
 
 import { Edit, Trash2 } from "lucide-react"
 
-import { getPB } from "@/lib/pocketbase"
+import { getBackendClient } from "@/lib/backend-client"
 import { showToast } from "@/lib/toast"
 import { BaseRecord, BulkAction, RowAction } from "@/types/data-table"
 
@@ -30,7 +30,7 @@ export function createAdminRowActions<T extends BaseRecord>(
       icon: Trash2,
       variant: "destructive",
       onClick: async (row) => {
-        const pb = getPB()
+        const pb = getBackendClient()
         try {
           await pb.collection(collection).delete(row.id)
           showToast.success(
@@ -72,7 +72,7 @@ export function createAdminBulkActions<T extends BaseRecord>(
       confirmMessage: `Delete all selected ${entityLabelPlural.toLowerCase()}? This action cannot be undone.`,
       description: `Permanently delete the selected ${entityLabelPlural.toLowerCase()}.`,
       onClick: async (rows) => {
-        const pb = getPB()
+        const pb = getBackendClient()
         let successCount = 0
         let errorCount = 0
 

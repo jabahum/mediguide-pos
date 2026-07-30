@@ -4,7 +4,7 @@
 import { Badge } from "@/components/ui/badge"
 import { DataTableColumnHeader } from "@/components/ui/datatable-column-header"
 import { ExtendedColumnDef } from "@/types/data-table"
-import { OwnershipTypesResponse } from "@/types/pocketbase-types"
+import { OwnershipTypesResponse } from "@/types/backend-types"
 
 export const ownershipTypesColumns: ExtendedColumnDef<OwnershipTypesResponse>[] = [
   {

@@ -27,8 +27,8 @@ import { Save, Eye } from "lucide-react"
 import { useQueryClient } from "@tanstack/react-query"
 import { showToast } from "@/lib/toast"
 import { useGuidelineTags } from "@/hooks/use-guideline-tags"
-import { getPB } from "@/lib/pocketbase"
-import { pbRecordKeyPrefix } from "@/hooks/use-pb-record"
+import { getBackendClient } from "@/lib/backend-client"
+import { backendRecordKeyPrefix } from "@/hooks/use-backend-record"
 import { usePermissionContext } from "@/lib/permission-context"
 
 // Form Schema
@@ -199,7 +199,7 @@ export default function EditGuidelinePage({ params }: EditGuidelinePageProps) {
     const fetchGuideline = async () => {
       try {
         const resolvedParams = await params
-        const pb = getPB()
+        const pb = getBackendClient()
         
         // Fetch guideline with expanded categories, tags, and index_item
         const result = await pb.collection('medical_guidelines').getOne(resolvedParams.id, { 
@@ -257,14 +257,14 @@ export default function EditGuidelinePage({ params }: EditGuidelinePageProps) {
     setIsSubmitting(true)
     try {
       const resolvedParams = await params
-      const pb = getPB()
+      const pb = getBackendClient()
       
-      // Update the medical guideline record in PocketBase
+      // Update the medical guideline record in legacy collection API
       const result = await pb.collection('medical_guidelines').update(resolvedParams.id, data)
 
       await Promise.all([
-        queryClient.invalidateQueries({ queryKey: pbRecordKeyPrefix('medical_guidelines', resolvedParams.id) }),
-        queryClient.invalidateQueries({ queryKey: ["pb", "medical_guidelines"] }),
+        queryClient.invalidateQueries({ queryKey: backendRecordKeyPrefix('medical_guidelines', resolvedParams.id) }),
+        queryClient.invalidateQueries({ queryKey: ["backend", "medical_guidelines"] }),
       ])
 
       console.log("Medical guideline updated:", result)

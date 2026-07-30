@@ -3,7 +3,7 @@ import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'package:get/get.dart';
 import 'package:toastification/toastification.dart';
 import '../../routes/app_pages.dart';
-import '../../data/services/pocketbase_service.dart';
+import '../../data/services/backend_api_service.dart';
 import '../../data/services/auth_service.dart';
 import '../../data/models/models.dart';
 import '../../translations/app_translations.dart';
@@ -26,7 +26,7 @@ class LoginController extends GetxController {
         final email = formData[emailField] as String;
         final password = formData[passwordField] as String;
 
-        final userRecord = await PocketBaseService.to.login(
+        final userRecord = await BackendApiService.to.login(
           email: email,
           password: password,
         );

@@ -1,14 +1,14 @@
 // ignore_for_file: unused_field
 
-import 'package:pocketbase/pocketbase.dart';
+import 'package:user_app/app/data/models/api_record.dart';
 import 'base_model.dart';
 import 'region.dart';
 
-/// District model based on PocketBase districts collection
+/// District model based on legacy collection API districts collection
 class District extends BaseModel {
   District(super.data);
 
-  /// PocketBase collection name
+  /// legacy collection API collection name
   static const String collection = 'districts';
 
   // Self-registration for dynamic model creation
@@ -17,8 +17,8 @@ class District extends BaseModel {
     return true;
   })();
 
-  /// Create District from PocketBase record
-  static District fromRecord(RecordModel record) => District(record.data);
+  /// Create District from legacy collection API record
+  static District fromRecord(ApiRecord record) => District(record.data);
 
   /// Create JSON for new district record (excludes system fields)
   static Map<String, dynamic> forCreate({

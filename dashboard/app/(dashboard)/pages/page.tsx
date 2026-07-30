@@ -7,7 +7,7 @@ import { Plus } from "lucide-react"
 // Components
 import { PageHeader } from "@/components/ui/page-header"
 import { usePermissionContext } from "@/lib/permission-context"
-import { EnhancedPocketBaseDataTable } from "@/components/ui/pocketbase-datatable"
+import { EnhancedBackendDataTable } from "@/components/ui/enhanced-backend-data-table"
 
 // Page-specific imports
 import { columns, GenericPage } from "./columns"
@@ -54,7 +54,7 @@ export default function PagesPage() {
 
       {/* Enhanced DataTable with responsive wrapper */}
       <div className="grid grid-cols-1">
-        <EnhancedPocketBaseDataTable<GenericPage>
+        <EnhancedBackendDataTable<GenericPage>
           collectionName="generic_pages"
           columns={columns}
           searchable={true}

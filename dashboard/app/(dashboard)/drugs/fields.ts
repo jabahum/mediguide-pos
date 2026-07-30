@@ -2,7 +2,7 @@ import { FieldOption } from "@/types/data-table"
 
 /**
  * Available fields for drugs table advanced filtering
- * Based on PocketBase drugs collection schema
+ * Based on legacy collection API drugs collection schema
  */
 export const drugAvailableFields: FieldOption[] = [
   // Basic Information

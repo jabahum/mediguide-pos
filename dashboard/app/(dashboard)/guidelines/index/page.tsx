@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation"
 
 // Components
 import { PageHeader } from "@/components/ui/page-header"
-import { EnhancedPocketBaseDataTable } from "@/components/ui/pocketbase-datatable"
+import { EnhancedBackendDataTable } from "@/components/ui/enhanced-backend-data-table"
 
 // Page-specific imports
 import { guidelineIndexColumns, GuidelineIndexType } from "./columns"
@@ -74,7 +74,7 @@ export default function GuidelineIndexPage() {
       />
 
       {/* Enhanced DataTable */}
-      <EnhancedPocketBaseDataTable<GuidelineIndexType>
+      <EnhancedBackendDataTable<GuidelineIndexType>
         key={refreshKey}
         collectionName="guideline_index"
         columns={guidelineIndexColumns as ExtendedColumnDef<GuidelineIndexType>[]}

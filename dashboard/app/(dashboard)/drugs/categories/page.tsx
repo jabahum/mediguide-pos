@@ -6,7 +6,7 @@ import { Plus, FolderTree, Edit, Trash2, Eye } from "lucide-react"
 
 // Components
 import { PageHeader } from "@/components/ui/page-header"
-import { PocketBaseDataTable } from "@/components/ui/pocketbase-datatable-simple"
+import { BackendDataTable } from "@/components/ui/backend-data-table"
 
 // Dialogs
 import { CategoryCreateDialog } from "@/components/dialogs/category-create-dialog"
@@ -14,10 +14,10 @@ import { CategoryEditDialog } from "@/components/dialogs/category-edit-dialog"
 import { CategoryViewDialog } from "@/components/dialogs/category-view-dialog"
 
 // Types
-import { DrugCategoriesResponse } from "@/types/pocketbase-types"
+import { DrugCategoriesResponse } from "@/types/backend-types"
 import { RowAction, BulkAction, FieldOption } from "@/types/data-table"
-import { usePocketBaseCrud } from "@/hooks/use-pocketbase-crud"
-import { getPB } from "@/lib/pocketbase"
+import { useBackendCrud } from "@/hooks/use-backend-crud"
+import { getBackendClient } from "@/lib/backend-client"
 
 // Page-specific imports
 import { categoryColumns, CategoryWithRelations } from "../columns"
@@ -118,7 +118,7 @@ export default function DrugCategoriesPage() {
   const [refreshTrigger, setRefreshTrigger] = React.useState(0)
 
   // Delete functionality
-  const { deleteRecord } = usePocketBaseCrud({
+  const { deleteRecord } = useBackendCrud({
     collectionName: "drug_categories",
     onSuccess: () => setRefreshTrigger(prev => prev + 1)
   })
@@ -127,7 +127,7 @@ export default function DrugCategoriesPage() {
   React.useEffect(() => {
     const fetchAllCategories = async () => {
       try {
-        const pb = getPB()
+        const pb = getBackendClient()
         const categories = await pb.collection("drug_categories").getFullList({
           sort: "name"
         })
@@ -183,14 +183,14 @@ export default function DrugCategoriesPage() {
       />
 
       {/* Simplified DataTable */}
-      <PocketBaseDataTable<CategoryWithRelations>
+      <BackendDataTable<CategoryWithRelations>
         collection="drug_categories"
         columns={categoryColumns}
         searchFields={["name", "description"]}
         rowActions={categoryRowActions}
         bulkActions={categoryBulkActions}
         availableFields={categoryAvailableFields}
-        pocketbase={{
+        query={{
           expand: "parent_category"
         }}
         ui={{

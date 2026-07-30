@@ -6,7 +6,7 @@ import 'package:path_provider/path_provider.dart';
 import 'dart:convert';
 import 'dart:io';
 
-import '../../data/services/pocketbase_service.dart';
+import '../../data/services/backend_api_service.dart';
 import '../../data/services/auth_service.dart';
 import '../../data/models/models.dart';
 import '../../utils/constants.dart';
@@ -71,7 +71,7 @@ class UseCalculatorController extends GetxController {
       );
       const collectionName = 'calculators';
 
-      final downloadUrl = PocketBaseService.to.getFileUrl(
+      final downloadUrl = BackendApiService.to.getFileUrl(
         collectionName: collectionName,
         recordId: calculator!.id,
         filename: calculator!.appFile,
@@ -183,7 +183,7 @@ class UseCalculatorController extends GetxController {
 
     await webViewController!.loadData(
       data: htmlContent!,
-      baseUrl: WebUri(contentBaseUrl ?? pocketbaseUrl),
+      baseUrl: WebUri(contentBaseUrl ?? mediguideApiBaseUrl),
     );
 
     debugPrint('🌐 HTML loaded into WebView');
@@ -210,7 +210,7 @@ class UseCalculatorController extends GetxController {
         calculatorType: calculator!.type,
       );
 
-      final record = await PocketBaseService.to.createRecord(
+      final record = await BackendApiService.to.createRecord(
         collectionName: CalculatorUsageLog.collection,
         data: usageLogData,
       );
@@ -230,7 +230,7 @@ class UseCalculatorController extends GetxController {
 
       if (duration.inSeconds < 5) return;
 
-      await PocketBaseService.to.updateRecord(
+      await BackendApiService.to.updateRecord(
         collectionName: CalculatorUsageLog.collection,
         recordId: currentUsageLogId!,
         data: CalculatorUsageLog.forSessionEnd(sessionEnd: end),

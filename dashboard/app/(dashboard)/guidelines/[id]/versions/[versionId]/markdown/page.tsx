@@ -19,7 +19,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { usePermissionContext } from "@/lib/permission-context"
-import { BackendRequestError } from "@/lib/pocketbase"
+import { BackendRequestError } from "@/lib/backend-client"
 import {
   GuidelineDocumentRecord,
   GuidelineDocumentsService,

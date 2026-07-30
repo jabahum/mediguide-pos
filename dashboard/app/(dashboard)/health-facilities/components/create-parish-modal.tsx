@@ -18,8 +18,8 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { showToast } from "@/lib/toast"
-import { getPB } from "@/lib/pocketbase"
-import { SubcountiesResponse } from "@/types/pocketbase-types"
+import { getBackendClient } from "@/lib/backend-client"
+import { SubcountiesResponse } from "@/types/backend-types"
 
 const parishFormSchema = z.object({
   name: z.string().min(1, "Parish name is required"),
@@ -54,7 +54,7 @@ export function CreateParishModal({ open, onClose, onSuccess }: CreateParishModa
   React.useEffect(() => {
     if (open) {
       const loadSubcounties = async () => {
-        const pb = getPB()
+        const pb = getBackendClient()
         try {
           const data = await pb.collection('subcounties').getFullList({
             sort: 'name',
@@ -72,7 +72,7 @@ export function CreateParishModal({ open, onClose, onSuccess }: CreateParishModa
 
   const onSubmit = async (data: ParishFormValues) => {
     setIsLoading(true)
-    const pb = getPB()
+    const pb = getBackendClient()
 
     try {
       await pb.collection('parishes').create({

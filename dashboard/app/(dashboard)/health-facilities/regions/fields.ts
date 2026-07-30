@@ -2,7 +2,7 @@ import { FieldOption } from "@/types/data-table"
 
 /**
  * Available fields for regions table advanced filtering
- * Based on PocketBase regions schema
+ * Based on legacy collection API regions schema
  */
 export const regionsAvailableFields: FieldOption[] = [
   // Basic Information

@@ -2,7 +2,7 @@ import { FieldOption } from "@/types/data-table"
 
 /**
  * Available fields for ownership types table advanced filtering
- * Based on PocketBase ownership_types schema
+ * Based on legacy collection API ownership_types schema
  */
 export const ownershipTypesAvailableFields: FieldOption[] = [
   // Basic Information

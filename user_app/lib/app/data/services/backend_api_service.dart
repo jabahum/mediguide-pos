@@ -3,7 +3,6 @@ import 'dart:convert';
 
 import 'package:get/get.dart';
 import 'package:http/http.dart' as http;
-import 'package:pocketbase/pocketbase.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:user_app/app/utils/constants.dart';
 
@@ -11,15 +10,8 @@ import '../models/models.dart';
 import 'auth_service.dart';
 import 'main_service.dart';
 
-class AppRecordSubscriptionEvent {
-  AppRecordSubscriptionEvent({required this.action, this.record});
-
-  final String action;
-  final RecordModel? record;
-}
-
-class PocketBaseService extends GetxService {
-  static PocketBaseService get to => Get.find();
+class BackendApiService extends GetxService {
+  static BackendApiService get to => Get.find();
 
   static const _refreshTokenKey = 'backend_refresh_token';
   static const _sessionIdKey = 'backend_session_id';
@@ -33,7 +25,7 @@ class PocketBaseService extends GetxService {
   String _refreshToken = '';
   String _sessionId = '';
 
-  Future<PocketBaseService> init() async {
+  Future<BackendApiService> init() async {
     _prefs = await SharedPreferences.getInstance();
     _accessToken = _prefs.getString(SharedPreferencesKeys.userToken) ?? '';
     _refreshToken = _prefs.getString(_refreshTokenKey) ?? '';
@@ -52,7 +44,7 @@ class PocketBaseService extends GetxService {
   bool get isAuthenticated => _accessToken.isNotEmpty;
   String get accessToken => _accessToken;
 
-  Future<RecordModel> register({
+  Future<ApiRecord> register({
     required String email,
     required String password,
     required String passwordConfirm,
@@ -79,7 +71,7 @@ class PocketBaseService extends GetxService {
     return login(email: email, password: password);
   }
 
-  Future<RecordModel> login({
+  Future<ApiRecord> login({
     required String email,
     required String password,
     String? expand,
@@ -98,17 +90,17 @@ class PocketBaseService extends GetxService {
       collectionName: User.collection,
       raw: _asMap(data['user']),
     );
-    return RecordModel(user);
+    return ApiRecord(user);
   }
 
-  Future<RecordModel> loginWithOAuth2({
+  Future<ApiRecord> loginWithOAuth2({
     required String provider,
     required Future<void> Function(Uri url) urlCallback,
   }) async {
     throw Exception('OAuth sign-in is not supported by the backend API');
   }
 
-  Future<RecordModel> loginWithGoogle() async {
+  Future<ApiRecord> loginWithGoogle() async {
     throw Exception('Google sign-in is not supported by the backend API');
   }
 
@@ -176,7 +168,7 @@ class PocketBaseService extends GetxService {
     _prefs.remove(SharedPreferencesKeys.userId);
   }
 
-  Future<RecordModel> createRecord({
+  Future<ApiRecord> createRecord({
     required String collectionName,
     required Map<String, dynamic> data,
     List<http.MultipartFile>? files,
@@ -198,12 +190,12 @@ class PocketBaseService extends GetxService {
     );
 
     final item = _asMap(response['item'] ?? response['data']);
-    return RecordModel(
+    return ApiRecord(
       _normalizeRecord(collectionName: collectionName, raw: item),
     );
   }
 
-  Future<ResultList<RecordModel>> getRecordList({
+  Future<PagedResult<ApiRecord>> getRecordList({
     required String collectionName,
     int page = 1,
     int perPage = 30,
@@ -256,16 +248,16 @@ class PocketBaseService extends GetxService {
         (response['totalPages'] as num?)?.toInt() ??
         (totalItems == 0 ? 0 : (totalItems / safePerPage).ceil());
 
-    return ResultList<RecordModel>(
+    return PagedResult<ApiRecord>(
       page: safePage,
       perPage: safePerPage,
       totalItems: totalItems,
       totalPages: totalPages,
-      items: rawItems.map(RecordModel.new).toList(),
+      items: rawItems.map(ApiRecord.new).toList(),
     );
   }
 
-  Future<List<RecordModel>> getFullList({
+  Future<List<ApiRecord>> getFullList({
     required String collectionName,
     int batch = 100,
     String? filter,
@@ -283,7 +275,7 @@ class PocketBaseService extends GetxService {
     return result.items;
   }
 
-  Future<RecordModel?> getRecord({
+  Future<ApiRecord?> getRecord({
     required String collectionName,
     required String recordId,
     String? expand,
@@ -300,7 +292,7 @@ class PocketBaseService extends GetxService {
       );
 
       final item = _asMap(response['item'] ?? response['data']);
-      return RecordModel(
+      return ApiRecord(
         _normalizeRecord(collectionName: collectionName, raw: item),
       );
     } catch (_) {
@@ -308,7 +300,7 @@ class PocketBaseService extends GetxService {
     }
   }
 
-  Future<RecordModel> getFirstListItem({
+  Future<ApiRecord> getFirstListItem({
     required String collectionName,
     required String filter,
     String? expand,
@@ -328,7 +320,7 @@ class PocketBaseService extends GetxService {
     return result.items.first;
   }
 
-  Future<RecordModel> updateRecord({
+  Future<ApiRecord> updateRecord({
     required String collectionName,
     required String recordId,
     required Map<String, dynamic> data,
@@ -351,7 +343,7 @@ class PocketBaseService extends GetxService {
     );
 
     final item = _asMap(response['item'] ?? response['data']);
-    return RecordModel(
+    return ApiRecord(
       _normalizeRecord(collectionName: collectionName, raw: item),
     );
   }
@@ -373,7 +365,7 @@ class PocketBaseService extends GetxService {
     );
   }
 
-  Future<RecordModel> upsertRecord({
+  Future<ApiRecord> upsertRecord({
     required String collectionName,
     required Map<String, dynamic> data,
     String idField = 'id',
@@ -454,7 +446,7 @@ class PocketBaseService extends GetxService {
 
   void subscribeToCollection(
     String collectionName,
-    Function(AppRecordSubscriptionEvent) callback, {
+    Function(ApiRecordSubscriptionEvent) callback, {
     String recordId = '*',
     String? filter,
   }) {
@@ -535,7 +527,7 @@ class PocketBaseService extends GetxService {
   }
 
   String getFileUrl({
-    RecordModel? record,
+    ApiRecord? record,
     String? collectionName,
     String? recordId,
     required String filename,
@@ -1299,7 +1291,7 @@ class PocketBaseService extends GetxService {
     return _prefs.setString(_readingProgressKey, jsonEncode(rows));
   }
 
-  Future<RecordModel> _createLocalReadingProgress(
+  Future<ApiRecord> _createLocalReadingProgress(
     Map<String, dynamic> data,
   ) async {
     final rows = await _readLocalReadingProgress();
@@ -1330,20 +1322,20 @@ class PocketBaseService extends GetxService {
     }
 
     await _writeLocalReadingProgress(rows);
-    return RecordModel(record);
+    return ApiRecord(record);
   }
 
-  Future<RecordModel?> _getLocalReadingProgress(String recordId) async {
+  Future<ApiRecord?> _getLocalReadingProgress(String recordId) async {
     final rows = await _readLocalReadingProgress();
     for (final row in rows) {
       if (row['id'] == recordId) {
-        return RecordModel(row);
+        return ApiRecord(row);
       }
     }
     return null;
   }
 
-  Future<RecordModel> _updateLocalReadingProgress(
+  Future<ApiRecord> _updateLocalReadingProgress(
     String recordId,
     Map<String, dynamic> data,
   ) async {
@@ -1361,10 +1353,10 @@ class PocketBaseService extends GetxService {
 
     rows[index] = updated;
     await _writeLocalReadingProgress(rows);
-    return RecordModel(updated);
+    return ApiRecord(updated);
   }
 
-  Future<ResultList<RecordModel>> _listLocalReadingProgress({
+  Future<PagedResult<ApiRecord>> _listLocalReadingProgress({
     required int page,
     required int perPage,
     String? filter,
@@ -1383,12 +1375,12 @@ class PocketBaseService extends GetxService {
         : rows.skip(offset).take(safePerPage).toList();
     final totalPages = totalItems == 0 ? 0 : (totalItems / safePerPage).ceil();
 
-    return ResultList<RecordModel>(
+    return PagedResult<ApiRecord>(
       page: safePage,
       perPage: safePerPage,
       totalItems: totalItems,
       totalPages: totalPages,
-      items: paged.map(RecordModel.new).toList(),
+      items: paged.map(ApiRecord.new).toList(),
     );
   }
 

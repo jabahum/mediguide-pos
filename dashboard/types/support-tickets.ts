@@ -11,7 +11,7 @@ import type {
   UsersResponse,
   SupportTicketsStatusOptions,
   SupportTicketsPriorityOptions,
-} from "./pocketbase-types"
+} from "./backend-types"
 
 // Expanded ticket type with user relations
 export interface SupportTicketWithUser extends SupportTicketsResponse {

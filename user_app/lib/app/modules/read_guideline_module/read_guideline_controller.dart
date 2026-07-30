@@ -4,7 +4,7 @@ import 'package:get/get.dart';
 import 'package:toastification/toastification.dart';
 import '../../data/models/models.dart';
 import '../../data/services/auth_service.dart';
-import '../../data/services/pocketbase_service.dart';
+import '../../data/services/backend_api_service.dart';
 import '../../utils/common.dart';
 
 class ReadGuidelineController extends GetxController {
@@ -106,7 +106,7 @@ class ReadGuidelineController extends GetxController {
       final userId = AuthService.to.currentUser.value!.id;
       final guidelineId = guideline.value!.id;
 
-      final records = await PocketBaseService.to.getRecordList(
+      final records = await BackendApiService.to.getRecordList(
         collectionName: 'reading_progress',
         filter: 'user_id="$userId" && guideline_id="$guidelineId"',
       );
@@ -141,7 +141,7 @@ class ReadGuidelineController extends GetxController {
         progressPercentage: 0.0,
       );
 
-      final record = await PocketBaseService.to.createRecord(
+      final record = await BackendApiService.to.createRecord(
         collectionName: 'reading_progress',
         data: progressData,
       );
@@ -163,7 +163,7 @@ class ReadGuidelineController extends GetxController {
     try {
       final isCompleted = progressPercentage.value >= 0.95;
 
-      await PocketBaseService.to.updateRecord(
+      await BackendApiService.to.updateRecord(
         collectionName: 'reading_progress',
         recordId: readingProgress.value!.id,
         data: {
@@ -221,7 +221,7 @@ class ReadGuidelineController extends GetxController {
       isLoading.value = true;
       final newBookmarkStatus = !isBookmarked.value;
 
-      await PocketBaseService.to.updateRecord(
+      await BackendApiService.to.updateRecord(
         collectionName: 'reading_progress',
         recordId: readingProgress.value!.id,
         data: {'is_bookmarked': newBookmarkStatus},
@@ -248,7 +248,7 @@ class ReadGuidelineController extends GetxController {
     try {
       isLoading.value = true;
 
-      await PocketBaseService.to.updateRecord(
+      await BackendApiService.to.updateRecord(
         collectionName: 'reading_progress',
         recordId: readingProgress.value!.id,
         data: {
@@ -392,13 +392,13 @@ class ReadGuidelineController extends GetxController {
         guidelineId: guidelineId,
       );
 
-      await PocketBaseService.to.createRecord(
+      await BackendApiService.to.createRecord(
         collectionName: GuidelineUsageLog.collection,
         data: logData,
       );
 
       // Increment guideline usage count
-      await PocketBaseService.to.incrementUsageCount(
+      await BackendApiService.to.incrementUsageCount(
         Guideline.collection,
         guidelineId,
       );

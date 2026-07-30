@@ -29,10 +29,10 @@ import { Button } from "@/components/ui/button"
 import { DataTableToolbar } from "@/components/ui/datatable-toolbar"
 import { DataTablePagination } from "@/components/ui/datatable-pagination"
 import { DataTableRowActions } from "@/components/ui/datatable-row-actions"
-import { usePocketBaseTableSimple } from "@/hooks/use-pocketbase-table-simple"
+import { useBackendTable } from "@/hooks/use-backend-table"
 import {
   BaseRecord,
-  PocketBaseDataTableProps,
+  BackendDataTableProps,
   ExportFormat,
 } from "@/types/data-table"
 
@@ -45,7 +45,7 @@ const DEFAULT_CONFIG = {
   importFormats: ['csv', 'json'] as ExportFormat[],
 }
 
-export function PocketBaseDataTable<TData extends BaseRecord = BaseRecord>({
+export function BackendDataTable<TData extends BaseRecord = BaseRecord>({
   collection,
   columns,
 
@@ -60,8 +60,8 @@ export function PocketBaseDataTable<TData extends BaseRecord = BaseRecord>({
   // Filtering
   availableFields = [],
 
-  // PocketBase options (realtime always enabled)
-  pocketbase = {},
+  // Backend query options
+  query = {},
   refreshSignal,
 
   // UI options with smart defaults
@@ -71,7 +71,7 @@ export function PocketBaseDataTable<TData extends BaseRecord = BaseRecord>({
   onRowClick,
   onSelect,
   onError,
-}: PocketBaseDataTableProps<TData>) {
+}: BackendDataTableProps<TData>) {
 
   // Merge UI options with defaults
   const uiConfig = {
@@ -147,13 +147,13 @@ export function PocketBaseDataTable<TData extends BaseRecord = BaseRecord>({
     updateAdvancedFilters,
     selectedRows,
     exportData,
-  } = usePocketBaseTableSimple<TData>({
+  } = useBackendTable<TData>({
     collection,
     searchFields,
     rowActions,
     bulkActions,
     availableFields,
-    pocketbase,
+    query,
     refreshSignal,
     ui: uiConfig,
     onRowClick,

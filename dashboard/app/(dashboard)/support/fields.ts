@@ -2,7 +2,7 @@ import { FieldOption } from "@/types/data-table"
 
 /**
  * Available fields for support tickets table advanced filtering
- * Based on PocketBase support_tickets schema
+ * Based on legacy collection API support_tickets schema
  */
 export const supportTicketsAvailableFields: FieldOption[] = [
   // Basic Information

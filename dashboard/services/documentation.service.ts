@@ -3,12 +3,12 @@
  * Handles all database interactions for the documentation collection
  */
 
-import { getPB } from "@/lib/pocketbase"
+import { getBackendClient } from "@/lib/backend-client"
 import type { 
   DocumentationRecord, 
   DocumentationResponse
-} from "@/types/pocketbase-types"
-import { Collections, DocumentationStatusOptions } from "@/types/pocketbase-types"
+} from "@/types/backend-types"
+import { Collections, DocumentationStatusOptions } from "@/types/backend-types"
 
 export interface CreateDocumentationData {
   title: string
@@ -33,7 +33,7 @@ export class DocumentationService {
     perPage?: number
   }): Promise<DocumentationResponse[]> {
     try {
-      const pb = getPB()
+      const pb = getBackendClient()
       
       const records = await pb.collection(Collections.Documentation).getFullList({
         sort: options?.sort || "-created",
@@ -53,7 +53,7 @@ export class DocumentationService {
    */
   static async getById(id: string, expand?: string): Promise<DocumentationResponse | null> {
     try {
-      const pb = getPB()
+      const pb = getBackendClient()
       
       const record = await pb.collection(Collections.Documentation).getOne(id, {
         expand: expand
@@ -71,7 +71,7 @@ export class DocumentationService {
    */
   static async create(data: CreateDocumentationData): Promise<DocumentationResponse> {
     try {
-      const pb = getPB()
+      const pb = getBackendClient()
       
       const createData: Omit<DocumentationRecord, 'id' | 'created' | 'updated'> = {
         title: data.title,
@@ -96,7 +96,7 @@ export class DocumentationService {
    */
   static async update(id: string, data: UpdateDocumentationData): Promise<DocumentationResponse> {
     try {
-      const pb = getPB()
+      const pb = getBackendClient()
       
       const updateData: Partial<DocumentationRecord> = {}
       
@@ -121,7 +121,7 @@ export class DocumentationService {
    */
   static async delete(id: string): Promise<boolean> {
     try {
-      const pb = getPB()
+      const pb = getBackendClient()
       
       await pb.collection(Collections.Documentation).delete(id)
       return true
@@ -141,7 +141,7 @@ export class DocumentationService {
     limit?: number
   }): Promise<DocumentationResponse[]> {
     try {
-      const pb = getPB()
+      const pb = getBackendClient()
       
       let filter = `title ~ "${query}" || description ~ "${query}" || content ~ "${query}" || tags ~ "${query}"`
       
@@ -171,7 +171,7 @@ export class DocumentationService {
    */
   static async getByCategory(category: string): Promise<DocumentationResponse[]> {
     try {
-      const pb = getPB()
+      const pb = getBackendClient()
       
       const records = await pb.collection(Collections.Documentation).getFullList({
         filter: `category = "${category}"`,
@@ -190,7 +190,7 @@ export class DocumentationService {
    */
   static async getByStatus(status: DocumentationStatusOptions): Promise<DocumentationResponse[]> {
     try {
-      const pb = getPB()
+      const pb = getBackendClient()
       
       const records = await pb.collection(Collections.Documentation).getFullList({
         filter: `status = "${status}"`,
@@ -209,7 +209,7 @@ export class DocumentationService {
    */
   static async getCategories(): Promise<string[]> {
     try {
-      const pb = getPB()
+      const pb = getBackendClient()
       
       const records = await pb.collection(Collections.Documentation).getFullList({
         fields: "category"
@@ -233,7 +233,7 @@ export class DocumentationService {
    */
   static async getTags(): Promise<string[]> {
     try {
-      const pb = getPB()
+      const pb = getBackendClient()
       
       const records = await pb.collection(Collections.Documentation).getFullList({
         fields: "tags"
@@ -259,7 +259,7 @@ export class DocumentationService {
    */
   static async bulkUpdateStatus(ids: string[], status: DocumentationStatusOptions): Promise<void> {
     try {
-      const pb = getPB()
+      const pb = getBackendClient()
       
       const promises = ids.map(id => 
         pb.collection(Collections.Documentation).update(id, { status })
@@ -274,7 +274,7 @@ export class DocumentationService {
 
   static async bulkDelete(ids: string[]): Promise<void> {
     try {
-      const pb = getPB()
+      const pb = getBackendClient()
       
       const promises = ids.map(id => 
         pb.collection(Collections.Documentation).delete(id)

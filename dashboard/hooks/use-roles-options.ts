@@ -1,8 +1,8 @@
 "use client"
 
 import { useState, useEffect, useMemo } from "react"
-import { getPB } from "@/lib/pocketbase"
-import { RolesResponse } from "@/types/pocketbase-types"
+import { getBackendClient } from "@/lib/backend-client"
+import { RolesResponse } from "@/types/backend-types"
 
 export interface RoleOption {
   label: string
@@ -17,14 +17,14 @@ interface UseRoleOptionsReturn {
 }
 
 /**
- * Hook to fetch active roles from PocketBase for use in dropdowns and forms
+ * Hook to fetch active roles from the backend for use in dropdowns and forms
  */
 export function useRoleOptions(): UseRoleOptionsReturn {
   const [roles, setRoles] = useState<RolesResponse[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<Error | null>(null)
 
-  const pb = useMemo(() => getPB(), [])
+  const pb = useMemo(() => getBackendClient(), [])
 
   const fetchRoles = async () => {
     try {

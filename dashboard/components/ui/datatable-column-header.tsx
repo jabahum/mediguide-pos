@@ -33,7 +33,7 @@ interface DataTableColumnHeaderComponentProps<TData, TValue>
   filterType?: FilterType
   filterOptions?: FilterOption[]
   filterPlaceholder?: string
-  relationField?: string // For relation fields, specify the PocketBase field path (e.g., "drug_class.name")
+  relationField?: string // For relation fields, specify the legacy collection API field path (e.g., "drug_class.name")
 }
 
 export function DataTableColumnHeader<TData, TValue>({

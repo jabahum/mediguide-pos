@@ -4,14 +4,14 @@ import * as React from "react"
 import { useRouter } from "next/navigation"
 import { PageHeader } from "@/components/ui/page-header"
 import { DecisionToolForm } from "@/components/forms/decision-tool-form"
-import { CalculatorsTypeOptions } from "@/types/pocketbase-types"
-import { usePocketBaseCrud } from "@/hooks/use-pocketbase-crud"
-import { getPB } from "@/lib/pocketbase"
+import { CalculatorsTypeOptions } from "@/types/backend-types"
+import { useBackendCrud } from "@/hooks/use-backend-crud"
+import { getBackendClient } from "@/lib/backend-client"
 
 export default function CreateChecklistPage() {
   const router = useRouter()
 
-  const { create, loading } = usePocketBaseCrud({
+  const { create, loading } = useBackendCrud({
     collectionName: "calculators",
     onSuccess: () => {
       router.push("/decision-tools/checklists")
@@ -19,7 +19,7 @@ export default function CreateChecklistPage() {
   })
 
   const handleSubmit = async (data: Record<string, unknown>) => {
-    const pb = getPB()
+    const pb = getBackendClient()
     const currentUser = pb.authStore.model
 
     if (!currentUser) {

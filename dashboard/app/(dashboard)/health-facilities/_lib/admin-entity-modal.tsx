@@ -23,7 +23,7 @@ import {
 import { Input } from "@/components/ui/input"
 import { RelationCombobox, RelationSelectConfig } from "@/components/ui/datatable-filter-value-input"
 import { showToast } from "@/lib/toast"
-import { getPB } from "@/lib/pocketbase"
+import { getBackendClient } from "@/lib/backend-client"
 
 export type AdminFieldDef =
   | {
@@ -105,7 +105,7 @@ export function AdminEntityModal({
     if (!result.ok) return
 
     setIsLoading(true)
-    const pb = getPB()
+    const pb = getBackendClient()
     try {
       const payload: Record<string, string> = {}
       for (const f of fields) {

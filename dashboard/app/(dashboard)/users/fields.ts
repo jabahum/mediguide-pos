@@ -2,7 +2,7 @@ import { FieldOption } from "@/types/data-table"
 
 /**
  * Available fields for users table advanced filtering
- * Based on PocketBase users collection schema
+ * Based on legacy collection API users collection schema
  */
 export const createUsersAvailableFields = (): FieldOption[] => [
   // Basic Information

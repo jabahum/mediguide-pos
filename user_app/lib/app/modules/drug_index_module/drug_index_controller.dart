@@ -4,7 +4,7 @@ import 'package:infinite_scroll_pagination/infinite_scroll_pagination.dart';
 
 import '../../data/models/models.dart';
 import '../../data/models/filter_models.dart';
-import '../../data/services/pocketbase_service.dart';
+import '../../data/services/backend_api_service.dart';
 import '../../translations/app_translations.dart';
 import '../../utils/common.dart';
 import '../../utils/constants.dart';
@@ -12,7 +12,7 @@ import '../../widgets/generic_filter_bottom_sheet.dart';
 import 'widgets/drug_details_bottom_sheet.dart';
 
 class DrugIndexController extends GetxController {
-  final PocketBaseService _pbService = PocketBaseService.to;
+  final BackendApiService _apiService = BackendApiService.to;
 
   late final PagingController<int, Drug> pagingController;
 
@@ -87,7 +87,7 @@ class DrugIndexController extends GetxController {
     try {
       isLoadingFilters.value = true;
 
-      final categoriesResult = await _pbService.getRecordList(
+      final categoriesResult = await _apiService.getRecordList(
         collectionName: DrugCategory.collection,
         page: 1,
         perPage: 100,
@@ -98,7 +98,7 @@ class DrugIndexController extends GetxController {
           .map((r) => r.data['name'] as String)
           .toList();
 
-      final tagsResult = await _pbService.getRecordList(
+      final tagsResult = await _apiService.getRecordList(
         collectionName: DrugTag.collection,
         page: 1,
         perPage: 100,
@@ -137,31 +137,31 @@ class DrugIndexController extends GetxController {
     final parts = <String>['status = "active"'];
 
     if (searchQuery.value.isNotEmpty) {
-      final q = PocketBaseService.escapeFilterValue(searchQuery.value);
+      final q = BackendApiService.escapeFilterValue(searchQuery.value);
       parts.add('(name ~ "$q" || generic_name ~ "$q" || brand_names ~ "$q")');
     }
 
     if (selectedCategories.isNotEmpty) {
       parts.add(
-        '(${selectedCategories.map((e) => 'categories ~ "${PocketBaseService.escapeFilterValue(e)}"').join(' || ')})',
+        '(${selectedCategories.map((e) => 'categories ~ "${BackendApiService.escapeFilterValue(e)}"').join(' || ')})',
       );
     }
 
     if (selectedTags.isNotEmpty) {
       parts.add(
-        '(${selectedTags.map((e) => 'tags ~ "${PocketBaseService.escapeFilterValue(e)}"').join(' || ')})',
+        '(${selectedTags.map((e) => 'tags ~ "${BackendApiService.escapeFilterValue(e)}"').join(' || ')})',
       );
     }
 
     if (selectedRoutes.isNotEmpty) {
       parts.add(
-        '(${selectedRoutes.map((e) => 'route_of_administration ~ "${PocketBaseService.escapeFilterValue(e)}"').join(' || ')})',
+        '(${selectedRoutes.map((e) => 'route_of_administration ~ "${BackendApiService.escapeFilterValue(e)}"').join(' || ')})',
       );
     }
 
     if (selectedPregnancyCategories.isNotEmpty) {
       parts.add(
-        '(${selectedPregnancyCategories.map((e) => 'pregnancy_category ~ "${PocketBaseService.escapeFilterValue(e)}"').join(' || ')})',
+        '(${selectedPregnancyCategories.map((e) => 'pregnancy_category ~ "${BackendApiService.escapeFilterValue(e)}"').join(' || ')})',
       );
     }
 
@@ -345,7 +345,7 @@ class DrugIndexController extends GetxController {
     String? sort,
     String? expand,
   }) async {
-    final result = await _pbService.getRecordList(
+    final result = await _apiService.getRecordList(
       collectionName: Drug.collection,
       page: page,
       perPage: perPage,

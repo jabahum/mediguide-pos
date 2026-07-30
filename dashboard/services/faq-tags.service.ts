@@ -1,5 +1,5 @@
-import { getPB } from "@/lib/pocketbase"
-import type { FaqTagsRecord, FaqTagsResponse, FaqsResponse } from "@/types/pocketbase-types"
+import { getBackendClient } from "@/lib/backend-client"
+import type { FaqTagsRecord, FaqTagsResponse, FaqsResponse } from "@/types/backend-types"
 import type { 
   FaqTagWithStats, 
   FaqTagCreateData, 
@@ -39,7 +39,7 @@ export class FaqTagsService {
         return { success: false, error: 'A tag with this name already exists' }
       }
       
-      const record = await getPB().collection(this.COLLECTION).create<FaqTagsResponse>(tagData)
+      const record = await getBackendClient().collection(this.COLLECTION).create<FaqTagsResponse>(tagData)
       return { success: true, data: record, message: 'Tag created successfully' }
     } catch (error) {
       console.error('Error creating tag:', error)
@@ -66,7 +66,7 @@ export class FaqTagsService {
         updateData.slug = newSlug
       }
 
-      const record = await getPB().collection(this.COLLECTION).update<FaqTagsResponse>(id, updateData)
+      const record = await getBackendClient().collection(this.COLLECTION).update<FaqTagsResponse>(id, updateData)
       return { success: true, data: record, message: 'Tag updated successfully' }
     } catch (error) {
       console.error('Error updating tag:', error)
@@ -79,7 +79,7 @@ export class FaqTagsService {
    */
   static async getTag(id: string): Promise<FaqServiceResponse<FaqTagsResponse>> {
     try {
-      const record = await getPB().collection(this.COLLECTION).getOne<FaqTagsResponse>(id)
+      const record = await getBackendClient().collection(this.COLLECTION).getOne<FaqTagsResponse>(id)
       return { success: true, data: record }
     } catch (error) {
       console.error('Error fetching tag:', error)
@@ -106,7 +106,7 @@ export class FaqTagsService {
         await this.removeTagFromAllFaqs(id)
       }
       
-      await getPB().collection(this.COLLECTION).delete(id)
+      await getBackendClient().collection(this.COLLECTION).delete(id)
       return { success: true, message: 'Tag deleted successfully' }
     } catch (error) {
       console.error('Error deleting tag:', error)
@@ -119,7 +119,7 @@ export class FaqTagsService {
    */
   static async getTagWithStats(id: string): Promise<FaqServiceResponse<FaqTagWithStats>> {
     try {
-      const tag = await getPB().collection(this.COLLECTION).getOne<FaqTagsResponse>(id)
+      const tag = await getBackendClient().collection(this.COLLECTION).getOne<FaqTagsResponse>(id)
       
       // Get current FAQ count for this tag
       const faqCount = await this.getTagUsageCount(id)
@@ -142,7 +142,7 @@ export class FaqTagsService {
   static async mergeTags(sourceIds: string[], targetId: string): Promise<FaqServiceResponse<BulkOperationResult>> {
     try {
       // Validate target tag exists
-      await getPB().collection(this.COLLECTION).getOne(targetId)
+      await getBackendClient().collection(this.COLLECTION).getOne(targetId)
 
       let totalMoved = 0
       const errors: Array<{ id: string; error: string }> = []
@@ -151,7 +151,7 @@ export class FaqTagsService {
       for (const sourceId of sourceIds) {
         try {
           // Get all FAQs with this source tag
-          const faqs = await getPB().collection(this.FAQ_COLLECTION).getFullList<FaqsResponse>({
+          const faqs = await getBackendClient().collection(this.FAQ_COLLECTION).getFullList<FaqsResponse>({
             filter: `tags ~ "${sourceId}"`
           })
 
@@ -161,7 +161,7 @@ export class FaqTagsService {
               .filter(tagId => tagId !== sourceId) // Remove source tag
               .concat(targetId) // Add target tag
             
-            return getPB().collection(this.FAQ_COLLECTION).update(faq.id, {
+            return getBackendClient().collection(this.FAQ_COLLECTION).update(faq.id, {
               tags: [...new Set(updatedTags)] // Remove duplicates
             })
           })
@@ -170,7 +170,7 @@ export class FaqTagsService {
           totalMoved += faqs.length
 
           // Delete source tag
-          await getPB().collection(this.COLLECTION).delete(sourceId)
+          await getBackendClient().collection(this.COLLECTION).delete(sourceId)
         } catch (error) {
           errors.push({
             id: sourceId,
@@ -181,7 +181,7 @@ export class FaqTagsService {
 
       // Recalculate usage count for target tag
       const newUsageCount = await this.getTagUsageCount(targetId)
-      await getPB().collection(this.COLLECTION).update(targetId, {
+      await getBackendClient().collection(this.COLLECTION).update(targetId, {
         usage_count: newUsageCount
       })
 
@@ -209,7 +209,7 @@ export class FaqTagsService {
     try {
       const results = await Promise.allSettled(
         ids.map(id => 
-          getPB().collection(this.COLLECTION).update(id, { is_active: isActive })
+          getBackendClient().collection(this.COLLECTION).update(id, { is_active: isActive })
         )
       )
 
@@ -243,7 +243,7 @@ export class FaqTagsService {
     try {
       const filter = `is_active = true && (name ~ "${query}" || slug ~ "${query}")`
       
-      const records = await getPB().collection(this.COLLECTION).getList<FaqTagsResponse>(1, limit, {
+      const records = await getBackendClient().collection(this.COLLECTION).getList<FaqTagsResponse>(1, limit, {
         filter,
         sort: '-usage_count,name'
       })
@@ -265,7 +265,7 @@ export class FaqTagsService {
       }
 
       const filter = ids.map(id => `id = "${id}"`).join(' || ')
-      const records = await getPB().collection(this.COLLECTION).getFullList<FaqTagsResponse>({
+      const records = await getBackendClient().collection(this.COLLECTION).getFullList<FaqTagsResponse>({
         filter,
         sort: 'name'
       })
@@ -282,7 +282,7 @@ export class FaqTagsService {
    */
   static async getPopularTags(limit = 20): Promise<FaqServiceResponse<FaqTagsResponse[]>> {
     try {
-      const records = await getPB().collection(this.COLLECTION).getList<FaqTagsResponse>(1, limit, {
+      const records = await getBackendClient().collection(this.COLLECTION).getList<FaqTagsResponse>(1, limit, {
         filter: 'is_active = true && usage_count > 0',
         sort: '-usage_count,name'
       })
@@ -299,14 +299,14 @@ export class FaqTagsService {
    */
   static async recalculateUsageCounts(): Promise<FaqServiceResponse<{ updated: number }>> {
     try {
-      const tags = await getPB().collection(this.COLLECTION).getFullList<FaqTagsResponse>()
+      const tags = await getBackendClient().collection(this.COLLECTION).getFullList<FaqTagsResponse>()
       let updated = 0
 
       const updates = tags.map(async (tag) => {
         try {
           const actualUsage = await this.getTagUsageCount(tag.id)
           if (actualUsage !== tag.usage_count) {
-            await getPB().collection(this.COLLECTION).update(tag.id, {
+            await getBackendClient().collection(this.COLLECTION).update(tag.id, {
               usage_count: actualUsage
             })
             updated++
@@ -353,7 +353,7 @@ export class FaqTagsService {
         filter += ` && id != "${excludeId}"`
       }
 
-      const result = await getPB().collection(this.COLLECTION).getList(1, 1, { filter })
+      const result = await getBackendClient().collection(this.COLLECTION).getList(1, 1, { filter })
       return result.totalItems > 0
     } catch (error) {
       return false
@@ -366,7 +366,7 @@ export class FaqTagsService {
    */
   private static async getTagUsageCount(tagId: string): Promise<number> {
     try {
-      const result = await getPB().collection(this.FAQ_COLLECTION).getList(1, 1, {
+      const result = await getBackendClient().collection(this.FAQ_COLLECTION).getList(1, 1, {
         filter: `tags ~ "${tagId}"`
       })
       return result.totalItems
@@ -381,13 +381,13 @@ export class FaqTagsService {
    */
   private static async removeTagFromAllFaqs(tagId: string): Promise<void> {
     try {
-      const faqs = await getPB().collection(this.FAQ_COLLECTION).getFullList<FaqsResponse>({
+      const faqs = await getBackendClient().collection(this.FAQ_COLLECTION).getFullList<FaqsResponse>({
         filter: `tags ~ "${tagId}"`
       })
 
       const updates = faqs.map(faq => {
         const updatedTags = (faq.tags || []).filter(id => id !== tagId)
-        return getPB().collection(this.FAQ_COLLECTION).update(faq.id, {
+        return getBackendClient().collection(this.FAQ_COLLECTION).update(faq.id, {
           tags: updatedTags
         })
       })

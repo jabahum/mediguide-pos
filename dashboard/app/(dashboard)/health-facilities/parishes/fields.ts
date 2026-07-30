@@ -2,7 +2,7 @@ import { FieldOption } from "@/types/data-table"
 
 /**
  * Available fields for parishes table advanced filtering
- * Based on PocketBase parishes schema
+ * Based on legacy collection API parishes schema
  */
 export const parishesAvailableFields: FieldOption[] = [
   // Basic Information

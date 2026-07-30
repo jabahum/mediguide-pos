@@ -8,7 +8,7 @@ import {
   Download,
 } from "lucide-react"
 
-import { getPB } from "@/lib/pocketbase"
+import { getBackendClient } from "@/lib/backend-client"
 import { showToast } from "@/lib/toast"
 import { RowAction, BulkAction } from "@/types/data-table"
 import { GenericPage } from "./columns"
@@ -16,7 +16,7 @@ import { GenericPage } from "./columns"
 // Helper function to delete a page
 const deletePage = async (page: GenericPage) => {
   try {
-    const pb = getPB()
+    const pb = getBackendClient()
     await pb.collection('generic_pages').delete(page.id)
     showToast.success("Page Deleted", `Page "${page.title}" has been deleted successfully`)
   } catch (error) {
@@ -150,7 +150,7 @@ export const pageBulkActions: BulkAction<GenericPage>[] = [
     variant: "destructive",
     onClick: async (pages) => {
       try {
-        const pb = getPB()
+        const pb = getBackendClient()
         
         // Delete all selected pages
         await Promise.all(

@@ -30,7 +30,7 @@ import {
 import { Check, ChevronDown, Search } from "lucide-react"
 import { GuidelineIndexType } from "../columns"
 import { showToast } from "@/lib/toast"
-import { getPB } from "@/lib/pocketbase"
+import { getBackendClient } from "@/lib/backend-client"
 
 const editIndexSchema = z.object({
   title: z.string().min(1, "Title is required").max(200, "Title must be less than 200 characters"),
@@ -94,7 +94,7 @@ export function EditIndexModal({
     
     setIsSearching(true)
     try {
-      const pb = getPB()
+      const pb = getBackendClient()
       const results = await pb.collection('guideline_index').getList(1, 50, {
         filter: `title ~ "${searchTerm}" && id != "${indexItem.id}"`,
         sort: 'level,order'
@@ -154,7 +154,7 @@ export function EditIndexModal({
 
     setIsSubmitting(true)
     try {
-      const pb = getPB()
+      const pb = getBackendClient()
       
       // Prepare update data
       const updateData: Record<string, unknown> = {

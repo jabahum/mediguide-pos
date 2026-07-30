@@ -18,7 +18,7 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Check, ChevronDown, X } from "lucide-react"
 import { cn } from "@/lib/utils"
-import type { UsersResponse } from "@/types/pocketbase-types"
+import type { UsersResponse } from "@/types/backend-types"
 import { SupportTicketsService } from "@/services/support-tickets.service"
 
 export interface UserSelectorProps {

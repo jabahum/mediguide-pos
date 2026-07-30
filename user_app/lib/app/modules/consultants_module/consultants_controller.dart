@@ -4,7 +4,7 @@ import 'package:infinite_scroll_pagination/infinite_scroll_pagination.dart';
 import 'package:user_app/app/data/models/filter_models.dart';
 
 import '../../data/models/models.dart';
-import '../../data/services/pocketbase_service.dart';
+import '../../data/services/backend_api_service.dart';
 import '../../utils/constants.dart';
 import '../../utils/common.dart';
 import '../../widgets/generic_filter_bottom_sheet.dart';
@@ -61,26 +61,26 @@ class ConsultantsController extends GetxController {
       final filters = <String>['(status="active" || status="pendingApproval")'];
 
       if (searchQuery.value.isNotEmpty) {
-        final q = PocketBaseService.escapeFilterValue(searchQuery.value);
+        final q = BackendApiService.escapeFilterValue(searchQuery.value);
         filters.add('(name~"$q" || organization~"$q" || specialty~"$q")');
       }
 
       if (selectedSpecialty.value.isNotEmpty) {
-        final specialty = PocketBaseService.escapeFilterValue(
+        final specialty = BackendApiService.escapeFilterValue(
           selectedSpecialty.value,
         );
         filters.add('specialty="$specialty"');
       }
 
       if (selectedRegion.value.isNotEmpty) {
-        final region = PocketBaseService.escapeFilterValue(
+        final region = BackendApiService.escapeFilterValue(
           selectedRegion.value,
         );
         filters.add('region="$region"');
       }
 
       if (selectedCity.value.isNotEmpty) {
-        final city = PocketBaseService.escapeFilterValue(selectedCity.value);
+        final city = BackendApiService.escapeFilterValue(selectedCity.value);
         filters.add('city="$city"');
       }
 
@@ -94,7 +94,7 @@ class ConsultantsController extends GetxController {
 
       final filterString = filters.join(' && ');
 
-      final result = await PocketBaseService.to.getRecordList(
+      final result = await BackendApiService.to.getRecordList(
         collectionName: Consultant.collection,
         page: pageKey,
         perPage: pageSize,
@@ -268,7 +268,7 @@ class ConsultantsController extends GetxController {
     try {
       isLoadingFilters.value = true;
 
-      final result = await PocketBaseService.to.getRecordList(
+      final result = await BackendApiService.to.getRecordList(
         collectionName: Consultant.collection,
         perPage: 100,
         filter: 'status="active"',

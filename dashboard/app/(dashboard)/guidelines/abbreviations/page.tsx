@@ -5,7 +5,7 @@ import { Plus } from "lucide-react"
 
 // Components
 import { PageHeader } from "@/components/ui/page-header"
-import { PocketBaseDataTable } from "@/components/ui/pocketbase-datatable-simple"
+import { BackendDataTable } from "@/components/ui/backend-data-table"
 
 // Page-specific imports
 import { abbreviationsColumns } from "./columns"
@@ -54,7 +54,7 @@ export default function AbbreviationsPage() {
   // Handle successful operations
   const handleSuccess = React.useCallback(() => {
     // This will trigger a refetch of the data table
-    // The EnhancedPocketBaseDataTable handles this automatically
+    // The EnhancedBackendDataTable handles this automatically
   }, [])
 
   return (
@@ -73,14 +73,14 @@ export default function AbbreviationsPage() {
       />
 
       {/* Simplified DataTable */}
-      <PocketBaseDataTable<AbbreviationsWithExpanded>
+      <BackendDataTable<AbbreviationsWithExpanded>
         collection="abbreviations"
         columns={abbreviationsColumns}
         searchFields={["abbreviation", "meaning", "description"]}
         rowActions={abbreviationRowActions}
         bulkActions={abbreviationBulkActions}
         availableFields={abbreviationsAvailableFields}
-        pocketbase={{
+        query={{
           expand: "category,tags"
         }}
         ui={{

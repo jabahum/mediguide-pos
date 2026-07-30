@@ -7,7 +7,7 @@ import 'package:get/get.dart';
 
 import 'package:user_app/app/data/models/filter_models.dart';
 import 'package:user_app/app/data/models/guideline_index.dart';
-import 'package:user_app/app/data/services/pocketbase_service.dart';
+import 'package:user_app/app/data/services/backend_api_service.dart';
 import 'package:user_app/app/translations/app_translations.dart';
 import 'package:user_app/app/widgets/generic_filter_bottom_sheet.dart';
 
@@ -110,7 +110,7 @@ class GuidelinesIndexerController extends GetxController {
       isLoading.value = true;
       hasLoadError.value = false;
 
-      final result = await PocketBaseService.to.getRecordList(
+      final result = await BackendApiService.to.getRecordList(
         collectionName: GuidelineIndex.collection,
         page: 1,
         perPage: 500,

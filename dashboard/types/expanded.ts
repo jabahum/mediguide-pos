@@ -1,5 +1,5 @@
 /**
- * Expanded types for PocketBase responses with relationship data
+ * Expanded types for legacy collection API responses with relationship data
  */
 
 import {
@@ -24,7 +24,7 @@ import {
   UsersResponse,
   SupportTicketsResponse,
   SupportTicketRepliesResponse,
-} from "./pocketbase-types"
+} from "./backend-types"
 
 /**
  * Health Sub-Region with expanded region relationship

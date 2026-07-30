@@ -30,7 +30,7 @@ import { SimpleGuidelineCategorySelector } from "@/components/ui/guideline-categ
 import { MultiSelect } from "@/components/ui/multi-select"
 
 // Hooks and utilities
-import { usePocketBaseCrud } from "@/hooks/use-pocketbase-crud"
+import { useBackendCrud } from "@/hooks/use-backend-crud"
 import { useGuidelineTags } from "@/hooks/use-guideline-tags"
 import { showToast } from "@/lib/toast"
 
@@ -62,7 +62,7 @@ export function AbbreviationCreateModal({
   // Load tags using the custom hook
   const { getMultiSelectOptions } = useGuidelineTags()
 
-  const { create } = usePocketBaseCrud({
+  const { create } = useBackendCrud({
     collectionName: "abbreviations",
     onSuccess: () => {
       // Success handled in onSubmit

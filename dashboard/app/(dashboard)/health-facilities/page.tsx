@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation"
 import { Plus } from "lucide-react"
 
 import { PageHeader } from "@/components/ui/page-header"
-import { EnhancedPocketBaseDataTable } from "@/components/ui/pocketbase-datatable"
+import { EnhancedBackendDataTable } from "@/components/ui/enhanced-backend-data-table"
 import { createColumns, HealthFacility } from "./columns"
 import { createFacilityRowActions, facilityBulkActions } from "./facility-actions"
 import { healthFacilitiesAvailableFields } from "./fields"
@@ -34,7 +34,7 @@ export default function HealthFacilitiesPage() {
 
   const handleAdvancedFilter = React.useCallback((filters: AdvancedFilter[]) => {
     console.log('Advanced filters applied:', filters)
-    // Here you would convert the advanced filters to PocketBase filter syntax
+    // Here you would convert the advanced filters to legacy collection API filter syntax
     // and pass them to the data table hook
   }, [])
 
@@ -65,7 +65,7 @@ export default function HealthFacilitiesPage() {
       />
 
       {/* Enhanced DataTable */}
-      <EnhancedPocketBaseDataTable<HealthFacility>
+      <EnhancedBackendDataTable<HealthFacility>
         // Collection settings
         collectionName="health_facilities"
         columns={columns}

@@ -1,14 +1,14 @@
 // ignore_for_file: unused_field
 
-import 'package:pocketbase/pocketbase.dart';
+import 'package:user_app/app/data/models/api_record.dart';
 import '../enums/common_enums.dart';
 import 'base_model.dart';
 
-/// Therapeutic category model based on PocketBase therapeutic_categories collection
+/// Therapeutic category model based on legacy collection API therapeutic_categories collection
 class TherapeuticCategory extends BaseModel {
   TherapeuticCategory(super.data);
 
-  /// PocketBase collection name
+  /// legacy collection API collection name
   static const String collection = 'therapeutic_categories';
 
   // Self-registration for dynamic model creation
@@ -17,8 +17,8 @@ class TherapeuticCategory extends BaseModel {
     return true;
   })();
 
-  /// Create TherapeuticCategory from PocketBase record
-  static TherapeuticCategory fromRecord(RecordModel record) =>
+  /// Create TherapeuticCategory from legacy collection API record
+  static TherapeuticCategory fromRecord(ApiRecord record) =>
       TherapeuticCategory(record.data);
 
   /// Create JSON for new therapeutic category record (excludes system fields)

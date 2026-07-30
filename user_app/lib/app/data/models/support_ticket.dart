@@ -1,7 +1,7 @@
 // ignore_for_file: unused_field
 
 import 'package:flutter/material.dart';
-import 'package:pocketbase/pocketbase.dart';
+import 'package:user_app/app/data/models/api_record.dart';
 import 'base_model.dart';
 import 'user.dart';
 
@@ -35,7 +35,7 @@ enum TicketPriority {
 class SupportTicket extends BaseModel {
   SupportTicket(super.data);
 
-  /// PocketBase collection name
+  /// legacy collection API collection name
   static const String collection = 'support_tickets';
 
   // Self-registration for dynamic model creation
@@ -44,8 +44,8 @@ class SupportTicket extends BaseModel {
     return true;
   })();
 
-  /// Create SupportTicket from PocketBase record
-  factory SupportTicket.fromRecord(RecordModel record) {
+  /// Create SupportTicket from legacy collection API record
+  factory SupportTicket.fromRecord(ApiRecord record) {
     return SupportTicket(record.data);
   }
 

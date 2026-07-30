@@ -1,14 +1,14 @@
 // ignore_for_file: unused_field
 
-import 'package:pocketbase/pocketbase.dart';
+import 'package:user_app/app/data/models/api_record.dart';
 import 'base_model.dart';
 
-/// Settings model based on PocketBase settings collection
+/// Settings model based on legacy collection API settings collection
 /// Handles application configuration and settings storage
 class Settings extends BaseModel {
   Settings(super.data);
 
-  /// PocketBase collection name
+  /// legacy collection API collection name
   static const String collection = 'settings';
 
   // Self-registration for dynamic model creation
@@ -17,8 +17,8 @@ class Settings extends BaseModel {
     return true;
   })();
 
-  /// Create Settings from PocketBase record
-  static Settings fromRecord(RecordModel record) => Settings(record.data);
+  /// Create Settings from legacy collection API record
+  static Settings fromRecord(ApiRecord record) => Settings(record.data);
 
   /// Create JSON for new settings record (excludes system fields)
   static Map<String, dynamic> forCreate({

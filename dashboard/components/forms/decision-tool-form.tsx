@@ -18,7 +18,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { FileUpload } from "@/components/ui/file-upload"
-import { CalculatorsResponse, CalculatorsTypeOptions, CalculatorsStatusOptions, CalculatorsCategoryOptions, CalculatorsPriorityOptions } from "@/types/pocketbase-types"
+import { CalculatorsResponse, CalculatorsTypeOptions, CalculatorsStatusOptions, CalculatorsCategoryOptions, CalculatorsPriorityOptions } from "@/types/backend-types"
 import { Calculator, Brain, CheckSquare, Palette, Settings, Info } from "lucide-react"
 
 const decisionToolSchema = z.object({

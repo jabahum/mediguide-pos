@@ -5,7 +5,7 @@ import 'package:infinite_scroll_pagination/infinite_scroll_pagination.dart';
 
 import '../../data/models/models.dart';
 import '../../data/models/filter_models.dart';
-import '../../data/services/pocketbase_service.dart';
+import '../../data/services/backend_api_service.dart';
 import '../../data/services/auth_service.dart';
 import '../../routes/app_pages.dart';
 import '../../utils/common.dart';
@@ -58,7 +58,7 @@ class ChatListController extends GetxController {
 
       final filter = _buildFilter(userId);
 
-      final result = await PocketBaseService.to.getRecordList(
+      final result = await BackendApiService.to.getRecordList(
         collectionName: Conversation.collection,
         page: pageKey,
         perPage: 20,

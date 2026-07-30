@@ -2,7 +2,7 @@ import { FieldOption } from "@/types/data-table"
 
 /**
  * Available fields for health sub-districts table advanced filtering
- * Based on PocketBase health_sub_districts schema
+ * Based on legacy collection API health_sub_districts schema
  */
 export const healthSubDistrictsAvailableFields: FieldOption[] = [
   // Basic Information

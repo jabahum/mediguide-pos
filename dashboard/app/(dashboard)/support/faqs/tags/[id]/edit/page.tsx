@@ -27,7 +27,7 @@ import { LoadingState } from "@/components/ui/loading-state"
 import { FaqTagsService } from "@/services/faq-tags.service"
 import { showToast } from "@/lib/toast"
 import type { FaqTagUpdateData } from "@/types/faq"
-import type { FaqTagsResponse } from "@/types/pocketbase-types"
+import type { FaqTagsResponse } from "@/types/backend-types"
 
 // Available color options for tags
 const TAG_COLOR_OPTIONS = [

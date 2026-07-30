@@ -5,7 +5,7 @@ import { useQuery } from "@tanstack/react-query"
 import { Check, ChevronsUpDown } from "lucide-react"
 
 import { cn } from "@/lib/utils"
-import { getPB } from "@/lib/pocketbase"
+import { getBackendClient } from "@/lib/backend-client"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import {
@@ -208,7 +208,7 @@ function RelationSelect({
   const [open, setOpen] = React.useState(false)
   const [search, setSearch] = React.useState("")
   const [debounced, setDebounced] = React.useState("")
-  const pb = React.useMemo(() => getPB(), [])
+  const pb = React.useMemo(() => getBackendClient(), [])
 
   const relation = field.relation!
   const labelField = relation.labelField ?? "name"

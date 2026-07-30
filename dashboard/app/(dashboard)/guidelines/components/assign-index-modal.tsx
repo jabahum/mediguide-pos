@@ -15,7 +15,7 @@ import { Label } from "@/components/ui/label"
 import { GuidelineIndexSelector } from "@/components/ui/guideline-index-selector"
 import { MedicalGuidelinesWithExpanded } from "@/types/expanded"
 import { showToast } from "@/lib/toast"
-import { getPB } from "@/lib/pocketbase"
+import { getBackendClient } from "@/lib/backend-client"
 
 const assignIndexSchema = z.object({
   index_item: z.string().optional(),
@@ -61,7 +61,7 @@ export function AssignIndexModal({
     
     setIsSubmitting(true)
     try {
-      const pb = getPB()
+      const pb = getBackendClient()
       
       await pb.collection('medical_guidelines').update(guideline.id, {
         index_item: data.index_item || undefined,

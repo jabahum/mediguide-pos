@@ -22,7 +22,7 @@ import {
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Button } from "@/components/ui/button"
-import { getPB } from "@/lib/pocketbase"
+import { getBackendClient } from "@/lib/backend-client"
 import { showToast } from "@/lib/toast"
 
 // Form validation schema
@@ -65,7 +65,7 @@ export function TagCreateModal({
     setIsSubmitting(true)
     
     try {
-      const pb = getPB()
+      const pb = getBackendClient()
       
       const tagData = {
         name: values.name.trim(),

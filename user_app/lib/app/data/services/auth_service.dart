@@ -2,7 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:get/get.dart';
 import 'package:local_auth/local_auth.dart';
 import 'package:user_app/app/data/models/models.dart';
-import 'package:user_app/app/data/services/pocketbase_service.dart';
+import 'package:user_app/app/data/services/backend_api_service.dart';
 import 'package:user_app/app/utils/preference_utils.dart';
 import 'package:user_app/app/utils/constants.dart';
 import 'package:user_app/app/translations/app_translations.dart';
@@ -33,7 +33,7 @@ class AuthService extends GetxService {
   String? get userProfilePicture {
     final user = currentUser.value;
     if (user?.avatar.isNotEmpty == true) {
-      return PocketBaseService.to.getFileUrl(
+      return BackendApiService.to.getFileUrl(
         collectionName: 'users',
         recordId: user!.id,
         filename: user.avatar,
@@ -126,7 +126,7 @@ class AuthService extends GetxService {
   Future<void> logout() async {
     try {
       // Clear all authentication-related shared preferences
-      PocketBaseService.to.logout();
+      BackendApiService.to.logout();
     } catch (_) {
     } finally {
       await clearUser();

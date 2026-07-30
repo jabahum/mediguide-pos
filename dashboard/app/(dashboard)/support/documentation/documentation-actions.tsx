@@ -1,6 +1,6 @@
 import { RowAction, BulkAction } from "@/types/data-table"
 import { Eye, Edit, Trash2, Archive, FileText, Download, CheckCircle } from "lucide-react"
-import { DocumentationResponse, DocumentationStatusOptions } from "@/types/pocketbase-types"
+import { DocumentationResponse, DocumentationStatusOptions } from "@/types/backend-types"
 import { DocumentationService } from "@/services/documentation.service"
 import { showToast } from "@/lib/toast"
 

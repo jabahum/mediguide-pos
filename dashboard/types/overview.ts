@@ -1,4 +1,4 @@
-import type { IsoDateString, RecordIdString } from "@/types/pocketbase-types"
+import type { IsoDateString, RecordIdString } from "@/types/backend-types"
 
 export type OverviewSeriesPoint = {
   day: IsoDateString

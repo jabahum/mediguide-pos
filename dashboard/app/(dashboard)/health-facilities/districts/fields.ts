@@ -2,7 +2,7 @@ import { FieldOption } from "@/types/data-table"
 
 /**
  * Available fields for districts table advanced filtering
- * Based on PocketBase districts schema
+ * Based on legacy collection API districts schema
  */
 export const districtsAvailableFields: FieldOption[] = [
   // Basic Information

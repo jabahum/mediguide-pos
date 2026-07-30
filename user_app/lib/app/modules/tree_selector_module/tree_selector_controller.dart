@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'package:animated_tree_view/tree_view/tree_node.dart';
 import 'package:get/get.dart';
 
-import '../../data/services/pocketbase_service.dart';
+import '../../data/services/backend_api_service.dart';
 import '../../translations/app_translations.dart';
 import '../../utils/common.dart';
 import 'models/tree_selector_models.dart';
@@ -180,7 +180,7 @@ class TreeSelectorController extends GetxController {
       if (config.context.isNotEmpty) 'context': jsonEncode(config.context),
     };
 
-    final response = await PocketBaseService.to.getCustomEndpoint(
+    final response = await BackendApiService.to.getCustomEndpoint(
       path: config.endpointPath,
       query: query,
     );

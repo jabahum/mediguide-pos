@@ -24,11 +24,11 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
 import { PageHeader } from "@/components/ui/page-header"
-import { usePbRecord } from "@/hooks/use-pb-record"
+import { useBackendRecord } from "@/hooks/use-backend-record"
 import { formatLocation, getStatusBadgeVariant } from "../columns"
 import type { Consultant } from "../columns"
 import { usePermissionContext, WithPermission } from "@/lib/permission-context"
-import { getPB } from "@/lib/pocketbase"
+import { getBackendClient } from "@/lib/backend-client"
 
 interface ConsultantDetailPageProps {
   params: Promise<{
@@ -41,7 +41,7 @@ export default function ConsultantDetailPage({ params }: ConsultantDetailPagePro
   const router = useRouter()
   const { id } = React.use(params)
 
-  const { record: consultant, loading: isLoading, error } = usePbRecord<Consultant & { id: string }>(
+  const { record: consultant, loading: isLoading, error } = useBackendRecord<Consultant & { id: string }>(
     "consultants",
     id
   )

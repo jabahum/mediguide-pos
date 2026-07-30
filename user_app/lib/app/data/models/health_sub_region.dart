@@ -1,14 +1,14 @@
 // ignore_for_file: unused_field
 
-import 'package:pocketbase/pocketbase.dart';
+import 'package:user_app/app/data/models/api_record.dart';
 import 'base_model.dart';
 import 'region.dart';
 
-/// Health sub-region model based on PocketBase health_sub_regions collection
+/// Health sub-region model based on legacy collection API health_sub_regions collection
 class HealthSubRegion extends BaseModel {
   HealthSubRegion(super.data);
 
-  /// PocketBase collection name
+  /// legacy collection API collection name
   static const String collection = 'health_sub_regions';
 
   // Self-registration for dynamic model creation
@@ -17,8 +17,8 @@ class HealthSubRegion extends BaseModel {
     return true;
   })();
 
-  /// Create HealthSubRegion from PocketBase record
-  static HealthSubRegion fromRecord(RecordModel record) =>
+  /// Create HealthSubRegion from legacy collection API record
+  static HealthSubRegion fromRecord(ApiRecord record) =>
       HealthSubRegion(record.data);
 
   /// Create JSON for new health sub-region record (excludes system fields)

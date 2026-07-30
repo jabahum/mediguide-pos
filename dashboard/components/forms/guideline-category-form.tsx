@@ -25,7 +25,7 @@ import {
 } from "@/components/ui/select"
 import { GuidelineCategorySelector } from "@/components/ui/guideline-category-selector"
 // import { useGuidelineCategories } from "@/hooks/use-guideline-categories"
-// import type { GuidelineCategoriesResponse } from "@/types/pocketbase-types"
+// import type { GuidelineCategoriesResponse } from "@/types/backend-types"
 
 const categoryFormSchema = z.object({
   name: z.string().min(1, "Name is required").max(100, "Name must be less than 100 characters"),

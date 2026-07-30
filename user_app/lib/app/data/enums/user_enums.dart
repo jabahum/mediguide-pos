@@ -1,4 +1,4 @@
-/// User role enum based on PocketBase users collection schema
+/// User role enum based on legacy collection API users collection schema
 enum UserRole {
   superAdmin(label: 'Super Admin'),
   admin(label: 'Admin'),
@@ -12,7 +12,7 @@ enum UserRole {
   final String label;
 }
 
-/// User status enum based on PocketBase users collection schema
+/// User status enum based on legacy collection API users collection schema
 enum UserStatus {
   active(label: 'Active'),
   inactive(label: 'Inactive'),
@@ -24,7 +24,7 @@ enum UserStatus {
   final String label;
 }
 
-/// User specialization enum based on PocketBase users collection schema
+/// User specialization enum based on legacy collection API users collection schema
 enum Specialization {
   generalPractice(label: 'General Practice'),
   pediatrics(label: 'Pediatrics'),
@@ -46,7 +46,7 @@ enum Specialization {
   final String label;
 }
 
-/// Preferred language enum based on PocketBase users collection schema
+/// Preferred language enum based on legacy collection API users collection schema
 enum PreferredLanguage {
   english(label: 'English'),
   french(label: 'French'),

@@ -2,7 +2,7 @@ import { FieldOption } from "@/types/data-table"
 
 /**
  * Available fields for medical guidelines table advanced filtering
- * Based on PocketBase medical_guidelines schema
+ * Based on legacy collection API medical_guidelines schema
  */
 export const medicalGuidelinesAvailableFields: FieldOption[] = [
   // Basic Information

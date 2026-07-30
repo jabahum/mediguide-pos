@@ -44,8 +44,8 @@ import {
   Loader2
 } from "lucide-react"
 import { showToast } from "@/lib/toast"
-import { pb } from "@/lib/pocketbase"
-import { Collections } from "@/types/pocketbase-types"
+import { backendClient } from "@/lib/backend-client"
+import { Collections } from "@/types/backend-types"
 import type {
   NotificationTemplatesResponse,
   NotificationCampaignsResponse,
@@ -54,7 +54,7 @@ import type {
   NotificationTemplatesCategoryOptions,
   NotificationCampaignsTypeOptions,
   NotificationCampaignsStatusOptions
-} from "@/types/pocketbase-types"
+} from "@/types/backend-types"
 
 export default function NotificationsPage() {
   const router = useRouter()
@@ -80,8 +80,8 @@ export default function NotificationsPage() {
   const fetchData = useCallback(async () => {
     try {
       const [templatesResult, campaignsResult] = await Promise.all([
-        pb.collection(Collections.NotificationTemplates).getList(1, 50),
-        pb.collection(Collections.NotificationCampaigns).getList(1, 50)
+        backendClient.collection(Collections.NotificationTemplates).getList(1, 50),
+        backendClient.collection(Collections.NotificationCampaigns).getList(1, 50)
       ])
 
       setTemplates(templatesResult.items as NotificationTemplatesResponse[])
@@ -168,7 +168,7 @@ export default function NotificationsPage() {
   const handleToggleTemplate = async (templateId: string, currentStatus: string) => {
     const newStatus = currentStatus === "active" ? "inactive" : "active"
     try {
-      await pb.collection(Collections.NotificationTemplates).update(templateId, { status: newStatus })
+      await backendClient.collection(Collections.NotificationTemplates).update(templateId, { status: newStatus })
       showToast.success(
         newStatus === "active" ? "Template activated" : "Template deactivated",
         `Notification template has been ${newStatus === "active" ? 'activated' : 'deactivated'}`
@@ -186,7 +186,7 @@ export default function NotificationsPage() {
       if (action === "resume") newStatus = "running"
       if (action === "stop") newStatus = "completed"
 
-      await pb.collection(Collections.NotificationCampaigns).update(campaignId, { status: newStatus })
+      await backendClient.collection(Collections.NotificationCampaigns).update(campaignId, { status: newStatus })
       showToast.success(`Campaign ${action}ed`, `Campaign has been ${action}ed`)
       fetchData()
     } catch (error) {
@@ -303,7 +303,7 @@ export default function NotificationsPage() {
       {/* Overview Stats */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 backendClient-2">
             <CardTitle className="text-sm font-medium">Total Sent</CardTitle>
             <Send className="h-4 w-4 text-blue-500" />
           </CardHeader>
@@ -316,7 +316,7 @@ export default function NotificationsPage() {
         </Card>
 
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 backendClient-2">
             <CardTitle className="text-sm font-medium">Delivery Rate</CardTitle>
             <CheckCircle className="h-4 w-4 text-green-500" />
           </CardHeader>
@@ -329,7 +329,7 @@ export default function NotificationsPage() {
         </Card>
 
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 backendClient-2">
             <CardTitle className="text-sm font-medium">Open Rate</CardTitle>
             <Eye className="h-4 w-4 text-orange-500" />
           </CardHeader>
@@ -342,7 +342,7 @@ export default function NotificationsPage() {
         </Card>
 
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 backendClient-2">
             <CardTitle className="text-sm font-medium">Active Templates</CardTitle>
             <Bell className="h-4 w-4 text-purple-500" />
           </CardHeader>
@@ -646,7 +646,7 @@ export default function NotificationsPage() {
               <div className="space-y-6">
                 <div className="grid gap-4 md:grid-cols-3">
                   <Card>
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 backendClient-2">
                       <CardTitle className="text-sm font-medium">Delivery Trends</CardTitle>
                       <TrendingUp className="h-4 w-4 text-muted-foreground" />
                     </CardHeader>
@@ -656,7 +656,7 @@ export default function NotificationsPage() {
                     </CardContent>
                   </Card>
                   <Card>
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 backendClient-2">
                       <CardTitle className="text-sm font-medium">Engagement</CardTitle>
                       <Eye className="h-4 w-4 text-muted-foreground" />
                     </CardHeader>
@@ -666,7 +666,7 @@ export default function NotificationsPage() {
                     </CardContent>
                   </Card>
                   <Card>
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 backendClient-2">
                       <CardTitle className="text-sm font-medium">Total Reach</CardTitle>
                       <Users className="h-4 w-4 text-muted-foreground" />
                     </CardHeader>

@@ -9,7 +9,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { GuidelineCategoryForm, GuidelineCategoryFormData } from "@/components/forms/guideline-category-form"
-import { usePocketBaseCrud } from "@/hooks/use-pocketbase-crud"
+import { useBackendCrud } from "@/hooks/use-backend-crud"
 import { showToast } from "@/lib/toast"
 
 interface CategoryCreateModalProps {
@@ -23,7 +23,7 @@ export function CategoryCreateModal({
   onOpenChange,
   onSuccess
 }: CategoryCreateModalProps) {
-  const { create, loading } = usePocketBaseCrud({
+  const { create, loading } = useBackendCrud({
     collectionName: "guideline_categories",
     onSuccess: () => {
       showToast.success("Category created", "The category has been created successfully")

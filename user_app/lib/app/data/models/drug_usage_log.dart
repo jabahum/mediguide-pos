@@ -1,6 +1,6 @@
 // ignore_for_file: unused_field
 
-import 'package:pocketbase/pocketbase.dart';
+import 'package:user_app/app/data/models/api_record.dart';
 import 'base_model.dart';
 import 'user.dart';
 import 'drug.dart';
@@ -9,7 +9,7 @@ import 'drug.dart';
 class DrugUsageLog extends BaseModel {
   DrugUsageLog(super.data);
 
-  /// PocketBase collection name
+  /// legacy collection API collection name
   static const String collection = 'drug_usage_logs';
 
   // Self-registration for dynamic model creation
@@ -18,9 +18,8 @@ class DrugUsageLog extends BaseModel {
     return true;
   })();
 
-  /// Create DrugUsageLog from PocketBase record
-  static DrugUsageLog fromRecord(RecordModel record) =>
-      DrugUsageLog(record.data);
+  /// Create DrugUsageLog from legacy collection API record
+  static DrugUsageLog fromRecord(ApiRecord record) => DrugUsageLog(record.data);
 
   /// Create JSON for new usage log record
   static Map<String, dynamic> forCreate({

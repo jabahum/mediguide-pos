@@ -12,7 +12,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
-import type { GuidelineTagsResponse } from "@/types/pocketbase-types"
+import type { GuidelineTagsResponse } from "@/types/backend-types"
 
 interface TagViewModalProps {
   open: boolean

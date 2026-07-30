@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { canAccessDashboard } from '@/lib/pocketbase'
+import { canAccessDashboard } from '@/lib/backend-client'
 
 interface AuthGuardProps {
   children: React.ReactNode

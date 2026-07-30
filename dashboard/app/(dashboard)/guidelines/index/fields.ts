@@ -2,7 +2,7 @@ import { FieldOption } from "@/types/data-table"
 
 /**
  * Available fields for guideline index table advanced filtering
- * Based on PocketBase guideline_index schema
+ * Based on legacy collection API guideline_index schema
  */
 export const guidelineIndexAvailableFields: FieldOption[] = [
   // Basic Information

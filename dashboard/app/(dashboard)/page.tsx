@@ -12,7 +12,7 @@ import {
   Users,
 } from "lucide-react"
 import { useEffect, useState } from "react"
-import { getPB } from "@/lib/pocketbase"
+import { getBackendClient } from "@/lib/backend-client"
 import type { OverviewData } from "@/types/overview"
 import {
   OverviewEngagementChart,
@@ -189,7 +189,7 @@ export default function DashboardPage() {
   useEffect(() => {
     async function loadData() {
       try {
-        const pb = getPB()
+        const pb = getBackendClient()
         const overview = await pb.send<OverviewData>("/api/overview", {
           method: "GET",
         })

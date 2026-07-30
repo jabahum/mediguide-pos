@@ -23,10 +23,10 @@ export default function LoginPage() {
     setIsLoading(true)
 
     try {
-      const { getPB } = await import('@/lib/pocketbase')
-      const pb = getPB()
+      const { getBackendClient } = await import('@/lib/backend-client')
+      const pb = getBackendClient()
       
-      // Authenticate with PocketBase directly
+      // Authenticate with legacy collection API directly
       await pb.collection('users').authWithPassword(email, password)
       
       // Redirect to dashboard on successful login

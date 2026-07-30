@@ -9,9 +9,9 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { GuidelineCategoryForm, GuidelineCategoryFormData } from "@/components/forms/guideline-category-form"
-import { usePocketBaseCrud } from "@/hooks/use-pocketbase-crud"
+import { useBackendCrud } from "@/hooks/use-backend-crud"
 import { showToast } from "@/lib/toast"
-import type { GuidelineCategoriesResponse } from "@/types/pocketbase-types"
+import type { GuidelineCategoriesResponse } from "@/types/backend-types"
 
 interface CategoryEditModalProps {
   open: boolean
@@ -26,7 +26,7 @@ export function CategoryEditModal({
   category,
   onSuccess
 }: CategoryEditModalProps) {
-  const { update, loading } = usePocketBaseCrud({
+  const { update, loading } = useBackendCrud({
     collectionName: "guideline_categories",
     onSuccess: () => {
       showToast.success("Category updated", "The category has been updated successfully")

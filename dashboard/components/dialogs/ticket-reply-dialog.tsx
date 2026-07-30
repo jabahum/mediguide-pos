@@ -29,7 +29,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { SupportTicketsService } from "@/services/support-tickets.service"
 import type { SupportTicketsWithExpanded } from "@/types/expanded"
 import { showToast } from "@/lib/toast"
-import { getPB } from "@/lib/pocketbase"
+import { getBackendClient } from "@/lib/backend-client"
 
 const replySchema = z.object({
   message: z.string().min(1, "Reply message is required"),
@@ -77,7 +77,7 @@ export function TicketReplyDialog({
     try {
       setLoading(true)
       
-      const pb = getPB()
+      const pb = getBackendClient()
       const currentUser = pb.authStore.model
       
       if (!currentUser) {

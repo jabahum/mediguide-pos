@@ -1,11 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:infinite_scroll_pagination/infinite_scroll_pagination.dart';
-import 'package:pocketbase/pocketbase.dart';
 
 import '../../data/models/models.dart';
 import '../../data/models/filter_models.dart';
-import '../../data/services/pocketbase_service.dart';
+import '../../data/services/backend_api_service.dart';
 import '../../utils/constants.dart';
 import '../../utils/common.dart';
 import '../../widgets/generic_filter_bottom_sheet.dart';
@@ -73,7 +72,7 @@ class FaqController extends GetxController {
     }
   }
 
-  Future<ResultList<RecordModel>> _getFAQs({
+  Future<PagedResult<ApiRecord>> _getFAQs({
     int page = 1,
     int perPage = 10,
     String? filter,
@@ -85,7 +84,7 @@ class FaqController extends GetxController {
         ? '$baseFilter && ($filter)'
         : baseFilter;
 
-    return PocketBaseService.to.getRecordList(
+    return BackendApiService.to.getRecordList(
       collectionName: 'faqs',
       page: page,
       perPage: perPage,
@@ -94,12 +93,12 @@ class FaqController extends GetxController {
     );
   }
 
-  Future<ResultList<RecordModel>> _searchFAQs({
+  Future<PagedResult<ApiRecord>> _searchFAQs({
     required String query,
     int page = 1,
     int perPage = 10,
   }) async {
-    final q = PocketBaseService.escapeFilterValue(query);
+    final q = BackendApiService.escapeFilterValue(query);
     final searchFilter = 'question ~ "$q" || keywords ~ "$q" || answer ~ "$q"';
 
     return _getFAQs(
@@ -181,7 +180,7 @@ class FaqController extends GetxController {
   // =========================
 
   Future<List<FAQ>> getFeaturedFAQs({int limit = 5}) async {
-    final result = await PocketBaseService.to.getRecordList(
+    final result = await BackendApiService.to.getRecordList(
       collectionName: 'faqs',
       page: 1,
       perPage: limit,
@@ -193,7 +192,7 @@ class FaqController extends GetxController {
   }
 
   Future<FAQ?> getFAQById({required String faqId}) async {
-    final record = await PocketBaseService.to.getRecord(
+    final record = await BackendApiService.to.getRecord(
       collectionName: 'faqs',
       recordId: faqId,
     );

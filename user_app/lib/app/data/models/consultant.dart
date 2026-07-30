@@ -1,16 +1,16 @@
 // ignore_for_file: unused_field
 
-import 'package:pocketbase/pocketbase.dart';
+import 'package:user_app/app/data/models/api_record.dart';
 import '../enums/consultant_enums.dart';
 import '../enums/user_enums.dart';
 import 'base_model.dart';
 import 'user.dart';
 
-/// Consultant model based on PocketBase consultants collection
+/// Consultant model based on legacy collection API consultants collection
 class Consultant extends BaseModel {
   Consultant(super.data);
 
-  /// PocketBase collection name
+  /// legacy collection API collection name
   static const String collection = 'consultants';
 
   // Self-registration for dynamic model creation
@@ -19,8 +19,8 @@ class Consultant extends BaseModel {
     return true;
   })();
 
-  /// Create Consultant from PocketBase record
-  static Consultant fromRecord(RecordModel record) => Consultant(record.data);
+  /// Create Consultant from legacy collection API record
+  static Consultant fromRecord(ApiRecord record) => Consultant(record.data);
 
   /// Create JSON for new consultant record (excludes system fields)
   static Map<String, dynamic> forCreate({

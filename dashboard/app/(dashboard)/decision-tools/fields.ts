@@ -2,7 +2,7 @@ import { FieldOption } from "@/types/data-table"
 
 /**
  * Available fields for decision tools table advanced filtering
- * Based on PocketBase calculators collection schema
+ * Based on legacy collection API calculators collection schema
  */
 export const decisionToolsAvailableFields: FieldOption[] = [
   // Basic Information

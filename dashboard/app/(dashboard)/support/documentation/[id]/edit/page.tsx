@@ -27,7 +27,7 @@ import {
 } from "@/components/ui/form"
 
 import { DocumentationService } from "@/services/documentation.service"
-import { DocumentationResponse, DocumentationStatusOptions } from "@/types/pocketbase-types"
+import { DocumentationResponse, DocumentationStatusOptions } from "@/types/backend-types"
 import { showToast } from "@/lib/toast"
 
 const editDocumentationSchema = z.object({

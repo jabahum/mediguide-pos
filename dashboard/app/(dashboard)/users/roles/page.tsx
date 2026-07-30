@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation"
 import { Plus } from "lucide-react"
 
 import { PageHeader } from "@/components/ui/page-header"
-import { PocketBaseDataTable } from "@/components/ui/pocketbase-datatable-simple"
+import { BackendDataTable } from "@/components/ui/backend-data-table"
 import { usePermissionContext } from "@/lib/permission-context"
 
 // Page-specific imports
@@ -139,7 +139,7 @@ export default function RolesPage() {
       />
 
       {/* Simplified DataTable */}
-      <PocketBaseDataTable<Role>
+      <BackendDataTable<Role>
         collection="roles"
         columns={columns}
         searchFields={["name", "key", "description"]}
@@ -147,7 +147,7 @@ export default function RolesPage() {
         rowActions={roleRowActions}
         bulkActions={[]} // No bulk actions for roles
         availableFields={rolesAvailableFields}
-        pocketbase={{
+        query={{
           sort: "-created"
         }}
         ui={{

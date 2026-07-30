@@ -1,10 +1,10 @@
-import 'package:pocketbase/pocketbase.dart';
+import 'package:user_app/app/data/models/api_record.dart';
 
-/// Base model extending PocketBase's RecordModel with common functionality
-abstract class BaseModel extends RecordModel {
+/// Base model extending the backend-neutral record with common functionality.
+abstract class BaseModel extends ApiRecord {
   BaseModel(super.data);
 
-  /// Each model must define its PocketBase collection name
+  /// Each model must define its compatibility API collection name.
   /// This eliminates hardcoded collection names throughout the app
   static String get collection => throw UnimplementedError(
     'Each model must implement static String get collection',
@@ -122,7 +122,7 @@ abstract class BaseModel extends RecordModel {
         return null;
       }
 
-      // Handle both single objects and arrays (PocketBase can return both)
+      // Handle both single objects and arrays (legacy collection API can return both)
       Map<String, dynamic>? targetData;
 
       if (relatedData is Map<String, dynamic>) {

@@ -1,6 +1,7 @@
 *.md
 !README.md
 !**/README.md
+!docs/pocketbase-removal.md
 !guidelines-platform/src/content/**/*.md
 backend/.env
 backend/.env.local

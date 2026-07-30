@@ -1,6 +1,6 @@
 // ignore_for_file: unused_field
 
-import 'package:pocketbase/pocketbase.dart';
+import 'package:user_app/app/data/models/api_record.dart';
 import 'base_model.dart';
 import 'user.dart';
 import 'consultant.dart';
@@ -9,7 +9,7 @@ import 'consultant.dart';
 class ConsultantUsageLog extends BaseModel {
   ConsultantUsageLog(super.data);
 
-  /// PocketBase collection name
+  /// legacy collection API collection name
   static const String collection = 'consultant_usage_logs';
 
   // Self-registration for dynamic model creation
@@ -18,8 +18,8 @@ class ConsultantUsageLog extends BaseModel {
     return true;
   })();
 
-  /// Create ConsultantUsageLog from PocketBase record
-  static ConsultantUsageLog fromRecord(RecordModel record) =>
+  /// Create ConsultantUsageLog from legacy collection API record
+  static ConsultantUsageLog fromRecord(ApiRecord record) =>
       ConsultantUsageLog(record.data);
 
   /// Create JSON for new usage log record

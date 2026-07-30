@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation"
 import { usePermissionContext } from "@/lib/permission-context"
 
 import { PageHeader } from "@/components/ui/page-header"
-import { EnhancedPocketBaseDataTable } from "@/components/ui/pocketbase-datatable"
+import { EnhancedBackendDataTable } from "@/components/ui/enhanced-backend-data-table"
 import { DistrictsWithExpanded } from "@/types/expanded"
 
 import { districtsColumns } from "./columns"
@@ -95,7 +95,7 @@ export default function DistrictsPage() {
         ]}
       />
 
-      <EnhancedPocketBaseDataTable<DistrictsWithExpanded>
+      <EnhancedBackendDataTable<DistrictsWithExpanded>
         collectionName="districts"
         columns={districtsColumns}
         expand="region,health_sub_region"

@@ -1,6 +1,6 @@
 import type { RowAction, BulkAction } from "@/types/data-table"
 import type { FaqsWithExpanded } from "@/types/expanded"
-import type { FaqsStatusOptions } from "@/types/pocketbase-types"
+import type { FaqsStatusOptions } from "@/types/backend-types"
 import { 
   Eye, 
   Edit, 

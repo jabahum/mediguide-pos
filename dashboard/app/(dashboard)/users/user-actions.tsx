@@ -11,7 +11,7 @@ import {
   Download,
 } from "lucide-react"
 
-import { getPB } from "@/lib/pocketbase"
+import { getBackendClient } from "@/lib/backend-client"
 import { showToast } from "@/lib/toast"
 import { RowAction, BulkAction } from "@/types/data-table"
 import { User as UserType } from "./columns"
@@ -151,7 +151,7 @@ export const userBulkActions: BulkAction<UserType>[] = [
 
 // Action implementations
 async function toggleUserStatus(user: UserType): Promise<void> {
-  const pb = getPB()
+  const pb = getBackendClient()
   try {
     const newStatus = user.status === 'active' ? 'inactive' : 'active'
     await pb.collection('users').update(user.id, { status: newStatus })
@@ -168,7 +168,7 @@ async function toggleUserStatus(user: UserType): Promise<void> {
 }
 
 async function resetUserPassword(user: UserType): Promise<void> {
-  const pb = getPB()
+  const pb = getBackendClient()
   try {
     // Generate a temporary password
     const tempPassword = generateTempPassword()
@@ -192,7 +192,7 @@ async function resetUserPassword(user: UserType): Promise<void> {
 }
 
 async function sendVerificationEmail(user: UserType): Promise<void> {
-  const pb = getPB()
+  const pb = getBackendClient()
   try {
     await pb.collection('users').requestVerification(user.email)
     
@@ -208,7 +208,7 @@ async function sendVerificationEmail(user: UserType): Promise<void> {
 }
 
 async function archiveUser(user: UserType): Promise<void> {
-  const pb = getPB()
+  const pb = getBackendClient()
   try {
     await pb.collection('users').update(user.id, { 
       status: 'archived',
@@ -227,7 +227,7 @@ async function archiveUser(user: UserType): Promise<void> {
 }
 
 async function deleteUser(user: UserType): Promise<void> {
-  const pb = getPB()
+  const pb = getBackendClient()
   try {
     await pb.collection('users').delete(user.id)
     
@@ -244,7 +244,7 @@ async function deleteUser(user: UserType): Promise<void> {
 
 // Bulk action implementations
 async function bulkUpdateUserStatus(users: UserType[], status: string): Promise<void> {
-  const pb = getPB()
+  const pb = getBackendClient()
   let successCount = 0
   let errorCount = 0
 
@@ -294,7 +294,7 @@ async function exportUsers(users: UserType[]): Promise<void> {
 }
 
 async function bulkSendVerificationEmails(users: UserType[]): Promise<void> {
-  const pb = getPB()
+  const pb = getBackendClient()
   const unverifiedUsers = users.filter(user => !user.verified)
   
   if (unverifiedUsers.length === 0) {

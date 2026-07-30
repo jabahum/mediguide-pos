@@ -6,8 +6,8 @@ import { useRouter } from "next/navigation"
 import { usePermissionContext } from "@/lib/permission-context"
 
 import { PageHeader } from "@/components/ui/page-header"
-import { EnhancedPocketBaseDataTable } from "@/components/ui/pocketbase-datatable"
-import { FacilityLevelsResponse } from "@/types/pocketbase-types"
+import { EnhancedBackendDataTable } from "@/components/ui/enhanced-backend-data-table"
+import { FacilityLevelsResponse } from "@/types/backend-types"
 
 import { facilityLevelsColumns } from "./columns"
 import { facilityLevelsAvailableFields } from "./fields"
@@ -82,7 +82,7 @@ export default function FacilityLevelsPage() {
         ]}
       />
 
-      <EnhancedPocketBaseDataTable<FacilityLevelsResponse>
+      <EnhancedBackendDataTable<FacilityLevelsResponse>
         collectionName="facility_levels"
         columns={facilityLevelsColumns}
         searchable={true}

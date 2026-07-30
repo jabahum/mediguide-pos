@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation"
 import { useCallback, useEffect } from "react"
 import { usePermissionContext } from "@/lib/permission-context"
 import { PageHeader } from "@/components/ui/page-header"
-import { EnhancedPocketBaseDataTable } from "@/components/ui/pocketbase-datatable"
+import { EnhancedBackendDataTable } from "@/components/ui/enhanced-backend-data-table"
 import { columns } from "./columns"
 import { createFaqRowActions, faqBulkActions } from "./faq-actions"
 import { faqAvailableFields } from "./fields"
@@ -29,7 +29,7 @@ export default function FAQsPage() {
   )
 
   const handleAdvancedFilter = useCallback((filters: AdvancedFilter[]) => {
-    // Advanced filter handling is managed by the EnhancedPocketBaseDataTable
+    // Advanced filter handling is managed by the EnhancedBackendDataTable
     console.log('Advanced filters applied:', filters)
   }, [])
 
@@ -53,7 +53,7 @@ export default function FAQsPage() {
         ]}
       />
 
-      <EnhancedPocketBaseDataTable<FaqsWithExpanded>
+      <EnhancedBackendDataTable<FaqsWithExpanded>
         collectionName="faqs"
         columns={columns}
         searchable={true}

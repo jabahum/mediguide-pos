@@ -3,7 +3,7 @@ import { DrugWithRelations } from "./columns"
 import {
   DrugsReviewStatusOptions,
   DrugsStatusOptions,
-} from "@/types/pocketbase-types"
+} from "@/types/backend-types"
 import {
   Eye,
   Edit,
@@ -14,11 +14,11 @@ import {
   XCircle,
   Clock,
 } from "lucide-react"
-import { getPB } from "@/lib/pocketbase"
+import { getBackendClient } from "@/lib/backend-client"
 import { showToast } from "@/lib/toast"
 import { downloadCsv, downloadJson } from "@/lib/client-download"
 
-const pb = getPB()
+const pb = getBackendClient()
 
 function getExportFilename(prefix: string) {
   return `${prefix}-${new Date().toISOString().slice(0, 10)}`

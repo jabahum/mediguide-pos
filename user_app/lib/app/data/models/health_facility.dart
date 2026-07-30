@@ -1,6 +1,6 @@
 // ignore_for_file: unused_field
 
-import 'package:pocketbase/pocketbase.dart';
+import 'package:user_app/app/data/models/api_record.dart';
 import 'base_model.dart';
 import 'region.dart';
 import 'district.dart';
@@ -13,11 +13,11 @@ import 'facility_level.dart';
 import 'ownership_type.dart';
 import 'authority.dart';
 
-/// Health facility model based on PocketBase health_facilities collection
+/// Health facility model based on legacy collection API health_facilities collection
 class HealthFacility extends BaseModel {
   HealthFacility(super.data);
 
-  /// PocketBase collection name
+  /// legacy collection API collection name
   static const String collection = 'health_facilities';
 
   // Self-registration for dynamic model creation
@@ -26,8 +26,8 @@ class HealthFacility extends BaseModel {
     return true;
   })();
 
-  /// Create HealthFacility from PocketBase record
-  static HealthFacility fromRecord(RecordModel record) =>
+  /// Create HealthFacility from legacy collection API record
+  static HealthFacility fromRecord(ApiRecord record) =>
       HealthFacility(record.data);
 
   /// Create JSON for new health facility record (excludes system fields)

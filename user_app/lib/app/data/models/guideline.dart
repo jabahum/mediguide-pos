@@ -1,16 +1,16 @@
 // ignore_for_file: unused_field
 
-import 'package:pocketbase/pocketbase.dart';
+import 'package:user_app/app/data/models/api_record.dart';
 import 'base_model.dart';
 import 'guideline_category.dart';
 import 'guideline_tag.dart';
 import 'guideline_index.dart';
 
-/// Medical guideline model based on PocketBase medical_guidelines collection
+/// Medical guideline model based on legacy collection API medical_guidelines collection
 class Guideline extends BaseModel {
   Guideline(super.data);
 
-  /// PocketBase collection name
+  /// legacy collection API collection name
   static const String collection = 'medical_guidelines';
 
   // Self-registration for dynamic model creation
@@ -19,8 +19,8 @@ class Guideline extends BaseModel {
     return true;
   })();
 
-  /// Create Guideline from PocketBase record
-  static Guideline fromRecord(RecordModel record) => Guideline(record.data);
+  /// Create Guideline from legacy collection API record
+  static Guideline fromRecord(ApiRecord record) => Guideline(record.data);
 
   /// Create JSON for new guideline record (excludes system fields)
   static Map<String, dynamic> forCreate({
@@ -170,7 +170,7 @@ class Guideline extends BaseModel {
   List<GuidelineCategory> _getCategories() {
     final categoryList = get<List>("expand.categories", []);
     return categoryList
-        .map((data) => GuidelineCategory.fromRecord(RecordModel(data)))
+        .map((data) => GuidelineCategory.fromRecord(ApiRecord(data)))
         .toList();
   }
 
@@ -178,7 +178,7 @@ class Guideline extends BaseModel {
   List<GuidelineTag> _getTags() {
     final tagList = get<List>("expand.tags", []);
     return tagList
-        .map((data) => GuidelineTag.fromRecord(RecordModel(data)))
+        .map((data) => GuidelineTag.fromRecord(ApiRecord(data)))
         .toList();
   }
 
@@ -186,7 +186,7 @@ class Guideline extends BaseModel {
   GuidelineIndex? _getIndexItem() {
     final indexData = get<Map<String, dynamic>?>("expand.index_item", null);
     if (indexData != null) {
-      return GuidelineIndex.fromRecord(RecordModel(indexData));
+      return GuidelineIndex.fromRecord(ApiRecord(indexData));
     }
     return null;
   }

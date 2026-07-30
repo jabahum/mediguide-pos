@@ -1,6 +1,6 @@
 /**
  * Permission Management System
- * Core utilities for AccessControl integration with PocketBase roles
+ * Core utilities for AccessControl integration with backend roles
  */
 
 import { AccessControl, Permission } from 'accesscontrol'

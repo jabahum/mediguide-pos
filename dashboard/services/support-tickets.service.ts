@@ -3,15 +3,15 @@
  * Centralized service for all support ticket CRUD operations and business logic
  */
 
-import { getPB } from "@/lib/pocketbase"
-import { Collections } from "@/types/pocketbase-types"
+import { getBackendClient } from "@/lib/backend-client"
+import { Collections } from "@/types/backend-types"
 import type {
   SupportTicketsResponse,
   SupportTicketRepliesResponse,
   UsersResponse,
   SupportTicketsStatusOptions,
   SupportTicketsPriorityOptions,
-} from "@/types/pocketbase-types"
+} from "@/types/backend-types"
 import type {
   SupportTicketsWithExpanded,
   SupportTicketRepliesWithExpanded,
@@ -43,7 +43,7 @@ export class SupportTicketsService {
     perPage: number
   }> {
     try {
-      const pb = getPB()
+      const pb = getBackendClient()
       
       const defaultOptions = {
         expand: "user_id,assigned_to",
@@ -81,7 +81,7 @@ export class SupportTicketsService {
    */
   static async getTicketById(id: string): Promise<SupportTicketsWithExpanded> {
     try {
-      const pb = getPB()
+      const pb = getBackendClient()
       
       const ticket = await pb.collection(Collections.SupportTickets).getOne(id, {
         expand: "user_id,assigned_to"
@@ -99,7 +99,7 @@ export class SupportTicketsService {
    */
   static async createTicket(data: CreateSupportTicketData): Promise<SupportTicketsResponse> {
     try {
-      const pb = getPB()
+      const pb = getBackendClient()
       
       const ticketData = {
         ...data,
@@ -119,7 +119,7 @@ export class SupportTicketsService {
    */
   static async updateTicket(id: string, data: UpdateSupportTicketData): Promise<SupportTicketsResponse> {
     try {
-      const pb = getPB()
+      const pb = getBackendClient()
       
       const ticket = await pb.collection(Collections.SupportTickets).update(id, data)
       return ticket as SupportTicketsResponse
@@ -155,7 +155,7 @@ export class SupportTicketsService {
    */
   static async deleteTicket(id: string): Promise<boolean> {
     try {
-      const pb = getPB()
+      const pb = getBackendClient()
       
       await pb.collection(Collections.SupportTickets).delete(id)
       return true
@@ -170,7 +170,7 @@ export class SupportTicketsService {
    */
   static async getTicketReplies(ticketId: string): Promise<SupportTicketRepliesWithExpanded[]> {
     try {
-      const pb = getPB()
+      const pb = getBackendClient()
       
       const replies = await pb.collection(Collections.SupportTicketReplies).getFullList({
         filter: `ticket_id="${ticketId}"`,
@@ -190,7 +190,7 @@ export class SupportTicketsService {
    */
   static async addReply(data: CreateTicketReplyData): Promise<SupportTicketRepliesResponse> {
     try {
-      const pb = getPB()
+      const pb = getBackendClient()
       
       const reply = await pb.collection(Collections.SupportTicketReplies).create(data)
       return reply as SupportTicketRepliesResponse
@@ -217,7 +217,7 @@ export class SupportTicketsService {
    */
   static async getTicketStats(): Promise<TicketStats> {
     try {
-      const pb = getPB()
+      const pb = getBackendClient()
       
       // Get all tickets to calculate stats
       const allTickets = await pb.collection(Collections.SupportTickets).getFullList()
@@ -315,7 +315,7 @@ export class SupportTicketsService {
    */
   static async bulkUpdateTickets(operation: BulkTicketOperation): Promise<SupportTicketsResponse[]> {
     try {
-      const pb = getPB()
+      const pb = getBackendClient()
       const results: SupportTicketsResponse[] = []
 
       for (const ticketId of operation.ticket_ids) {
@@ -340,7 +340,7 @@ export class SupportTicketsService {
    */
   static async getAssignableUsers(): Promise<UsersResponse[]> {
     try {
-      const pb = getPB()
+      const pb = getBackendClient()
       
       // Get users with admin, contentManager, or other relevant roles
       const users = await pb.collection(Collections.Users).getFullList({

@@ -6,10 +6,10 @@ import { CalendarDays, Mail, User, Phone, Building2, Briefcase, FileText, Globe,
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { DataTableColumnHeader } from "@/components/ui/datatable-column-header"
-import { UsersResponse, UsersStatusOptions, UsersPreferredLanguageOptions, ConsultantsSpecialtyOptions } from "@/types/pocketbase-types"
+import { UsersResponse, UsersStatusOptions, UsersPreferredLanguageOptions, ConsultantsSpecialtyOptions } from "@/types/backend-types"
 import { ExtendedColumnDef } from "@/types/data-table"
 
-// Use the proper PocketBase generated type
+// Use the proper legacy collection API generated type
 export type User = UsersResponse
 
 // Role option type for dynamic roles

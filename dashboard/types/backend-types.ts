@@ -1,9 +1,9 @@
 /**
-* This file was @generated using pocketbase-typegen
-*/
-
-import type PocketBase from 'pocketbase'
-import type { RecordService } from 'pocketbase'
+ * Legacy collection response contracts used by the Go backend compatibility API.
+ *
+ * These types are intentionally framework-neutral. Replace each collection
+ * contract with an OpenAPI-generated domain DTO as dedicated endpoints mature.
+ */
 
 export const Collections = {
 	Authorigins: "_authOrigins",
@@ -1211,7 +1211,7 @@ export type UsersRecord = {
 	verified?: boolean
 }
 
-// Response types include system fields and match responses from the PocketBase API
+// Response types include system fields and match responses from the legacy collection API API
 export type AuthoriginsResponse<Texpand = unknown> = Required<AuthoriginsRecord> & BaseSystemFields<Texpand>
 export type ExternalauthsResponse<Texpand = unknown> = Required<ExternalauthsRecord> & BaseSystemFields<Texpand>
 export type MfasResponse<Texpand = unknown> = Required<MfasRecord> & BaseSystemFields<Texpand>
@@ -1436,12 +1436,3 @@ export type Update<T extends keyof CollectionResponses> =
 	CollectionResponses[T] extends AuthSystemFields
 		? UpdateAuth<CollectionRecords[T]>
 		: UpdateBase<CollectionRecords[T]>
-
-// Type for usage with type asserted PocketBase instance
-// https://github.com/pocketbase/js-sdk#specify-typescript-definitions
-
-export type TypedPocketBase = {
-	collection<T extends keyof CollectionResponses>(
-		idOrName: T
-	): RecordService<CollectionResponses[T]>
-} & PocketBase

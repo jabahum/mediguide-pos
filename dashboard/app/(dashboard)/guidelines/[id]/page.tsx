@@ -16,9 +16,9 @@ import { RichContent } from "@/components/ui/rich-content"
 // Icons
 import { Edit, Share2, Calendar, User, FileText, Pill, AlertTriangle, Shield } from "lucide-react"
 
-// PocketBase
-import { Collections } from "@/types/pocketbase-types"
-import { usePbRecord } from "@/hooks/use-pb-record"
+// legacy collection API
+import { Collections } from "@/types/backend-types"
+import { useBackendRecord } from "@/hooks/use-backend-record"
 import type { MedicalGuidelinesWithExpanded } from "@/types/expanded"
 
 // Toast
@@ -36,7 +36,7 @@ export default function GuidelineDetailPage({ params }: GuidelineDetailPageProps
   const { id } = use(params)
   const { hasPermission, loading: permLoading } = usePermissionContext()
 
-  const { record: guideline, loading, error } = usePbRecord<MedicalGuidelinesWithExpanded>(
+  const { record: guideline, loading, error } = useBackendRecord<MedicalGuidelinesWithExpanded>(
     Collections.MedicalGuidelines,
     id,
     { expand: "categories,tags" }

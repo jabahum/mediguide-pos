@@ -17,7 +17,7 @@ import { Label } from "@/components/ui/label"
 import { GuidelineIndexSelector } from "@/components/ui/guideline-index-selector"
 import { GuidelineIndexType } from "../columns"
 import { showToast } from "@/lib/toast"
-import { getPB } from "@/lib/pocketbase"
+import { getBackendClient } from "@/lib/backend-client"
 
 const createIndexSchema = z.object({
   title: z.string().min(1, "Title is required").max(200, "Title must be less than 200 characters"),
@@ -70,7 +70,7 @@ export function CreateIndexModal({
   const onSubmit = async (data: CreateIndexFormData) => {
     setIsSubmitting(true)
     try {
-      const pb = getPB()
+      const pb = getBackendClient()
       
       let level = 0
       let order = 0

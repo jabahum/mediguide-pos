@@ -8,8 +8,8 @@ import { Badge } from "@/components/ui/badge"
 import { Label } from "@/components/ui/label"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { DrugWithRelations } from "../columns"
-import { getPB } from "@/lib/pocketbase"
-import { usePbRecord } from "@/hooks/use-pb-record"
+import { getBackendClient } from "@/lib/backend-client"
+import { useBackendRecord } from "@/hooks/use-backend-record"
 import { formatDistanceToNow } from "date-fns"
 import { Edit, Copy, Trash2, Pill, AlertTriangle, Calendar, FileText, Activity } from "lucide-react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -36,7 +36,7 @@ export default function DrugViewPage({ params }: DrugViewPageProps) {
   // Unwrap params using React.use()
   const { id } = React.use(params)
 
-  const { record: drug, loading, error } = usePbRecord<DrugWithRelations>(
+  const { record: drug, loading, error } = useBackendRecord<DrugWithRelations>(
     "drugs",
     id,
     { expand: "categories,tags,drug_class,therapeutic_category" }
@@ -60,7 +60,7 @@ export default function DrugViewPage({ params }: DrugViewPageProps) {
   const handleDelete = async () => {
     if (window.confirm("Are you sure you want to delete this drug? This action cannot be undone.")) {
       try {
-        const pb = getPB()
+        const pb = getBackendClient()
         await pb.collection("drugs").delete(id)
         router.push("/drugs")
       } catch (error) {

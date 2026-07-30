@@ -18,8 +18,8 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { PageHeader } from "@/components/ui/page-header"
 import { useQueryClient } from "@tanstack/react-query"
 import { showToast } from "@/lib/toast"
-import { getPB } from "@/lib/pocketbase"
-import { pbRecordKeyPrefix } from "@/hooks/use-pb-record"
+import { getBackendClient } from "@/lib/backend-client"
+import { backendRecordKeyPrefix } from "@/hooks/use-backend-record"
 import { SpecialtyOptions } from "../../columns"
 import type { Consultant } from "../../columns"
 import { usePermissionContext, WithPermission } from "@/lib/permission-context"
@@ -107,7 +107,7 @@ export default function EditConsultantPage({ params }: EditConsultantPageProps) 
 
     async function fetchConsultant() {
       try {
-        const pb = getPB()
+        const pb = getBackendClient()
         const record = await pb.collection('consultants').getOne(id!) as Consultant
         setConsultant(record)
         
@@ -151,12 +151,12 @@ export default function EditConsultantPage({ params }: EditConsultantPageProps) 
 
   async function onSubmit(data: ConsultantFormValues) {
     setIsLoading(true)
-    const pb = getPB()
+    const pb = getBackendClient()
     
     try {
       await pb.collection('consultants').update(id!, data)
 
-      await queryClient.invalidateQueries({ queryKey: pbRecordKeyPrefix('consultants', id!) })
+      await queryClient.invalidateQueries({ queryKey: backendRecordKeyPrefix('consultants', id!) })
 
       showToast.success(
         "Consultant Updated",

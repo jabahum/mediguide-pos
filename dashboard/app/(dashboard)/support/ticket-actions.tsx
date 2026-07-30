@@ -4,7 +4,7 @@ import { Eye, MessageSquare, Clock, User, CheckCircle, XCircle, AlertTriangle } 
 
 import type { RowAction, BulkAction } from "@/types/data-table"
 import type { SupportTicketsWithExpanded } from "@/types/expanded"
-import type { SupportTicketsStatusOptions, SupportTicketsPriorityOptions } from "@/types/pocketbase-types"
+import type { SupportTicketsStatusOptions, SupportTicketsPriorityOptions } from "@/types/backend-types"
 import { SupportTicketsService } from "@/services/support-tickets.service"
 import { showToast } from "@/lib/toast"
 

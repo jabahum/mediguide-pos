@@ -2,32 +2,32 @@
 
 import { useEffect, useMemo } from "react"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
-import { getPB } from "@/lib/pocketbase"
+import { getBackendClient } from "@/lib/backend-client"
 
-export const pbRecordQueryKey = (
+export const backendRecordQueryKey = (
   collection: string,
   id: string,
   expand?: string,
   fields?: string
-) => ["pb-record", collection, id, expand ?? "", fields ?? ""] as const
+) => ["backend-record", collection, id, expand ?? "", fields ?? ""] as const
 
 // Prefix key for invalidating any variant of a record (any expand/fields).
-export const pbRecordKeyPrefix = (collection: string, id: string) =>
-  ["pb-record", collection, id] as const
+export const backendRecordKeyPrefix = (collection: string, id: string) =>
+  ["backend-record", collection, id] as const
 
-export interface UsePbRecordOptions {
+export interface UseBackendRecordOptions {
   expand?: string
   fields?: string
   enabled?: boolean
 }
 
-export function usePbRecord<T = unknown>(
+export function useBackendRecord<T = unknown>(
   collection: string,
   id: string | undefined | null,
-  options: UsePbRecordOptions = {}
+  options: UseBackendRecordOptions = {}
 ) {
   const { expand, fields, enabled = true } = options
-  const pb = useMemo(() => getPB(), [])
+  const backendClient = useMemo(() => getBackendClient(), [])
   const queryClient = useQueryClient()
   const recordId = id ?? ""
 
@@ -39,9 +39,9 @@ export function usePbRecord<T = unknown>(
   }, [expand, fields])
 
   const query = useQuery<T | null>({
-    queryKey: pbRecordQueryKey(collection, recordId, expand, fields),
+    queryKey: backendRecordQueryKey(collection, recordId, expand, fields),
     queryFn: async () => {
-      const record = await pb
+      const record = await backendClient
         .collection(collection)
         .getOne(recordId, fetchOptions)
       return record as unknown as T
@@ -53,8 +53,8 @@ export function usePbRecord<T = unknown>(
     if (!enabled || !recordId) return
 
     let cancelled = false
-    const queryKey = pbRecordQueryKey(collection, recordId, expand, fields)
-    const subscribePromise = pb
+    const queryKey = backendRecordQueryKey(collection, recordId, expand, fields)
+    const subscribePromise = backendClient
       .collection(collection)
       .subscribe(
         recordId,
@@ -75,7 +75,7 @@ export function usePbRecord<T = unknown>(
         .then((unsub) => unsub?.())
         .catch(() => {})
     }
-  }, [collection, recordId, expand, fields, fetchOptions, enabled, pb, queryClient])
+  }, [collection, recordId, expand, fields, fetchOptions, enabled, backendClient, queryClient])
 
   return {
     record: query.data ?? null,
@@ -83,7 +83,7 @@ export function usePbRecord<T = unknown>(
     error: query.error,
     refresh: () =>
       queryClient.invalidateQueries({
-        queryKey: pbRecordQueryKey(collection, recordId, expand, fields),
+        queryKey: backendRecordQueryKey(collection, recordId, expand, fields),
       }),
   }
 }

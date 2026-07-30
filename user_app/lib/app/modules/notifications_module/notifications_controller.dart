@@ -3,7 +3,7 @@ import 'package:get/get.dart';
 import 'package:infinite_scroll_pagination/infinite_scroll_pagination.dart';
 
 import '../../data/models/models.dart';
-import '../../data/services/pocketbase_service.dart';
+import '../../data/services/backend_api_service.dart';
 import '../../data/services/auth_service.dart';
 import '../../utils/constants.dart';
 import '../../utils/common.dart';
@@ -48,7 +48,7 @@ class NotificationsController extends GetxController {
     try {
       final filter = _buildFilter();
 
-      final result = await PocketBaseService.to.getRecordList(
+      final result = await BackendApiService.to.getRecordList(
         collectionName: 'notifications',
         page: pageKey,
         perPage: pageSize,
@@ -82,17 +82,17 @@ class NotificationsController extends GetxController {
     }
 
     if (searchQuery.value.isNotEmpty) {
-      final q = PocketBaseService.escapeFilterValue(searchQuery.value);
+      final q = BackendApiService.escapeFilterValue(searchQuery.value);
       filters.add('(title ~ "$q" || message ~ "$q")');
     }
 
     if (selectedType.value.isNotEmpty) {
-      final type = PocketBaseService.escapeFilterValue(selectedType.value);
+      final type = BackendApiService.escapeFilterValue(selectedType.value);
       filters.add('type = "$type"');
     }
 
     if (selectedPriority.value.isNotEmpty) {
-      final priority = PocketBaseService.escapeFilterValue(
+      final priority = BackendApiService.escapeFilterValue(
         selectedPriority.value,
       );
       filters.add('priority = "$priority"');

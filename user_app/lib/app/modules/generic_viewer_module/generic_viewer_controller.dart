@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:toastification/toastification.dart';
-import '../../data/services/pocketbase_service.dart';
+import '../../data/services/backend_api_service.dart';
 import '../../models/generic_page.dart';
 import '../../utils/common.dart';
 
@@ -47,12 +47,12 @@ class GenericViewerController extends GetxController {
     super.onClose();
   }
 
-  /// Load page data from PocketBase using page key
+  /// Load page data from legacy collection API using page key
   Future<void> loadPage(String pageKey) async {
     try {
       isLoading.value = true;
 
-      final records = await PocketBaseService.to.getRecordList(
+      final records = await BackendApiService.to.getRecordList(
         collectionName: 'generic_pages',
         filter: 'key="$pageKey"',
         perPage: 1,

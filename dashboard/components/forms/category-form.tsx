@@ -16,7 +16,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { ColorPicker } from "@/components/ui/color-picker"
-import { DrugCategoriesResponse } from "@/types/pocketbase-types"
+import { DrugCategoriesResponse } from "@/types/backend-types"
 
 const categorySchema = z.object({
   name: z.string().min(1, "Name is required").max(100, "Name must be less than 100 characters"),
@@ -72,7 +72,7 @@ export function CategoryForm({
 
   const handleFormSubmit = async (data: CategoryFormData) => {
     try {
-      // Convert parent_category string to array format expected by PocketBase
+      // Convert parent_category string to array format expected by legacy collection API
       // Handle the special "__none__" value for no parent category
       const parentCategory = data.parent_category === "__none__" ? undefined : data.parent_category
       const formattedData = {

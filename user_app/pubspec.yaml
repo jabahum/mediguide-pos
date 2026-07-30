@@ -45,7 +45,6 @@ dependencies:
   universal_image: ^1.0.11
   local_auth: ^3.0.2
   responsive_framework: ^1.5.1
-  pocketbase: ^0.24.0+1
   event_bus: ^2.0.1
   toastification: ^3.0.3
   url_launcher: ^6.3.2
@@ -63,7 +62,6 @@ dependencies:
   expansion_tile_group: ^2.3.0
   bubble: ^1.2.1
   openai_dart: ^7.0.1
-  pocketbase_drift: ^0.4.1
 
 dev_dependencies:
   flutter_test:
@@ -93,7 +91,6 @@ flutter:
   # To add assets to your application, add an assets section, like this:
   assets:
     - assets/
-    - assets/pb_schema.json
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images

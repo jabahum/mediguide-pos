@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation"
 import { Plus } from "lucide-react"
 
 import { PageHeader } from "@/components/ui/page-header"
-import { PocketBaseDataTable } from "@/components/ui/pocketbase-datatable-simple"
+import { BackendDataTable } from "@/components/ui/backend-data-table"
 import { usePermissionContext } from "@/lib/permission-context"
 import { createColumns, User } from "./columns"
 import { createUserRowActions, userBulkActions } from "./user-actions"
@@ -59,7 +59,7 @@ export default function UsersPage() {
       />
 
       {/* Simplified DataTable */}
-      <PocketBaseDataTable<User>
+      <BackendDataTable<User>
         collection="users"
         columns={columns}
         searchFields={["name", "email", "phone", "organization", "jobTitle"]}
@@ -67,7 +67,7 @@ export default function UsersPage() {
         rowActions={userRowActions}
         bulkActions={userBulkActions}
         availableFields={usersAvailableFields}
-        pocketbase={{
+        query={{
           sort: "-created",
         }}
         ui={{

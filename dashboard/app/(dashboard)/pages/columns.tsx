@@ -2,7 +2,7 @@
 
 import { Badge } from "@/components/ui/badge"
 import { DataTableColumnHeader } from "@/components/ui/datatable-column-header"
-import { GenericPagesResponse } from "@/types/pocketbase-types"
+import { GenericPagesResponse } from "@/types/backend-types"
 import { ExtendedColumnDef } from "@/types/data-table"
 
 // Export the GenericPage type for use in other files

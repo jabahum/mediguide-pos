@@ -1,13 +1,13 @@
 // ignore_for_file: unused_field
 
-import 'package:pocketbase/pocketbase.dart';
+import 'package:user_app/app/data/models/api_record.dart';
 import 'base_model.dart';
 
-/// Ownership type model based on PocketBase ownership_types collection
+/// Ownership type model based on legacy collection API ownership_types collection
 class OwnershipType extends BaseModel {
   OwnershipType(super.data);
 
-  /// PocketBase collection name
+  /// legacy collection API collection name
   static const String collection = 'ownership_types';
 
   // Self-registration for dynamic model creation
@@ -16,8 +16,8 @@ class OwnershipType extends BaseModel {
     return true;
   })();
 
-  /// Create OwnershipType from PocketBase record
-  static OwnershipType fromRecord(RecordModel record) =>
+  /// Create OwnershipType from legacy collection API record
+  static OwnershipType fromRecord(ApiRecord record) =>
       OwnershipType(record.data);
 
   /// Create JSON for new ownership type record (excludes system fields)

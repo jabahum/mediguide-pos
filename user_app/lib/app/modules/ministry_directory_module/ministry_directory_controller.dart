@@ -4,7 +4,7 @@ import 'package:infinite_scroll_pagination/infinite_scroll_pagination.dart';
 import 'package:user_app/app/data/models/filter_models.dart';
 
 import '../../data/models/models.dart';
-import '../../data/services/pocketbase_service.dart';
+import '../../data/services/backend_api_service.dart';
 import '../../utils/constants.dart';
 import '../../utils/common.dart';
 import '../../widgets/generic_filter_bottom_sheet.dart';
@@ -63,7 +63,7 @@ class MinistryDirectoryController extends GetxController {
     try {
       final filter = _buildFilter();
 
-      final result = await PocketBaseService.to.getRecordList(
+      final result = await BackendApiService.to.getRecordList(
         collectionName: 'ministry_directory',
         page: pageKey,
         perPage: pageSize,
@@ -89,7 +89,7 @@ class MinistryDirectoryController extends GetxController {
 
     // Status logic
     if (selectedStatus.value.isNotEmpty) {
-      final status = PocketBaseService.escapeFilterValue(selectedStatus.value);
+      final status = BackendApiService.escapeFilterValue(selectedStatus.value);
       filters.add('status="$status"');
     } else if (showActiveOnly.value) {
       filters.add('status="active"');
@@ -97,7 +97,7 @@ class MinistryDirectoryController extends GetxController {
 
     // Search
     if (searchQuery.value.isNotEmpty) {
-      final q = PocketBaseService.escapeFilterValue(searchQuery.value);
+      final q = BackendApiService.escapeFilterValue(searchQuery.value);
       filters.add(
         '(name~"$q" || title~"$q" || department~"$q" || ministry~"$q" || email~"$q")',
       );
@@ -105,28 +105,28 @@ class MinistryDirectoryController extends GetxController {
 
     // Simple filters
     if (selectedMinistry.value.isNotEmpty) {
-      final ministry = PocketBaseService.escapeFilterValue(
+      final ministry = BackendApiService.escapeFilterValue(
         selectedMinistry.value,
       );
       filters.add('ministry="$ministry"');
     }
 
     if (selectedDepartment.value.isNotEmpty) {
-      final department = PocketBaseService.escapeFilterValue(
+      final department = BackendApiService.escapeFilterValue(
         selectedDepartment.value,
       );
       filters.add('department~"$department"');
     }
 
     if (selectedDistrict.value.isNotEmpty) {
-      final district = PocketBaseService.escapeFilterValue(
+      final district = BackendApiService.escapeFilterValue(
         selectedDistrict.value,
       );
       filters.add('district.name~"$district"');
     }
 
     if (selectedRegion.value.isNotEmpty) {
-      final region = PocketBaseService.escapeFilterValue(selectedRegion.value);
+      final region = BackendApiService.escapeFilterValue(selectedRegion.value);
       filters.add('region.name~"$region"');
     }
 
@@ -146,7 +146,7 @@ class MinistryDirectoryController extends GetxController {
 
       availableMinistries.value = Ministry.values.map((e) => e.label).toList();
 
-      final districts = await PocketBaseService.to.getRecordList(
+      final districts = await BackendApiService.to.getRecordList(
         collectionName: 'districts',
         perPage: 500,
         sort: 'name',
@@ -156,7 +156,7 @@ class MinistryDirectoryController extends GetxController {
           .map((e) => e.data['name'] as String)
           .toList();
 
-      final regions = await PocketBaseService.to.getRecordList(
+      final regions = await BackendApiService.to.getRecordList(
         collectionName: 'regions',
         perPage: 500,
         sort: 'name',

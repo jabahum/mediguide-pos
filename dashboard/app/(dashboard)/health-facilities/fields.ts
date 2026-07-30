@@ -2,9 +2,9 @@ import { FieldOption } from "@/types/data-table"
 
 /**
  * Available fields for health facilities table advanced filtering.
- * Relation fields are wired to their PocketBase source collections so the
+ * Relation fields are wired to their legacy collection API source collections so the
  * filter dropdown can search by human-readable name while sending the
- * underlying record id to PocketBase.
+ * underlying record id to legacy collection API.
  */
 export const healthFacilitiesAvailableFields: FieldOption[] = [
   // Basic Information

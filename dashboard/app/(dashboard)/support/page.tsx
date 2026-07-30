@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation"
 import { usePermissionContext } from "@/lib/permission-context"
 
 import { PageHeader } from "@/components/ui/page-header"
-import { PocketBaseDataTable } from "@/components/ui/pocketbase-datatable-simple"
+import { BackendDataTable } from "@/components/ui/backend-data-table"
 import { TicketReplyDialog } from "@/components/dialogs/ticket-reply-dialog"
 import { TicketStatusUpdateDialog } from "@/components/dialogs/ticket-status-update-dialog"
 import { TicketAssignDialog } from "@/components/dialogs/ticket-assign-dialog"
@@ -74,14 +74,14 @@ export default function SupportPage() {
       />
 
       {/* Simplified DataTable */}
-      <PocketBaseDataTable<SupportTicketsWithExpanded>
+      <BackendDataTable<SupportTicketsWithExpanded>
         collection="support_tickets"
         columns={columns}
         searchFields={["subject", "description", "category"]}
         rowActions={rowActions}
         bulkActions={supportTicketBulkActions}
         availableFields={supportTicketsAvailableFields}
-        pocketbase={{
+        query={{
           expand: "user_id,assigned_to",
           sort: "-created"
         }}

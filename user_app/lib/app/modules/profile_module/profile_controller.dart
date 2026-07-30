@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:toastification/toastification.dart';
 import 'package:in_app_review/in_app_review.dart';
 import '../../data/services/auth_service.dart';
-import '../../data/services/pocketbase_service.dart';
+import '../../data/services/backend_api_service.dart';
 import '../../routes/app_pages.dart';
 import '../../translations/app_translations.dart';
 import '../../utils/common.dart';
@@ -20,8 +20,8 @@ class ProfileController extends GetxController {
     try {
       isLoading.value = true;
 
-      // Clear PocketBase auth session
-      PocketBaseService.to.logout();
+      // Clear legacy collection API auth session
+      BackendApiService.to.logout();
 
       // Clear user session from AuthService (includes shared preferences)
       await AuthService.to.logout();
@@ -90,8 +90,8 @@ class ProfileController extends GetxController {
 
         // TODO: Implement actual account deletion API call
 
-        // Clear PocketBase auth session
-        PocketBaseService.to.logout();
+        // Clear legacy collection API auth session
+        BackendApiService.to.logout();
 
         // Clear user session from AuthService (includes shared preferences)
         await AuthService.to.logout();
@@ -121,7 +121,7 @@ class ProfileController extends GetxController {
 }
 
 /// Settings class for ProfilePage compatibility
-/// TODO: Replace with actual UserSettings model from PocketBase
+/// TODO: Replace with actual UserSettings model from legacy collection API
 class DummySettings {
   bool get biometricEnabled => false;
   bool get notificationsEnabled => true;

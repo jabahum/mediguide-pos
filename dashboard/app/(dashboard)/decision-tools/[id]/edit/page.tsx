@@ -5,9 +5,9 @@ import { useRouter } from "next/navigation"
 import { notFound } from "next/navigation"
 import { PageHeader } from "@/components/ui/page-header"
 import { DecisionToolForm } from "@/components/forms/decision-tool-form"
-import { CalculatorsResponse, CalculatorsTypeOptions } from "@/types/pocketbase-types"
-import { usePocketBaseCrud } from "@/hooks/use-pocketbase-crud"
-import { getPB } from "@/lib/pocketbase"
+import { CalculatorsResponse, CalculatorsTypeOptions } from "@/types/backend-types"
+import { useBackendCrud } from "@/hooks/use-backend-crud"
+import { getBackendClient } from "@/lib/backend-client"
 import { usePermissionContext } from "@/lib/permission-context"
 
 interface DecisionToolEditPageProps {
@@ -52,7 +52,7 @@ export default function DecisionToolEditPage({ params, searchParams }: DecisionT
     searchParams.then(setResolvedSearchParams)
   }, [params, searchParams])
 
-  const { update, create, loading } = usePocketBaseCrud({
+  const { update, create, loading } = useBackendCrud({
     collectionName: "calculators",
     onSuccess: () => {
       if (resolvedParams?.id && !isDuplicate) {
@@ -68,7 +68,7 @@ export default function DecisionToolEditPage({ params, searchParams }: DecisionT
       if (!resolvedParams?.id) return
       
       try {
-        const pb = getPB()
+        const pb = getBackendClient()
         const toolData = await pb.collection("calculators").getOne(resolvedParams.id, {
           expand: "addedBy"
         }) as CalculatorWithRelations
@@ -91,7 +91,7 @@ export default function DecisionToolEditPage({ params, searchParams }: DecisionT
     if (!resolvedParams?.id) return
 
     try {
-      const pb = getPB()
+      const pb = getBackendClient()
       const currentUser = pb.authStore.model
       
       if (!currentUser) {

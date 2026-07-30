@@ -1,13 +1,13 @@
 // ignore_for_file: unused_field
 
-import 'package:pocketbase/pocketbase.dart';
+import 'package:user_app/app/data/models/api_record.dart';
 import 'base_model.dart';
 
-/// Guideline tag model based on PocketBase guideline_tags collection
+/// Guideline tag model based on legacy collection API guideline_tags collection
 class GuidelineTag extends BaseModel {
   GuidelineTag(super.data);
 
-  /// PocketBase collection name
+  /// legacy collection API collection name
   static const String collection = 'guideline_tags';
 
   // Self-registration for dynamic model creation
@@ -16,9 +16,8 @@ class GuidelineTag extends BaseModel {
     return true;
   })();
 
-  /// Create GuidelineTag from PocketBase record
-  static GuidelineTag fromRecord(RecordModel record) =>
-      GuidelineTag(record.data);
+  /// Create GuidelineTag from legacy collection API record
+  static GuidelineTag fromRecord(ApiRecord record) => GuidelineTag(record.data);
 
   /// Create JSON for new guideline tag record (excludes system fields)
   static Map<String, dynamic> forCreate({

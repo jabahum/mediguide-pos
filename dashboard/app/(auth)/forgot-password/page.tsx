@@ -21,10 +21,10 @@ export default function ForgotPasswordPage() {
     setError("")
 
     try {
-      const { getPB } = await import('@/lib/pocketbase')
-      const pb = getPB()
+      const { getBackendClient } = await import('@/lib/backend-client')
+      const pb = getBackendClient()
       
-      // Use PocketBase's built-in password reset functionality
+      // Use legacy collection API's built-in password reset functionality
       await pb.collection('users').requestPasswordReset(email)
       
       setSuccess(true)

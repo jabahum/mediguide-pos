@@ -29,7 +29,7 @@ import { FaqService } from "@/services/faq.service"
 import { FaqTagsService } from "@/services/faq-tags.service"
 import { showToast } from "@/lib/toast"
 import type { FaqCreateData } from "@/types/faq"
-import type { FaqTagsResponse, FaqsStatusOptions, FaqsPriorityOptions, FaqsTargetAudienceOptions } from "@/types/pocketbase-types"
+import type { FaqTagsResponse, FaqsStatusOptions, FaqsPriorityOptions, FaqsTargetAudienceOptions } from "@/types/backend-types"
 import { FAQ_STATUS_OPTIONS, FAQ_PRIORITY_OPTIONS, TARGET_AUDIENCE_OPTIONS } from "@/types/faq"
 
 // Form validation schema

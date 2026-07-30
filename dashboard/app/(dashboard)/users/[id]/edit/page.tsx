@@ -17,14 +17,14 @@ import { Separator } from "@/components/ui/separator"
 import { Skeleton } from "@/components/ui/skeleton"
 import { useQueryClient } from "@tanstack/react-query"
 import { showToast } from "@/lib/toast"
-import { getPB } from "@/lib/pocketbase"
-import { pbRecordKeyPrefix } from "@/hooks/use-pb-record"
+import { getBackendClient } from "@/lib/backend-client"
+import { backendRecordKeyPrefix } from "@/hooks/use-backend-record"
 import { 
   UsersStatusOptions, 
  
   UsersPreferredLanguageOptions,
   UsersResponse 
-} from "@/types/pocketbase-types"
+} from "@/types/backend-types"
 import { useRoleOptions, useRoleValidation } from "@/hooks/use-roles-options"
 import { usePermissionContext } from "@/lib/permission-context"
 
@@ -112,8 +112,8 @@ export default function EditUserPage() {
           return
         }
         
-        const pb = getPB()
-        console.log('PocketBase URL:', pb.baseUrl)
+        const pb = getBackendClient()
+        console.log('legacy collection API URL:', pb.baseUrl)
         
         // Check if authenticated
         if (!pb.authStore.isValid) {
@@ -227,12 +227,12 @@ export default function EditUserPage() {
     setIsLoading(true)
     
     try {
-      const pb = getPB()
+      const pb = getBackendClient()
       
-      // Update user record in PocketBase
+      // Update user record in legacy collection API
       const userData = {
         ...data,
-        // Ensure specialization is properly formatted for PocketBase
+        // Ensure specialization is properly formatted for legacy collection API
         specialization: data.specialization || [],
         // Always ensure this field remains true
         emailVisibility: true,
@@ -240,7 +240,7 @@ export default function EditUserPage() {
       
       await pb.collection('users').update(userId, userData)
 
-      await queryClient.invalidateQueries({ queryKey: pbRecordKeyPrefix('users', userId) })
+      await queryClient.invalidateQueries({ queryKey: backendRecordKeyPrefix('users', userId) })
 
       showToast.success(
         "User Updated Successfully",
@@ -253,14 +253,14 @@ export default function EditUserPage() {
     } catch (error: unknown) {
       console.error('Failed to update user:', error)
       
-      // Handle PocketBase validation errors using React Hook Form best practices
+      // Handle legacy collection API validation errors using React Hook Form best practices
       if (error && typeof error === 'object' && 'data' in error) {
         const errorResponse = error as { 
           data: Record<string, { message: string; code: string }>,
           status: number 
         }
         
-        // Process each field error from PocketBase and set using React Hook Form
+        // Process each field error from legacy collection API and set using React Hook Form
         const errorMessages: string[] = []
         Object.entries(errorResponse.data).forEach(([fieldName, fieldError]) => {
           if (fieldError && typeof fieldError === 'object' && 'message' in fieldError) {

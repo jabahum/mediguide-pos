@@ -1,12 +1,12 @@
-import 'package:pocketbase/pocketbase.dart';
+import 'package:user_app/app/data/models/api_record.dart';
 import 'base_model.dart';
 
 /// Reading progress tracking model for user guideline reading status
 class ReadingProgress extends BaseModel {
   ReadingProgress(super.data);
 
-  /// Create ReadingProgress from PocketBase record
-  static ReadingProgress fromRecord(RecordModel record) =>
+  /// Create ReadingProgress from legacy collection API record
+  static ReadingProgress fromRecord(ApiRecord record) =>
       ReadingProgress(record.data);
 
   /// Create JSON for new reading progress record (excludes system fields)

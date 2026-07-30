@@ -1,14 +1,14 @@
 // ignore_for_file: unused_field
 
-import 'package:pocketbase/pocketbase.dart';
+import 'package:user_app/app/data/models/api_record.dart';
 import 'base_model.dart';
 import 'ownership_type.dart';
 
-/// Authority model based on PocketBase authorities collection
+/// Authority model based on legacy collection API authorities collection
 class Authority extends BaseModel {
   Authority(super.data);
 
-  /// PocketBase collection name
+  /// legacy collection API collection name
   static const String collection = 'authorities';
 
   // Self-registration for dynamic model creation
@@ -17,8 +17,8 @@ class Authority extends BaseModel {
     return true;
   })();
 
-  /// Create Authority from PocketBase record
-  static Authority fromRecord(RecordModel record) => Authority(record.data);
+  /// Create Authority from legacy collection API record
+  static Authority fromRecord(ApiRecord record) => Authority(record.data);
 
   /// Create JSON for new authority record (excludes system fields)
   static Map<String, dynamic> forCreate({

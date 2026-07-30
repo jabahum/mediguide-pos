@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation"
 import { usePermissionContext } from "@/lib/permission-context"
 
 import { PageHeader } from "@/components/ui/page-header"
-import { EnhancedPocketBaseDataTable } from "@/components/ui/pocketbase-datatable"
+import { EnhancedBackendDataTable } from "@/components/ui/enhanced-backend-data-table"
 import { HealthSubRegionsWithRegion } from "@/types/expanded"
 
 import { healthSubRegionsColumns } from "./columns"
@@ -89,7 +89,7 @@ export default function HealthSubRegionsPage() {
         ]}
       />
 
-      <EnhancedPocketBaseDataTable<HealthSubRegionsWithRegion>
+      <EnhancedBackendDataTable<HealthSubRegionsWithRegion>
         collectionName="health_sub_regions"
         columns={healthSubRegionsColumns}
         expand="region"

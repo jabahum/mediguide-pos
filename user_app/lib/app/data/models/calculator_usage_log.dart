@@ -1,6 +1,6 @@
 // ignore_for_file: unused_field
 
-import 'package:pocketbase/pocketbase.dart';
+import 'package:user_app/app/data/models/api_record.dart';
 import '../enums/calculator_enums.dart';
 import 'base_model.dart';
 import 'user.dart';
@@ -10,7 +10,7 @@ import 'calculator.dart';
 class CalculatorUsageLog extends BaseModel {
   CalculatorUsageLog(super.data);
 
-  /// PocketBase collection name
+  /// legacy collection API collection name
   static const String collection = 'calculator_usage_logs';
 
   // Self-registration for dynamic model creation
@@ -19,8 +19,8 @@ class CalculatorUsageLog extends BaseModel {
     return true;
   })();
 
-  /// Create CalculatorUsageLog from PocketBase record
-  static CalculatorUsageLog fromRecord(RecordModel record) =>
+  /// Create CalculatorUsageLog from legacy collection API record
+  static CalculatorUsageLog fromRecord(ApiRecord record) =>
       CalculatorUsageLog(record.data);
 
   /// Create JSON for new usage log record (excludes system fields)

@@ -6,7 +6,7 @@ import 'package:toastification/toastification.dart';
 import 'package:http/http.dart' as http;
 import '../../data/models/models.dart';
 import '../../data/services/auth_service.dart';
-import '../../data/services/pocketbase_service.dart';
+import '../../data/services/backend_api_service.dart';
 import '../../translations/app_translations.dart';
 import '../../utils/common.dart';
 
@@ -63,7 +63,7 @@ class EditProfileController extends GetxController {
         }
       }
 
-      // PocketBase seems to validate enum fields even when not being updated
+      // legacy collection API seems to validate enum fields even when not being updated
       // Include current enum values to prevent validation errors
       if (user.role != null) {
         updateData['role'] = user.role!.name;
@@ -78,8 +78,8 @@ class EditProfileController extends GetxController {
       // Debug: Print the final update data being sent
       debugPrint('Update data being sent: $updateData');
 
-      // Update user profile via PocketBase
-      final updatedRecord = await PocketBaseService.to.updateRecord(
+      // Update user profile via legacy collection API
+      final updatedRecord = await BackendApiService.to.updateRecord(
         collectionName: User.collection,
         recordId: user.id,
         data: updateData,
@@ -159,7 +159,7 @@ class EditProfileController extends GetxController {
       avatarFile.path,
     );
 
-    final record = await PocketBaseService.to.updateRecord(
+    final record = await BackendApiService.to.updateRecord(
       collectionName: User.collection,
       recordId: userId,
       data: {},

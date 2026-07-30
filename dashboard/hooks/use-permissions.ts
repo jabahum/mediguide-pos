@@ -1,10 +1,10 @@
 /**
  * Permission Management Hook
- * React hook for managing permissions with AccessControl and PocketBase integration
+ * React hook for managing permissions with AccessControl and backend integration
  */
 
 import * as React from 'react'
-import { getPB, getUserRole } from '@/lib/pocketbase'
+import { getBackendClient, getUserRole } from '@/lib/backend-client'
 import { showToast } from '@/lib/toast'
 import { 
   permissionService,
@@ -21,7 +21,7 @@ import type {
   PermissionGrant
 } from '@/types/permissions'
 import { PERMISSION_TEMPLATES } from '@/types/permissions'
-import type { RolesResponse } from '@/types/pocketbase-types'
+import type { RolesResponse } from '@/types/backend-types'
 
 interface UsePermissionsReturn {
   // Permission checking
@@ -67,7 +67,7 @@ export function usePermissions(options: UsePermissionsOptions = {}): UsePermissi
       setLoading(true)
       setError(null)
       
-      const pb = getPB()
+      const pb = getBackendClient()
       
       // Fetch all active roles with their permissions
       const roles = await pb.collection('roles').getFullList<RolesResponse>({
@@ -140,7 +140,7 @@ export function usePermissions(options: UsePermissionsOptions = {}): UsePermissi
   const loadRolePermissions = React.useCallback(async (roleId: string): Promise<RolePermissions | null> => {
     try {
       setLoading(true)
-      const pb = getPB()
+      const pb = getBackendClient()
       
       const role = await pb.collection('roles').getOne<RolesResponse>(roleId)
       const parsedPermissions = parsePermissionsFromDatabase(role.permissions)
@@ -180,7 +180,7 @@ export function usePermissions(options: UsePermissionsOptions = {}): UsePermissi
         }
       }
       
-      const pb = getPB()
+      const pb = getBackendClient()
       
       // Serialize permissions for database storage
       const serializedPermissions = serializePermissionsForDatabase(permissions)
@@ -226,7 +226,7 @@ export function usePermissions(options: UsePermissionsOptions = {}): UsePermissi
         return { success: false, error: `Template not found: ${templateKey}` }
       }
       
-      const pb = getPB()
+      const pb = getBackendClient()
       
       // Get the role to get its key
       const role = await pb.collection('roles').getOne<RolesResponse>(roleId)

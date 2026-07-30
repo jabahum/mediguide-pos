@@ -16,7 +16,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { ColorPicker } from "@/components/ui/color-picker"
-import { DrugTagsResponse } from "@/types/pocketbase-types"
+import { DrugTagsResponse } from "@/types/backend-types"
 
 const tagSchema = z.object({
   name: z.string().min(1, "Name is required").max(100, "Name must be less than 100 characters"),

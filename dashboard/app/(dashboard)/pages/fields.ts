@@ -2,7 +2,7 @@ import { FieldOption } from "@/types/data-table"
 
 /**
  * Available fields for pages table advanced filtering
- * Based on PocketBase generic_pages collection schema
+ * Based on legacy collection API generic_pages collection schema
  */
 export const pagesAvailableFields: FieldOption[] = [
   // Basic Information

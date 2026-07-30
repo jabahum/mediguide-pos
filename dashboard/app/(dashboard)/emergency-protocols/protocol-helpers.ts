@@ -1,4 +1,4 @@
-import { EmergencyProtocolsResponse } from "@/types/pocketbase-types"
+import { EmergencyProtocolsResponse } from "@/types/backend-types"
 
 export type EmergencyProtocolRecord = EmergencyProtocolsResponse<
   unknown,

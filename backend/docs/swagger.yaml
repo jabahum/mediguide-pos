@@ -8,6 +8,22 @@ definitions:
         example: true
         type: boolean
     type: object
+  handlers.CalculatorEnvelope:
+    properties:
+      data:
+        $ref: '#/definitions/models.Calculator'
+      success:
+        example: true
+        type: boolean
+    type: object
+  handlers.CalculatorUsageEnvelope:
+    properties:
+      data:
+        $ref: '#/definitions/models.CalculatorUsageLog'
+      success:
+        example: true
+        type: boolean
+    type: object
   handlers.ClinicalProtocolEnvelope:
     properties:
       data:
@@ -245,6 +261,33 @@ definitions:
         example: 1024
         type: integer
       updated:
+        example: true
+        type: boolean
+    type: object
+  handlers.PaginatedCalculators:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/models.Calculator'
+        type: array
+      page:
+        example: 1
+        type: integer
+      per_page:
+        example: 20
+        type: integer
+      total_items:
+        example: 1
+        type: integer
+      total_pages:
+        example: 1
+        type: integer
+    type: object
+  handlers.PaginatedCalculatorsEnvelope:
+    properties:
+      data:
+        $ref: '#/definitions/handlers.PaginatedCalculators'
+      success:
         example: true
         type: boolean
     type: object
@@ -542,6 +585,58 @@ definitions:
       success:
         example: true
         type: boolean
+    type: object
+  models.Calculator:
+    properties:
+      added_by_user_id:
+        type: string
+      app_file_json:
+        type: object
+      background_color:
+        type: string
+      color:
+        type: string
+      created_at:
+        type: string
+      description:
+        type: string
+      featured:
+        type: boolean
+      icon:
+        type: string
+      id:
+        type: string
+      name:
+        type: string
+      status:
+        type: string
+      type:
+        type: string
+      updated_at:
+        type: string
+      usage_count:
+        type: integer
+      version:
+        type: string
+    type: object
+  models.CalculatorUsageLog:
+    properties:
+      calculator_id:
+        type: string
+      calculator_type:
+        type: string
+      created_at:
+        type: string
+      id:
+        type: string
+      session_end:
+        type: string
+      session_start:
+        type: string
+      updated_at:
+        type: string
+      user_id:
+        type: string
     type: object
   models.ClinicalProtocol:
     properties:
@@ -922,6 +1017,29 @@ definitions:
       title:
         type: string
     type: object
+  services.CreateCalculatorInput:
+    properties:
+      app_file_json:
+        type: object
+      background_color:
+        type: string
+      color:
+        type: string
+      description:
+        type: string
+      featured:
+        type: boolean
+      icon:
+        type: string
+      name:
+        type: string
+      status:
+        type: string
+      type:
+        type: string
+      version:
+        type: string
+    type: object
   services.CreateGuidelineInput:
     properties:
       country:
@@ -1008,6 +1126,11 @@ definitions:
       version:
         type: string
     type: object
+  services.FinishCalculatorUsageInput:
+    properties:
+      session_end:
+        type: string
+    type: object
   services.LoginResult:
     properties:
       expires_at:
@@ -1083,6 +1206,13 @@ definitions:
       title:
         type: string
     type: object
+  services.StartCalculatorUsageInput:
+    properties:
+      calculator_type:
+        type: string
+      session_start:
+        type: string
+    type: object
   services.TreeNode:
     properties:
       count:
@@ -1100,6 +1230,29 @@ definitions:
       subtitle:
         type: string
       title:
+        type: string
+    type: object
+  services.UpdateCalculatorInput:
+    properties:
+      app_file_json:
+        type: object
+      background_color:
+        type: string
+      color:
+        type: string
+      description:
+        type: string
+      featured:
+        type: boolean
+      icon:
+        type: string
+      name:
+        type: string
+      status:
+        type: string
+      type:
+        type: string
+      version:
         type: string
     type: object
 info:
@@ -1122,7 +1275,6 @@ paths:
         enum:
         - medical_guidelines
         - drugs
-        - calculators
         - abbreviations
         - emergency_protocols
         - faqs
@@ -1154,7 +1306,6 @@ paths:
         - conversations
         - messages
         - reading_progress
-        - calculator_usage_logs
         - guideline_usage_logs
         - drug_usage_logs
         - abbreviation_usage_logs
@@ -1225,7 +1376,6 @@ paths:
         - conversations
         - messages
         - reading_progress
-        - calculator_usage_logs
         - guideline_usage_logs
         - drug_usage_logs
         - abbreviation_usage_logs
@@ -1324,7 +1474,6 @@ paths:
         enum:
         - medical_guidelines
         - drugs
-        - calculators
         - abbreviations
         - emergency_protocols
         - faqs
@@ -1356,7 +1505,6 @@ paths:
         - conversations
         - messages
         - reading_progress
-        - calculator_usage_logs
         - guideline_usage_logs
         - drug_usage_logs
         - abbreviation_usage_logs
@@ -1834,6 +1982,271 @@ paths:
       summary: Register a user
       tags:
       - auth
+  /api/v2/calculator-usage/{usageId}:
+    patch:
+      consumes:
+      - application/json
+      parameters:
+      - description: Usage session ID
+        format: uuid
+        in: path
+        name: usageId
+        required: true
+        type: string
+      - description: Usage completion
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/services.FinishCalculatorUsageInput'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.CalculatorUsageEnvelope'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Finish a calculator usage session
+      tags:
+      - calculators
+  /api/v2/calculators:
+    get:
+      parameters:
+      - description: Page number
+        in: query
+        minimum: 1
+        name: page
+        type: integer
+      - description: Page size
+        in: query
+        maximum: 100
+        minimum: 1
+        name: per_page
+        type: integer
+      - description: Name or description search
+        in: query
+        name: search
+        type: string
+      - description: Comma-separated calculator, decision_tool, or checklist values
+        in: query
+        name: type
+        type: string
+      - description: Comma-separated active, draft, or archived values
+        in: query
+        name: status
+        type: string
+      - description: Featured filter
+        in: query
+        name: featured
+        type: boolean
+      - description: Sort field
+        in: query
+        name: sort
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.PaginatedCalculatorsEnvelope'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: List calculators and decision tools
+      tags:
+      - calculators
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Calculator payload
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/services.CreateCalculatorInput'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/handlers.CalculatorEnvelope'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Create a calculator or decision tool
+      tags:
+      - calculators
+  /api/v2/calculators/{id}:
+    delete:
+      parameters:
+      - description: Calculator ID
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Archive a calculator or decision tool
+      tags:
+      - calculators
+    get:
+      parameters:
+      - description: Calculator ID
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.CalculatorEnvelope'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get a calculator or decision tool
+      tags:
+      - calculators
+    patch:
+      consumes:
+      - application/json
+      parameters:
+      - description: Calculator ID
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Calculator fields
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/services.UpdateCalculatorInput'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.CalculatorEnvelope'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Update a calculator or decision tool
+      tags:
+      - calculators
+  /api/v2/calculators/{id}/content:
+    get:
+      description: Returns embedded HTML or a safely resolved static calculator artifact.
+      parameters:
+      - description: Calculator ID
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - text/html
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: string
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Load executable calculator content
+      tags:
+      - calculators
+  /api/v2/calculators/{id}/usage:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Calculator ID
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Usage session
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/services.StartCalculatorUsageInput'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/handlers.CalculatorUsageEnvelope'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Start a calculator usage session
+      tags:
+      - calculators
   /api/v2/chat/ask:
     post:
       consumes:

@@ -81,6 +81,7 @@ func New(cfg config.Config) (*App, error) {
 	protocolSvc := services.ProtocolService{DB: database}
 	syncSvc := services.SyncService{DB: database, Store: store, Cfg: cfg}
 	referenceSvc := services.ReferenceService{DB: database}
+	calculatorSvc := services.CalculatorService{DB: database, StaticSamplesDir: cfg.StaticSamplesDir}
 	legacyAPISvc := services.LegacyAPIService{DB: database}
 	legacyCollectionSvc := services.LegacyCollectionService{DB: database}
 
@@ -92,6 +93,7 @@ func New(cfg config.Config) (*App, error) {
 	protocolH := handlers.ProtocolHandler{Service: protocolSvc}
 	syncH := handlers.SyncHandler{Service: syncSvc}
 	referenceH := handlers.ReferenceHandler{Service: referenceSvc}
+	calculatorH := handlers.CalculatorHandler{Service: calculatorSvc}
 	legacyAPIH := handlers.LegacyAPIHandler{Service: legacyAPISvc, Cfg: cfg}
 	legacyCollectionH := handlers.LegacyCollectionHandler{Service: legacyCollectionSvc, Cfg: cfg}
 
@@ -135,6 +137,15 @@ func New(cfg config.Config) (*App, error) {
 		protected.Use(middleware.AuthRequired(cfg, database))
 		protected.POST("/auth/logout", authH.Logout)
 		protected.GET("/me", authH.Me)
+
+		protected.GET("/calculators", middleware.RequireAnyPermission("calculator.read", "guideline.read"), calculatorH.List)
+		protected.GET("/calculators/:id", middleware.RequireAnyPermission("calculator.read", "guideline.read"), calculatorH.Get)
+		protected.POST("/calculators", middleware.RequireAnyPermission("calculator.write", "guideline.write"), calculatorH.Create)
+		protected.PATCH("/calculators/:id", middleware.RequireAnyPermission("calculator.write", "guideline.write"), calculatorH.Update)
+		protected.DELETE("/calculators/:id", middleware.RequireAnyPermission("calculator.write", "guideline.write"), calculatorH.Delete)
+		protected.GET("/calculators/:id/content", middleware.RequireAnyPermission("calculator.read", "guideline.read"), calculatorH.Content)
+		protected.POST("/calculators/:id/usage", calculatorH.StartUsage)
+		protected.PATCH("/calculator-usage/:usageId", calculatorH.FinishUsage)
 
 		protected.POST("/guidelines", middleware.RequirePermission("guideline.write"), guidelineH.Create)
 		protected.GET("/guidelines", middleware.RequirePermission("guideline.read"), guidelineH.List)

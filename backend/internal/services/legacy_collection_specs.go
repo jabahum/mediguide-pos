@@ -52,27 +52,6 @@ var legacyCollectionSpecs = map[string]legacyCollectionSpec{
 			return query.Where("d.deleted_at IS NULL")
 		},
 	},
-	"calculators": {
-		Table:        "calculators c",
-		IDColumn:     "c.id",
-		Select:       "c.*",
-		DefaultOrder: "c.name ASC",
-		SearchColumns: []string{
-			"c.name", "coalesce(c.description, '')", "coalesce(c.type, '')",
-		},
-		FilterColumns: map[string]string{
-			"status":   "c.status",
-			"type":     "c.type",
-			"featured": "c.featured::text",
-		},
-		Access: legacyAccessPublic,
-		ApplyScopes: func(query *gorm.DB) *gorm.DB {
-			return query.Where("c.deleted_at IS NULL").Where("coalesce(c.status, '') = ?", "active")
-		},
-		ApplyAuth: func(query *gorm.DB) *gorm.DB {
-			return query.Where("c.deleted_at IS NULL")
-		},
-	},
 	"abbreviations": {
 		Table:        "abbreviations a",
 		IDColumn:     "a.id",
@@ -756,23 +735,6 @@ var legacyCollectionSpecs = map[string]legacyCollectionSpec{
 		},
 		ApplyUser: func(query *gorm.DB, userID string) *gorm.DB {
 			return query.Where("rp.user_id::text = ?", userID)
-		},
-	},
-	"calculator_usage_logs": {
-		Table:        "calculator_usage_logs cul",
-		IDColumn:     "cul.id",
-		Select:       "cul.*",
-		DefaultOrder: "cul.created_at DESC",
-		FilterColumns: map[string]string{
-			"calculator_id":   "cul.calculator_id::text",
-			"calculator_type": "cul.calculator_type",
-		},
-		Access: legacyAccessUser,
-		ApplyScopes: func(query *gorm.DB) *gorm.DB {
-			return query.Where("cul.deleted_at IS NULL")
-		},
-		ApplyUser: func(query *gorm.DB, userID string) *gorm.DB {
-			return query.Where("cul.user_id::text = ?", userID)
 		},
 	},
 	"guideline_usage_logs": {

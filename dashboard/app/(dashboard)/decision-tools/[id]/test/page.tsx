@@ -189,7 +189,7 @@ export default function DecisionToolTestPage({
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          {fileUrl ? (
+          {tool.id ? (
             <>
               <div className="flex items-center gap-3">
                 <Button

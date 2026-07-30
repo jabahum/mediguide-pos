@@ -162,8 +162,6 @@ func (s LegacyCollectionService) Create(collection string, payload map[string]an
 		return s.createMessage(payload, userID)
 	case "reading_progress":
 		return s.createReadingProgress(payload, userID)
-	case "calculator_usage_logs":
-		return s.createUsageLog(collection, payload, userID)
 	case "guideline_usage_logs":
 		return s.createUsageLog(collection, payload, userID)
 	case "drug_usage_logs":
@@ -202,8 +200,6 @@ func (s LegacyCollectionService) Update(collection, id string, payload map[strin
 		return s.updateMessage(id, payload, userID)
 	case "reading_progress":
 		return s.updateReadingProgress(id, payload, userID)
-	case "calculator_usage_logs":
-		return s.updateUsageLog(collection, id, payload, userID)
 	default:
 		return s.updateGeneric(collection, id, payload, userID)
 	}

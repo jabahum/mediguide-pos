@@ -168,6 +168,93 @@ class BackendApiService extends GetxService {
     _prefs.remove(SharedPreferencesKeys.userId);
   }
 
+  Future<PagedResult<ApiRecord>> getCalculators({
+    int page = 1,
+    int perPage = 30,
+    String? search,
+    List<String> types = const [],
+    List<String> statuses = const [],
+    bool? featured,
+    String sort = '-created',
+  }) async {
+    final safePage = page < 1 ? 1 : page;
+    final safePerPage = perPage < 1 ? 1 : perPage;
+    final response = await _requestJson(
+      '/api/v2/calculators',
+      method: 'GET',
+      query: {
+        'page': '$safePage',
+        'per_page': '$safePerPage',
+        if (search != null && search.trim().isNotEmpty) 'search': search.trim(),
+        if (types.isNotEmpty) 'type': types.join(','),
+        if (statuses.isNotEmpty) 'status': statuses.join(','),
+        if (featured != null) 'featured': '$featured',
+        'sort': sort,
+      },
+    );
+    final data = _unwrapData(response);
+    final items = (data['items'] as List? ?? const [])
+        .whereType<Map>()
+        .map(
+          (item) => ApiRecord(
+            _normalizeRecord(
+              collectionName: Calculator.collection,
+              raw: _asMap(item),
+            ),
+          ),
+        )
+        .toList();
+    return PagedResult<ApiRecord>(
+      page: (data['page'] as num?)?.toInt() ?? safePage,
+      perPage: (data['per_page'] as num?)?.toInt() ?? safePerPage,
+      totalItems: (data['total_items'] as num?)?.toInt() ?? items.length,
+      totalPages: (data['total_pages'] as num?)?.toInt() ?? 0,
+      items: items,
+    );
+  }
+
+  Future<String> getCalculatorContent(String calculatorId) {
+    return _requestText('/api/v2/calculators/$calculatorId/content');
+  }
+
+  String getCalculatorContentUrl(String calculatorId) =>
+      '${mediguideApiBaseUrl.replaceFirst(RegExp(r'/$'), '')}/api/v2/calculators/$calculatorId/content';
+
+  Future<ApiRecord> startCalculatorUsage({
+    required String calculatorId,
+    required String sessionStart,
+    required String calculatorType,
+  }) async {
+    final response = await _requestJson(
+      '/api/v2/calculators/$calculatorId/usage',
+      method: 'POST',
+      body: {'session_start': sessionStart, 'calculator_type': calculatorType},
+    );
+    return ApiRecord(
+      _normalizeRecord(
+        collectionName: CalculatorUsageLog.collection,
+        raw: _unwrapData(response),
+      ),
+    );
+  }
+
+  Future<ApiRecord> finishCalculatorUsage({
+    required String usageId,
+    required String sessionEnd,
+  }) async {
+    final response = await _requestJson(
+      '/api/v2/calculator-usage/$usageId',
+      method: 'PATCH',
+      body: {'session_end': sessionEnd},
+    );
+    return ApiRecord(
+      _normalizeRecord(
+        collectionName: CalculatorUsageLog.collection,
+        raw: _unwrapData(response),
+      ),
+    );
+  }
+
   Future<ApiRecord> createRecord({
     required String collectionName,
     required Map<String, dynamic> data,
@@ -665,6 +752,24 @@ class BackendApiService extends GetxService {
     }
 
     return map;
+  }
+
+  Future<String> _requestText(String path) async {
+    final base = Uri.parse(mediguideApiBaseUrl);
+    final uri = base.replace(path: _joinPath(base.path, path));
+    final response = await http.get(
+      uri,
+      headers: {
+        'Accept': 'text/html,application/json',
+        if (_accessToken.isNotEmpty) 'Authorization': 'Bearer $_accessToken',
+      },
+    );
+    if (response.statusCode >= 400) {
+      throw Exception(
+        'Failed to load calculator content (${response.statusCode})',
+      );
+    }
+    return utf8.decode(response.bodyBytes);
   }
 
   Future<void> _persistSession(Map<String, dynamic> data) async {

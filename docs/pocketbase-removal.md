@@ -12,6 +12,11 @@ typed domain endpoints are introduced. Do not remove those routes until every
 consumer in the migration table has moved and contract tests cover its
 replacement.
 
+The calculators and decision-tools slice has completed that migration. Its
+clients now use `/api/v2/calculators` for CRUD, filtering, executable content,
+and owned usage sessions. The `calculators` and `calculator_usage_logs`
+compatibility specs have been removed; other collection specs remain.
+
 `backend/cmd/importpb` is also retained temporarily. It imports historical
 PocketBase SQLite exports into PostgreSQL and is not part of the running API.
 The migrations whose names or comments mention PocketBase are immutable schema
@@ -58,7 +63,7 @@ domain PR before removing a collection spec.
 
 | Domain | Current collections | Consumers and required query behaviour | Writes/files | Proposed endpoints | Permissions |
 | --- | --- | --- | --- | --- | --- |
-| Calculators and decision tools | `calculators`, `calculator_usage_logs` | Dashboard decision-tools/calculators pages; mobile tools and calculator controllers. Filter by status, category, tool type and search; load executable JSON/HTML safely. | Admin CRUD; usage-log create. Structured `app_file_json`, optional future asset download. | `/api/v1/calculators`, `/api/v1/calculators/{id}`, `/api/v1/calculators/{id}/usage` | Public/authenticated read by publication state; editor/admin write; user owns usage. |
+| Calculators and decision tools — migrated | Former compatibility collections: `calculators`, `calculator_usage_logs` | Dashboard decision-tools/calculators pages use a domain adapter; mobile tools, home and calculator controllers call typed methods. Server-side status/type/featured/search filters and safe HTML delivery are implemented. | Authenticated CRUD; owned usage-session start/finish. `app_file_json` remains structured JSON and may contain safe static metadata or embedded HTML. | `/api/v2/calculators`, `/api/v2/calculators/{id}`, `/api/v2/calculators/{id}/content`, `/api/v2/calculators/{id}/usage`, `/api/v2/calculator-usage/{usageId}` | `calculator.read` is granted to supported app roles; `calculator.write` is limited to content managers, reviewers and administrators. The calculator owner comes from JWT claims; usage sessions can only be finished by their owner. |
 | Drugs and metadata | `drugs`, `drug_categories`, `drug_classes`, `drug_tags`, `therapeutic_categories`, `drug_usage_logs` | Dashboard drugs and metadata screens; mobile drug index/search. Search and multi-value filters; expand categories, classes and tags. | Editor CRUD; usage create; future monograph assets. | `/api/v1/drugs`, `/api/v1/drugs/{id}`, `/api/v1/drug-metadata/*`, `/api/v1/drugs/{id}/usage` | Published read; clinical editor/admin write; user owns usage. |
 | Facilities and regions | `health_facilities`, `facility_levels`, `ownership_types`, `authorities`, `regions`, `health_sub_regions`, `districts`, `counties`, `subcounties`, `parishes`, `health_sub_districts`, `facility_usage_logs` | Dashboard facility and administrative tables/forms; mobile infrastructure and tree selector. Geographic hierarchy filters and parent expansions are required. | Admin/editor CRUD; usage create; no current file requirement. | `/api/v1/facilities`, `/api/v1/facilities/{id}`, `/api/v1/administrative-areas`, `/api/v1/administrative-areas/{id}/children` | Published read; facility-data editor/admin write; user owns usage. |
 | Guidelines | `medical_guidelines`, `guideline_categories`, `guideline_tags`, `guideline_index`, `abbreviations`, `abbreviation_usage_logs`, `guideline_usage_logs` | Dashboard guideline editor, categories, tags, index and abbreviations; mobile guideline list/reader/indexer/search. Filter publication status, hierarchy, tags, audience and search; expand category/tag/index relations. | Editorial CRUD, Markdown upload/save, publishing workflow and usage writes. | `/api/v1/guidelines`, `/api/v1/guidelines/{id}`, `/api/v1/guidelines/{id}/content`, `/api/v1/guideline-taxonomy/*`, `/api/v1/abbreviations` | Published read; author/editor approval stages; admin taxonomy; user owns progress/usage. |
@@ -72,12 +77,10 @@ domain PR before removing a collection spec.
 
 ## Recommended migration order
 
-Start with calculators and decision tools. This domain is bounded, already has
-visible launch failures when payload/file assumptions are wrong, and exposes the
-`app_file_json` typing problem. A typed endpoint can validate executable content,
-return an explicit launch payload, and replace both client-side filtering and
-ambiguous file URL construction. Migrate guidelines next because their Markdown
-content and publishing permissions need similarly explicit contracts.
+Calculators and decision tools are complete. Migrate guidelines next because
+their Markdown content, taxonomy, legacy medical-guideline records, and
+publishing permissions need similarly explicit contracts. Drugs and facilities
+should follow once shared reference-data filtering is established.
 
 For each domain:
 

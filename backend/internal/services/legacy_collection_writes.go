@@ -187,18 +187,6 @@ func (s LegacyCollectionService) createUsageLog(collection string, payload map[s
 		"updated_at": time.Now().UTC(),
 	}
 	switch collection {
-	case "calculator_usage_logs":
-		id, err := parsePayloadUUIDAny(payload, "calculator_id")
-		if err != nil {
-			return nil, ErrLegacyCollectionInvalid
-		}
-		row["calculator_id"] = id
-		row["session_start"] = firstPayloadStringAny(payload, "session_start")
-		row["session_end"] = nullableString(firstPayloadStringAny(payload, "session_end"))
-		row["calculator_type"] = defaultString(firstPayloadStringAny(payload, "calculator_type"), "calculator")
-		if row["session_start"] == "" {
-			return nil, ErrLegacyCollectionInvalid
-		}
 	case "guideline_usage_logs":
 		id, err := parsePayloadUUIDAny(payload, "guideline_document_id", "guideline_id")
 		if err != nil {
@@ -382,27 +370,4 @@ func (s LegacyCollectionService) updateReadingProgress(id string, payload map[st
 		return nil, err
 	}
 	return s.Get("reading_progress", id, userID)
-}
-
-// updateUsageLog updates allowed fields on a usage log the user owns.
-func (s LegacyCollectionService) updateUsageLog(collection, id string, payload map[string]any, userID string) (*LegacyItemResult, error) {
-	rowID, err := parsePayloadUUIDAny(map[string]any{"id": id}, "id")
-	if err != nil {
-		return nil, ErrLegacyCollectionInvalid
-	}
-	if !s.ownsRow(collection, rowID, userID) {
-		return nil, ErrLegacyCollectionForbidden
-	}
-	updates := map[string]any{}
-	if collection == "calculator_usage_logs" {
-		copyNullableStringUpdate(payload, updates, "session_end")
-	}
-	if len(updates) == 0 {
-		return nil, ErrLegacyCollectionInvalid
-	}
-	updates["updated_at"] = time.Now().UTC()
-	if err := s.DB.Table(collection).Where("id = ?", rowID).Updates(updates).Error; err != nil {
-		return nil, err
-	}
-	return s.Get(collection, id, userID)
 }

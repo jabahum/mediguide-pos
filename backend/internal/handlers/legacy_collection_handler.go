@@ -26,7 +26,7 @@ type LegacyCollectionHandler struct {
 // @Tags legacy-v1
 // @Produce json
 // @Security BearerAuth
-// @Param collection path string true "Legacy collection name" Enums(medical_guidelines,drugs,calculators,abbreviations,emergency_protocols,faqs,documentation,generic_pages,guideline_categories,guideline_tags,drug_categories,drug_tags,drug_classes,therapeutic_categories,consultants,health_facilities,regions,districts,counties,subcounties,parishes,facility_levels,ownership_types,authorities,ministry_directory,languages,notifications,notification_templates,notification_campaigns,support_tickets,support_ticket_replies,conversations,messages,reading_progress,calculator_usage_logs,guideline_usage_logs,drug_usage_logs,abbreviation_usage_logs,consultant_usage_logs,facility_usage_logs,ai_usage_logs)
+// @Param collection path string true "Legacy collection name" Enums(medical_guidelines,drugs,abbreviations,emergency_protocols,faqs,documentation,generic_pages,guideline_categories,guideline_tags,drug_categories,drug_tags,drug_classes,therapeutic_categories,consultants,health_facilities,regions,districts,counties,subcounties,parishes,facility_levels,ownership_types,authorities,ministry_directory,languages,notifications,notification_templates,notification_campaigns,support_tickets,support_ticket_replies,conversations,messages,reading_progress,guideline_usage_logs,drug_usage_logs,abbreviation_usage_logs,consultant_usage_logs,facility_usage_logs,ai_usage_logs)
 // @Param page query int false "Page number" minimum(1)
 // @Param per_page query int false "Page size" minimum(1) maximum(100)
 // @Param search query string false "Search term"
@@ -73,7 +73,7 @@ func (h LegacyCollectionHandler) List(c *gin.Context) {
 // @Tags legacy-v1
 // @Produce json
 // @Security BearerAuth
-// @Param collection path string true "Legacy collection name" Enums(medical_guidelines,drugs,calculators,abbreviations,emergency_protocols,faqs,documentation,generic_pages,guideline_categories,guideline_tags,drug_categories,drug_tags,drug_classes,therapeutic_categories,consultants,health_facilities,regions,districts,counties,subcounties,parishes,facility_levels,ownership_types,authorities,ministry_directory,languages,notifications,notification_templates,notification_campaigns,support_tickets,support_ticket_replies,conversations,messages,reading_progress,calculator_usage_logs,guideline_usage_logs,drug_usage_logs,abbreviation_usage_logs,consultant_usage_logs,facility_usage_logs,ai_usage_logs)
+// @Param collection path string true "Legacy collection name" Enums(medical_guidelines,drugs,abbreviations,emergency_protocols,faqs,documentation,generic_pages,guideline_categories,guideline_tags,drug_categories,drug_tags,drug_classes,therapeutic_categories,consultants,health_facilities,regions,districts,counties,subcounties,parishes,facility_levels,ownership_types,authorities,ministry_directory,languages,notifications,notification_templates,notification_campaigns,support_tickets,support_ticket_replies,conversations,messages,reading_progress,guideline_usage_logs,drug_usage_logs,abbreviation_usage_logs,consultant_usage_logs,facility_usage_logs,ai_usage_logs)
 // @Param id path string true "Record ID"
 // @Success 200 {object} handlers.LegacyCollectionItemResult
 // @Failure 401 {object} handlers.ErrorResponse
@@ -101,7 +101,7 @@ func (h LegacyCollectionHandler) Get(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Security BearerAuth
-// @Param collection path string true "Legacy collection name" Enums(support_tickets,support_ticket_replies,conversations,messages,reading_progress,calculator_usage_logs,guideline_usage_logs,drug_usage_logs,abbreviation_usage_logs,consultant_usage_logs,facility_usage_logs,ai_usage_logs)
+// @Param collection path string true "Legacy collection name" Enums(support_tickets,support_ticket_replies,conversations,messages,reading_progress,guideline_usage_logs,drug_usage_logs,abbreviation_usage_logs,consultant_usage_logs,facility_usage_logs,ai_usage_logs)
 // @Param payload body map[string]interface{} true "Legacy collection payload"
 // @Success 200 {object} handlers.LegacyCollectionItemResult
 // @Failure 400 {object} handlers.ErrorResponse

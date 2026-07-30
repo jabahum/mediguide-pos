@@ -250,6 +250,10 @@ class CollectionClient {
     id: string,
     options: { expand?: string; fields?: string } = {}
   ): Promise<T> {
+    if (this.name === "calculators") {
+      const item = await this.client.request<JsonRecord>(`/api/v2/calculators/${id}`)
+      return normalizeRecord(this.name, item) as T
+    }
     const response = await this.client.request<{ item: JsonRecord }>(
       `/api/v1/collections/${this.name}/records/${id}`
     )
@@ -266,6 +270,13 @@ class CollectionClient {
         created: new Date().toISOString(),
         updated: new Date().toISOString(),
       } as T
+    }
+    if (this.name === "calculators") {
+      const item = await this.client.request<JsonRecord>("/api/v2/calculators", {
+        method: "POST",
+        body: JSON.stringify(await calculatorPayload(data, true)),
+      })
+      return normalizeRecord(this.name, item) as T
     }
 
     const response = await this.client.request<{ item: JsonRecord }>(
@@ -286,6 +297,13 @@ class CollectionClient {
         updated: new Date().toISOString(),
       } as T
     }
+    if (this.name === "calculators") {
+      const item = await this.client.request<JsonRecord>(`/api/v2/calculators/${id}`, {
+        method: "PATCH",
+        body: JSON.stringify(await calculatorPayload(data, false)),
+      })
+      return normalizeRecord(this.name, item) as T
+    }
 
     const response = await this.client.request<{ item: JsonRecord }>(
       `/api/v1/collections/${this.name}/records/${id}`,
@@ -298,6 +316,13 @@ class CollectionClient {
   }
 
   async delete(id: string): Promise<boolean> {
+    if (this.name === "calculators") {
+      await this.client.request<void>(`/api/v2/calculators/${id}`, {
+        method: "DELETE",
+        responseType: "text",
+      })
+      return true
+    }
     await this.client.request<void>(`/api/v1/collections/${this.name}/records/${id}`, {
       method: "DELETE",
       responseType: "text",
@@ -322,6 +347,26 @@ class CollectionClient {
     let page = 1
 
     while (true) {
+      if (this.name === "calculators") {
+        const response = await this.client.request<{
+          items: JsonRecord[]
+          page: number
+          per_page: number
+          total_items: number
+        }>("/api/v2/calculators", {
+          query: {
+            page,
+            per_page: LIST_PAGE_SIZE,
+            sort: "name",
+          },
+        })
+        const items = (response.items || []).map((item) => normalizeRecord(this.name, item))
+        all.push(...items)
+        const totalItems = Number(response.total_items || 0)
+        if (all.length >= totalItems || items.length === 0) break
+        page += 1
+        continue
+      }
       const response = await this.client.request<{
         items: JsonRecord[]
         page: number
@@ -605,6 +650,13 @@ function normalizeRecord(collection: string, raw: JsonRecord) {
     normalized.permissions = normalized.permissions ?? normalized.permissions_json ?? {}
   }
 
+  if (collection === "calculators") {
+    const artifact = parseJSONValue(raw.app_file_json)
+    normalized.appFileJson = artifact
+    normalized.appFile = calculatorArtifactPath(artifact)
+    normalized.addedBy = raw.added_by_user_id
+  }
+
   if (!normalized.created && normalized.created_at) {
     normalized.created = normalized.created_at
   }
@@ -613,6 +665,79 @@ function normalizeRecord(collection: string, raw: JsonRecord) {
   }
 
   return normalized
+}
+
+async function calculatorPayload(
+  input: JsonRecord | FormData,
+  requireArtifact: boolean,
+): Promise<JsonRecord> {
+  const values: JsonRecord = {}
+  if (input instanceof FormData) {
+    for (const [key, value] of input.entries()) {
+      values[key] = value
+    }
+  } else {
+    Object.assign(values, input)
+  }
+
+  const payload: JsonRecord = {}
+  const stringFields: Record<string, string> = {
+    name: "name",
+    description: "description",
+    icon: "icon",
+    color: "color",
+    backgroundColor: "background_color",
+    version: "version",
+    type: "type",
+    status: "status",
+  }
+  for (const [source, target] of Object.entries(stringFields)) {
+    if (values[source] !== undefined && values[source] !== null) {
+      payload[target] = String(values[source])
+    }
+  }
+  if (values.featured !== undefined) {
+    payload.featured = values.featured === true || String(values.featured) === "true"
+  }
+
+  const artifact = values.app_file_json ?? values.appFile ?? values.app_file
+  if (typeof File !== "undefined" && artifact instanceof File) {
+    const content = await artifact.text()
+    if (artifact.name.toLowerCase().endsWith(".html")) {
+      payload.app_file_json = {
+        name: artifact.name,
+        path: artifact.name,
+        html: content,
+      }
+    } else {
+      let parsed: unknown
+      try {
+        parsed = JSON.parse(content)
+      } catch {
+        throw new Error("Calculator artifact must be an HTML file or valid JSON")
+      }
+      payload.app_file_json = parsed
+    }
+  } else if (typeof artifact === "string" && artifact.trim()) {
+    payload.app_file_json = { path: artifact.trim(), name: artifact.trim() }
+  } else if (artifact && typeof artifact === "object") {
+    payload.app_file_json = artifact
+  } else if (requireArtifact) {
+    throw new Error("Calculator artifact is required")
+  }
+
+  return payload
+}
+
+function calculatorArtifactPath(value: unknown): string {
+  if (typeof value === "string") return value
+  if (!value || typeof value !== "object") return ""
+  const record = value as JsonRecord
+  return typeof record.path === "string"
+    ? record.path
+    : typeof record.name === "string"
+      ? record.name
+      : ""
 }
 
 function parseJSONValue(value: unknown) {

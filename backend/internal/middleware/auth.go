@@ -65,3 +65,23 @@ func RequirePermission(permission string) gin.HandlerFunc {
 		c.Next()
 	}
 }
+
+func RequireAnyPermission(permissions ...string) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		v, exists := c.Get(ClaimsKey)
+		if !exists {
+			httpx.Error(c, http.StatusUnauthorized, "not authenticated")
+			c.Abort()
+			return
+		}
+		claims := v.(*security.Claims)
+		for _, permission := range permissions {
+			if security.HasPerm(claims, permission) {
+				c.Next()
+				return
+			}
+		}
+		httpx.Error(c, http.StatusForbidden, "forbidden")
+		c.Abort()
+	}
+}

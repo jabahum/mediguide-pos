@@ -186,8 +186,8 @@ class HomeController extends GetxController {
     try {
       final featured = await getCalculators(
         perPage: 6,
-        filter: 'featured=true && status="active"',
-        sort: '-usageCount,-created',
+        featured: true,
+        sort: '-usage_count',
       );
 
       final calculators = List<Calculator>.from(featured);
@@ -195,8 +195,8 @@ class HomeController extends GetxController {
       if (calculators.length < 6) {
         final fallback = await getCalculators(
           perPage: 6 - calculators.length,
-          filter: 'featured!=true && status="active"',
-          sort: '-usageCount,-created',
+          featured: false,
+          sort: '-usage_count',
         );
 
         calculators.addAll(fallback);
@@ -456,42 +456,19 @@ class HomeController extends GetxController {
   Future<List<Calculator>> getCalculators({
     int page = 1,
     int perPage = 30,
-    String? filter,
-    String? sort,
-    String? expand,
+    List<String> statuses = const ['active'],
+    bool? featured,
+    String sort = '-usage_count',
   }) async {
-    final result = await _apiService.getRecordList(
-      collectionName: Calculator.collection,
+    final result = await _apiService.getCalculators(
       page: page,
       perPage: perPage,
-      filter: filter,
+      statuses: statuses,
+      featured: featured,
       sort: sort,
-      expand: expand,
     );
 
     return result.items.map((record) => Calculator.fromRecord(record)).toList();
-  }
-
-  Future<Calculator> createCalculator(Map<String, dynamic> data) async {
-    final record = await _apiService.createRecord(
-      collectionName: Calculator.collection,
-      data: data,
-    );
-
-    return Calculator.fromRecord(record);
-  }
-
-  Future<Calculator> updateCalculator(
-    String id,
-    Map<String, dynamic> data,
-  ) async {
-    final record = await _apiService.updateRecord(
-      collectionName: Calculator.collection,
-      recordId: id,
-      data: data,
-    );
-
-    return Calculator.fromRecord(record);
   }
 
   // =========================

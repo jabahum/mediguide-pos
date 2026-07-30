@@ -85,6 +85,29 @@ type GuidelineDocumentEnvelope struct {
 	Data    models.GuidelineDocument `json:"data"`
 }
 
+type CalculatorEnvelope struct {
+	Success bool              `json:"success" example:"true"`
+	Data    models.Calculator `json:"data"`
+}
+
+type PaginatedCalculators struct {
+	Items      []models.Calculator `json:"items"`
+	Page       int                 `json:"page" example:"1"`
+	PerPage    int                 `json:"per_page" example:"20"`
+	TotalItems int64               `json:"total_items" example:"1"`
+	TotalPages int                 `json:"total_pages" example:"1"`
+}
+
+type PaginatedCalculatorsEnvelope struct {
+	Success bool                 `json:"success" example:"true"`
+	Data    PaginatedCalculators `json:"data"`
+}
+
+type CalculatorUsageEnvelope struct {
+	Success bool                      `json:"success" example:"true"`
+	Data    models.CalculatorUsageLog `json:"data"`
+}
+
 type PaginatedGuidelineDocuments struct {
 	Items      []models.GuidelineDocument `json:"items"`
 	Page       int                        `json:"page" example:"1"`

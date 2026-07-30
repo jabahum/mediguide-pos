@@ -52,15 +52,22 @@ class ToolsController extends GetxController {
   // ================================
   Future<List<Calculator>> _fetchPage(int page) async {
     try {
-      final filter = _buildFilter();
-
-      final result = await _apiService.getRecordList(
-        collectionName: Calculator.collection,
+      final tabType = _getTabType(selectedTabIndex.value);
+      final types = selectedTypes.isNotEmpty
+          ? selectedTypes.map(_typeToString).toList()
+          : tabType == null
+          ? <String>[]
+          : [_typeToString(tabType)];
+      final statuses = selectedStatuses.isNotEmpty
+          ? selectedStatuses.map(_statusToString).toList()
+          : const ['active'];
+      final result = await _apiService.getCalculators(
         page: page,
         perPage: pageSize,
-        filter: filter.isEmpty ? null : filter,
+        search: searchQuery.value,
+        types: types,
+        statuses: statuses,
         sort: '-created',
-        expand: 'addedBy',
       );
 
       return result.items.map((r) => Calculator.fromRecord(r)).toList();
@@ -68,45 +75,6 @@ class ToolsController extends GetxController {
       Common.quickToast(title: 'Failed to load calculators');
       rethrow;
     }
-  }
-
-  // ================================
-  // FILTER ENGINE (FIXED)
-  // ================================
-  String _buildFilter() {
-    final parts = <String>[];
-
-    // search
-    if (searchQuery.value.isNotEmpty) {
-      final q = BackendApiService.escapeFilterValue(searchQuery.value);
-      parts.add('(name ~ "$q" || description ~ "$q")');
-    }
-
-    // tab filter
-    final tabType = _getTabType(selectedTabIndex.value);
-    if (tabType != null) {
-      parts.add('type = "${_typeToString(tabType)}"');
-    }
-
-    // multi type filter
-    if (selectedTypes.isNotEmpty) {
-      final types = selectedTypes
-          .map((t) => 'type = "${_typeToString(t)}"')
-          .join(' || ');
-      parts.add('($types)');
-    }
-
-    // status filter
-    if (selectedStatuses.isNotEmpty) {
-      final statuses = selectedStatuses
-          .map((s) => 'status = "${_statusToString(s)}"')
-          .join(' || ');
-      parts.add('($statuses)');
-    } else {
-      parts.add('status = "active"');
-    }
-
-    return parts.join(' && ');
   }
 
   // ================================
@@ -231,26 +199,4 @@ class ToolsController extends GetxController {
     CalculatorStatus.draft => 'draft',
     CalculatorStatus.archived => 'archived',
   };
-
-  // ================================
-  // API LAYER
-  // ================================
-  Future<List<Calculator>> getCalculators({
-    int page = 1,
-    int perPage = 30,
-    String? filter,
-    String? sort,
-    String? expand,
-  }) async {
-    final result = await _apiService.getRecordList(
-      collectionName: Calculator.collection,
-      page: page,
-      perPage: perPage,
-      filter: filter,
-      sort: sort,
-      expand: expand,
-    );
-
-    return result.items.map((e) => Calculator.fromRecord(e)).toList();
-  }
 }

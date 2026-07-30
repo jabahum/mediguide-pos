@@ -3,6 +3,52 @@ const API_BASE_URL =
 
 const AUTH_COOKIE_NAME = "mediguide_auth"
 const LIST_PAGE_SIZE = 100
+const DOMAIN_COLLECTION_PATHS: Record<string, string> = {
+  drugs: "/api/v2/drugs",
+  drug_categories: "/api/v2/drug-categories",
+  drug_tags: "/api/v2/drug-tags",
+  drug_classes: "/api/v2/drug-classes",
+  therapeutic_categories: "/api/v2/therapeutic-categories",
+  medical_guidelines: "/api/v2/medical-guidelines",
+  abbreviations: "/api/v2/abbreviations",
+  emergency_protocols: "/api/v2/emergency-protocols",
+  faqs: "/api/v2/faqs",
+  faq_tags: "/api/v2/faq-tags",
+  documentation: "/api/v2/documentation",
+  generic_pages: "/api/v2/pages",
+  guideline_categories: "/api/v2/guideline-categories",
+  guideline_tags: "/api/v2/guideline-tags",
+  guideline_index: "/api/v2/guideline-index",
+  consultants: "/api/v2/consultants",
+  health_sub_regions: "/api/v2/health-sub-regions",
+  health_facilities: "/api/v2/facilities",
+  regions: "/api/v2/regions",
+  districts: "/api/v2/districts",
+  health_sub_districts: "/api/v2/health-sub-districts",
+  counties: "/api/v2/counties",
+  subcounties: "/api/v2/subcounties",
+  parishes: "/api/v2/parishes",
+  facility_levels: "/api/v2/facility-levels",
+  ownership_types: "/api/v2/ownership-types",
+  authorities: "/api/v2/authorities",
+  ministry_directory: "/api/v2/ministry-directory",
+  languages: "/api/v2/reference-languages",
+  users: "/api/v2/users",
+  roles: "/api/v2/roles",
+  notifications: "/api/v2/notifications",
+  notification_templates: "/api/v2/notification-templates",
+  notification_campaigns: "/api/v2/notification-campaigns",
+  support_tickets: "/api/v2/support-tickets",
+  support_ticket_replies: "/api/v2/support-ticket-replies",
+  conversations: "/api/v2/conversations",
+  messages: "/api/v2/messages",
+  reading_progress: "/api/v2/reading-progress",
+  guideline_usage_logs: "/api/v2/guideline-usage",
+  abbreviation_usage_logs: "/api/v2/abbreviation-usage",
+  consultant_usage_logs: "/api/v2/consultant-usage",
+  facility_usage_logs: "/api/v2/facility-usage",
+  ai_usage_logs: "/api/v2/ai-usage",
+}
 
 type JsonRecord = Record<string, any>
 
@@ -34,6 +80,20 @@ type AuthSnapshot = {
   refreshToken?: string
   record: JsonRecord | null
   model: JsonRecord | null
+}
+
+export type LoginRequest = {
+  email: string
+  password: string
+}
+
+export type AuthSession = {
+  token: string
+  refresh_token: string
+  session_id: string
+  expires_at: string
+  refresh_expires_at: string
+  user: JsonRecord
 }
 
 type ExpandConfig = {
@@ -160,32 +220,11 @@ class BackendAuthStore {
   }
 }
 
-class CollectionClient {
+class ResourceClient {
   constructor(
     private readonly client: BackendClient,
     private readonly name: string
   ) {}
-
-  async authWithPassword(email: string, password: string) {
-    const response = await this.client.request<{
-      token: string
-      refresh_token?: string
-      user: JsonRecord
-    }>("/api/v1/collections/users/auth-with-password", {
-      method: "POST",
-      body: JSON.stringify({ email, password }),
-    })
-
-    const token = response.token.startsWith("Bearer ")
-      ? response.token
-      : `Bearer ${response.token}`
-    const record = normalizeRecord("users", response.user)
-    this.client.authStore.save(token, record, response.refresh_token || "")
-    return {
-      token,
-      record,
-    }
-  }
 
   async requestPasswordReset(_email: string) {
     return { success: true }
@@ -254,12 +293,15 @@ class CollectionClient {
       const item = await this.client.request<JsonRecord>(`/api/v2/calculators/${id}`)
       return normalizeRecord(this.name, item) as T
     }
-    const response = await this.client.request<{ item: JsonRecord }>(
-      `/api/v1/collections/${this.name}/records/${id}`
+    const domainPath = DOMAIN_COLLECTION_PATHS[this.name]
+    if (domainPath) {
+      const item = await this.client.request<JsonRecord>(`${domainPath}/${id}`)
+      return normalizeRecord(this.name, item) as T
+    }
+    throw new BackendRequestError(
+      `No typed backend endpoint is registered for ${this.name}`,
+      501,
     )
-    const normalized = normalizeRecord(this.name, response.item)
-    const [expanded] = await this.client.expandRecords(this.name, [normalized], options.expand)
-    return expanded as T
   }
 
   async create<T = any>(data: JsonRecord): Promise<T> {
@@ -278,15 +320,19 @@ class CollectionClient {
       })
       return normalizeRecord(this.name, item) as T
     }
-
-    const response = await this.client.request<{ item: JsonRecord }>(
-      `/api/v1/collections/${this.name}/records`,
-      {
+    const domainPath = DOMAIN_COLLECTION_PATHS[this.name]
+    if (domainPath) {
+      const item = await this.client.request<JsonRecord>(domainPath, {
         method: "POST",
         body: JSON.stringify(data),
-      }
+      })
+      return normalizeRecord(this.name, item) as T
+    }
+
+    throw new BackendRequestError(
+      `No typed backend endpoint is registered for ${this.name}`,
+      501,
     )
-    return normalizeRecord(this.name, response.item) as T
   }
 
   async update<T = any>(id: string, data: JsonRecord): Promise<T> {
@@ -304,15 +350,19 @@ class CollectionClient {
       })
       return normalizeRecord(this.name, item) as T
     }
-
-    const response = await this.client.request<{ item: JsonRecord }>(
-      `/api/v1/collections/${this.name}/records/${id}`,
-      {
+    const domainPath = DOMAIN_COLLECTION_PATHS[this.name]
+    if (domainPath) {
+      const item = await this.client.request<JsonRecord>(`${domainPath}/${id}`, {
         method: "PATCH",
         body: JSON.stringify(data),
-      }
+      })
+      return normalizeRecord(this.name, item) as T
+    }
+
+    throw new BackendRequestError(
+      `No typed backend endpoint is registered for ${this.name}`,
+      501,
     )
-    return normalizeRecord(this.name, response.item) as T
   }
 
   async delete(id: string): Promise<boolean> {
@@ -323,11 +373,18 @@ class CollectionClient {
       })
       return true
     }
-    await this.client.request<void>(`/api/v1/collections/${this.name}/records/${id}`, {
-      method: "DELETE",
-      responseType: "text",
-    })
-    return true
+    const domainPath = DOMAIN_COLLECTION_PATHS[this.name]
+    if (domainPath) {
+      await this.client.request<void>(`${domainPath}/${id}`, {
+        method: "DELETE",
+        responseType: "text",
+      })
+      return true
+    }
+    throw new BackendRequestError(
+      `No typed backend endpoint is registered for ${this.name}`,
+      501,
+    )
   }
 
   subscribe(
@@ -367,34 +424,34 @@ class CollectionClient {
         page += 1
         continue
       }
-      const response = await this.client.request<{
-        items: JsonRecord[]
-        page: number
-        per_page: number
-        total_items: number
-      }>(`/api/v1/collections/${this.name}/records`, {
-        query: {
-          page,
-          per_page: LIST_PAGE_SIZE,
-          fields,
-        },
-      })
-
-      const items = (response.items || []).map((item) => normalizeRecord(this.name, item))
-      all.push(...items)
-
-      const totalItems = Number(response.total_items || 0)
-      if (all.length >= totalItems || items.length === 0) {
-        break
+      const domainPath = DOMAIN_COLLECTION_PATHS[this.name]
+      if (domainPath) {
+        const response = await this.client.request<{
+          items: JsonRecord[]
+          page: number
+          per_page: number
+          total_items: number
+        }>(domainPath, {
+          query: { page, per_page: LIST_PAGE_SIZE, sort: "name", order: "asc" },
+        })
+        const items = (response.items || []).map((item) => normalizeRecord(this.name, item))
+        all.push(...items)
+        const totalItems = Number(response.total_items || 0)
+        if (all.length >= totalItems || items.length === 0) break
+        page += 1
+        continue
       }
-      page += 1
+      throw new BackendRequestError(
+        `No typed backend endpoint is registered for ${this.name}`,
+        501,
+      )
     }
 
     return all
   }
 }
 
-class BackendClient {
+export class BackendClient {
   readonly baseUrl = API_BASE_URL
   readonly authStore = new BackendAuthStore()
   readonly files = {
@@ -408,20 +465,62 @@ class BackendClient {
     },
   }
 
-  private readonly collections = new Map<string, CollectionClient>()
+  private readonly resources = new Map<string, ResourceClient>()
   private readonly relationCache = new Map<string, Map<string, JsonRecord>>()
 
   autoCancellation(_enabled: boolean) {}
 
-  collection(name: string) {
-    if (!this.collections.has(name)) {
-      this.collections.set(name, new CollectionClient(this, name))
+  resource(name: string) {
+    if (!this.resources.has(name)) {
+      this.resources.set(name, new ResourceClient(this, name))
     }
-    return this.collections.get(name)!
+    return this.resources.get(name)!
   }
 
   async send<T = any>(path: string, options: RequestOptions = {}) {
     return this.request<T>(path, options)
+  }
+
+  async login(credentials: LoginRequest) {
+    const session = await this.request<AuthSession>("/api/v2/auth/login", {
+      method: "POST",
+      body: JSON.stringify(credentials),
+    })
+    return this.saveSession(session)
+  }
+
+  async refreshAuth() {
+    if (!this.authStore.refreshToken) {
+      throw new BackendRequestError("No refresh token is available", 401)
+    }
+    const session = await this.request<AuthSession>("/api/v2/auth/refresh", {
+      method: "POST",
+      body: JSON.stringify({ refresh_token: this.authStore.refreshToken }),
+    })
+    return this.saveSession(session)
+  }
+
+  async currentUser() {
+    const user = await this.request<JsonRecord>("/api/v2/me")
+    const record = normalizeRecord("users", user)
+    this.authStore.save(
+      this.authStore.token,
+      record,
+      this.authStore.refreshToken,
+    )
+    return record
+  }
+
+  async logout() {
+    try {
+      if (this.authStore.token) {
+        await this.request<{ logged_out: boolean }>("/api/v2/auth/logout", {
+          method: "POST",
+        })
+      }
+    } finally {
+      this.authStore.clear()
+    }
   }
 
   async request<T = any>(path: string, options: RequestOptions = {}) {
@@ -503,13 +602,22 @@ class BackendClient {
     const cached = this.relationCache.get(cacheKey)
     if (cached) return cached
 
-    const list = await this.collection(collection).getFullList<JsonRecord>()
+    const list = await this.resource(collection).getFullList<JsonRecord>()
     const index = new Map<string, JsonRecord>()
     for (const item of list) {
       index.set(String(item.id), item)
     }
     this.relationCache.set(cacheKey, index)
     return index
+  }
+
+  private saveSession(session: AuthSession) {
+    const token = session.token.startsWith("Bearer ")
+      ? session.token
+      : `Bearer ${session.token}`
+    const record = normalizeRecord("users", session.user)
+    this.authStore.save(token, record, session.refresh_token)
+    return { token, record, session }
   }
 }
 
@@ -588,9 +696,9 @@ export function canAccessMobile(): boolean {
   return isAuthenticated() && hasAnyRole(allowedRoles)
 }
 
-export function logout() {
+export async function logout() {
   if (typeof window === "undefined") return
-  getBackendClient().authStore.clear()
+  await getBackendClient().logout()
 }
 
 function normalizeRecord(collection: string, raw: JsonRecord) {

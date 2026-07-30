@@ -65,13 +65,7 @@ class DrugIndexController extends GetxController {
 
   Future<List<Drug>> _fetchDrugsPage(int pageKey) async {
     try {
-      final drugs = await getDrugs(
-        page: pageKey,
-        perPage: pageSize,
-        filter: _buildFilter(),
-        sort: 'name',
-        expand: 'categories,tags,therapeutic_category',
-      );
+      final drugs = await getDrugs(page: pageKey, perPage: pageSize);
 
       return drugs;
     } catch (e) {
@@ -87,7 +81,7 @@ class DrugIndexController extends GetxController {
     try {
       isLoadingFilters.value = true;
 
-      final categoriesResult = await _apiService.getRecordList(
+      final categoriesResult = await _apiService.getResourceList(
         collectionName: DrugCategory.collection,
         page: 1,
         perPage: 100,
@@ -98,7 +92,7 @@ class DrugIndexController extends GetxController {
           .map((r) => r.data['name'] as String)
           .toList();
 
-      final tagsResult = await _apiService.getRecordList(
+      final tagsResult = await _apiService.getResourceList(
         collectionName: DrugTag.collection,
         page: 1,
         perPage: 100,
@@ -128,47 +122,6 @@ class DrugIndexController extends GetxController {
     } finally {
       isLoadingFilters.value = false;
     }
-  }
-
-  // =========================
-  // FILTER BUILDER
-  // =========================
-  String _buildFilter() {
-    final parts = <String>['status = "active"'];
-
-    if (searchQuery.value.isNotEmpty) {
-      final q = BackendApiService.escapeFilterValue(searchQuery.value);
-      parts.add('(name ~ "$q" || generic_name ~ "$q" || brand_names ~ "$q")');
-    }
-
-    if (selectedCategories.isNotEmpty) {
-      parts.add(
-        '(${selectedCategories.map((e) => 'categories ~ "${BackendApiService.escapeFilterValue(e)}"').join(' || ')})',
-      );
-    }
-
-    if (selectedTags.isNotEmpty) {
-      parts.add(
-        '(${selectedTags.map((e) => 'tags ~ "${BackendApiService.escapeFilterValue(e)}"').join(' || ')})',
-      );
-    }
-
-    if (selectedRoutes.isNotEmpty) {
-      parts.add(
-        '(${selectedRoutes.map((e) => 'route_of_administration ~ "${BackendApiService.escapeFilterValue(e)}"').join(' || ')})',
-      );
-    }
-
-    if (selectedPregnancyCategories.isNotEmpty) {
-      parts.add(
-        '(${selectedPregnancyCategories.map((e) => 'pregnancy_category ~ "${BackendApiService.escapeFilterValue(e)}"').join(' || ')})',
-      );
-    }
-
-    if (whoEmlOnly.value) parts.add('who_eml_status = true');
-    if (antimicrobialOnly.value) parts.add('antimicrobial_status = true');
-
-    return parts.join(' && ');
   }
 
   // =========================
@@ -338,20 +291,18 @@ class DrugIndexController extends GetxController {
   // =========================
   // API
   // =========================
-  Future<List<Drug>> getDrugs({
-    int page = 1,
-    int perPage = 30,
-    String? filter,
-    String? sort,
-    String? expand,
-  }) async {
-    final result = await _apiService.getRecordList(
-      collectionName: Drug.collection,
+  Future<List<Drug>> getDrugs({int page = 1, int perPage = 30}) async {
+    final result = await _apiService.getDrugs(
       page: page,
       perPage: perPage,
-      filter: filter,
-      sort: sort,
-      expand: expand,
+      search: searchQuery.value,
+      status: 'active',
+      route: selectedRoutes.length == 1 ? selectedRoutes.single : null,
+      pregnancyCategory: selectedPregnancyCategories.length == 1
+          ? selectedPregnancyCategories.single
+          : null,
+      whoEml: whoEmlOnly.value ? true : null,
+      antimicrobial: antimicrobialOnly.value ? true : null,
     );
 
     return result.items.map((e) => Drug.fromRecord(e)).toList();

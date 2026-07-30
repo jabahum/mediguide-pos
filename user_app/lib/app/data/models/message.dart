@@ -4,7 +4,7 @@ import 'package:user_app/app/data/models/api_record.dart';
 import 'base_model.dart';
 import 'user.dart';
 
-/// Enum for message types matching legacy collection API collection schema
+/// Enum for message types matching backend resource API collection schema
 enum MessageType {
   text(label: 'Text'),
   image(label: 'Image'),
@@ -20,7 +20,7 @@ enum MessageType {
 class Message extends BaseModel {
   Message(super.data);
 
-  /// legacy collection API collection name
+  /// backend resource API collection name
   static const String collection = 'messages';
 
   // Self-registration for dynamic model creation
@@ -35,7 +35,7 @@ class Message extends BaseModel {
     _registered;
   }
 
-  /// Create Message from legacy collection API record
+  /// Create Message from backend resource API record
   static Message fromRecord(ApiRecord record) => Message(record.data);
 
   /// Create JSON for new message record
@@ -120,7 +120,7 @@ class Message extends BaseModel {
     return DateTime.tryParse(dateStr);
   }
 
-  /// Safe helper for getting map fields from legacy collection API
+  /// Safe helper for getting map fields from backend resource API
   Map<String, dynamic> _getMapField(String fieldName) {
     try {
       final value = data[fieldName];

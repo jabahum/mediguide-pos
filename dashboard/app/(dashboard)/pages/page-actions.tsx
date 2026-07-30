@@ -16,8 +16,8 @@ import { GenericPage } from "./columns"
 // Helper function to delete a page
 const deletePage = async (page: GenericPage) => {
   try {
-    const pb = getBackendClient()
-    await pb.collection('generic_pages').delete(page.id)
+    const backend = getBackendClient()
+    await backend.resource('generic_pages').delete(page.id)
     showToast.success("Page Deleted", `Page "${page.title}" has been deleted successfully`)
   } catch (error) {
     console.error('Error deleting page:', error)
@@ -150,11 +150,11 @@ export const pageBulkActions: BulkAction<GenericPage>[] = [
     variant: "destructive",
     onClick: async (pages) => {
       try {
-        const pb = getBackendClient()
+        const backend = getBackendClient()
         
         // Delete all selected pages
         await Promise.all(
-          pages.map(page => pb.collection('generic_pages').delete(page.id))
+          pages.map(page => backend.resource('generic_pages').delete(page.id))
         )
         
         showToast.success("Pages Deleted", `Successfully deleted ${pages.length} pages`)

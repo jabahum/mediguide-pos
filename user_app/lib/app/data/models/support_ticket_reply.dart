@@ -8,7 +8,7 @@ import 'user.dart';
 class SupportTicketReply extends BaseModel {
   SupportTicketReply(super.data);
 
-  /// legacy collection API collection name
+  /// backend resource API collection name
   static const String collection = 'support_ticket_replies';
 
   // Self-registration for dynamic model creation
@@ -17,7 +17,7 @@ class SupportTicketReply extends BaseModel {
     return true;
   })();
 
-  /// Create SupportTicketReply from legacy collection API record
+  /// Create SupportTicketReply from backend resource API record
   factory SupportTicketReply.fromRecord(ApiRecord record) {
     return SupportTicketReply(record.data);
   }

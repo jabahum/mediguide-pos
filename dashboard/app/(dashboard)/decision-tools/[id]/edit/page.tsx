@@ -68,8 +68,8 @@ export default function DecisionToolEditPage({ params, searchParams }: DecisionT
       if (!resolvedParams?.id) return
       
       try {
-        const pb = getBackendClient()
-        const toolData = await pb.collection("calculators").getOne(resolvedParams.id, {
+        const backend = getBackendClient()
+        const toolData = await backend.resource("calculators").getOne(resolvedParams.id, {
           expand: "addedBy"
         }) as CalculatorWithRelations
         
@@ -91,8 +91,8 @@ export default function DecisionToolEditPage({ params, searchParams }: DecisionT
     if (!resolvedParams?.id) return
 
     try {
-      const pb = getBackendClient()
-      const currentUser = pb.authStore.model
+      const backend = getBackendClient()
+      const currentUser = backend.authStore.model
       
       if (!currentUser) {
         throw new Error("User not authenticated")

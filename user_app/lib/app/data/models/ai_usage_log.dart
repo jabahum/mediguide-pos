@@ -8,7 +8,7 @@ import 'user.dart';
 class AiUsageLog extends BaseModel {
   AiUsageLog(super.data);
 
-  /// legacy collection API collection name
+  /// backend resource API collection name
   static const String collection = 'ai_usage_logs';
 
   // Self-registration for dynamic model creation
@@ -17,7 +17,7 @@ class AiUsageLog extends BaseModel {
     return true;
   })();
 
-  /// Create AiUsageLog from legacy collection API record
+  /// Create AiUsageLog from backend resource API record
   static AiUsageLog fromRecord(ApiRecord record) => AiUsageLog(record.data);
 
   /// Create JSON for new AI usage log record

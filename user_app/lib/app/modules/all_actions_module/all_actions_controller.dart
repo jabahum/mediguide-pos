@@ -120,7 +120,7 @@ class AllActionsController extends GetxController {
     try {
       isLoadingPages.value = true;
 
-      final records = await BackendApiService.to.getRecordList(
+      final records = await BackendApiService.to.getResourceList(
         collectionName: 'generic_pages',
         perPage: 50,
       );

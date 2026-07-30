@@ -59,16 +59,16 @@ export default function DrugEditPage({ params, searchParams }: DrugEditPageProps
       if (!resolvedParams?.id) return
       
       try {
-        const pb = getBackendClient()
+        const backend = getBackendClient()
         const [drugData, categoriesResult, tagsResult] = await Promise.all([
-          pb.collection("drugs").getOne(resolvedParams.id, {
+          backend.resource("drugs").getOne(resolvedParams.id, {
             expand: "categories,tags"
           }) as Promise<DrugWithRelations>,
-          pb.collection("drug_categories").getFullList({
+          backend.resource("drug_categories").getFullList({
             filter: "status = 'active'",
             sort: "sort_order,name"
           }),
-          pb.collection("drug_tags").getFullList({
+          backend.resource("drug_tags").getFullList({
             filter: "status = 'active'", 
             sort: "sort_order,name"
           })

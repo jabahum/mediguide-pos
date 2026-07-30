@@ -35,7 +35,7 @@ enum TicketPriority {
 class SupportTicket extends BaseModel {
   SupportTicket(super.data);
 
-  /// legacy collection API collection name
+  /// backend resource API collection name
   static const String collection = 'support_tickets';
 
   // Self-registration for dynamic model creation
@@ -44,7 +44,7 @@ class SupportTicket extends BaseModel {
     return true;
   })();
 
-  /// Create SupportTicket from legacy collection API record
+  /// Create SupportTicket from backend resource API record
   factory SupportTicket.fromRecord(ApiRecord record) {
     return SupportTicket(record.data);
   }

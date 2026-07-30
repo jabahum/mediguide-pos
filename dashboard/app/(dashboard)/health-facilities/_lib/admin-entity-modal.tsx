@@ -105,7 +105,7 @@ export function AdminEntityModal({
     if (!result.ok) return
 
     setIsLoading(true)
-    const pb = getBackendClient()
+    const backend = getBackendClient()
     try {
       const payload: Record<string, string> = {}
       for (const f of fields) {
@@ -113,10 +113,10 @@ export function AdminEntityModal({
       }
 
       if (isEdit && record) {
-        await pb.collection(collection).update(String(record.id), payload)
+        await backend.resource(collection).update(String(record.id), payload)
         showToast.success("Success", `${entityLabel} updated successfully`)
       } else {
-        await pb.collection(collection).create(payload)
+        await backend.resource(collection).create(payload)
         showToast.success("Success", `${entityLabel} created successfully`)
       }
 

@@ -29,7 +29,7 @@ class LanguageModel {
   }) : created = created ?? DateTime.fromMillisecondsSinceEpoch(0),
        updated = updated ?? DateTime.fromMillisecondsSinceEpoch(0);
 
-  /// Create from legacy collection API record
+  /// Create from backend resource API record
   factory LanguageModel.fromRecord(ApiRecord record) {
     return LanguageModel(
       id: record.id,

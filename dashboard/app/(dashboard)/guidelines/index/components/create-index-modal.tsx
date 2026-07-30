@@ -70,7 +70,7 @@ export function CreateIndexModal({
   const onSubmit = async (data: CreateIndexFormData) => {
     setIsSubmitting(true)
     try {
-      const pb = getBackendClient()
+      const backend = getBackendClient()
       
       let level = 0
       let order = 0
@@ -81,19 +81,19 @@ export function CreateIndexModal({
         level = (parent?.level || 0) + 1
         
         // Get next order under this parent
-        const siblings = await pb.collection('guideline_index').getList(1, 50, {
+        const siblings = await backend.resource('guideline_index').getList(1, 50, {
           filter: `parent ~ "${data.parent}"`,
           sort: '-order'
         })
         order = (siblings.items[0]?.order || 0) + 1
         
         // Update parent to mark it has children
-        await pb.collection('guideline_index').update(data.parent, {
+        await backend.resource('guideline_index').update(data.parent, {
           hasChildren: true
         })
       } else {
         // Creating at root level
-        const rootItems = await pb.collection('guideline_index').getList(1, 1, {
+        const rootItems = await backend.resource('guideline_index').getList(1, 1, {
           filter: 'parent = ""',
           sort: '-order'
         })
@@ -101,7 +101,7 @@ export function CreateIndexModal({
       }
 
       // Create the new index item
-      await pb.collection('guideline_index').create({
+      await backend.resource('guideline_index').create({
         title: data.title,
         description: data.description || "",
         parent: data.parent ? [data.parent] : undefined,

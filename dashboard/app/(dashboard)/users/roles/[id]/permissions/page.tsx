@@ -71,8 +71,8 @@ export default function RolePermissionsPage() {
         setRoleLoading(true)
         setRoleError(null)
 
-        const pb = getBackendClient()
-        const roleData = await pb.collection('roles').getOne<RolesResponse>(roleId)
+        const backend = getBackendClient()
+        const roleData = await backend.resource('roles').getOne<RolesResponse>(roleId)
         setRole(roleData)
 
       } catch (error) {

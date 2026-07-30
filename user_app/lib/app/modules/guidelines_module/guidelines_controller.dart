@@ -346,7 +346,7 @@ class GuidelinesController extends GetxController {
 
   Future<void> _loadChildCategoryIds(String parentCategoryId) async {
     try {
-      final result = await BackendApiService.to.getRecordList(
+      final result = await BackendApiService.to.getResourceList(
         collectionName: GuidelineCategory.collection,
         perPage: 100,
         filter:
@@ -374,7 +374,7 @@ class GuidelinesController extends GetxController {
 
     for (final parentCategoryId in parentCategoryIds) {
       try {
-        final result = await BackendApiService.to.getRecordList(
+        final result = await BackendApiService.to.getResourceList(
           collectionName: GuidelineCategory.collection,
           perPage: 100,
           filter:
@@ -479,7 +479,7 @@ class GuidelinesController extends GetxController {
 
       debugPrint('Guidelines filter: $filter');
 
-      final result = await BackendApiService.to.getRecordList(
+      final result = await BackendApiService.to.getResourceList(
         collectionName: Guideline.collection,
         page: pageKey,
         perPage: pageSize,
@@ -808,7 +808,7 @@ class GuidelinesController extends GetxController {
   }
 
   Future<List<GuidelineCategory>> getGuidelineCategories() async {
-    final result = await BackendApiService.to.getRecordList(
+    final result = await BackendApiService.to.getResourceList(
       collectionName: GuidelineCategory.collection,
       perPage: 100,
       filter: 'status="active"',
@@ -819,7 +819,7 @@ class GuidelinesController extends GetxController {
   }
 
   Future<List<GuidelineTag>> getGuidelineTags() async {
-    final result = await BackendApiService.to.getRecordList(
+    final result = await BackendApiService.to.getResourceList(
       collectionName: GuidelineTag.collection,
       perPage: 100,
       sort: 'name',

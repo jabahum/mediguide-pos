@@ -34,12 +34,12 @@ export class BackupService {
    */
   async listBackups(page = 1, perPage = 100): Promise<BackupListResponse> {
     try {
-      const pb = getBackendClient()
-      if (!pb.authStore.model?.id) {
+      const backend = getBackendClient()
+      if (!backend.authStore.model?.id) {
         throw new Error("Authentication required for backup operations")
       }
 
-      const response = await pb.send("/api/backups", {
+      const response = await backend.send("/api/backups", {
         method: "GET",
         params: { page, perPage },
       })
@@ -57,8 +57,8 @@ export class BackupService {
    */
   async createBackup(data: BackupCreateData = {}): Promise<BackupOperationResult> {
     try {
-      const pb = getBackendClient()
-      if (!pb.authStore.model?.id) {
+      const backend = getBackendClient()
+      if (!backend.authStore.model?.id) {
         throw new Error("Authentication required for backup operations")
       }
 
@@ -67,7 +67,7 @@ export class BackupService {
         formData.append("name", data.name)
       }
 
-      const response = await pb.send("/api/backups", {
+      const response = await backend.send("/api/backups", {
         method: "POST",
         body: formData,
       })
@@ -93,8 +93,8 @@ export class BackupService {
    */
   async uploadBackup(data: BackupUploadData): Promise<BackupOperationResult> {
     try {
-      const pb = getBackendClient()
-      if (!pb.authStore.model?.id) {
+      const backend = getBackendClient()
+      if (!backend.authStore.model?.id) {
         throw new Error("Authentication required for backup operations")
       }
 
@@ -110,7 +110,7 @@ export class BackupService {
       const formData = new FormData()
       formData.append("file", data.file)
 
-      const response = await pb.send("/api/backups/upload", {
+      const response = await backend.send("/api/backups/upload", {
         method: "POST",
         body: formData,
       })
@@ -136,8 +136,8 @@ export class BackupService {
    */
   async restoreBackup(data: BackupRestoreData): Promise<BackupOperationResult> {
     try {
-      const pb = getBackendClient()
-      if (!pb.authStore.model?.id) {
+      const backend = getBackendClient()
+      if (!backend.authStore.model?.id) {
         throw new Error("Authentication required for backup operations")
       }
 
@@ -148,7 +148,7 @@ export class BackupService {
       const formData = new FormData()
       formData.append("key", data.key)
 
-      const response = await pb.send("/api/backups/restore", {
+      const response = await backend.send("/api/backups/restore", {
         method: "POST",
         body: formData,
       })
@@ -174,8 +174,8 @@ export class BackupService {
    */
   async downloadBackup(options: BackupDownloadOptions): Promise<string> {
     try {
-      const pb = getBackendClient()
-      if (!pb.authStore.model?.id) {
+      const backend = getBackendClient()
+      if (!backend.authStore.model?.id) {
         throw new Error("Authentication required for backup operations")
       }
 
@@ -184,11 +184,11 @@ export class BackupService {
       }
 
       // Generate download token
-      const tokenResponse = await pb.send(`/api/backups/${options.key}`, {
+      const tokenResponse = await backend.send(`/api/backups/${options.key}`, {
         method: "GET",
       })
 
-      const downloadUrl = `${pb.baseUrl}/api/backups/${options.key}?token=${tokenResponse.token}`
+      const downloadUrl = `${backend.baseUrl}/api/backups/${options.key}?token=${tokenResponse.token}`
       return downloadUrl
     } catch (err) {
       const error = err instanceof Error ? err.message : "Failed to generate download URL"
@@ -202,8 +202,8 @@ export class BackupService {
    */
   async deleteBackup(key: string): Promise<BackupOperationResult> {
     try {
-      const pb = getBackendClient()
-      if (!pb.authStore.model?.id) {
+      const backend = getBackendClient()
+      if (!backend.authStore.model?.id) {
         throw new Error("Authentication required for backup operations")
       }
 
@@ -211,7 +211,7 @@ export class BackupService {
         throw new Error("Backup key is required")
       }
 
-      await pb.send(`/api/backups/${key}`, {
+      await backend.send(`/api/backups/${key}`, {
         method: "DELETE",
       })
 

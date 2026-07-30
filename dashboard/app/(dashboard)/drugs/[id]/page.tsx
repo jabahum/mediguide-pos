@@ -60,8 +60,8 @@ export default function DrugViewPage({ params }: DrugViewPageProps) {
   const handleDelete = async () => {
     if (window.confirm("Are you sure you want to delete this drug? This action cannot be undone.")) {
       try {
-        const pb = getBackendClient()
-        await pb.collection("drugs").delete(id)
+        const backend = getBackendClient()
+        await backend.resource("drugs").delete(id)
         router.push("/drugs")
       } catch (error) {
         console.error("Failed to delete drug:", error)

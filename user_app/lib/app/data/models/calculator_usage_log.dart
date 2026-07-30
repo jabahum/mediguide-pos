@@ -10,7 +10,7 @@ import 'calculator.dart';
 class CalculatorUsageLog extends BaseModel {
   CalculatorUsageLog(super.data);
 
-  /// legacy collection API collection name
+  /// backend resource API collection name
   static const String collection = 'calculator_usage_logs';
 
   // Self-registration for dynamic model creation
@@ -19,7 +19,7 @@ class CalculatorUsageLog extends BaseModel {
     return true;
   })();
 
-  /// Create CalculatorUsageLog from legacy collection API record
+  /// Create CalculatorUsageLog from backend resource API record
   static CalculatorUsageLog fromRecord(ApiRecord record) =>
       CalculatorUsageLog(record.data);
 

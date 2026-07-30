@@ -383,19 +383,17 @@ export default function CalculatorsPage() {
     setRequestSubmitting(true);
     let requestRecordId: string | null = null;
     try {
-      const requestRecord = await backendClient
-        .collection("calculator_requests")
-        .create({
-          name,
-          category: category || undefined,
-          description,
-          justification: justification || undefined,
-          requestedBy: user.id,
-          status: "pending",
-        });
-      requestRecordId = requestRecord.id;
+      const requestRecord = await backendClient.resource("calculator_requests").create({
+        name,
+        category: category || undefined,
+        description,
+        justification: justification || undefined,
+        requestedBy: user.id,
+        status: "pending",
+      })
+      requestRecordId = requestRecord.id
 
-      const ticket = await backendClient.collection("support_tickets").create({
+      const ticket = await backendClient.resource("support_tickets").create({
         subject: `Calculator Request: ${name}`,
         description: ticketDescription,
         status: "open",
@@ -405,11 +403,9 @@ export default function CalculatorsPage() {
       });
 
       try {
-        await backendClient
-          .collection("calculator_requests")
-          .update(requestRecord.id, {
-            supportTicket: ticket.id,
-          });
+        await backendClient.resource("calculator_requests").update(requestRecord.id, {
+          supportTicket: ticket.id,
+        })
       } catch (linkError) {
         console.warn(
           "Created ticket but failed to link it back to the request:",
@@ -459,13 +455,11 @@ export default function CalculatorsPage() {
 
   const fetchCalculators = useCallback(async () => {
     try {
-      const result = await backendClient
-        .collection(Collections.Calculators)
-        .getList(1, 50, {
-          filter: "status = 'active'",
-          sort: "-featured,name",
-        });
-      setDbCalculators(result.items as CalculatorsResponse[]);
+      const result = await backendClient.resource(Collections.Calculators).getList(1, 50, {
+        filter: "status = 'active'",
+        sort: "-featured,name"
+      })
+      setDbCalculators(result.items as CalculatorsResponse[])
     } catch (error) {
       console.error("Failed to fetch calculators:", error);
       showToast.error("Error", "Failed to load calculators");

@@ -30,8 +30,8 @@ export function CreateDrugClassDialog({ open, onOpenChange, onSuccess }: CreateD
     setLoading(true)
 
     try {
-      const pb = getBackendClient()
-      const drugClass = await pb.collection("drug_classes").create(formData)
+      const backend = getBackendClient()
+      const drugClass = await backend.resource("drug_classes").create(formData)
       
       showToast.success("Success", "Drug class created successfully")
       onSuccess?.(drugClass as unknown as { id: string; name: string })

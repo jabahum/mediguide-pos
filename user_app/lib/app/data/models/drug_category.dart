@@ -4,11 +4,11 @@ import 'package:user_app/app/data/models/api_record.dart';
 import '../enums/common_enums.dart';
 import 'base_model.dart';
 
-/// Drug category model based on legacy collection API drug_categories collection
+/// Drug category model based on backend resource API drug_categories collection
 class DrugCategory extends BaseModel {
   DrugCategory(super.data);
 
-  /// legacy collection API collection name
+  /// backend resource API collection name
   static const String collection = 'drug_categories';
 
   // Self-registration for dynamic model creation
@@ -17,7 +17,7 @@ class DrugCategory extends BaseModel {
     return true;
   })();
 
-  /// Create DrugCategory from legacy collection API record
+  /// Create DrugCategory from backend resource API record
   static DrugCategory fromRecord(ApiRecord record) => DrugCategory(record.data);
 
   /// Create JSON for new drug category record (excludes system fields)

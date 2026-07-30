@@ -4,11 +4,11 @@ import 'package:user_app/app/data/models/api_record.dart';
 import '../enums/common_enums.dart';
 import 'base_model.dart';
 
-/// Guideline category model based on legacy collection API guideline_categories collection
+/// Guideline category model based on backend resource API guideline_categories collection
 class GuidelineCategory extends BaseModel {
   GuidelineCategory(super.data);
 
-  /// legacy collection API collection name
+  /// backend resource API collection name
   static const String collection = 'guideline_categories';
 
   // Self-registration for dynamic model creation
@@ -17,7 +17,7 @@ class GuidelineCategory extends BaseModel {
     return true;
   })();
 
-  /// Create GuidelineCategory from legacy collection API record
+  /// Create GuidelineCategory from backend resource API record
   static GuidelineCategory fromRecord(ApiRecord record) =>
       GuidelineCategory(record.data);
 

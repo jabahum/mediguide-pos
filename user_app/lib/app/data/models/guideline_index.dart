@@ -4,11 +4,11 @@ import 'package:user_app/app/data/models/api_record.dart';
 import 'base_model.dart';
 
 /// Guideline index model for hierarchical organization of medical guidelines
-/// Based on legacy collection API guideline_index collection with self-referencing structure
+/// Based on backend resource API guideline_index collection with self-referencing structure
 class GuidelineIndex extends BaseModel {
   GuidelineIndex(super.data);
 
-  /// legacy collection API collection name
+  /// backend resource API collection name
   static const String collection = 'guideline_index';
 
   // Self-registration for dynamic model creation
@@ -17,7 +17,7 @@ class GuidelineIndex extends BaseModel {
     return true;
   })();
 
-  /// Create GuidelineIndex from legacy collection API record
+  /// Create GuidelineIndex from backend resource API record
   static GuidelineIndex fromRecord(ApiRecord record) =>
       GuidelineIndex(record.data);
 

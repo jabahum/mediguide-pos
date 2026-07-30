@@ -214,9 +214,9 @@ export default function CreateGuidelinePage() {
 
     const loadSource = async () => {
       try {
-        const pb = getBackendClient()
-        const result = await pb
-          .collection("medical_guidelines")
+        const backend = getBackendClient()
+        const result = await backend
+          .resource("medical_guidelines")
           .getOne(duplicateFromId, { expand: "categories,tags,index_item" })
 
         if (cancelled) return
@@ -280,10 +280,10 @@ export default function CreateGuidelinePage() {
   const onSubmit = async (data: MedicalGuidelineForm) => {
     setIsSubmitting(true)
     try {
-      const pb = getBackendClient()
+      const backend = getBackendClient()
       
       // Create the medical guideline record in legacy collection API
-      const result = await pb.collection('medical_guidelines').create(data)
+      const result = await backend.resource('medical_guidelines').create(data)
 
       console.log("Medical guideline created:", result)
       // Invalidate the guidelines list cache so the new record is visible

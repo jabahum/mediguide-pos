@@ -30,9 +30,9 @@ export function createAdminRowActions<T extends BaseRecord>(
       icon: Trash2,
       variant: "destructive",
       onClick: async (row) => {
-        const pb = getBackendClient()
+        const backend = getBackendClient()
         try {
-          await pb.collection(collection).delete(row.id)
+          await backend.resource(collection).delete(row.id)
           showToast.success(
             `${entityLabel} Deleted`,
             `${getDisplayName(row)} has been deleted`
@@ -72,13 +72,13 @@ export function createAdminBulkActions<T extends BaseRecord>(
       confirmMessage: `Delete all selected ${entityLabelPlural.toLowerCase()}? This action cannot be undone.`,
       description: `Permanently delete the selected ${entityLabelPlural.toLowerCase()}.`,
       onClick: async (rows) => {
-        const pb = getBackendClient()
+        const backend = getBackendClient()
         let successCount = 0
         let errorCount = 0
 
         for (const row of rows) {
           try {
-            await pb.collection(collection).delete(row.id)
+            await backend.resource(collection).delete(row.id)
             successCount++
           } catch (error) {
             errorCount++

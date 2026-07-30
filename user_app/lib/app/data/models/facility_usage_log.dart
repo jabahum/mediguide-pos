@@ -9,7 +9,7 @@ import 'health_facility.dart';
 class FacilityUsageLog extends BaseModel {
   FacilityUsageLog(super.data);
 
-  /// legacy collection API collection name
+  /// backend resource API collection name
   static const String collection = 'facility_usage_logs';
 
   // Self-registration for dynamic model creation
@@ -18,7 +18,7 @@ class FacilityUsageLog extends BaseModel {
     return true;
   })();
 
-  /// Create FacilityUsageLog from legacy collection API record
+  /// Create FacilityUsageLog from backend resource API record
   static FacilityUsageLog fromRecord(ApiRecord record) =>
       FacilityUsageLog(record.data);
 

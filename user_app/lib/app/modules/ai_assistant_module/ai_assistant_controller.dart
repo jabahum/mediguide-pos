@@ -220,8 +220,8 @@ class AiAssistantController extends GetxController {
 
       final usageData = AiUsageLog.forCreate(userId: currentUser.id);
 
-      // Save to legacy collection API asynchronously (don't block UI)
-      BackendApiService.to.createRecord(
+      // Save to backend resource API asynchronously (don't block UI)
+      BackendApiService.to.createResource(
         collectionName: AiUsageLog.collection,
         data: usageData,
       );

@@ -33,9 +33,9 @@ export class DocumentationService {
     perPage?: number
   }): Promise<DocumentationResponse[]> {
     try {
-      const pb = getBackendClient()
+      const backend = getBackendClient()
       
-      const records = await pb.collection(Collections.Documentation).getFullList({
+      const records = await backend.resource(Collections.Documentation).getFullList({
         sort: options?.sort || "-created",
         filter: options?.filter,
         expand: options?.expand,
@@ -53,9 +53,9 @@ export class DocumentationService {
    */
   static async getById(id: string, expand?: string): Promise<DocumentationResponse | null> {
     try {
-      const pb = getBackendClient()
+      const backend = getBackendClient()
       
-      const record = await pb.collection(Collections.Documentation).getOne(id, {
+      const record = await backend.resource(Collections.Documentation).getOne(id, {
         expand: expand
       })
 
@@ -71,7 +71,7 @@ export class DocumentationService {
    */
   static async create(data: CreateDocumentationData): Promise<DocumentationResponse> {
     try {
-      const pb = getBackendClient()
+      const backend = getBackendClient()
       
       const createData: Omit<DocumentationRecord, 'id' | 'created' | 'updated'> = {
         title: data.title,
@@ -82,7 +82,7 @@ export class DocumentationService {
         status: data.status || DocumentationStatusOptions.draft
       }
       
-      const newRecord = await pb.collection(Collections.Documentation).create(createData)
+      const newRecord = await backend.resource(Collections.Documentation).create(createData)
       return newRecord as DocumentationResponse
       
     } catch (error) {
@@ -96,7 +96,7 @@ export class DocumentationService {
    */
   static async update(id: string, data: UpdateDocumentationData): Promise<DocumentationResponse> {
     try {
-      const pb = getBackendClient()
+      const backend = getBackendClient()
       
       const updateData: Partial<DocumentationRecord> = {}
       
@@ -107,7 +107,7 @@ export class DocumentationService {
       if (data.tags !== undefined) updateData.tags = data.tags
       if (data.status !== undefined) updateData.status = data.status
 
-      const updatedRecord = await pb.collection(Collections.Documentation).update(id, updateData)
+      const updatedRecord = await backend.resource(Collections.Documentation).update(id, updateData)
       return updatedRecord as DocumentationResponse
       
     } catch (error) {
@@ -121,9 +121,9 @@ export class DocumentationService {
    */
   static async delete(id: string): Promise<boolean> {
     try {
-      const pb = getBackendClient()
+      const backend = getBackendClient()
       
-      await pb.collection(Collections.Documentation).delete(id)
+      await backend.resource(Collections.Documentation).delete(id)
       return true
       
     } catch (error) {
@@ -141,7 +141,7 @@ export class DocumentationService {
     limit?: number
   }): Promise<DocumentationResponse[]> {
     try {
-      const pb = getBackendClient()
+      const backend = getBackendClient()
       
       let filter = `title ~ "${query}" || description ~ "${query}" || content ~ "${query}" || tags ~ "${query}"`
       
@@ -153,7 +153,7 @@ export class DocumentationService {
         filter += ` && status = "${options.status}"`
       }
 
-      const records = await pb.collection(Collections.Documentation).getFullList({
+      const records = await backend.resource(Collections.Documentation).getFullList({
         filter: filter,
         sort: "-created",
         ...(options?.limit && { perPage: options.limit })
@@ -171,9 +171,9 @@ export class DocumentationService {
    */
   static async getByCategory(category: string): Promise<DocumentationResponse[]> {
     try {
-      const pb = getBackendClient()
+      const backend = getBackendClient()
       
-      const records = await pb.collection(Collections.Documentation).getFullList({
+      const records = await backend.resource(Collections.Documentation).getFullList({
         filter: `category = "${category}"`,
         sort: "-created"
       })
@@ -190,9 +190,9 @@ export class DocumentationService {
    */
   static async getByStatus(status: DocumentationStatusOptions): Promise<DocumentationResponse[]> {
     try {
-      const pb = getBackendClient()
+      const backend = getBackendClient()
       
-      const records = await pb.collection(Collections.Documentation).getFullList({
+      const records = await backend.resource(Collections.Documentation).getFullList({
         filter: `status = "${status}"`,
         sort: "-created"
       })
@@ -209,9 +209,9 @@ export class DocumentationService {
    */
   static async getCategories(): Promise<string[]> {
     try {
-      const pb = getBackendClient()
+      const backend = getBackendClient()
       
-      const records = await pb.collection(Collections.Documentation).getFullList({
+      const records = await backend.resource(Collections.Documentation).getFullList({
         fields: "category"
       })
 
@@ -233,9 +233,9 @@ export class DocumentationService {
    */
   static async getTags(): Promise<string[]> {
     try {
-      const pb = getBackendClient()
+      const backend = getBackendClient()
       
-      const records = await pb.collection(Collections.Documentation).getFullList({
+      const records = await backend.resource(Collections.Documentation).getFullList({
         fields: "tags"
       })
 
@@ -259,10 +259,10 @@ export class DocumentationService {
    */
   static async bulkUpdateStatus(ids: string[], status: DocumentationStatusOptions): Promise<void> {
     try {
-      const pb = getBackendClient()
+      const backend = getBackendClient()
       
       const promises = ids.map(id => 
-        pb.collection(Collections.Documentation).update(id, { status })
+        backend.resource(Collections.Documentation).update(id, { status })
       )
       
       await Promise.all(promises)
@@ -274,10 +274,10 @@ export class DocumentationService {
 
   static async bulkDelete(ids: string[]): Promise<void> {
     try {
-      const pb = getBackendClient()
+      const backend = getBackendClient()
       
       const promises = ids.map(id => 
-        pb.collection(Collections.Documentation).delete(id)
+        backend.resource(Collections.Documentation).delete(id)
       )
       
       await Promise.all(promises)

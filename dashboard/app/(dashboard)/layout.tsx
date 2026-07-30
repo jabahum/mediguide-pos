@@ -48,7 +48,7 @@ export default function DashboardLayout({
   React.useEffect(() => {
     const authUser = getCurrentUser()
     if (!authUser?.id) return
-    getBackendClient().collection("users").getOne(authUser.id)
+    getBackendClient().resource("users").getOne(authUser.id)
       .then(u => setCurrentUser(u as UsersResponse))
       .catch(() => {})
   }, [])
@@ -63,7 +63,7 @@ export default function DashboardLayout({
 
   const handleLogout = async () => {
     try {
-      logout()
+      await logout()
       showToast.success("Logged out", "You have been successfully logged out")
       router.push("/login")
     } catch (error) {

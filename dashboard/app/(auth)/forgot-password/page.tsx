@@ -22,10 +22,10 @@ export default function ForgotPasswordPage() {
 
     try {
       const { getBackendClient } = await import('@/lib/backend-client')
-      const pb = getBackendClient()
+      const backend = getBackendClient()
       
       // Use legacy collection API's built-in password reset functionality
-      await pb.collection('users').requestPasswordReset(email)
+      await backend.resource('users').requestPasswordReset(email)
       
       setSuccess(true)
       

@@ -55,8 +55,8 @@ export function useGuidelineCategories(options: UseGuidelineCategoriesOptions = 
         filter = filterParts.join(" && ")
       }
 
-      const pb = getBackendClient()
-      const records = await pb.collection("guideline_categories").getFullList<GuidelineCategoriesResponse>({
+      const backend = getBackendClient()
+      const records = await backend.resource("guideline_categories").getFullList<GuidelineCategoriesResponse>({
         sort: "parent_category,sort_order,name",
         filter,
         expand: "parent_category"

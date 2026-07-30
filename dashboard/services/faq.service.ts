@@ -30,7 +30,7 @@ export class FaqService {
    */
   static async createFaq(data: FaqCreateData): Promise<FaqServiceResponse<FaqsResponse>> {
     try {
-      const pb = getBackendClient()
+      const backend = getBackendClient()
       
       // Set default values
       const faqData: FaqCreateData = {
@@ -47,7 +47,7 @@ export class FaqService {
         faqData.published_at = new Date().toISOString()
       }
 
-      const record = await pb.collection(this.COLLECTION).create<FaqsResponse>(faqData)
+      const record = await backend.resource(this.COLLECTION).create<FaqsResponse>(faqData)
       
       // Update tag usage counts
       if (data.tags && data.tags.length > 0) {
@@ -67,7 +67,7 @@ export class FaqService {
   static async updateFaq(id: string, data: FaqUpdateData): Promise<FaqServiceResponse<FaqsResponse>> {
     try {
       // Get current FAQ to compare tags
-      const currentFaq = await getBackendClient().collection(this.COLLECTION).getOne<FaqsResponse>(id)
+      const currentFaq = await getBackendClient().resource(this.COLLECTION).getOne<FaqsResponse>(id)
       
       // Handle published status timestamp
       const updateData = { ...data }
@@ -77,7 +77,7 @@ export class FaqService {
         updateData.published_at = undefined
       }
 
-      const record = await getBackendClient().collection(this.COLLECTION).update<FaqsResponse>(id, updateData)
+      const record = await getBackendClient().resource(this.COLLECTION).update<FaqsResponse>(id, updateData)
       
       // Update tag usage counts if tags changed
       if (data.tags !== undefined) {
@@ -110,9 +110,9 @@ export class FaqService {
   static async deleteFaq(id: string): Promise<FaqServiceResponse<void>> {
     try {
       // Get FAQ to update tag usage counts
-      const faq = await getBackendClient().collection(this.COLLECTION).getOne<FaqsResponse>(id)
+      const faq = await getBackendClient().resource(this.COLLECTION).getOne<FaqsResponse>(id)
       
-      await getBackendClient().collection(this.COLLECTION).delete(id)
+      await getBackendClient().resource(this.COLLECTION).delete(id)
       
       // Decrement tag usage counts
       if (faq.tags && faq.tags.length > 0) {
@@ -131,7 +131,7 @@ export class FaqService {
    */
   static async getFaqWithRelations(id: string): Promise<FaqServiceResponse<FaqsWithExpanded>> {
     try {
-      const record = await getBackendClient().collection(this.COLLECTION).getOne<FaqsWithExpanded>(id, {
+      const record = await getBackendClient().resource(this.COLLECTION).getOne<FaqsWithExpanded>(id, {
         expand: 'tags,author,reviewer,related_faqs'
       })
       return { success: true, data: record }
@@ -189,7 +189,7 @@ export class FaqService {
             updateData.published_at = undefined
           }
 
-          const result = await getBackendClient().collection(this.COLLECTION).update(id, updateData)
+          const result = await getBackendClient().resource(this.COLLECTION).update(id, updateData)
           return { id, result }
         })
       )
@@ -224,7 +224,7 @@ export class FaqService {
     try {
       const results = await Promise.allSettled(
         faqIds.map(async (faqId) => {
-          const currentFaq = await getBackendClient().collection(this.COLLECTION).getOne<FaqsResponse>(faqId)
+          const currentFaq = await getBackendClient().resource(this.COLLECTION).getOne<FaqsResponse>(faqId)
           const currentTags = currentFaq.tags || []
           
           let newTags: string[]
@@ -236,7 +236,7 @@ export class FaqService {
             newTags = currentTags.filter(tagId => !tagIds.includes(tagId))
           }
 
-          const result = await getBackendClient().collection(this.COLLECTION).update(faqId, {
+          const result = await getBackendClient().resource(this.COLLECTION).update(faqId, {
             tags: newTags
           })
           return { id: faqId, result }
@@ -284,13 +284,13 @@ export class FaqService {
     try {
       const updates = tagIds.map(async (tagId) => {
         try {
-          const tag = await getBackendClient().collection(this.TAGS_COLLECTION).getOne<FaqTagsResponse>(tagId)
+          const tag = await getBackendClient().resource(this.TAGS_COLLECTION).getOne<FaqTagsResponse>(tagId)
           const currentCount = tag.usage_count || 0
           const newCount = operation === 'increment' 
             ? currentCount + 1 
             : Math.max(0, currentCount - 1)
           
-          return getBackendClient().collection(this.TAGS_COLLECTION).update(tagId, {
+          return getBackendClient().resource(this.TAGS_COLLECTION).update(tagId, {
             usage_count: newCount
           })
         } catch (error) {
@@ -328,7 +328,7 @@ export class FaqService {
         filter += ` && (${keywordFilter})`
       }
 
-      const records = await getBackendClient().collection(this.COLLECTION).getList<FaqsResponse>(1, 5, {
+      const records = await getBackendClient().resource(this.COLLECTION).getList<FaqsResponse>(1, 5, {
         filter,
         sort: '-created',
         expand: 'tags'

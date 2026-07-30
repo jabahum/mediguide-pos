@@ -63,7 +63,7 @@ class EditProfileController extends GetxController {
         }
       }
 
-      // legacy collection API seems to validate enum fields even when not being updated
+      // backend resource API seems to validate enum fields even when not being updated
       // Include current enum values to prevent validation errors
       if (user.role != null) {
         updateData['role'] = user.role!.name;
@@ -78,8 +78,8 @@ class EditProfileController extends GetxController {
       // Debug: Print the final update data being sent
       debugPrint('Update data being sent: $updateData');
 
-      // Update user profile via legacy collection API
-      final updatedRecord = await BackendApiService.to.updateRecord(
+      // Update user profile via backend resource API
+      final updatedRecord = await BackendApiService.to.updateResource(
         collectionName: User.collection,
         recordId: user.id,
         data: updateData,
@@ -159,7 +159,7 @@ class EditProfileController extends GetxController {
       avatarFile.path,
     );
 
-    final record = await BackendApiService.to.updateRecord(
+    final record = await BackendApiService.to.updateResource(
       collectionName: User.collection,
       recordId: userId,
       data: {},

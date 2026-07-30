@@ -3,11 +3,11 @@
 import 'package:user_app/app/data/models/api_record.dart';
 import 'base_model.dart';
 
-/// Guideline tag model based on legacy collection API guideline_tags collection
+/// Guideline tag model based on backend resource API guideline_tags collection
 class GuidelineTag extends BaseModel {
   GuidelineTag(super.data);
 
-  /// legacy collection API collection name
+  /// backend resource API collection name
   static const String collection = 'guideline_tags';
 
   // Self-registration for dynamic model creation
@@ -16,7 +16,7 @@ class GuidelineTag extends BaseModel {
     return true;
   })();
 
-  /// Create GuidelineTag from legacy collection API record
+  /// Create GuidelineTag from backend resource API record
   static GuidelineTag fromRecord(ApiRecord record) => GuidelineTag(record.data);
 
   /// Create JSON for new guideline tag record (excludes system fields)

@@ -84,7 +84,7 @@ class FaqController extends GetxController {
         ? '$baseFilter && ($filter)'
         : baseFilter;
 
-    return BackendApiService.to.getRecordList(
+    return BackendApiService.to.getResourceList(
       collectionName: 'faqs',
       page: page,
       perPage: perPage,
@@ -180,7 +180,7 @@ class FaqController extends GetxController {
   // =========================
 
   Future<List<FAQ>> getFeaturedFAQs({int limit = 5}) async {
-    final result = await BackendApiService.to.getRecordList(
+    final result = await BackendApiService.to.getResourceList(
       collectionName: 'faqs',
       page: 1,
       perPage: limit,
@@ -192,7 +192,7 @@ class FaqController extends GetxController {
   }
 
   Future<FAQ?> getFAQById({required String faqId}) async {
-    final record = await BackendApiService.to.getRecord(
+    final record = await BackendApiService.to.getResource(
       collectionName: 'faqs',
       recordId: faqId,
     );

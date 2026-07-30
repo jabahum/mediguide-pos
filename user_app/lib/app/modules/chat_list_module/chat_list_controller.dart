@@ -58,7 +58,7 @@ class ChatListController extends GetxController {
 
       final filter = _buildFilter(userId);
 
-      final result = await BackendApiService.to.getRecordList(
+      final result = await BackendApiService.to.getResourceList(
         collectionName: Conversation.collection,
         page: pageKey,
         perPage: 20,

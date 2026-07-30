@@ -89,10 +89,10 @@ export default function CreateConsultantPage() {
 
   async function onSubmit(data: ConsultantFormValues) {
     setIsLoading(true)
-    const pb = getBackendClient()
+    const backend = getBackendClient()
     
     try {
-      await pb.collection('consultants').create(data)
+      await backend.resource('consultants').create(data)
       
       showToast.success(
         "Consultant Created",

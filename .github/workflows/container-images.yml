@@ -39,6 +39,19 @@ jobs:
         run: |
           go test ./...
           go vet ./...
+          make swagger
+
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Verify dashboard contracts
+        working-directory: dashboard
+        run: |
+          bun install --frozen-lockfile
+          bun run generate-types
+          git diff --exit-code -- types/generated/backend-openapi.ts ../backend/docs
 
       - name: Set up Node
         uses: actions/setup-node@v6

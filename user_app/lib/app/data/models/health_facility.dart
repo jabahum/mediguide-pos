@@ -13,11 +13,11 @@ import 'facility_level.dart';
 import 'ownership_type.dart';
 import 'authority.dart';
 
-/// Health facility model based on legacy collection API health_facilities collection
+/// Health facility model based on backend resource API health_facilities collection
 class HealthFacility extends BaseModel {
   HealthFacility(super.data);
 
-  /// legacy collection API collection name
+  /// backend resource API collection name
   static const String collection = 'health_facilities';
 
   // Self-registration for dynamic model creation
@@ -26,7 +26,7 @@ class HealthFacility extends BaseModel {
     return true;
   })();
 
-  /// Create HealthFacility from legacy collection API record
+  /// Create HealthFacility from backend resource API record
   static HealthFacility fromRecord(ApiRecord record) =>
       HealthFacility(record.data);
 

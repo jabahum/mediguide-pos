@@ -110,7 +110,7 @@ class GuidelinesIndexerController extends GetxController {
       isLoading.value = true;
       hasLoadError.value = false;
 
-      final result = await BackendApiService.to.getRecordList(
+      final result = await BackendApiService.to.getResourceList(
         collectionName: GuidelineIndex.collection,
         page: 1,
         perPage: 500,

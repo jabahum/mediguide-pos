@@ -4,11 +4,11 @@ import 'package:user_app/app/data/models/api_record.dart';
 import '../enums/common_enums.dart';
 import 'base_model.dart';
 
-/// Drug class model based on legacy collection API drug_classes collection
+/// Drug class model based on backend resource API drug_classes collection
 class DrugClass extends BaseModel {
   DrugClass(super.data);
 
-  /// legacy collection API collection name
+  /// backend resource API collection name
   static const String collection = 'drug_classes';
 
   // Self-registration for dynamic model creation
@@ -17,7 +17,7 @@ class DrugClass extends BaseModel {
     return true;
   })();
 
-  /// Create DrugClass from legacy collection API record
+  /// Create DrugClass from backend resource API record
   static DrugClass fromRecord(ApiRecord record) => DrugClass(record.data);
 
   /// Create JSON for new drug class record (excludes system fields)

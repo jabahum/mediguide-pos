@@ -47,12 +47,12 @@ class GenericViewerController extends GetxController {
     super.onClose();
   }
 
-  /// Load page data from legacy collection API using page key
+  /// Load page data from backend resource API using page key
   Future<void> loadPage(String pageKey) async {
     try {
       isLoading.value = true;
 
-      final records = await BackendApiService.to.getRecordList(
+      final records = await BackendApiService.to.getResourceList(
         collectionName: 'generic_pages',
         filter: 'key="$pageKey"',
         perPage: 1,

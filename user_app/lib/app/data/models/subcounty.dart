@@ -5,11 +5,11 @@ import 'base_model.dart';
 import 'county.dart';
 import 'district.dart';
 
-/// Subcounty model based on legacy collection API subcounties collection
+/// Subcounty model based on backend resource API subcounties collection
 class Subcounty extends BaseModel {
   Subcounty(super.data);
 
-  /// legacy collection API collection name
+  /// backend resource API collection name
   static const String collection = 'subcounties';
 
   // Self-registration for dynamic model creation
@@ -18,7 +18,7 @@ class Subcounty extends BaseModel {
     return true;
   })();
 
-  /// Create Subcounty from legacy collection API record
+  /// Create Subcounty from backend resource API record
   static Subcounty fromRecord(ApiRecord record) => Subcounty(record.data);
 
   /// Create JSON for new subcounty record (excludes system fields)

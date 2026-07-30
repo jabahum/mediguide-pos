@@ -8,11 +8,11 @@ import 'drug_tag.dart';
 import 'drug_class.dart';
 import 'therapeutic_category.dart';
 
-/// Drug model based on legacy collection API drugs collection
+/// Drug model based on backend resource API drugs collection
 class Drug extends BaseModel {
   Drug(super.data);
 
-  /// legacy collection API collection name
+  /// backend resource API collection name
   static const String collection = 'drugs';
 
   // Self-registration for dynamic model creation
@@ -21,7 +21,7 @@ class Drug extends BaseModel {
     return true;
   })();
 
-  /// Create Drug from legacy collection API record
+  /// Create Drug from backend resource API record
   static Drug fromRecord(ApiRecord record) => Drug(record.data);
 
   /// Create JSON for new drug record (excludes system fields)

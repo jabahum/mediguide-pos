@@ -95,7 +95,7 @@ class HomeController extends GetxController {
     try {
       isLoadingGuidelines.value = true;
 
-      final result = await _apiService.getRecordList(
+      final result = await _apiService.getResourceList(
         collectionName: GuidelineCategory.collection,
         perPage: 30,
         filter: 'status="active" && parent_category=""',
@@ -117,7 +117,7 @@ class HomeController extends GetxController {
   // =====================================================
   Future<void> _loadPinnedGuidelines() async {
     try {
-      final result = await _apiService.getRecordList(
+      final result = await _apiService.getResourceList(
         collectionName: Guideline.collection,
         perPage: 5,
         filter: 'is_published=true && status="published" && pinned=true',
@@ -138,7 +138,7 @@ class HomeController extends GetxController {
   // =====================================================
   Future<void> _loadRecentlyUpdatedGuidelines() async {
     try {
-      final result = await _apiService.getRecordList(
+      final result = await _apiService.getResourceList(
         collectionName: Guideline.collection,
         perPage: 5,
         filter: 'is_published=true && status="published"',
@@ -163,7 +163,7 @@ class HomeController extends GetxController {
 
       if (user == null) return;
 
-      final records = await _apiService.getRecordList(
+      final records = await _apiService.getResourceList(
         collectionName: 'reading_progress',
         perPage: 6,
         filter:
@@ -434,7 +434,7 @@ class HomeController extends GetxController {
 
   Future<void> navigateToContinueReading(ReadingProgress progress) async {
     try {
-      final record = await _apiService.getRecord(
+      final record = await _apiService.getResource(
         collectionName: Guideline.collection,
         recordId: progress.guidelineId,
         expand: 'categories,tags,index_item',

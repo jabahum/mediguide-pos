@@ -67,10 +67,10 @@ export function usePermissions(options: UsePermissionsOptions = {}): UsePermissi
       setLoading(true)
       setError(null)
       
-      const pb = getBackendClient()
+      const backend = getBackendClient()
       
       // Fetch all active roles with their permissions
-      const roles = await pb.collection('roles').getFullList<RolesResponse>({
+      const roles = await backend.resource('roles').getFullList<RolesResponse>({
         filter: 'isActive = true',
         sort: 'name'
       })
@@ -140,9 +140,9 @@ export function usePermissions(options: UsePermissionsOptions = {}): UsePermissi
   const loadRolePermissions = React.useCallback(async (roleId: string): Promise<RolePermissions | null> => {
     try {
       setLoading(true)
-      const pb = getBackendClient()
+      const backend = getBackendClient()
       
-      const role = await pb.collection('roles').getOne<RolesResponse>(roleId)
+      const role = await backend.resource('roles').getOne<RolesResponse>(roleId)
       const parsedPermissions = parsePermissionsFromDatabase(role.permissions)
       const permissions =
         Object.keys(parsedPermissions).length > 0
@@ -180,13 +180,13 @@ export function usePermissions(options: UsePermissionsOptions = {}): UsePermissi
         }
       }
       
-      const pb = getBackendClient()
+      const backend = getBackendClient()
       
       // Serialize permissions for database storage
       const serializedPermissions = serializePermissionsForDatabase(permissions)
       
       // Update role in database
-      await pb.collection('roles').update(roleId, {
+      await backend.resource('roles').update(roleId, {
         permissions: serializedPermissions
       })
       
@@ -226,10 +226,10 @@ export function usePermissions(options: UsePermissionsOptions = {}): UsePermissi
         return { success: false, error: `Template not found: ${templateKey}` }
       }
       
-      const pb = getBackendClient()
+      const backend = getBackendClient()
       
       // Get the role to get its key
-      const role = await pb.collection('roles').getOne<RolesResponse>(roleId)
+      const role = await backend.resource('roles').getOne<RolesResponse>(roleId)
       
       // Apply template to permission service
       const grants = permissionService.applyTemplate(role.key, templateKey)

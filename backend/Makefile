@@ -35,7 +35,7 @@ importpb:
 	go run ./cmd/importpb
 
 swagger:
-	swag init -g main.go -d cmd/api,internal/handlers,internal/httpx,internal/models,internal/services -o docs --outputTypes go,json,yaml --generatedTime=false --parseInternal
+	go run github.com/swaggo/swag/cmd/swag@v1.16.6 init -g main.go -d cmd/api,internal/handlers,internal/httpx,internal/models,internal/services -o docs --outputTypes go,json,yaml --generatedTime=false --parseInternal
 
 proto:
 	sh ../scripts/generate_proto.sh

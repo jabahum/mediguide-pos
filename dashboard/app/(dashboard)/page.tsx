@@ -189,8 +189,8 @@ export default function DashboardPage() {
   useEffect(() => {
     async function loadData() {
       try {
-        const pb = getBackendClient()
-        const overview = await pb.send<OverviewData>("/api/overview", {
+        const backend = getBackendClient()
+        const overview = await backend.send<OverviewData>("/api/overview", {
           method: "GET",
         })
         setData(overview)

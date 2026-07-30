@@ -72,10 +72,10 @@ function ResetPasswordForm() {
 
     try {
       const { getBackendClient } = await import('@/lib/backend-client')
-      const pb = getBackendClient()
+      const backend = getBackendClient()
       
       // Use legacy collection API's built-in password reset confirmation
-      await pb.collection('users').confirmPasswordReset(
+      await backend.resource('users').confirmPasswordReset(
         formData.token,
         formData.password,
         formData.confirmPassword

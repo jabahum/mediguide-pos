@@ -6,11 +6,11 @@ import 'guideline_category.dart';
 import 'guideline_tag.dart';
 import 'guideline_index.dart';
 
-/// Medical guideline model based on legacy collection API medical_guidelines collection
+/// Medical guideline model based on backend resource API medical_guidelines collection
 class Guideline extends BaseModel {
   Guideline(super.data);
 
-  /// legacy collection API collection name
+  /// backend resource API collection name
   static const String collection = 'medical_guidelines';
 
   // Self-registration for dynamic model creation
@@ -19,7 +19,7 @@ class Guideline extends BaseModel {
     return true;
   })();
 
-  /// Create Guideline from legacy collection API record
+  /// Create Guideline from backend resource API record
   static Guideline fromRecord(ApiRecord record) => Guideline(record.data);
 
   /// Create JSON for new guideline record (excludes system fields)

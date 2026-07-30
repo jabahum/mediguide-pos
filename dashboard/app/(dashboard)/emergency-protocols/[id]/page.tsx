@@ -77,8 +77,8 @@ export default function EmergencyProtocolViewPage({
     }
 
     try {
-      const pb = getBackendClient()
-      await pb.collection("emergency_protocols").delete(protocol.id)
+      const backend = getBackendClient()
+      await backend.resource("emergency_protocols").delete(protocol.id)
       showToast.success("Protocol Deleted", `"${protocol.title}" was deleted`)
       router.push("/emergency-protocols")
     } catch (error) {

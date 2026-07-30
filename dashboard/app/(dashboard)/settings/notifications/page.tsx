@@ -80,8 +80,8 @@ export default function NotificationsPage() {
   const fetchData = useCallback(async () => {
     try {
       const [templatesResult, campaignsResult] = await Promise.all([
-        backendClient.collection(Collections.NotificationTemplates).getList(1, 50),
-        backendClient.collection(Collections.NotificationCampaigns).getList(1, 50)
+        backendClient.resource(Collections.NotificationTemplates).getList(1, 50),
+        backendClient.resource(Collections.NotificationCampaigns).getList(1, 50)
       ])
 
       setTemplates(templatesResult.items as NotificationTemplatesResponse[])
@@ -168,7 +168,7 @@ export default function NotificationsPage() {
   const handleToggleTemplate = async (templateId: string, currentStatus: string) => {
     const newStatus = currentStatus === "active" ? "inactive" : "active"
     try {
-      await backendClient.collection(Collections.NotificationTemplates).update(templateId, { status: newStatus })
+      await backendClient.resource(Collections.NotificationTemplates).update(templateId, { status: newStatus })
       showToast.success(
         newStatus === "active" ? "Template activated" : "Template deactivated",
         `Notification template has been ${newStatus === "active" ? 'activated' : 'deactivated'}`
@@ -186,7 +186,7 @@ export default function NotificationsPage() {
       if (action === "resume") newStatus = "running"
       if (action === "stop") newStatus = "completed"
 
-      await backendClient.collection(Collections.NotificationCampaigns).update(campaignId, { status: newStatus })
+      await backendClient.resource(Collections.NotificationCampaigns).update(campaignId, { status: newStatus })
       showToast.success(`Campaign ${action}ed`, `Campaign has been ${action}ed`)
       fetchData()
     } catch (error) {

@@ -9,7 +9,7 @@ import 'guideline.dart';
 class GuidelineUsageLog extends BaseModel {
   GuidelineUsageLog(super.data);
 
-  /// legacy collection API collection name
+  /// backend resource API collection name
   static const String collection = 'guideline_usage_logs';
 
   // Self-registration for dynamic model creation
@@ -18,7 +18,7 @@ class GuidelineUsageLog extends BaseModel {
     return true;
   })();
 
-  /// Create GuidelineUsageLog from legacy collection API record
+  /// Create GuidelineUsageLog from backend resource API record
   static GuidelineUsageLog fromRecord(ApiRecord record) =>
       GuidelineUsageLog(record.data);
 

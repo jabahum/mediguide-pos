@@ -61,9 +61,9 @@ export function AssignIndexModal({
     
     setIsSubmitting(true)
     try {
-      const pb = getBackendClient()
+      const backend = getBackendClient()
       
-      await pb.collection('medical_guidelines').update(guideline.id, {
+      await backend.resource('medical_guidelines').update(guideline.id, {
         index_item: data.index_item || undefined,
       })
       

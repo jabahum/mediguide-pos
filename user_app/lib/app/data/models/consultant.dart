@@ -6,11 +6,11 @@ import '../enums/user_enums.dart';
 import 'base_model.dart';
 import 'user.dart';
 
-/// Consultant model based on legacy collection API consultants collection
+/// Consultant model based on backend resource API consultants collection
 class Consultant extends BaseModel {
   Consultant(super.data);
 
-  /// legacy collection API collection name
+  /// backend resource API collection name
   static const String collection = 'consultants';
 
   // Self-registration for dynamic model creation
@@ -19,7 +19,7 @@ class Consultant extends BaseModel {
     return true;
   })();
 
-  /// Create Consultant from legacy collection API record
+  /// Create Consultant from backend resource API record
   static Consultant fromRecord(ApiRecord record) => Consultant(record.data);
 
   /// Create JSON for new consultant record (excludes system fields)

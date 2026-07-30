@@ -107,8 +107,8 @@ export default function EditConsultantPage({ params }: EditConsultantPageProps) 
 
     async function fetchConsultant() {
       try {
-        const pb = getBackendClient()
-        const record = await pb.collection('consultants').getOne(id!) as Consultant
+        const backend = getBackendClient()
+        const record = await backend.resource('consultants').getOne(id!) as Consultant
         setConsultant(record)
         
         // Populate form with existing data
@@ -151,10 +151,10 @@ export default function EditConsultantPage({ params }: EditConsultantPageProps) 
 
   async function onSubmit(data: ConsultantFormValues) {
     setIsLoading(true)
-    const pb = getBackendClient()
+    const backend = getBackendClient()
     
     try {
-      await pb.collection('consultants').update(id!, data)
+      await backend.resource('consultants').update(id!, data)
 
       await queryClient.invalidateQueries({ queryKey: backendRecordKeyPrefix('consultants', id!) })
 

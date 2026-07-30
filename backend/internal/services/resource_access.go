@@ -8,7 +8,7 @@ import (
 )
 
 // ensureTicketAccess verifies the user owns or is assigned to the ticket.
-func (s LegacyCollectionService) ensureTicketAccess(ticketID uuid.UUID, userID string) error {
+func (s ResourceService) ensureTicketAccess(ticketID uuid.UUID, userID string) error {
 	var count int64
 	if err := s.DB.Table("support_tickets").
 		Where("id = ? AND deleted_at IS NULL AND (user_id::text = ? OR assigned_to::text = ?)", ticketID, userID, userID).
@@ -16,13 +16,13 @@ func (s LegacyCollectionService) ensureTicketAccess(ticketID uuid.UUID, userID s
 		return err
 	}
 	if count == 0 {
-		return ErrLegacyCollectionForbidden
+		return ErrResourceForbidden
 	}
 	return nil
 }
 
 // ensureConversationAccess verifies the user is a participant in the conversation.
-func (s LegacyCollectionService) ensureConversationAccess(conversationID uuid.UUID, userID string) error {
+func (s ResourceService) ensureConversationAccess(conversationID uuid.UUID, userID string) error {
 	var count int64
 	if err := s.DB.Table("conversations").
 		Where("id = ? AND deleted_at IS NULL AND (participant1_user_id::text = ? OR participant2_user_id::text = ?)", conversationID, userID, userID).
@@ -30,13 +30,13 @@ func (s LegacyCollectionService) ensureConversationAccess(conversationID uuid.UU
 		return err
 	}
 	if count == 0 {
-		return ErrLegacyCollectionForbidden
+		return ErrResourceForbidden
 	}
 	return nil
 }
 
 // ensureMessageAccess verifies the user participates in the conversation the message belongs to.
-func (s LegacyCollectionService) ensureMessageAccess(messageID uuid.UUID, userID string) error {
+func (s ResourceService) ensureMessageAccess(messageID uuid.UUID, userID string) error {
 	var count int64
 	if err := s.DB.Table("messages m").
 		Joins("JOIN conversations c ON c.id = m.conversation_id").
@@ -45,13 +45,13 @@ func (s LegacyCollectionService) ensureMessageAccess(messageID uuid.UUID, userID
 		return err
 	}
 	if count == 0 {
-		return ErrLegacyCollectionForbidden
+		return ErrResourceForbidden
 	}
 	return nil
 }
 
 // ownsRow returns true when the user_id column on the row matches userID.
-func (s LegacyCollectionService) ownsRow(table string, rowID uuid.UUID, userID string) bool {
+func (s ResourceService) ownsRow(table string, rowID uuid.UUID, userID string) bool {
 	var count int64
 	err := s.DB.Table(table).
 		Where("id = ? AND deleted_at IS NULL AND user_id::text = ?", rowID, userID).
@@ -60,7 +60,7 @@ func (s LegacyCollectionService) ownsRow(table string, rowID uuid.UUID, userID s
 }
 
 // findConversationID looks for an existing conversation between two participants.
-func (s LegacyCollectionService) findConversationID(participant1, participant2 uuid.UUID) (uuid.UUID, bool, error) {
+func (s ResourceService) findConversationID(participant1, participant2 uuid.UUID) (uuid.UUID, bool, error) {
 	var row struct {
 		ID uuid.UUID `gorm:"column:id"`
 	}
@@ -82,7 +82,7 @@ func (s LegacyCollectionService) findConversationID(participant1, participant2 u
 }
 
 // findReadingProgressID looks for an existing reading progress record for a user + document.
-func (s LegacyCollectionService) findReadingProgressID(guidelineDocumentID, userID uuid.UUID) (uuid.UUID, bool, error) {
+func (s ResourceService) findReadingProgressID(guidelineDocumentID, userID uuid.UUID) (uuid.UUID, bool, error) {
 	var row struct {
 		ID uuid.UUID `gorm:"column:id"`
 	}

@@ -117,7 +117,7 @@ export default function CreateUserPage() {
     setIsLoading(true)
     
     try {
-      const pb = getBackendClient()
+      const backend = getBackendClient()
       
       // Create user record in legacy collection API
       const userData = {
@@ -128,7 +128,7 @@ export default function CreateUserPage() {
         emailVisibility: true,
       }
       
-      await pb.collection('users').create(userData)
+      await backend.resource('users').create(userData)
       
       showToast.success(
         "User Created Successfully",

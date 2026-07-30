@@ -62,7 +62,7 @@ class ChatInterfaceController extends GetxController {
       final filter =
           '(participant1 = "$currentUserId" && participant2 = "${user.id}") || (participant1 = "${user.id}" && participant2 = "$currentUserId")';
 
-      final existingConversations = await BackendApiService.to.getRecordList(
+      final existingConversations = await BackendApiService.to.getResourceList(
         collectionName: 'conversations',
         filter: filter,
       );
@@ -74,7 +74,7 @@ class ChatInterfaceController extends GetxController {
         subscribeToMessages();
       } else {
         // Create new conversation
-        final newConversation = await BackendApiService.to.createRecord(
+        final newConversation = await BackendApiService.to.createResource(
           collectionName: 'conversations',
           data: Conversation.forCreate(
             participant1: currentUserId,
@@ -102,7 +102,7 @@ class ChatInterfaceController extends GetxController {
 
     isLoading.value = true;
     try {
-      final result = await BackendApiService.to.getRecordList(
+      final result = await BackendApiService.to.getResourceList(
         collectionName: 'messages',
         filter: 'conversation = "${conversationId.value}"',
         sort: 'created',
@@ -141,7 +141,7 @@ class ChatInterfaceController extends GetxController {
     if (currentUserId == null) return;
 
     try {
-      await BackendApiService.to.createRecord(
+      await BackendApiService.to.createResource(
         collectionName: 'messages',
         data: Message.forCreate(
           conversation: conversationId.value,
@@ -152,7 +152,7 @@ class ChatInterfaceController extends GetxController {
       );
 
       // Update conversation last activity
-      await BackendApiService.to.updateRecord(
+      await BackendApiService.to.updateResource(
         collectionName: 'conversations',
         recordId: conversationId.value,
         data: Conversation.forUpdate(lastActivity: DateTime.now()),
@@ -221,7 +221,7 @@ class ChatInterfaceController extends GetxController {
       final updatedReadBy = Map<String, dynamic>.from(message.readBy);
       updatedReadBy[currentUserId] = DateTime.now().toIso8601String();
 
-      await BackendApiService.to.updateRecord(
+      await BackendApiService.to.updateResource(
         collectionName: 'messages',
         recordId: messageId,
         data: Message.forUpdate(readBy: updatedReadBy),
@@ -247,7 +247,7 @@ class ChatInterfaceController extends GetxController {
         userIds.add(currentUserId);
         updatedReactions[emoji] = userIds;
 
-        await BackendApiService.to.updateRecord(
+        await BackendApiService.to.updateResource(
           collectionName: 'messages',
           recordId: messageId,
           data: Message.forUpdate(reactions: updatedReactions),
@@ -270,7 +270,7 @@ class ChatInterfaceController extends GetxController {
     if (currentUserId == null) return;
 
     try {
-      await BackendApiService.to.createRecord(
+      await BackendApiService.to.createResource(
         collectionName: 'messages',
         data: Message.forCreate(
           conversation: conversationId.value,

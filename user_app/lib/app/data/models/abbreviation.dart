@@ -5,11 +5,11 @@ import 'base_model.dart';
 import 'guideline_category.dart';
 import 'guideline_tag.dart';
 
-/// Abbreviation model based on legacy collection API abbreviations collection
+/// Abbreviation model based on backend resource API abbreviations collection
 class Abbreviation extends BaseModel {
   Abbreviation(super.data);
 
-  /// legacy collection API collection name
+  /// backend resource API collection name
   static const String collection = 'abbreviations';
 
   // Self-registration for dynamic model creation
@@ -18,7 +18,7 @@ class Abbreviation extends BaseModel {
     return true;
   })();
 
-  /// Create Abbreviation from legacy collection API record
+  /// Create Abbreviation from backend resource API record
   static Abbreviation fromRecord(ApiRecord record) => Abbreviation(record.data);
 
   /// Create JSON for new abbreviation record (excludes system fields)

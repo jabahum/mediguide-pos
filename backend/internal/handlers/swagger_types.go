@@ -108,6 +108,93 @@ type CalculatorUsageEnvelope struct {
 	Data    models.CalculatorUsageLog `json:"data"`
 }
 
+type DrugEnvelope struct {
+	Success bool        `json:"success" example:"true"`
+	Data    models.Drug `json:"data"`
+}
+
+type PaginatedDrugs struct {
+	Items      []models.Drug `json:"items"`
+	Page       int           `json:"page" example:"1"`
+	PerPage    int           `json:"per_page" example:"20"`
+	TotalItems int64         `json:"total_items" example:"1"`
+	TotalPages int           `json:"total_pages" example:"1"`
+}
+
+type PaginatedDrugsEnvelope struct {
+	Success bool           `json:"success" example:"true"`
+	Data    PaginatedDrugs `json:"data"`
+}
+
+type DrugUsageEnvelope struct {
+	Success bool                `json:"success" example:"true"`
+	Data    models.DrugUsageLog `json:"data"`
+}
+
+type DrugCategoryEnvelope struct {
+	Success bool                `json:"success" example:"true"`
+	Data    models.DrugCategory `json:"data"`
+}
+
+type DrugTagEnvelope struct {
+	Success bool           `json:"success" example:"true"`
+	Data    models.DrugTag `json:"data"`
+}
+
+type DrugClassEnvelope struct {
+	Success bool             `json:"success" example:"true"`
+	Data    models.DrugClass `json:"data"`
+}
+
+type TherapeuticCategoryEnvelope struct {
+	Success bool                       `json:"success" example:"true"`
+	Data    models.TherapeuticCategory `json:"data"`
+}
+
+type PaginatedDrugCategoriesEnvelope struct {
+	Success bool `json:"success" example:"true"`
+	Data    struct {
+		Items      []models.DrugCategory `json:"items"`
+		Page       int                   `json:"page"`
+		PerPage    int                   `json:"per_page"`
+		TotalItems int64                 `json:"total_items"`
+		TotalPages int                   `json:"total_pages"`
+	} `json:"data"`
+}
+
+type PaginatedDrugTagsEnvelope struct {
+	Success bool `json:"success" example:"true"`
+	Data    struct {
+		Items      []models.DrugTag `json:"items"`
+		Page       int              `json:"page"`
+		PerPage    int              `json:"per_page"`
+		TotalItems int64            `json:"total_items"`
+		TotalPages int              `json:"total_pages"`
+	} `json:"data"`
+}
+
+type PaginatedDrugClassesEnvelope struct {
+	Success bool `json:"success" example:"true"`
+	Data    struct {
+		Items      []models.DrugClass `json:"items"`
+		Page       int                `json:"page"`
+		PerPage    int                `json:"per_page"`
+		TotalItems int64              `json:"total_items"`
+		TotalPages int                `json:"total_pages"`
+	} `json:"data"`
+}
+
+type PaginatedTherapeuticCategoriesEnvelope struct {
+	Success bool `json:"success" example:"true"`
+	Data    struct {
+		Items      []models.TherapeuticCategory `json:"items"`
+		Page       int                          `json:"page"`
+		PerPage    int                          `json:"per_page"`
+		TotalItems int64                        `json:"total_items"`
+		TotalPages int                          `json:"total_pages"`
+	} `json:"data"`
+}
+
 type PaginatedGuidelineDocuments struct {
 	Items      []models.GuidelineDocument `json:"items"`
 	Page       int                        `json:"page" example:"1"`
@@ -251,7 +338,7 @@ type LegacyTreeResult = services.TreeResult
 type LegacyOverviewResult = services.OverviewResult
 type LegacyStatsResult = services.StatsResult
 
-type LegacyCollectionListResult struct {
+type ResourceListResult struct {
 	Success    bool      `json:"success" example:"true"`
 	Collection string    `json:"collection" example:"medical_guidelines"`
 	Page       int       `json:"page" example:"1"`
@@ -260,7 +347,7 @@ type LegacyCollectionListResult struct {
 	Items      []JSONMap `json:"items"`
 }
 
-type LegacyCollectionItemResult struct {
+type ResourceItemResult struct {
 	Success    bool    `json:"success" example:"true"`
 	Collection string  `json:"collection" example:"medical_guidelines"`
 	Item       JSONMap `json:"item"`

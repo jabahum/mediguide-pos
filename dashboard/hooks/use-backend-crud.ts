@@ -34,7 +34,7 @@ export function useBackendCrud({
   const create = useCallback(async (data: any) => {
     setLoading(true)
     try {
-      const record = await backendClient.collection(collectionName).create(data)
+      const record = await backendClient.resource(collectionName).create(data)
       await invalidateList()
       showToast.success("Success", "Record created successfully")
       onSuccess?.()
@@ -52,7 +52,7 @@ export function useBackendCrud({
   const update = useCallback(async (id: string, data: any) => {
     setLoading(true)
     try {
-      const record = await backendClient.collection(collectionName).update(id, data)
+      const record = await backendClient.resource(collectionName).update(id, data)
       await Promise.all([invalidateRecord(id), invalidateList()])
       showToast.success("Success", "Record updated successfully")
       onSuccess?.()
@@ -70,7 +70,7 @@ export function useBackendCrud({
   const deleteRecord = useCallback(async (id: string) => {
     setLoading(true)
     try {
-      await backendClient.collection(collectionName).delete(id)
+      await backendClient.resource(collectionName).delete(id)
       await Promise.all([invalidateRecord(id), invalidateList()])
       showToast.success("Success", "Record deleted successfully")
       onSuccess?.()
@@ -88,7 +88,7 @@ export function useBackendCrud({
   const getOne = useCallback(async (id: string, options?: any) => {
     setLoading(true)
     try {
-      const record = await backendClient.collection(collectionName).getOne(id, options)
+      const record = await backendClient.resource(collectionName).getOne(id, options)
       return record
     } catch (error: any) {
       console.error(`Failed to get ${collectionName}:`, error)
@@ -103,7 +103,7 @@ export function useBackendCrud({
   const getList = useCallback(async (page = 1, perPage = 50, options?: any) => {
     setLoading(true)
     try {
-      const records = await backendClient.collection(collectionName).getList(page, perPage, options)
+      const records = await backendClient.resource(collectionName).getList(page, perPage, options)
       return records
     } catch (error: any) {
       console.error(`Failed to list ${collectionName}:`, error)

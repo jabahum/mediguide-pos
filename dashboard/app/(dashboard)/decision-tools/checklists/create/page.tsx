@@ -19,8 +19,8 @@ export default function CreateChecklistPage() {
   })
 
   const handleSubmit = async (data: Record<string, unknown>) => {
-    const pb = getBackendClient()
-    const currentUser = pb.authStore.model
+    const backend = getBackendClient()
+    const currentUser = backend.authStore.model
 
     if (!currentUser) {
       throw new Error("User not authenticated")

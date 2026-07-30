@@ -287,6 +287,8 @@ func deriveRolePermissions(roleKey, permissionsJSON string) []string {
 			"calculator.read",
 			"calculator.write",
 			"chat.ask",
+			"drug.read",
+			"drug.write",
 			"guideline.publish",
 			"guideline.read",
 			"guideline.write",
@@ -300,6 +302,8 @@ func deriveRolePermissions(roleKey, permissionsJSON string) []string {
 			"calculator.read",
 			"calculator.write",
 			"guideline.publish",
+			"drug.read",
+			"drug.write",
 			"guideline.read",
 			"guideline.write",
 			"protocol.read",
@@ -310,6 +314,7 @@ func deriveRolePermissions(roleKey, permissionsJSON string) []string {
 		return []string{
 			"chat.ask",
 			"calculator.read",
+			"drug.read",
 			"guideline.read",
 			"protocol.read",
 			"sync.read",
@@ -317,6 +322,7 @@ func deriveRolePermissions(roleKey, permissionsJSON string) []string {
 	case "observer":
 		return []string{
 			"calculator.read",
+			"drug.read",
 			"guideline.read",
 			"protocol.read",
 			"sync.read",
@@ -340,11 +346,13 @@ func deriveRolePermissions(roleKey, permissionsJSON string) []string {
 		case "content":
 			if hasReadAny || hasReadOwn {
 				perms["calculator.read"] = true
+				perms["drug.read"] = true
 				perms["guideline.read"] = true
 				perms["protocol.read"] = true
 			}
 			if hasCreateAny || hasUpdateAny || hasDeleteAny {
 				perms["calculator.write"] = true
+				perms["drug.write"] = true
 				perms["guideline.write"] = true
 				perms["guideline.publish"] = true
 				perms["protocol.write"] = true

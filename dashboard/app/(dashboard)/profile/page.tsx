@@ -30,8 +30,8 @@ export default function MyProfilePage() {
           return
         }
 
-        const pb = getBackendClient()
-        const fresh = await pb.collection("users").getOne(authUser.id)
+        const backend = getBackendClient()
+        const fresh = await backend.resource("users").getOne(authUser.id)
         if (!abortController.signal.aborted) {
           setUser(fresh as UsersResponse)
         }

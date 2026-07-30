@@ -63,7 +63,7 @@ class MinistryDirectoryController extends GetxController {
     try {
       final filter = _buildFilter();
 
-      final result = await BackendApiService.to.getRecordList(
+      final result = await BackendApiService.to.getResourceList(
         collectionName: 'ministry_directory',
         page: pageKey,
         perPage: pageSize,
@@ -146,7 +146,7 @@ class MinistryDirectoryController extends GetxController {
 
       availableMinistries.value = Ministry.values.map((e) => e.label).toList();
 
-      final districts = await BackendApiService.to.getRecordList(
+      final districts = await BackendApiService.to.getResourceList(
         collectionName: 'districts',
         perPage: 500,
         sort: 'name',
@@ -156,7 +156,7 @@ class MinistryDirectoryController extends GetxController {
           .map((e) => e.data['name'] as String)
           .toList();
 
-      final regions = await BackendApiService.to.getRecordList(
+      final regions = await BackendApiService.to.getResourceList(
         collectionName: 'regions',
         perPage: 500,
         sort: 'name',

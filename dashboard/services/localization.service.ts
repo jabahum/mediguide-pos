@@ -32,7 +32,7 @@ export class LocalizationService {
     perPage?: number
   ): Promise<LanguagesResponse[]> {
     try {
-      const pb = getBackendClient()
+      const backend = getBackendClient()
       
       // Build filter string
       const filterConditions: string[] = []
@@ -78,10 +78,10 @@ export class LocalizationService {
       let languages: LanguagesResponse[]
       
       if (page && perPage) {
-        const result = await pb.collection(Collections.Languages).getList(page, perPage, options)
+        const result = await backend.resource(Collections.Languages).getList(page, perPage, options)
         languages = result.items as LanguagesResponse[]
       } else {
-        languages = await pb.collection(Collections.Languages).getFullList(options) as LanguagesResponse[]
+        languages = await backend.resource(Collections.Languages).getFullList(options) as LanguagesResponse[]
       }
       
       return languages
@@ -97,8 +97,8 @@ export class LocalizationService {
    */
   static async getLanguageById(id: string): Promise<LanguagesResponse | null> {
     try {
-      const pb = getBackendClient()
-      const language = await pb.collection(Collections.Languages).getOne(id) as LanguagesResponse
+      const backend = getBackendClient()
+      const language = await backend.resource(Collections.Languages).getOne(id) as LanguagesResponse
       return language
     } catch (error) {
       console.error('Error getting language by ID:', error)
@@ -111,8 +111,8 @@ export class LocalizationService {
    */
   static async getLanguageByCode(code: string): Promise<LanguagesResponse | null> {
     try {
-      const pb = getBackendClient()
-      const languages = await pb.collection(Collections.Languages).getFullList({
+      const backend = getBackendClient()
+      const languages = await backend.resource(Collections.Languages).getFullList({
         filter: `code = "${code}"`
       }) as LanguagesResponse[]
       
@@ -128,7 +128,7 @@ export class LocalizationService {
    */
   static async createLanguage(data: LanguageCreateData): Promise<LanguagesResponse> {
     try {
-      const pb = getBackendClient()
+      const backend = getBackendClient()
       
       // Validate the data
       const validation = this.validateLanguageData(data)
@@ -151,7 +151,7 @@ export class LocalizationService {
         await this.clearDefaultLanguage()
       }
       
-      const newLanguage = await pb.collection(Collections.Languages).create(data) as LanguagesResponse
+      const newLanguage = await backend.resource(Collections.Languages).create(data) as LanguagesResponse
       
       showToast.success('Language created successfully', `"${data.name}" has been added`)
       return newLanguage
@@ -170,7 +170,7 @@ export class LocalizationService {
    */
   static async updateLanguage(id: string, data: LanguageUpdateData): Promise<LanguagesResponse> {
     try {
-      const pb = getBackendClient()
+      const backend = getBackendClient()
       
       // Get current language to validate
       const currentLang = await this.getLanguageById(id)
@@ -195,7 +195,7 @@ export class LocalizationService {
         await this.clearDefaultLanguage()
       }
       
-      const updatedLanguage = await pb.collection(Collections.Languages).update(id, data) as LanguagesResponse
+      const updatedLanguage = await backend.resource(Collections.Languages).update(id, data) as LanguagesResponse
       
       showToast.success('Language updated successfully', `"${updatedLanguage.name}" has been updated`)
       return updatedLanguage
@@ -214,7 +214,7 @@ export class LocalizationService {
    */
   static async deleteLanguage(id: string): Promise<boolean> {
     try {
-      const pb = getBackendClient()
+      const backend = getBackendClient()
       
       // Get language to validate deletion
       const language = await this.getLanguageById(id)
@@ -229,7 +229,7 @@ export class LocalizationService {
         return false
       }
       
-      await pb.collection(Collections.Languages).delete(id)
+      await backend.resource(Collections.Languages).delete(id)
       
       showToast.success('Language deleted successfully', `"${language.name}" has been removed`)
       return true
@@ -477,8 +477,8 @@ export class LocalizationService {
     try {
       const currentDefault = await this.getDefaultLanguage()
       if (currentDefault) {
-        const pb = getBackendClient()
-        await pb.collection(Collections.Languages).update(currentDefault.id, { is_default: false })
+        const backend = getBackendClient()
+        await backend.resource(Collections.Languages).update(currentDefault.id, { is_default: false })
       }
     } catch (error) {
       console.error('Error clearing default language:', error)

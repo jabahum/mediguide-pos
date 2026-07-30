@@ -24,10 +24,8 @@ export default function LoginPage() {
 
     try {
       const { getBackendClient } = await import('@/lib/backend-client')
-      const pb = getBackendClient()
-      
-      // Authenticate with legacy collection API directly
-      await pb.collection('users').authWithPassword(email, password)
+      const backend = getBackendClient()
+      await backend.login({ email, password })
       
       // Redirect to dashboard on successful login
       router.push("/")

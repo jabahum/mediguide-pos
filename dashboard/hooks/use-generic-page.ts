@@ -10,7 +10,7 @@ export const genericPageQueryKey = (pageKey: string) =>
   ["generic-page", pageKey] as const
 
 export function useGenericPage(pageKey: string) {
-  const pb = useMemo(() => getBackendClient(), [])
+  const backend = useMemo(() => getBackendClient(), [])
   const queryClient = useQueryClient()
 
   const query = useQuery<TypedGenericPagesResponse | null>({
@@ -24,8 +24,8 @@ export function useGenericPage(pageKey: string) {
     if (!pageId) return
 
     let cancelled = false
-    const subscribePromise = pb
-      .collection("generic_pages")
+    const subscribePromise = backend
+      .resource("generic_pages")
       .subscribe(pageId, (e) => {
         if (cancelled) return
         const queryKey = genericPageQueryKey(pageKey)
@@ -45,7 +45,7 @@ export function useGenericPage(pageKey: string) {
         .then((unsub) => unsub?.())
         .catch(() => {})
     }
-  }, [pageId, pageKey, pb, queryClient])
+  }, [pageId, pageKey, backend, queryClient])
 
   return {
     page: query.data ?? null,

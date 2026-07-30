@@ -126,7 +126,7 @@ export function useGuidelineIndexSearch(
     setError(null)
 
     try {
-      const pb = getBackendClient()
+      const backend = getBackendClient()
       
       // Build filter conditions
       const filterConditions: string[] = []
@@ -153,7 +153,7 @@ export function useGuidelineIndexSearch(
       
       const filter = filterConditions.join(" && ")
       
-      const response = await pb.collection('guideline_index').getList(1, stableMaxResults, {
+      const response = await backend.resource('guideline_index').getList(1, stableMaxResults, {
         filter,
         sort: 'level,order,title',
       })

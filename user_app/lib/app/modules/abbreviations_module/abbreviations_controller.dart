@@ -204,7 +204,7 @@ class AbbreviationsController extends GetxController {
     int page = 1,
     int perPage = 30,
   }) async {
-    final result = await BackendApiService.to.getRecordList(
+    final result = await BackendApiService.to.getResourceList(
       collectionName: Abbreviation.collection,
       page: page,
       perPage: perPage,
@@ -216,7 +216,7 @@ class AbbreviationsController extends GetxController {
   }
 
   Future<List<Abbreviation>> getCommonAbbreviations() async {
-    final result = await BackendApiService.to.getRecordList(
+    final result = await BackendApiService.to.getResourceList(
       collectionName: Abbreviation.collection,
       perPage: 50,
       filter: 'common_usage = true',
@@ -256,7 +256,7 @@ class AbbreviationsController extends GetxController {
       filters.add('($tagFilter)');
     }
 
-    final result = await BackendApiService.to.getRecordList(
+    final result = await BackendApiService.to.getResourceList(
       collectionName: Abbreviation.collection,
       page: page,
       perPage: perPage,
@@ -286,7 +286,7 @@ class AbbreviationsController extends GetxController {
 
       if (user == null) return;
 
-      await BackendApiService.to.createRecord(
+      await BackendApiService.to.createResource(
         collectionName: AbbreviationUsageLog.collection,
         data: AbbreviationUsageLog.forCreate(
           userId: user.id,
@@ -306,7 +306,7 @@ class AbbreviationsController extends GetxController {
     String? filter,
     String? sort,
   }) async {
-    final result = await BackendApiService.to.getRecordList(
+    final result = await BackendApiService.to.getResourceList(
       collectionName: GuidelineCategory.collection,
       filter: filter ?? 'status = "active"',
       sort: sort ?? 'sort_order,name',
@@ -322,7 +322,7 @@ class AbbreviationsController extends GetxController {
     String? filter,
     String? sort,
   }) async {
-    final result = await BackendApiService.to.getRecordList(
+    final result = await BackendApiService.to.getResourceList(
       collectionName: GuidelineTag.collection,
       filter: filter,
       sort: sort ?? 'name',

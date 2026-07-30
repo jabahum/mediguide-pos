@@ -94,7 +94,7 @@ class ConsultantsController extends GetxController {
 
       final filterString = filters.join(' && ');
 
-      final result = await BackendApiService.to.getRecordList(
+      final result = await BackendApiService.to.getResourceList(
         collectionName: Consultant.collection,
         page: pageKey,
         perPage: pageSize,
@@ -268,7 +268,7 @@ class ConsultantsController extends GetxController {
     try {
       isLoadingFilters.value = true;
 
-      final result = await BackendApiService.to.getRecordList(
+      final result = await BackendApiService.to.getResourceList(
         collectionName: Consultant.collection,
         perPage: 100,
         filter: 'status="active"',

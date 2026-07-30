@@ -9,67 +9,67 @@ import (
 )
 
 var (
-	ErrLegacyCollectionNotFound   = errors.New("legacy collection not found")
-	ErrLegacyCollectionAuthNeeded = errors.New("legacy collection requires authentication")
-	ErrLegacyCollectionForbidden  = errors.New("legacy collection forbidden")
-	ErrLegacyCollectionWrite      = errors.New("legacy collection write unsupported")
-	ErrLegacyCollectionInvalid    = errors.New("legacy collection invalid payload")
+	ErrResourceNotFound   = errors.New("resource not found")
+	ErrResourceAuthNeeded = errors.New("resource requires authentication")
+	ErrResourceForbidden  = errors.New("resource forbidden")
+	ErrResourceWrite      = errors.New("resource write unsupported")
+	ErrResourceInvalid    = errors.New("resource invalid payload")
 )
 
-type LegacyCollectionService struct {
+type ResourceService struct {
 	DB *gorm.DB
 }
 
-type LegacyListInput struct {
+type ResourceListInput struct {
 	Page    int
 	PerPage int
 	Search  string
 	Filters map[string]string
 }
 
-type LegacyListResult struct {
+type ResourceListResult struct {
 	Success    bool             `json:"success"`
-	Collection string           `json:"collection"`
+	Resource   string           `json:"resource"`
 	Page       int              `json:"page"`
 	PerPage    int              `json:"per_page"`
 	TotalItems int64            `json:"total_items"`
 	Items      []map[string]any `json:"items"`
 }
 
-type LegacyItemResult struct {
-	Success    bool           `json:"success"`
-	Collection string         `json:"collection"`
-	Item       map[string]any `json:"item"`
+type ResourceItemResult struct {
+	Success  bool           `json:"success"`
+	Resource string         `json:"resource"`
+	Item     map[string]any `json:"item"`
 }
 
-type legacyAccessMode string
+type resourceAccessMode string
 
 const (
-	legacyAccessPublic legacyAccessMode = "public"
-	legacyAccessAuth   legacyAccessMode = "auth"
-	legacyAccessUser   legacyAccessMode = "user"
+	resourceAccessPublic resourceAccessMode = "public"
+	resourceAccessAuth   resourceAccessMode = "auth"
+	resourceAccessUser   resourceAccessMode = "user"
 )
 
-type legacyCollectionSpec struct {
+type resourceSpec struct {
 	Table         string
 	IDColumn      string
 	Select        string
 	DefaultOrder  string
 	SearchColumns []string
 	FilterColumns map[string]string
-	Access        legacyAccessMode
+	Access        resourceAccessMode
 	Joins         []string
 	ApplyScopes   func(*gorm.DB) *gorm.DB
 	ApplyAuth     func(*gorm.DB) *gorm.DB
 	ApplyUser     func(*gorm.DB, string) *gorm.DB
 }
 
-func (s LegacyCollectionService) List(collection string, in LegacyListInput, userID string) (*LegacyListResult, error) {
-	spec, ok := legacyCollectionSpecs[collection]
+func (s ResourceService) List(resource string, in ResourceListInput, userID string) (*ResourceListResult, error) {
+	spec, ok := resourceSpecs[resource]
 	if !ok {
-		return nil, ErrLegacyCollectionNotFound
+		return nil, ErrResourceNotFound
 	}
-	if err := validateLegacyAccess(spec, userID); err != nil {
+	if err := validateResourceAccess(spec, userID); err != nil {
 		return nil, err
 	}
 
@@ -86,8 +86,8 @@ func (s LegacyCollectionService) List(collection string, in LegacyListInput, use
 	}
 
 	baseQuery := s.buildQuery(spec, userID)
-	baseQuery = applyLegacySearch(baseQuery, spec.SearchColumns, in.Search)
-	baseQuery = applyLegacyFilters(baseQuery, spec.FilterColumns, in.Filters)
+	baseQuery = applyResourceSearch(baseQuery, spec.SearchColumns, in.Search)
+	baseQuery = applyResourceFilters(baseQuery, spec.FilterColumns, in.Filters)
 
 	var total int64
 	countQuery := baseQuery.Session(&gorm.Session{})
@@ -106,9 +106,9 @@ func (s LegacyCollectionService) List(collection string, in LegacyListInput, use
 		return nil, err
 	}
 
-	return &LegacyListResult{
+	return &ResourceListResult{
 		Success:    true,
-		Collection: collection,
+		Resource:   resource,
 		Page:       page,
 		PerPage:    perPage,
 		TotalItems: total,
@@ -116,12 +116,12 @@ func (s LegacyCollectionService) List(collection string, in LegacyListInput, use
 	}, nil
 }
 
-func (s LegacyCollectionService) Get(collection, id, userID string) (*LegacyItemResult, error) {
-	spec, ok := legacyCollectionSpecs[collection]
+func (s ResourceService) Get(resource, id, userID string) (*ResourceItemResult, error) {
+	spec, ok := resourceSpecs[resource]
 	if !ok {
-		return nil, ErrLegacyCollectionNotFound
+		return nil, ErrResourceNotFound
 	}
-	if err := validateLegacyAccess(spec, userID); err != nil {
+	if err := validateResourceAccess(spec, userID); err != nil {
 		return nil, err
 	}
 
@@ -133,23 +133,23 @@ func (s LegacyCollectionService) Get(collection, id, userID string) (*LegacyItem
 		return nil, err
 	}
 
-	return &LegacyItemResult{
-		Success:    true,
-		Collection: collection,
-		Item:       item,
+	return &ResourceItemResult{
+		Success:  true,
+		Resource: resource,
+		Item:     item,
 	}, nil
 }
 
-func (s LegacyCollectionService) Create(collection string, payload map[string]any, userID string) (*LegacyItemResult, error) {
-	spec, ok := legacyCollectionSpecs[collection]
+func (s ResourceService) Create(resource string, payload map[string]any, userID string) (*ResourceItemResult, error) {
+	spec, ok := resourceSpecs[resource]
 	if !ok {
-		return nil, ErrLegacyCollectionNotFound
+		return nil, ErrResourceNotFound
 	}
-	if err := validateLegacyAccess(spec, userID); err != nil {
+	if err := validateResourceAccess(spec, userID); err != nil {
 		return nil, err
 	}
 
-	switch collection {
+	switch resource {
 	case "users":
 		return s.createUser(payload)
 	case "support_tickets":
@@ -163,32 +163,30 @@ func (s LegacyCollectionService) Create(collection string, payload map[string]an
 	case "reading_progress":
 		return s.createReadingProgress(payload, userID)
 	case "guideline_usage_logs":
-		return s.createUsageLog(collection, payload, userID)
-	case "drug_usage_logs":
-		return s.createUsageLog(collection, payload, userID)
+		return s.createUsageLog(resource, payload, userID)
 	case "abbreviation_usage_logs":
-		return s.createUsageLog(collection, payload, userID)
+		return s.createUsageLog(resource, payload, userID)
 	case "consultant_usage_logs":
-		return s.createUsageLog(collection, payload, userID)
+		return s.createUsageLog(resource, payload, userID)
 	case "facility_usage_logs":
-		return s.createUsageLog(collection, payload, userID)
+		return s.createUsageLog(resource, payload, userID)
 	case "ai_usage_logs":
-		return s.createUsageLog(collection, payload, userID)
+		return s.createUsageLog(resource, payload, userID)
 	default:
-		return s.createGeneric(collection, payload, userID)
+		return s.createGeneric(resource, payload, userID)
 	}
 }
 
-func (s LegacyCollectionService) Update(collection, id string, payload map[string]any, userID string) (*LegacyItemResult, error) {
-	spec, ok := legacyCollectionSpecs[collection]
+func (s ResourceService) Update(resource, id string, payload map[string]any, userID string) (*ResourceItemResult, error) {
+	spec, ok := resourceSpecs[resource]
 	if !ok {
-		return nil, ErrLegacyCollectionNotFound
+		return nil, ErrResourceNotFound
 	}
-	if err := validateLegacyAccess(spec, userID); err != nil {
+	if err := validateResourceAccess(spec, userID); err != nil {
 		return nil, err
 	}
 
-	switch collection {
+	switch resource {
 	case "users":
 		if id == userID {
 			return s.updateUser(id, payload, userID)
@@ -201,28 +199,28 @@ func (s LegacyCollectionService) Update(collection, id string, payload map[strin
 	case "reading_progress":
 		return s.updateReadingProgress(id, payload, userID)
 	default:
-		return s.updateGeneric(collection, id, payload, userID)
+		return s.updateGeneric(resource, id, payload, userID)
 	}
 }
 
-func (s LegacyCollectionService) Delete(collection, id, userID string) error {
-	spec, ok := legacyCollectionSpecs[collection]
+func (s ResourceService) Delete(resource, id, userID string) error {
+	spec, ok := resourceSpecs[resource]
 	if !ok {
-		return ErrLegacyCollectionNotFound
+		return ErrResourceNotFound
 	}
-	if err := validateLegacyAccess(spec, userID); err != nil {
+	if err := validateResourceAccess(spec, userID); err != nil {
 		return err
 	}
 
-	switch collection {
+	switch resource {
 	case "users":
 		return s.deleteUser(id)
 	default:
-		return s.deleteGeneric(collection, id, userID)
+		return s.deleteGeneric(resource, id, userID)
 	}
 }
 
-func (s LegacyCollectionService) buildQuery(spec legacyCollectionSpec, userID string) *gorm.DB {
+func (s ResourceService) buildQuery(spec resourceSpec, userID string) *gorm.DB {
 	query := s.DB.Table(spec.Table)
 	for _, join := range spec.Joins {
 		query = query.Joins(join)
@@ -238,14 +236,14 @@ func (s LegacyCollectionService) buildQuery(spec legacyCollectionSpec, userID st
 	return query
 }
 
-func validateLegacyAccess(spec legacyCollectionSpec, userID string) error {
-	if (spec.Access == legacyAccessAuth || spec.Access == legacyAccessUser) && strings.TrimSpace(userID) == "" {
-		return ErrLegacyCollectionAuthNeeded
+func validateResourceAccess(spec resourceSpec, userID string) error {
+	if (spec.Access == resourceAccessAuth || spec.Access == resourceAccessUser) && strings.TrimSpace(userID) == "" {
+		return ErrResourceAuthNeeded
 	}
 	return nil
 }
 
-func applyLegacySearch(query *gorm.DB, columns []string, raw string) *gorm.DB {
+func applyResourceSearch(query *gorm.DB, columns []string, raw string) *gorm.DB {
 	term := strings.TrimSpace(raw)
 	if term == "" || len(columns) == 0 {
 		return query
@@ -261,7 +259,7 @@ func applyLegacySearch(query *gorm.DB, columns []string, raw string) *gorm.DB {
 	return query.Where("("+strings.Join(parts, " OR ")+")", args...)
 }
 
-func applyLegacyFilters(query *gorm.DB, columns map[string]string, filters map[string]string) *gorm.DB {
+func applyResourceFilters(query *gorm.DB, columns map[string]string, filters map[string]string) *gorm.DB {
 	if len(columns) == 0 || len(filters) == 0 {
 		return query
 	}
@@ -283,29 +281,29 @@ func applyLegacyFilters(query *gorm.DB, columns map[string]string, filters map[s
 	return query
 }
 
-func (s LegacyCollectionService) SupportedCollections() []string {
-	names := make([]string, 0, len(legacyCollectionSpecs))
-	for name := range legacyCollectionSpecs {
+func (s ResourceService) SupportedResources() []string {
+	names := make([]string, 0, len(resourceSpecs))
+	for name := range resourceSpecs {
 		names = append(names, name)
 	}
 	return names
 }
 
-func LegacyCollectionErrorMessage(err error) string {
+func ResourceErrorMessage(err error) string {
 	switch {
-	case errors.Is(err, ErrLegacyCollectionNotFound):
-		return "collection not found"
-	case errors.Is(err, ErrLegacyCollectionAuthNeeded):
+	case errors.Is(err, ErrResourceNotFound):
+		return "resource not found"
+	case errors.Is(err, ErrResourceAuthNeeded):
 		return "authentication required"
-	case errors.Is(err, ErrLegacyCollectionForbidden):
+	case errors.Is(err, ErrResourceForbidden):
 		return "forbidden"
-	case errors.Is(err, ErrLegacyCollectionWrite):
+	case errors.Is(err, ErrResourceWrite):
 		return "write operation not supported"
-	case errors.Is(err, ErrLegacyCollectionInvalid):
+	case errors.Is(err, ErrResourceInvalid):
 		return "invalid payload"
 	case errors.Is(err, gorm.ErrRecordNotFound):
 		return "record not found"
 	default:
-		return fmt.Sprintf("legacy collection error: %v", err)
+		return fmt.Sprintf("resource error: %v", err)
 	}
 }

@@ -112,28 +112,28 @@ export default function EditUserPage() {
           return
         }
         
-        const pb = getBackendClient()
-        console.log('legacy collection API URL:', pb.baseUrl)
+        const backend = getBackendClient()
+        console.log('legacy collection API URL:', backend.baseUrl)
         
         // Check if authenticated
-        if (!pb.authStore.isValid) {
+        if (!backend.authStore.isValid) {
           console.error('Not authenticated')
           showToast.error("Authentication Error", "Please log in to continue")
           router.push('/login')
           return
         }
         
-        console.log('Auth store valid, user:', pb.authStore.record?.email)
+        console.log('Auth store valid, user:', backend.authStore.record?.email)
         
         // Test connection first
         try {
-          const testConnection = await pb.collection('users').getList(1, 1)
+          const testConnection = await backend.resource('users').getList(1, 1)
           console.log('Connection test successful, found users:', testConnection.totalItems)
         } catch (connError) {
           console.error('Connection test failed:', connError)
         }
         
-        const userData = await pb.collection('users').getOne(userId)
+        const userData = await backend.resource('users').getOne(userId)
         console.log('Loaded user data:', userData)
         setUser(userData as UsersResponse)
         
@@ -227,7 +227,7 @@ export default function EditUserPage() {
     setIsLoading(true)
     
     try {
-      const pb = getBackendClient()
+      const backend = getBackendClient()
       
       // Update user record in legacy collection API
       const userData = {
@@ -238,7 +238,7 @@ export default function EditUserPage() {
         emailVisibility: true,
       }
       
-      await pb.collection('users').update(userId, userData)
+      await backend.resource('users').update(userId, userData)
 
       await queryClient.invalidateQueries({ queryKey: backendRecordKeyPrefix('users', userId) })
 

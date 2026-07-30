@@ -67,8 +67,8 @@ export default function EditPagePage({ params }: { params: Promise<{ id: string 
   useEffect(() => {
     const loadPage = async () => {
       try {
-        const pb = getBackendClient()
-        const pageData = await pb.collection('generic_pages').getOne(resolvedParams.id) as GenericPagesResponse
+        const backend = getBackendClient()
+        const pageData = await backend.resource('generic_pages').getOne(resolvedParams.id) as GenericPagesResponse
         
         setPage(pageData)
         form.reset({
@@ -93,8 +93,8 @@ export default function EditPagePage({ params }: { params: Promise<{ id: string 
     
     setLoading(true)
     try {
-      const pb = getBackendClient()
-      await pb.collection('generic_pages').update(page.id, {
+      const backend = getBackendClient()
+      await backend.resource('generic_pages').update(page.id, {
         title: data.title,
         key: data.key,
         description: data.description || "",

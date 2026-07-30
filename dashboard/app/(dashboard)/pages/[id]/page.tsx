@@ -82,8 +82,8 @@ export default function PageDetailsPage({
     if (!page) return;
 
     try {
-      const pb = getBackendClient();
-      await pb.collection("generic_pages").delete(page.id);
+      const backend = getBackendClient();
+      await backend.resource("generic_pages").delete(page.id);
       showToast.success(
         "Page Deleted",
         `Page "${page.title}" has been deleted successfully`,

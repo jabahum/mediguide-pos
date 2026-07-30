@@ -4,6 +4,8 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 BACKEND_SWAGGER="${SCRIPT_DIR}/../../backend/docs/swagger.json"
+OUTPUT_DIR="${SCRIPT_DIR}/../types/generated"
+OUTPUT_FILE="${OUTPUT_DIR}/backend-openapi.ts"
 
 if [[ ! -f "${BACKEND_SWAGGER}" ]]; then
   printf 'Missing backend OpenAPI document: %s\n' "${BACKEND_SWAGGER}" >&2
@@ -11,10 +13,18 @@ if [[ ! -f "${BACKEND_SWAGGER}" ]]; then
   exit 1
 fi
 
-printf '%s\n' \
-  "The Go OpenAPI document is the source of truth for new backend contracts:" \
-  "  ${BACKEND_SWAGGER}" \
-  "" \
-  "Automatic client generation is intentionally deferred until the legacy" \
-  "/api/v1/collections compatibility endpoints are replaced by typed domain APIs." \
-  "See docs/pocketbase-removal.md for the migration plan."
+mkdir -p "${OUTPUT_DIR}"
+
+cd "${SCRIPT_DIR}/.."
+bunx --bun swagger-typescript-api generate \
+  --path "${BACKEND_SWAGGER}" \
+  --output "${OUTPUT_DIR}" \
+  --name "$(basename "${OUTPUT_FILE}")" \
+  --no-client \
+  --add-readonly \
+  --enum-style union \
+  --extract-enums \
+  --sort-types \
+  --silent
+
+printf 'Generated dashboard contracts: %s\n' "${OUTPUT_FILE}"

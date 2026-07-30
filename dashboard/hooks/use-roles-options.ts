@@ -24,7 +24,7 @@ export function useRoleOptions(): UseRoleOptionsReturn {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<Error | null>(null)
 
-  const pb = useMemo(() => getBackendClient(), [])
+  const backend = useMemo(() => getBackendClient(), [])
 
   const fetchRoles = async () => {
     try {
@@ -32,7 +32,7 @@ export function useRoleOptions(): UseRoleOptionsReturn {
       setError(null)
 
       // Fetch only active roles, sorted by name
-      const rolesList = await pb.collection('roles').getFullList<RolesResponse>({
+      const rolesList = await backend.resource('roles').getFullList<RolesResponse>({
         filter: 'isActive = true',
         sort: 'name',
       })

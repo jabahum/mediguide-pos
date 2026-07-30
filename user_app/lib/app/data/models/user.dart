@@ -4,11 +4,11 @@ import 'package:user_app/app/data/models/api_record.dart';
 import '../enums/user_enums.dart';
 import 'base_model.dart';
 
-/// User model based on legacy collection API users collection
+/// User model based on backend resource API users collection
 class User extends BaseModel {
   User(super.data);
 
-  /// legacy collection API collection name
+  /// backend resource API collection name
   static const String collection = 'users';
 
   // Self-registration for dynamic model creation
@@ -23,7 +23,7 @@ class User extends BaseModel {
     _registered;
   }
 
-  /// Create User from legacy collection API record
+  /// Create User from backend resource API record
   static User fromRecord(ApiRecord record) => User(record.data);
 
   /// Create JSON for new user record (excludes system fields)

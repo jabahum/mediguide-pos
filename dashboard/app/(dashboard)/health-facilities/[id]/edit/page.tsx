@@ -30,9 +30,9 @@ export default function EditFacilityPage() {
     const loadFacility = async () => {
       if (!facilityId) return
 
-      const pb = getBackendClient()
+      const backend = getBackendClient()
       try {
-        const facilityData = await pb.collection('health_facilities').getOne(facilityId)
+        const facilityData = await backend.resource('health_facilities').getOne(facilityId)
         setFacility(facilityData as HealthFacilitiesResponse)
       } catch (error) {
         console.error("Failed to load facility:", error)

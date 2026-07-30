@@ -81,8 +81,8 @@ export default function DecisionToolTestPage({
   React.useEffect(() => {
     const fetchTool = async () => {
       try {
-        const pb = getBackendClient();
-        const toolData = (await pb.collection("calculators").getOne(id, {
+        const backend = getBackendClient()
+        const toolData = await backend.resource("calculators").getOne(id, {
           expand: "addedBy",
         })) as DecisionToolWithRelations;
 

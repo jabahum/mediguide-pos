@@ -57,13 +57,13 @@ export function CreateDistrictModal({ open, onClose, onSuccess }: CreateDistrict
   React.useEffect(() => {
     if (open) {
       const loadData = async () => {
-        const pb = getBackendClient()
+        const backend = getBackendClient()
         try {
           const [regionsData, healthSubRegionsData] = await Promise.all([
-            pb.collection('regions').getFullList({
+            backend.resource('regions').getFullList({
               sort: 'name',
             }),
-            pb.collection('health_sub_regions').getFullList({
+            backend.resource('health_sub_regions').getFullList({
               sort: 'name',
             })
           ])
@@ -80,10 +80,10 @@ export function CreateDistrictModal({ open, onClose, onSuccess }: CreateDistrict
 
   const onSubmit = async (data: DistrictFormValues) => {
     setIsLoading(true)
-    const pb = getBackendClient()
+    const backend = getBackendClient()
 
     try {
-      await pb.collection('districts').create({
+      await backend.resource('districts').create({
         name: data.name,
         region: data.region,
         health_sub_region: data.health_sub_region,

@@ -9,7 +9,7 @@ import 'drug.dart';
 class DrugUsageLog extends BaseModel {
   DrugUsageLog(super.data);
 
-  /// legacy collection API collection name
+  /// backend resource API collection name
   static const String collection = 'drug_usage_logs';
 
   // Self-registration for dynamic model creation
@@ -18,7 +18,7 @@ class DrugUsageLog extends BaseModel {
     return true;
   })();
 
-  /// Create DrugUsageLog from legacy collection API record
+  /// Create DrugUsageLog from backend resource API record
   static DrugUsageLog fromRecord(ApiRecord record) => DrugUsageLog(record.data);
 
   /// Create JSON for new usage log record

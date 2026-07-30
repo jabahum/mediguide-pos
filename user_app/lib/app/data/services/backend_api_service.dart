@@ -62,7 +62,7 @@ class BackendApiService extends GetxService {
     }
 
     await _requestJson(
-      '/api/v1/collections/users/register',
+      '/api/v2/auth/register',
       method: 'POST',
       body: payload,
       includeAuth: false,
@@ -77,7 +77,7 @@ class BackendApiService extends GetxService {
     String? expand,
   }) async {
     final response = await _requestJson(
-      '/api/v1/collections/users/auth-with-password',
+      '/api/v2/auth/login',
       method: 'POST',
       body: {'email': email, 'password': password},
       includeAuth: false,
@@ -130,7 +130,7 @@ class BackendApiService extends GetxService {
     }
 
     final response = await _requestJson(
-      '/api/v1/collections/users/auth-refresh',
+      '/api/v2/auth/refresh',
       method: 'POST',
       body: {'refresh_token': _refreshToken},
       includeAuth: false,
@@ -151,21 +151,27 @@ class BackendApiService extends GetxService {
 
     await login(email: currentUser.email, password: currentPassword);
 
-    await updateRecord(
+    await updateResource(
       collectionName: User.collection,
       recordId: currentUser.id,
       data: {'password': newPassword, 'passwordConfirm': newPasswordConfirm},
     );
   }
 
-  void logout() {
-    _accessToken = '';
-    _refreshToken = '';
-    _sessionId = '';
-    _prefs.remove(SharedPreferencesKeys.userToken);
-    _prefs.remove(_refreshTokenKey);
-    _prefs.remove(_sessionIdKey);
-    _prefs.remove(SharedPreferencesKeys.userId);
+  Future<void> logout() async {
+    try {
+      if (_accessToken.isNotEmpty) {
+        await _requestJson('/api/v2/auth/logout', method: 'POST');
+      }
+    } finally {
+      _accessToken = '';
+      _refreshToken = '';
+      _sessionId = '';
+      await _prefs.remove(SharedPreferencesKeys.userToken);
+      await _prefs.remove(_refreshTokenKey);
+      await _prefs.remove(_sessionIdKey);
+      await _prefs.remove(SharedPreferencesKeys.userId);
+    }
   }
 
   Future<PagedResult<ApiRecord>> getCalculators({
@@ -255,7 +261,99 @@ class BackendApiService extends GetxService {
     );
   }
 
-  Future<ApiRecord> createRecord({
+  Future<PagedResult<ApiRecord>> getDrugs({
+    int page = 1,
+    int perPage = 30,
+    String? search,
+    String? status,
+    String? reviewStatus,
+    String? drugClassId,
+    String? therapeuticCategoryId,
+    String? route,
+    String? pregnancyCategory,
+    bool? whoEml,
+    bool? antimicrobial,
+    String sort = 'name',
+    String order = 'asc',
+  }) async {
+    final safePage = page < 1 ? 1 : page;
+    final safePerPage = perPage < 1 ? 1 : perPage;
+    final response = await _requestJson(
+      '/api/v2/drugs',
+      method: 'GET',
+      query: {
+        'page': '$safePage',
+        'per_page': '$safePerPage',
+        if (search != null && search.trim().isNotEmpty) 'search': search.trim(),
+        if (status != null && status.trim().isNotEmpty) 'status': status.trim(),
+        if (reviewStatus != null && reviewStatus.trim().isNotEmpty)
+          'review_status': reviewStatus.trim(),
+        if (drugClassId != null && drugClassId.trim().isNotEmpty)
+          'drug_class_id': drugClassId.trim(),
+        if (therapeuticCategoryId != null &&
+            therapeuticCategoryId.trim().isNotEmpty)
+          'therapeutic_category_id': therapeuticCategoryId.trim(),
+        if (route != null && route.trim().isNotEmpty) 'route': route.trim(),
+        if (pregnancyCategory != null && pregnancyCategory.trim().isNotEmpty)
+          'pregnancy_category': pregnancyCategory.trim(),
+        if (whoEml != null) 'who_eml': '$whoEml',
+        if (antimicrobial != null) 'antimicrobial': '$antimicrobial',
+        'sort': sort,
+        'order': order,
+      },
+    );
+    final data = _unwrapData(response);
+    final items = (data['items'] as List? ?? const [])
+        .whereType<Map>()
+        .map(
+          (item) => ApiRecord(
+            _normalizeRecord(
+              collectionName: Drug.collection,
+              raw: _asMap(item),
+            ),
+          ),
+        )
+        .toList();
+    return PagedResult<ApiRecord>(
+      page: (data['page'] as num?)?.toInt() ?? safePage,
+      perPage: (data['per_page'] as num?)?.toInt() ?? safePerPage,
+      totalItems: (data['total_items'] as num?)?.toInt() ?? items.length,
+      totalPages: (data['total_pages'] as num?)?.toInt() ?? 0,
+      items: items,
+    );
+  }
+
+  Future<ApiRecord?> getDrug(String drugId) async {
+    try {
+      final response = await _requestJson(
+        '/api/v2/drugs/$drugId',
+        method: 'GET',
+      );
+      return ApiRecord(
+        _normalizeRecord(
+          collectionName: Drug.collection,
+          raw: _unwrapData(response),
+        ),
+      );
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<ApiRecord> recordDrugUsage(String drugId) async {
+    final response = await _requestJson(
+      '/api/v2/drugs/$drugId/usage',
+      method: 'POST',
+    );
+    return ApiRecord(
+      _normalizeRecord(
+        collectionName: DrugUsageLog.collection,
+        raw: _unwrapData(response),
+      ),
+    );
+  }
+
+  Future<ApiRecord> createResource({
     required String collectionName,
     required Map<String, dynamic> data,
     List<http.MultipartFile>? files,
@@ -265,24 +363,27 @@ class BackendApiService extends GetxService {
     }
 
     if (files != null && files.isNotEmpty) {
+      throw Exception('File uploads are not supported by the backend API');
+    }
+    final typedPath = _typedCollectionPath(collectionName);
+    if (typedPath == null) {
       throw Exception(
-        'File uploads are not supported by the backend compatibility API',
+        'No typed backend endpoint is registered for $collectionName',
       );
     }
-
     final response = await _requestJson(
-      '/api/v1/collections/$collectionName/records',
+      typedPath,
       method: 'POST',
       body: _normalizeOutgoingPayload(data),
     );
 
-    final item = _asMap(response['item'] ?? response['data']);
+    final item = _asMap(response['item'] ?? _unwrapData(response));
     return ApiRecord(
       _normalizeRecord(collectionName: collectionName, raw: item),
     );
   }
 
-  Future<PagedResult<ApiRecord>> getRecordList({
+  Future<PagedResult<ApiRecord>> getResourceList({
     required String collectionName,
     int page = 1,
     int perPage = 30,
@@ -299,24 +400,30 @@ class BackendApiService extends GetxService {
         sort: sort,
       );
     }
+    if (collectionName == Drug.collection) {
+      return getDrugs(page: page, perPage: perPage);
+    }
 
     final safePage = page < 1 ? 1 : page;
     final safePerPage = perPage < 1 ? 1 : perPage;
-    final query = <String, String>{
-      'page': '$safePage',
-      'per_page': '$safePerPage',
-      if (filter != null && filter.trim().isNotEmpty) 'filter': filter.trim(),
-      if (sort != null && sort.trim().isNotEmpty) 'sort': sort.trim(),
-      if (expand != null && expand.trim().isNotEmpty) 'expand': expand.trim(),
-    };
-
+    final typedPath = _typedCollectionPath(collectionName);
+    if (typedPath == null) {
+      throw Exception(
+        'No typed backend endpoint is registered for $collectionName',
+      );
+    }
     final response = await _requestJson(
-      '/api/v1/collections/$collectionName/records',
+      typedPath,
       method: 'GET',
-      query: query,
+      query: {
+        'page': '$safePage',
+        'per_page': '$safePerPage',
+        ..._structuredQueryFromLegacyArguments(filter: filter, sort: sort),
+      },
     );
 
-    final rawItems = (response['items'] as List? ?? const [])
+    final responseData = _unwrapData(response);
+    final rawItems = (responseData['items'] as List? ?? const [])
         .whereType<Map>()
         .map((item) {
           return _normalizeRecord(
@@ -327,12 +434,12 @@ class BackendApiService extends GetxService {
         .toList();
 
     final totalItems =
-        (response['total_items'] as num?)?.toInt() ??
-        (response['totalItems'] as num?)?.toInt() ??
+        (responseData['total_items'] as num?)?.toInt() ??
+        (responseData['totalItems'] as num?)?.toInt() ??
         rawItems.length;
     final totalPages =
-        (response['total_pages'] as num?)?.toInt() ??
-        (response['totalPages'] as num?)?.toInt() ??
+        (responseData['total_pages'] as num?)?.toInt() ??
+        (responseData['totalPages'] as num?)?.toInt() ??
         (totalItems == 0 ? 0 : (totalItems / safePerPage).ceil());
 
     return PagedResult<ApiRecord>(
@@ -344,14 +451,14 @@ class BackendApiService extends GetxService {
     );
   }
 
-  Future<List<ApiRecord>> getFullList({
+  Future<List<ApiRecord>> getFullResourceList({
     required String collectionName,
     int batch = 100,
     String? filter,
     String? sort,
     String? expand,
   }) async {
-    final result = await getRecordList(
+    final result = await getResourceList(
       collectionName: collectionName,
       page: 1,
       perPage: batch,
@@ -362,7 +469,7 @@ class BackendApiService extends GetxService {
     return result.items;
   }
 
-  Future<ApiRecord?> getRecord({
+  Future<ApiRecord?> getResource({
     required String collectionName,
     required String recordId,
     String? expand,
@@ -373,12 +480,18 @@ class BackendApiService extends GetxService {
     }
 
     try {
+      final typedPath = _typedCollectionPath(collectionName);
+      if (typedPath == null) {
+        throw Exception(
+          'No typed backend endpoint is registered for $collectionName',
+        );
+      }
       final response = await _requestJson(
-        '/api/v1/collections/$collectionName/records/$recordId',
+        '$typedPath/$recordId',
         method: 'GET',
       );
 
-      final item = _asMap(response['item'] ?? response['data']);
+      final item = _asMap(response['item'] ?? _unwrapData(response));
       return ApiRecord(
         _normalizeRecord(collectionName: collectionName, raw: item),
       );
@@ -387,12 +500,12 @@ class BackendApiService extends GetxService {
     }
   }
 
-  Future<ApiRecord> getFirstListItem({
+  Future<ApiRecord> getFirstResourceItem({
     required String collectionName,
     required String filter,
     String? expand,
   }) async {
-    final result = await getRecordList(
+    final result = await getResourceList(
       collectionName: collectionName,
       page: 1,
       perPage: 1,
@@ -407,7 +520,7 @@ class BackendApiService extends GetxService {
     return result.items.first;
   }
 
-  Future<ApiRecord> updateRecord({
+  Future<ApiRecord> updateResource({
     required String collectionName,
     required String recordId,
     required Map<String, dynamic> data,
@@ -418,24 +531,28 @@ class BackendApiService extends GetxService {
     }
 
     if (files != null && files.isNotEmpty) {
-      throw Exception(
-        'File uploads are not supported by the backend compatibility API',
-      );
+      throw Exception('File uploads are not supported by the backend API');
     }
 
+    final typedPath = _typedCollectionPath(collectionName);
+    if (typedPath == null) {
+      throw Exception(
+        'No typed backend endpoint is registered for $collectionName',
+      );
+    }
     final response = await _requestJson(
-      '/api/v1/collections/$collectionName/records/$recordId',
+      '$typedPath/$recordId',
       method: 'PATCH',
       body: _normalizeOutgoingPayload(data),
     );
 
-    final item = _asMap(response['item'] ?? response['data']);
+    final item = _asMap(response['item'] ?? _unwrapData(response));
     return ApiRecord(
       _normalizeRecord(collectionName: collectionName, raw: item),
     );
   }
 
-  Future<void> deleteRecord({
+  Future<void> deleteResource({
     required String collectionName,
     required String recordId,
   }) async {
@@ -446,13 +563,16 @@ class BackendApiService extends GetxService {
       return;
     }
 
-    await _requestJson(
-      '/api/v1/collections/$collectionName/records/$recordId',
-      method: 'DELETE',
-    );
+    final typedPath = _typedCollectionPath(collectionName);
+    if (typedPath == null) {
+      throw Exception(
+        'No typed backend endpoint is registered for $collectionName',
+      );
+    }
+    await _requestJson('$typedPath/$recordId', method: 'DELETE');
   }
 
-  Future<ApiRecord> upsertRecord({
+  Future<ApiRecord> upsertResource({
     required String collectionName,
     required Map<String, dynamic> data,
     String idField = 'id',
@@ -460,12 +580,12 @@ class BackendApiService extends GetxService {
   }) async {
     final recordId = data[idField]?.toString();
     if (recordId != null && recordId.isNotEmpty) {
-      final existing = await getRecord(
+      final existing = await getResource(
         collectionName: collectionName,
         recordId: recordId,
       );
       if (existing != null) {
-        return updateRecord(
+        return updateResource(
           collectionName: collectionName,
           recordId: recordId,
           data: data,
@@ -474,7 +594,7 @@ class BackendApiService extends GetxService {
       }
     }
 
-    return createRecord(
+    return createResource(
       collectionName: collectionName,
       data: data,
       files: files,
@@ -493,7 +613,7 @@ class BackendApiService extends GetxService {
       switch (type) {
         case 'create':
           results.add(
-            await createRecord(
+            await createResource(
               collectionName: collection,
               data: Map<String, dynamic>.from(operation['data'] as Map),
             ),
@@ -501,7 +621,7 @@ class BackendApiService extends GetxService {
           break;
         case 'update':
           results.add(
-            await updateRecord(
+            await updateResource(
               collectionName: collection,
               recordId: operation['id'].toString(),
               data: Map<String, dynamic>.from(operation['data'] as Map),
@@ -509,7 +629,7 @@ class BackendApiService extends GetxService {
           );
           break;
         case 'delete':
-          await deleteRecord(
+          await deleteResource(
             collectionName: collection,
             recordId: operation['id'].toString(),
           );
@@ -517,7 +637,7 @@ class BackendApiService extends GetxService {
           break;
         case 'upsert':
           results.add(
-            await upsertRecord(
+            await upsertResource(
               collectionName: collection,
               data: Map<String, dynamic>.from(operation['data'] as Map),
             ),
@@ -691,7 +811,7 @@ class BackendApiService extends GetxService {
     String collectionName,
     String recordId,
   ) async {
-    // The backend compatibility API does not expose public usage counter mutation.
+    // The backend API does not expose public usage counter mutation.
   }
 
   Future<Map<String, dynamic>> _requestJson(
@@ -1487,6 +1607,91 @@ class BackendApiService extends GetxService {
       totalPages: totalPages,
       items: paged.map(ApiRecord.new).toList(),
     );
+  }
+
+  String? _typedCollectionPath(String collectionName) {
+    return switch (collectionName) {
+      Drug.collection => '/api/v2/drugs',
+      DrugCategory.collection => '/api/v2/drug-categories',
+      DrugTag.collection => '/api/v2/drug-tags',
+      DrugClass.collection => '/api/v2/drug-classes',
+      TherapeuticCategory.collection => '/api/v2/therapeutic-categories',
+      'medical_guidelines' => '/api/v2/medical-guidelines',
+      'abbreviations' => '/api/v2/abbreviations',
+      'emergency_protocols' => '/api/v2/emergency-protocols',
+      'faqs' => '/api/v2/faqs',
+      'faq_tags' => '/api/v2/faq-tags',
+      'documentation' => '/api/v2/documentation',
+      'generic_pages' => '/api/v2/pages',
+      'guideline_categories' => '/api/v2/guideline-categories',
+      'guideline_tags' => '/api/v2/guideline-tags',
+      'guideline_index' => '/api/v2/guideline-index',
+      'consultants' => '/api/v2/consultants',
+      'health_sub_regions' => '/api/v2/health-sub-regions',
+      'health_facilities' => '/api/v2/facilities',
+      'regions' => '/api/v2/regions',
+      'districts' => '/api/v2/districts',
+      'health_sub_districts' => '/api/v2/health-sub-districts',
+      'counties' => '/api/v2/counties',
+      'subcounties' => '/api/v2/subcounties',
+      'parishes' => '/api/v2/parishes',
+      'facility_levels' => '/api/v2/facility-levels',
+      'ownership_types' => '/api/v2/ownership-types',
+      'authorities' => '/api/v2/authorities',
+      'ministry_directory' => '/api/v2/ministry-directory',
+      'languages' => '/api/v2/reference-languages',
+      'users' => '/api/v2/users',
+      'roles' => '/api/v2/roles',
+      'notifications' => '/api/v2/notifications',
+      'notification_templates' => '/api/v2/notification-templates',
+      'notification_campaigns' => '/api/v2/notification-campaigns',
+      'support_tickets' => '/api/v2/support-tickets',
+      'support_ticket_replies' => '/api/v2/support-ticket-replies',
+      'conversations' => '/api/v2/conversations',
+      'messages' => '/api/v2/messages',
+      'guideline_usage_logs' => '/api/v2/guideline-usage',
+      'abbreviation_usage_logs' => '/api/v2/abbreviation-usage',
+      'consultant_usage_logs' => '/api/v2/consultant-usage',
+      'facility_usage_logs' => '/api/v2/facility-usage',
+      'ai_usage_logs' => '/api/v2/ai-usage',
+      _ => null,
+    };
+  }
+
+  Map<String, String> _structuredQueryFromLegacyArguments({
+    String? filter,
+    String? sort,
+  }) {
+    final query = <String, String>{};
+    final expression = filter?.trim() ?? '';
+    if (expression.isNotEmpty) {
+      final searchMatch = RegExp(
+        r'[A-Za-z0-9_]+\s*~\s*"([^"]+)"',
+      ).firstMatch(expression);
+      if (searchMatch != null) {
+        query['search'] = searchMatch.group(1)!;
+      }
+
+      if (!expression.contains('||')) {
+        final equalityPattern = RegExp(
+          r'([A-Za-z0-9_]+)\s*=\s*(?:"([^"]*)"|([A-Za-z0-9_.-]+))',
+        );
+        for (final match in equalityPattern.allMatches(expression)) {
+          final rawKey = match.group(1)!;
+          final key = switch (rawKey) {
+            'conversation' => 'conversation_id',
+            'guideline_id' => 'guideline_document_id',
+            'user' => 'user_id',
+            _ => rawKey,
+          };
+          query[key] = match.group(2) ?? match.group(3) ?? '';
+        }
+      }
+    }
+
+    // Domain endpoints own their sort allowlists. Until a domain exposes one,
+    // retain its server-side default instead of forwarding expression syntax.
+    return query;
   }
 
   String _toSnakeCase(String value) {

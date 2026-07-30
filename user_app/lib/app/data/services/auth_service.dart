@@ -126,7 +126,7 @@ class AuthService extends GetxService {
   Future<void> logout() async {
     try {
       // Clear all authentication-related shared preferences
-      BackendApiService.to.logout();
+      await BackendApiService.to.logout();
     } catch (_) {
     } finally {
       await clearUser();

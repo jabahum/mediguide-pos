@@ -3,12 +3,12 @@
 import 'package:user_app/app/data/models/api_record.dart';
 import 'base_model.dart';
 
-/// Settings model based on legacy collection API settings collection
+/// Settings model based on backend resource API settings collection
 /// Handles application configuration and settings storage
 class Settings extends BaseModel {
   Settings(super.data);
 
-  /// legacy collection API collection name
+  /// backend resource API collection name
   static const String collection = 'settings';
 
   // Self-registration for dynamic model creation
@@ -17,7 +17,7 @@ class Settings extends BaseModel {
     return true;
   })();
 
-  /// Create Settings from legacy collection API record
+  /// Create Settings from backend resource API record
   static Settings fromRecord(ApiRecord record) => Settings(record.data);
 
   /// Create JSON for new settings record (excludes system fields)

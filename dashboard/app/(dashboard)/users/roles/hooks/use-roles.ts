@@ -24,7 +24,7 @@ export function useRoles(): UseRolesReturn {
   })
   const [error, setError] = useState<Error | null>(null)
 
-  const pb = useMemo(() => getBackendClient(), [])
+  const backend = useMemo(() => getBackendClient(), [])
 
   // Fetch all roles
   const fetchRoles = useCallback(async () => {
@@ -32,7 +32,7 @@ export function useRoles(): UseRolesReturn {
       setLoading(prev => ({ ...prev, roles: true }))
       setError(null)
 
-      const rolesList = await pb.collection('roles').getFullList<Role>({
+      const rolesList = await backend.resource('roles').getFullList<Role>({
         sort: '-created',
       })
 
@@ -44,7 +44,7 @@ export function useRoles(): UseRolesReturn {
     } finally {
       setLoading(prev => ({ ...prev, roles: false }))
     }
-  }, [pb])
+  }, [ backend])
 
   // Fetch role statistics
   const fetchStats = useCallback(async () => {
@@ -52,12 +52,12 @@ export function useRoles(): UseRolesReturn {
       setLoading(prev => ({ ...prev, stats: true }))
       
       // Get roles count
-      const rolesData = await pb.collection('roles').getList(1, 1)
+      const rolesData = await backend.resource('roles').getList(1, 1)
       const totalRoles = rolesData.totalItems
       const activeRoles = roles.filter(role => role.isActive).length
 
       // Get users count
-      const usersData = await pb.collection('users').getList(1, 1)
+      const usersData = await backend.resource('users').getList(1, 1)
       const totalUsers = usersData.totalItems
 
       // Get most assigned role
@@ -68,7 +68,7 @@ export function useRoles(): UseRolesReturn {
         const roleCounts = new Map<string, number>()
         
         // Get all users with their roles
-        const allUsers = await pb.collection('users').getFullList({
+        const allUsers = await backend.resource('users').getFullList({
           fields: 'role',
         })
         
@@ -114,7 +114,7 @@ export function useRoles(): UseRolesReturn {
     } finally {
       setLoading(prev => ({ ...prev, stats: false }))
     }
-  }, [pb, roles])
+  }, [ backend, roles])
 
   // Create new role
   const createRole = useCallback(async (data: CreateRoleFormData & { key: string }): Promise<RoleOperationResult> => {
@@ -122,7 +122,7 @@ export function useRoles(): UseRolesReturn {
       setLoading(prev => ({ ...prev, operation: true }))
 
       // Check if role key already exists
-      const existingRole = await pb.collection('roles').getFirstListItem(`key="${data.key}"`)
+      const existingRole = await backend.resource('roles').getFirstListItem(`key="${data.key}"`)
         .catch(() => null)
 
       if (existingRole) {
@@ -131,7 +131,7 @@ export function useRoles(): UseRolesReturn {
         return { success: false, message: errorMsg }
       }
 
-      const newRole = await pb.collection('roles').create<Role>(data)
+      const newRole = await backend.resource('roles').create<Role>(data)
       
       // Update local state
       setRoles(prev => [newRole, ...prev])
@@ -149,14 +149,14 @@ export function useRoles(): UseRolesReturn {
     } finally {
       setLoading(prev => ({ ...prev, operation: false }))
     }
-  }, [pb, fetchStats])
+  }, [ backend, fetchStats])
 
   // Update existing role
   const updateRole = useCallback(async (id: string, data: EditRoleFormData): Promise<RoleOperationResult> => {
     try {
       setLoading(prev => ({ ...prev, operation: true }))
 
-      const updatedRole = await pb.collection('roles').update<Role>(id, data)
+      const updatedRole = await backend.resource('roles').update<Role>(id, data)
       
       // Update local state
       setRoles(prev => prev.map(role => 
@@ -176,7 +176,7 @@ export function useRoles(): UseRolesReturn {
     } finally {
       setLoading(prev => ({ ...prev, operation: false }))
     }
-  }, [pb, fetchStats])
+  }, [ backend, fetchStats])
 
   // Get role assignment information
   const getRoleAssignmentInfo = useCallback(async (roleId: string): Promise<RoleAssignmentInfo> => {
@@ -187,7 +187,7 @@ export function useRoles(): UseRolesReturn {
       }
 
       // Count users assigned to this role
-      const usersWithRole = await pb.collection('users').getFullList({
+      const usersWithRole = await backend.resource('users').getFullList({
         filter: `role="${role.key}"`,
         fields: 'id,name,email',
       })
@@ -213,7 +213,7 @@ export function useRoles(): UseRolesReturn {
         canDelete: false,
       }
     }
-  }, [pb, roles])
+  }, [ backend, roles])
 
   // Delete role
   const deleteRole = useCallback(async (id: string): Promise<RoleOperationResult> => {
@@ -229,7 +229,7 @@ export function useRoles(): UseRolesReturn {
         return { success: false, message: errorMsg }
       }
 
-      await pb.collection('roles').delete(id)
+      await backend.resource('roles').delete(id)
       
       // Update local state
       setRoles(prev => prev.filter(role => role.id !== id))
@@ -247,7 +247,7 @@ export function useRoles(): UseRolesReturn {
     } finally {
       setLoading(prev => ({ ...prev, operation: false }))
     }
-  }, [pb, fetchStats, getRoleAssignmentInfo])
+  }, [ backend, fetchStats, getRoleAssignmentInfo])
 
   // Refresh all data
   const refresh = useCallback(async () => {

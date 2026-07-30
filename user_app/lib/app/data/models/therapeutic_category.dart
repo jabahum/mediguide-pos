@@ -4,11 +4,11 @@ import 'package:user_app/app/data/models/api_record.dart';
 import '../enums/common_enums.dart';
 import 'base_model.dart';
 
-/// Therapeutic category model based on legacy collection API therapeutic_categories collection
+/// Therapeutic category model based on backend resource API therapeutic_categories collection
 class TherapeuticCategory extends BaseModel {
   TherapeuticCategory(super.data);
 
-  /// legacy collection API collection name
+  /// backend resource API collection name
   static const String collection = 'therapeutic_categories';
 
   // Self-registration for dynamic model creation
@@ -17,7 +17,7 @@ class TherapeuticCategory extends BaseModel {
     return true;
   })();
 
-  /// Create TherapeuticCategory from legacy collection API record
+  /// Create TherapeuticCategory from backend resource API record
   static TherapeuticCategory fromRecord(ApiRecord record) =>
       TherapeuticCategory(record.data);
 

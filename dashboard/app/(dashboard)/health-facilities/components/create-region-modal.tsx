@@ -62,18 +62,18 @@ export function CreateRegionModal({ open, onClose, onSuccess, region }: CreateRe
 
   const onSubmit = async (data: RegionFormValues) => {
     setIsLoading(true)
-    const pb = getBackendClient()
+    const backend = getBackendClient()
 
     try {
       if (isEdit && region) {
-        await pb.collection('regions').update(region.id, {
+        await backend.resource('regions').update(region.id, {
           name: data.name,
           nhpi_code: data.nhpi_code,
           hsdt_code: data.hsdt_code,
         })
         showToast.success("Success", "Region updated successfully")
       } else {
-        await pb.collection('regions').create({
+        await backend.resource('regions').create({
           name: data.name,
           nhpi_code: data.nhpi_code,
           hsdt_code: data.hsdt_code,

@@ -3,11 +3,11 @@
 import 'package:user_app/app/data/models/api_record.dart';
 import 'base_model.dart';
 
-/// Role model based on legacy collection API roles collection
+/// Role model based on backend resource API roles collection
 class Role extends BaseModel {
   Role(super.data);
 
-  /// legacy collection API collection name
+  /// backend resource API collection name
   static const String collection = 'roles';
 
   // Self-registration for dynamic model creation
@@ -16,7 +16,7 @@ class Role extends BaseModel {
     return true;
   })();
 
-  /// Create Role from legacy collection API record
+  /// Create Role from backend resource API record
   static Role fromRecord(ApiRecord record) => Role(record.data);
 
   /// Create JSON for new role record (excludes system fields)

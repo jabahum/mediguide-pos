@@ -9,7 +9,7 @@ import 'message.dart';
 class Conversation extends BaseModel {
   Conversation(super.data);
 
-  /// legacy collection API collection name
+  /// backend resource API collection name
   static const String collection = 'conversations';
 
   // Self-registration for dynamic model creation
@@ -24,7 +24,7 @@ class Conversation extends BaseModel {
     _registered;
   }
 
-  /// Create Conversation from legacy collection API record
+  /// Create Conversation from backend resource API record
   static Conversation fromRecord(ApiRecord record) => Conversation(record.data);
 
   /// Create JSON for new conversation record

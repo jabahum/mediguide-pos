@@ -106,8 +106,8 @@ function normalizeDocument(document: GuidelineDocumentRecord): GuidelineDocument
 
 export class GuidelineDocumentsService {
   static async listDocuments(programArea?: string): Promise<GuidelineDocumentsPage> {
-    const pb = getBackendClient()
-    const data = await pb.send<GuidelineDocumentsPage>("/api/v2/guidelines", {
+    const backend = getBackendClient()
+    const data = await backend.send<GuidelineDocumentsPage>("/api/v2/guidelines", {
       method: "GET",
       query: {
         page: 1,
@@ -126,16 +126,16 @@ export class GuidelineDocumentsService {
     documentId: string,
     payload: CreateGuidelineVersionInput
   ): Promise<GuidelineVersionRecord> {
-    const pb = getBackendClient()
-    return pb.send<GuidelineVersionRecord>(`/api/v2/guidelines/${documentId}/versions`, {
+    const backend = getBackendClient()
+    return backend.send<GuidelineVersionRecord>(`/api/v2/guidelines/${documentId}/versions`, {
       method: "POST",
       body: JSON.stringify(payload),
     })
   }
 
   static async getDocument(documentId: string): Promise<GuidelineDocumentRecord> {
-    const pb = getBackendClient()
-    const document = await pb.send<GuidelineDocumentRecord>(`/api/v2/guidelines/${documentId}`, {
+    const backend = getBackendClient()
+    const document = await backend.send<GuidelineDocumentRecord>(`/api/v2/guidelines/${documentId}`, {
       method: "GET",
     })
     return normalizeDocument(document)
@@ -145,19 +145,19 @@ export class GuidelineDocumentsService {
     versionId: string,
     file: File
   ): Promise<IngestionJobRecord> {
-    const pb = getBackendClient()
+    const backend = getBackendClient()
     const formData = new FormData()
     formData.append("file", file)
 
-    return pb.send<IngestionJobRecord>(`/api/v2/guideline-versions/${versionId}/upload`, {
+    return backend.send<IngestionJobRecord>(`/api/v2/guideline-versions/${versionId}/upload`, {
       method: "POST",
       body: formData,
     })
   }
 
   static async publishVersion(versionId: string): Promise<{ published: boolean }> {
-    const pb = getBackendClient()
-    return pb.send<{ published: boolean }>(`/api/v2/guideline-versions/${versionId}/publish`, {
+    const backend = getBackendClient()
+    return backend.send<{ published: boolean }>(`/api/v2/guideline-versions/${versionId}/publish`, {
       method: "POST",
     })
   }

@@ -41,8 +41,8 @@ export default function CreateDecisionToolPage() {
       }
 
       try {
-        const pb = getBackendClient()
-        const duplicateResult = await pb.collection("calculators").getOne(duplicateId, {
+        const backend = getBackendClient()
+        const duplicateResult = await backend.resource("calculators").getOne(duplicateId, {
           expand: "addedBy"
         }) as CalculatorsResponse
         
@@ -59,8 +59,8 @@ export default function CreateDecisionToolPage() {
 
   const handleSubmit = async (data: Record<string, unknown>) => {
     try {
-      const pb = getBackendClient()
-      const currentUser = pb.authStore.model
+      const backend = getBackendClient()
+      const currentUser = backend.authStore.model
       
       if (!currentUser) {
         throw new Error("User not authenticated")

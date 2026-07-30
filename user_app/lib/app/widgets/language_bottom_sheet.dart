@@ -38,7 +38,7 @@ class LanguageController extends GetxController {
     try {
       isLoading.value = true;
 
-      final response = await BackendApiService.to.getRecordList(
+      final response = await BackendApiService.to.getResourceList(
         collectionName: 'languages',
         filter: 'is_active = true || enabled_for_users = true',
         sort: 'is_default desc, name asc',

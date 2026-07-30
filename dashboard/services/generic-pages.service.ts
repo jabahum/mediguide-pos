@@ -18,9 +18,9 @@ export class GenericPagesService {
    */
   static async getPageByKey(pageKey: string): Promise<TypedGenericPagesResponse | null> {
     try {
-      const pb = getBackendClient()
+      const backend = getBackendClient()
 
-      const records = await pb.collection(Collections.GenericPages).getFullList({
+      const records = await backend.resource(Collections.GenericPages).getFullList({
         filter: `key = "${pageKey}"`
       })
 
@@ -40,7 +40,7 @@ export class GenericPagesService {
     description?: string
   ): Promise<TypedGenericPagesResponse> {
     try {
-      const pb = getBackendClient()
+      const backend = getBackendClient()
 
       const createData = {
         key: key,
@@ -49,7 +49,7 @@ export class GenericPagesService {
         content: null // Start with null content, will be populated when content is added
       }
 
-      const newRecord = await pb.collection(Collections.GenericPages).create(createData)
+      const newRecord = await backend.resource(Collections.GenericPages).create(createData)
       return newRecord as TypedGenericPagesResponse
 
     } catch (error) {
@@ -67,7 +67,7 @@ export class GenericPagesService {
     description?: string
   ): Promise<TypedGenericPagesResponse> {
     try {
-      const pb = getBackendClient()
+      const backend = getBackendClient()
 
       // Find the page
       const page = await this.getPageByKey(pageKey)
@@ -76,7 +76,7 @@ export class GenericPagesService {
       }
 
       // Update the page
-      const updatedRecord = await pb.collection(Collections.GenericPages).update(page.id, {
+      const updatedRecord = await backend.resource(Collections.GenericPages).update(page.id, {
         title,
         description: description || ""
       })
@@ -97,7 +97,7 @@ export class GenericPagesService {
     content: GenericPageContent
   ): Promise<TypedGenericPagesResponse> {
     try {
-      const pb = getBackendClient()
+      const backend = getBackendClient()
 
       // Find the page
       const page = await this.getPageByKey(pageKey)
@@ -133,13 +133,13 @@ export class GenericPagesService {
       // Try update; if PB rejects the JSON field as object, retry with a stringified value.
       let updatedRecord
       try {
-        updatedRecord = await pb.collection(Collections.GenericPages).update(page.id, {
+        updatedRecord = await backend.resource(Collections.GenericPages).update(page.id, {
           content: updatedContent,
         })
       } catch (firstErr) {
         const status = (firstErr as { status?: number })?.status
         console.warn("First PATCH attempt failed (status", status, ") — retrying with stringified JSON field")
-        updatedRecord = await pb.collection(Collections.GenericPages).update(page.id, {
+        updatedRecord = await backend.resource(Collections.GenericPages).update(page.id, {
           content: JSON.stringify(updatedContent),
         })
       }
@@ -173,7 +173,7 @@ export class GenericPagesService {
     content: GenericPageContent
   ): Promise<TypedGenericPagesResponse> {
     try {
-      const pb = getBackendClient()
+      const backend = getBackendClient()
 
       // Find the page
       const page = await this.getPageByKey(pageKey)
@@ -196,7 +196,7 @@ export class GenericPagesService {
       }
 
       // Update the page
-      const updatedRecord = await pb.collection(Collections.GenericPages).update(page.id, {
+      const updatedRecord = await backend.resource(Collections.GenericPages).update(page.id, {
         content: updatedContent
       })
 
@@ -215,7 +215,7 @@ export class GenericPagesService {
     contentKey: string
   ): Promise<TypedGenericPagesResponse> {
     try {
-      const pb = getBackendClient()
+      const backend = getBackendClient()
 
       // Find the page
       const page = await this.getPageByKey(pageKey)
@@ -235,7 +235,7 @@ export class GenericPagesService {
       const { [contentKey]: removed, ...updatedContent } = currentContent
 
       // Update the page
-      const updatedRecord = await pb.collection(Collections.GenericPages).update(page.id, {
+      const updatedRecord = await backend.resource(Collections.GenericPages).update(page.id, {
         content: updatedContent
       })
 
@@ -312,7 +312,7 @@ export class GenericPagesService {
     content: string
   ): Promise<TypedGenericPagesResponse> {
     try {
-      const pb = getBackendClient()
+      const backend = getBackendClient()
 
       // Find the page
       const page = await this.getPageByKey(pageKey)
@@ -321,7 +321,7 @@ export class GenericPagesService {
       }
 
       // Update the page with direct content
-      const updatedRecord = await pb.collection(Collections.GenericPages).update(page.id, {
+      const updatedRecord = await backend.resource(Collections.GenericPages).update(page.id, {
         content: content // Store as simple string
       })
 

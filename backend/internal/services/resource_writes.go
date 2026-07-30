@@ -10,7 +10,7 @@ import (
 )
 
 // createSupportTicket creates a new support ticket owned by the user.
-func (s LegacyCollectionService) createSupportTicket(payload map[string]any, userID string) (*LegacyItemResult, error) {
+func (s ResourceService) createSupportTicket(payload map[string]any, userID string) (*ResourceItemResult, error) {
 	row := map[string]any{
 		"id":          uuid.New(),
 		"user_id":     mustUUID(userID),
@@ -23,7 +23,7 @@ func (s LegacyCollectionService) createSupportTicket(payload map[string]any, use
 		"updated_at":  time.Now().UTC(),
 	}
 	if row["subject"] == "" || row["description"] == "" {
-		return nil, ErrLegacyCollectionInvalid
+		return nil, ErrResourceInvalid
 	}
 	if err := s.DB.Table("support_tickets").Create(&row).Error; err != nil {
 		return nil, err
@@ -32,17 +32,17 @@ func (s LegacyCollectionService) createSupportTicket(payload map[string]any, use
 }
 
 // createSupportTicketReply adds a reply to an existing ticket the user has access to.
-func (s LegacyCollectionService) createSupportTicketReply(payload map[string]any, userID string) (*LegacyItemResult, error) {
+func (s ResourceService) createSupportTicketReply(payload map[string]any, userID string) (*ResourceItemResult, error) {
 	ticketID, err := parsePayloadUUID(payload, "ticket_id")
 	if err != nil {
-		return nil, ErrLegacyCollectionInvalid
+		return nil, ErrResourceInvalid
 	}
 	if err := s.ensureTicketAccess(ticketID, userID); err != nil {
 		return nil, err
 	}
 	message := firstPayloadString(payload, "message")
 	if message == "" {
-		return nil, ErrLegacyCollectionInvalid
+		return nil, ErrResourceInvalid
 	}
 	row := map[string]any{
 		"id":          uuid.New(),
@@ -60,18 +60,18 @@ func (s LegacyCollectionService) createSupportTicketReply(payload map[string]any
 }
 
 // createConversation creates a new conversation between two participants (idempotent).
-func (s LegacyCollectionService) createConversation(payload map[string]any, userID string) (*LegacyItemResult, error) {
+func (s ResourceService) createConversation(payload map[string]any, userID string) (*ResourceItemResult, error) {
 	p1, err := parsePayloadUUIDAny(payload, "participant1_user_id", "participant1")
 	if err != nil {
-		return nil, ErrLegacyCollectionInvalid
+		return nil, ErrResourceInvalid
 	}
 	p2, err := parsePayloadUUIDAny(payload, "participant2_user_id", "participant2")
 	if err != nil {
-		return nil, ErrLegacyCollectionInvalid
+		return nil, ErrResourceInvalid
 	}
 	currentUserID := mustUUID(userID)
 	if p1 != currentUserID && p2 != currentUserID {
-		return nil, ErrLegacyCollectionForbidden
+		return nil, ErrResourceForbidden
 	}
 
 	existingID, found, err := s.findConversationID(p1, p2)
@@ -97,24 +97,24 @@ func (s LegacyCollectionService) createConversation(payload map[string]any, user
 }
 
 // createMessage sends a message in a conversation the user participates in.
-func (s LegacyCollectionService) createMessage(payload map[string]any, userID string) (*LegacyItemResult, error) {
+func (s ResourceService) createMessage(payload map[string]any, userID string) (*ResourceItemResult, error) {
 	conversationID, err := parsePayloadUUIDAny(payload, "conversation_id", "conversation")
 	if err != nil {
-		return nil, ErrLegacyCollectionInvalid
+		return nil, ErrResourceInvalid
 	}
 	if err := s.ensureConversationAccess(conversationID, userID); err != nil {
 		return nil, err
 	}
 	senderID, err := parsePayloadUUIDAny(payload, "sender_user_id", "sender")
 	if err != nil {
-		return nil, ErrLegacyCollectionInvalid
+		return nil, ErrResourceInvalid
 	}
 	if senderID != mustUUID(userID) {
-		return nil, ErrLegacyCollectionForbidden
+		return nil, ErrResourceForbidden
 	}
 	content := firstPayloadString(payload, "content")
 	if content == "" {
-		return nil, ErrLegacyCollectionInvalid
+		return nil, ErrResourceInvalid
 	}
 
 	row := map[string]any{
@@ -148,10 +148,10 @@ func (s LegacyCollectionService) createMessage(payload map[string]any, userID st
 }
 
 // createReadingProgress creates or upserts a reading progress record for the user.
-func (s LegacyCollectionService) createReadingProgress(payload map[string]any, userID string) (*LegacyItemResult, error) {
+func (s ResourceService) createReadingProgress(payload map[string]any, userID string) (*ResourceItemResult, error) {
 	docID, err := parsePayloadUUIDAny(payload, "guideline_document_id", "guideline_id")
 	if err != nil {
-		return nil, ErrLegacyCollectionInvalid
+		return nil, ErrResourceInvalid
 	}
 
 	if existingID, found, err := s.findReadingProgressID(docID, mustUUID(userID)); err != nil {
@@ -178,68 +178,62 @@ func (s LegacyCollectionService) createReadingProgress(payload map[string]any, u
 	return s.Get("reading_progress", row["id"].(uuid.UUID).String(), userID)
 }
 
-// createUsageLog records a usage event for any of the supported log collections.
-func (s LegacyCollectionService) createUsageLog(collection string, payload map[string]any, userID string) (*LegacyItemResult, error) {
+// createUsageLog records a usage event for any of the supported log resources.
+func (s ResourceService) createUsageLog(resource string, payload map[string]any, userID string) (*ResourceItemResult, error) {
 	row := map[string]any{
 		"id":         uuid.New(),
 		"user_id":    mustUUID(userID),
 		"created_at": time.Now().UTC(),
 		"updated_at": time.Now().UTC(),
 	}
-	switch collection {
+	switch resource {
 	case "guideline_usage_logs":
 		id, err := parsePayloadUUIDAny(payload, "guideline_document_id", "guideline_id")
 		if err != nil {
-			return nil, ErrLegacyCollectionInvalid
+			return nil, ErrResourceInvalid
 		}
 		row["guideline_document_id"] = id
-	case "drug_usage_logs":
-		id, err := parsePayloadUUIDAny(payload, "drug_id")
-		if err != nil {
-			return nil, ErrLegacyCollectionInvalid
-		}
-		row["drug_id"] = id
 	case "abbreviation_usage_logs":
 		id, err := parsePayloadUUIDAny(payload, "abbreviation_id")
 		if err != nil {
-			return nil, ErrLegacyCollectionInvalid
+			return nil, ErrResourceInvalid
 		}
 		row["abbreviation_id"] = id
 	case "consultant_usage_logs":
 		id, err := parsePayloadUUIDAny(payload, "consultant_id")
 		if err != nil {
-			return nil, ErrLegacyCollectionInvalid
+			return nil, ErrResourceInvalid
 		}
 		row["consultant_id"] = id
 	case "facility_usage_logs":
 		id, err := parsePayloadUUIDAny(payload, "facility_id")
 		if err != nil {
-			return nil, ErrLegacyCollectionInvalid
+			return nil, ErrResourceInvalid
 		}
 		row["facility_id"] = id
 	case "ai_usage_logs":
 		// no extra fields required
 	default:
-		return nil, ErrLegacyCollectionWrite
+		return nil, ErrResourceWrite
 	}
 
-	if err := s.DB.Table(collection).Create(&row).Error; err != nil {
+	if err := s.DB.Table(resource).Create(&row).Error; err != nil {
 		return nil, err
 	}
-	return s.Get(collection, row["id"].(uuid.UUID).String(), userID)
+	return s.Get(resource, row["id"].(uuid.UUID).String(), userID)
 }
 
 // updateUser applies allowed profile field updates for the authenticated user only.
-func (s LegacyCollectionService) updateUser(id string, payload map[string]any, userID string) (*LegacyItemResult, error) {
+func (s ResourceService) updateUser(id string, payload map[string]any, userID string) (*ResourceItemResult, error) {
 	if id != userID {
-		return nil, ErrLegacyCollectionForbidden
+		return nil, ErrResourceForbidden
 	}
 
 	updates := map[string]any{}
 	if password := firstPayloadString(payload, "password"); password != "" {
 		passwordConfirm := firstPayloadStringAny(payload, "passwordConfirm", "password_confirm")
 		if passwordConfirm != "" && passwordConfirm != password {
-			return nil, ErrLegacyCollectionInvalid
+			return nil, ErrResourceInvalid
 		}
 		hash, err := security.HashPassword(password)
 		if err != nil {
@@ -266,12 +260,12 @@ func (s LegacyCollectionService) updateUser(id string, payload map[string]any, u
 	if specialization, ok := payload["specialization"]; ok {
 		list, err := stringListPayload(specialization)
 		if err != nil {
-			return nil, ErrLegacyCollectionInvalid
+			return nil, ErrResourceInvalid
 		}
 		updates["specialization_json"] = models.StringList(list)
 	}
 	if len(updates) == 0 {
-		return nil, ErrLegacyCollectionInvalid
+		return nil, ErrResourceInvalid
 	}
 	updates["updated_at"] = time.Now().UTC()
 	if err := s.DB.Model(&models.User{}).Where("id = ?", mustUUID(userID)).Updates(updates).Error; err != nil {
@@ -286,14 +280,14 @@ func (s LegacyCollectionService) updateUser(id string, payload map[string]any, u
 	if err != nil {
 		return nil, err
 	}
-	return &LegacyItemResult{Success: true, Collection: "users", Item: item}, nil
+	return &ResourceItemResult{Success: true, Resource: "users", Item: item}, nil
 }
 
 // updateConversation updates the last_activity timestamp for a conversation.
-func (s LegacyCollectionService) updateConversation(id string, payload map[string]any, userID string) (*LegacyItemResult, error) {
+func (s ResourceService) updateConversation(id string, payload map[string]any, userID string) (*ResourceItemResult, error) {
 	conversationID, err := parsePayloadUUIDAny(map[string]any{"id": id}, "id")
 	if err != nil {
-		return nil, ErrLegacyCollectionInvalid
+		return nil, ErrResourceInvalid
 	}
 	if err := s.ensureConversationAccess(conversationID, userID); err != nil {
 		return nil, err
@@ -301,7 +295,7 @@ func (s LegacyCollectionService) updateConversation(id string, payload map[strin
 	updates := map[string]any{}
 	copyNullableStringUpdateAny(payload, updates, "last_activity")
 	if len(updates) == 0 {
-		return nil, ErrLegacyCollectionInvalid
+		return nil, ErrResourceInvalid
 	}
 	updates["updated_at"] = time.Now().UTC()
 	if err := s.DB.Table("conversations").Where("id = ?", conversationID).Updates(updates).Error; err != nil {
@@ -311,10 +305,10 @@ func (s LegacyCollectionService) updateConversation(id string, payload map[strin
 }
 
 // updateMessage applies allowed field updates to a message the user has access to.
-func (s LegacyCollectionService) updateMessage(id string, payload map[string]any, userID string) (*LegacyItemResult, error) {
+func (s ResourceService) updateMessage(id string, payload map[string]any, userID string) (*ResourceItemResult, error) {
 	messageID, err := parsePayloadUUIDAny(map[string]any{"id": id}, "id")
 	if err != nil {
-		return nil, ErrLegacyCollectionInvalid
+		return nil, ErrResourceInvalid
 	}
 	if err := s.ensureMessageAccess(messageID, userID); err != nil {
 		return nil, err
@@ -332,7 +326,7 @@ func (s LegacyCollectionService) updateMessage(id string, payload map[string]any
 	}
 	copyNullableStringUpdateAny(payload, updates, "edited_at")
 	if len(updates) == 0 {
-		return nil, ErrLegacyCollectionInvalid
+		return nil, ErrResourceInvalid
 	}
 	updates["updated_at"] = time.Now().UTC()
 	if err := s.DB.Table("messages").Where("id = ?", messageID).Updates(updates).Error; err != nil {
@@ -342,13 +336,13 @@ func (s LegacyCollectionService) updateMessage(id string, payload map[string]any
 }
 
 // updateReadingProgress applies allowed field updates to a reading progress record.
-func (s LegacyCollectionService) updateReadingProgress(id string, payload map[string]any, userID string) (*LegacyItemResult, error) {
+func (s ResourceService) updateReadingProgress(id string, payload map[string]any, userID string) (*ResourceItemResult, error) {
 	rowID, err := parsePayloadUUIDAny(map[string]any{"id": id}, "id")
 	if err != nil {
-		return nil, ErrLegacyCollectionInvalid
+		return nil, ErrResourceInvalid
 	}
 	if !s.ownsRow("reading_progress", rowID, userID) {
-		return nil, ErrLegacyCollectionForbidden
+		return nil, ErrResourceForbidden
 	}
 	updates := map[string]any{}
 	copyNullableStringUpdateAny(payload, updates, "current_section")
@@ -363,7 +357,7 @@ func (s LegacyCollectionService) updateReadingProgress(id string, payload map[st
 		updates["reading_time_seconds"] = value
 	}
 	if len(updates) == 0 {
-		return nil, ErrLegacyCollectionInvalid
+		return nil, ErrResourceInvalid
 	}
 	updates["updated_at"] = time.Now().UTC()
 	if err := s.DB.Table("reading_progress").Where("id = ?", rowID).Updates(updates).Error; err != nil {

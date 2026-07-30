@@ -3,11 +3,11 @@
 import 'package:user_app/app/data/models/api_record.dart';
 import 'base_model.dart';
 
-/// Parish model based on legacy collection API parishes collection
+/// Parish model based on backend resource API parishes collection
 class Parish extends BaseModel {
   Parish(super.data);
 
-  /// legacy collection API collection name
+  /// backend resource API collection name
   static const String collection = 'parishes';
 
   // Self-registration for dynamic model creation
@@ -16,7 +16,7 @@ class Parish extends BaseModel {
     return true;
   })();
 
-  /// Create Parish from legacy collection API record
+  /// Create Parish from backend resource API record
   static Parish fromRecord(ApiRecord record) => Parish(record.data);
 
   /// Create JSON for new parish record (excludes system fields)

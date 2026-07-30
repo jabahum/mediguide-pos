@@ -142,10 +142,10 @@ export const createGuidelineRowActions = (
       label: "Toggle Publish",
       icon: CheckCircle,
       onClick: async (guideline) => {
-        const pb = getBackendClient()
+        const backend = getBackendClient()
         const nextPublished = !guideline.is_published
         try {
-          await pb.collection("medical_guidelines").update(guideline.id, {
+          await backend.resource("medical_guidelines").update(guideline.id, {
             is_published: nextPublished,
             // When publishing, advance status to "published" unless already archived.
             // When unpublishing, leave status alone so reviewer/draft state survives.
@@ -172,9 +172,9 @@ export const createGuidelineRowActions = (
       label: "Archive",
       icon: Archive,
       onClick: async (guideline) => {
-        const pb = getBackendClient()
+        const backend = getBackendClient()
         try {
-          await pb.collection("medical_guidelines").update(guideline.id, {
+          await backend.resource("medical_guidelines").update(guideline.id, {
             status: "archived",
             is_published: false,
           })
@@ -192,9 +192,9 @@ export const createGuidelineRowActions = (
       label: "Unarchive",
       icon: ArchiveRestore,
       onClick: async (guideline) => {
-        const pb = getBackendClient()
+        const backend = getBackendClient()
         try {
-          await pb.collection("medical_guidelines").update(guideline.id, {
+          await backend.resource("medical_guidelines").update(guideline.id, {
             // Return to draft so it isn't auto-republished — user can publish explicitly.
             status: "draft",
           })
@@ -214,9 +214,9 @@ export const createGuidelineRowActions = (
       icon: Trash2,
       variant: "destructive",
       onClick: async (guideline) => {
-        const pb = getBackendClient()
+        const backend = getBackendClient()
         try {
-          await pb.collection("medical_guidelines").delete(guideline.id)
+          await backend.resource("medical_guidelines").delete(guideline.id)
           await onMutationSuccess?.()
           showToast.success("Success", "Guideline deleted")
         } catch (error) {
@@ -307,7 +307,7 @@ export const createGuidelineBulkActions = (
   options: GuidelineBulkActionsOptions = {}
 ): BulkAction<MedicalGuidelinesWithExpanded>[] => {
   const { onMutationSuccess, canUpdate = false } = options
-  const pb = () => getBackendClient()
+  const backend = () => getBackendClient()
   const actions: BulkAction<MedicalGuidelinesWithExpanded>[] = [
     {
       id: "bulk-publish",
@@ -332,8 +332,8 @@ export const createGuidelineBulkActions = (
         }
 
         const result = await runBulk(targets, (g) =>
-          pb()
-            .collection("medical_guidelines")
+          backend()
+            .resource("medical_guidelines")
             .update(g.id, { is_published: true, status: "published" })
         )
         await onMutationSuccess?.()
@@ -363,7 +363,7 @@ export const createGuidelineBulkActions = (
           return
         }
         const result = await runBulk(targets, (g) =>
-          pb().collection("medical_guidelines").update(g.id, { is_published: false })
+          backend().resource("medical_guidelines").update(g.id, { is_published: false })
         )
         await onMutationSuccess?.()
         reportBulk(result, "Unpublished", "unpublish")
@@ -385,8 +385,8 @@ export const createGuidelineBulkActions = (
           return
         }
         const result = await runBulk(targets, (g) =>
-          pb()
-            .collection("medical_guidelines")
+          backend()
+            .resource("medical_guidelines")
             .update(g.id, { status: "archived", is_published: false })
         )
         await onMutationSuccess?.()

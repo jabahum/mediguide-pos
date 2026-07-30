@@ -122,7 +122,7 @@ abstract class BaseModel extends ApiRecord {
         return null;
       }
 
-      // Handle both single objects and arrays (legacy collection API can return both)
+      // Handle both single objects and arrays (backend resource API can return both)
       Map<String, dynamic>? targetData;
 
       if (relatedData is Map<String, dynamic>) {

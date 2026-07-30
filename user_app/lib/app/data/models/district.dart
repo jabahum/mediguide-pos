@@ -4,11 +4,11 @@ import 'package:user_app/app/data/models/api_record.dart';
 import 'base_model.dart';
 import 'region.dart';
 
-/// District model based on legacy collection API districts collection
+/// District model based on backend resource API districts collection
 class District extends BaseModel {
   District(super.data);
 
-  /// legacy collection API collection name
+  /// backend resource API collection name
   static const String collection = 'districts';
 
   // Self-registration for dynamic model creation
@@ -17,7 +17,7 @@ class District extends BaseModel {
     return true;
   })();
 
-  /// Create District from legacy collection API record
+  /// Create District from backend resource API record
   static District fromRecord(ApiRecord record) => District(record.data);
 
   /// Create JSON for new district record (excludes system fields)

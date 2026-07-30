@@ -23,7 +23,6 @@ type AuthHandler struct{ Service services.AuthService }
 // @Param payload body handlers.RegisterRequest true "Registration payload"
 // @Success 201 {object} handlers.UserEnvelope
 // @Failure 400 {object} handlers.ErrorResponse
-// @Router /api/v1/collections/users/register [post]
 // @Router /api/v2/auth/register [post]
 func (h AuthHandler) Register(c *gin.Context) {
 	var req RegisterRequest
@@ -69,7 +68,6 @@ func (h AuthHandler) Register(c *gin.Context) {
 // @Success 200 {object} handlers.LoginEnvelope
 // @Failure 400 {object} handlers.ErrorResponse
 // @Failure 401 {object} handlers.ErrorResponse
-// @Router /api/v1/collections/users/auth-with-password [post]
 // @Router /api/v2/auth/login [post]
 func (h AuthHandler) Login(c *gin.Context) {
 	var req LoginRequest
@@ -98,7 +96,6 @@ func (h AuthHandler) Login(c *gin.Context) {
 // @Success 200 {object} handlers.LoginEnvelope
 // @Failure 400 {object} handlers.ErrorResponse
 // @Failure 401 {object} handlers.ErrorResponse
-// @Router /api/v1/collections/users/auth-refresh [post]
 // @Router /api/v2/auth/refresh [post]
 func (h AuthHandler) Refresh(c *gin.Context) {
 	var req RefreshRequest
@@ -125,7 +122,6 @@ func (h AuthHandler) Refresh(c *gin.Context) {
 // @Security BearerAuth
 // @Success 200 {object} handlers.LogoutEnvelope
 // @Failure 401 {object} handlers.ErrorResponse
-// @Router /api/v1/collections/users/logout [post]
 // @Router /api/v2/auth/logout [post]
 func (h AuthHandler) Logout(c *gin.Context) {
 	claims := c.MustGet(middleware.ClaimsKey).(*security.Claims)
@@ -149,7 +145,6 @@ func (h AuthHandler) Logout(c *gin.Context) {
 // @Success 200 {object} handlers.UserEnvelope
 // @Failure 404 {object} handlers.ErrorResponse
 // @Failure 401 {object} handlers.ErrorResponse
-// @Router /api/v1/collections/users/me [get]
 // @Router /api/v2/me [get]
 func (h AuthHandler) Me(c *gin.Context) {
 	claims := c.MustGet(middleware.ClaimsKey).(*security.Claims)

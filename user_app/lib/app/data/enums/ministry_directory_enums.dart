@@ -1,4 +1,4 @@
-/// Ministry enum based on legacy collection API ministry_directory collection schema
+/// Ministry enum based on backend resource API ministry_directory collection schema
 enum Ministry {
   ministryOfHealth(label: 'Ministry of Health'),
   ministryOfEducation(label: 'Ministry of Education'),

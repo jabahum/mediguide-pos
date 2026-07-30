@@ -57,14 +57,14 @@ export function CreateSubcountyModal({ open, onClose, onSuccess }: CreateSubcoun
   React.useEffect(() => {
     if (open) {
       const loadData = async () => {
-        const pb = getBackendClient()
+        const backend = getBackendClient()
         try {
           const [countiesData, districtsData] = await Promise.all([
-            pb.collection('counties').getFullList({
+            backend.resource('counties').getFullList({
               sort: 'name',
               expand: 'district',
             }),
-            pb.collection('districts').getFullList({
+            backend.resource('districts').getFullList({
               sort: 'name',
             })
           ])
@@ -81,10 +81,10 @@ export function CreateSubcountyModal({ open, onClose, onSuccess }: CreateSubcoun
 
   const onSubmit = async (data: SubcountyFormValues) => {
     setIsLoading(true)
-    const pb = getBackendClient()
+    const backend = getBackendClient()
 
     try {
-      await pb.collection('subcounties').create({
+      await backend.resource('subcounties').create({
         name: data.name,
         county: data.county,
         district: data.district,

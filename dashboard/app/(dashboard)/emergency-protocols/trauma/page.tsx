@@ -56,7 +56,7 @@ export default function TraumaProtocolsPage() {
 
   const fetchTraumaProtocols = async () => {
     try {
-      const result = await backendClient.collection(Collections.EmergencyProtocols).getList(1, 50, {
+      const result = await backendClient.resource(Collections.EmergencyProtocols).getList(1, 50, {
         filter: "category = 'Trauma' && status = 'active'",
         sort: "priority"
       })

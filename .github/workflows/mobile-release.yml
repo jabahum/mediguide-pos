@@ -57,6 +57,12 @@ jobs:
       - name: Install dependencies
         run: flutter pub get
 
+      - name: Verify generated backend contracts
+        run: |
+          dart run tool/generate_backend_contracts.dart
+          dart format lib/app/data/contracts/generated/backend_contracts.dart
+          git diff --exit-code -- lib/app/data/contracts/generated/backend_contracts.dart
+
       - name: Check formatting
         run: dart format --output=none --set-exit-if-changed lib test
 

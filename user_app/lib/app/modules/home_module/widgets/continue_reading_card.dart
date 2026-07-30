@@ -35,7 +35,7 @@ class _ContinueReadingCardState extends State<ContinueReadingCard> {
 
   Future<void> _loadGuidelineTitle() async {
     try {
-      final record = await BackendApiService.to.getRecord(
+      final record = await BackendApiService.to.getResource(
         collectionName: Guideline.collection,
         recordId: widget.progress.guidelineId,
       );

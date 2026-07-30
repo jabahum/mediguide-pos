@@ -4,11 +4,11 @@ import 'package:user_app/app/data/models/api_record.dart';
 import 'base_model.dart';
 import 'district.dart';
 
-/// County model based on legacy collection API counties collection
+/// County model based on backend resource API counties collection
 class County extends BaseModel {
   County(super.data);
 
-  /// legacy collection API collection name
+  /// backend resource API collection name
   static const String collection = 'counties';
 
   // Self-registration for dynamic model creation
@@ -17,7 +17,7 @@ class County extends BaseModel {
     return true;
   })();
 
-  /// Create County from legacy collection API record
+  /// Create County from backend resource API record
   static County fromRecord(ApiRecord record) => County(record.data);
 
   /// Create JSON for new county record (excludes system fields)

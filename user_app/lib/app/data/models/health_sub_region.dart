@@ -4,11 +4,11 @@ import 'package:user_app/app/data/models/api_record.dart';
 import 'base_model.dart';
 import 'region.dart';
 
-/// Health sub-region model based on legacy collection API health_sub_regions collection
+/// Health sub-region model based on backend resource API health_sub_regions collection
 class HealthSubRegion extends BaseModel {
   HealthSubRegion(super.data);
 
-  /// legacy collection API collection name
+  /// backend resource API collection name
   static const String collection = 'health_sub_regions';
 
   // Self-registration for dynamic model creation
@@ -17,7 +17,7 @@ class HealthSubRegion extends BaseModel {
     return true;
   })();
 
-  /// Create HealthSubRegion from legacy collection API record
+  /// Create HealthSubRegion from backend resource API record
   static HealthSubRegion fromRecord(ApiRecord record) =>
       HealthSubRegion(record.data);
 

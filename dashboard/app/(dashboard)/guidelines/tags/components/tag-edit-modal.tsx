@@ -80,14 +80,14 @@ export function TagEditModal({
     setIsSubmitting(true)
     
     try {
-      const pb = getBackendClient()
+      const backend = getBackendClient()
       
       const tagData = {
         name: values.name.trim(),
         description: values.description?.trim() || "",
       }
 
-      await pb.collection("guideline_tags").update(tag.id, tagData)
+      await backend.resource("guideline_tags").update(tag.id, tagData)
 
       showToast.success("Tag updated", "Guideline tag has been updated successfully")
       

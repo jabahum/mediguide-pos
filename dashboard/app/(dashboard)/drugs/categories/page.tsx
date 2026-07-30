@@ -127,8 +127,8 @@ export default function DrugCategoriesPage() {
   React.useEffect(() => {
     const fetchAllCategories = async () => {
       try {
-        const pb = getBackendClient()
-        const categories = await pb.collection("drug_categories").getFullList({
+        const backend = getBackendClient()
+        const categories = await backend.resource("drug_categories").getFullList({
           sort: "name"
         })
         setAllCategories(categories as DrugCategoriesResponse[])

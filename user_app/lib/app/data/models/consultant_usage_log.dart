@@ -9,7 +9,7 @@ import 'consultant.dart';
 class ConsultantUsageLog extends BaseModel {
   ConsultantUsageLog(super.data);
 
-  /// legacy collection API collection name
+  /// backend resource API collection name
   static const String collection = 'consultant_usage_logs';
 
   // Self-registration for dynamic model creation
@@ -18,7 +18,7 @@ class ConsultantUsageLog extends BaseModel {
     return true;
   })();
 
-  /// Create ConsultantUsageLog from legacy collection API record
+  /// Create ConsultantUsageLog from backend resource API record
   static ConsultantUsageLog fromRecord(ApiRecord record) =>
       ConsultantUsageLog(record.data);
 

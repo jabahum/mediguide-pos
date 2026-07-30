@@ -15,7 +15,7 @@ import { getBackendClient } from "@/lib/backend-client"
 import { showToast } from "@/lib/toast"
 import { downloadJson } from "@/lib/client-download"
 
-const pb = getBackendClient()
+const backend = getBackendClient()
 
 function getExportFilename(prefix: string) {
   return `${prefix}-${new Date().toISOString().slice(0, 10)}.json`
@@ -27,7 +27,7 @@ async function updateToolStatus(
   actionLabel: string
 ) {
   const results = await Promise.allSettled(
-    tools.map((tool) => pb.collection("calculators").update(tool.id, { status }))
+    tools.map((tool) => backend.resource("calculators").update(tool.id, { status }))
   )
 
   const successCount = results.filter((result) => result.status === "fulfilled").length
@@ -48,13 +48,13 @@ async function updateToolStatus(
 }
 
 async function deleteTool(tool: DecisionToolWithRelations) {
-  await pb.collection("calculators").delete(tool.id)
+  await backend.resource("calculators").delete(tool.id)
   showToast.success("Decision Tool Deleted", `"${tool.name}" was deleted`)
 }
 
 async function deleteManyTools(tools: DecisionToolWithRelations[]) {
   const results = await Promise.allSettled(
-    tools.map((tool) => pb.collection("calculators").delete(tool.id))
+    tools.map((tool) => backend.resource("calculators").delete(tool.id))
   )
 
   const successCount = results.filter((result) => result.status === "fulfilled").length

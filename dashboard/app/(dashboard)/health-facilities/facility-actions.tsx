@@ -203,7 +203,7 @@ async function showFacilityHierarchy(facility: HealthFacility): Promise<void> {
 }
 
 async function archiveFacility(facility: HealthFacility): Promise<void> {
-  // const pb = getBackendClient()
+  // const backend = getBackendClient()
   try {
     // In a real implementation, you might have a status field to set to 'archived'
     // For now, we'll simulate the archive process
@@ -219,9 +219,9 @@ async function archiveFacility(facility: HealthFacility): Promise<void> {
 }
 
 async function deleteFacility(facility: HealthFacility): Promise<void> {
-  const pb = getBackendClient()
+  const backend = getBackendClient()
   try {
-    await pb.collection('health_facilities').delete(facility.id)
+    await backend.resource('health_facilities').delete(facility.id)
     
     showToast.success(
       "Facility Deleted",

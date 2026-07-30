@@ -36,8 +36,8 @@ export function SelectWithCreate({
 
   const fetchOptions = React.useCallback(async () => {
     try {
-      const pb = getBackendClient()
-      const records = await pb.collection(collection).getFullList({
+      const backend = getBackendClient()
+      const records = await backend.resource(collection).getFullList({
         filter: "status = 'active'",
         sort: "sort_order,name"
       })
@@ -102,8 +102,8 @@ export function useSelectWithCreate(collection: string) {
 
   const fetchOptions = React.useCallback(async () => {
     try {
-      const pb = getBackendClient()
-      const records = await pb.collection(collection).getFullList({
+      const backend = getBackendClient()
+      const records = await backend.resource(collection).getFullList({
         filter: "status = 'active'",
         sort: "sort_order,name"
       })

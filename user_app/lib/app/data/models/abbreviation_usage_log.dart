@@ -9,7 +9,7 @@ import 'abbreviation.dart';
 class AbbreviationUsageLog extends BaseModel {
   AbbreviationUsageLog(super.data);
 
-  /// legacy collection API collection name
+  /// backend resource API collection name
   static const String collection = 'abbreviation_usage_logs';
 
   // Self-registration for dynamic model creation
@@ -18,7 +18,7 @@ class AbbreviationUsageLog extends BaseModel {
     return true;
   })();
 
-  /// Create AbbreviationUsageLog from legacy collection API record
+  /// Create AbbreviationUsageLog from backend resource API record
   static AbbreviationUsageLog fromRecord(ApiRecord record) =>
       AbbreviationUsageLog(record.data);
 

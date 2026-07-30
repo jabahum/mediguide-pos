@@ -68,8 +68,8 @@ export default function DecisionToolViewPage({ params }: DecisionToolViewPagePro
   const handleDelete = async () => {
     if (window.confirm("Are you sure you want to delete this decision tool? This action cannot be undone.")) {
       try {
-        const pb = getBackendClient()
-        await pb.collection("calculators").delete(id)
+        const backend = getBackendClient()
+        await backend.resource("calculators").delete(id)
         router.push(getListPath(tool?.type))
       } catch (error) {
         console.error("Failed to delete decision tool:", error)

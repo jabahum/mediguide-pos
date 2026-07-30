@@ -43,7 +43,7 @@ export class SupportTicketsService {
     perPage: number
   }> {
     try {
-      const pb = getBackendClient()
+      const backend = getBackendClient()
       
       const defaultOptions = {
         expand: "user_id,assigned_to",
@@ -53,7 +53,7 @@ export class SupportTicketsService {
         ...options
       }
 
-      const result = await pb.collection(Collections.SupportTickets).getList(
+      const result = await backend.resource(Collections.SupportTickets).getList(
         defaultOptions.page,
         defaultOptions.perPage,
         {
@@ -81,9 +81,9 @@ export class SupportTicketsService {
    */
   static async getTicketById(id: string): Promise<SupportTicketsWithExpanded> {
     try {
-      const pb = getBackendClient()
+      const backend = getBackendClient()
       
-      const ticket = await pb.collection(Collections.SupportTickets).getOne(id, {
+      const ticket = await backend.resource(Collections.SupportTickets).getOne(id, {
         expand: "user_id,assigned_to"
       })
 
@@ -99,14 +99,14 @@ export class SupportTicketsService {
    */
   static async createTicket(data: CreateSupportTicketData): Promise<SupportTicketsResponse> {
     try {
-      const pb = getBackendClient()
+      const backend = getBackendClient()
       
       const ticketData = {
         ...data,
         status: 'open' as SupportTicketsStatusOptions,
       }
 
-      const ticket = await pb.collection(Collections.SupportTickets).create(ticketData)
+      const ticket = await backend.resource(Collections.SupportTickets).create(ticketData)
       return ticket as SupportTicketsResponse
     } catch (error) {
       console.error('Error creating ticket:', error)
@@ -119,9 +119,9 @@ export class SupportTicketsService {
    */
   static async updateTicket(id: string, data: UpdateSupportTicketData): Promise<SupportTicketsResponse> {
     try {
-      const pb = getBackendClient()
+      const backend = getBackendClient()
       
-      const ticket = await pb.collection(Collections.SupportTickets).update(id, data)
+      const ticket = await backend.resource(Collections.SupportTickets).update(id, data)
       return ticket as SupportTicketsResponse
     } catch (error) {
       console.error('Error updating ticket:', error)
@@ -155,9 +155,9 @@ export class SupportTicketsService {
    */
   static async deleteTicket(id: string): Promise<boolean> {
     try {
-      const pb = getBackendClient()
+      const backend = getBackendClient()
       
-      await pb.collection(Collections.SupportTickets).delete(id)
+      await backend.resource(Collections.SupportTickets).delete(id)
       return true
     } catch (error) {
       console.error('Error deleting ticket:', error)
@@ -170,9 +170,9 @@ export class SupportTicketsService {
    */
   static async getTicketReplies(ticketId: string): Promise<SupportTicketRepliesWithExpanded[]> {
     try {
-      const pb = getBackendClient()
+      const backend = getBackendClient()
       
-      const replies = await pb.collection(Collections.SupportTicketReplies).getFullList({
+      const replies = await backend.resource(Collections.SupportTicketReplies).getFullList({
         filter: `ticket_id="${ticketId}"`,
         sort: "created",
         expand: "user_id"
@@ -190,9 +190,9 @@ export class SupportTicketsService {
    */
   static async addReply(data: CreateTicketReplyData): Promise<SupportTicketRepliesResponse> {
     try {
-      const pb = getBackendClient()
+      const backend = getBackendClient()
       
-      const reply = await pb.collection(Collections.SupportTicketReplies).create(data)
+      const reply = await backend.resource(Collections.SupportTicketReplies).create(data)
       return reply as SupportTicketRepliesResponse
     } catch (error) {
       console.error('Error adding reply:', error)
@@ -217,10 +217,10 @@ export class SupportTicketsService {
    */
   static async getTicketStats(): Promise<TicketStats> {
     try {
-      const pb = getBackendClient()
+      const backend = getBackendClient()
       
       // Get all tickets to calculate stats
-      const allTickets = await pb.collection(Collections.SupportTickets).getFullList()
+      const allTickets = await backend.resource(Collections.SupportTickets).getFullList()
       
       const stats: TicketStats = {
         total: allTickets.length,
@@ -315,12 +315,12 @@ export class SupportTicketsService {
    */
   static async bulkUpdateTickets(operation: BulkTicketOperation): Promise<SupportTicketsResponse[]> {
     try {
-      const pb = getBackendClient()
+      const backend = getBackendClient()
       const results: SupportTicketsResponse[] = []
 
       for (const ticketId of operation.ticket_ids) {
         try {
-          const result = await pb.collection(Collections.SupportTickets).update(ticketId, operation.data)
+          const result = await backend.resource(Collections.SupportTickets).update(ticketId, operation.data)
           results.push(result as SupportTicketsResponse)
         } catch (error) {
           console.error(`Error updating ticket ${ticketId}:`, error)
@@ -340,10 +340,10 @@ export class SupportTicketsService {
    */
   static async getAssignableUsers(): Promise<UsersResponse[]> {
     try {
-      const pb = getBackendClient()
+      const backend = getBackendClient()
       
       // Get users with admin, contentManager, or other relevant roles
-      const users = await pb.collection(Collections.Users).getFullList({
+      const users = await backend.resource(Collections.Users).getFullList({
         filter: 'status="active"',
         sort: "name"
       })

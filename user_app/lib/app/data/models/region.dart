@@ -3,11 +3,11 @@
 import 'package:user_app/app/data/models/api_record.dart';
 import 'base_model.dart';
 
-/// Region model based on legacy collection API regions collection
+/// Region model based on backend resource API regions collection
 class Region extends BaseModel {
   Region(super.data);
 
-  /// legacy collection API collection name
+  /// backend resource API collection name
   static const String collection = 'regions';
 
   // Self-registration for dynamic model creation
@@ -16,7 +16,7 @@ class Region extends BaseModel {
     return true;
   })();
 
-  /// Create Region from legacy collection API record
+  /// Create Region from backend resource API record
   static Region fromRecord(ApiRecord record) => Region(record.data);
 
   /// Create JSON for new region record (excludes system fields)

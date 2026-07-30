@@ -54,9 +54,9 @@ export function CreateCountyModal({ open, onClose, onSuccess }: CreateCountyModa
   React.useEffect(() => {
     if (open) {
       const loadDistricts = async () => {
-        const pb = getBackendClient()
+        const backend = getBackendClient()
         try {
-          const data = await pb.collection('districts').getFullList({
+          const data = await backend.resource('districts').getFullList({
             sort: 'name',
           })
           setDistricts(data as DistrictsResponse[])
@@ -71,10 +71,10 @@ export function CreateCountyModal({ open, onClose, onSuccess }: CreateCountyModa
 
   const onSubmit = async (data: CountyFormValues) => {
     setIsLoading(true)
-    const pb = getBackendClient()
+    const backend = getBackendClient()
 
     try {
-      await pb.collection('counties').create({
+      await backend.resource('counties').create({
         name: data.name,
         district: data.district,
         nhpi_code: data.nhpi_code,

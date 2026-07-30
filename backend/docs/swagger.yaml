@@ -46,6 +46,46 @@ definitions:
         example: https://storage.example.com/path/to/package.zip
         type: string
     type: object
+  handlers.DrugCategoryEnvelope:
+    properties:
+      data:
+        $ref: '#/definitions/models.DrugCategory'
+      success:
+        example: true
+        type: boolean
+    type: object
+  handlers.DrugClassEnvelope:
+    properties:
+      data:
+        $ref: '#/definitions/models.DrugClass'
+      success:
+        example: true
+        type: boolean
+    type: object
+  handlers.DrugEnvelope:
+    properties:
+      data:
+        $ref: '#/definitions/models.Drug'
+      success:
+        example: true
+        type: boolean
+    type: object
+  handlers.DrugTagEnvelope:
+    properties:
+      data:
+        $ref: '#/definitions/models.DrugTag'
+      success:
+        example: true
+        type: boolean
+    type: object
+  handlers.DrugUsageEnvelope:
+    properties:
+      data:
+        $ref: '#/definitions/models.DrugUsageLog'
+      success:
+        example: true
+        type: boolean
+    type: object
   handlers.ErrorResponse:
     properties:
       error:
@@ -89,39 +129,6 @@ definitions:
       success:
         example: true
         type: boolean
-    type: object
-  handlers.LegacyCollectionItemResult:
-    properties:
-      collection:
-        example: medical_guidelines
-        type: string
-      item:
-        $ref: '#/definitions/handlers.JSONMap'
-      success:
-        example: true
-        type: boolean
-    type: object
-  handlers.LegacyCollectionListResult:
-    properties:
-      collection:
-        example: medical_guidelines
-        type: string
-      items:
-        items:
-          $ref: '#/definitions/handlers.JSONMap'
-        type: array
-      page:
-        example: 1
-        type: integer
-      per_page:
-        example: 20
-        type: integer
-      success:
-        example: true
-        type: boolean
-      total_items:
-        example: 1
-        type: integer
     type: object
   handlers.LegacyOverviewResult:
     properties:
@@ -318,6 +325,96 @@ definitions:
         example: true
         type: boolean
     type: object
+  handlers.PaginatedDrugCategoriesEnvelope:
+    properties:
+      data:
+        properties:
+          items:
+            items:
+              $ref: '#/definitions/models.DrugCategory'
+            type: array
+          page:
+            type: integer
+          per_page:
+            type: integer
+          total_items:
+            type: integer
+          total_pages:
+            type: integer
+        type: object
+      success:
+        example: true
+        type: boolean
+    type: object
+  handlers.PaginatedDrugClassesEnvelope:
+    properties:
+      data:
+        properties:
+          items:
+            items:
+              $ref: '#/definitions/models.DrugClass'
+            type: array
+          page:
+            type: integer
+          per_page:
+            type: integer
+          total_items:
+            type: integer
+          total_pages:
+            type: integer
+        type: object
+      success:
+        example: true
+        type: boolean
+    type: object
+  handlers.PaginatedDrugTagsEnvelope:
+    properties:
+      data:
+        properties:
+          items:
+            items:
+              $ref: '#/definitions/models.DrugTag'
+            type: array
+          page:
+            type: integer
+          per_page:
+            type: integer
+          total_items:
+            type: integer
+          total_pages:
+            type: integer
+        type: object
+      success:
+        example: true
+        type: boolean
+    type: object
+  handlers.PaginatedDrugs:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/models.Drug'
+        type: array
+      page:
+        example: 1
+        type: integer
+      per_page:
+        example: 20
+        type: integer
+      total_items:
+        example: 1
+        type: integer
+      total_pages:
+        example: 1
+        type: integer
+    type: object
+  handlers.PaginatedDrugsEnvelope:
+    properties:
+      data:
+        $ref: '#/definitions/handlers.PaginatedDrugs'
+      success:
+        example: true
+        type: boolean
+    type: object
   handlers.PaginatedGuidelineChunks:
     properties:
       items:
@@ -453,6 +550,27 @@ definitions:
         example: true
         type: boolean
     type: object
+  handlers.PaginatedTherapeuticCategoriesEnvelope:
+    properties:
+      data:
+        properties:
+          items:
+            items:
+              $ref: '#/definitions/models.TherapeuticCategory'
+            type: array
+          page:
+            type: integer
+          per_page:
+            type: integer
+          total_items:
+            type: integer
+          total_pages:
+            type: integer
+        type: object
+      success:
+        example: true
+        type: boolean
+    type: object
   handlers.ProtocolRunEnvelope:
     properties:
       data:
@@ -571,6 +689,14 @@ definitions:
         example: true
         type: boolean
     type: object
+  handlers.TherapeuticCategoryEnvelope:
+    properties:
+      data:
+        $ref: '#/definitions/models.TherapeuticCategory'
+      success:
+        example: true
+        type: boolean
+    type: object
   handlers.UpdateMarkdownInput:
     properties:
       content:
@@ -661,6 +787,157 @@ definitions:
       updated_at:
         type: string
       version:
+        type: string
+    type: object
+  models.Drug:
+    properties:
+      adult_dose:
+        type: string
+      antimicrobial_status:
+        type: boolean
+      brand_names:
+        type: string
+      categories_json:
+        items:
+          type: string
+        type: array
+      clinical_notes:
+        type: string
+      contraindications:
+        type: string
+      controlled_substance:
+        type: string
+      created_at:
+        type: string
+      description:
+        type: string
+      drug_class_id:
+        type: string
+      drug_class_name:
+        type: string
+      duration:
+        type: string
+      elderly_dose:
+        type: string
+      frequency:
+        type: string
+      id:
+        type: string
+      indications:
+        type: string
+      max_daily_dose:
+        type: string
+      mechanism_of_action:
+        type: string
+      monitoring_parameters:
+        type: string
+      name:
+        type: string
+      pediatric_dose:
+        type: string
+      pregnancy_category:
+        type: string
+      reference_text:
+        type: string
+      review_status:
+        type: string
+      route_of_administration:
+        type: string
+      search_keywords:
+        type: string
+      side_effects:
+        type: string
+      status:
+        type: string
+      tags_json:
+        items:
+          type: string
+        type: array
+      therapeutic_category_id:
+        type: string
+      therapeutic_category_name:
+        type: string
+      updated_at:
+        type: string
+      usage_count:
+        type: integer
+      warnings:
+        type: string
+      who_eml_status:
+        type: boolean
+    type: object
+  models.DrugCategory:
+    properties:
+      color:
+        type: string
+      created_at:
+        type: string
+      description:
+        type: string
+      icon:
+        type: string
+      id:
+        type: string
+      name:
+        type: string
+      parent_category_id:
+        type: string
+      sort_order:
+        type: integer
+      status:
+        type: string
+      updated_at:
+        type: string
+    type: object
+  models.DrugClass:
+    properties:
+      created_at:
+        type: string
+      description:
+        type: string
+      id:
+        type: string
+      name:
+        type: string
+      sort_order:
+        type: integer
+      status:
+        type: string
+      updated_at:
+        type: string
+    type: object
+  models.DrugTag:
+    properties:
+      color:
+        type: string
+      created_at:
+        type: string
+      description:
+        type: string
+      id:
+        type: string
+      name:
+        type: string
+      sort_order:
+        type: integer
+      status:
+        type: string
+      tag_category:
+        type: string
+      updated_at:
+        type: string
+    type: object
+  models.DrugUsageLog:
+    properties:
+      created_at:
+        type: string
+      drug_id:
+        type: string
+      id:
+        type: string
+      updated_at:
+        type: string
+      user_id:
         type: string
     type: object
   models.GuidelineChunk:
@@ -921,6 +1198,23 @@ definitions:
       version:
         type: string
     type: object
+  models.TherapeuticCategory:
+    properties:
+      created_at:
+        type: string
+      description:
+        type: string
+      id:
+        type: string
+      name:
+        type: string
+      sort_order:
+        type: integer
+      status:
+        type: string
+      updated_at:
+        type: string
+    type: object
   models.User:
     properties:
       address:
@@ -1126,6 +1420,114 @@ definitions:
       version:
         type: string
     type: object
+  services.DrugCategoryInput:
+    properties:
+      color:
+        type: string
+      description:
+        type: string
+      icon:
+        type: string
+      name:
+        type: string
+      parent_category_id:
+        type: string
+      sort_order:
+        type: integer
+      status:
+        type: string
+    type: object
+  services.DrugInput:
+    properties:
+      adult_dose:
+        type: string
+      antimicrobial_status:
+        type: boolean
+      brand_names:
+        type: string
+      categories:
+        items:
+          type: string
+        type: array
+      clinical_notes:
+        type: string
+      contraindications:
+        type: string
+      controlled_substance:
+        type: string
+      description:
+        type: string
+      drug_class_id:
+        type: string
+      duration:
+        type: string
+      elderly_dose:
+        type: string
+      frequency:
+        type: string
+      indications:
+        type: string
+      max_daily_dose:
+        type: string
+      mechanism_of_action:
+        type: string
+      monitoring_parameters:
+        type: string
+      name:
+        type: string
+      pediatric_dose:
+        type: string
+      pregnancy_category:
+        type: string
+      reference_text:
+        type: string
+      review_status:
+        type: string
+      route_of_administration:
+        type: string
+      search_keywords:
+        type: string
+      side_effects:
+        type: string
+      status:
+        type: string
+      tags:
+        items:
+          type: string
+        type: array
+      therapeutic_category_id:
+        type: string
+      warnings:
+        type: string
+      who_eml_status:
+        type: boolean
+    type: object
+  services.DrugNamedReferenceInput:
+    properties:
+      description:
+        type: string
+      name:
+        type: string
+      sort_order:
+        type: integer
+      status:
+        type: string
+    type: object
+  services.DrugTagInput:
+    properties:
+      color:
+        type: string
+      description:
+        type: string
+      name:
+        type: string
+      sort_order:
+        type: integer
+      status:
+        type: string
+      tag_category:
+        type: string
+    type: object
   services.FinishCalculatorUsageInput:
     properties:
       session_end:
@@ -1266,474 +1668,6 @@ info:
   title: MediGuide Backend API
   version: "1.0"
 paths:
-  /api/v1/collections/{collection}/records:
-    get:
-      description: Legacy v1 collection listing endpoint. Some collections are public
-        while others require authentication depending on the collection name.
-      parameters:
-      - description: Legacy collection name
-        enum:
-        - medical_guidelines
-        - drugs
-        - abbreviations
-        - emergency_protocols
-        - faqs
-        - documentation
-        - generic_pages
-        - guideline_categories
-        - guideline_tags
-        - drug_categories
-        - drug_tags
-        - drug_classes
-        - therapeutic_categories
-        - consultants
-        - health_facilities
-        - regions
-        - districts
-        - counties
-        - subcounties
-        - parishes
-        - facility_levels
-        - ownership_types
-        - authorities
-        - ministry_directory
-        - languages
-        - notifications
-        - notification_templates
-        - notification_campaigns
-        - support_tickets
-        - support_ticket_replies
-        - conversations
-        - messages
-        - reading_progress
-        - guideline_usage_logs
-        - drug_usage_logs
-        - abbreviation_usage_logs
-        - consultant_usage_logs
-        - facility_usage_logs
-        - ai_usage_logs
-        in: path
-        name: collection
-        required: true
-        type: string
-      - description: Page number
-        in: query
-        minimum: 1
-        name: page
-        type: integer
-      - description: Page size
-        in: query
-        maximum: 100
-        minimum: 1
-        name: per_page
-        type: integer
-      - description: Search term
-        in: query
-        name: search
-        type: string
-      - description: Search term alias
-        in: query
-        name: q
-        type: string
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/handlers.LegacyCollectionListResult'
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/handlers.ErrorResponse'
-        "401":
-          description: Unauthorized
-          schema:
-            $ref: '#/definitions/handlers.ErrorResponse'
-        "404":
-          description: Not Found
-          schema:
-            $ref: '#/definitions/handlers.ErrorResponse'
-        "500":
-          description: Internal Server Error
-          schema:
-            $ref: '#/definitions/handlers.ErrorResponse'
-      security:
-      - BearerAuth: []
-      summary: List legacy collection records
-      tags:
-      - legacy-v1
-    post:
-      consumes:
-      - application/json
-      description: Legacy v1 collection create endpoint for authenticated user-owned
-        resources and compatibility write flows.
-      parameters:
-      - description: Legacy collection name
-        enum:
-        - support_tickets
-        - support_ticket_replies
-        - conversations
-        - messages
-        - reading_progress
-        - guideline_usage_logs
-        - drug_usage_logs
-        - abbreviation_usage_logs
-        - consultant_usage_logs
-        - facility_usage_logs
-        - ai_usage_logs
-        in: path
-        name: collection
-        required: true
-        type: string
-      - description: Legacy collection payload
-        in: body
-        name: payload
-        required: true
-        schema:
-          additionalProperties: true
-          type: object
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/handlers.LegacyCollectionItemResult'
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/handlers.ErrorResponse'
-        "401":
-          description: Unauthorized
-          schema:
-            $ref: '#/definitions/handlers.ErrorResponse'
-        "403":
-          description: Forbidden
-          schema:
-            $ref: '#/definitions/handlers.ErrorResponse'
-        "404":
-          description: Not Found
-          schema:
-            $ref: '#/definitions/handlers.ErrorResponse'
-        "500":
-          description: Internal Server Error
-          schema:
-            $ref: '#/definitions/handlers.ErrorResponse'
-      security:
-      - BearerAuth: []
-      summary: Create legacy collection record
-      tags:
-      - legacy-v1
-  /api/v1/collections/{collection}/records/{id}:
-    delete:
-      description: Legacy v1 collection delete endpoint for authenticated compatibility
-        flows.
-      parameters:
-      - description: Legacy collection name
-        in: path
-        name: collection
-        required: true
-        type: string
-      - description: Record ID
-        in: path
-        name: id
-        required: true
-        type: string
-      produces:
-      - application/json
-      responses:
-        "204":
-          description: No Content
-        "401":
-          description: Unauthorized
-          schema:
-            $ref: '#/definitions/handlers.ErrorResponse'
-        "403":
-          description: Forbidden
-          schema:
-            $ref: '#/definitions/handlers.ErrorResponse'
-        "404":
-          description: Not Found
-          schema:
-            $ref: '#/definitions/handlers.ErrorResponse'
-        "500":
-          description: Internal Server Error
-          schema:
-            $ref: '#/definitions/handlers.ErrorResponse'
-      security:
-      - BearerAuth: []
-      summary: Delete legacy collection record
-      tags:
-      - legacy-v1
-    get:
-      description: Legacy v1 collection detail endpoint. Some collections are public
-        while others require authentication depending on the collection name.
-      parameters:
-      - description: Legacy collection name
-        enum:
-        - medical_guidelines
-        - drugs
-        - abbreviations
-        - emergency_protocols
-        - faqs
-        - documentation
-        - generic_pages
-        - guideline_categories
-        - guideline_tags
-        - drug_categories
-        - drug_tags
-        - drug_classes
-        - therapeutic_categories
-        - consultants
-        - health_facilities
-        - regions
-        - districts
-        - counties
-        - subcounties
-        - parishes
-        - facility_levels
-        - ownership_types
-        - authorities
-        - ministry_directory
-        - languages
-        - notifications
-        - notification_templates
-        - notification_campaigns
-        - support_tickets
-        - support_ticket_replies
-        - conversations
-        - messages
-        - reading_progress
-        - guideline_usage_logs
-        - drug_usage_logs
-        - abbreviation_usage_logs
-        - consultant_usage_logs
-        - facility_usage_logs
-        - ai_usage_logs
-        in: path
-        name: collection
-        required: true
-        type: string
-      - description: Record ID
-        in: path
-        name: id
-        required: true
-        type: string
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/handlers.LegacyCollectionItemResult'
-        "401":
-          description: Unauthorized
-          schema:
-            $ref: '#/definitions/handlers.ErrorResponse'
-        "404":
-          description: Not Found
-          schema:
-            $ref: '#/definitions/handlers.ErrorResponse'
-        "500":
-          description: Internal Server Error
-          schema:
-            $ref: '#/definitions/handlers.ErrorResponse'
-      security:
-      - BearerAuth: []
-      summary: Get legacy collection record
-      tags:
-      - legacy-v1
-    patch:
-      consumes:
-      - application/json
-      description: Legacy v1 collection patch endpoint for authenticated compatibility
-        flows.
-      parameters:
-      - description: Legacy collection name
-        enum:
-        - users
-        - conversations
-        - messages
-        - reading_progress
-        - calculator_usage_logs
-        in: path
-        name: collection
-        required: true
-        type: string
-      - description: Record ID
-        in: path
-        name: id
-        required: true
-        type: string
-      - description: Legacy collection payload
-        in: body
-        name: payload
-        required: true
-        schema:
-          additionalProperties: true
-          type: object
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/handlers.LegacyCollectionItemResult'
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/handlers.ErrorResponse'
-        "401":
-          description: Unauthorized
-          schema:
-            $ref: '#/definitions/handlers.ErrorResponse'
-        "403":
-          description: Forbidden
-          schema:
-            $ref: '#/definitions/handlers.ErrorResponse'
-        "404":
-          description: Not Found
-          schema:
-            $ref: '#/definitions/handlers.ErrorResponse'
-        "500":
-          description: Internal Server Error
-          schema:
-            $ref: '#/definitions/handlers.ErrorResponse'
-      security:
-      - BearerAuth: []
-      summary: Update legacy collection record
-      tags:
-      - legacy-v1
-  /api/v1/collections/users/auth-refresh:
-    post:
-      consumes:
-      - application/json
-      description: Exchange a refresh token for a new access token and rotated refresh
-        token.
-      parameters:
-      - description: Refresh payload
-        in: body
-        name: payload
-        required: true
-        schema:
-          $ref: '#/definitions/handlers.RefreshRequest'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/handlers.LoginEnvelope'
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/handlers.ErrorResponse'
-        "401":
-          description: Unauthorized
-          schema:
-            $ref: '#/definitions/handlers.ErrorResponse'
-      summary: Refresh a user session
-      tags:
-      - auth
-  /api/v1/collections/users/auth-with-password:
-    post:
-      consumes:
-      - application/json
-      description: Authenticate a user and return a JWT bearer token.
-      parameters:
-      - description: Login payload
-        in: body
-        name: payload
-        required: true
-        schema:
-          $ref: '#/definitions/handlers.LoginRequest'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/handlers.LoginEnvelope'
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/handlers.ErrorResponse'
-        "401":
-          description: Unauthorized
-          schema:
-            $ref: '#/definitions/handlers.ErrorResponse'
-      summary: Log in a user
-      tags:
-      - auth
-  /api/v1/collections/users/logout:
-    post:
-      description: Revoke the current authenticated session.
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/handlers.LogoutEnvelope'
-        "401":
-          description: Unauthorized
-          schema:
-            $ref: '#/definitions/handlers.ErrorResponse'
-      security:
-      - BearerAuth: []
-      summary: Log out current session
-      tags:
-      - auth
-  /api/v1/collections/users/me:
-    get:
-      description: Return the currently authenticated user.
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/handlers.UserEnvelope'
-        "401":
-          description: Unauthorized
-          schema:
-            $ref: '#/definitions/handlers.ErrorResponse'
-        "404":
-          description: Not Found
-          schema:
-            $ref: '#/definitions/handlers.ErrorResponse'
-      security:
-      - BearerAuth: []
-      summary: Get current user
-      tags:
-      - auth
-  /api/v1/collections/users/register:
-    post:
-      consumes:
-      - application/json
-      description: Create a new backend user account.
-      parameters:
-      - description: Registration payload
-        in: body
-        name: payload
-        required: true
-        schema:
-          $ref: '#/definitions/handlers.RegisterRequest'
-      produces:
-      - application/json
-      responses:
-        "201":
-          description: Created
-          schema:
-            $ref: '#/definitions/handlers.UserEnvelope'
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/handlers.ErrorResponse'
-      summary: Register a user
-      tags:
-      - auth
   /api/v1/consultants/tree:
     get:
       description: Legacy v1 endpoint that groups consultants by region, city, then
@@ -2286,6 +2220,379 @@ paths:
       summary: Ask the guideline assistant
       tags:
       - chat
+  /api/v2/drug-categories:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.PaginatedDrugCategoriesEnvelope'
+      security:
+      - BearerAuth: []
+      summary: List drug categories
+      tags:
+      - drugs
+    post:
+      parameters:
+      - description: Category payload
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/services.DrugCategoryInput'
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/handlers.DrugCategoryEnvelope'
+      summary: Create a drug category
+      tags:
+      - drugs
+  /api/v2/drug-categories/{id}:
+    delete:
+      responses:
+        "204":
+          description: No Content
+      summary: Archive a drug category
+      tags:
+      - drugs
+    get:
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.DrugCategoryEnvelope'
+      summary: Get a drug category
+      tags:
+      - drugs
+    patch:
+      parameters:
+      - description: Category fields
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/services.DrugCategoryInput'
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.DrugCategoryEnvelope'
+      summary: Update a drug category
+      tags:
+      - drugs
+  /api/v2/drug-classes:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.PaginatedDrugClassesEnvelope'
+      security:
+      - BearerAuth: []
+      summary: List drug classes
+      tags:
+      - drugs
+    post:
+      parameters:
+      - description: Class payload
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/services.DrugNamedReferenceInput'
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/handlers.DrugClassEnvelope'
+      summary: Create a drug class
+      tags:
+      - drugs
+  /api/v2/drug-classes/{id}:
+    delete:
+      responses:
+        "204":
+          description: No Content
+      summary: Archive a drug class
+      tags:
+      - drugs
+    get:
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.DrugClassEnvelope'
+      summary: Get a drug class
+      tags:
+      - drugs
+    patch:
+      parameters:
+      - description: Class fields
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/services.DrugNamedReferenceInput'
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.DrugClassEnvelope'
+      summary: Update a drug class
+      tags:
+      - drugs
+  /api/v2/drug-tags:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.PaginatedDrugTagsEnvelope'
+      security:
+      - BearerAuth: []
+      summary: List drug tags
+      tags:
+      - drugs
+    post:
+      parameters:
+      - description: Tag payload
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/services.DrugTagInput'
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/handlers.DrugTagEnvelope'
+      summary: Create a drug tag
+      tags:
+      - drugs
+  /api/v2/drug-tags/{id}:
+    delete:
+      responses:
+        "204":
+          description: No Content
+      summary: Archive a drug tag
+      tags:
+      - drugs
+    get:
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.DrugTagEnvelope'
+      summary: Get a drug tag
+      tags:
+      - drugs
+    patch:
+      parameters:
+      - description: Tag fields
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/services.DrugTagInput'
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.DrugTagEnvelope'
+      summary: Update a drug tag
+      tags:
+      - drugs
+  /api/v2/drugs:
+    get:
+      parameters:
+      - description: Page number
+        in: query
+        minimum: 1
+        name: page
+        type: integer
+      - description: Page size
+        in: query
+        maximum: 100
+        minimum: 1
+        name: per_page
+        type: integer
+      - description: Drug name, brand, indication, or keyword
+        in: query
+        name: search
+        type: string
+      - description: Drug status
+        in: query
+        name: status
+        type: string
+      - description: Review status
+        in: query
+        name: review_status
+        type: string
+      - description: Drug class UUID
+        in: query
+        name: drug_class_id
+        type: string
+      - description: Therapeutic category UUID
+        in: query
+        name: therapeutic_category_id
+        type: string
+      - description: Route of administration
+        in: query
+        name: route
+        type: string
+      - description: Pregnancy category
+        in: query
+        name: pregnancy_category
+        type: string
+      - description: WHO essential medicines only
+        in: query
+        name: who_eml
+        type: boolean
+      - description: Antimicrobials only
+        in: query
+        name: antimicrobial
+        type: boolean
+      - description: 'Allowed values: name, created_at, updated_at, usage_count'
+        in: query
+        name: sort
+        type: string
+      - description: 'Allowed values: asc, desc'
+        in: query
+        name: order
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.PaginatedDrugsEnvelope'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: List drugs
+      tags:
+      - drugs
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Drug payload
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/services.DrugInput'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/handlers.DrugEnvelope'
+      security:
+      - BearerAuth: []
+      summary: Create a drug
+      tags:
+      - drugs
+  /api/v2/drugs/{id}:
+    delete:
+      parameters:
+      - description: Drug ID
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+      security:
+      - BearerAuth: []
+      summary: Archive a drug
+      tags:
+      - drugs
+    get:
+      parameters:
+      - description: Drug ID
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.DrugEnvelope'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get a drug
+      tags:
+      - drugs
+    patch:
+      consumes:
+      - application/json
+      parameters:
+      - description: Drug ID
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Drug fields
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/services.DrugInput'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.DrugEnvelope'
+      security:
+      - BearerAuth: []
+      summary: Update a drug
+      tags:
+      - drugs
+  /api/v2/drugs/{id}/usage:
+    post:
+      parameters:
+      - description: Drug ID
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/handlers.DrugUsageEnvelope'
+      security:
+      - BearerAuth: []
+      summary: Record authenticated drug usage
+      tags:
+      - drugs
   /api/v2/guideline-versions/{id}/chunks:
     get:
       parameters:
@@ -3195,6 +3502,69 @@ paths:
       summary: Get a sync package download URL
       tags:
       - sync
+  /api/v2/therapeutic-categories:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.PaginatedTherapeuticCategoriesEnvelope'
+      security:
+      - BearerAuth: []
+      summary: List therapeutic categories
+      tags:
+      - drugs
+    post:
+      parameters:
+      - description: Therapeutic category payload
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/services.DrugNamedReferenceInput'
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/handlers.TherapeuticCategoryEnvelope'
+      summary: Create a therapeutic category
+      tags:
+      - drugs
+  /api/v2/therapeutic-categories/{id}:
+    delete:
+      responses:
+        "204":
+          description: No Content
+      summary: Archive a therapeutic category
+      tags:
+      - drugs
+    get:
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.TherapeuticCategoryEnvelope'
+      summary: Get a therapeutic category
+      tags:
+      - drugs
+    patch:
+      parameters:
+      - description: Therapeutic category fields
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/services.DrugNamedReferenceInput'
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.TherapeuticCategoryEnvelope'
+      summary: Update a therapeutic category
+      tags:
+      - drugs
 schemes:
 - http
 - https

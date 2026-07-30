@@ -30,8 +30,8 @@ export function CreateTherapeuticCategoryDialog({ open, onOpenChange, onSuccess 
     setLoading(true)
 
     try {
-      const pb = getBackendClient()
-      const category = await pb.collection("therapeutic_categories").create(formData)
+      const backend = getBackendClient()
+      const category = await backend.resource("therapeutic_categories").create(formData)
       
       showToast.success("Success", "Therapeutic category created successfully")
       onSuccess?.(category as unknown as { id: string; name: string })

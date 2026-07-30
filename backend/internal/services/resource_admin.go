@@ -13,13 +13,13 @@ import (
 	"gorm.io/gorm"
 )
 
-func (s LegacyCollectionService) createUser(payload map[string]any) (*LegacyItemResult, error) {
+func (s ResourceService) createUser(payload map[string]any) (*ResourceItemResult, error) {
 	email := firstPayloadStringAny(payload, "email")
 	password := firstPayloadStringAny(payload, "password")
 	name := firstPayloadStringAny(payload, "name")
 	phone := firstPayloadStringAny(payload, "phone")
 	if email == "" || password == "" || name == "" || phone == "" {
-		return nil, ErrLegacyCollectionInvalid
+		return nil, ErrResourceInvalid
 	}
 
 	hash, err := security.HashPassword(password)
@@ -54,7 +54,7 @@ func (s LegacyCollectionService) createUser(payload map[string]any) (*LegacyItem
 	if raw, ok := payload["specialization"]; ok {
 		list, err := stringListPayload(raw)
 		if err != nil {
-			return nil, ErrLegacyCollectionInvalid
+			return nil, ErrResourceInvalid
 		}
 		user.Specialization = list
 	}
@@ -72,10 +72,10 @@ func (s LegacyCollectionService) createUser(payload map[string]any) (*LegacyItem
 	return s.Get("users", user.ID.String(), user.ID.String())
 }
 
-func (s LegacyCollectionService) updateUserAdmin(id string, payload map[string]any) (*LegacyItemResult, error) {
+func (s ResourceService) updateUserAdmin(id string, payload map[string]any) (*ResourceItemResult, error) {
 	userID, err := uuid.Parse(strings.TrimSpace(id))
 	if err != nil {
-		return nil, ErrLegacyCollectionInvalid
+		return nil, ErrResourceInvalid
 	}
 
 	updates := map[string]any{}
@@ -97,7 +97,7 @@ func (s LegacyCollectionService) updateUserAdmin(id string, payload map[string]a
 	if raw, ok := payload["specialization"]; ok {
 		list, err := stringListPayload(raw)
 		if err != nil {
-			return nil, ErrLegacyCollectionInvalid
+			return nil, ErrResourceInvalid
 		}
 		updates["specialization_json"] = datatypes.JSON(mustJSON(list))
 	}
@@ -132,10 +132,10 @@ func (s LegacyCollectionService) updateUserAdmin(id string, payload map[string]a
 	return s.Get("users", userID.String(), userID.String())
 }
 
-func (s LegacyCollectionService) deleteUser(id string) error {
+func (s ResourceService) deleteUser(id string) error {
 	userID, err := uuid.Parse(strings.TrimSpace(id))
 	if err != nil {
-		return ErrLegacyCollectionInvalid
+		return ErrResourceInvalid
 	}
 	now := time.Now().UTC()
 	return s.DB.Model(&models.User{}).Where("id = ?", userID).Updates(map[string]any{
@@ -144,7 +144,7 @@ func (s LegacyCollectionService) deleteUser(id string) error {
 	}).Error
 }
 
-func (s LegacyCollectionService) replaceUserRole(userID uuid.UUID, roleKey string) error {
+func (s ResourceService) replaceUserRole(userID uuid.UUID, roleKey string) error {
 	roleKey = strings.TrimSpace(roleKey)
 	if roleKey == "" {
 		return nil
@@ -168,23 +168,23 @@ func (s LegacyCollectionService) replaceUserRole(userID uuid.UUID, roleKey strin
 	})
 }
 
-func (s LegacyCollectionService) createGeneric(collection string, payload map[string]any, userID string) (*LegacyItemResult, error) {
-	spec, ok := legacyCollectionSpecs[collection]
+func (s ResourceService) createGeneric(resource string, payload map[string]any, userID string) (*ResourceItemResult, error) {
+	spec, ok := resourceSpecs[resource]
 	if !ok {
-		return nil, ErrLegacyCollectionNotFound
+		return nil, ErrResourceNotFound
 	}
 	record, err := s.normalizedWriteRecord(spec, payload)
 	if err != nil {
 		return nil, err
 	}
 	if len(record) == 0 {
-		return nil, ErrLegacyCollectionWrite
+		return nil, ErrResourceWrite
 	}
 	record["id"] = uuid.New()
 	now := time.Now().UTC()
 	record["created_at"] = now
 	record["updated_at"] = now
-	baseTable := legacyBaseTable(spec.Table)
+	baseTable := resourceBaseTable(spec.Table)
 	if _, ok := record["added_by_user_id"]; !ok {
 		if _, has := s.hasColumn(baseTable, "added_by_user_id"); has {
 			record["added_by_user_id"] = mustUUID(userID)
@@ -193,57 +193,57 @@ func (s LegacyCollectionService) createGeneric(collection string, payload map[st
 	if err := s.DB.Table(baseTable).Create(&record).Error; err != nil {
 		return nil, err
 	}
-	return s.Get(collection, record["id"].(uuid.UUID).String(), userID)
+	return s.Get(resource, record["id"].(uuid.UUID).String(), userID)
 }
 
-func (s LegacyCollectionService) updateGeneric(collection, id string, payload map[string]any, userID string) (*LegacyItemResult, error) {
-	spec, ok := legacyCollectionSpecs[collection]
+func (s ResourceService) updateGeneric(resource, id string, payload map[string]any, userID string) (*ResourceItemResult, error) {
+	spec, ok := resourceSpecs[resource]
 	if !ok {
-		return nil, ErrLegacyCollectionNotFound
+		return nil, ErrResourceNotFound
 	}
 	record, err := s.normalizedWriteRecord(spec, payload)
 	if err != nil {
 		return nil, err
 	}
 	if len(record) == 0 {
-		return nil, ErrLegacyCollectionWrite
+		return nil, ErrResourceWrite
 	}
 	record["updated_at"] = time.Now().UTC()
-	if err := s.DB.Table(legacyBaseTable(spec.Table)).Where("id = ?", id).Updates(record).Error; err != nil {
+	if err := s.DB.Table(resourceBaseTable(spec.Table)).Where("id = ?", id).Updates(record).Error; err != nil {
 		return nil, err
 	}
-	return s.Get(collection, id, userID)
+	return s.Get(resource, id, userID)
 }
 
-func (s LegacyCollectionService) deleteGeneric(collection, id, userID string) error {
-	spec, ok := legacyCollectionSpecs[collection]
+func (s ResourceService) deleteGeneric(resource, id, userID string) error {
+	spec, ok := resourceSpecs[resource]
 	if !ok {
-		return ErrLegacyCollectionNotFound
+		return ErrResourceNotFound
 	}
 	rowID, err := uuid.Parse(strings.TrimSpace(id))
 	if err != nil {
-		return ErrLegacyCollectionInvalid
+		return ErrResourceInvalid
 	}
 	now := time.Now().UTC()
-	return s.DB.Table(legacyBaseTable(spec.Table)).Where("id = ?", rowID).Updates(map[string]any{
+	return s.DB.Table(resourceBaseTable(spec.Table)).Where("id = ?", rowID).Updates(map[string]any{
 		"deleted_at": now,
 		"updated_at": now,
 	}).Error
 }
 
-func (s LegacyCollectionService) normalizedWriteRecord(spec legacyCollectionSpec, payload map[string]any) (map[string]any, error) {
-	baseTable := legacyBaseTable(spec.Table)
+func (s ResourceService) normalizedWriteRecord(spec resourceSpec, payload map[string]any) (map[string]any, error) {
+	baseTable := resourceBaseTable(spec.Table)
 	columns, err := s.tableColumns(baseTable)
 	if err != nil {
 		return nil, err
 	}
 	record := map[string]any{}
 	for key, value := range payload {
-		column := resolveLegacyColumn(key, columns)
+		column := resolveResourceColumn(key, columns)
 		if column == "" {
 			continue
 		}
-		normalized, err := normalizeLegacyValue(column, value)
+		normalized, err := normalizeResourceValue(column, value)
 		if err != nil {
 			return nil, err
 		}
@@ -252,7 +252,7 @@ func (s LegacyCollectionService) normalizedWriteRecord(spec legacyCollectionSpec
 	return record, nil
 }
 
-func (s LegacyCollectionService) tableColumns(table string) (map[string]struct{}, error) {
+func (s ResourceService) tableColumns(table string) (map[string]struct{}, error) {
 	var rows []struct {
 		ColumnName string `gorm:"column:column_name"`
 	}
@@ -270,7 +270,7 @@ func (s LegacyCollectionService) tableColumns(table string) (map[string]struct{}
 	return columns, nil
 }
 
-func (s LegacyCollectionService) hasColumn(table, column string) (string, bool) {
+func (s ResourceService) hasColumn(table, column string) (string, bool) {
 	columns, err := s.tableColumns(table)
 	if err != nil {
 		return "", false
@@ -279,7 +279,7 @@ func (s LegacyCollectionService) hasColumn(table, column string) (string, bool) 
 	return column, ok
 }
 
-func legacyBaseTable(tableExpr string) string {
+func resourceBaseTable(tableExpr string) string {
 	parts := strings.Fields(strings.TrimSpace(tableExpr))
 	if len(parts) == 0 {
 		return ""
@@ -287,7 +287,7 @@ func legacyBaseTable(tableExpr string) string {
 	return parts[0]
 }
 
-func resolveLegacyColumn(key string, columns map[string]struct{}) string {
+func resolveResourceColumn(key string, columns map[string]struct{}) string {
 	if shouldIgnoreLegacyKey(key) {
 		return ""
 	}
@@ -343,7 +343,7 @@ func resolveLegacyColumn(key string, columns map[string]struct{}) string {
 	return ""
 }
 
-func normalizeLegacyValue(column string, value any) (any, error) {
+func normalizeResourceValue(column string, value any) (any, error) {
 	if value == nil {
 		return nil, nil
 	}
@@ -369,7 +369,7 @@ func normalizeLegacyValue(column string, value any) (any, error) {
 
 func shouldIgnoreLegacyKey(key string) bool {
 	switch key {
-	case "id", "created", "updated", "created_at", "updated_at", "collectionId", "collectionName", "expand", "emailVisibility", "passwordConfirm", "tokenKey":
+	case "id", "created", "updated", "created_at", "updated_at", "resourceId", "resourceName", "expand", "emailVisibility", "passwordConfirm", "tokenKey":
 		return true
 	default:
 		return false

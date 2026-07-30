@@ -54,9 +54,9 @@ export function CreateParishModal({ open, onClose, onSuccess }: CreateParishModa
   React.useEffect(() => {
     if (open) {
       const loadSubcounties = async () => {
-        const pb = getBackendClient()
+        const backend = getBackendClient()
         try {
-          const data = await pb.collection('subcounties').getFullList({
+          const data = await backend.resource('subcounties').getFullList({
             sort: 'name',
             expand: 'county',
           })
@@ -72,10 +72,10 @@ export function CreateParishModal({ open, onClose, onSuccess }: CreateParishModa
 
   const onSubmit = async (data: ParishFormValues) => {
     setIsLoading(true)
-    const pb = getBackendClient()
+    const backend = getBackendClient()
 
     try {
-      await pb.collection('parishes').create({
+      await backend.resource('parishes').create({
         name: data.name,
         subcounty: data.subcounty,
         nhpi_code: data.nhpi_code,

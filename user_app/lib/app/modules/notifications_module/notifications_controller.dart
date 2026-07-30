@@ -48,7 +48,7 @@ class NotificationsController extends GetxController {
     try {
       final filter = _buildFilter();
 
-      final result = await BackendApiService.to.getRecordList(
+      final result = await BackendApiService.to.getResourceList(
         collectionName: 'notifications',
         page: pageKey,
         perPage: pageSize,

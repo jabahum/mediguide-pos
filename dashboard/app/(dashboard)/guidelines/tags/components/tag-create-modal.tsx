@@ -65,14 +65,14 @@ export function TagCreateModal({
     setIsSubmitting(true)
     
     try {
-      const pb = getBackendClient()
+      const backend = getBackendClient()
       
       const tagData = {
         name: values.name.trim(),
         description: values.description?.trim() || "",
       }
 
-      await pb.collection("guideline_tags").create(tagData)
+      await backend.resource("guideline_tags").create(tagData)
 
       showToast.success("Tag created", "New guideline tag has been created successfully")
       

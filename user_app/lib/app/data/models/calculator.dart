@@ -5,11 +5,11 @@ import '../enums/calculator_enums.dart';
 import 'base_model.dart';
 import 'user.dart';
 
-/// Calculator model based on legacy collection API calculators collection
+/// Calculator model based on backend resource API calculators collection
 class Calculator extends BaseModel {
   Calculator(super.data);
 
-  /// legacy collection API collection name
+  /// backend resource API collection name
   static const String collection = 'calculators';
 
   // Self-registration for dynamic model creation
@@ -18,7 +18,7 @@ class Calculator extends BaseModel {
     return true;
   })();
 
-  /// Create Calculator from legacy collection API record
+  /// Create Calculator from backend resource API record
   static Calculator fromRecord(ApiRecord record) => Calculator(record.data);
 
   /// Create JSON for new calculator record (excludes system fields)

@@ -42,7 +42,7 @@ export function useBackendRecord<T = unknown>(
     queryKey: backendRecordQueryKey(collection, recordId, expand, fields),
     queryFn: async () => {
       const record = await backendClient
-        .collection(collection)
+        .resource(collection)
         .getOne(recordId, fetchOptions)
       return record as unknown as T
     },
@@ -55,7 +55,7 @@ export function useBackendRecord<T = unknown>(
     let cancelled = false
     const queryKey = backendRecordQueryKey(collection, recordId, expand, fields)
     const subscribePromise = backendClient
-      .collection(collection)
+      .resource(collection)
       .subscribe(
         recordId,
         (e) => {

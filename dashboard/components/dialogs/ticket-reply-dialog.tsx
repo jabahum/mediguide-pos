@@ -77,8 +77,8 @@ export function TicketReplyDialog({
     try {
       setLoading(true)
       
-      const pb = getBackendClient()
-      const currentUser = pb.authStore.model
+      const backend = getBackendClient()
+      const currentUser = backend.authStore.model
       
       if (!currentUser) {
         showToast.error("Error", "You must be logged in to reply")

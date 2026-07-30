@@ -133,7 +133,7 @@ export function useBackendTable<TData extends BaseRecord = BaseRecord>(
   const query = useQuery({
     queryKey,
     queryFn: async () => {
-      return backendClient.collection(config.collection).getList(currentPage, currentPageSize, {
+      return backendClient.resource(config.collection).getList(currentPage, currentPageSize, {
         filter: filterQuery || undefined,
         sort: sortQuery,
         expand: config.query?.expand || undefined,
@@ -249,7 +249,7 @@ export function useBackendTable<TData extends BaseRecord = BaseRecord>(
 
   // Realtime subscriptions (always enabled)
   useEffect(() => {
-    const unsubscribe = backendClient.collection(config.collection).subscribe('*', (e) => {
+    const unsubscribe = backendClient.resource(config.collection).subscribe('*', (e) => {
       if (e.action === 'create') {
         setData(prev => [e.record as unknown as TData, ...prev.slice(0, currentPageSize - 1)])
         setTotalItems(prev => prev + 1)
@@ -268,7 +268,7 @@ export function useBackendTable<TData extends BaseRecord = BaseRecord>(
     })
 
     return () => {
-      backendClient.collection(config.collection).unsubscribe('*')
+      backendClient.resource(config.collection).unsubscribe('*')
     }
   }, [config.collection, currentPageSize, backendClient])
 

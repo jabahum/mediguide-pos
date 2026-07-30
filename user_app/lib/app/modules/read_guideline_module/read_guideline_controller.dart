@@ -106,7 +106,7 @@ class ReadGuidelineController extends GetxController {
       final userId = AuthService.to.currentUser.value!.id;
       final guidelineId = guideline.value!.id;
 
-      final records = await BackendApiService.to.getRecordList(
+      final records = await BackendApiService.to.getResourceList(
         collectionName: 'reading_progress',
         filter: 'user_id="$userId" && guideline_id="$guidelineId"',
       );
@@ -141,7 +141,7 @@ class ReadGuidelineController extends GetxController {
         progressPercentage: 0.0,
       );
 
-      final record = await BackendApiService.to.createRecord(
+      final record = await BackendApiService.to.createResource(
         collectionName: 'reading_progress',
         data: progressData,
       );
@@ -163,7 +163,7 @@ class ReadGuidelineController extends GetxController {
     try {
       final isCompleted = progressPercentage.value >= 0.95;
 
-      await BackendApiService.to.updateRecord(
+      await BackendApiService.to.updateResource(
         collectionName: 'reading_progress',
         recordId: readingProgress.value!.id,
         data: {
@@ -221,7 +221,7 @@ class ReadGuidelineController extends GetxController {
       isLoading.value = true;
       final newBookmarkStatus = !isBookmarked.value;
 
-      await BackendApiService.to.updateRecord(
+      await BackendApiService.to.updateResource(
         collectionName: 'reading_progress',
         recordId: readingProgress.value!.id,
         data: {'is_bookmarked': newBookmarkStatus},
@@ -248,7 +248,7 @@ class ReadGuidelineController extends GetxController {
     try {
       isLoading.value = true;
 
-      await BackendApiService.to.updateRecord(
+      await BackendApiService.to.updateResource(
         collectionName: 'reading_progress',
         recordId: readingProgress.value!.id,
         data: {
@@ -392,7 +392,7 @@ class ReadGuidelineController extends GetxController {
         guidelineId: guidelineId,
       );
 
-      await BackendApiService.to.createRecord(
+      await BackendApiService.to.createResource(
         collectionName: GuidelineUsageLog.collection,
         data: logData,
       );

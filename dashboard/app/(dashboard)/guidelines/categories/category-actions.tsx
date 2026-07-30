@@ -116,7 +116,7 @@ export const categoryBulkActions: BulkAction<GuidelineCategoriesResponse>[] = [
 
 // Action implementation functions
 async function duplicateCategory(category: GuidelineCategoriesResponse): Promise<void> {
-  const pb = getBackendClient()
+  const backend = getBackendClient()
   
   const duplicateData = {
     name: `${category.name} (Copy)`,
@@ -130,7 +130,7 @@ async function duplicateCategory(category: GuidelineCategoriesResponse): Promise
   }
 
   try {
-    await pb.collection("guideline_categories").create(duplicateData)
+    await backend.resource("guideline_categories").create(duplicateData)
     showToast.success("Category duplicated", "Category has been duplicated successfully")
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Failed to duplicate category'
@@ -140,11 +140,11 @@ async function duplicateCategory(category: GuidelineCategoriesResponse): Promise
 }
 
 async function toggleCategoryStatus(category: GuidelineCategoriesResponse): Promise<void> {
-  const pb = getBackendClient()
+  const backend = getBackendClient()
   
   try {
     const newStatus = category.status === "active" ? "inactive" : "active"
-    await pb.collection("guideline_categories").update(category.id, { status: newStatus })
+    await backend.resource("guideline_categories").update(category.id, { status: newStatus })
     
     showToast.success(
       "Status Updated",
@@ -158,10 +158,10 @@ async function toggleCategoryStatus(category: GuidelineCategoriesResponse): Prom
 }
 
 async function deleteCategory(category: GuidelineCategoriesResponse): Promise<void> {
-  const pb = getBackendClient()
+  const backend = getBackendClient()
   
   try {
-    await pb.collection("guideline_categories").delete(category.id)
+    await backend.resource("guideline_categories").delete(category.id)
     
     showToast.success(
       "Category Deleted",
@@ -176,7 +176,7 @@ async function deleteCategory(category: GuidelineCategoriesResponse): Promise<vo
 
 // Bulk action implementation functions
 async function bulkUpdateCategoryStatus(categories: GuidelineCategoriesResponse[], status: "active" | "inactive"): Promise<void> {
-  const pb = getBackendClient()
+  const backend = getBackendClient()
   const targetCategories = categories.filter(cat => cat.status !== status)
   
   if (targetCategories.length === 0) {
@@ -189,7 +189,7 @@ async function bulkUpdateCategoryStatus(categories: GuidelineCategoriesResponse[
 
   for (const category of targetCategories) {
     try {
-      await pb.collection("guideline_categories").update(category.id, { status })
+      await backend.resource("guideline_categories").update(category.id, { status })
       successCount++
     } catch (error) {
       errorCount++
@@ -251,13 +251,13 @@ async function exportCategories(categories: GuidelineCategoriesResponse[]): Prom
 }
 
 async function bulkDeleteCategories(categories: GuidelineCategoriesResponse[]): Promise<void> {
-  const pb = getBackendClient()
+  const backend = getBackendClient()
   let successCount = 0
   let errorCount = 0
 
   for (const category of categories) {
     try {
-      await pb.collection("guideline_categories").delete(category.id)
+      await backend.resource("guideline_categories").delete(category.id)
       successCount++
     } catch (error) {
       errorCount++

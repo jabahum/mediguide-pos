@@ -28,8 +28,8 @@ export function useGuidelineTags(options: UseGuidelineTagsOptions = {}) {
         filter = `(name ~ "${searchTerm}" || description ~ "${searchTerm}")`
       }
 
-      const pb = getBackendClient()
-      const records = await pb.collection("guideline_tags").getFullList<GuidelineTagsResponse>({
+      const backend = getBackendClient()
+      const records = await backend.resource("guideline_tags").getFullList<GuidelineTagsResponse>({
         sort: "name",
         filter: filter || undefined
       })

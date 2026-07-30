@@ -7,7 +7,6 @@ import '../data/models/consultant.dart';
 import '../data/models/health_facility.dart';
 import '../data/models/abbreviation.dart';
 import '../data/models/calculator.dart';
-import '../data/models/drug_usage_log.dart';
 import '../data/services/backend_api_service.dart';
 import '../data/services/auth_service.dart';
 import '../modules/drug_index_module/widgets/drug_details_bottom_sheet.dart';
@@ -195,19 +194,7 @@ class GlobalSearchController extends GetxController {
     try {
       if (AuthService.to.currentUser.value == null) return;
 
-      // Create drug usage log
-      final logData = DrugUsageLog.forCreate(
-        userId: AuthService.to.currentUser.value!.id,
-        drugId: drugId,
-      );
-
-      await BackendApiService.to.createRecord(
-        collectionName: DrugUsageLog.collection,
-        data: logData,
-      );
-
-      // Increment drug usage count
-      await BackendApiService.to.incrementUsageCount(Drug.collection, drugId);
+      await BackendApiService.to.recordDrugUsage(drugId);
     } catch (e) {
       // Handle error silently to not disrupt user experience
     }
@@ -309,6 +296,18 @@ class GlobalSearchController extends GetxController {
     if (config == null) return [];
 
     try {
+      if (category == SearchCategory.drugs) {
+        final response = await BackendApiService.to.getDrugs(
+          page: 1,
+          perPage: 10,
+          search: query,
+          status: 'active',
+        );
+        return response.items
+            .map((record) => _createSearchResult(record, category, query))
+            .toList();
+      }
+
       // Build filter for search fields
       final fields = config['fields'] as List<String>;
       final escapedQuery = BackendApiService.escapeFilterValue(query);
@@ -317,7 +316,7 @@ class GlobalSearchController extends GetxController {
           .toList();
       final filter = '(${filterParts.join(' || ')})';
 
-      final response = await BackendApiService.to.getRecordList(
+      final response = await BackendApiService.to.getResourceList(
         collectionName: config['collection'],
         page: 1,
         perPage: 10,
@@ -373,7 +372,7 @@ class GlobalSearchController extends GetxController {
     );
   }
 
-  /// Create SearchResult from legacy collection API record
+  /// Create SearchResult from backend resource API record
   SearchResult _createSearchResult(
     dynamic record,
     SearchCategory category,
@@ -526,7 +525,7 @@ class GlobalSearchController extends GetxController {
     try {
       final escapedQuery = BackendApiService.escapeFilterValue(query);
       final filter = '(question ~ "$escapedQuery" || answer ~ "$escapedQuery")';
-      final response = await BackendApiService.to.getRecordList(
+      final response = await BackendApiService.to.getResourceList(
         collectionName: 'faq',
         page: 1,
         perPage: 10,

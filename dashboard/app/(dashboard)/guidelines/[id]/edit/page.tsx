@@ -199,10 +199,10 @@ export default function EditGuidelinePage({ params }: EditGuidelinePageProps) {
     const fetchGuideline = async () => {
       try {
         const resolvedParams = await params
-        const pb = getBackendClient()
+        const backend = getBackendClient()
         
         // Fetch guideline with expanded categories, tags, and index_item
-        const result = await pb.collection('medical_guidelines').getOne(resolvedParams.id, { 
+        const result = await backend.resource('medical_guidelines').getOne(resolvedParams.id, {
           expand: 'categories,tags,index_item' 
         })
         
@@ -257,10 +257,10 @@ export default function EditGuidelinePage({ params }: EditGuidelinePageProps) {
     setIsSubmitting(true)
     try {
       const resolvedParams = await params
-      const pb = getBackendClient()
+      const backend = getBackendClient()
       
       // Update the medical guideline record in legacy collection API
-      const result = await pb.collection('medical_guidelines').update(resolvedParams.id, data)
+      const result = await backend.resource('medical_guidelines').update(resolvedParams.id, data)
 
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: backendRecordKeyPrefix('medical_guidelines', resolvedParams.id) }),

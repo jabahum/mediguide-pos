@@ -148,9 +148,9 @@ export default function NotificationsPage() {
     setCreating(true)
 
     try {
-      const pb = getBackendClient()
+      const backend = getBackendClient()
 
-      await pb.collection("notifications").create({
+      await backend.resource("notifications").create({
         title,
         message,
         type: formData.type,

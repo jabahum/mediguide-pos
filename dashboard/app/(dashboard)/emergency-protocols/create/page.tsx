@@ -24,8 +24,8 @@ export default function CreateEmergencyProtocolPage() {
 
   const handleSubmit = async (data: EmergencyProtocolPayload) => {
     try {
-      const pb = getBackendClient()
-      const created = await pb.collection("emergency_protocols").create(data)
+      const backend = getBackendClient()
+      const created = await backend.resource("emergency_protocols").create(data)
       showToast.success("Protocol Created", `"${created.title}" was created`)
       router.push(`/emergency-protocols/${created.id}`)
     } catch (error) {

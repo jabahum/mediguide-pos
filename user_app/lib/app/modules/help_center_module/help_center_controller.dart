@@ -407,7 +407,7 @@ class HelpCenterController extends GetxController {
 
     final combinedFilter = filters.join(' && ');
 
-    final result = await BackendApiService.to.getRecordList(
+    final result = await BackendApiService.to.getResourceList(
       collectionName: 'support_tickets',
       page: page,
       perPage: perPage,
@@ -433,7 +433,7 @@ class HelpCenterController extends GetxController {
     }
 
     try {
-      final record = await BackendApiService.to.getRecord(
+      final record = await BackendApiService.to.getResource(
         collectionName: 'support_tickets',
         recordId: ticketId,
         expand: expand ?? 'user_id',
@@ -478,7 +478,7 @@ class HelpCenterController extends GetxController {
       'user_id': currentUser.id,
     };
 
-    final record = await BackendApiService.to.createRecord(
+    final record = await BackendApiService.to.createResource(
       collectionName: 'support_tickets',
       data: ticketData,
     );
@@ -498,7 +498,7 @@ class HelpCenterController extends GetxController {
     await getMyTicketById(ticketId);
 
     // Get replies for this ticket (exclude internal replies)
-    final result = await BackendApiService.to.getRecordList(
+    final result = await BackendApiService.to.getResourceList(
       collectionName: 'support_ticket_replies',
       page: page,
       perPage: perPage,
@@ -533,7 +533,7 @@ class HelpCenterController extends GetxController {
       'is_internal': false, // User replies are always public
     };
 
-    final record = await BackendApiService.to.createRecord(
+    final record = await BackendApiService.to.createResource(
       collectionName: 'support_ticket_replies',
       data: replyData,
     );
@@ -582,7 +582,7 @@ class HelpCenterController extends GetxController {
 
     final combinedFilter = filters.join(' && ');
 
-    final result = await BackendApiService.to.getRecordList(
+    final result = await BackendApiService.to.getResourceList(
       collectionName: 'support_tickets',
       page: page,
       perPage: perPage,

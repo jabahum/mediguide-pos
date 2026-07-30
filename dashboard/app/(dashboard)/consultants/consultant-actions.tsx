@@ -166,10 +166,10 @@ export const consultantBulkActions: BulkAction<Consultant>[] = [
 
 // Action implementations
 async function toggleConsultantStatus(consultant: Consultant): Promise<void> {
-  const pb = getBackendClient()
+  const backend = getBackendClient()
   try {
     const newStatus = consultant.status === 'active' ? 'inactive' : 'active'
-    await pb.collection('consultants').update(consultant.id, { status: newStatus })
+    await backend.resource('consultants').update(consultant.id, { status: newStatus })
     
     showToast.success(
       "Status Updated",
@@ -183,10 +183,10 @@ async function toggleConsultantStatus(consultant: Consultant): Promise<void> {
 }
 
 async function toggleConsultantVerification(consultant: Consultant): Promise<void> {
-  const pb = getBackendClient()
+  const backend = getBackendClient()
   try {
     const newVerificationStatus = !consultant.isVerified
-    await pb.collection('consultants').update(consultant.id, { isVerified: newVerificationStatus })
+    await backend.resource('consultants').update(consultant.id, { isVerified: newVerificationStatus })
     
     showToast.success(
       "Verification Updated",
@@ -217,9 +217,9 @@ async function sendWelcomeEmail(consultant: Consultant): Promise<void> {
 }
 
 async function archiveConsultant(consultant: Consultant): Promise<void> {
-  const pb = getBackendClient()
+  const backend = getBackendClient()
   try {
-    await pb.collection('consultants').update(consultant.id, { 
+    await backend.resource('consultants').update(consultant.id, {
       status: 'inactive',
       notes: consultant.notes ? `${consultant.notes} [ARCHIVED: ${new Date().toISOString()}]` : `[ARCHIVED: ${new Date().toISOString()}]`
     })
@@ -236,9 +236,9 @@ async function archiveConsultant(consultant: Consultant): Promise<void> {
 }
 
 async function deleteConsultant(consultant: Consultant): Promise<void> {
-  const pb = getBackendClient()
+  const backend = getBackendClient()
   try {
-    await pb.collection('consultants').delete(consultant.id)
+    await backend.resource('consultants').delete(consultant.id)
     
     showToast.success(
       "Consultant Deleted",
@@ -253,13 +253,13 @@ async function deleteConsultant(consultant: Consultant): Promise<void> {
 
 // Bulk action implementations
 async function bulkUpdateConsultantStatus(consultants: Consultant[], status: string): Promise<void> {
-  const pb = getBackendClient()
+  const backend = getBackendClient()
   let successCount = 0
   let errorCount = 0
 
   for (const consultant of consultants) {
     try {
-      await pb.collection('consultants').update(consultant.id, { status })
+      await backend.resource('consultants').update(consultant.id, { status })
       successCount++
     } catch (error) {
       errorCount++
@@ -287,7 +287,7 @@ async function bulkUpdateConsultantStatus(consultants: Consultant[], status: str
 }
 
 async function bulkVerifyConsultants(consultants: Consultant[]): Promise<void> {
-  const pb = getBackendClient()
+  const backend = getBackendClient()
   const unverifiedConsultants = consultants.filter(consultant => !consultant.isVerified)
   
   if (unverifiedConsultants.length === 0) {
@@ -300,7 +300,7 @@ async function bulkVerifyConsultants(consultants: Consultant[]): Promise<void> {
 
   for (const consultant of unverifiedConsultants) {
     try {
-      await pb.collection('consultants').update(consultant.id, { isVerified: true })
+      await backend.resource('consultants').update(consultant.id, { isVerified: true })
       successCount++
     } catch (error) {
       errorCount++

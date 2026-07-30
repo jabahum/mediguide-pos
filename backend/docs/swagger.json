@@ -19,669 +19,6 @@
     },
     "basePath": "/",
     "paths": {
-        "/api/v1/collections/users/auth-refresh": {
-            "post": {
-                "description": "Exchange a refresh token for a new access token and rotated refresh token.",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "auth"
-                ],
-                "summary": "Refresh a user session",
-                "parameters": [
-                    {
-                        "description": "Refresh payload",
-                        "name": "payload",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/handlers.RefreshRequest"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/handlers.LoginEnvelope"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/handlers.ErrorResponse"
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthorized",
-                        "schema": {
-                            "$ref": "#/definitions/handlers.ErrorResponse"
-                        }
-                    }
-                }
-            }
-        },
-        "/api/v1/collections/users/auth-with-password": {
-            "post": {
-                "description": "Authenticate a user and return a JWT bearer token.",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "auth"
-                ],
-                "summary": "Log in a user",
-                "parameters": [
-                    {
-                        "description": "Login payload",
-                        "name": "payload",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/handlers.LoginRequest"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/handlers.LoginEnvelope"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/handlers.ErrorResponse"
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthorized",
-                        "schema": {
-                            "$ref": "#/definitions/handlers.ErrorResponse"
-                        }
-                    }
-                }
-            }
-        },
-        "/api/v1/collections/users/logout": {
-            "post": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Revoke the current authenticated session.",
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "auth"
-                ],
-                "summary": "Log out current session",
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/handlers.LogoutEnvelope"
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthorized",
-                        "schema": {
-                            "$ref": "#/definitions/handlers.ErrorResponse"
-                        }
-                    }
-                }
-            }
-        },
-        "/api/v1/collections/users/me": {
-            "get": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Return the currently authenticated user.",
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "auth"
-                ],
-                "summary": "Get current user",
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/handlers.UserEnvelope"
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthorized",
-                        "schema": {
-                            "$ref": "#/definitions/handlers.ErrorResponse"
-                        }
-                    },
-                    "404": {
-                        "description": "Not Found",
-                        "schema": {
-                            "$ref": "#/definitions/handlers.ErrorResponse"
-                        }
-                    }
-                }
-            }
-        },
-        "/api/v1/collections/users/register": {
-            "post": {
-                "description": "Create a new backend user account.",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "auth"
-                ],
-                "summary": "Register a user",
-                "parameters": [
-                    {
-                        "description": "Registration payload",
-                        "name": "payload",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/handlers.RegisterRequest"
-                        }
-                    }
-                ],
-                "responses": {
-                    "201": {
-                        "description": "Created",
-                        "schema": {
-                            "$ref": "#/definitions/handlers.UserEnvelope"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/handlers.ErrorResponse"
-                        }
-                    }
-                }
-            }
-        },
-        "/api/v1/collections/{collection}/records": {
-            "get": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Legacy v1 collection listing endpoint. Some collections are public while others require authentication depending on the collection name.",
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "legacy-v1"
-                ],
-                "summary": "List legacy collection records",
-                "parameters": [
-                    {
-                        "enum": [
-                            "medical_guidelines",
-                            "drugs",
-                            "abbreviations",
-                            "emergency_protocols",
-                            "faqs",
-                            "documentation",
-                            "generic_pages",
-                            "guideline_categories",
-                            "guideline_tags",
-                            "drug_categories",
-                            "drug_tags",
-                            "drug_classes",
-                            "therapeutic_categories",
-                            "consultants",
-                            "health_facilities",
-                            "regions",
-                            "districts",
-                            "counties",
-                            "subcounties",
-                            "parishes",
-                            "facility_levels",
-                            "ownership_types",
-                            "authorities",
-                            "ministry_directory",
-                            "languages",
-                            "notifications",
-                            "notification_templates",
-                            "notification_campaigns",
-                            "support_tickets",
-                            "support_ticket_replies",
-                            "conversations",
-                            "messages",
-                            "reading_progress",
-                            "guideline_usage_logs",
-                            "drug_usage_logs",
-                            "abbreviation_usage_logs",
-                            "consultant_usage_logs",
-                            "facility_usage_logs",
-                            "ai_usage_logs"
-                        ],
-                        "type": "string",
-                        "description": "Legacy collection name",
-                        "name": "collection",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
-                        "minimum": 1,
-                        "type": "integer",
-                        "description": "Page number",
-                        "name": "page",
-                        "in": "query"
-                    },
-                    {
-                        "maximum": 100,
-                        "minimum": 1,
-                        "type": "integer",
-                        "description": "Page size",
-                        "name": "per_page",
-                        "in": "query"
-                    },
-                    {
-                        "type": "string",
-                        "description": "Search term",
-                        "name": "search",
-                        "in": "query"
-                    },
-                    {
-                        "type": "string",
-                        "description": "Search term alias",
-                        "name": "q",
-                        "in": "query"
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/handlers.LegacyCollectionListResult"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/handlers.ErrorResponse"
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthorized",
-                        "schema": {
-                            "$ref": "#/definitions/handlers.ErrorResponse"
-                        }
-                    },
-                    "404": {
-                        "description": "Not Found",
-                        "schema": {
-                            "$ref": "#/definitions/handlers.ErrorResponse"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/handlers.ErrorResponse"
-                        }
-                    }
-                }
-            },
-            "post": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Legacy v1 collection create endpoint for authenticated user-owned resources and compatibility write flows.",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "legacy-v1"
-                ],
-                "summary": "Create legacy collection record",
-                "parameters": [
-                    {
-                        "enum": [
-                            "support_tickets",
-                            "support_ticket_replies",
-                            "conversations",
-                            "messages",
-                            "reading_progress",
-                            "guideline_usage_logs",
-                            "drug_usage_logs",
-                            "abbreviation_usage_logs",
-                            "consultant_usage_logs",
-                            "facility_usage_logs",
-                            "ai_usage_logs"
-                        ],
-                        "type": "string",
-                        "description": "Legacy collection name",
-                        "name": "collection",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
-                        "description": "Legacy collection payload",
-                        "name": "payload",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/handlers.LegacyCollectionItemResult"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/handlers.ErrorResponse"
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthorized",
-                        "schema": {
-                            "$ref": "#/definitions/handlers.ErrorResponse"
-                        }
-                    },
-                    "403": {
-                        "description": "Forbidden",
-                        "schema": {
-                            "$ref": "#/definitions/handlers.ErrorResponse"
-                        }
-                    },
-                    "404": {
-                        "description": "Not Found",
-                        "schema": {
-                            "$ref": "#/definitions/handlers.ErrorResponse"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/handlers.ErrorResponse"
-                        }
-                    }
-                }
-            }
-        },
-        "/api/v1/collections/{collection}/records/{id}": {
-            "get": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Legacy v1 collection detail endpoint. Some collections are public while others require authentication depending on the collection name.",
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "legacy-v1"
-                ],
-                "summary": "Get legacy collection record",
-                "parameters": [
-                    {
-                        "enum": [
-                            "medical_guidelines",
-                            "drugs",
-                            "abbreviations",
-                            "emergency_protocols",
-                            "faqs",
-                            "documentation",
-                            "generic_pages",
-                            "guideline_categories",
-                            "guideline_tags",
-                            "drug_categories",
-                            "drug_tags",
-                            "drug_classes",
-                            "therapeutic_categories",
-                            "consultants",
-                            "health_facilities",
-                            "regions",
-                            "districts",
-                            "counties",
-                            "subcounties",
-                            "parishes",
-                            "facility_levels",
-                            "ownership_types",
-                            "authorities",
-                            "ministry_directory",
-                            "languages",
-                            "notifications",
-                            "notification_templates",
-                            "notification_campaigns",
-                            "support_tickets",
-                            "support_ticket_replies",
-                            "conversations",
-                            "messages",
-                            "reading_progress",
-                            "guideline_usage_logs",
-                            "drug_usage_logs",
-                            "abbreviation_usage_logs",
-                            "consultant_usage_logs",
-                            "facility_usage_logs",
-                            "ai_usage_logs"
-                        ],
-                        "type": "string",
-                        "description": "Legacy collection name",
-                        "name": "collection",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
-                        "type": "string",
-                        "description": "Record ID",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/handlers.LegacyCollectionItemResult"
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthorized",
-                        "schema": {
-                            "$ref": "#/definitions/handlers.ErrorResponse"
-                        }
-                    },
-                    "404": {
-                        "description": "Not Found",
-                        "schema": {
-                            "$ref": "#/definitions/handlers.ErrorResponse"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/handlers.ErrorResponse"
-                        }
-                    }
-                }
-            },
-            "delete": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Legacy v1 collection delete endpoint for authenticated compatibility flows.",
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "legacy-v1"
-                ],
-                "summary": "Delete legacy collection record",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Legacy collection name",
-                        "name": "collection",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
-                        "type": "string",
-                        "description": "Record ID",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "204": {
-                        "description": "No Content"
-                    },
-                    "401": {
-                        "description": "Unauthorized",
-                        "schema": {
-                            "$ref": "#/definitions/handlers.ErrorResponse"
-                        }
-                    },
-                    "403": {
-                        "description": "Forbidden",
-                        "schema": {
-                            "$ref": "#/definitions/handlers.ErrorResponse"
-                        }
-                    },
-                    "404": {
-                        "description": "Not Found",
-                        "schema": {
-                            "$ref": "#/definitions/handlers.ErrorResponse"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/handlers.ErrorResponse"
-                        }
-                    }
-                }
-            },
-            "patch": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Legacy v1 collection patch endpoint for authenticated compatibility flows.",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "legacy-v1"
-                ],
-                "summary": "Update legacy collection record",
-                "parameters": [
-                    {
-                        "enum": [
-                            "users",
-                            "conversations",
-                            "messages",
-                            "reading_progress",
-                            "calculator_usage_logs"
-                        ],
-                        "type": "string",
-                        "description": "Legacy collection name",
-                        "name": "collection",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
-                        "type": "string",
-                        "description": "Record ID",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
-                        "description": "Legacy collection payload",
-                        "name": "payload",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/handlers.LegacyCollectionItemResult"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/handlers.ErrorResponse"
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthorized",
-                        "schema": {
-                            "$ref": "#/definitions/handlers.ErrorResponse"
-                        }
-                    },
-                    "403": {
-                        "description": "Forbidden",
-                        "schema": {
-                            "$ref": "#/definitions/handlers.ErrorResponse"
-                        }
-                    },
-                    "404": {
-                        "description": "Not Found",
-                        "schema": {
-                            "$ref": "#/definitions/handlers.ErrorResponse"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/handlers.ErrorResponse"
-                        }
-                    }
-                }
-            }
-        },
         "/api/v1/consultants/tree": {
             "get": {
                 "description": "Legacy v1 endpoint that groups consultants by region, city, then specialty.",
@@ -1525,6 +862,599 @@
                         "description": "Internal Server Error",
                         "schema": {
                             "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v2/drug-categories": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "drugs"
+                ],
+                "summary": "List drug categories",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.PaginatedDrugCategoriesEnvelope"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "tags": [
+                    "drugs"
+                ],
+                "summary": "Create a drug category",
+                "parameters": [
+                    {
+                        "description": "Category payload",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/services.DrugCategoryInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.DrugCategoryEnvelope"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v2/drug-categories/{id}": {
+            "get": {
+                "tags": [
+                    "drugs"
+                ],
+                "summary": "Get a drug category",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.DrugCategoryEnvelope"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "tags": [
+                    "drugs"
+                ],
+                "summary": "Archive a drug category",
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    }
+                }
+            },
+            "patch": {
+                "tags": [
+                    "drugs"
+                ],
+                "summary": "Update a drug category",
+                "parameters": [
+                    {
+                        "description": "Category fields",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/services.DrugCategoryInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.DrugCategoryEnvelope"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v2/drug-classes": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "drugs"
+                ],
+                "summary": "List drug classes",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.PaginatedDrugClassesEnvelope"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "tags": [
+                    "drugs"
+                ],
+                "summary": "Create a drug class",
+                "parameters": [
+                    {
+                        "description": "Class payload",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/services.DrugNamedReferenceInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.DrugClassEnvelope"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v2/drug-classes/{id}": {
+            "get": {
+                "tags": [
+                    "drugs"
+                ],
+                "summary": "Get a drug class",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.DrugClassEnvelope"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "tags": [
+                    "drugs"
+                ],
+                "summary": "Archive a drug class",
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    }
+                }
+            },
+            "patch": {
+                "tags": [
+                    "drugs"
+                ],
+                "summary": "Update a drug class",
+                "parameters": [
+                    {
+                        "description": "Class fields",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/services.DrugNamedReferenceInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.DrugClassEnvelope"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v2/drug-tags": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "drugs"
+                ],
+                "summary": "List drug tags",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.PaginatedDrugTagsEnvelope"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "tags": [
+                    "drugs"
+                ],
+                "summary": "Create a drug tag",
+                "parameters": [
+                    {
+                        "description": "Tag payload",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/services.DrugTagInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.DrugTagEnvelope"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v2/drug-tags/{id}": {
+            "get": {
+                "tags": [
+                    "drugs"
+                ],
+                "summary": "Get a drug tag",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.DrugTagEnvelope"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "tags": [
+                    "drugs"
+                ],
+                "summary": "Archive a drug tag",
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    }
+                }
+            },
+            "patch": {
+                "tags": [
+                    "drugs"
+                ],
+                "summary": "Update a drug tag",
+                "parameters": [
+                    {
+                        "description": "Tag fields",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/services.DrugTagInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.DrugTagEnvelope"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v2/drugs": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "drugs"
+                ],
+                "summary": "List drugs",
+                "parameters": [
+                    {
+                        "minimum": 1,
+                        "type": "integer",
+                        "description": "Page number",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "maximum": 100,
+                        "minimum": 1,
+                        "type": "integer",
+                        "description": "Page size",
+                        "name": "per_page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Drug name, brand, indication, or keyword",
+                        "name": "search",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Drug status",
+                        "name": "status",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Review status",
+                        "name": "review_status",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Drug class UUID",
+                        "name": "drug_class_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Therapeutic category UUID",
+                        "name": "therapeutic_category_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Route of administration",
+                        "name": "route",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Pregnancy category",
+                        "name": "pregnancy_category",
+                        "in": "query"
+                    },
+                    {
+                        "type": "boolean",
+                        "description": "WHO essential medicines only",
+                        "name": "who_eml",
+                        "in": "query"
+                    },
+                    {
+                        "type": "boolean",
+                        "description": "Antimicrobials only",
+                        "name": "antimicrobial",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Allowed values: name, created_at, updated_at, usage_count",
+                        "name": "sort",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Allowed values: asc, desc",
+                        "name": "order",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.PaginatedDrugsEnvelope"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "drugs"
+                ],
+                "summary": "Create a drug",
+                "parameters": [
+                    {
+                        "description": "Drug payload",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/services.DrugInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.DrugEnvelope"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v2/drugs/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "drugs"
+                ],
+                "summary": "Get a drug",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "Drug ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.DrugEnvelope"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "drugs"
+                ],
+                "summary": "Archive a drug",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "Drug ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    }
+                }
+            },
+            "patch": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "drugs"
+                ],
+                "summary": "Update a drug",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "Drug ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Drug fields",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/services.DrugInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.DrugEnvelope"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v2/drugs/{id}/usage": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "drugs"
+                ],
+                "summary": "Record authenticated drug usage",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "Drug ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.DrugUsageEnvelope"
                         }
                     }
                 }
@@ -2944,6 +2874,107 @@
                     }
                 }
             }
+        },
+        "/api/v2/therapeutic-categories": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "drugs"
+                ],
+                "summary": "List therapeutic categories",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.PaginatedTherapeuticCategoriesEnvelope"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "tags": [
+                    "drugs"
+                ],
+                "summary": "Create a therapeutic category",
+                "parameters": [
+                    {
+                        "description": "Therapeutic category payload",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/services.DrugNamedReferenceInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.TherapeuticCategoryEnvelope"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v2/therapeutic-categories/{id}": {
+            "get": {
+                "tags": [
+                    "drugs"
+                ],
+                "summary": "Get a therapeutic category",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.TherapeuticCategoryEnvelope"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "tags": [
+                    "drugs"
+                ],
+                "summary": "Archive a therapeutic category",
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    }
+                }
+            },
+            "patch": {
+                "tags": [
+                    "drugs"
+                ],
+                "summary": "Update a therapeutic category",
+                "parameters": [
+                    {
+                        "description": "Therapeutic category fields",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/services.DrugNamedReferenceInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.TherapeuticCategoryEnvelope"
+                        }
+                    }
+                }
+            }
         }
     },
     "definitions": {
@@ -3016,6 +3047,66 @@
                 }
             }
         },
+        "handlers.DrugCategoryEnvelope": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/models.DrugCategory"
+                },
+                "success": {
+                    "type": "boolean",
+                    "example": true
+                }
+            }
+        },
+        "handlers.DrugClassEnvelope": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/models.DrugClass"
+                },
+                "success": {
+                    "type": "boolean",
+                    "example": true
+                }
+            }
+        },
+        "handlers.DrugEnvelope": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/models.Drug"
+                },
+                "success": {
+                    "type": "boolean",
+                    "example": true
+                }
+            }
+        },
+        "handlers.DrugTagEnvelope": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/models.DrugTag"
+                },
+                "success": {
+                    "type": "boolean",
+                    "example": true
+                }
+            }
+        },
+        "handlers.DrugUsageEnvelope": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/models.DrugUsageLog"
+                },
+                "success": {
+                    "type": "boolean",
+                    "example": true
+                }
+            }
+        },
         "handlers.ErrorResponse": {
             "type": "object",
             "properties": {
@@ -3078,53 +3169,6 @@
                 "success": {
                     "type": "boolean",
                     "example": true
-                }
-            }
-        },
-        "handlers.LegacyCollectionItemResult": {
-            "type": "object",
-            "properties": {
-                "collection": {
-                    "type": "string",
-                    "example": "medical_guidelines"
-                },
-                "item": {
-                    "$ref": "#/definitions/handlers.JSONMap"
-                },
-                "success": {
-                    "type": "boolean",
-                    "example": true
-                }
-            }
-        },
-        "handlers.LegacyCollectionListResult": {
-            "type": "object",
-            "properties": {
-                "collection": {
-                    "type": "string",
-                    "example": "medical_guidelines"
-                },
-                "items": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/handlers.JSONMap"
-                    }
-                },
-                "page": {
-                    "type": "integer",
-                    "example": 1
-                },
-                "per_page": {
-                    "type": "integer",
-                    "example": 20
-                },
-                "success": {
-                    "type": "boolean",
-                    "example": true
-                },
-                "total_items": {
-                    "type": "integer",
-                    "example": 1
                 }
             }
         },
@@ -3414,6 +3458,141 @@
                 }
             }
         },
+        "handlers.PaginatedDrugCategoriesEnvelope": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "type": "object",
+                    "properties": {
+                        "items": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/models.DrugCategory"
+                            }
+                        },
+                        "page": {
+                            "type": "integer"
+                        },
+                        "per_page": {
+                            "type": "integer"
+                        },
+                        "total_items": {
+                            "type": "integer"
+                        },
+                        "total_pages": {
+                            "type": "integer"
+                        }
+                    }
+                },
+                "success": {
+                    "type": "boolean",
+                    "example": true
+                }
+            }
+        },
+        "handlers.PaginatedDrugClassesEnvelope": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "type": "object",
+                    "properties": {
+                        "items": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/models.DrugClass"
+                            }
+                        },
+                        "page": {
+                            "type": "integer"
+                        },
+                        "per_page": {
+                            "type": "integer"
+                        },
+                        "total_items": {
+                            "type": "integer"
+                        },
+                        "total_pages": {
+                            "type": "integer"
+                        }
+                    }
+                },
+                "success": {
+                    "type": "boolean",
+                    "example": true
+                }
+            }
+        },
+        "handlers.PaginatedDrugTagsEnvelope": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "type": "object",
+                    "properties": {
+                        "items": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/models.DrugTag"
+                            }
+                        },
+                        "page": {
+                            "type": "integer"
+                        },
+                        "per_page": {
+                            "type": "integer"
+                        },
+                        "total_items": {
+                            "type": "integer"
+                        },
+                        "total_pages": {
+                            "type": "integer"
+                        }
+                    }
+                },
+                "success": {
+                    "type": "boolean",
+                    "example": true
+                }
+            }
+        },
+        "handlers.PaginatedDrugs": {
+            "type": "object",
+            "properties": {
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.Drug"
+                    }
+                },
+                "page": {
+                    "type": "integer",
+                    "example": 1
+                },
+                "per_page": {
+                    "type": "integer",
+                    "example": 20
+                },
+                "total_items": {
+                    "type": "integer",
+                    "example": 1
+                },
+                "total_pages": {
+                    "type": "integer",
+                    "example": 1
+                }
+            }
+        },
+        "handlers.PaginatedDrugsEnvelope": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/handlers.PaginatedDrugs"
+                },
+                "success": {
+                    "type": "boolean",
+                    "example": true
+                }
+            }
+        },
         "handlers.PaginatedGuidelineChunks": {
             "type": "object",
             "properties": {
@@ -3609,6 +3788,38 @@
                 }
             }
         },
+        "handlers.PaginatedTherapeuticCategoriesEnvelope": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "type": "object",
+                    "properties": {
+                        "items": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/models.TherapeuticCategory"
+                            }
+                        },
+                        "page": {
+                            "type": "integer"
+                        },
+                        "per_page": {
+                            "type": "integer"
+                        },
+                        "total_items": {
+                            "type": "integer"
+                        },
+                        "total_pages": {
+                            "type": "integer"
+                        }
+                    }
+                },
+                "success": {
+                    "type": "boolean",
+                    "example": true
+                }
+            }
+        },
         "handlers.ProtocolRunEnvelope": {
             "type": "object",
             "properties": {
@@ -3777,6 +3988,18 @@
                 }
             }
         },
+        "handlers.TherapeuticCategoryEnvelope": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/models.TherapeuticCategory"
+                },
+                "success": {
+                    "type": "boolean",
+                    "example": true
+                }
+            }
+        },
         "handlers.UpdateMarkdownInput": {
             "type": "object",
             "required": [
@@ -3913,6 +4136,235 @@
                     "type": "string"
                 },
                 "version": {
+                    "type": "string"
+                }
+            }
+        },
+        "models.Drug": {
+            "type": "object",
+            "properties": {
+                "adult_dose": {
+                    "type": "string"
+                },
+                "antimicrobial_status": {
+                    "type": "boolean"
+                },
+                "brand_names": {
+                    "type": "string"
+                },
+                "categories_json": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "clinical_notes": {
+                    "type": "string"
+                },
+                "contraindications": {
+                    "type": "string"
+                },
+                "controlled_substance": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "drug_class_id": {
+                    "type": "string"
+                },
+                "drug_class_name": {
+                    "type": "string"
+                },
+                "duration": {
+                    "type": "string"
+                },
+                "elderly_dose": {
+                    "type": "string"
+                },
+                "frequency": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "indications": {
+                    "type": "string"
+                },
+                "max_daily_dose": {
+                    "type": "string"
+                },
+                "mechanism_of_action": {
+                    "type": "string"
+                },
+                "monitoring_parameters": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "pediatric_dose": {
+                    "type": "string"
+                },
+                "pregnancy_category": {
+                    "type": "string"
+                },
+                "reference_text": {
+                    "type": "string"
+                },
+                "review_status": {
+                    "type": "string"
+                },
+                "route_of_administration": {
+                    "type": "string"
+                },
+                "search_keywords": {
+                    "type": "string"
+                },
+                "side_effects": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "tags_json": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "therapeutic_category_id": {
+                    "type": "string"
+                },
+                "therapeutic_category_name": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                },
+                "usage_count": {
+                    "type": "integer"
+                },
+                "warnings": {
+                    "type": "string"
+                },
+                "who_eml_status": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "models.DrugCategory": {
+            "type": "object",
+            "properties": {
+                "color": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "icon": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "parent_category_id": {
+                    "type": "string"
+                },
+                "sort_order": {
+                    "type": "integer"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                }
+            }
+        },
+        "models.DrugClass": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "sort_order": {
+                    "type": "integer"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                }
+            }
+        },
+        "models.DrugTag": {
+            "type": "object",
+            "properties": {
+                "color": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "sort_order": {
+                    "type": "integer"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "tag_category": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                }
+            }
+        },
+        "models.DrugUsageLog": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "drug_id": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                },
+                "user_id": {
                     "type": "string"
                 }
             }
@@ -4309,6 +4761,32 @@
                 }
             }
         },
+        "models.TherapeuticCategory": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "sort_order": {
+                    "type": "integer"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                }
+            }
+        },
         "models.User": {
             "type": "object",
             "properties": {
@@ -4618,6 +5096,170 @@
                     "type": "string"
                 },
                 "version": {
+                    "type": "string"
+                }
+            }
+        },
+        "services.DrugCategoryInput": {
+            "type": "object",
+            "properties": {
+                "color": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "icon": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "parent_category_id": {
+                    "type": "string"
+                },
+                "sort_order": {
+                    "type": "integer"
+                },
+                "status": {
+                    "type": "string"
+                }
+            }
+        },
+        "services.DrugInput": {
+            "type": "object",
+            "properties": {
+                "adult_dose": {
+                    "type": "string"
+                },
+                "antimicrobial_status": {
+                    "type": "boolean"
+                },
+                "brand_names": {
+                    "type": "string"
+                },
+                "categories": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "clinical_notes": {
+                    "type": "string"
+                },
+                "contraindications": {
+                    "type": "string"
+                },
+                "controlled_substance": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "drug_class_id": {
+                    "type": "string"
+                },
+                "duration": {
+                    "type": "string"
+                },
+                "elderly_dose": {
+                    "type": "string"
+                },
+                "frequency": {
+                    "type": "string"
+                },
+                "indications": {
+                    "type": "string"
+                },
+                "max_daily_dose": {
+                    "type": "string"
+                },
+                "mechanism_of_action": {
+                    "type": "string"
+                },
+                "monitoring_parameters": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "pediatric_dose": {
+                    "type": "string"
+                },
+                "pregnancy_category": {
+                    "type": "string"
+                },
+                "reference_text": {
+                    "type": "string"
+                },
+                "review_status": {
+                    "type": "string"
+                },
+                "route_of_administration": {
+                    "type": "string"
+                },
+                "search_keywords": {
+                    "type": "string"
+                },
+                "side_effects": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "tags": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "therapeutic_category_id": {
+                    "type": "string"
+                },
+                "warnings": {
+                    "type": "string"
+                },
+                "who_eml_status": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "services.DrugNamedReferenceInput": {
+            "type": "object",
+            "properties": {
+                "description": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "sort_order": {
+                    "type": "integer"
+                },
+                "status": {
+                    "type": "string"
+                }
+            }
+        },
+        "services.DrugTagInput": {
+            "type": "object",
+            "properties": {
+                "color": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "sort_order": {
+                    "type": "integer"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "tag_category": {
                     "type": "string"
                 }
             }

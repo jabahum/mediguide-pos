@@ -5,7 +5,7 @@ import 'base_model.dart';
 class ReadingProgress extends BaseModel {
   ReadingProgress(super.data);
 
-  /// Create ReadingProgress from legacy collection API record
+  /// Create ReadingProgress from backend resource API record
   static ReadingProgress fromRecord(ApiRecord record) =>
       ReadingProgress(record.data);
 

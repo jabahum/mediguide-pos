@@ -208,7 +208,7 @@ function RelationSelect({
   const [open, setOpen] = React.useState(false)
   const [search, setSearch] = React.useState("")
   const [debounced, setDebounced] = React.useState("")
-  const pb = React.useMemo(() => getBackendClient(), [])
+  const backend = React.useMemo(() => getBackendClient(), [])
 
   const relation = field.relation!
   const labelField = relation.labelField ?? "name"
@@ -227,7 +227,7 @@ function RelationSelect({
   const listQuery = useQuery({
     enabled: open,
     queryKey: [
-      "pb-filter-relation",
+      "backend-filter-relation",
       relation.collection,
       { labelField, valueField, sort, pageSize, debounced, base: relation.filter ?? "" },
     ],
@@ -235,7 +235,7 @@ function RelationSelect({
       const filters: string[] = []
       if (relation.filter) filters.push(`(${relation.filter})`)
       if (debounced) filters.push(`${labelField} ~ "${escapeForFilter(debounced)}"`)
-      const result = await pb.collection(relation.collection).getList(1, pageSize, {
+      const result = await backend.resource(relation.collection).getList(1, pageSize, {
         filter: filters.join(" && ") || undefined,
         sort,
         fields: `${valueField},${labelField}`,
@@ -246,10 +246,10 @@ function RelationSelect({
 
   const selectedQuery = useQuery({
     enabled: !!value,
-    queryKey: ["pb-filter-relation-one", relation.collection, value, labelField, valueField],
+    queryKey: ["backend-filter-relation-one", relation.collection, value, labelField, valueField],
     queryFn: async () => {
-      const item = await pb
-        .collection(relation.collection)
+      const item = await backend
+        .resource(relation.collection)
         .getOne(value, { fields: `${valueField},${labelField}` })
       return item as Record<string, unknown>
     },

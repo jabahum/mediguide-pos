@@ -46,7 +46,7 @@ export const createGuidelineIndexRowActions = (
           const newOrder = await getNextOrderForParent(indexItem.id)
           const newLevel = (indexItem.level || 0) + 1
           
-          await getBackendClient().collection('guideline_index').create({
+          await getBackendClient().resource('guideline_index').create({
             title: "New Sub-item",
             parent: [indexItem.id],
             level: newLevel,
@@ -54,7 +54,7 @@ export const createGuidelineIndexRowActions = (
             hasChildren: false,
           })
           
-          await getBackendClient().collection('guideline_index').update(indexItem.id, {
+          await getBackendClient().resource('guideline_index').update(indexItem.id, {
             hasChildren: true
           })
           
@@ -107,7 +107,7 @@ export const createGuidelineIndexRowActions = (
     onClick: async (indexItem) => {
       try {
         // Check if this item has children
-        const children = await getBackendClient().collection('guideline_index').getList(1, 1, {
+        const children = await getBackendClient().resource('guideline_index').getList(1, 1, {
           filter: `parent ~ "${indexItem.id}"`
         })
         
@@ -116,7 +116,7 @@ export const createGuidelineIndexRowActions = (
           return
         }
         
-        await getBackendClient().collection('guideline_index').delete(indexItem.id)
+        await getBackendClient().resource('guideline_index').delete(indexItem.id)
         showToast.success("Deleted", "Index item deleted successfully")
         onRefresh?.()
       } catch (error) {
@@ -141,7 +141,7 @@ export const guidelineIndexBulkActions: BulkAction<GuidelineIndexType>[] = [
       try {
         // Check if any selected items have children
         for (const item of indexItems) {
-          const children = await getBackendClient().collection('guideline_index').getList(1, 1, {
+          const children = await getBackendClient().resource('guideline_index').getList(1, 1, {
             filter: `parent ~ "${item.id}"`
           })
           
@@ -154,7 +154,7 @@ export const guidelineIndexBulkActions: BulkAction<GuidelineIndexType>[] = [
         // Delete all selected items
         await Promise.all(
           indexItems.map(item => 
-            getBackendClient().collection('guideline_index').delete(item.id)
+            getBackendClient().resource('guideline_index').delete(item.id)
           )
         )
         
@@ -174,7 +174,7 @@ export const guidelineIndexBulkActions: BulkAction<GuidelineIndexType>[] = [
  */
 async function getNextOrderForParent(parentId: string): Promise<number> {
   try {
-    const siblings = await getBackendClient().collection('guideline_index').getList(1, 1, {
+    const siblings = await getBackendClient().resource('guideline_index').getList(1, 1, {
       filter: `parent ~ "${parentId}"`,
       sort: '-order'
     })
@@ -196,20 +196,20 @@ async function moveIndexItem(item: GuidelineIndexType, direction: 'up' | 'down')
   
   // Find the item that currently occupies the target position
   const parentFilter = item.parent?.length ? `parent ~ "${item.parent[0]}"` : 'parent = ""'
-  const targetItems = await getBackendClient().collection('guideline_index').getList(1, 50, {
+  const targetItems = await getBackendClient().resource('guideline_index').getList(1, 50, {
     filter: `${parentFilter} && order = ${newOrder}`
   })
   
   if (targetItems.items.length > 0) {
     const targetItem = targetItems.items[0]
     // Swap orders
-    await getBackendClient().collection('guideline_index').update(targetItem.id, {
+    await getBackendClient().resource('guideline_index').update(targetItem.id, {
       order: currentOrder
     })
   }
   
   // Update the current item's order
-  await getBackendClient().collection('guideline_index').update(item.id, {
+  await getBackendClient().resource('guideline_index').update(item.id, {
     order: newOrder
   })
 }

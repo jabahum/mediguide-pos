@@ -6,11 +6,11 @@ import 'base_model.dart';
 import 'district.dart';
 import 'region.dart';
 
-/// MinistryDirectory model based on legacy collection API ministry_directory collection
+/// MinistryDirectory model based on backend resource API ministry_directory collection
 class MinistryDirectory extends BaseModel {
   MinistryDirectory(super.data);
 
-  /// legacy collection API collection name
+  /// backend resource API collection name
   static const String collection = 'ministry_directory';
 
   // Self-registration for dynamic model creation
@@ -19,7 +19,7 @@ class MinistryDirectory extends BaseModel {
     return true;
   })();
 
-  /// Create MinistryDirectory from legacy collection API record
+  /// Create MinistryDirectory from backend resource API record
   static MinistryDirectory fromRecord(ApiRecord record) =>
       MinistryDirectory(record.data);
 

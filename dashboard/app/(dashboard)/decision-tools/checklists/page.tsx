@@ -65,7 +65,7 @@ export default function ChecklistsPage() {
   const fetchChecklists = useCallback(async () => {
     try {
       setIsFetching(true)
-      const result = await backendClient.collection(Collections.Calculators).getList(1, 100, {
+      const result = await backendClient.resource(Collections.Calculators).getList(1, 100, {
         filter: `type = "${CalculatorsTypeOptions.checklist}"`,
         sort: "-updated",
       })

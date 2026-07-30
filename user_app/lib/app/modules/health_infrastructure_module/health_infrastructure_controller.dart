@@ -68,7 +68,7 @@ class HealthInfrastructureController extends GetxController {
 
   Future<List<HealthFacility>> _loadPage(int pageKey) async {
     try {
-      final result = await BackendApiService.to.getRecordList(
+      final result = await BackendApiService.to.getResourceList(
         collectionName: 'health_facilities',
         page: pageKey,
         perPage: pageSize,
@@ -209,7 +209,7 @@ class HealthInfrastructureController extends GetxController {
 
       availableRegions.assignAll(regions);
 
-      final levels = await BackendApiService.to.getRecordList(
+      final levels = await BackendApiService.to.getResourceList(
         collectionName: 'facility_levels',
       );
 
@@ -217,7 +217,7 @@ class HealthInfrastructureController extends GetxController {
         levels.items.map((e) => FacilityLevel.fromRecord(e)),
       );
 
-      final ownership = await BackendApiService.to.getRecordList(
+      final ownership = await BackendApiService.to.getResourceList(
         collectionName: 'ownership_types',
       );
 
@@ -234,7 +234,7 @@ class HealthInfrastructureController extends GetxController {
   }
 
   Future<List<Region>> getRegions({String? filter, String? sort}) async {
-    final result = await BackendApiService.to.getRecordList(
+    final result = await BackendApiService.to.getResourceList(
       collectionName: 'regions',
       filter: filter,
       sort: sort,
@@ -244,7 +244,7 @@ class HealthInfrastructureController extends GetxController {
   }
 
   Future<void> _loadDistricts(String regionId) async {
-    final districts = await BackendApiService.to.getRecordList(
+    final districts = await BackendApiService.to.getResourceList(
       collectionName: 'districts',
       filter: 'region_id = "$regionId"',
       sort: 'name',

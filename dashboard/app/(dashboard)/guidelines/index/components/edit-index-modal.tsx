@@ -94,8 +94,8 @@ export function EditIndexModal({
     
     setIsSearching(true)
     try {
-      const pb = getBackendClient()
-      const results = await pb.collection('guideline_index').getList(1, 50, {
+      const backend = getBackendClient()
+      const results = await backend.resource('guideline_index').getList(1, 50, {
         filter: `title ~ "${searchTerm}" && id != "${indexItem.id}"`,
         sort: 'level,order'
       })
@@ -154,7 +154,7 @@ export function EditIndexModal({
 
     setIsSubmitting(true)
     try {
-      const pb = getBackendClient()
+      const backend = getBackendClient()
       
       // Prepare update data
       const updateData: Record<string, unknown> = {
@@ -173,14 +173,14 @@ export function EditIndexModal({
           updateData.level = (newParent?.level || 0) + 1
           
           // Get next order under new parent
-          const siblings = await pb.collection('guideline_index').getList(1, 50, {
+          const siblings = await backend.resource('guideline_index').getList(1, 50, {
             filter: `parent ~ "${data.parent}"`,
             sort: '-order'
           })
           updateData.order = (siblings.items[0]?.order || 0) + 1
           
           // Update new parent to mark it has children
-          await pb.collection('guideline_index').update(data.parent, {
+          await backend.resource('guideline_index').update(data.parent, {
             hasChildren: true
           })
         } else {
@@ -189,7 +189,7 @@ export function EditIndexModal({
           updateData.level = 0
           
           // Get next order for root items
-          const rootItems = await pb.collection('guideline_index').getList(1, 1, {
+          const rootItems = await backend.resource('guideline_index').getList(1, 1, {
             filter: 'parent = ""',
             sort: '-order'
           })
@@ -199,12 +199,12 @@ export function EditIndexModal({
         // Check if old parent should be updated (no longer has children)
         if (indexItem.parent?.[0]) {
           const oldParentId = indexItem.parent[0]
-          const remainingSiblings = await pb.collection('guideline_index').getList(1, 1, {
+          const remainingSiblings = await backend.resource('guideline_index').getList(1, 1, {
             filter: `parent ~ "${oldParentId}" && id != "${indexItem.id}"`
           })
           
           if (remainingSiblings.totalItems === 0) {
-            await pb.collection('guideline_index').update(oldParentId, {
+            await backend.resource('guideline_index').update(oldParentId, {
               hasChildren: false
             })
           }
@@ -212,7 +212,7 @@ export function EditIndexModal({
       }
 
       // Update the index item
-      await pb.collection('guideline_index').update(indexItem.id, updateData)
+      await backend.resource('guideline_index').update(indexItem.id, updateData)
       
       showToast.success("Success", "Index item updated successfully")
       onSuccess()

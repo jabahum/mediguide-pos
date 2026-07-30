@@ -3,11 +3,11 @@
 import 'package:user_app/app/data/models/api_record.dart';
 import 'base_model.dart';
 
-/// Facility level model based on legacy collection API facility_levels collection
+/// Facility level model based on backend resource API facility_levels collection
 class FacilityLevel extends BaseModel {
   FacilityLevel(super.data);
 
-  /// legacy collection API collection name
+  /// backend resource API collection name
   static const String collection = 'facility_levels';
 
   // Self-registration for dynamic model creation
@@ -16,7 +16,7 @@ class FacilityLevel extends BaseModel {
     return true;
   })();
 
-  /// Create FacilityLevel from legacy collection API record
+  /// Create FacilityLevel from backend resource API record
   static FacilityLevel fromRecord(ApiRecord record) =>
       FacilityLevel(record.data);
 

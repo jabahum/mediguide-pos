@@ -32,13 +32,13 @@ export default function CreateDrugPage() {
   React.useEffect(() => {
     const fetchData = async () => {
       try {
-        const pb = getBackendClient()
+        const backend = getBackendClient()
         const [categoriesResult, tagsResult] = await Promise.all([
-          pb.collection("drug_categories").getFullList({
+          backend.resource("drug_categories").getFullList({
             filter: "status = 'active'",
             sort: "sort_order,name"
           }),
-          pb.collection("drug_tags").getFullList({
+          backend.resource("drug_tags").getFullList({
             filter: "status = 'active'", 
             sort: "sort_order,name"
           })

@@ -168,8 +168,6 @@ func (s ResourceService) Create(resource string, payload map[string]any, userID 
 		return s.createUsageLog(resource, payload, userID)
 	case "consultant_usage_logs":
 		return s.createUsageLog(resource, payload, userID)
-	case "facility_usage_logs":
-		return s.createUsageLog(resource, payload, userID)
 	case "ai_usage_logs":
 		return s.createUsageLog(resource, payload, userID)
 	default:

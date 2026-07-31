@@ -92,6 +92,7 @@ func New(cfg config.Config) (*App, error) {
 	userSvc := services.UserService{DB: database}
 	legacyAPISvc := services.LegacyAPIService{DB: database}
 	resourceSvc := services.ResourceService{DB: database}
+	facilitySvc := services.FacilityService{DB: database}
 
 	authH := handlers.AuthHandler{Service: authSvc}
 	guidelineH := handlers.GuidelineHandler{Service: guidelineSvc, MaxUploadMB: cfg.MaxUploadMB}
@@ -107,7 +108,7 @@ func New(cfg config.Config) (*App, error) {
 	userH := handlers.UserHandler{Service: userSvc}
 	legacyAPIH := handlers.LegacyAPIHandler{Service: legacyAPISvc, Cfg: cfg}
 	resourceH := handlers.ResourceHandler{Service: resourceSvc, Cfg: cfg}
-	facilityH := handlers.NewFacilityHandler(resourceSvc, cfg)
+	facilityH := handlers.NewFacilityHandler(facilitySvc)
 
 	legacyV1 := r.Group("/api/v1")
 	legacyV1.GET("/stats", legacyAPIH.Stats)
@@ -230,44 +231,56 @@ func New(cfg config.Config) (*App, error) {
 		protected.POST("/facilities", middleware.RequireAnyPermission("admin.all", "facility.write"), facilityH.CreateFacility)
 		protected.PATCH("/facilities/:id", middleware.RequireAnyPermission("admin.all", "facility.write"), facilityH.UpdateFacility)
 		protected.DELETE("/facilities/:id", middleware.RequireAnyPermission("admin.all", "facility.write"), facilityH.DeleteFacility)
+		protected.POST("/facilities/:id/usage", facilityH.RecordUsage)
 
 		protected.GET("/health-sub-regions", facilityH.ListHealthSubRegions)
+		protected.GET("/health-sub-regions/:id", facilityH.GetHealthSubRegion)
 		protected.POST("/health-sub-regions", middleware.RequireAnyPermission("admin.all", "facility.write"), facilityH.CreateHealthSubRegion)
 		protected.PATCH("/health-sub-regions/:id", middleware.RequireAnyPermission("admin.all", "facility.write"), facilityH.UpdateHealthSubRegion)
 		protected.DELETE("/health-sub-regions/:id", middleware.RequireAnyPermission("admin.all", "facility.write"), facilityH.DeleteHealthSubRegion)
 		protected.GET("/regions", facilityH.ListRegions)
+		protected.GET("/regions/:id", facilityH.GetRegion)
+		protected.GET("/regions/:id/children", facilityH.GetRegionChildren)
 		protected.POST("/regions", middleware.RequireAnyPermission("admin.all", "facility.write"), facilityH.CreateRegion)
 		protected.PATCH("/regions/:id", middleware.RequireAnyPermission("admin.all", "facility.write"), facilityH.UpdateRegion)
 		protected.DELETE("/regions/:id", middleware.RequireAnyPermission("admin.all", "facility.write"), facilityH.DeleteRegion)
 		protected.GET("/districts", facilityH.ListDistricts)
+		protected.GET("/districts/:id", facilityH.GetDistrict)
 		protected.POST("/districts", middleware.RequireAnyPermission("admin.all", "facility.write"), facilityH.CreateDistrict)
 		protected.PATCH("/districts/:id", middleware.RequireAnyPermission("admin.all", "facility.write"), facilityH.UpdateDistrict)
 		protected.DELETE("/districts/:id", middleware.RequireAnyPermission("admin.all", "facility.write"), facilityH.DeleteDistrict)
 		protected.GET("/health-sub-districts", facilityH.ListHealthSubDistricts)
+		protected.GET("/health-sub-districts/:id", facilityH.GetHealthSubDistrict)
 		protected.POST("/health-sub-districts", middleware.RequireAnyPermission("admin.all", "facility.write"), facilityH.CreateHealthSubDistrict)
 		protected.PATCH("/health-sub-districts/:id", middleware.RequireAnyPermission("admin.all", "facility.write"), facilityH.UpdateHealthSubDistrict)
 		protected.DELETE("/health-sub-districts/:id", middleware.RequireAnyPermission("admin.all", "facility.write"), facilityH.DeleteHealthSubDistrict)
 		protected.GET("/counties", facilityH.ListCounties)
+		protected.GET("/counties/:id", facilityH.GetCounty)
 		protected.POST("/counties", middleware.RequireAnyPermission("admin.all", "facility.write"), facilityH.CreateCounty)
 		protected.PATCH("/counties/:id", middleware.RequireAnyPermission("admin.all", "facility.write"), facilityH.UpdateCounty)
 		protected.DELETE("/counties/:id", middleware.RequireAnyPermission("admin.all", "facility.write"), facilityH.DeleteCounty)
 		protected.GET("/subcounties", facilityH.ListSubcounties)
+		protected.GET("/subcounties/:id", facilityH.GetSubcounty)
 		protected.POST("/subcounties", middleware.RequireAnyPermission("admin.all", "facility.write"), facilityH.CreateSubcounty)
 		protected.PATCH("/subcounties/:id", middleware.RequireAnyPermission("admin.all", "facility.write"), facilityH.UpdateSubcounty)
 		protected.DELETE("/subcounties/:id", middleware.RequireAnyPermission("admin.all", "facility.write"), facilityH.DeleteSubcounty)
 		protected.GET("/parishes", facilityH.ListParishes)
+		protected.GET("/parishes/:id", facilityH.GetParish)
 		protected.POST("/parishes", middleware.RequireAnyPermission("admin.all", "facility.write"), facilityH.CreateParish)
 		protected.PATCH("/parishes/:id", middleware.RequireAnyPermission("admin.all", "facility.write"), facilityH.UpdateParish)
 		protected.DELETE("/parishes/:id", middleware.RequireAnyPermission("admin.all", "facility.write"), facilityH.DeleteParish)
 		protected.GET("/facility-levels", facilityH.ListFacilityLevels)
+		protected.GET("/facility-levels/:id", facilityH.GetFacilityLevel)
 		protected.POST("/facility-levels", middleware.RequireAnyPermission("admin.all", "facility.write"), facilityH.CreateFacilityLevel)
 		protected.PATCH("/facility-levels/:id", middleware.RequireAnyPermission("admin.all", "facility.write"), facilityH.UpdateFacilityLevel)
 		protected.DELETE("/facility-levels/:id", middleware.RequireAnyPermission("admin.all", "facility.write"), facilityH.DeleteFacilityLevel)
 		protected.GET("/ownership-types", facilityH.ListOwnershipTypes)
+		protected.GET("/ownership-types/:id", facilityH.GetOwnershipType)
 		protected.POST("/ownership-types", middleware.RequireAnyPermission("admin.all", "facility.write"), facilityH.CreateOwnershipType)
 		protected.PATCH("/ownership-types/:id", middleware.RequireAnyPermission("admin.all", "facility.write"), facilityH.UpdateOwnershipType)
 		protected.DELETE("/ownership-types/:id", middleware.RequireAnyPermission("admin.all", "facility.write"), facilityH.DeleteOwnershipType)
 		protected.GET("/authorities", facilityH.ListAuthorities)
+		protected.GET("/authorities/:id", facilityH.GetAuthority)
 		protected.POST("/authorities", middleware.RequireAnyPermission("admin.all", "facility.write"), facilityH.CreateAuthority)
 		protected.PATCH("/authorities/:id", middleware.RequireAnyPermission("admin.all", "facility.write"), facilityH.UpdateAuthority)
 		protected.DELETE("/authorities/:id", middleware.RequireAnyPermission("admin.all", "facility.write"), facilityH.DeleteAuthority)
@@ -307,7 +320,6 @@ func registerResourceRoutes(group *gin.RouterGroup, handler handlers.ResourceHan
 		"guideline_usage_logs":    "/guideline-usage",
 		"abbreviation_usage_logs": "/abbreviation-usage",
 		"consultant_usage_logs":   "/consultant-usage",
-		"facility_usage_logs":     "/facility-usage",
 		"ai_usage_logs":           "/ai-usage",
 	}
 

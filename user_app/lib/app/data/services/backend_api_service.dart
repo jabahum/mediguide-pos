@@ -285,96 +285,6 @@ class BackendApiService extends GetxService {
     );
   }
 
-  Future<PagedResult<ApiRecord>> getFacilities({
-    int page = 1,
-    int perPage = 30,
-    String? search,
-    String? regionId,
-    String? districtId,
-    String? facilityLevelId,
-    String? ownershipTypeId,
-  }) {
-    return _getTypedPage(
-      path: '/api/v2/facilities',
-      collectionName: HealthFacility.collection,
-      page: page,
-      perPage: perPage,
-      query: {
-        if (search != null && search.trim().isNotEmpty) 'search': search.trim(),
-        if (regionId != null && regionId.isNotEmpty) 'region_id': regionId,
-        if (districtId != null && districtId.isNotEmpty)
-          'district_id': districtId,
-        if (facilityLevelId != null && facilityLevelId.isNotEmpty)
-          'facility_level_id': facilityLevelId,
-        if (ownershipTypeId != null && ownershipTypeId.isNotEmpty)
-          'ownership_type_id': ownershipTypeId,
-        'sort': 'name',
-        'order': 'asc',
-      },
-    );
-  }
-
-  Future<PagedResult<ApiRecord>> getFacilityReference({
-    required String path,
-    required String collectionName,
-    int page = 1,
-    int perPage = 100,
-    String? search,
-    String? regionId,
-  }) {
-    const allowedPaths = {
-      '/api/v2/regions',
-      '/api/v2/districts',
-      '/api/v2/facility-levels',
-      '/api/v2/ownership-types',
-    };
-    if (!allowedPaths.contains(path)) {
-      throw ArgumentError.value(path, 'path', 'unsupported facility reference');
-    }
-    return _getTypedPage(
-      path: path,
-      collectionName: collectionName,
-      page: page,
-      perPage: perPage,
-      query: {
-        if (search != null && search.trim().isNotEmpty) 'search': search.trim(),
-        if (regionId != null && regionId.isNotEmpty) 'region_id': regionId,
-        'sort': 'name',
-        'order': 'asc',
-      },
-    );
-  }
-
-  Future<PagedResult<ApiRecord>> _getTypedPage({
-    required String path,
-    required String collectionName,
-    required int page,
-    required int perPage,
-    Map<String, String> query = const {},
-  }) async {
-    final response = await _requestJson(
-      path,
-      method: 'GET',
-      query: {'page': '$page', 'per_page': '$perPage', ...query},
-    );
-    final data = _unwrapData(response);
-    final items = (data['items'] as List? ?? const [])
-        .whereType<Map>()
-        .map(
-          (item) => ApiRecord(
-            _normalizeRecord(collectionName: collectionName, raw: _asMap(item)),
-          ),
-        )
-        .toList();
-    return PagedResult<ApiRecord>(
-      page: (data['page'] as num?)?.toInt() ?? page,
-      perPage: (data['per_page'] as num?)?.toInt() ?? perPage,
-      totalItems: (data['total_items'] as num?)?.toInt() ?? items.length,
-      totalPages: (data['total_pages'] as num?)?.toInt() ?? 0,
-      items: items,
-    );
-  }
-
   Future<ApiRecord?> getDrug(String drugId) async {
     try {
       final response = await _requestJson(
@@ -1095,81 +1005,6 @@ class BackendApiService extends GetxService {
         data['reply_to'] = raw['reply_to_id']?.toString() ?? '';
         _injectExpandUser(data, field: 'sender', prefix: 'sender_expand_');
         break;
-      case 'health_facilities':
-        data['facility_level'] = raw['facility_level_id']?.toString() ?? '';
-        data['authority'] = raw['authority_id']?.toString() ?? '';
-        data['ownership_type'] = raw['ownership_type_id']?.toString() ?? '';
-        data['health_sub_district'] =
-            raw['health_sub_district_id']?.toString() ?? '';
-        data['parish'] = raw['parish_id']?.toString() ?? '';
-        data['subcounty'] = raw['subcounty_id']?.toString() ?? '';
-        data['county'] = raw['county_id']?.toString() ?? '';
-        data['district'] = raw['district_id']?.toString() ?? '';
-        data['region'] = raw['region_id']?.toString() ?? '';
-        _injectSimpleExpand(
-          data,
-          field: 'facility_level',
-          id: data['facility_level']?.toString() ?? '',
-          collectionName: 'facility_levels',
-          extra: {'name': raw['facility_level_name']},
-        );
-        _injectSimpleExpand(
-          data,
-          field: 'authority',
-          id: data['authority']?.toString() ?? '',
-          collectionName: 'authorities',
-          extra: {'name': raw['authority_name']},
-        );
-        _injectSimpleExpand(
-          data,
-          field: 'ownership_type',
-          id: data['ownership_type']?.toString() ?? '',
-          collectionName: 'ownership_types',
-          extra: {'name': raw['ownership_type_name']},
-        );
-        _injectSimpleExpand(
-          data,
-          field: 'health_sub_district',
-          id: data['health_sub_district']?.toString() ?? '',
-          collectionName: 'health_sub_districts',
-          extra: {'name': raw['health_sub_district_name']},
-        );
-        _injectSimpleExpand(
-          data,
-          field: 'parish',
-          id: data['parish']?.toString() ?? '',
-          collectionName: 'parishes',
-          extra: {'name': raw['parish_name']},
-        );
-        _injectSimpleExpand(
-          data,
-          field: 'subcounty',
-          id: data['subcounty']?.toString() ?? '',
-          collectionName: 'subcounties',
-          extra: {'name': raw['subcounty_name']},
-        );
-        _injectSimpleExpand(
-          data,
-          field: 'county',
-          id: data['county']?.toString() ?? '',
-          collectionName: 'counties',
-          extra: {'name': raw['county_name']},
-        );
-        _injectSimpleExpand(
-          data,
-          field: 'district',
-          id: data['district']?.toString() ?? '',
-          collectionName: 'districts',
-          extra: {'name': raw['district_name']},
-        );
-        _injectSimpleExpand(
-          data,
-          field: 'region',
-          id: data['region']?.toString() ?? '',
-          collectionName: 'regions',
-          extra: {'name': raw['region_name']},
-        );
-        break;
       case 'ministry_directory':
         data['district'] = raw['district_id']?.toString() ?? '';
         data['region'] = raw['region_id']?.toString() ?? '';
@@ -1695,17 +1530,6 @@ class BackendApiService extends GetxService {
       'guideline_tags' => '/api/v2/guideline-tags',
       'guideline_index' => '/api/v2/guideline-index',
       'consultants' => '/api/v2/consultants',
-      'health_sub_regions' => '/api/v2/health-sub-regions',
-      'health_facilities' => '/api/v2/facilities',
-      'regions' => '/api/v2/regions',
-      'districts' => '/api/v2/districts',
-      'health_sub_districts' => '/api/v2/health-sub-districts',
-      'counties' => '/api/v2/counties',
-      'subcounties' => '/api/v2/subcounties',
-      'parishes' => '/api/v2/parishes',
-      'facility_levels' => '/api/v2/facility-levels',
-      'ownership_types' => '/api/v2/ownership-types',
-      'authorities' => '/api/v2/authorities',
       'ministry_directory' => '/api/v2/ministry-directory',
       'languages' => '/api/v2/reference-languages',
       'notifications' => '/api/v2/notifications',
@@ -1718,7 +1542,6 @@ class BackendApiService extends GetxService {
       'guideline_usage_logs' => '/api/v2/guideline-usage',
       'abbreviation_usage_logs' => '/api/v2/abbreviation-usage',
       'consultant_usage_logs' => '/api/v2/consultant-usage',
-      'facility_usage_logs' => '/api/v2/facility-usage',
       'ai_usage_logs' => '/api/v2/ai-usage',
       _ => null,
     };

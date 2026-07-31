@@ -1044,6 +1044,19 @@ definitions:
       user_id:
         type: string
     type: object
+  models.FacilityUsageLog:
+    properties:
+      created_at:
+        type: string
+      facility_id:
+        type: string
+      id:
+        type: string
+      updated_at:
+        type: string
+      user_id:
+        type: string
+    type: object
   models.GuidelineChunk:
     properties:
       content:
@@ -1641,6 +1654,161 @@ definitions:
       tag_category:
         type: string
     type: object
+  services.FacilityInput:
+    properties:
+      authority_id:
+        type: string
+      county_id:
+        type: string
+      district_id:
+        type: string
+      facility_level_id:
+        type: string
+      health_sub_district_id:
+        type: string
+      health_sub_region_id:
+        type: string
+      hsdt_code:
+        type: string
+      name:
+        type: string
+      nhpi_code:
+        type: string
+      ownership_type_id:
+        type: string
+      parish_id:
+        type: string
+      region_id:
+        type: string
+      subcounty_id:
+        type: string
+    type: object
+  services.FacilityItem:
+    properties:
+      item:
+        $ref: '#/definitions/services.FacilityView'
+      resource:
+        type: string
+      success:
+        type: boolean
+    type: object
+  services.FacilityPage:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/services.FacilityView'
+        type: array
+      page:
+        type: integer
+      per_page:
+        type: integer
+      resource:
+        type: string
+      success:
+        type: boolean
+      total_items:
+        type: integer
+      total_pages:
+        type: integer
+    type: object
+  services.FacilityReferenceView:
+    properties:
+      code:
+        type: string
+      county_id:
+        type: string
+      county_name:
+        type: string
+      created_at:
+        type: string
+      district_id:
+        type: string
+      district_name:
+        type: string
+      health_sub_region_id:
+        type: string
+      health_sub_region_name:
+        type: string
+      hsdt_code:
+        type: string
+      id:
+        type: string
+      name:
+        type: string
+      nhpi_code:
+        type: string
+      ownership_type_id:
+        type: string
+      ownership_type_name:
+        type: string
+      region_id:
+        type: string
+      region_name:
+        type: string
+      subcounty_id:
+        type: string
+      subcounty_name:
+        type: string
+      updated_at:
+        type: string
+    type: object
+  services.FacilityView:
+    properties:
+      authority_id:
+        type: string
+      authority_name:
+        type: string
+      county_id:
+        type: string
+      county_name:
+        type: string
+      created_at:
+        type: string
+      district_id:
+        type: string
+      district_name:
+        type: string
+      facility_level_id:
+        type: string
+      facility_level_name:
+        type: string
+      health_sub_district_id:
+        type: string
+      health_sub_district_name:
+        type: string
+      health_sub_region_id:
+        type: string
+      health_sub_region_name:
+        type: string
+      hsdt_code:
+        type: string
+      id:
+        type: string
+      name:
+        type: string
+      nhpi_code:
+        type: string
+      ownership_type_id:
+        type: string
+      ownership_type_name:
+        type: string
+      parish_id:
+        type: string
+      parish_name:
+        type: string
+      region_id:
+        type: string
+      region_name:
+        type: string
+      subcounty_id:
+        type: string
+      subcounty_name:
+        type: string
+      updated_at:
+        type: string
+      usage_count:
+        type: integer
+    type: object
   services.FinishCalculatorUsageInput:
     properties:
       session_end:
@@ -1721,6 +1889,19 @@ definitions:
         type: string
       type:
         type: string
+    type: object
+  services.RegionChildren:
+    properties:
+      districts:
+        items:
+          $ref: '#/definitions/services.FacilityReferenceView'
+        type: array
+      health_sub_regions:
+        items:
+          $ref: '#/definitions/services.FacilityReferenceView'
+        type: array
+      region:
+        $ref: '#/definitions/services.FacilityReferenceView'
     type: object
   services.RoleInput:
     properties:
@@ -3010,6 +3191,229 @@ paths:
       summary: Record authenticated drug usage
       tags:
       - drugs
+  /api/v2/facilities:
+    get:
+      parameters:
+      - description: Page
+        in: query
+        name: page
+        type: integer
+      - description: Items per page
+        in: query
+        name: per_page
+        type: integer
+      - description: Name, code, or district search
+        in: query
+        name: search
+        type: string
+      - description: Region UUID
+        in: query
+        name: region_id
+        type: string
+      - description: District UUID
+        in: query
+        name: district_id
+        type: string
+      - description: Facility level UUID
+        in: query
+        name: facility_level_id
+        type: string
+      - description: Ownership type UUID
+        in: query
+        name: ownership_type_id
+        type: string
+      - description: name, created_at, updated_at, or usage_count
+        in: query
+        name: sort
+        type: string
+      - description: asc or desc
+        in: query
+        name: order
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/services.FacilityPage'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: List health facilities
+      tags:
+      - facilities
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Facility
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/services.FacilityInput'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/services.FacilityItem'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Create a health facility
+      tags:
+      - facilities
+  /api/v2/facilities/{id}:
+    delete:
+      parameters:
+      - description: Facility UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Soft-delete a health facility
+      tags:
+      - facilities
+    get:
+      parameters:
+      - description: Facility UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/services.FacilityItem'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get a health facility
+      tags:
+      - facilities
+    patch:
+      consumes:
+      - application/json
+      parameters:
+      - description: Facility UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Facility changes
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/services.FacilityInput'
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/services.FacilityItem'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Update a health facility
+      tags:
+      - facilities
+  /api/v2/facilities/{id}/usage:
+    post:
+      parameters:
+      - description: Facility UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/models.FacilityUsageLog'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Record current-user facility usage
+      tags:
+      - facilities
   /api/v2/guideline-versions/{id}/chunks:
     get:
       parameters:
@@ -3799,6 +4203,36 @@ paths:
       summary: Run a clinical protocol
       tags:
       - protocols
+  /api/v2/regions/{id}/children:
+    get:
+      parameters:
+      - description: Region UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/services.RegionChildren'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get typed children for a region
+      tags:
+      - facilities
   /api/v2/roles:
     get:
       parameters:

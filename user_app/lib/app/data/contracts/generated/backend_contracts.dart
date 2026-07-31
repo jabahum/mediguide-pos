@@ -1906,6 +1906,29 @@ final class ModelsDrugUsageLog {
   Map<String, dynamic> toJson() => Map.of(value);
 }
 
+final class ModelsFacilityUsageLog {
+  ModelsFacilityUsageLog(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory ModelsFacilityUsageLog.fromJson(Map<String, dynamic> json) =>
+      ModelsFacilityUsageLog(json);
+
+  static const schemaName = 'models.FacilityUsageLog';
+  final Map<String, dynamic> value;
+
+  String? get createdAt => value['created_at']?.toString();
+
+  String? get facilityId => value['facility_id']?.toString();
+
+  String? get id => value['id']?.toString();
+
+  String? get updatedAt => value['updated_at']?.toString();
+
+  String? get userId => value['user_id']?.toString();
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
 final class ModelsGuidelineChunk {
   ModelsGuidelineChunk(Map<String, dynamic> value)
     : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
@@ -2808,6 +2831,225 @@ final class ServicesDrugTagInput {
   Map<String, dynamic> toJson() => Map.of(value);
 }
 
+final class ServicesFacilityInput {
+  ServicesFacilityInput(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory ServicesFacilityInput.fromJson(Map<String, dynamic> json) =>
+      ServicesFacilityInput(json);
+
+  static const schemaName = 'services.FacilityInput';
+  final Map<String, dynamic> value;
+
+  String? get authorityId => value['authority_id']?.toString();
+
+  String? get countyId => value['county_id']?.toString();
+
+  String? get districtId => value['district_id']?.toString();
+
+  String? get facilityLevelId => value['facility_level_id']?.toString();
+
+  String? get healthSubDistrictId =>
+      value['health_sub_district_id']?.toString();
+
+  String? get healthSubRegionId => value['health_sub_region_id']?.toString();
+
+  String? get hsdtCode => value['hsdt_code']?.toString();
+
+  String? get name => value['name']?.toString();
+
+  String? get nhpiCode => value['nhpi_code']?.toString();
+
+  String? get ownershipTypeId => value['ownership_type_id']?.toString();
+
+  String? get parishId => value['parish_id']?.toString();
+
+  String? get regionId => value['region_id']?.toString();
+
+  String? get subcountyId => value['subcounty_id']?.toString();
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
+final class ServicesFacilityItem {
+  ServicesFacilityItem(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory ServicesFacilityItem.fromJson(Map<String, dynamic> json) =>
+      ServicesFacilityItem(json);
+
+  static const schemaName = 'services.FacilityItem';
+  final Map<String, dynamic> value;
+
+  ServicesFacilityView? get item {
+    final raw = value['item'];
+    if (raw is! Map) return null;
+    return ServicesFacilityView.fromJson(_jsonMap(raw));
+  }
+
+  String? get resource => value['resource']?.toString();
+
+  bool? get success => value['success'] as bool?;
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
+final class ServicesFacilityPage {
+  ServicesFacilityPage(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory ServicesFacilityPage.fromJson(Map<String, dynamic> json) =>
+      ServicesFacilityPage(json);
+
+  static const schemaName = 'services.FacilityPage';
+  final Map<String, dynamic> value;
+
+  List<ServicesFacilityView> get items {
+    final raw = value['items'];
+    if (raw is! List) return const [];
+    return raw
+        .whereType<Map>()
+        .map((item) => ServicesFacilityView.fromJson(_jsonMap(item)))
+        .toList(growable: false);
+  }
+
+  int? get page => (value['page'] as num?)?.toInt();
+
+  int? get perPage => (value['per_page'] as num?)?.toInt();
+
+  String? get resource => value['resource']?.toString();
+
+  bool? get success => value['success'] as bool?;
+
+  int? get totalItems => (value['total_items'] as num?)?.toInt();
+
+  int? get totalPages => (value['total_pages'] as num?)?.toInt();
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
+final class ServicesFacilityReferenceView {
+  ServicesFacilityReferenceView(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory ServicesFacilityReferenceView.fromJson(Map<String, dynamic> json) =>
+      ServicesFacilityReferenceView(json);
+
+  static const schemaName = 'services.FacilityReferenceView';
+  final Map<String, dynamic> value;
+
+  String? get code => value['code']?.toString();
+
+  String? get countyId => value['county_id']?.toString();
+
+  String? get countyName => value['county_name']?.toString();
+
+  String? get createdAt => value['created_at']?.toString();
+
+  String? get districtId => value['district_id']?.toString();
+
+  String? get districtName => value['district_name']?.toString();
+
+  String? get healthSubRegionId => value['health_sub_region_id']?.toString();
+
+  String? get healthSubRegionName =>
+      value['health_sub_region_name']?.toString();
+
+  String? get hsdtCode => value['hsdt_code']?.toString();
+
+  String? get id => value['id']?.toString();
+
+  String? get name => value['name']?.toString();
+
+  String? get nhpiCode => value['nhpi_code']?.toString();
+
+  String? get ownershipTypeId => value['ownership_type_id']?.toString();
+
+  String? get ownershipTypeName => value['ownership_type_name']?.toString();
+
+  String? get regionId => value['region_id']?.toString();
+
+  String? get regionName => value['region_name']?.toString();
+
+  String? get subcountyId => value['subcounty_id']?.toString();
+
+  String? get subcountyName => value['subcounty_name']?.toString();
+
+  String? get updatedAt => value['updated_at']?.toString();
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
+final class ServicesFacilityView {
+  ServicesFacilityView(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory ServicesFacilityView.fromJson(Map<String, dynamic> json) =>
+      ServicesFacilityView(json);
+
+  static const schemaName = 'services.FacilityView';
+  final Map<String, dynamic> value;
+
+  String? get authorityId => value['authority_id']?.toString();
+
+  String? get authorityName => value['authority_name']?.toString();
+
+  String? get countyId => value['county_id']?.toString();
+
+  String? get countyName => value['county_name']?.toString();
+
+  String? get createdAt => value['created_at']?.toString();
+
+  String? get districtId => value['district_id']?.toString();
+
+  String? get districtName => value['district_name']?.toString();
+
+  String? get facilityLevelId => value['facility_level_id']?.toString();
+
+  String? get facilityLevelName => value['facility_level_name']?.toString();
+
+  String? get healthSubDistrictId =>
+      value['health_sub_district_id']?.toString();
+
+  String? get healthSubDistrictName =>
+      value['health_sub_district_name']?.toString();
+
+  String? get healthSubRegionId => value['health_sub_region_id']?.toString();
+
+  String? get healthSubRegionName =>
+      value['health_sub_region_name']?.toString();
+
+  String? get hsdtCode => value['hsdt_code']?.toString();
+
+  String? get id => value['id']?.toString();
+
+  String? get name => value['name']?.toString();
+
+  String? get nhpiCode => value['nhpi_code']?.toString();
+
+  String? get ownershipTypeId => value['ownership_type_id']?.toString();
+
+  String? get ownershipTypeName => value['ownership_type_name']?.toString();
+
+  String? get parishId => value['parish_id']?.toString();
+
+  String? get parishName => value['parish_name']?.toString();
+
+  String? get regionId => value['region_id']?.toString();
+
+  String? get regionName => value['region_name']?.toString();
+
+  String? get subcountyId => value['subcounty_id']?.toString();
+
+  String? get subcountyName => value['subcounty_name']?.toString();
+
+  String? get updatedAt => value['updated_at']?.toString();
+
+  int? get usageCount => (value['usage_count'] as num?)?.toInt();
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
 final class ServicesFinishCalculatorUsageInput {
   ServicesFinishCalculatorUsageInput(Map<String, dynamic> value)
     : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
@@ -2966,6 +3208,43 @@ final class ServicesProtocolStep {
   String? get question => value['question']?.toString();
 
   String? get type => value['type']?.toString();
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
+final class ServicesRegionChildren {
+  ServicesRegionChildren(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory ServicesRegionChildren.fromJson(Map<String, dynamic> json) =>
+      ServicesRegionChildren(json);
+
+  static const schemaName = 'services.RegionChildren';
+  final Map<String, dynamic> value;
+
+  List<ServicesFacilityReferenceView> get districts {
+    final raw = value['districts'];
+    if (raw is! List) return const [];
+    return raw
+        .whereType<Map>()
+        .map((item) => ServicesFacilityReferenceView.fromJson(_jsonMap(item)))
+        .toList(growable: false);
+  }
+
+  List<ServicesFacilityReferenceView> get healthSubRegions {
+    final raw = value['health_sub_regions'];
+    if (raw is! List) return const [];
+    return raw
+        .whereType<Map>()
+        .map((item) => ServicesFacilityReferenceView.fromJson(_jsonMap(item)))
+        .toList(growable: false);
+  }
+
+  ServicesFacilityReferenceView? get region {
+    final raw = value['region'];
+    if (raw is! Map) return null;
+    return ServicesFacilityReferenceView.fromJson(_jsonMap(raw));
+  }
 
   Map<String, dynamic> toJson() => Map.of(value);
 }

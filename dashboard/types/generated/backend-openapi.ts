@@ -676,6 +676,14 @@ export interface ModelsDrugUsageLog {
   user_id?: string;
 }
 
+export interface ModelsFacilityUsageLog {
+  created_at?: string;
+  facility_id?: string;
+  id?: string;
+  updated_at?: string;
+  user_id?: string;
+}
+
 export interface ModelsGuidelineChunk {
   content?: string;
   created_at?: string;
@@ -1007,6 +1015,90 @@ export interface ServicesDrugTagInput {
   tag_category?: string;
 }
 
+export interface ServicesFacilityInput {
+  authority_id?: string;
+  county_id?: string;
+  district_id?: string;
+  facility_level_id?: string;
+  health_sub_district_id?: string;
+  health_sub_region_id?: string;
+  hsdt_code?: string;
+  name?: string;
+  nhpi_code?: string;
+  ownership_type_id?: string;
+  parish_id?: string;
+  region_id?: string;
+  subcounty_id?: string;
+}
+
+export interface ServicesFacilityItem {
+  item?: ServicesFacilityView;
+  resource?: string;
+  success?: boolean;
+}
+
+export interface ServicesFacilityPage {
+  items?: ServicesFacilityView[];
+  page?: number;
+  per_page?: number;
+  resource?: string;
+  success?: boolean;
+  total_items?: number;
+  total_pages?: number;
+}
+
+export interface ServicesFacilityReferenceView {
+  code?: string;
+  county_id?: string;
+  county_name?: string;
+  created_at?: string;
+  district_id?: string;
+  district_name?: string;
+  health_sub_region_id?: string;
+  health_sub_region_name?: string;
+  hsdt_code?: string;
+  id?: string;
+  name?: string;
+  nhpi_code?: string;
+  ownership_type_id?: string;
+  ownership_type_name?: string;
+  region_id?: string;
+  region_name?: string;
+  subcounty_id?: string;
+  subcounty_name?: string;
+  updated_at?: string;
+}
+
+export interface ServicesFacilityView {
+  authority_id?: string;
+  authority_name?: string;
+  county_id?: string;
+  county_name?: string;
+  created_at?: string;
+  district_id?: string;
+  district_name?: string;
+  facility_level_id?: string;
+  facility_level_name?: string;
+  health_sub_district_id?: string;
+  health_sub_district_name?: string;
+  health_sub_region_id?: string;
+  health_sub_region_name?: string;
+  hsdt_code?: string;
+  id?: string;
+  name?: string;
+  nhpi_code?: string;
+  ownership_type_id?: string;
+  ownership_type_name?: string;
+  parish_id?: string;
+  parish_name?: string;
+  region_id?: string;
+  region_name?: string;
+  subcounty_id?: string;
+  subcounty_name?: string;
+  updated_at?: string;
+  usage_count?: number;
+}
+
 export interface ServicesFinishCalculatorUsageInput {
   session_end?: string;
 }
@@ -1049,6 +1141,12 @@ export interface ServicesProtocolStep {
   options?: string[];
   question?: string;
   type?: string;
+}
+
+export interface ServicesRegionChildren {
+  districts?: ServicesFacilityReferenceView[];
+  health_sub_regions?: ServicesFacilityReferenceView[];
+  region?: ServicesFacilityReferenceView;
 }
 
 export interface ServicesRoleInput {

@@ -20,17 +20,6 @@ const DOMAIN_COLLECTION_PATHS: Record<string, string> = {
   guideline_tags: "/api/v2/guideline-tags",
   guideline_index: "/api/v2/guideline-index",
   consultants: "/api/v2/consultants",
-  health_sub_regions: "/api/v2/health-sub-regions",
-  health_facilities: "/api/v2/facilities",
-  regions: "/api/v2/regions",
-  districts: "/api/v2/districts",
-  health_sub_districts: "/api/v2/health-sub-districts",
-  counties: "/api/v2/counties",
-  subcounties: "/api/v2/subcounties",
-  parishes: "/api/v2/parishes",
-  facility_levels: "/api/v2/facility-levels",
-  ownership_types: "/api/v2/ownership-types",
-  authorities: "/api/v2/authorities",
   ministry_directory: "/api/v2/ministry-directory",
   languages: "/api/v2/reference-languages",
   notifications: "/api/v2/notifications",
@@ -44,7 +33,6 @@ const DOMAIN_COLLECTION_PATHS: Record<string, string> = {
   guideline_usage_logs: "/api/v2/guideline-usage",
   abbreviation_usage_logs: "/api/v2/abbreviation-usage",
   consultant_usage_logs: "/api/v2/consultant-usage",
-  facility_usage_logs: "/api/v2/facility-usage",
   ai_usage_logs: "/api/v2/ai-usage",
 }
 
@@ -109,38 +97,6 @@ const RELATION_MAP: Record<string, Record<string, ExpandConfig>> = {
     reviewer: { collection: "users" },
     tags: { collection: "faq_tags", many: true },
     related_faqs: { collection: "faqs", many: true },
-  },
-  health_facilities: {
-    authority: { collection: "authorities" },
-    county: { collection: "counties" },
-    district: { collection: "districts" },
-    facility_level: { collection: "facility_levels" },
-    health_sub_district: { collection: "health_sub_districts" },
-    health_sub_region: { collection: "health_sub_regions" },
-    ownership_type: { collection: "ownership_types" },
-    parish: { collection: "parishes" },
-    region: { collection: "regions" },
-    subcounty: { collection: "subcounties" },
-  },
-  health_sub_regions: {
-    region: { collection: "regions" },
-  },
-  health_sub_districts: {
-    district: { collection: "districts" },
-  },
-  counties: {
-    district: { collection: "districts" },
-  },
-  districts: {
-    health_sub_region: { collection: "health_sub_regions" },
-    region: { collection: "regions" },
-  },
-  subcounties: {
-    county: { collection: "counties" },
-    district: { collection: "districts" },
-  },
-  parishes: {
-    subcounty: { collection: "subcounties" },
   },
   support_tickets: {
     assigned_to: { collection: "users" },

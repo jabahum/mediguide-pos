@@ -1614,6 +1614,358 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/v2/facilities": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "facilities"
+                ],
+                "summary": "List health facilities",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Page",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Items per page",
+                        "name": "per_page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Name, code, or district search",
+                        "name": "search",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Region UUID",
+                        "name": "region_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "District UUID",
+                        "name": "district_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Facility level UUID",
+                        "name": "facility_level_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Ownership type UUID",
+                        "name": "ownership_type_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "name, created_at, updated_at, or usage_count",
+                        "name": "sort",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "asc or desc",
+                        "name": "order",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/services.FacilityPage"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "facilities"
+                ],
+                "summary": "Create a health facility",
+                "parameters": [
+                    {
+                        "description": "Facility",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/services.FacilityInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/services.FacilityItem"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v2/facilities/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "facilities"
+                ],
+                "summary": "Get a health facility",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Facility UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/services.FacilityItem"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "facilities"
+                ],
+                "summary": "Soft-delete a health facility",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Facility UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "patch": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "tags": [
+                    "facilities"
+                ],
+                "summary": "Update a health facility",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Facility UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Facility changes",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/services.FacilityInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/services.FacilityItem"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v2/facilities/{id}/usage": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "facilities"
+                ],
+                "summary": "Record current-user facility usage",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Facility UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/models.FacilityUsageLog"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v2/guideline-versions/{id}/chunks": {
             "get": {
                 "security": [
@@ -2834,6 +3186,54 @@ const docTemplate = `{
                     },
                     "403": {
                         "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v2/regions/{id}/children": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "facilities"
+                ],
+                "summary": "Get typed children for a region",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Region UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/services.RegionChildren"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
                         "schema": {
                             "$ref": "#/definitions/handlers.ErrorResponse"
                         }
@@ -5580,6 +5980,26 @@ const docTemplate = `{
                 }
             }
         },
+        "models.FacilityUsageLog": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "facility_id": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                },
+                "user_id": {
+                    "type": "string"
+                }
+            }
+        },
         "models.GuidelineChunk": {
             "type": "object",
             "properties": {
@@ -6489,6 +6909,241 @@ const docTemplate = `{
                 }
             }
         },
+        "services.FacilityInput": {
+            "type": "object",
+            "properties": {
+                "authority_id": {
+                    "type": "string"
+                },
+                "county_id": {
+                    "type": "string"
+                },
+                "district_id": {
+                    "type": "string"
+                },
+                "facility_level_id": {
+                    "type": "string"
+                },
+                "health_sub_district_id": {
+                    "type": "string"
+                },
+                "health_sub_region_id": {
+                    "type": "string"
+                },
+                "hsdt_code": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "nhpi_code": {
+                    "type": "string"
+                },
+                "ownership_type_id": {
+                    "type": "string"
+                },
+                "parish_id": {
+                    "type": "string"
+                },
+                "region_id": {
+                    "type": "string"
+                },
+                "subcounty_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "services.FacilityItem": {
+            "type": "object",
+            "properties": {
+                "item": {
+                    "$ref": "#/definitions/services.FacilityView"
+                },
+                "resource": {
+                    "type": "string"
+                },
+                "success": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "services.FacilityPage": {
+            "type": "object",
+            "properties": {
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/services.FacilityView"
+                    }
+                },
+                "page": {
+                    "type": "integer"
+                },
+                "per_page": {
+                    "type": "integer"
+                },
+                "resource": {
+                    "type": "string"
+                },
+                "success": {
+                    "type": "boolean"
+                },
+                "total_items": {
+                    "type": "integer"
+                },
+                "total_pages": {
+                    "type": "integer"
+                }
+            }
+        },
+        "services.FacilityReferenceView": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "string"
+                },
+                "county_id": {
+                    "type": "string"
+                },
+                "county_name": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "district_id": {
+                    "type": "string"
+                },
+                "district_name": {
+                    "type": "string"
+                },
+                "health_sub_region_id": {
+                    "type": "string"
+                },
+                "health_sub_region_name": {
+                    "type": "string"
+                },
+                "hsdt_code": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "nhpi_code": {
+                    "type": "string"
+                },
+                "ownership_type_id": {
+                    "type": "string"
+                },
+                "ownership_type_name": {
+                    "type": "string"
+                },
+                "region_id": {
+                    "type": "string"
+                },
+                "region_name": {
+                    "type": "string"
+                },
+                "subcounty_id": {
+                    "type": "string"
+                },
+                "subcounty_name": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                }
+            }
+        },
+        "services.FacilityView": {
+            "type": "object",
+            "properties": {
+                "authority_id": {
+                    "type": "string"
+                },
+                "authority_name": {
+                    "type": "string"
+                },
+                "county_id": {
+                    "type": "string"
+                },
+                "county_name": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "district_id": {
+                    "type": "string"
+                },
+                "district_name": {
+                    "type": "string"
+                },
+                "facility_level_id": {
+                    "type": "string"
+                },
+                "facility_level_name": {
+                    "type": "string"
+                },
+                "health_sub_district_id": {
+                    "type": "string"
+                },
+                "health_sub_district_name": {
+                    "type": "string"
+                },
+                "health_sub_region_id": {
+                    "type": "string"
+                },
+                "health_sub_region_name": {
+                    "type": "string"
+                },
+                "hsdt_code": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "nhpi_code": {
+                    "type": "string"
+                },
+                "ownership_type_id": {
+                    "type": "string"
+                },
+                "ownership_type_name": {
+                    "type": "string"
+                },
+                "parish_id": {
+                    "type": "string"
+                },
+                "parish_name": {
+                    "type": "string"
+                },
+                "region_id": {
+                    "type": "string"
+                },
+                "region_name": {
+                    "type": "string"
+                },
+                "subcounty_id": {
+                    "type": "string"
+                },
+                "subcounty_name": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                },
+                "usage_count": {
+                    "type": "integer"
+                }
+            }
+        },
         "services.FinishCalculatorUsageInput": {
             "type": "object",
             "properties": {
@@ -6610,6 +7265,26 @@ const docTemplate = `{
                 },
                 "type": {
                     "type": "string"
+                }
+            }
+        },
+        "services.RegionChildren": {
+            "type": "object",
+            "properties": {
+                "districts": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/services.FacilityReferenceView"
+                    }
+                },
+                "health_sub_regions": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/services.FacilityReferenceView"
+                    }
+                },
+                "region": {
+                    "$ref": "#/definitions/services.FacilityReferenceView"
                 }
             }
         },

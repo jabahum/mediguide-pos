@@ -205,12 +205,6 @@ func (s ResourceService) createUsageLog(resource string, payload map[string]any,
 			return nil, ErrResourceInvalid
 		}
 		row["consultant_id"] = id
-	case "facility_usage_logs":
-		id, err := parsePayloadUUIDAny(payload, "facility_id")
-		if err != nil {
-			return nil, ErrResourceInvalid
-		}
-		row["facility_id"] = id
 	case "ai_usage_logs":
 		// no extra fields required
 	default:

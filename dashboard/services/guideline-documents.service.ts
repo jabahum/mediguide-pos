@@ -1,6 +1,6 @@
 "use client"
 
-import { getPB } from "@/lib/pocketbase"
+import { getBackendClient } from "@/lib/backend-client"
 
 export const guidelineDocumentsQueryKey = ["v2-guideline-documents"] as const
 
@@ -129,14 +129,14 @@ function downloadBlob(blob: Blob, filename: string) {
 
 export class GuidelineDocumentsService {
   static async listDocuments(programArea?: string): Promise<GuidelineDocumentsPage> {
-    const pb = getPB()
-    const first = await pb.send<GuidelineDocumentsPage>("/api/v2/guidelines", {
+    const backend = getBackendClient()
+    const first = await backend.request<GuidelineDocumentsPage>("/api/v2/guidelines", {
       method: "GET",
       query: { page: 1, per_page: 100, program_area: programArea },
     })
     const items = [...(first.items || [])]
     for (let page = 2; page <= first.total_pages; page += 1) {
-      const next = await pb.send<GuidelineDocumentsPage>("/api/v2/guidelines", {
+      const next = await backend.request<GuidelineDocumentsPage>("/api/v2/guidelines", {
         method: "GET",
         query: { page, per_page: 100, program_area: programArea },
       })
@@ -146,7 +146,7 @@ export class GuidelineDocumentsService {
   }
 
   static async getDocument(documentId: string): Promise<GuidelineDocumentRecord> {
-    const document = await getPB().send<GuidelineDocumentRecord>(
+    const document = await getBackendClient().request<GuidelineDocumentRecord>(
       `/api/v2/guidelines/${documentId}`,
       { method: "GET" }
     )
@@ -154,7 +154,7 @@ export class GuidelineDocumentsService {
   }
 
   static async createDocument(payload: GuidelineDocumentInput): Promise<GuidelineDocumentRecord> {
-    return getPB().send<GuidelineDocumentRecord>("/api/v2/guidelines", {
+    return getBackendClient().request<GuidelineDocumentRecord>("/api/v2/guidelines", {
       method: "POST",
       body: JSON.stringify(payload),
     })
@@ -164,7 +164,7 @@ export class GuidelineDocumentsService {
     documentId: string,
     payload: GuidelineDocumentInput
   ): Promise<GuidelineDocumentRecord> {
-    return getPB().send<GuidelineDocumentRecord>(`/api/v2/guidelines/${documentId}`, {
+    return getBackendClient().request<GuidelineDocumentRecord>(`/api/v2/guidelines/${documentId}`, {
       method: "PATCH",
       body: JSON.stringify(payload),
     })
@@ -174,7 +174,7 @@ export class GuidelineDocumentsService {
     documentId: string,
     payload: CreateGuidelineVersionInput
   ): Promise<GuidelineVersionRecord> {
-    return getPB().send<GuidelineVersionRecord>(`/api/v2/guidelines/${documentId}/versions`, {
+    return getBackendClient().request<GuidelineVersionRecord>(`/api/v2/guidelines/${documentId}/versions`, {
       method: "POST",
       body: JSON.stringify(payload),
     })
@@ -183,27 +183,27 @@ export class GuidelineDocumentsService {
   static async uploadVersionPdf(versionId: string, file: File): Promise<IngestionJobRecord> {
     const formData = new FormData()
     formData.append("file", file)
-    return getPB().send<IngestionJobRecord>(`/api/v2/guideline-versions/${versionId}/upload`, {
+    return getBackendClient().request<IngestionJobRecord>(`/api/v2/guideline-versions/${versionId}/upload`, {
       method: "POST",
       body: formData,
     })
   }
 
   static async publishVersion(versionId: string): Promise<{ published: boolean }> {
-    return getPB().send<{ published: boolean }>(
+    return getBackendClient().request<{ published: boolean }>(
       `/api/v2/guideline-versions/${versionId}/publish`,
       { method: "POST" }
     )
   }
 
   static async listSections(versionId: string): Promise<GuidelineSectionRecord[]> {
-    const first = await getPB().send<GuidelineSectionsPage>(
+    const first = await getBackendClient().request<GuidelineSectionsPage>(
       `/api/v2/guideline-versions/${versionId}/sections`,
       { method: "GET", query: { page: 1, per_page: 500 } }
     )
     const sections = [...(first.items || [])]
     for (let page = 2; page <= first.total_pages; page += 1) {
-      const next = await getPB().send<GuidelineSectionsPage>(
+      const next = await getBackendClient().request<GuidelineSectionsPage>(
         `/api/v2/guideline-versions/${versionId}/sections`,
         { method: "GET", query: { page, per_page: 500 } }
       )
@@ -213,7 +213,7 @@ export class GuidelineDocumentsService {
   }
 
   static async getExtractedMarkdown(versionId: string): Promise<string> {
-    return getPB().send<string>(`/api/v2/guideline-versions/${versionId}/extracted/markdown`, {
+    return getBackendClient().request<string>(`/api/v2/guideline-versions/${versionId}/extracted/markdown`, {
       method: "GET",
       responseType: "text",
     })
@@ -223,7 +223,7 @@ export class GuidelineDocumentsService {
     versionId: string,
     content: string
   ): Promise<{ updated: boolean; size: number }> {
-    return getPB().send<{ updated: boolean; size: number }>(
+    return getBackendClient().request<{ updated: boolean; size: number }>(
       `/api/v2/guideline-versions/${versionId}/extracted/markdown`,
       {
         method: "PUT",
@@ -238,7 +238,7 @@ export class GuidelineDocumentsService {
     format: "md" | "html",
     filename: string
   ): Promise<void> {
-    const blob = await getPB().send<Blob>(
+    const blob = await getBackendClient().request<Blob>(
       `/api/v2/guideline-versions/${versionId}/extracted/${format}`,
       { method: "GET", responseType: "blob" }
     )

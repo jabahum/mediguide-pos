@@ -14,8 +14,8 @@ import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Separator } from "@/components/ui/separator"
 import { showToast } from "@/lib/toast"
-import { getBackendClient } from "@/lib/backend-client"
 import { backendRecordKeyPrefix } from "@/hooks/use-backend-record"
+import { healthFacilitiesService } from "@/services/health-facilities.service"
 import { 
   FacilityLevelsResponse, 
   AuthoritiesResponse, 
@@ -104,7 +104,6 @@ export function FacilityForm({ initialData, mode, facilityId }: FacilityFormProp
   // Load dropdown options on component mount
   React.useEffect(() => {
     const loadOptions = async () => {
-      const backend = getBackendClient()
       try {
         const [
           facilityLevelsData,
@@ -112,10 +111,10 @@ export function FacilityForm({ initialData, mode, facilityId }: FacilityFormProp
           ownershipTypesData,
           regionsData,
         ] = await Promise.all([
-          backend.resource('facility_levels').getFullList({ sort: 'name' }),
-          backend.resource('authorities').getFullList({ sort: 'name' }),
-          backend.resource('ownership_types').getFullList({ sort: 'name' }),
-          backend.resource('regions').getFullList({ sort: 'name' }),
+          healthFacilitiesService.facilityLevels(),
+          healthFacilitiesService.authorities(),
+          healthFacilitiesService.ownershipTypes(),
+          healthFacilitiesService.regions(),
         ])
 
         setFacilityLevels(facilityLevelsData as FacilityLevelsResponse[])
@@ -140,12 +139,8 @@ export function FacilityForm({ initialData, mode, facilityId }: FacilityFormProp
 
     if (selectedRegion) {
       const loadHealthSubRegions = async () => {
-        const backend = getBackendClient()
         try {
-          const data = await backend.resource('health_sub_regions').getFullList({
-            filter: `region = "${selectedRegion}"`,
-            sort: 'name',
-          })
+          const data = await healthFacilitiesService.healthSubRegions(selectedRegion)
           setHealthSubRegions(data as HealthSubRegionsResponse[])
         } catch (error) {
           console.error("Failed to load health sub regions:", error)
@@ -163,12 +158,8 @@ export function FacilityForm({ initialData, mode, facilityId }: FacilityFormProp
 
     if (selectedRegion) {
       const loadDistricts = async () => {
-        const backend = getBackendClient()
         try {
-          const data = await backend.resource('districts').getFullList({
-            filter: `region = "${selectedRegion}"`,
-            sort: 'name',
-          })
+          const data = await healthFacilitiesService.districts(selectedRegion)
           setDistricts(data as DistrictsResponse[])
         } catch (error) {
           console.error("Failed to load districts:", error)
@@ -187,12 +178,8 @@ export function FacilityForm({ initialData, mode, facilityId }: FacilityFormProp
 
     if (selectedDistrict) {
       const loadCounties = async () => {
-        const backend = getBackendClient()
         try {
-          const data = await backend.resource('counties').getFullList({
-            filter: `district = "${selectedDistrict}"`,
-            sort: 'name',
-          })
+          const data = await healthFacilitiesService.counties(selectedDistrict)
           setCounties(data as CountiesResponse[])
         } catch (error) {
           console.error("Failed to load counties:", error)
@@ -200,12 +187,8 @@ export function FacilityForm({ initialData, mode, facilityId }: FacilityFormProp
       }
 
       const loadHealthSubDistricts = async () => {
-        const backend = getBackendClient()
         try {
-          const data = await backend.resource('health_sub_districts').getFullList({
-            filter: `district = "${selectedDistrict}"`,
-            sort: 'name',
-          })
+          const data = await healthFacilitiesService.healthSubDistricts(selectedDistrict)
           setHealthSubDistricts(data as HealthSubDistrictsResponse[])
         } catch (error) {
           console.error("Failed to load health sub districts:", error)
@@ -225,12 +208,8 @@ export function FacilityForm({ initialData, mode, facilityId }: FacilityFormProp
 
     if (selectedCounty) {
       const loadSubcounties = async () => {
-        const backend = getBackendClient()
         try {
-          const data = await backend.resource('subcounties').getFullList({
-            filter: `county = "${selectedCounty}"`,
-            sort: 'name',
-          })
+          const data = await healthFacilitiesService.subcounties(selectedDistrict, selectedCounty)
           setSubcounties(data as SubcountiesResponse[])
         } catch (error) {
           console.error("Failed to load subcounties:", error)
@@ -238,7 +217,7 @@ export function FacilityForm({ initialData, mode, facilityId }: FacilityFormProp
       }
       loadSubcounties()
     }
-  }, [selectedCounty])
+  }, [selectedCounty, selectedDistrict])
 
   React.useEffect(() => {
     if (!selectedSubcounty) {
@@ -248,12 +227,8 @@ export function FacilityForm({ initialData, mode, facilityId }: FacilityFormProp
 
     if (selectedSubcounty) {
       const loadParishes = async () => {
-        const backend = getBackendClient()
         try {
-          const data = await backend.resource('parishes').getFullList({
-            filter: `subcounty = "${selectedSubcounty}"`,
-            sort: 'name',
-          })
+          const data = await healthFacilitiesService.parishes(selectedSubcounty)
           setParishes(data as ParishesResponse[])
         } catch (error) {
           console.error("Failed to load parishes:", error)
@@ -304,14 +279,12 @@ export function FacilityForm({ initialData, mode, facilityId }: FacilityFormProp
 
   const onSubmit = async (data: FacilityFormValues) => {
     setIsLoading(true)
-    const backend = getBackendClient()
-
     try {
       if (mode === "create") {
-        await backend.resource('health_facilities').create(data)
+        await healthFacilitiesService.createFacility(data)
         showToast.success("Success", "Health facility created successfully")
       } else if (mode === "edit" && facilityId) {
-        await backend.resource('health_facilities').update(facilityId, data)
+        await healthFacilitiesService.updateFacility(facilityId, data)
         await queryClient.invalidateQueries({ queryKey: backendRecordKeyPrefix('health_facilities', facilityId) })
         showToast.success("Success", "Health facility updated successfully")
       }

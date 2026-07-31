@@ -1,10 +1,10 @@
 import { FieldOption } from "@/types/data-table"
+import { facilityRelationOptions } from "@/services/health-facilities.service"
 
 /**
  * Available fields for health facilities table advanced filtering.
- * Relation fields are wired to their legacy collection API source collections so the
- * filter dropdown can search by human-readable name while sending the
- * underlying record id to legacy collection API.
+ * Relation fields load through the focused facility service while retaining
+ * opaque IDs as typed query parameters.
  */
 export const healthFacilitiesAvailableFields: FieldOption[] = [
   // Basic Information
@@ -15,69 +15,69 @@ export const healthFacilitiesAvailableFields: FieldOption[] = [
   // Classification
   {
     label: "Facility Level",
-    value: "facility_level",
+    value: "facility_level_id",
     type: "select",
-    relation: { collection: "facility_levels", labelField: "name", sort: "name" },
+    relation: facilityRelationOptions.facilityLevels,
   },
   {
     label: "Authority",
-    value: "authority",
+    value: "authority_id",
     type: "select",
-    relation: { collection: "authorities", labelField: "name", sort: "name" },
+    relation: facilityRelationOptions.authorities,
   },
   {
     label: "Ownership Type",
-    value: "ownership_type",
+    value: "ownership_type_id",
     type: "select",
-    relation: { collection: "ownership_types", labelField: "name", sort: "name" },
+    relation: facilityRelationOptions.ownershipTypes,
   },
 
   // Geographic Hierarchy (Top Level)
   {
     label: "Region",
-    value: "region",
+    value: "region_id",
     type: "select",
-    relation: { collection: "regions", labelField: "name", sort: "name" },
+    relation: facilityRelationOptions.regions,
   },
   {
     label: "Health Sub Region",
-    value: "health_sub_region",
+    value: "health_sub_region_id",
     type: "select",
-    relation: { collection: "health_sub_regions", labelField: "name", sort: "name" },
+    relation: facilityRelationOptions.healthSubRegions,
   },
 
   // Geographic Hierarchy (District Level)
   {
     label: "District",
-    value: "district",
+    value: "district_id",
     type: "select",
-    relation: { collection: "districts", labelField: "name", sort: "name" },
+    relation: facilityRelationOptions.districts,
   },
   {
     label: "Health Sub District",
-    value: "health_sub_district",
+    value: "health_sub_district_id",
     type: "select",
-    relation: { collection: "health_sub_districts", labelField: "name", sort: "name" },
+    relation: facilityRelationOptions.healthSubDistricts,
   },
 
   // Geographic Hierarchy (Local Level)
   {
     label: "County",
-    value: "county",
+    value: "county_id",
     type: "select",
-    relation: { collection: "counties", labelField: "name", sort: "name" },
+    relation: facilityRelationOptions.counties,
   },
   {
     label: "Subcounty",
-    value: "subcounty",
+    value: "subcounty_id",
     type: "select",
-    relation: { collection: "subcounties", labelField: "name", sort: "name" },
+    relation: facilityRelationOptions.subcounties,
   },
   {
     label: "Parish",
-    value: "parish",
+    value: "parish_id",
     type: "select",
-    relation: { collection: "parishes", labelField: "name", sort: "name" },
+    relation: facilityRelationOptions.parishes,
   },
 
   // Timestamps

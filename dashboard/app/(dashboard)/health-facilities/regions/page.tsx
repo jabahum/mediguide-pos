@@ -13,6 +13,7 @@ import { regionsColumns } from "./columns"
 import { regionsAvailableFields } from "./fields"
 import { AdminEntityModal, AdminFieldDef } from "../_lib/admin-entity-modal"
 import { createAdminRowActions, createAdminBulkActions } from "../_lib/admin-crud-actions"
+import { healthFacilitiesService } from "@/services/health-facilities.service"
 
 const FIELDS: AdminFieldDef[] = [
   { name: "name", label: "Name", type: "text", placeholder: "Enter region name" },
@@ -42,7 +43,7 @@ export default function RegionsPage() {
   const rowActions = React.useMemo(
     () =>
       createAdminRowActions<RegionsResponse>({
-        collection: "regions",
+        deleteRecord: healthFacilitiesService.deleteRegion,
         entityLabel: "Region",
         getDisplayName: (row) => row.name,
         onEdit: openEdit,
@@ -53,7 +54,7 @@ export default function RegionsPage() {
   const bulkActions = React.useMemo(
     () =>
       createAdminBulkActions<RegionsResponse>({
-        collection: "regions",
+        deleteRecord: healthFacilitiesService.deleteRegion,
         entityLabel: "Region",
         entityLabelPlural: "Regions",
       }),
@@ -85,6 +86,7 @@ export default function RegionsPage() {
 
       <EnhancedBackendDataTable<RegionsResponse>
         collectionName="regions"
+        loadPage={healthFacilitiesService.listRegions}
         columns={regionsColumns}
         searchable={true}
         searchFields={["name", "nhpi_code", "hsdt_code"]}
@@ -100,7 +102,8 @@ export default function RegionsPage() {
       <AdminEntityModal
         open={modalOpen}
         onClose={closeModal}
-        collection="regions"
+        createRecord={healthFacilitiesService.createRegion}
+        updateRecord={healthFacilitiesService.updateRegion}
         entityLabel="Region"
         fields={FIELDS}
         record={editing}

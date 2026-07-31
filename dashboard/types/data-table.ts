@@ -35,7 +35,9 @@ export interface FieldOption {
    * underlying filter value remains the related record id.
    */
   relation?: {
-    collection: string
+    collection?: string
+    key?: string
+    loadOptions?: (search: string, pageSize: number) => Promise<Array<Record<string, unknown>>>
     labelField?: string
     valueField?: string
     sort?: string
@@ -144,6 +146,25 @@ export interface BackendQueryOptions {
   fields?: string
 }
 
+export interface DomainPageQuery {
+  page: number
+  perPage: number
+  search: string
+  filters: AdvancedFilter[]
+}
+
+export interface DomainPageResult<TData> {
+  items: TData[]
+  page: number
+  perPage: number
+  totalItems: number
+  totalPages: number
+}
+
+export type DomainPageLoader<TData> = (
+  query: DomainPageQuery,
+) => Promise<DomainPageResult<TData>>
+
 // Simplified UI options
 export interface UIOptions {
   pageSize?: number
@@ -158,6 +179,7 @@ export interface BackendDataTableProps<TData = BaseRecord> {
   // Core required
   collection: string
   columns: ColumnDef<TData>[]
+  loadPage?: DomainPageLoader<TData>
 
   // Search (explicit)
   searchFields?: string[]
@@ -187,6 +209,7 @@ export interface BackendDataTableProps<TData = BaseRecord> {
 export interface EnhancedBackendDataTableProps<TData = BaseRecord> {
   // Required
   columns: ColumnDef<TData>[]
+  loadPage?: DomainPageLoader<TData>
 
   // Legacy collection prop mapping
   collection?: string
@@ -286,6 +309,7 @@ export interface TableError {
 // Simplified hook interface
 export interface UseBackendTableConfig<TData = BaseRecord> {
   collection: string
+  loadPage?: DomainPageLoader<TData>
   searchFields?: string[]
   rowActions?: RowAction<TData>[]
   bulkActions?: BulkAction<TData>[]

@@ -40,7 +40,11 @@ history and must not be rewritten or deleted.
   generated file URLs are downloadable.
 - Transitional resource endpoints do not support real multipart file uploads.
 - OAuth login is unsupported.
-- Password reset and email verification are incomplete.
+- Password reset tokens are secure and usable, but outbound email delivery is
+  not configured. Production reset requests therefore report
+  `delivery_accepted: false`; development may return an explicit development
+  token. Administrative user verification changes state directly and records
+  an audit event; it does not claim to send verification email.
 - Mobile converts remaining filter expressions into allowlisted query
   parameters; complex OR expressions still require domain-specific DTOs.
 - Some dashboard resource queries fetch a whole result set and filter it in
@@ -49,8 +53,11 @@ history and must not be rewritten or deleted.
   must not be treated as filename strings.
 - The Flutter health-infrastructure list and its region, district, facility
   level, and ownership filters now use `FacilityRepository` with explicit
-  query parameters. Dashboard facility administration and the remaining
-  geographic resources still use the transitional resource service.
+  query parameters. Dashboard facility administration, paginated tables, and
+  relation selectors now use `health-facilities.service.ts` and injected typed
+  table loaders rather than `backend.resource(...)`. The Go facility handler
+  is still a compatibility facade over the transitional resource service, so
+  hierarchy validation and final specification removal remain incomplete.
 
 These are explicit follow-up tasks. Compatibility clients must throw or degrade
 honestly; they must not report successful realtime, upload, OAuth, or recovery
@@ -87,7 +94,7 @@ domain PR before replacing a transitional resource specification.
 | Drugs and metadata — migrated | Former compatibility collections: `drugs`, `drug_categories`, `drug_classes`, `drug_tags`, `therapeutic_categories`, `drug_usage_logs` | Dashboard drug screens route through typed domain transport; mobile drug index and global search use explicit search/status/route/pregnancy/WHO/antimicrobial parameters. | Editor CRUD and owned usage creation. | `/api/v2/drugs`, `/api/v2/drugs/{id}`, `/api/v2/drugs/{id}/usage`, `/api/v2/drug-categories`, `/api/v2/drug-tags`, `/api/v2/drug-classes`, `/api/v2/therapeutic-categories` | `drug.read` for supported app roles; `drug.write` for editors and administrators; usage owner is derived from JWT claims. |
 | Facilities and regions | `health_facilities`, `facility_levels`, `ownership_types`, `authorities`, `regions`, `health_sub_regions`, `districts`, `counties`, `subcounties`, `parishes`, `health_sub_districts`, `facility_usage_logs` | Dashboard facility and administrative tables/forms; mobile infrastructure and tree selector. Geographic hierarchy filters and parent expansions are required. | Admin/editor CRUD; usage create; no current file requirement. | Transitional `/api/v2/facilities`, `/api/v2/regions`, and related explicit reference routes; dedicated hierarchy endpoints remain to be implemented. | Published read; facility-data editor/admin write; user owns usage. |
 | Guidelines | `medical_guidelines`, `guideline_categories`, `guideline_tags`, `guideline_index`, `abbreviations`, `abbreviation_usage_logs`, `guideline_usage_logs` | Dashboard guideline editor, categories, tags, index and abbreviations; mobile guideline list/reader/indexer/search. Filter publication status, hierarchy, tags, audience and search; expand category/tag/index relations. | Editorial CRUD, Markdown upload/save, publishing workflow and usage writes. | Typed `/api/v2/guidelines` and version routes; transitional `/api/v2/medical-guidelines`, taxonomy, abbreviation and usage routes. | Published read; author/editor approval stages; admin taxonomy; user owns progress/usage. |
-| Users, roles and permissions | `users`, `roles`, `permissions`, `role_permissions` | Dashboard users/roles/permissions, login and profile; mobile auth/profile. Filter role/status; expand assigned role and specialization. | Registration, profile update, role assignment and permission management; avatar upload is a future file endpoint. | Typed `/api/v2/auth/*` and `/api/v2/me`; transitional `/api/v2/users` and `/api/v2/roles`. | Self-service profile; user-admin management; privileged role/permission changes. |
+| Users, roles and permissions — typed API, final consumer cleanup in progress | `users`, `roles`, `permissions`, `role_permissions` | Dashboard user actions, login, recovery and profile use focused services. Mobile profile update, refresh, password change and recovery use `UserRepository`. Filtering and sorting are server-side and allowlisted. | Registration, profile update, role assignment, audited administrative verification, hashed single-use reset tokens, and authenticated password change. Avatar upload remains explicitly unsupported. | `/api/v2/auth/*`, `/api/v2/me`, `/api/v2/me/password`, `/api/v2/users`, `/api/v2/roles`, `/api/v2/permissions`, and `/api/v2/roles/{id}/permissions`. | Self-service profile DTO excludes administrative fields; `admin.all` controls management, verification, role and permission changes. Reset confirmation revokes active sessions; password change preserves the current session and revokes the others. |
 | Consultants | `consultants`, `consultant_usage_logs` | Dashboard consultants; mobile consultants and global search. Search/filter specialty, qualification, language, region, status and consultation type. | Admin/editor CRUD; usage create; future profile assets. | Transitional `/api/v2/consultants` and `/api/v2/consultant-usage`. | Published read; consultant editor/admin write; user owns usage. |
 | Notifications | `notifications`, `notification_campaigns`, `user_notification_reads` | Dashboard notifications/campaign settings; mobile notification list. Filter recipient, type, priority, read state and date; optional user relation. | Admin campaign CRUD; user mark-read operations. | Transitional `/api/v2/notifications`, `/api/v2/notification-campaigns`, and `/api/v2/notification-templates`. | User reads own notifications; communications/admin manages campaigns. |
 | Support | `support_tickets`, `support_ticket_replies`, `faqs`, `faq_tags`, `documentation` | Dashboard support, FAQ and documentation screens; mobile help center. Filter ticket owner/status/priority and FAQ tags; expand replies and tags. | User ticket/reply create; support status updates; editor FAQ/docs CRUD; future attachments. | Transitional `/api/v2/support-tickets`, `/api/v2/support-ticket-replies`, `/api/v2/faqs`, `/api/v2/faq-tags`, and `/api/v2/documentation`. | User owns tickets; support staff triage/reply; editor/admin publish help content. |

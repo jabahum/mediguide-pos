@@ -19,6 +19,20 @@ import (
 
 type UserHandler struct{ Service services.UserService }
 
+// List godoc
+// @Summary List users
+// @Tags users
+// @Security BearerAuth
+// @Param page query int false "Page number"
+// @Param per_page query int false "Page size"
+// @Param search query string false "Name, email, or phone"
+// @Param status query string false "User status"
+// @Param role_id query string false "Role UUID"
+// @Param sort query string false "name, email, created_at, or updated_at"
+// @Param order query string false "asc or desc"
+// @Success 200 {object} handlers.PaginatedUsersEnvelope
+// @Failure 400,401,403 {object} handlers.ErrorResponse
+// @Router /api/v2/users [get]
 func (h UserHandler) List(c *gin.Context) {
 	page, err := parsePageQuery(c, 20, 100)
 	if err != nil {
@@ -38,6 +52,14 @@ func (h UserHandler) List(c *gin.Context) {
 	h.respond(c, result, err)
 }
 
+// Get godoc
+// @Summary Get a user
+// @Tags users
+// @Security BearerAuth
+// @Param id path string true "User UUID"
+// @Success 200 {object} handlers.UserViewEnvelope
+// @Failure 400,401,403,404 {object} handlers.ErrorResponse
+// @Router /api/v2/users/{id} [get]
 func (h UserHandler) Get(c *gin.Context) {
 	id, ok := typedID(c, "user")
 	if !ok {
@@ -52,6 +74,14 @@ func (h UserHandler) Get(c *gin.Context) {
 	h.respond(c, result, err)
 }
 
+// Create godoc
+// @Summary Create a user
+// @Tags users
+// @Security BearerAuth
+// @Param payload body services.UserCreateInput true "User payload"
+// @Success 201 {object} handlers.UserViewEnvelope
+// @Failure 400,401,403 {object} handlers.ErrorResponse
+// @Router /api/v2/users [post]
 func (h UserHandler) Create(c *gin.Context) {
 	var input services.UserCreateInput
 	if c.ShouldBindJSON(&input) != nil {
@@ -66,6 +96,15 @@ func (h UserHandler) Create(c *gin.Context) {
 	httpx.Created(c, result)
 }
 
+// Update godoc
+// @Summary Update a user or the authenticated profile
+// @Tags users
+// @Security BearerAuth
+// @Param id path string true "User UUID"
+// @Param payload body services.UserUpdateInput true "Administrative user fields; self updates are restricted server-side"
+// @Success 200 {object} handlers.UserViewEnvelope
+// @Failure 400,401,403,404 {object} handlers.ErrorResponse
+// @Router /api/v2/users/{id} [patch]
 func (h UserHandler) Update(c *gin.Context) {
 	id, ok := typedID(c, "user")
 	if !ok {
@@ -95,6 +134,14 @@ func (h UserHandler) Update(c *gin.Context) {
 	h.respond(c, result, err)
 }
 
+// Delete godoc
+// @Summary Archive a user
+// @Tags users
+// @Security BearerAuth
+// @Param id path string true "User UUID"
+// @Success 204
+// @Failure 400,401,403,404 {object} handlers.ErrorResponse
+// @Router /api/v2/users/{id} [delete]
 func (h UserHandler) Delete(c *gin.Context) {
 	id, ok := typedID(c, "user")
 	if !ok {
@@ -112,16 +159,36 @@ func (h UserHandler) Delete(c *gin.Context) {
 	c.Status(http.StatusNoContent)
 }
 
+// Verify godoc
+// @Summary Administratively verify a user
+// @Description Marks the user verified and writes an audit event; this endpoint does not send email.
+// @Tags users
+// @Security BearerAuth
+// @Param id path string true "User UUID"
+// @Success 200 {object} handlers.UserViewEnvelope
+// @Failure 400,401,403,404 {object} handlers.ErrorResponse
+// @Router /api/v2/users/{id}/verification [post]
 func (h UserHandler) Verify(c *gin.Context) {
 	id, ok := typedID(c, "user")
 	if !ok {
 		return
 	}
-	verified := true
-	result, err := h.Service.UpdateUser(id, services.UserUpdateInput{Verified: &verified})
+	claims := c.MustGet(middleware.ClaimsKey).(*security.Claims)
+	result, err := h.Service.VerifyUser(id, claims.UserID, c.ClientIP())
 	h.respond(c, result, err)
 }
 
+// ListRoles godoc
+// @Summary List roles
+// @Tags roles
+// @Security BearerAuth
+// @Param page query int false "Page number"
+// @Param per_page query int false "Page size"
+// @Param search query string false "Name or key"
+// @Param is_active query bool false "Active state"
+// @Success 200 {object} handlers.PaginatedRolesEnvelope
+// @Failure 400,401,403 {object} handlers.ErrorResponse
+// @Router /api/v2/roles [get]
 func (h UserHandler) ListRoles(c *gin.Context) {
 	page, err := parsePageQuery(c, 20, 100)
 	if err != nil {
@@ -141,6 +208,14 @@ func (h UserHandler) ListRoles(c *gin.Context) {
 	h.respond(c, result, err)
 }
 
+// GetRole godoc
+// @Summary Get a role
+// @Tags roles
+// @Security BearerAuth
+// @Param id path string true "Role UUID"
+// @Success 200 {object} handlers.RoleViewEnvelope
+// @Failure 400,401,403,404 {object} handlers.ErrorResponse
+// @Router /api/v2/roles/{id} [get]
 func (h UserHandler) GetRole(c *gin.Context) {
 	id, ok := typedID(c, "role")
 	if !ok {
@@ -150,6 +225,14 @@ func (h UserHandler) GetRole(c *gin.Context) {
 	h.respond(c, result, err)
 }
 
+// CreateRole godoc
+// @Summary Create a role
+// @Tags roles
+// @Security BearerAuth
+// @Param payload body services.RoleInput true "Role payload"
+// @Success 201 {object} handlers.RoleViewEnvelope
+// @Failure 400,401,403 {object} handlers.ErrorResponse
+// @Router /api/v2/roles [post]
 func (h UserHandler) CreateRole(c *gin.Context) {
 	var input services.RoleInput
 	if c.ShouldBindJSON(&input) != nil {
@@ -164,6 +247,15 @@ func (h UserHandler) CreateRole(c *gin.Context) {
 	httpx.Created(c, result)
 }
 
+// UpdateRole godoc
+// @Summary Update a role
+// @Tags roles
+// @Security BearerAuth
+// @Param id path string true "Role UUID"
+// @Param payload body services.RoleInput true "Role fields"
+// @Success 200 {object} handlers.RoleViewEnvelope
+// @Failure 400,401,403,404 {object} handlers.ErrorResponse
+// @Router /api/v2/roles/{id} [patch]
 func (h UserHandler) UpdateRole(c *gin.Context) {
 	id, ok := typedID(c, "role")
 	if !ok {
@@ -178,6 +270,14 @@ func (h UserHandler) UpdateRole(c *gin.Context) {
 	h.respond(c, result, err)
 }
 
+// DeleteRole godoc
+// @Summary Delete an unassigned non-system role
+// @Tags roles
+// @Security BearerAuth
+// @Param id path string true "Role UUID"
+// @Success 204
+// @Failure 400,401,403,404,409 {object} handlers.ErrorResponse
+// @Router /api/v2/roles/{id} [delete]
 func (h UserHandler) DeleteRole(c *gin.Context) {
 	id, ok := typedID(c, "role")
 	if !ok {
@@ -190,11 +290,26 @@ func (h UserHandler) DeleteRole(c *gin.Context) {
 	c.Status(http.StatusNoContent)
 }
 
+// ListPermissions godoc
+// @Summary List permissions
+// @Tags roles
+// @Security BearerAuth
+// @Success 200 {object} handlers.PermissionsEnvelope
+// @Failure 401,403 {object} handlers.ErrorResponse
+// @Router /api/v2/permissions [get]
 func (h UserHandler) ListPermissions(c *gin.Context) {
 	result, err := h.Service.ListPermissions()
 	h.respond(c, result, err)
 }
 
+// GetRolePermissions godoc
+// @Summary Get a role permission document
+// @Tags roles
+// @Security BearerAuth
+// @Param id path string true "Role UUID"
+// @Success 200 {object} handlers.PermissionDocumentEnvelope
+// @Failure 400,401,403,404 {object} handlers.ErrorResponse
+// @Router /api/v2/roles/{id}/permissions [get]
 func (h UserHandler) GetRolePermissions(c *gin.Context) {
 	id, ok := typedID(c, "role")
 	if !ok {
@@ -208,6 +323,15 @@ func (h UserHandler) GetRolePermissions(c *gin.Context) {
 	httpx.OK(c, result.Permissions)
 }
 
+// SetRolePermissions godoc
+// @Summary Replace a role permission document
+// @Tags roles
+// @Security BearerAuth
+// @Param id path string true "Role UUID"
+// @Param payload body handlers.RolePermissionsRequest true "Permission document"
+// @Success 200 {object} handlers.RoleViewEnvelope
+// @Failure 400,401,403,404 {object} handlers.ErrorResponse
+// @Router /api/v2/roles/{id}/permissions [put]
 func (h UserHandler) SetRolePermissions(c *gin.Context) {
 	id, ok := typedID(c, "role")
 	if !ok {

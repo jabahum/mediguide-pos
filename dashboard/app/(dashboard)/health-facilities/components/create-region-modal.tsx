@@ -17,7 +17,7 @@ import {
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
 import { showToast } from "@/lib/toast"
-import { getBackendClient } from "@/lib/backend-client"
+import { healthFacilitiesService } from "@/services/health-facilities.service"
 import { RegionsResponse } from "@/types/backend-types"
 
 const regionFormSchema = z.object({
@@ -62,18 +62,16 @@ export function CreateRegionModal({ open, onClose, onSuccess, region }: CreateRe
 
   const onSubmit = async (data: RegionFormValues) => {
     setIsLoading(true)
-    const backend = getBackendClient()
-
     try {
       if (isEdit && region) {
-        await backend.resource('regions').update(region.id, {
+        await healthFacilitiesService.updateRegion(region.id, {
           name: data.name,
           nhpi_code: data.nhpi_code,
           hsdt_code: data.hsdt_code,
         })
         showToast.success("Success", "Region updated successfully")
       } else {
-        await backend.resource('regions').create({
+        await healthFacilitiesService.createRegion({
           name: data.name,
           nhpi_code: data.nhpi_code,
           hsdt_code: data.hsdt_code,

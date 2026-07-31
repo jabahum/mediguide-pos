@@ -8,7 +8,6 @@ import {
   BaseRecord,
   UseBackendTableConfig,
   UseBackendTableReturn,
-  LoadingStates,
   TableError,
   PaginationInfo,
   ExportFormat,
@@ -127,12 +126,23 @@ export function useBackendTable<TData extends BaseRecord = BaseRecord>(
       sort: sortQuery,
       expand: config.query?.expand || "",
       fields: config.query?.fields || "",
+      typed: Boolean(config.loadPage),
+      search: config.loadPage ? globalFilter : undefined,
+      filters: config.loadPage ? advancedFilters : undefined,
     }
-  ], [config.collection, currentPage, currentPageSize, filterQuery, sortQuery, config.query?.expand, config.query?.fields])
+  ], [config.collection, currentPage, currentPageSize, filterQuery, sortQuery, config.query?.expand, config.query?.fields, config.loadPage, globalFilter, advancedFilters])
 
   const query = useQuery({
     queryKey,
     queryFn: async () => {
+      if (config.loadPage) {
+        return config.loadPage({
+          page: currentPage,
+          perPage: currentPageSize,
+          search: globalFilter,
+          filters: advancedFilters,
+        })
+      }
       return backendClient.resource(config.collection).getList(currentPage, currentPageSize, {
         filter: filterQuery || undefined,
         sort: sortQuery,
@@ -249,7 +259,8 @@ export function useBackendTable<TData extends BaseRecord = BaseRecord>(
 
   // Realtime subscriptions (always enabled)
   useEffect(() => {
-    const unsubscribe = backendClient.resource(config.collection).subscribe('*', (e) => {
+    if (config.loadPage) return
+    void backendClient.resource(config.collection).subscribe('*', (e) => {
       if (e.action === 'create') {
         setData(prev => [e.record as unknown as TData, ...prev.slice(0, currentPageSize - 1)])
         setTotalItems(prev => prev + 1)
@@ -270,7 +281,7 @@ export function useBackendTable<TData extends BaseRecord = BaseRecord>(
     return () => {
       backendClient.resource(config.collection).unsubscribe('*')
     }
-  }, [config.collection, currentPageSize, backendClient])
+  }, [config.collection, config.loadPage, currentPageSize, backendClient])
 
   // Effects for data fetching
   useEffect(() => {

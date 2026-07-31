@@ -1006,6 +1006,27 @@ final class HandlersPaginatedLanguagesEnvelope {
   Map<String, dynamic> toJson() => Map.of(value);
 }
 
+final class HandlersPaginatedRolesEnvelope {
+  HandlersPaginatedRolesEnvelope(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory HandlersPaginatedRolesEnvelope.fromJson(Map<String, dynamic> json) =>
+      HandlersPaginatedRolesEnvelope(json);
+
+  static const schemaName = 'handlers.PaginatedRolesEnvelope';
+  final Map<String, dynamic> value;
+
+  ServicesPageResultServicesRoleView? get data {
+    final raw = value['data'];
+    if (raw is! Map) return null;
+    return ServicesPageResultServicesRoleView.fromJson(_jsonMap(raw));
+  }
+
+  bool? get success => value['success'] as bool?;
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
 final class HandlersPaginatedSettings {
   HandlersPaginatedSettings(Map<String, dynamic> value)
     : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
@@ -1076,6 +1097,46 @@ final class HandlersPaginatedTherapeuticCategoriesEnvelope {
   Map<String, dynamic> toJson() => Map.of(value);
 }
 
+final class HandlersPaginatedUsersEnvelope {
+  HandlersPaginatedUsersEnvelope(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory HandlersPaginatedUsersEnvelope.fromJson(Map<String, dynamic> json) =>
+      HandlersPaginatedUsersEnvelope(json);
+
+  static const schemaName = 'handlers.PaginatedUsersEnvelope';
+  final Map<String, dynamic> value;
+
+  ServicesPageResultServicesUserView? get data {
+    final raw = value['data'];
+    if (raw is! Map) return null;
+    return ServicesPageResultServicesUserView.fromJson(_jsonMap(raw));
+  }
+
+  bool? get success => value['success'] as bool?;
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
+final class HandlersPasswordChangeRequest {
+  HandlersPasswordChangeRequest(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory HandlersPasswordChangeRequest.fromJson(Map<String, dynamic> json) =>
+      HandlersPasswordChangeRequest(json);
+
+  static const schemaName = 'handlers.PasswordChangeRequest';
+  final Map<String, dynamic> value;
+
+  String? get currentPassword => value['current_password']?.toString();
+
+  String? get newPassword => value['new_password']?.toString();
+
+  String? get newPasswordConfirm => value['new_password_confirm']?.toString();
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
 final class HandlersPasswordResetConfirmRequest {
   HandlersPasswordResetConfirmRequest(Map<String, dynamic> value)
     : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
@@ -1107,6 +1168,48 @@ final class HandlersPasswordResetRequest {
   final Map<String, dynamic> value;
 
   String? get email => value['email']?.toString();
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
+final class HandlersPermissionDocumentEnvelope {
+  HandlersPermissionDocumentEnvelope(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory HandlersPermissionDocumentEnvelope.fromJson(
+    Map<String, dynamic> json,
+  ) => HandlersPermissionDocumentEnvelope(json);
+
+  static const schemaName = 'handlers.PermissionDocumentEnvelope';
+  final Map<String, dynamic> value;
+
+  Map<String, dynamic> get data => _jsonMap(value['data']);
+
+  bool? get success => value['success'] as bool?;
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
+final class HandlersPermissionsEnvelope {
+  HandlersPermissionsEnvelope(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory HandlersPermissionsEnvelope.fromJson(Map<String, dynamic> json) =>
+      HandlersPermissionsEnvelope(json);
+
+  static const schemaName = 'handlers.PermissionsEnvelope';
+  final Map<String, dynamic> value;
+
+  List<ModelsPermission> get data {
+    final raw = value['data'];
+    if (raw is! List) return const [];
+    return raw
+        .whereType<Map>()
+        .map((item) => ModelsPermission.fromJson(_jsonMap(item)))
+        .toList(growable: false);
+  }
+
+  bool? get success => value['success'] as bool?;
 
   Map<String, dynamic> toJson() => Map.of(value);
 }
@@ -1238,6 +1341,42 @@ final class HandlersRegisterRequest {
   Map<String, dynamic> toJson() => Map.of(value);
 }
 
+final class HandlersRolePermissionsRequest {
+  HandlersRolePermissionsRequest(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory HandlersRolePermissionsRequest.fromJson(Map<String, dynamic> json) =>
+      HandlersRolePermissionsRequest(json);
+
+  static const schemaName = 'handlers.RolePermissionsRequest';
+  final Map<String, dynamic> value;
+
+  Map<String, dynamic> get permissions => _jsonMap(value['permissions']);
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
+final class HandlersRoleViewEnvelope {
+  HandlersRoleViewEnvelope(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory HandlersRoleViewEnvelope.fromJson(Map<String, dynamic> json) =>
+      HandlersRoleViewEnvelope(json);
+
+  static const schemaName = 'handlers.RoleViewEnvelope';
+  final Map<String, dynamic> value;
+
+  ServicesRoleView? get data {
+    final raw = value['data'];
+    if (raw is! Map) return null;
+    return ServicesRoleView.fromJson(_jsonMap(raw));
+  }
+
+  bool? get success => value['success'] as bool?;
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
 final class HandlersSearchResultsEnvelope {
   HandlersSearchResultsEnvelope(Map<String, dynamic> value)
     : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
@@ -1355,6 +1494,27 @@ final class HandlersUserEnvelope {
     final raw = value['data'];
     if (raw is! Map) return null;
     return ModelsUser.fromJson(_jsonMap(raw));
+  }
+
+  bool? get success => value['success'] as bool?;
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
+final class HandlersUserViewEnvelope {
+  HandlersUserViewEnvelope(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory HandlersUserViewEnvelope.fromJson(Map<String, dynamic> json) =>
+      HandlersUserViewEnvelope(json);
+
+  static const schemaName = 'handlers.UserViewEnvelope';
+  final Map<String, dynamic> value;
+
+  ServicesUserView? get data {
+    final raw = value['data'];
+    if (raw is! Map) return null;
+    return ServicesUserView.fromJson(_jsonMap(raw));
   }
 
   bool? get success => value['success'] as bool?;
@@ -2163,7 +2323,7 @@ final class ServicesAccountActionResult {
 
   bool? get accepted => value['accepted'] as bool?;
 
-  bool? get deliveryRequired => value['delivery_required'] as bool?;
+  bool? get deliveryAccepted => value['delivery_accepted'] as bool?;
 
   String? get developmentToken => value['development_token']?.toString();
 
@@ -2648,6 +2808,68 @@ final class ServicesManifestResult {
   Map<String, dynamic> toJson() => Map.of(value);
 }
 
+final class ServicesPageResultServicesRoleView {
+  ServicesPageResultServicesRoleView(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory ServicesPageResultServicesRoleView.fromJson(
+    Map<String, dynamic> json,
+  ) => ServicesPageResultServicesRoleView(json);
+
+  static const schemaName = 'services.PageResult-services_RoleView';
+  final Map<String, dynamic> value;
+
+  List<ServicesRoleView> get items {
+    final raw = value['items'];
+    if (raw is! List) return const [];
+    return raw
+        .whereType<Map>()
+        .map((item) => ServicesRoleView.fromJson(_jsonMap(item)))
+        .toList(growable: false);
+  }
+
+  int? get page => (value['page'] as num?)?.toInt();
+
+  int? get perPage => (value['per_page'] as num?)?.toInt();
+
+  int? get totalItems => (value['total_items'] as num?)?.toInt();
+
+  int? get totalPages => (value['total_pages'] as num?)?.toInt();
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
+final class ServicesPageResultServicesUserView {
+  ServicesPageResultServicesUserView(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory ServicesPageResultServicesUserView.fromJson(
+    Map<String, dynamic> json,
+  ) => ServicesPageResultServicesUserView(json);
+
+  static const schemaName = 'services.PageResult-services_UserView';
+  final Map<String, dynamic> value;
+
+  List<ServicesUserView> get items {
+    final raw = value['items'];
+    if (raw is! List) return const [];
+    return raw
+        .whereType<Map>()
+        .map((item) => ServicesUserView.fromJson(_jsonMap(item)))
+        .toList(growable: false);
+  }
+
+  int? get page => (value['page'] as num?)?.toInt();
+
+  int? get perPage => (value['per_page'] as num?)?.toInt();
+
+  int? get totalItems => (value['total_items'] as num?)?.toInt();
+
+  int? get totalPages => (value['total_pages'] as num?)?.toInt();
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
 final class ServicesProtocolStep {
   ServicesProtocolStep(Map<String, dynamic> value)
     : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
@@ -2675,6 +2897,60 @@ final class ServicesProtocolStep {
   String? get question => value['question']?.toString();
 
   String? get type => value['type']?.toString();
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
+final class ServicesRoleInput {
+  ServicesRoleInput(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory ServicesRoleInput.fromJson(Map<String, dynamic> json) =>
+      ServicesRoleInput(json);
+
+  static const schemaName = 'services.RoleInput';
+  final Map<String, dynamic> value;
+
+  String? get description => value['description']?.toString();
+
+  bool? get isactive => value['isActive'] as bool?;
+
+  String? get key => value['key']?.toString();
+
+  String? get name => value['name']?.toString();
+
+  Map<String, dynamic> get permissions => _jsonMap(value['permissions']);
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
+final class ServicesRoleView {
+  ServicesRoleView(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory ServicesRoleView.fromJson(Map<String, dynamic> json) =>
+      ServicesRoleView(json);
+
+  static const schemaName = 'services.RoleView';
+  final Map<String, dynamic> value;
+
+  String? get createdAt => value['created_at']?.toString();
+
+  String? get description => value['description']?.toString();
+
+  String? get id => value['id']?.toString();
+
+  bool? get isactive => value['isActive'] as bool?;
+
+  String? get key => value['key']?.toString();
+
+  String? get name => value['name']?.toString();
+
+  Map<String, dynamic> get permissions => _jsonMap(value['permissions']);
+
+  String? get updatedAt => value['updated_at']?.toString();
+
+  int? get userCount => (value['user_count'] as num?)?.toInt();
 
   Map<String, dynamic> toJson() => Map.of(value);
 }
@@ -2805,6 +3081,197 @@ final class ServicesUpdateCalculatorInput {
   String? get type => value['type']?.toString();
 
   String? get version => value['version']?.toString();
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
+final class ServicesUpdateGuidelineInput {
+  ServicesUpdateGuidelineInput(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory ServicesUpdateGuidelineInput.fromJson(Map<String, dynamic> json) =>
+      ServicesUpdateGuidelineInput(json);
+
+  static const schemaName = 'services.UpdateGuidelineInput';
+  final Map<String, dynamic> value;
+
+  String? get country => value['country']?.toString();
+
+  String? get description => value['description']?.toString();
+
+  String? get language => value['language']?.toString();
+
+  String? get programArea => value['program_area']?.toString();
+
+  String? get sourceOrg => value['source_org']?.toString();
+
+  String? get title => value['title']?.toString();
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
+final class ServicesUserCreateInput {
+  ServicesUserCreateInput(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory ServicesUserCreateInput.fromJson(Map<String, dynamic> json) =>
+      ServicesUserCreateInput(json);
+
+  static const schemaName = 'services.UserCreateInput';
+  final Map<String, dynamic> value;
+
+  String? get email => value['email']?.toString();
+
+  String? get name => value['name']?.toString();
+
+  String? get password => value['password']?.toString();
+
+  String? get phone => value['phone']?.toString();
+
+  String? get role => value['role']?.toString();
+
+  String? get roleId => value['role_id']?.toString();
+
+  String? get status => value['status']?.toString();
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
+final class ServicesUserUpdateInput {
+  ServicesUserUpdateInput(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory ServicesUserUpdateInput.fromJson(Map<String, dynamic> json) =>
+      ServicesUserUpdateInput(json);
+
+  static const schemaName = 'services.UserUpdateInput';
+  final Map<String, dynamic> value;
+
+  String? get address => value['address']?.toString();
+
+  String? get alternativePhone => value['alternative_phone']?.toString();
+
+  String? get avatar => value['avatar']?.toString();
+
+  String? get city => value['city']?.toString();
+
+  String? get country => value['country']?.toString();
+
+  String? get department => value['department']?.toString();
+
+  String? get email => value['email']?.toString();
+
+  bool? get isActive => value['is_active'] as bool?;
+
+  String? get jobTitle => value['job_title']?.toString();
+
+  String? get name => value['name']?.toString();
+
+  String? get notes => value['notes']?.toString();
+
+  String? get organization => value['organization']?.toString();
+
+  String? get password => value['password']?.toString();
+
+  String? get phone => value['phone']?.toString();
+
+  String? get postalCode => value['postal_code']?.toString();
+
+  String? get preferredLanguage => value['preferred_language']?.toString();
+
+  String? get role => value['role']?.toString();
+
+  String? get roleId => value['role_id']?.toString();
+
+  List<String> get specialization {
+    final raw = value['specialization'];
+    if (raw is! List) return const [];
+    return raw.whereType<String>().toList(growable: false);
+  }
+
+  String? get status => value['status']?.toString();
+
+  String? get timezone => value['timezone']?.toString();
+
+  bool? get verified => value['verified'] as bool?;
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
+final class ServicesUserView {
+  ServicesUserView(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory ServicesUserView.fromJson(Map<String, dynamic> json) =>
+      ServicesUserView(json);
+
+  static const schemaName = 'services.UserView';
+  final Map<String, dynamic> value;
+
+  String? get address => value['address']?.toString();
+
+  String? get alternativePhone => value['alternative_phone']?.toString();
+
+  String? get avatar => value['avatar']?.toString();
+
+  String? get city => value['city']?.toString();
+
+  String? get country => value['country']?.toString();
+
+  String? get createdAt => value['created_at']?.toString();
+
+  String? get department => value['department']?.toString();
+
+  String? get email => value['email']?.toString();
+
+  String? get facilityId => value['facility_id']?.toString();
+
+  String? get id => value['id']?.toString();
+
+  bool? get isActive => value['is_active'] as bool?;
+
+  String? get jobTitle => value['job_title']?.toString();
+
+  String? get licenseNumber => value['license_number']?.toString();
+
+  String? get name => value['name']?.toString();
+
+  String? get notes => value['notes']?.toString();
+
+  String? get organization => value['organization']?.toString();
+
+  String? get phone => value['phone']?.toString();
+
+  String? get postalCode => value['postal_code']?.toString();
+
+  String? get preferredLanguage => value['preferred_language']?.toString();
+
+  String? get role => value['role']?.toString();
+
+  String? get roleId => value['role_id']?.toString();
+
+  List<ModelsRole> get roles {
+    final raw = value['roles'];
+    if (raw is! List) return const [];
+    return raw
+        .whereType<Map>()
+        .map((item) => ModelsRole.fromJson(_jsonMap(item)))
+        .toList(growable: false);
+  }
+
+  List<String> get specialization {
+    final raw = value['specialization'];
+    if (raw is! List) return const [];
+    return raw.whereType<String>().toList(growable: false);
+  }
+
+  String? get status => value['status']?.toString();
+
+  String? get timezone => value['timezone']?.toString();
+
+  String? get updatedAt => value['updated_at']?.toString();
+
+  bool? get verified => value['verified'] as bool?;
 
   Map<String, dynamic> toJson() => Map.of(value);
 }

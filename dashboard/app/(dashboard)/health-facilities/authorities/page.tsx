@@ -13,6 +13,7 @@ import { authoritiesColumns } from "./columns"
 import { authoritiesAvailableFields } from "./fields"
 import { AdminEntityModal, AdminFieldDef } from "../_lib/admin-entity-modal"
 import { createAdminRowActions, createAdminBulkActions } from "../_lib/admin-crud-actions"
+import { facilityRelationOptions, healthFacilitiesService } from "@/services/health-facilities.service"
 
 const FIELDS: AdminFieldDef[] = [
   { name: "name", label: "Name", type: "text", placeholder: "e.g., Ministry of Health" },
@@ -21,7 +22,7 @@ const FIELDS: AdminFieldDef[] = [
     name: "ownership_type",
     label: "Ownership Type",
     type: "relation",
-    relation: { collection: "ownership_types", labelField: "name", sort: "name" },
+    relation: facilityRelationOptions.ownershipTypes,
   },
 ]
 
@@ -47,7 +48,7 @@ export default function AuthoritiesPage() {
   const rowActions = React.useMemo(
     () =>
       createAdminRowActions<AuthoritiesWithOwnershipType>({
-        collection: "authorities",
+        deleteRecord: healthFacilitiesService.deleteAuthority,
         entityLabel: "Authority",
         getDisplayName: (row) => row.name,
         onEdit: openEdit,
@@ -58,7 +59,7 @@ export default function AuthoritiesPage() {
   const bulkActions = React.useMemo(
     () =>
       createAdminBulkActions<AuthoritiesWithOwnershipType>({
-        collection: "authorities",
+        deleteRecord: healthFacilitiesService.deleteAuthority,
         entityLabel: "Authority",
         entityLabelPlural: "Authorities",
       }),
@@ -90,6 +91,7 @@ export default function AuthoritiesPage() {
 
       <EnhancedBackendDataTable<AuthoritiesWithOwnershipType>
         collectionName="authorities"
+        loadPage={healthFacilitiesService.listAuthorities}
         columns={authoritiesColumns}
         expand="ownership_type"
         expandable={true}
@@ -107,7 +109,8 @@ export default function AuthoritiesPage() {
       <AdminEntityModal
         open={modalOpen}
         onClose={closeModal}
-        collection="authorities"
+        createRecord={healthFacilitiesService.createAuthority}
+        updateRecord={healthFacilitiesService.updateAuthority}
         entityLabel="Authority"
         fields={FIELDS}
         record={editing}

@@ -7,7 +7,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:user_app/app/utils/constants.dart';
 
 import '../models/models.dart';
-import 'auth_service.dart';
 import 'main_service.dart';
 
 class BackendApiService extends GetxService {
@@ -93,23 +92,6 @@ class BackendApiService extends GetxService {
     return ApiRecord(user);
   }
 
-  Future<ApiRecord> updateCurrentUser(
-    String userId,
-    Map<String, dynamic> data,
-  ) async {
-    final response = await _requestJson(
-      '/api/v2/users/$userId',
-      method: 'PATCH',
-      body: _normalizeOutgoingPayload(data),
-    );
-    return ApiRecord(
-      _normalizeRecord(
-        collectionName: User.collection,
-        raw: _unwrapData(response),
-      ),
-    );
-  }
-
   Future<ApiRecord> loginWithOAuth2({
     required String provider,
     required Future<void> Function(Uri url) urlCallback,
@@ -122,24 +104,6 @@ class BackendApiService extends GetxService {
   }
 
   Future<List<String>> getAuthMethods() async => const ['password'];
-
-  Future<void> requestPasswordReset(String email) async {
-    throw Exception('Password reset is not exposed by the backend API');
-  }
-
-  Future<void> confirmPasswordReset({
-    required String token,
-    required String password,
-    required String passwordConfirm,
-  }) async {
-    throw Exception(
-      'Password reset confirmation is not exposed by the backend API',
-    );
-  }
-
-  Future<void> confirmEmailVerification(String token) async {
-    throw Exception('Email verification is not exposed by the backend API');
-  }
 
   Future<void> refreshAuth() async {
     if (_refreshToken.isEmpty) {
@@ -154,25 +118,6 @@ class BackendApiService extends GetxService {
     );
 
     await _persistSession(_unwrapData(response));
-  }
-
-  Future<void> changePassword({
-    required String currentPassword,
-    required String newPassword,
-    required String newPasswordConfirm,
-  }) async {
-    final currentUser = AuthService.to.currentUser.value;
-    if (currentUser == null) {
-      throw Exception('No authenticated user found');
-    }
-
-    await login(email: currentUser.email, password: currentPassword);
-
-    await updateResource(
-      collectionName: User.collection,
-      recordId: currentUser.id,
-      data: {'password': newPassword, 'passwordConfirm': newPasswordConfirm},
-    );
   }
 
   Future<void> logout() async {
@@ -979,6 +924,22 @@ class BackendApiService extends GetxService {
     }
 
     return map;
+  }
+
+  Future<Map<String, dynamic>> requestJson(
+    String path, {
+    required String method,
+    Map<String, dynamic>? body,
+    Map<String, String>? query,
+    bool includeAuth = true,
+  }) {
+    return _requestJson(
+      path,
+      method: method,
+      body: body,
+      query: query,
+      includeAuth: includeAuth,
+    );
   }
 
   Future<String> _requestText(String path) async {

@@ -18,7 +18,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { showToast } from "@/lib/toast"
-import { getBackendClient } from "@/lib/backend-client"
+import { healthFacilitiesService } from "@/services/health-facilities.service"
 import { RegionsResponse, HealthSubRegionsResponse } from "@/types/backend-types"
 
 const districtFormSchema = z.object({
@@ -57,15 +57,10 @@ export function CreateDistrictModal({ open, onClose, onSuccess }: CreateDistrict
   React.useEffect(() => {
     if (open) {
       const loadData = async () => {
-        const backend = getBackendClient()
         try {
           const [regionsData, healthSubRegionsData] = await Promise.all([
-            backend.resource('regions').getFullList({
-              sort: 'name',
-            }),
-            backend.resource('health_sub_regions').getFullList({
-              sort: 'name',
-            })
+            healthFacilitiesService.regions(),
+            healthFacilitiesService.healthSubRegions(),
           ])
           setRegions(regionsData as RegionsResponse[])
           setHealthSubRegions(healthSubRegionsData as HealthSubRegionsResponse[])
@@ -80,10 +75,9 @@ export function CreateDistrictModal({ open, onClose, onSuccess }: CreateDistrict
 
   const onSubmit = async (data: DistrictFormValues) => {
     setIsLoading(true)
-    const backend = getBackendClient()
 
     try {
-      await backend.resource('districts').create({
+      await healthFacilitiesService.createDistrict({
         name: data.name,
         region: data.region,
         health_sub_region: data.health_sub_region,

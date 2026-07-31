@@ -31,7 +31,7 @@ export const usersService = {
   requestPasswordReset(email: string) {
     return client().send<{
       accepted: boolean
-      delivery_required: boolean
+      delivery_accepted: boolean
       development_token?: string
     }>("/api/v2/auth/password-reset/request", {
       method: "POST",

@@ -246,6 +246,28 @@ func (s UserService) DeleteUser(id uuid.UUID) error {
 	})
 }
 
+func (s UserService) VerifyUser(id, actorID uuid.UUID, ipAddress string) (*UserView, error) {
+	err := s.DB.Transaction(func(tx *gorm.DB) error {
+		result := tx.Model(&models.User{}).
+			Where("id = ? AND deleted_at IS NULL", id).
+			Updates(map[string]any{"verified": true, "updated_at": time.Now().UTC()})
+		if result.Error != nil {
+			return result.Error
+		}
+		if result.RowsAffected == 0 {
+			return gorm.ErrRecordNotFound
+		}
+		return tx.Create(&models.AuditLog{
+			ActorID: actorID.String(), EntityID: id.String(), EntityType: "user",
+			Action: "user.verified", MetadataJSON: `{"verified":true}`, IPAddress: ipAddress,
+		}).Error
+	})
+	if err != nil {
+		return nil, err
+	}
+	return s.GetUser(id)
+}
+
 func (s UserService) ListRoles(page PageInput, search string, active *bool) (*PageResult[RoleView], error) {
 	page = page.Normalize(20, 100)
 	query := s.DB.Model(&models.Role{}).Where("roles.deleted_at IS NULL")

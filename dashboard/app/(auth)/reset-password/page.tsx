@@ -38,19 +38,11 @@ function ResetPasswordForm() {
   }, [searchParams])
 
   const validateToken = async (token: string) => {
-    try {
-      // For legacy collection API, we don't need to validate the token beforehand
-      // The token validation happens during the actual reset process
-      // We'll just check if it looks like a valid format
-      if (token && token.length > 10) {
-        setTokenValid(true)
-      } else {
-        setTokenValid(false)
-        setError("Invalid reset token format")
-      }
-    } catch {
+    if (token.trim()) {
+      setTokenValid(true)
+    } else {
       setTokenValid(false)
-      setError("Failed to validate reset token")
+      setError("Invalid reset token")
     }
   }
 
@@ -65,8 +57,8 @@ function ResetPasswordForm() {
       return
     }
 
-    if (formData.password.length < 8) {
-      setError("Password must be at least 8 characters long")
+    if (formData.password.length < 8 || !/[A-Za-z]/.test(formData.password) || !/\d/.test(formData.password)) {
+      setError("Password must be at least 8 characters and include a letter and number")
       setIsLoading(false)
       return
     }
@@ -88,11 +80,8 @@ function ResetPasswordForm() {
       showToast.error('Reset Failed', errorMessage)
       console.error('Password reset confirmation error:', error)
       
-      // Handle specific legacy collection API errors
       if (error && typeof error === 'object' && 'status' in error && error.status === 400) {
         setError('Invalid or expired reset token')
-      } else if (error && typeof error === 'object' && 'data' in error && error.data && typeof error.data === 'object' && 'password' in error.data) {
-        setError('Password does not meet requirements')
       } else {
         setError(errorMessage)
       }

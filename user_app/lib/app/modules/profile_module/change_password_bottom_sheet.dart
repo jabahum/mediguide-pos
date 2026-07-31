@@ -9,6 +9,7 @@ import '../../utils/common.dart';
 import '../../utils/responsive.dart';
 import '../../widgets/app_button.dart';
 import '../../data/services/backend_api_service.dart';
+import '../../data/repositories/user_repository.dart';
 import '../../translations/app_translations.dart';
 
 /// Controller for password change bottom sheet
@@ -30,7 +31,7 @@ class ChangePasswordController extends GetxController {
 
       final formValues = formKey.currentState!.value;
 
-      await BackendApiService.to.changePassword(
+      await UserRepository(BackendApiService.to).changePassword(
         currentPassword: formValues['currentPassword']?.toString() ?? '',
         newPassword: formValues['newPassword']?.toString() ?? '',
         newPasswordConfirm: formValues['confirmPassword']?.toString() ?? '',

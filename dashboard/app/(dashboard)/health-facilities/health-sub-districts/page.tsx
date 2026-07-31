@@ -14,13 +14,14 @@ import { healthSubDistrictsColumns } from "./columns"
 import { healthSubDistrictsAvailableFields } from "./fields"
 import { AdminEntityModal, AdminFieldDef } from "../_lib/admin-entity-modal"
 import { createAdminRowActions, createAdminBulkActions } from "../_lib/admin-crud-actions"
+import { facilityRelationOptions, healthFacilitiesService } from "@/services/health-facilities.service"
 
 const FIELDS: AdminFieldDef[] = [
   {
     name: "district",
     label: "District",
     type: "relation",
-    relation: { collection: "districts", labelField: "name", sort: "name" },
+    relation: facilityRelationOptions.districts,
   },
   { name: "name", label: "Name", type: "text", placeholder: "Enter health sub-district name" },
   { name: "nhpi_code", label: "NHPI Code", type: "text", placeholder: "e.g., HSD001", span: "half" },
@@ -49,7 +50,7 @@ export default function HealthSubDistrictsPage() {
   const rowActions = React.useMemo(
     () =>
       createAdminRowActions<HealthSubDistrictsResponse>({
-        collection: "health_sub_districts",
+        deleteRecord: healthFacilitiesService.deleteHealthSubDistrict,
         entityLabel: "Health Sub-District",
         getDisplayName: (row) => row.name,
         onEdit: openEdit,
@@ -60,7 +61,7 @@ export default function HealthSubDistrictsPage() {
   const bulkActions = React.useMemo(
     () =>
       createAdminBulkActions<HealthSubDistrictsResponse>({
-        collection: "health_sub_districts",
+        deleteRecord: healthFacilitiesService.deleteHealthSubDistrict,
         entityLabel: "Health Sub-District",
         entityLabelPlural: "Health Sub-Districts",
       }),
@@ -92,6 +93,7 @@ export default function HealthSubDistrictsPage() {
 
       <EnhancedBackendDataTable<HealthSubDistrictsResponse>
         collectionName="health_sub_districts"
+        loadPage={healthFacilitiesService.listHealthSubDistricts}
         columns={healthSubDistrictsColumns as ExtendedColumnDef<HealthSubDistrictsResponse>[]}
         expand="district"
         expandable={true}
@@ -109,7 +111,8 @@ export default function HealthSubDistrictsPage() {
       <AdminEntityModal
         open={modalOpen}
         onClose={closeModal}
-        collection="health_sub_districts"
+        createRecord={healthFacilitiesService.createHealthSubDistrict}
+        updateRecord={healthFacilitiesService.updateHealthSubDistrict}
         entityLabel="Health Sub-District"
         fields={FIELDS}
         record={editing}

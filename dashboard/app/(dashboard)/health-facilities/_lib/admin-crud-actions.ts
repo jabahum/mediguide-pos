@@ -2,21 +2,20 @@
 
 import { Edit, Trash2 } from "lucide-react"
 
-import { getBackendClient } from "@/lib/backend-client"
 import { showToast } from "@/lib/toast"
 import { BaseRecord, BulkAction, RowAction } from "@/types/data-table"
 
 interface AdminRowActionsConfig<T extends BaseRecord> {
-  collection: string
   entityLabel: string
   getDisplayName: (row: T) => string
   onEdit: (row: T) => void
+  deleteRecord: (id: string) => Promise<unknown>
 }
 
 export function createAdminRowActions<T extends BaseRecord>(
   config: AdminRowActionsConfig<T>
 ): RowAction<T>[] {
-  const { collection, entityLabel, getDisplayName, onEdit } = config
+  const { entityLabel, getDisplayName, onEdit, deleteRecord } = config
   return [
     {
       id: "edit",
@@ -30,9 +29,8 @@ export function createAdminRowActions<T extends BaseRecord>(
       icon: Trash2,
       variant: "destructive",
       onClick: async (row) => {
-        const backend = getBackendClient()
         try {
-          await backend.resource(collection).delete(row.id)
+          await deleteRecord(row.id)
           showToast.success(
             `${entityLabel} Deleted`,
             `${getDisplayName(row)} has been deleted`
@@ -53,15 +51,15 @@ export function createAdminRowActions<T extends BaseRecord>(
 }
 
 interface AdminBulkActionsConfig {
-  collection: string
   entityLabel: string
   entityLabelPlural?: string
+  deleteRecord: (id: string) => Promise<unknown>
 }
 
 export function createAdminBulkActions<T extends BaseRecord>(
   config: AdminBulkActionsConfig
 ): BulkAction<T>[] {
-  const { collection, entityLabel, entityLabelPlural = `${entityLabel}s` } = config
+  const { entityLabel, entityLabelPlural = `${entityLabel}s`, deleteRecord } = config
   return [
     {
       id: "bulk-delete",
@@ -72,13 +70,12 @@ export function createAdminBulkActions<T extends BaseRecord>(
       confirmMessage: `Delete all selected ${entityLabelPlural.toLowerCase()}? This action cannot be undone.`,
       description: `Permanently delete the selected ${entityLabelPlural.toLowerCase()}.`,
       onClick: async (rows) => {
-        const backend = getBackendClient()
         let successCount = 0
         let errorCount = 0
 
         for (const row of rows) {
           try {
-            await backend.resource(collection).delete(row.id)
+            await deleteRecord(row.id)
             successCount++
           } catch (error) {
             errorCount++

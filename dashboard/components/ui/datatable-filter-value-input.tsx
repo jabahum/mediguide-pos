@@ -160,7 +160,9 @@ function StaticSelect({
 }
 
 export interface RelationSelectConfig {
-  collection: string
+  collection?: string
+  key?: string
+  loadOptions?: (search: string, pageSize: number) => Promise<Array<Record<string, unknown>>>
   labelField?: string
   valueField?: string
   sort?: string
@@ -215,6 +217,7 @@ function RelationSelect({
   const valueField = relation.valueField ?? "id"
   const sort = relation.sort ?? labelField
   const pageSize = relation.pageSize ?? 50
+  const relationKey = relation.key ?? relation.collection ?? "relation"
 
   React.useEffect(() => {
     const t = setTimeout(() => setDebounced(search.trim()), 250)
@@ -228,10 +231,14 @@ function RelationSelect({
     enabled: open,
     queryKey: [
       "backend-filter-relation",
-      relation.collection,
+      relationKey,
       { labelField, valueField, sort, pageSize, debounced, base: relation.filter ?? "" },
     ],
     queryFn: async () => {
+      if (relation.loadOptions) {
+        return relation.loadOptions(debounced, pageSize)
+      }
+      if (!relation.collection) return []
       const filters: string[] = []
       if (relation.filter) filters.push(`(${relation.filter})`)
       if (debounced) filters.push(`${labelField} ~ "${escapeForFilter(debounced)}"`)
@@ -246,8 +253,13 @@ function RelationSelect({
 
   const selectedQuery = useQuery({
     enabled: !!value,
-    queryKey: ["backend-filter-relation-one", relation.collection, value, labelField, valueField],
+    queryKey: ["backend-filter-relation-one", relationKey, value, labelField, valueField],
     queryFn: async () => {
+      if (relation.loadOptions) {
+        const items = await relation.loadOptions("", Math.max(pageSize, 200))
+        return items.find((item) => String(item[valueField]) === value) ?? null
+      }
+      if (!relation.collection) return null
       const item = await backend
         .resource(relation.collection)
         .getOne(value, { fields: `${valueField},${labelField}` })

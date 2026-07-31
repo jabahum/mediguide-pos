@@ -13,6 +13,7 @@ import { facilityLevelsColumns } from "./columns"
 import { facilityLevelsAvailableFields } from "./fields"
 import { AdminEntityModal, AdminFieldDef } from "../_lib/admin-entity-modal"
 import { createAdminRowActions, createAdminBulkActions } from "../_lib/admin-crud-actions"
+import { healthFacilitiesService } from "@/services/health-facilities.service"
 
 const FIELDS: AdminFieldDef[] = [
   { name: "name", label: "Name", type: "text", placeholder: "e.g., Hospital" },
@@ -41,7 +42,7 @@ export default function FacilityLevelsPage() {
   const rowActions = React.useMemo(
     () =>
       createAdminRowActions<FacilityLevelsResponse>({
-        collection: "facility_levels",
+        deleteRecord: healthFacilitiesService.deleteFacilityLevel,
         entityLabel: "Facility Level",
         getDisplayName: (row) => row.name,
         onEdit: openEdit,
@@ -52,7 +53,7 @@ export default function FacilityLevelsPage() {
   const bulkActions = React.useMemo(
     () =>
       createAdminBulkActions<FacilityLevelsResponse>({
-        collection: "facility_levels",
+        deleteRecord: healthFacilitiesService.deleteFacilityLevel,
         entityLabel: "Facility Level",
         entityLabelPlural: "Facility Levels",
       }),
@@ -84,6 +85,7 @@ export default function FacilityLevelsPage() {
 
       <EnhancedBackendDataTable<FacilityLevelsResponse>
         collectionName="facility_levels"
+        loadPage={healthFacilitiesService.listFacilityLevels}
         columns={facilityLevelsColumns}
         searchable={true}
         searchFields={["name", "code"]}
@@ -99,7 +101,8 @@ export default function FacilityLevelsPage() {
       <AdminEntityModal
         open={modalOpen}
         onClose={closeModal}
-        collection="facility_levels"
+        createRecord={healthFacilitiesService.createFacilityLevel}
+        updateRecord={healthFacilitiesService.updateFacilityLevel}
         entityLabel="Facility Level"
         fields={FIELDS}
         record={editing}

@@ -13,13 +13,14 @@ import { healthSubRegionsColumns } from "./columns"
 import { healthSubRegionsAvailableFields } from "./fields"
 import { AdminEntityModal, AdminFieldDef } from "../_lib/admin-entity-modal"
 import { createAdminRowActions, createAdminBulkActions } from "../_lib/admin-crud-actions"
+import { facilityRelationOptions, healthFacilitiesService } from "@/services/health-facilities.service"
 
 const FIELDS: AdminFieldDef[] = [
   {
     name: "region",
     label: "Region",
     type: "relation",
-    relation: { collection: "regions", labelField: "name", sort: "name" },
+    relation: facilityRelationOptions.regions,
   },
   { name: "name", label: "Name", type: "text", placeholder: "Enter health sub-region name" },
   { name: "nhpi_code", label: "NHPI Code", type: "text", placeholder: "e.g., HSR001", span: "half" },
@@ -48,7 +49,7 @@ export default function HealthSubRegionsPage() {
   const rowActions = React.useMemo(
     () =>
       createAdminRowActions<HealthSubRegionsWithRegion>({
-        collection: "health_sub_regions",
+        deleteRecord: healthFacilitiesService.deleteHealthSubRegion,
         entityLabel: "Health Sub-Region",
         getDisplayName: (row) => row.name,
         onEdit: openEdit,
@@ -59,7 +60,7 @@ export default function HealthSubRegionsPage() {
   const bulkActions = React.useMemo(
     () =>
       createAdminBulkActions<HealthSubRegionsWithRegion>({
-        collection: "health_sub_regions",
+        deleteRecord: healthFacilitiesService.deleteHealthSubRegion,
         entityLabel: "Health Sub-Region",
         entityLabelPlural: "Health Sub-Regions",
       }),
@@ -91,6 +92,7 @@ export default function HealthSubRegionsPage() {
 
       <EnhancedBackendDataTable<HealthSubRegionsWithRegion>
         collectionName="health_sub_regions"
+        loadPage={healthFacilitiesService.listHealthSubRegions}
         columns={healthSubRegionsColumns}
         expand="region"
         expandable={true}
@@ -108,7 +110,8 @@ export default function HealthSubRegionsPage() {
       <AdminEntityModal
         open={modalOpen}
         onClose={closeModal}
-        collection="health_sub_regions"
+        createRecord={healthFacilitiesService.createHealthSubRegion}
+        updateRecord={healthFacilitiesService.updateHealthSubRegion}
         entityLabel="Health Sub-Region"
         fields={FIELDS}
         record={editing}

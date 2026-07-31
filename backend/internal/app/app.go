@@ -102,6 +102,7 @@ func New(cfg config.Config) (*App, error) {
 	userH := handlers.UserHandler{Service: userSvc}
 	legacyAPIH := handlers.LegacyAPIHandler{Service: legacyAPISvc, Cfg: cfg}
 	resourceH := handlers.ResourceHandler{Service: resourceSvc, Cfg: cfg}
+	facilityH := handlers.NewFacilityHandler(resourceSvc, cfg)
 
 	legacyV1 := r.Group("/api/v1")
 	legacyV1.GET("/stats", legacyAPIH.Stats)
@@ -129,12 +130,13 @@ func New(cfg config.Config) (*App, error) {
 		v2.POST("/auth/register", authH.Register)
 		v2.POST("/auth/login", authH.Login)
 		v2.POST("/auth/refresh", authH.Refresh)
-		v2.POST("/auth/password-reset/request", authH.RequestPasswordReset)
-		v2.POST("/auth/password-reset/confirm", authH.ConfirmPasswordReset)
+		v2.POST("/auth/password-reset/request", middleware.PublicRateLimit(5, 15*time.Minute), authH.RequestPasswordReset)
+		v2.POST("/auth/password-reset/confirm", middleware.PublicRateLimit(10, 15*time.Minute), authH.ConfirmPasswordReset)
 		protected := v2.Group("")
 		protected.Use(middleware.AuthRequired(cfg, database))
 		protected.POST("/auth/logout", authH.Logout)
 		protected.GET("/me", authH.Me)
+		protected.POST("/me/password", authH.ChangePassword)
 
 		protected.GET("/calculators", middleware.RequireAnyPermission("calculator.read", "guideline.read"), calculatorH.List)
 		protected.GET("/calculators/:id", middleware.RequireAnyPermission("calculator.read", "guideline.read"), calculatorH.Get)
@@ -216,6 +218,53 @@ func New(cfg config.Config) (*App, error) {
 		protected.GET("/languages", referenceH.ListLanguages)
 		protected.POST("/languages", middleware.RequirePermission("admin.all"), referenceH.CreateLanguage)
 
+		protected.GET("/facilities", facilityH.ListFacilities)
+		protected.GET("/facilities/:id", facilityH.GetFacility)
+		protected.POST("/facilities", middleware.RequireAnyPermission("admin.all", "guideline.write"), facilityH.CreateFacility)
+		protected.PATCH("/facilities/:id", middleware.RequireAnyPermission("admin.all", "guideline.write"), facilityH.UpdateFacility)
+		protected.DELETE("/facilities/:id", middleware.RequireAnyPermission("admin.all", "guideline.write"), facilityH.DeleteFacility)
+
+		protected.GET("/health-sub-regions", facilityH.ListHealthSubRegions)
+		protected.POST("/health-sub-regions", middleware.RequireAnyPermission("admin.all", "guideline.write"), facilityH.CreateHealthSubRegion)
+		protected.PATCH("/health-sub-regions/:id", middleware.RequireAnyPermission("admin.all", "guideline.write"), facilityH.UpdateHealthSubRegion)
+		protected.DELETE("/health-sub-regions/:id", middleware.RequireAnyPermission("admin.all", "guideline.write"), facilityH.DeleteHealthSubRegion)
+		protected.GET("/regions", facilityH.ListRegions)
+		protected.POST("/regions", middleware.RequireAnyPermission("admin.all", "guideline.write"), facilityH.CreateRegion)
+		protected.PATCH("/regions/:id", middleware.RequireAnyPermission("admin.all", "guideline.write"), facilityH.UpdateRegion)
+		protected.DELETE("/regions/:id", middleware.RequireAnyPermission("admin.all", "guideline.write"), facilityH.DeleteRegion)
+		protected.GET("/districts", facilityH.ListDistricts)
+		protected.POST("/districts", middleware.RequireAnyPermission("admin.all", "guideline.write"), facilityH.CreateDistrict)
+		protected.PATCH("/districts/:id", middleware.RequireAnyPermission("admin.all", "guideline.write"), facilityH.UpdateDistrict)
+		protected.DELETE("/districts/:id", middleware.RequireAnyPermission("admin.all", "guideline.write"), facilityH.DeleteDistrict)
+		protected.GET("/health-sub-districts", facilityH.ListHealthSubDistricts)
+		protected.POST("/health-sub-districts", middleware.RequireAnyPermission("admin.all", "guideline.write"), facilityH.CreateHealthSubDistrict)
+		protected.PATCH("/health-sub-districts/:id", middleware.RequireAnyPermission("admin.all", "guideline.write"), facilityH.UpdateHealthSubDistrict)
+		protected.DELETE("/health-sub-districts/:id", middleware.RequireAnyPermission("admin.all", "guideline.write"), facilityH.DeleteHealthSubDistrict)
+		protected.GET("/counties", facilityH.ListCounties)
+		protected.POST("/counties", middleware.RequireAnyPermission("admin.all", "guideline.write"), facilityH.CreateCounty)
+		protected.PATCH("/counties/:id", middleware.RequireAnyPermission("admin.all", "guideline.write"), facilityH.UpdateCounty)
+		protected.DELETE("/counties/:id", middleware.RequireAnyPermission("admin.all", "guideline.write"), facilityH.DeleteCounty)
+		protected.GET("/subcounties", facilityH.ListSubcounties)
+		protected.POST("/subcounties", middleware.RequireAnyPermission("admin.all", "guideline.write"), facilityH.CreateSubcounty)
+		protected.PATCH("/subcounties/:id", middleware.RequireAnyPermission("admin.all", "guideline.write"), facilityH.UpdateSubcounty)
+		protected.DELETE("/subcounties/:id", middleware.RequireAnyPermission("admin.all", "guideline.write"), facilityH.DeleteSubcounty)
+		protected.GET("/parishes", facilityH.ListParishes)
+		protected.POST("/parishes", middleware.RequireAnyPermission("admin.all", "guideline.write"), facilityH.CreateParish)
+		protected.PATCH("/parishes/:id", middleware.RequireAnyPermission("admin.all", "guideline.write"), facilityH.UpdateParish)
+		protected.DELETE("/parishes/:id", middleware.RequireAnyPermission("admin.all", "guideline.write"), facilityH.DeleteParish)
+		protected.GET("/facility-levels", facilityH.ListFacilityLevels)
+		protected.POST("/facility-levels", middleware.RequireAnyPermission("admin.all", "guideline.write"), facilityH.CreateFacilityLevel)
+		protected.PATCH("/facility-levels/:id", middleware.RequireAnyPermission("admin.all", "guideline.write"), facilityH.UpdateFacilityLevel)
+		protected.DELETE("/facility-levels/:id", middleware.RequireAnyPermission("admin.all", "guideline.write"), facilityH.DeleteFacilityLevel)
+		protected.GET("/ownership-types", facilityH.ListOwnershipTypes)
+		protected.POST("/ownership-types", middleware.RequireAnyPermission("admin.all", "guideline.write"), facilityH.CreateOwnershipType)
+		protected.PATCH("/ownership-types/:id", middleware.RequireAnyPermission("admin.all", "guideline.write"), facilityH.UpdateOwnershipType)
+		protected.DELETE("/ownership-types/:id", middleware.RequireAnyPermission("admin.all", "guideline.write"), facilityH.DeleteOwnershipType)
+		protected.GET("/authorities", facilityH.ListAuthorities)
+		protected.POST("/authorities", middleware.RequireAnyPermission("admin.all", "guideline.write"), facilityH.CreateAuthority)
+		protected.PATCH("/authorities/:id", middleware.RequireAnyPermission("admin.all", "guideline.write"), facilityH.UpdateAuthority)
+		protected.DELETE("/authorities/:id", middleware.RequireAnyPermission("admin.all", "guideline.write"), facilityH.DeleteAuthority)
+
 		protected.GET("/sync/manifest", middleware.RequirePermission("sync.read"), syncH.Manifest)
 		protected.POST("/sync/packages", middleware.RequirePermission("admin.all"), syncH.CreatePackage)
 		protected.GET("/sync/packages/:id/download", middleware.RequirePermission("sync.read"), syncH.Download)
@@ -238,17 +287,6 @@ func registerResourceRoutes(group *gin.RouterGroup, handler handlers.ResourceHan
 		"guideline_tags":          "/guideline-tags",
 		"guideline_index":         "/guideline-index",
 		"consultants":             "/consultants",
-		"health_sub_regions":      "/health-sub-regions",
-		"health_facilities":       "/facilities",
-		"regions":                 "/regions",
-		"districts":               "/districts",
-		"health_sub_districts":    "/health-sub-districts",
-		"counties":                "/counties",
-		"subcounties":             "/subcounties",
-		"parishes":                "/parishes",
-		"facility_levels":         "/facility-levels",
-		"ownership_types":         "/ownership-types",
-		"authorities":             "/authorities",
 		"ministry_directory":      "/ministry-directory",
 		"languages":               "/reference-languages",
 		"notifications":           "/notifications",

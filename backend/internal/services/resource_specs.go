@@ -239,11 +239,16 @@ var resourceSpecs = map[string]resourceSpec{
 			"hf.name", "hf.nhpi_code", "hf.hsdt_code", "coalesce(d.name, '')", "coalesce(r.name, '')",
 		},
 		FilterColumns: map[string]string{
-			"region_id":         "hf.region_id::text",
-			"district_id":       "hf.district_id::text",
-			"facility_level_id": "hf.facility_level_id::text",
-			"ownership_type_id": "hf.ownership_type_id::text",
-			"authority_id":      "hf.authority_id::text",
+			"region_id":              "hf.region_id::text",
+			"health_sub_region_id":   "hf.health_sub_region_id::text",
+			"district_id":            "hf.district_id::text",
+			"health_sub_district_id": "hf.health_sub_district_id::text",
+			"county_id":              "hf.county_id::text",
+			"subcounty_id":           "hf.subcounty_id::text",
+			"parish_id":              "hf.parish_id::text",
+			"facility_level_id":      "hf.facility_level_id::text",
+			"ownership_type_id":      "hf.ownership_type_id::text",
+			"authority_id":           "hf.authority_id::text",
 		},
 		Access: resourceAccessPublic,
 		Joins: []string{
@@ -277,7 +282,7 @@ var resourceSpecs = map[string]resourceSpec{
 	"districts": {
 		Table:        "districts d",
 		IDColumn:     "d.id",
-		Select:       "d.*, r.name AS region_name",
+		Select:       "d.*, r.name AS region_name, hsr.name AS health_sub_region_name",
 		DefaultOrder: "d.name ASC",
 		SearchColumns: []string{
 			"d.name", "d.nhpi_code", "d.hsdt_code", "coalesce(r.name, '')",
@@ -286,7 +291,10 @@ var resourceSpecs = map[string]resourceSpec{
 			"region_id": "d.region_id::text",
 		},
 		Access: resourceAccessPublic,
-		Joins:  []string{"LEFT JOIN regions r ON r.id = d.region_id"},
+		Joins: []string{
+			"LEFT JOIN regions r ON r.id = d.region_id",
+			"LEFT JOIN health_sub_regions hsr ON hsr.id = d.health_sub_region_id",
+		},
 		ApplyScopes: func(query *gorm.DB) *gorm.DB {
 			return query.Where("d.deleted_at IS NULL")
 		},

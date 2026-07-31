@@ -6,9 +6,9 @@ import { useParams, useRouter } from "next/navigation"
 import { PageHeader } from "@/components/ui/page-header"
 import { usePermissionContext } from "@/lib/permission-context"
 import { FacilityForm } from "../../components/facility-form"
-import { getBackendClient } from "@/lib/backend-client"
 import { showToast } from "@/lib/toast"
 import { HealthFacilitiesResponse } from "@/types/backend-types"
+import { healthFacilitiesService } from "@/services/health-facilities.service"
 
 export default function EditFacilityPage() {
   const params = useParams()
@@ -30,9 +30,8 @@ export default function EditFacilityPage() {
     const loadFacility = async () => {
       if (!facilityId) return
 
-      const backend = getBackendClient()
       try {
-        const facilityData = await backend.resource('health_facilities').getOne(facilityId)
+        const facilityData = await healthFacilitiesService.getFacility(facilityId)
         setFacility(facilityData as HealthFacilitiesResponse)
       } catch (error) {
         console.error("Failed to load facility:", error)

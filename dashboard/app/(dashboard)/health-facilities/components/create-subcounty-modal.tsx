@@ -18,7 +18,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { showToast } from "@/lib/toast"
-import { getBackendClient } from "@/lib/backend-client"
+import { healthFacilitiesService } from "@/services/health-facilities.service"
 import { CountiesResponse, DistrictsResponse } from "@/types/backend-types"
 
 const subcountyFormSchema = z.object({
@@ -57,16 +57,10 @@ export function CreateSubcountyModal({ open, onClose, onSuccess }: CreateSubcoun
   React.useEffect(() => {
     if (open) {
       const loadData = async () => {
-        const backend = getBackendClient()
         try {
           const [countiesData, districtsData] = await Promise.all([
-            backend.resource('counties').getFullList({
-              sort: 'name',
-              expand: 'district',
-            }),
-            backend.resource('districts').getFullList({
-              sort: 'name',
-            })
+            healthFacilitiesService.counties(),
+            healthFacilitiesService.districts(),
           ])
           setCounties(countiesData as CountiesResponse[])
           setDistricts(districtsData as DistrictsResponse[])
@@ -81,10 +75,9 @@ export function CreateSubcountyModal({ open, onClose, onSuccess }: CreateSubcoun
 
   const onSubmit = async (data: SubcountyFormValues) => {
     setIsLoading(true)
-    const backend = getBackendClient()
 
     try {
-      await backend.resource('subcounties').create({
+      await healthFacilitiesService.createSubcounty({
         name: data.name,
         county: data.county,
         district: data.district,

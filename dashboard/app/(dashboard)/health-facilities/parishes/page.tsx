@@ -13,13 +13,14 @@ import { parishesColumns } from "./columns"
 import { parishesAvailableFields } from "./fields"
 import { AdminEntityModal, AdminFieldDef } from "../_lib/admin-entity-modal"
 import { createAdminRowActions, createAdminBulkActions } from "../_lib/admin-crud-actions"
+import { facilityRelationOptions, healthFacilitiesService } from "@/services/health-facilities.service"
 
 const FIELDS: AdminFieldDef[] = [
   {
     name: "subcounty",
     label: "Subcounty",
     type: "relation",
-    relation: { collection: "subcounties", labelField: "name", sort: "name" },
+    relation: facilityRelationOptions.subcounties,
   },
   { name: "name", label: "Name", type: "text", placeholder: "Enter parish name" },
   { name: "nhpi_code", label: "NHPI Code", type: "text", placeholder: "e.g., PAR001", span: "half" },
@@ -48,7 +49,7 @@ export default function ParishesPage() {
   const rowActions = React.useMemo(
     () =>
       createAdminRowActions<ParishesWithSubcounty>({
-        collection: "parishes",
+        deleteRecord: healthFacilitiesService.deleteParish,
         entityLabel: "Parish",
         getDisplayName: (row) => row.name,
         onEdit: openEdit,
@@ -59,7 +60,7 @@ export default function ParishesPage() {
   const bulkActions = React.useMemo(
     () =>
       createAdminBulkActions<ParishesWithSubcounty>({
-        collection: "parishes",
+        deleteRecord: healthFacilitiesService.deleteParish,
         entityLabel: "Parish",
         entityLabelPlural: "Parishes",
       }),
@@ -91,6 +92,7 @@ export default function ParishesPage() {
 
       <EnhancedBackendDataTable<ParishesWithSubcounty>
         collectionName="parishes"
+        loadPage={healthFacilitiesService.listParishes}
         columns={parishesColumns}
         expand="subcounty"
         expandable={true}
@@ -108,7 +110,8 @@ export default function ParishesPage() {
       <AdminEntityModal
         open={modalOpen}
         onClose={closeModal}
-        collection="parishes"
+        createRecord={healthFacilitiesService.createParish}
+        updateRecord={healthFacilitiesService.updateParish}
         entityLabel="Parish"
         fields={FIELDS}
         record={editing}

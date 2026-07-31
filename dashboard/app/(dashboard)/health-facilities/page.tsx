@@ -11,6 +11,7 @@ import { createFacilityRowActions, facilityBulkActions } from "./facility-action
 import { healthFacilitiesAvailableFields } from "./fields"
 import { AdvancedFilter } from "@/types/data-table"
 import { usePermissionContext } from "@/lib/permission-context"
+import { healthFacilitiesService } from "@/services/health-facilities.service"
 
 export default function HealthFacilitiesPage() {
   const router = useRouter()
@@ -34,8 +35,6 @@ export default function HealthFacilitiesPage() {
 
   const handleAdvancedFilter = React.useCallback((filters: AdvancedFilter[]) => {
     console.log('Advanced filters applied:', filters)
-    // Here you would convert the advanced filters to legacy collection API filter syntax
-    // and pass them to the data table hook
   }, [])
 
   const handleSelectionChange = React.useCallback((selectedFacilities: HealthFacility[]) => {
@@ -68,11 +67,9 @@ export default function HealthFacilitiesPage() {
       <EnhancedBackendDataTable<HealthFacility>
         // Collection settings
         collectionName="health_facilities"
+        loadPage={healthFacilitiesService.listFacilityTable}
         columns={columns}
-        expand="facility_level,authority,ownership_type,region,district,county,subcounty,parish,health_sub_region,health_sub_district"
         expandable={true}
-        sort="-created"
-        realtime={true}
 
         // Pagination
         defaultPageSize={20}

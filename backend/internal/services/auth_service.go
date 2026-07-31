@@ -61,12 +61,14 @@ type RegisterInput struct {
 
 type AccountActionResult struct {
 	Accepted         bool   `json:"accepted"`
-	DeliveryRequired bool   `json:"delivery_required"`
+	DeliveryAccepted bool   `json:"delivery_accepted"`
 	DevelopmentToken string `json:"development_token,omitempty"`
 }
 
 func (s AuthService) RequestPasswordReset(email string) (*AccountActionResult, error) {
-	result := &AccountActionResult{Accepted: true, DeliveryRequired: true}
+	// No outbound email adapter is configured yet. Keep the public response
+	// enumeration-safe while honestly reporting that no provider accepted mail.
+	result := &AccountActionResult{Accepted: true, DeliveryAccepted: false}
 	var user models.User
 	if err := s.DB.Where("lower(email) = ? AND deleted_at IS NULL", strings.ToLower(strings.TrimSpace(email))).First(&user).Error; err != nil {
 		return result, nil
@@ -90,13 +92,12 @@ func (s AuthService) RequestPasswordReset(email string) (*AccountActionResult, e
 	}
 	if s.Cfg.AppEnv == "development" {
 		result.DevelopmentToken = raw
-		result.DeliveryRequired = false
 	}
 	return result, nil
 }
 
 func (s AuthService) ConfirmPasswordReset(rawToken, password string) error {
-	if strings.TrimSpace(rawToken) == "" || len(password) < 8 {
+	if strings.TrimSpace(rawToken) == "" || !validAccountPassword(password) {
 		return errors.New("invalid or expired reset token")
 	}
 	hash, err := security.HashPassword(password)
@@ -126,6 +127,49 @@ func (s AuthService) ConfirmPasswordReset(rawToken, password string) error {
 			Where("user_id = ? AND revoked_at IS NULL", token.UserID).
 			Update("revoked_at", now).Error
 	})
+}
+
+func (s AuthService) ChangePassword(userID uuid.UUID, currentSessionID, currentPassword, newPassword string) error {
+	if !validAccountPassword(newPassword) || currentPassword == newPassword {
+		return errors.New("invalid password change")
+	}
+	var user models.User
+	if err := s.DB.First(&user, "id = ? AND deleted_at IS NULL", userID).Error; err != nil {
+		return errors.New("invalid password change")
+	}
+	if !security.CheckPassword(user.PasswordHash, currentPassword) {
+		return errors.New("invalid password change")
+	}
+	hash, err := security.HashPassword(newPassword)
+	if err != nil {
+		return err
+	}
+	now := time.Now().UTC()
+	return s.DB.Transaction(func(tx *gorm.DB) error {
+		if err := tx.Model(&models.User{}).Where("id = ?", userID).
+			Updates(map[string]any{"password_hash": hash, "updated_at": now}).Error; err != nil {
+			return err
+		}
+		return tx.Model(&models.AuthSession{}).
+			Where("user_id = ? AND id <> ? AND revoked_at IS NULL", userID, currentSessionID).
+			Update("revoked_at", now).Error
+	})
+}
+
+func validAccountPassword(password string) bool {
+	if len(password) < 8 {
+		return false
+	}
+	var hasLetter, hasNumber bool
+	for _, character := range password {
+		switch {
+		case character >= '0' && character <= '9':
+			hasNumber = true
+		case character >= 'a' && character <= 'z', character >= 'A' && character <= 'Z':
+			hasLetter = true
+		}
+	}
+	return hasLetter && hasNumber
 }
 
 func (s AuthService) Register(in RegisterInput) (*models.User, error) {

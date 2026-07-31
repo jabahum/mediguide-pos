@@ -13,6 +13,7 @@ import { ownershipTypesColumns } from "./columns"
 import { ownershipTypesAvailableFields } from "./fields"
 import { AdminEntityModal, AdminFieldDef } from "../_lib/admin-entity-modal"
 import { createAdminRowActions, createAdminBulkActions } from "../_lib/admin-crud-actions"
+import { healthFacilitiesService } from "@/services/health-facilities.service"
 
 const FIELDS: AdminFieldDef[] = [
   { name: "name", label: "Name", type: "text", placeholder: "e.g., Government" },
@@ -41,7 +42,7 @@ export default function OwnershipTypesPage() {
   const rowActions = React.useMemo(
     () =>
       createAdminRowActions<OwnershipTypesResponse>({
-        collection: "ownership_types",
+        deleteRecord: healthFacilitiesService.deleteOwnershipType,
         entityLabel: "Ownership Type",
         getDisplayName: (row) => row.name,
         onEdit: openEdit,
@@ -52,7 +53,7 @@ export default function OwnershipTypesPage() {
   const bulkActions = React.useMemo(
     () =>
       createAdminBulkActions<OwnershipTypesResponse>({
-        collection: "ownership_types",
+        deleteRecord: healthFacilitiesService.deleteOwnershipType,
         entityLabel: "Ownership Type",
         entityLabelPlural: "Ownership Types",
       }),
@@ -84,6 +85,7 @@ export default function OwnershipTypesPage() {
 
       <EnhancedBackendDataTable<OwnershipTypesResponse>
         collectionName="ownership_types"
+        loadPage={healthFacilitiesService.listOwnershipTypes}
         columns={ownershipTypesColumns}
         searchable={true}
         searchFields={["name", "code"]}
@@ -99,7 +101,8 @@ export default function OwnershipTypesPage() {
       <AdminEntityModal
         open={modalOpen}
         onClose={closeModal}
-        collection="ownership_types"
+        createRecord={healthFacilitiesService.createOwnershipType}
+        updateRecord={healthFacilitiesService.updateOwnershipType}
         entityLabel="Ownership Type"
         fields={FIELDS}
         record={editing}

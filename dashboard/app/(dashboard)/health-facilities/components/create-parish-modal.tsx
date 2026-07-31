@@ -18,7 +18,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { showToast } from "@/lib/toast"
-import { getBackendClient } from "@/lib/backend-client"
+import { healthFacilitiesService } from "@/services/health-facilities.service"
 import { SubcountiesResponse } from "@/types/backend-types"
 
 const parishFormSchema = z.object({
@@ -54,12 +54,8 @@ export function CreateParishModal({ open, onClose, onSuccess }: CreateParishModa
   React.useEffect(() => {
     if (open) {
       const loadSubcounties = async () => {
-        const backend = getBackendClient()
         try {
-          const data = await backend.resource('subcounties').getFullList({
-            sort: 'name',
-            expand: 'county',
-          })
+          const data = await healthFacilitiesService.subcounties()
           setSubcounties(data as SubcountiesResponse[])
         } catch (error) {
           console.error("Failed to load subcounties:", error)
@@ -72,10 +68,9 @@ export function CreateParishModal({ open, onClose, onSuccess }: CreateParishModa
 
   const onSubmit = async (data: ParishFormValues) => {
     setIsLoading(true)
-    const backend = getBackendClient()
 
     try {
-      await backend.resource('parishes').create({
+      await healthFacilitiesService.createParish({
         name: data.name,
         subcounty: data.subcounty,
         nhpi_code: data.nhpi_code,

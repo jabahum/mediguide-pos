@@ -54,7 +54,7 @@ export const createUserRowActions = (navigate: (path: string) => void): RowActio
   },
   {
     id: "send-verification",
-    label: "Send Verification Email",
+    label: "Mark as Verified",
     icon: Mail,
     onClick: async (user) => {
       await sendVerificationEmail(user)
@@ -118,24 +118,14 @@ export const userBulkActions: BulkAction<UserType>[] = [
   },
   {
     id: "bulk-send-verification",
-    label: "Send Verification Emails",
+    label: "Mark Selected as Verified",
     icon: Mail,
     variant: "outline",
     onClick: async (users) => {
       await bulkSendVerificationEmails(users)
     },
     disabled: (users) => users.every(user => user.verified),
-    description: "Send email verification to unverified users",
-  },
-  {
-    id: "bulk-send-welcome",
-    label: "Send Welcome Emails",
-    icon: Mail,
-    variant: "outline",
-    onClick: async (users) => {
-      await bulkSendWelcomeEmails(users)
-    },
-    description: "Send welcome emails with login instructions",
+    description: "Administratively verify the selected user accounts",
   },
   {
     id: "bulk-export",
@@ -168,20 +158,17 @@ async function toggleUserStatus(user: UserType): Promise<void> {
 
 async function resetUserPassword(user: UserType): Promise<void> {
   try {
-    // Generate a temporary password
-    const tempPassword = generateTempPassword()
-    await usersService.update(user.id, {
-      password: tempPassword,
-      passwordConfirm: tempPassword 
-    })
-    
-    // Send password reset email (if implemented)
-    // await sendPasswordResetEmail(user, tempPassword)
-    
-    showToast.success(
-      "Password Reset",
-      `Temporary password generated for ${user.name}. They will receive an email with instructions.`
-    )
+    const result = await usersService.requestPasswordReset(user.email)
+    if (result.delivery_accepted) {
+      showToast.success("Reset Requested", `The reset provider accepted a message for ${user.email}`)
+    } else if (result.development_token) {
+      showToast.info("Development Reset Token", result.development_token)
+    } else {
+      showToast.info(
+        "Reset Requested",
+        "No email provider is configured. The request was accepted, but no message was sent."
+      )
+    }
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Failed to reset password'
     showToast.error("Reset Failed", message)
@@ -194,8 +181,8 @@ async function sendVerificationEmail(user: UserType): Promise<void> {
     await usersService.verify(user.id)
     
     showToast.success(
-      "Verification Sent",
-      `Verification email sent to ${user.email}`
+      "User Verified",
+      `${user.name} has been marked as verified`
     )
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Failed to send verification email'
@@ -304,81 +291,27 @@ async function bulkSendVerificationEmails(users: UserType[]): Promise<void> {
       successCount++
     } catch (error) {
       errorCount++
-      console.error(`Failed to send verification to ${user.email}:`, error)
+      console.error(`Failed to verify ${user.email}:`, error)
     }
   }
 
   if (successCount > 0) {
     showToast.success(
-      "Verification Emails Sent",
-      `Successfully sent ${successCount} verification email${successCount === 1 ? '' : 's'}`
+      "Users Verified",
+      `Successfully verified ${successCount} user${successCount === 1 ? '' : 's'}`
     )
   }
   
   if (errorCount > 0) {
     showToast.error(
-      "Some Emails Failed",
-      `${errorCount} verification email${errorCount === 1 ? '' : 's'} could not be sent`
+      "Some Verifications Failed",
+      `${errorCount} user${errorCount === 1 ? '' : 's'} could not be verified`
     )
   }
 
   if (successCount === 0) {
-    throw new Error("Failed to send any verification emails")
+    throw new Error("Failed to verify any users")
   }
-}
-
-async function bulkSendWelcomeEmails(users: UserType[]): Promise<void> {
-  // This would typically integrate with your email service
-  // For now, we'll simulate the process
-  let successCount = 0
-  let errorCount = 0
-
-  for (const user of users) {
-    try {
-      // Simulate sending welcome email
-      // In real implementation, this would call your email service
-      // await emailService.sendWelcomeEmail(user.email, {
-      //   name: user.name,
-      //   loginUrl: `${process.env.NEXT_PUBLIC_APP_URL}/login`,
-      //   supportEmail: 'support@mediguide.com'
-      // })
-      
-      console.log(`Sending welcome email to ${user.email}`)
-      successCount++
-    } catch (error) {
-      errorCount++
-      console.error(`Failed to send welcome email to ${user.email}:`, error)
-    }
-  }
-
-  if (successCount > 0) {
-    showToast.success(
-      "Welcome Emails Sent",
-      `Successfully sent ${successCount} welcome email${successCount === 1 ? '' : 's'}`
-    )
-  }
-  
-  if (errorCount > 0) {
-    showToast.error(
-      "Some Emails Failed",
-      `${errorCount} welcome email${errorCount === 1 ? '' : 's'} could not be sent`
-    )
-  }
-
-  if (successCount === 0) {
-    throw new Error("Failed to send any welcome emails")
-  }
-}
-
-
-// Utility functions
-function generateTempPassword(): string {
-  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*'
-  let result = ''
-  for (let i = 0; i < 12; i++) {
-    result += chars.charAt(Math.floor(Math.random() * chars.length))
-  }
-  return result
 }
 
 function convertUsersToCSV(users: UserType[]): string {

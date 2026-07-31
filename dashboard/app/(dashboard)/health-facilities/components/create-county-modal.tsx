@@ -18,7 +18,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { showToast } from "@/lib/toast"
-import { getBackendClient } from "@/lib/backend-client"
+import { healthFacilitiesService } from "@/services/health-facilities.service"
 import { DistrictsResponse } from "@/types/backend-types"
 
 const countyFormSchema = z.object({
@@ -54,11 +54,8 @@ export function CreateCountyModal({ open, onClose, onSuccess }: CreateCountyModa
   React.useEffect(() => {
     if (open) {
       const loadDistricts = async () => {
-        const backend = getBackendClient()
         try {
-          const data = await backend.resource('districts').getFullList({
-            sort: 'name',
-          })
+          const data = await healthFacilitiesService.districts()
           setDistricts(data as DistrictsResponse[])
         } catch (error) {
           console.error("Failed to load districts:", error)
@@ -71,10 +68,9 @@ export function CreateCountyModal({ open, onClose, onSuccess }: CreateCountyModa
 
   const onSubmit = async (data: CountyFormValues) => {
     setIsLoading(true)
-    const backend = getBackendClient()
 
     try {
-      await backend.resource('counties').create({
+      await healthFacilitiesService.createCounty({
         name: data.name,
         district: data.district,
         nhpi_code: data.nhpi_code,

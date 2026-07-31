@@ -35,10 +35,6 @@ class EditProfileController extends GetxController {
 
       final formValues = formKey.currentState!.value;
 
-      // Debug: Print all form values to see what's being sent
-      debugPrint('Form values: $formValues');
-
-      // Create a clean update data with only the fields we want to update
       final allowedFields = [
         'name',
         'phone',
@@ -63,20 +59,9 @@ class EditProfileController extends GetxController {
         }
       }
 
-      // backend resource API seems to validate enum fields even when not being updated
-      // Include current enum values to prevent validation errors
-      if (user.role != null) {
-        updateData['role'] = user.role!.name;
-      }
-      if (user.status != null) {
-        updateData['status'] = user.status!.name;
-      }
       if (user.preferredLanguage != null) {
         updateData['preferredLanguage'] = user.preferredLanguage!.name;
       }
-
-      // Debug: Print the final update data being sent
-      debugPrint('Update data being sent: $updateData');
 
       final updatedRecord = await UserRepository(
         BackendApiService.to,

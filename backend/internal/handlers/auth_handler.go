@@ -156,6 +156,31 @@ func (h AuthHandler) Me(c *gin.Context) {
 	httpx.OK(c, u)
 }
 
+// ChangePassword godoc
+// @Summary Change the current user's password
+// @Tags auth
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param payload body handlers.PasswordChangeRequest true "Password change"
+// @Success 200 {object} handlers.LogoutEnvelope
+// @Failure 400 {object} handlers.ErrorResponse
+// @Failure 401 {object} handlers.ErrorResponse
+// @Router /api/v2/me/password [post]
+func (h AuthHandler) ChangePassword(c *gin.Context) {
+	var req PasswordChangeRequest
+	if c.ShouldBindJSON(&req) != nil || req.NewPassword != req.NewPasswordConfirm {
+		httpx.Error(c, http.StatusBadRequest, "invalid request body")
+		return
+	}
+	claims := c.MustGet(middleware.ClaimsKey).(*security.Claims)
+	if err := h.Service.ChangePassword(claims.UserID, claims.SessionID, req.CurrentPassword, req.NewPassword); err != nil {
+		httpx.Error(c, http.StatusBadRequest, "password change failed")
+		return
+	}
+	httpx.OK(c, LogoutResult{LoggedOut: false})
+}
+
 // RequestPasswordReset godoc
 // @Summary Request a password reset
 // @Tags auth

@@ -348,6 +348,12 @@ export interface HandlersPaginatedLanguagesEnvelope {
   success?: boolean;
 }
 
+export interface HandlersPaginatedRolesEnvelope {
+  data?: ServicesPageResultServicesRoleView;
+  /** @example true */
+  success?: boolean;
+}
+
 export interface HandlersPaginatedSettings {
   items?: ModelsSetting[];
   /** @example 1 */
@@ -378,6 +384,18 @@ export interface HandlersPaginatedTherapeuticCategoriesEnvelope {
   success?: boolean;
 }
 
+export interface HandlersPaginatedUsersEnvelope {
+  data?: ServicesPageResultServicesUserView;
+  /** @example true */
+  success?: boolean;
+}
+
+export interface HandlersPasswordChangeRequest {
+  current_password?: string;
+  new_password?: string;
+  new_password_confirm?: string;
+}
+
 export interface HandlersPasswordResetConfirmRequest {
   password?: string;
   password_confirm?: string;
@@ -387,6 +405,18 @@ export interface HandlersPasswordResetConfirmRequest {
 export interface HandlersPasswordResetRequest {
   /** @example "user@example.com" */
   email?: string;
+}
+
+export interface HandlersPermissionDocumentEnvelope {
+  data?: object;
+  /** @example true */
+  success?: boolean;
+}
+
+export interface HandlersPermissionsEnvelope {
+  data?: ModelsPermission[];
+  /** @example true */
+  success?: boolean;
 }
 
 export interface HandlersProtocolRunEnvelope {
@@ -452,6 +482,16 @@ export interface HandlersRegisterRequest {
   timezone?: string;
 }
 
+export interface HandlersRolePermissionsRequest {
+  permissions?: object;
+}
+
+export interface HandlersRoleViewEnvelope {
+  data?: ServicesRoleView;
+  /** @example true */
+  success?: boolean;
+}
+
 export interface HandlersSearchResultsEnvelope {
   data?: ServicesSearchResult[];
   /** @example true */
@@ -482,6 +522,12 @@ export interface HandlersUpdateMarkdownInput {
 
 export interface HandlersUserEnvelope {
   data?: ModelsUser;
+  /** @example true */
+  success?: boolean;
+}
+
+export interface HandlersUserViewEnvelope {
+  data?: ServicesUserView;
   /** @example true */
   success?: boolean;
 }
@@ -791,7 +837,7 @@ export interface ModelsUser {
 
 export interface ServicesAccountActionResult {
   accepted?: boolean;
-  delivery_required?: boolean;
+  delivery_accepted?: boolean;
   development_token?: string;
 }
 
@@ -959,6 +1005,22 @@ export interface ServicesManifestResult {
   packages?: ModelsSyncPackage[];
 }
 
+export interface ServicesPageResultServicesRoleView {
+  items?: ServicesRoleView[];
+  page?: number;
+  per_page?: number;
+  total_items?: number;
+  total_pages?: number;
+}
+
+export interface ServicesPageResultServicesUserView {
+  items?: ServicesUserView[];
+  page?: number;
+  per_page?: number;
+  total_items?: number;
+  total_pages?: number;
+}
+
 export interface ServicesProtocolStep {
   citation?: Record<string, string>;
   id?: string;
@@ -967,6 +1029,26 @@ export interface ServicesProtocolStep {
   options?: string[];
   question?: string;
   type?: string;
+}
+
+export interface ServicesRoleInput {
+  description?: string;
+  isActive?: boolean;
+  key?: string;
+  name?: string;
+  permissions?: object;
+}
+
+export interface ServicesRoleView {
+  created_at?: string;
+  description?: string;
+  id?: string;
+  isActive?: boolean;
+  key?: string;
+  name?: string;
+  permissions?: object;
+  updated_at?: string;
+  user_count?: number;
 }
 
 export interface ServicesRunProtocolResult {
@@ -1012,4 +1094,78 @@ export interface ServicesUpdateCalculatorInput {
   status?: string;
   type?: string;
   version?: string;
+}
+
+export interface ServicesUpdateGuidelineInput {
+  country?: string;
+  description?: string;
+  language?: string;
+  program_area?: string;
+  source_org?: string;
+  title?: string;
+}
+
+export interface ServicesUserCreateInput {
+  email?: string;
+  name?: string;
+  password?: string;
+  phone?: string;
+  role?: string;
+  role_id?: string;
+  status?: string;
+}
+
+export interface ServicesUserUpdateInput {
+  address?: string;
+  alternative_phone?: string;
+  avatar?: string;
+  city?: string;
+  country?: string;
+  department?: string;
+  email?: string;
+  is_active?: boolean;
+  job_title?: string;
+  name?: string;
+  notes?: string;
+  organization?: string;
+  password?: string;
+  phone?: string;
+  postal_code?: string;
+  preferred_language?: string;
+  role?: string;
+  role_id?: string;
+  specialization?: string[];
+  status?: string;
+  timezone?: string;
+  verified?: boolean;
+}
+
+export interface ServicesUserView {
+  address?: string;
+  alternative_phone?: string;
+  avatar?: string;
+  city?: string;
+  country?: string;
+  created_at?: string;
+  department?: string;
+  email?: string;
+  facility_id?: string;
+  id?: string;
+  is_active?: boolean;
+  job_title?: string;
+  license_number?: string;
+  name?: string;
+  notes?: string;
+  organization?: string;
+  phone?: string;
+  postal_code?: string;
+  preferred_language?: string;
+  role?: string;
+  role_id?: string;
+  roles?: ModelsRole[];
+  specialization?: string[];
+  status?: string;
+  timezone?: string;
+  updated_at?: string;
+  verified?: boolean;
 }

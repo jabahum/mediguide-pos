@@ -13,13 +13,14 @@ import { countiesColumns } from "./columns"
 import { countiesAvailableFields } from "./fields"
 import { AdminEntityModal, AdminFieldDef } from "../_lib/admin-entity-modal"
 import { createAdminRowActions, createAdminBulkActions } from "../_lib/admin-crud-actions"
+import { facilityRelationOptions, healthFacilitiesService } from "@/services/health-facilities.service"
 
 const FIELDS: AdminFieldDef[] = [
   {
     name: "district",
     label: "District",
     type: "relation",
-    relation: { collection: "districts", labelField: "name", sort: "name" },
+    relation: facilityRelationOptions.districts,
   },
   { name: "name", label: "Name", type: "text", placeholder: "Enter county name" },
   { name: "nhpi_code", label: "NHPI Code", type: "text", placeholder: "e.g., CNT001", span: "half" },
@@ -48,7 +49,7 @@ export default function CountiesPage() {
   const rowActions = React.useMemo(
     () =>
       createAdminRowActions<CountiesWithDistrict>({
-        collection: "counties",
+        deleteRecord: healthFacilitiesService.deleteCounty,
         entityLabel: "County",
         getDisplayName: (row) => row.name,
         onEdit: openEdit,
@@ -59,7 +60,7 @@ export default function CountiesPage() {
   const bulkActions = React.useMemo(
     () =>
       createAdminBulkActions<CountiesWithDistrict>({
-        collection: "counties",
+        deleteRecord: healthFacilitiesService.deleteCounty,
         entityLabel: "County",
         entityLabelPlural: "Counties",
       }),
@@ -91,6 +92,7 @@ export default function CountiesPage() {
 
       <EnhancedBackendDataTable<CountiesWithDistrict>
         collectionName="counties"
+        loadPage={healthFacilitiesService.listCounties}
         columns={countiesColumns}
         expand="district"
         expandable={true}
@@ -108,7 +110,8 @@ export default function CountiesPage() {
       <AdminEntityModal
         open={modalOpen}
         onClose={closeModal}
-        collection="counties"
+        createRecord={healthFacilitiesService.createCounty}
+        updateRecord={healthFacilitiesService.updateCounty}
         entityLabel="County"
         fields={FIELDS}
         record={editing}

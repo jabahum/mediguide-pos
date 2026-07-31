@@ -15,6 +15,7 @@ export function EnhancedBackendDataTable<TData extends BaseRecord = BaseRecord>(
     collectionName,
     collection = collectionName, // fallback to legacy prop
     columns,
+    loadPage,
 
     // Legacy collection query settings
     expand = "",
@@ -59,6 +60,7 @@ export function EnhancedBackendDataTable<TData extends BaseRecord = BaseRecord>(
     <BackendDataTable<TData>
       collection={collection!}
       columns={columns}
+      loadPage={loadPage}
       searchFields={searchable ? searchFields : []}
       searchPlaceholder={searchPlaceholder}
       rowActions={rowActions}

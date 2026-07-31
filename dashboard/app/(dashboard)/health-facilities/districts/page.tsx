@@ -13,19 +13,20 @@ import { districtsColumns } from "./columns"
 import { districtsAvailableFields } from "./fields"
 import { AdminEntityModal, AdminFieldDef } from "../_lib/admin-entity-modal"
 import { createAdminRowActions, createAdminBulkActions } from "../_lib/admin-crud-actions"
+import { facilityRelationOptions, healthFacilitiesService } from "@/services/health-facilities.service"
 
 const FIELDS: AdminFieldDef[] = [
   {
     name: "region",
     label: "Region",
     type: "relation",
-    relation: { collection: "regions", labelField: "name", sort: "name" },
+    relation: facilityRelationOptions.regions,
   },
   {
     name: "health_sub_region",
     label: "Health Sub-Region",
     type: "relation",
-    relation: { collection: "health_sub_regions", labelField: "name", sort: "name" },
+    relation: facilityRelationOptions.healthSubRegions,
   },
   { name: "name", label: "Name", type: "text", placeholder: "Enter district name" },
   { name: "nhpi_code", label: "NHPI Code", type: "text", placeholder: "e.g., DIS001", span: "half" },
@@ -54,7 +55,7 @@ export default function DistrictsPage() {
   const rowActions = React.useMemo(
     () =>
       createAdminRowActions<DistrictsWithExpanded>({
-        collection: "districts",
+        deleteRecord: healthFacilitiesService.deleteDistrict,
         entityLabel: "District",
         getDisplayName: (row) => row.name,
         onEdit: openEdit,
@@ -65,7 +66,7 @@ export default function DistrictsPage() {
   const bulkActions = React.useMemo(
     () =>
       createAdminBulkActions<DistrictsWithExpanded>({
-        collection: "districts",
+        deleteRecord: healthFacilitiesService.deleteDistrict,
         entityLabel: "District",
         entityLabelPlural: "Districts",
       }),
@@ -97,6 +98,7 @@ export default function DistrictsPage() {
 
       <EnhancedBackendDataTable<DistrictsWithExpanded>
         collectionName="districts"
+        loadPage={healthFacilitiesService.listDistricts}
         columns={districtsColumns}
         expand="region,health_sub_region"
         expandable={true}
@@ -114,7 +116,8 @@ export default function DistrictsPage() {
       <AdminEntityModal
         open={modalOpen}
         onClose={closeModal}
-        collection="districts"
+        createRecord={healthFacilitiesService.createDistrict}
+        updateRecord={healthFacilitiesService.updateDistrict}
         entityLabel="District"
         fields={FIELDS}
         record={editing}

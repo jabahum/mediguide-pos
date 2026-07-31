@@ -23,7 +23,6 @@ import {
 import { Input } from "@/components/ui/input"
 import { RelationCombobox, RelationSelectConfig } from "@/components/ui/datatable-filter-value-input"
 import { showToast } from "@/lib/toast"
-import { getBackendClient } from "@/lib/backend-client"
 
 export type AdminFieldDef =
   | {
@@ -48,11 +47,12 @@ export type AdminFieldDef =
 interface AdminEntityModalProps {
   open: boolean
   onClose: () => void
-  collection: string
   entityLabel: string
   fields: AdminFieldDef[]
   record?: Record<string, unknown> | null
   onSuccess?: () => void
+  createRecord: (payload: Record<string, string>) => Promise<unknown>
+  updateRecord: (id: string, payload: Record<string, string>) => Promise<unknown>
 }
 
 type FormValues = Record<string, string>
@@ -69,11 +69,12 @@ function buildDefaults(fields: AdminFieldDef[], record?: Record<string, unknown>
 export function AdminEntityModal({
   open,
   onClose,
-  collection,
   entityLabel,
   fields,
   record,
   onSuccess,
+  createRecord,
+  updateRecord,
 }: AdminEntityModalProps) {
   const [isLoading, setIsLoading] = React.useState(false)
   const isEdit = !!record
@@ -105,7 +106,6 @@ export function AdminEntityModal({
     if (!result.ok) return
 
     setIsLoading(true)
-    const backend = getBackendClient()
     try {
       const payload: Record<string, string> = {}
       for (const f of fields) {
@@ -113,10 +113,10 @@ export function AdminEntityModal({
       }
 
       if (isEdit && record) {
-        await backend.resource(collection).update(String(record.id), payload)
+        await updateRecord(String(record.id), payload)
         showToast.success("Success", `${entityLabel} updated successfully`)
       } else {
-        await backend.resource(collection).create(payload)
+        await createRecord(payload)
         showToast.success("Success", `${entityLabel} created successfully`)
       }
 

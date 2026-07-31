@@ -15,6 +15,8 @@ export default function ForgotPasswordPage() {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState("")
   const [success, setSuccess] = useState(false)
+  const [deliveryAccepted, setDeliveryAccepted] = useState(false)
+  const [developmentToken, setDevelopmentToken] = useState("")
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -22,16 +24,13 @@ export default function ForgotPasswordPage() {
     setError("")
 
     try {
-      await usersService.requestPasswordReset(email)
-      
+      const result = await usersService.requestPasswordReset(email)
+      setDeliveryAccepted(result.delivery_accepted)
+      setDevelopmentToken(result.development_token || "")
       setSuccess(true)
-      
     } catch (error: unknown) {
       console.error('Password reset request error:', error)
-      
-      // Always show success to prevent email enumeration attacks
-      // Don't reveal whether the email exists or not
-      setSuccess(true)
+      setError(error instanceof Error ? error.message : "Unable to submit password reset request")
     } finally {
       setIsLoading(false)
     }
@@ -44,24 +43,32 @@ export default function ForgotPasswordPage() {
           <div className="mx-auto w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mb-4">
             <CheckCircle className="h-6 w-6 text-green-600" />
           </div>
-          <CardTitle className="text-2xl">Check Your Email</CardTitle>
+          <CardTitle className="text-2xl">Request Accepted</CardTitle>
           <CardDescription>
-            Password reset instructions sent
+            If the account exists, a reset token has been prepared
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <Alert>
             <Mail className="h-4 w-4" />
             <AlertDescription>
-              We&apos;ve sent password reset instructions to <strong>{email}</strong>. 
-              Please check your inbox and follow the link to reset your password.
+              {deliveryAccepted
+                ? <>The email provider accepted reset instructions for <strong>{email}</strong>.</>
+                : "Email delivery is not configured, so no reset message was sent. Contact an administrator."}
             </AlertDescription>
           </Alert>
+          {developmentToken && (
+            <Button asChild className="w-full">
+              <Link href={`/reset-password?token=${encodeURIComponent(developmentToken)}`}>
+                Continue with development token
+              </Link>
+            </Button>
+          )}
           <div className="bg-muted/50 rounded-lg p-4 text-sm text-muted-foreground">
             <p className="font-medium mb-2">Didn&apos;t receive an email?</p>
             <ul className="space-y-1 text-xs">
-              <li>• Check your spam or junk folder</li>
-              <li>• Make sure the email address is correct</li>
+              <li>• Confirm an outbound email provider is configured</li>
+              <li>• Requests never reveal whether an account exists</li>
               <li>• The link will expire in 1 hour</li>
             </ul>
           </div>

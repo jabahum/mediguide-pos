@@ -48,6 +48,7 @@ const DEFAULT_CONFIG = {
 export function BackendDataTable<TData extends BaseRecord = BaseRecord>({
   collection,
   columns,
+  loadPage,
 
   // Search options
   searchFields = [],
@@ -149,6 +150,7 @@ export function BackendDataTable<TData extends BaseRecord = BaseRecord>({
     exportData,
   } = useBackendTable<TData>({
     collection,
+    loadPage,
     searchFields,
     rowActions,
     bulkActions,

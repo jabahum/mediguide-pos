@@ -12,10 +12,10 @@ import {
   ExternalLink
 } from "lucide-react"
 
-import { getBackendClient } from "@/lib/backend-client"
 import { showToast } from "@/lib/toast"
 import { RowAction, BulkAction } from "@/types/data-table"
 import { HealthFacility } from "./columns"
+import { healthFacilitiesService } from "@/services/health-facilities.service"
 
 // Factory function to create facility row actions with navigation
 export const createFacilityRowActions = (navigate: (path: string) => void): RowAction<HealthFacility>[] => [
@@ -203,7 +203,6 @@ async function showFacilityHierarchy(facility: HealthFacility): Promise<void> {
 }
 
 async function archiveFacility(facility: HealthFacility): Promise<void> {
-  // const backend = getBackendClient()
   try {
     // In a real implementation, you might have a status field to set to 'archived'
     // For now, we'll simulate the archive process
@@ -219,9 +218,8 @@ async function archiveFacility(facility: HealthFacility): Promise<void> {
 }
 
 async function deleteFacility(facility: HealthFacility): Promise<void> {
-  const backend = getBackendClient()
   try {
-    await backend.resource('health_facilities').delete(facility.id)
+    await healthFacilitiesService.deleteFacility(facility.id)
     
     showToast.success(
       "Facility Deleted",

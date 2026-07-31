@@ -13,19 +13,20 @@ import { subcountiesColumns } from "./columns"
 import { subcountiesAvailableFields } from "./fields"
 import { AdminEntityModal, AdminFieldDef } from "../_lib/admin-entity-modal"
 import { createAdminRowActions, createAdminBulkActions } from "../_lib/admin-crud-actions"
+import { facilityRelationOptions, healthFacilitiesService } from "@/services/health-facilities.service"
 
 const FIELDS: AdminFieldDef[] = [
   {
     name: "district",
     label: "District",
     type: "relation",
-    relation: { collection: "districts", labelField: "name", sort: "name" },
+    relation: facilityRelationOptions.districts,
   },
   {
     name: "county",
     label: "County",
     type: "relation",
-    relation: { collection: "counties", labelField: "name", sort: "name" },
+    relation: facilityRelationOptions.counties,
   },
   { name: "name", label: "Name", type: "text", placeholder: "Enter subcounty name" },
   { name: "nhpi_code", label: "NHPI Code", type: "text", placeholder: "e.g., SC001", span: "half" },
@@ -54,7 +55,7 @@ export default function SubcountiesPage() {
   const rowActions = React.useMemo(
     () =>
       createAdminRowActions<SubcountiesWithExpanded>({
-        collection: "subcounties",
+        deleteRecord: healthFacilitiesService.deleteSubcounty,
         entityLabel: "Subcounty",
         getDisplayName: (row) => row.name,
         onEdit: openEdit,
@@ -65,7 +66,7 @@ export default function SubcountiesPage() {
   const bulkActions = React.useMemo(
     () =>
       createAdminBulkActions<SubcountiesWithExpanded>({
-        collection: "subcounties",
+        deleteRecord: healthFacilitiesService.deleteSubcounty,
         entityLabel: "Subcounty",
         entityLabelPlural: "Subcounties",
       }),
@@ -97,6 +98,7 @@ export default function SubcountiesPage() {
 
       <EnhancedBackendDataTable<SubcountiesWithExpanded>
         collectionName="subcounties"
+        loadPage={healthFacilitiesService.listSubcounties}
         columns={subcountiesColumns}
         expand="county,district"
         expandable={true}
@@ -114,7 +116,8 @@ export default function SubcountiesPage() {
       <AdminEntityModal
         open={modalOpen}
         onClose={closeModal}
-        collection="subcounties"
+        createRecord={healthFacilitiesService.createSubcounty}
+        updateRecord={healthFacilitiesService.updateSubcounty}
         entityLabel="Subcounty"
         fields={FIELDS}
         record={editing}

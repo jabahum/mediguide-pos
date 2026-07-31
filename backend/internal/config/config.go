@@ -33,6 +33,13 @@ type Config struct {
 	AIWorkerSecret string
 	// Comma-separated list of allowed CORS origins (use "*" for local dev only).
 	AllowedOrigins string
+	PublicAppURL   string
+	MailDriver     string
+	MailFrom       string
+	SMTPHost       string
+	SMTPPort       int
+	SMTPUsername   string
+	SMTPPassword   string
 }
 
 func Load() Config {
@@ -61,6 +68,13 @@ func Load() Config {
 		AIWorkerTimeoutSecs:  getInt("AI_WORKER_TIMEOUT_SECONDS", 120),
 		AIWorkerSecret:       get("AI_WORKER_SECRET", ""),
 		AllowedOrigins:       get("ALLOWED_ORIGINS", "http://localhost:3000,*"), // Adjust for production domains
+		PublicAppURL:         get("PUBLIC_APP_URL", "http://localhost:3000"),
+		MailDriver:           get("MAIL_DRIVER", "disabled"),
+		MailFrom:             get("MAIL_FROM", ""),
+		SMTPHost:             get("SMTP_HOST", ""),
+		SMTPPort:             getInt("SMTP_PORT", 587),
+		SMTPUsername:         get("SMTP_USERNAME", ""),
+		SMTPPassword:         get("SMTP_PASSWORD", ""),
 	}
 }
 

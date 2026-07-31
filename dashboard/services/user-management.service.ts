@@ -51,6 +51,22 @@ export const usersService = {
       },
     )
   },
+  requestEmailVerification(email: string) {
+    return client().send<{
+      accepted: boolean
+      delivery_accepted: boolean
+      development_token?: string
+    }>("/api/v2/auth/email-verification/request", {
+      method: "POST",
+      body: JSON.stringify({ email }),
+    })
+  },
+  confirmEmailVerification(token: string) {
+    return client().send<{ verified: boolean }>(
+      "/api/v2/auth/email-verification/confirm",
+      { method: "POST", body: JSON.stringify({ token }) },
+    )
+  },
   list<T>(query: UserQuery = {}) {
     return client().send<PageResult<T>>("/api/v2/users", { query: { ...query } })
   },

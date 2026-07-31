@@ -86,6 +86,17 @@ definitions:
         example: true
         type: boolean
     type: object
+  handlers.EmailVerificationConfirmRequest:
+    properties:
+      token:
+        type: string
+    type: object
+  handlers.EmailVerificationRequest:
+    properties:
+      email:
+        example: user@example.com
+        type: string
+    type: object
   handlers.ErrorResponse:
     properties:
       error:
@@ -787,6 +798,20 @@ definitions:
     properties:
       data:
         $ref: '#/definitions/services.UserView'
+      success:
+        example: true
+        type: boolean
+    type: object
+  handlers.VerificationResult:
+    properties:
+      verified:
+        example: true
+        type: boolean
+    type: object
+  handlers.VerificationResultEnvelope:
+    properties:
+      data:
+        $ref: '#/definitions/handlers.VerificationResult'
       success:
         example: true
         type: boolean
@@ -2104,6 +2129,58 @@ paths:
       summary: Get legacy mobile stats
       tags:
       - legacy-v1
+  /api/v2/auth/email-verification/confirm:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Verification confirmation
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.EmailVerificationConfirmRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.VerificationResultEnvelope'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+      summary: Confirm email verification
+      tags:
+      - auth
+  /api/v2/auth/email-verification/request:
+    post:
+      consumes:
+      - application/json
+      description: Accept an email-verification request without revealing whether
+        the address exists.
+      parameters:
+      - description: Verification request
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.EmailVerificationRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/services.AccountActionResult'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+      summary: Request email verification
+      tags:
+      - auth
   /api/v2/auth/login:
     post:
       consumes:

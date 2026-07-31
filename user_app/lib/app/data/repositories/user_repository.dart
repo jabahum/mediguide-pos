@@ -66,6 +66,25 @@ final class UserRepository {
     );
   }
 
+  Future<Map<String, dynamic>> requestEmailVerification(String email) async {
+    final response = await _api.requestJson(
+      '/api/v2/auth/email-verification/request',
+      method: 'POST',
+      body: {'email': email},
+      includeAuth: false,
+    );
+    return _data(response);
+  }
+
+  Future<void> confirmEmailVerification(String token) async {
+    await _api.requestJson(
+      '/api/v2/auth/email-verification/confirm',
+      method: 'POST',
+      body: {'token': token},
+      includeAuth: false,
+    );
+  }
+
   Map<String, dynamic> _data(Map<String, dynamic> response) {
     final data = response['data'];
     return data is Map ? Map<String, dynamic>.from(data) : response;

@@ -29,6 +29,21 @@ func TestCustomContentPermissionsMapToCalculatorDomain(t *testing.T) {
 	}
 }
 
+func TestDerivedRolePermissionsSeparateFacilityReadAndWrite(t *testing.T) {
+	contentPermissions := deriveRolePermissions("content_manager", "")
+	if !containsPermission(contentPermissions, "facility.read") || !containsPermission(contentPermissions, "facility.write") {
+		t.Fatalf("content manager facility permissions missing: %v", contentPermissions)
+	}
+
+	providerPermissions := deriveRolePermissions("healthcare_provider", "")
+	if !containsPermission(providerPermissions, "facility.read") {
+		t.Fatalf("provider facility read permission missing: %v", providerPermissions)
+	}
+	if containsPermission(providerPermissions, "facility.write") {
+		t.Fatalf("provider must not receive facility write permission: %v", providerPermissions)
+	}
+}
+
 func containsPermission(values []string, expected string) bool {
 	for _, value := range values {
 		if value == expected {

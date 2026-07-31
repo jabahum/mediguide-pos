@@ -224,3 +224,49 @@ func (h AuthHandler) ConfirmPasswordReset(c *gin.Context) {
 	}
 	httpx.OK(c, LogoutResult{LoggedOut: true})
 }
+
+// RequestEmailVerification godoc
+// @Summary Request email verification
+// @Description Accept an email-verification request without revealing whether the address exists.
+// @Tags auth
+// @Accept json
+// @Produce json
+// @Param payload body handlers.EmailVerificationRequest true "Verification request"
+// @Success 200 {object} services.AccountActionResult
+// @Failure 400 {object} handlers.ErrorResponse
+// @Router /api/v2/auth/email-verification/request [post]
+func (h AuthHandler) RequestEmailVerification(c *gin.Context) {
+	var req EmailVerificationRequest
+	if c.ShouldBindJSON(&req) != nil {
+		httpx.Error(c, http.StatusBadRequest, "invalid request body")
+		return
+	}
+	result, err := h.Service.RequestEmailVerification(req.Email)
+	if err != nil {
+		httpx.Error(c, http.StatusInternalServerError, "email verification request failed")
+		return
+	}
+	httpx.OK(c, result)
+}
+
+// ConfirmEmailVerification godoc
+// @Summary Confirm email verification
+// @Tags auth
+// @Accept json
+// @Produce json
+// @Param payload body handlers.EmailVerificationConfirmRequest true "Verification confirmation"
+// @Success 200 {object} handlers.VerificationResultEnvelope
+// @Failure 400 {object} handlers.ErrorResponse
+// @Router /api/v2/auth/email-verification/confirm [post]
+func (h AuthHandler) ConfirmEmailVerification(c *gin.Context) {
+	var req EmailVerificationConfirmRequest
+	if c.ShouldBindJSON(&req) != nil {
+		httpx.Error(c, http.StatusBadRequest, "invalid request body")
+		return
+	}
+	if err := h.Service.ConfirmEmailVerification(req.Token); err != nil {
+		httpx.Error(c, http.StatusBadRequest, "invalid or expired verification token")
+		return
+	}
+	httpx.OK(c, VerificationResult{Verified: true})
+}

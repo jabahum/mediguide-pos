@@ -48,6 +48,14 @@ type PasswordResetConfirmRequest struct {
 	PasswordConfirm string `json:"password_confirm"`
 }
 
+type EmailVerificationRequest struct {
+	Email string `json:"email" example:"user@example.com"`
+}
+
+type EmailVerificationConfirmRequest struct {
+	Token string `json:"token"`
+}
+
 type PasswordChangeRequest struct {
 	CurrentPassword    string `json:"current_password"`
 	NewPassword        string `json:"new_password"`
@@ -65,6 +73,15 @@ type MarkdownUpdateResult struct {
 
 type LogoutResult struct {
 	LoggedOut bool `json:"logged_out" example:"true"`
+}
+
+type VerificationResult struct {
+	Verified bool `json:"verified" example:"true"`
+}
+
+type VerificationResultEnvelope struct {
+	Success bool               `json:"success" example:"true"`
+	Data    VerificationResult `json:"data"`
 }
 
 type DownloadURLResult struct {

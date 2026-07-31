@@ -1,10 +1,13 @@
 package services
 
 import (
+	"context"
+	"strings"
 	"testing"
 	"time"
 
 	"mediguide/internal/config"
+	"mediguide/internal/mailer"
 	"mediguide/internal/models"
 	"mediguide/internal/security"
 
@@ -12,6 +15,16 @@ import (
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 )
+
+type recordingMailer struct {
+	messages []mailer.Message
+	err      error
+}
+
+func (sender *recordingMailer) Send(_ context.Context, message mailer.Message) error {
+	sender.messages = append(sender.messages, message)
+	return sender.err
+}
 
 func TestPasswordResetIsHashedSingleUseAndRevokesSessions(t *testing.T) {
 	service, user := testPasswordResetService(t)
@@ -88,6 +101,78 @@ func TestPasswordResetDoesNotRevealUnknownEmail(t *testing.T) {
 	}
 }
 
+func TestEmailVerificationIsHashedSingleUseAndAudited(t *testing.T) {
+	service, user := testPasswordResetService(t)
+	sender := &recordingMailer{}
+	service.Mailer = sender
+	service.Cfg.PublicAppURL = "https://dashboard.example.test"
+
+	result, err := service.RequestEmailVerification(user.Email)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !result.Accepted || result.DeliveryAccepted || result.DevelopmentToken == "" {
+		t.Fatalf("unexpected verification result: %#v", result)
+	}
+	if len(sender.messages) != 1 || sender.messages[0].To != user.Email {
+		t.Fatalf("verification message was not passed to the adapter: %#v", sender.messages)
+	}
+	if !strings.Contains(sender.messages[0].Text, "https://dashboard.example.test/verify-email?token=") {
+		t.Fatalf("verification message has the wrong link: %q", sender.messages[0].Text)
+	}
+
+	var token models.AccountActionToken
+	if err := service.DB.First(&token, "user_id = ? AND purpose = ?", user.ID, "email_verification").Error; err != nil {
+		t.Fatal(err)
+	}
+	if token.TokenHash == result.DevelopmentToken || token.TokenHash != hashRefreshToken(result.DevelopmentToken) {
+		t.Fatal("verification token was not stored as a hash")
+	}
+	if err := service.ConfirmEmailVerification(result.DevelopmentToken); err != nil {
+		t.Fatal(err)
+	}
+	if err := service.ConfirmEmailVerification(result.DevelopmentToken); err == nil {
+		t.Fatal("expected replayed verification token to be rejected")
+	}
+	if err := service.DB.First(&user, "id = ?", user.ID).Error; err != nil {
+		t.Fatal(err)
+	}
+	if !user.Verified {
+		t.Fatal("expected user to be verified")
+	}
+	var audit models.AuditLog
+	if err := service.DB.First(&audit, "entity_id = ? AND action = ?", user.ID.String(), "user.email_verified").Error; err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestEmailVerificationDoesNotRevealUnknownEmail(t *testing.T) {
+	service, _ := testPasswordResetService(t)
+	sender := &recordingMailer{}
+	service.Mailer = sender
+	result, err := service.RequestEmailVerification("missing@example.test")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !result.Accepted || result.DeliveryAccepted || result.DevelopmentToken != "" || len(sender.messages) != 0 {
+		t.Fatalf("unexpected unknown-email result: result=%#v messages=%#v", result, sender.messages)
+	}
+}
+
+func TestEmailVerificationRejectsExpiredToken(t *testing.T) {
+	service, user := testPasswordResetService(t)
+	raw := "expired-verification-token"
+	if err := service.DB.Create(&models.AccountActionToken{
+		UserID: user.ID, Purpose: "email_verification", TokenHash: hashRefreshToken(raw),
+		ExpiresAt: time.Now().Add(-time.Minute),
+	}).Error; err != nil {
+		t.Fatal(err)
+	}
+	if err := service.ConfirmEmailVerification(raw); err == nil {
+		t.Fatal("expected expired verification token to be rejected")
+	}
+}
+
 func TestChangePasswordChecksCurrentPasswordAndRevokesOtherSessions(t *testing.T) {
 	service, user := testPasswordResetService(t)
 	current := models.AuthSession{UserID: user.ID, RefreshTokenHash: uuid.NewString(), ExpiresAt: time.Now().Add(time.Hour)}
@@ -121,7 +206,7 @@ func testPasswordResetService(t *testing.T) (AuthService, models.User) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := database.AutoMigrate(&models.User{}, &models.AccountActionToken{}, &models.AuthSession{}); err != nil {
+	if err := database.AutoMigrate(&models.User{}, &models.AccountActionToken{}, &models.AuthSession{}, &models.AuditLog{}); err != nil {
 		t.Fatal(err)
 	}
 	hash, err := security.HashPassword("OriginalPassword8")

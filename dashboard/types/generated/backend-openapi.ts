@@ -75,6 +75,15 @@ export interface HandlersDrugUsageEnvelope {
   success?: boolean;
 }
 
+export interface HandlersEmailVerificationConfirmRequest {
+  token?: string;
+}
+
+export interface HandlersEmailVerificationRequest {
+  /** @example "user@example.com" */
+  email?: string;
+}
+
 export interface HandlersErrorResponse {
   /** @example "invalid request" */
   error?: string;
@@ -528,6 +537,17 @@ export interface HandlersUserEnvelope {
 
 export interface HandlersUserViewEnvelope {
   data?: ServicesUserView;
+  /** @example true */
+  success?: boolean;
+}
+
+export interface HandlersVerificationResult {
+  /** @example true */
+  verified?: boolean;
+}
+
+export interface HandlersVerificationResultEnvelope {
+  data?: HandlersVerificationResult;
   /** @example true */
   success?: boolean;
 }

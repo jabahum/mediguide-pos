@@ -236,6 +236,38 @@ final class HandlersDrugUsageEnvelope {
   Map<String, dynamic> toJson() => Map.of(value);
 }
 
+final class HandlersEmailVerificationConfirmRequest {
+  HandlersEmailVerificationConfirmRequest(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory HandlersEmailVerificationConfirmRequest.fromJson(
+    Map<String, dynamic> json,
+  ) => HandlersEmailVerificationConfirmRequest(json);
+
+  static const schemaName = 'handlers.EmailVerificationConfirmRequest';
+  final Map<String, dynamic> value;
+
+  String? get token => value['token']?.toString();
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
+final class HandlersEmailVerificationRequest {
+  HandlersEmailVerificationRequest(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory HandlersEmailVerificationRequest.fromJson(
+    Map<String, dynamic> json,
+  ) => HandlersEmailVerificationRequest(json);
+
+  static const schemaName = 'handlers.EmailVerificationRequest';
+  final Map<String, dynamic> value;
+
+  String? get email => value['email']?.toString();
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
 final class HandlersErrorResponse {
   HandlersErrorResponse(Map<String, dynamic> value)
     : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
@@ -1515,6 +1547,43 @@ final class HandlersUserViewEnvelope {
     final raw = value['data'];
     if (raw is! Map) return null;
     return ServicesUserView.fromJson(_jsonMap(raw));
+  }
+
+  bool? get success => value['success'] as bool?;
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
+final class HandlersVerificationResult {
+  HandlersVerificationResult(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory HandlersVerificationResult.fromJson(Map<String, dynamic> json) =>
+      HandlersVerificationResult(json);
+
+  static const schemaName = 'handlers.VerificationResult';
+  final Map<String, dynamic> value;
+
+  bool? get verified => value['verified'] as bool?;
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
+final class HandlersVerificationResultEnvelope {
+  HandlersVerificationResultEnvelope(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory HandlersVerificationResultEnvelope.fromJson(
+    Map<String, dynamic> json,
+  ) => HandlersVerificationResultEnvelope(json);
+
+  static const schemaName = 'handlers.VerificationResultEnvelope';
+  final Map<String, dynamic> value;
+
+  HandlersVerificationResult? get data {
+    final raw = value['data'];
+    if (raw is! Map) return null;
+    return HandlersVerificationResult.fromJson(_jsonMap(raw));
   }
 
   bool? get success => value['success'] as bool?;

@@ -42,4 +42,33 @@ describe("usersService", () => {
     )
     expect(result.verified).toBe(true)
   })
+
+	it("uses the typed user-owned email verification endpoints", async () => {
+		const fetchMock = vi
+			.fn()
+			.mockResolvedValueOnce(new Response(JSON.stringify({
+				success: true,
+				data: { accepted: true, delivery_accepted: false, development_token: "verify-token" },
+			}), { status: 200, headers: { "Content-Type": "application/json" } }))
+			.mockResolvedValueOnce(new Response(JSON.stringify({
+				success: true,
+				data: { verified: true },
+			}), { status: 200, headers: { "Content-Type": "application/json" } }))
+		vi.stubGlobal("fetch", fetchMock)
+
+		await usersService.requestEmailVerification("user@example.test")
+		const result = await usersService.confirmEmailVerification("verify-token")
+
+		expect(fetchMock).toHaveBeenNthCalledWith(
+			1,
+			"http://127.0.0.1:8080/api/v2/auth/email-verification/request",
+			expect.objectContaining({ method: "POST", body: JSON.stringify({ email: "user@example.test" }) }),
+		)
+		expect(fetchMock).toHaveBeenNthCalledWith(
+			2,
+			"http://127.0.0.1:8080/api/v2/auth/email-verification/confirm",
+			expect.objectContaining({ method: "POST", body: JSON.stringify({ token: "verify-token" }) }),
+		)
+		expect(result.verified).toBe(true)
+	})
 })

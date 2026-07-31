@@ -185,8 +185,8 @@ async function sendVerificationEmail(user: UserType): Promise<void> {
       `${user.name} has been marked as verified`
     )
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'Failed to send verification email'
-    showToast.error("Send Failed", message)
+	const message = error instanceof Error ? error.message : 'Failed to verify user'
+	showToast.error("Verification Failed", message)
     throw error
   }
 }

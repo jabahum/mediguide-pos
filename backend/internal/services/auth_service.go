@@ -1,16 +1,20 @@
 package services
 
 import (
+	"context"
 	"crypto/rand"
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/json"
 	"errors"
+	"fmt"
+	"net/url"
 	"sort"
 	"strings"
 	"time"
 
 	"mediguide/internal/config"
+	"mediguide/internal/mailer"
 	"mediguide/internal/models"
 	"mediguide/internal/security"
 
@@ -19,8 +23,9 @@ import (
 )
 
 type AuthService struct {
-	DB  *gorm.DB
-	Cfg config.Config
+	DB     *gorm.DB
+	Cfg    config.Config
+	Mailer mailer.Sender
 }
 
 type LoginResult struct {
@@ -66,8 +71,8 @@ type AccountActionResult struct {
 }
 
 func (s AuthService) RequestPasswordReset(email string) (*AccountActionResult, error) {
-	// No outbound email adapter is configured yet. Keep the public response
-	// enumeration-safe while honestly reporting that no provider accepted mail.
+	// DeliveryAccepted deliberately remains false for this public endpoint. A
+	// provider result would allow callers to enumerate registered addresses.
 	result := &AccountActionResult{Accepted: true, DeliveryAccepted: false}
 	var user models.User
 	if err := s.DB.Where("lower(email) = ? AND deleted_at IS NULL", strings.ToLower(strings.TrimSpace(email))).First(&user).Error; err != nil {
@@ -93,7 +98,84 @@ func (s AuthService) RequestPasswordReset(email string) (*AccountActionResult, e
 	if s.Cfg.AppEnv == "development" {
 		result.DevelopmentToken = raw
 	}
+	s.sendAccountEmail(user.Email, "Reset your MediGuide password", "reset-password", raw)
 	return result, nil
+}
+
+func (s AuthService) RequestEmailVerification(email string) (*AccountActionResult, error) {
+	result := &AccountActionResult{Accepted: true, DeliveryAccepted: false}
+	var user models.User
+	if err := s.DB.Where("lower(email) = ? AND deleted_at IS NULL", strings.ToLower(strings.TrimSpace(email))).First(&user).Error; err != nil {
+		return result, nil
+	}
+	if user.Verified {
+		return result, nil
+	}
+	raw, err := generateRefreshToken()
+	if err != nil {
+		return nil, err
+	}
+	token := models.AccountActionToken{
+		UserID: user.ID, Purpose: "email_verification", TokenHash: hashRefreshToken(raw),
+		ExpiresAt: time.Now().Add(24 * time.Hour),
+	}
+	if err := s.DB.Transaction(func(tx *gorm.DB) error {
+		if err := tx.Where("user_id = ? AND purpose = ? AND consumed_at IS NULL", user.ID, "email_verification").
+			Delete(&models.AccountActionToken{}).Error; err != nil {
+			return err
+		}
+		return tx.Create(&token).Error
+	}); err != nil {
+		return nil, err
+	}
+	if s.Cfg.AppEnv == "development" {
+		result.DevelopmentToken = raw
+	}
+	s.sendAccountEmail(user.Email, "Verify your MediGuide email", "verify-email", raw)
+	return result, nil
+}
+
+func (s AuthService) ConfirmEmailVerification(rawToken string) error {
+	if strings.TrimSpace(rawToken) == "" {
+		return errors.New("invalid or expired verification token")
+	}
+	now := time.Now()
+	return s.DB.Transaction(func(tx *gorm.DB) error {
+		var token models.AccountActionToken
+		if err := tx.Where(
+			"token_hash = ? AND purpose = ? AND consumed_at IS NULL AND expires_at > ?",
+			hashRefreshToken(rawToken), "email_verification", now,
+		).First(&token).Error; err != nil {
+			return errors.New("invalid or expired verification token")
+		}
+		result := tx.Model(&models.AccountActionToken{}).
+			Where("id = ? AND consumed_at IS NULL", token.ID).
+			Update("consumed_at", now)
+		if result.Error != nil || result.RowsAffected != 1 {
+			return errors.New("invalid or expired verification token")
+		}
+		if err := tx.Model(&models.User{}).Where("id = ? AND deleted_at IS NULL", token.UserID).
+			Updates(map[string]any{"verified": true, "updated_at": now}).Error; err != nil {
+			return err
+		}
+		return tx.Create(&models.AuditLog{
+			ActorID: token.UserID.String(), Action: "user.email_verified",
+			EntityType: "user", EntityID: token.UserID.String(), MetadataJSON: "{}",
+		}).Error
+	})
+}
+
+func (s AuthService) sendAccountEmail(to, subject, path, token string) {
+	if s.Mailer == nil {
+		return
+	}
+	base := strings.TrimRight(strings.TrimSpace(s.Cfg.PublicAppURL), "/")
+	link := fmt.Sprintf("%s/%s?token=%s", base, path, url.QueryEscape(token))
+	// The public response intentionally does not expose this provider outcome.
+	_ = s.Mailer.Send(context.Background(), mailer.Message{
+		To: to, Subject: subject,
+		Text: fmt.Sprintf("Open this link to continue: %s\n\nIf you did not request this action, ignore this message.", link),
+	})
 }
 
 func (s AuthService) ConfirmPasswordReset(rawToken, password string) error {
@@ -402,6 +484,8 @@ func deriveRolePermissions(roleKey, permissionsJSON string) []string {
 			"chat.ask",
 			"drug.read",
 			"drug.write",
+			"facility.read",
+			"facility.write",
 			"guideline.publish",
 			"guideline.read",
 			"guideline.write",
@@ -417,6 +501,8 @@ func deriveRolePermissions(roleKey, permissionsJSON string) []string {
 			"guideline.publish",
 			"drug.read",
 			"drug.write",
+			"facility.read",
+			"facility.write",
 			"guideline.read",
 			"guideline.write",
 			"protocol.read",
@@ -428,6 +514,7 @@ func deriveRolePermissions(roleKey, permissionsJSON string) []string {
 			"chat.ask",
 			"calculator.read",
 			"drug.read",
+			"facility.read",
 			"guideline.read",
 			"protocol.read",
 			"sync.read",
@@ -436,6 +523,7 @@ func deriveRolePermissions(roleKey, permissionsJSON string) []string {
 		return []string{
 			"calculator.read",
 			"drug.read",
+			"facility.read",
 			"guideline.read",
 			"protocol.read",
 			"sync.read",

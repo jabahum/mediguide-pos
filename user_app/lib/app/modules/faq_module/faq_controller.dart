@@ -4,6 +4,7 @@ import 'package:infinite_scroll_pagination/infinite_scroll_pagination.dart';
 
 import '../../data/models/models.dart';
 import '../../data/models/filter_models.dart';
+import '../../data/repositories/help_content_repository.dart';
 import '../../data/services/backend_api_service.dart';
 import '../../utils/constants.dart';
 import '../../utils/common.dart';
@@ -11,6 +12,8 @@ import '../../widgets/generic_filter_bottom_sheet.dart';
 import '../../translations/app_translations.dart';
 
 class FaqController extends GetxController {
+  HelpContentRepository get _repository =>
+      HelpContentRepository(BackendApiService.to);
   // Reactive state
   final RxBool isLoading = false.obs;
   final RxString searchQuery = ''.obs;
@@ -62,7 +65,7 @@ class FaqController extends GetxController {
             )
           : await _getFAQs(page: pageKey, perPage: pageSize);
 
-      return result.items.map((item) => FAQ.fromJson(item.toJson())).toList();
+      return result.items;
     } catch (error) {
       Common.quickToast(
         title: AppTranslationKey.error.tr,
@@ -72,41 +75,16 @@ class FaqController extends GetxController {
     }
   }
 
-  Future<PagedResult<ApiRecord>> _getFAQs({
-    int page = 1,
-    int perPage = 10,
-    String? filter,
-    String? sort,
-  }) async {
-    final baseFilter = 'status = "published"';
-
-    final finalFilter = (filter != null && filter.isNotEmpty)
-        ? '$baseFilter && ($filter)'
-        : baseFilter;
-
-    return BackendApiService.to.getResourceList(
-      collectionName: 'faqs',
-      page: page,
-      perPage: perPage,
-      filter: finalFilter,
-      sort: sort ?? 'sort_order, -created',
-    );
+  Future<PagedResult<FAQ>> _getFAQs({int page = 1, int perPage = 10}) async {
+    return _repository.listFAQs(page: page, perPage: perPage);
   }
 
-  Future<PagedResult<ApiRecord>> _searchFAQs({
+  Future<PagedResult<FAQ>> _searchFAQs({
     required String query,
     int page = 1,
     int perPage = 10,
   }) async {
-    final q = BackendApiService.escapeFilterValue(query);
-    final searchFilter = 'question ~ "$q" || keywords ~ "$q" || answer ~ "$q"';
-
-    return _getFAQs(
-      page: page,
-      perPage: perPage,
-      filter: searchFilter,
-      sort: '-is_featured, sort_order, -created',
-    );
+    return _repository.listFAQs(page: page, perPage: perPage, search: query);
   }
 
   // =========================
@@ -180,24 +158,17 @@ class FaqController extends GetxController {
   // =========================
 
   Future<List<FAQ>> getFeaturedFAQs({int limit = 5}) async {
-    final result = await BackendApiService.to.getResourceList(
-      collectionName: 'faqs',
+    final result = await _repository.listFAQs(
       page: 1,
       perPage: limit,
-      filter: 'is_featured = true',
-      sort: 'sort_order, -created',
+      featured: true,
     );
 
-    return result.items.map((e) => FAQ.fromJson(e.toJson())).toList();
+    return result.items;
   }
 
   Future<FAQ?> getFAQById({required String faqId}) async {
-    final record = await BackendApiService.to.getResource(
-      collectionName: 'faqs',
-      recordId: faqId,
-    );
-
-    return record != null ? FAQ.fromJson(record.toJson()) : null;
+    return _repository.getFAQ(faqId);
   }
 
   @override

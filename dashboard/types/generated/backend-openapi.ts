@@ -34,6 +34,11 @@ export interface HandlersClinicalProtocolEnvelope {
   success?: boolean;
 }
 
+export interface HandlersDocumentationEnvelope {
+  data?: ModelsDocumentation;
+  success?: boolean;
+}
+
 export interface HandlersDownloadURLEnvelope {
   data?: HandlersDownloadURLResult;
   /** @example true */
@@ -88,6 +93,16 @@ export interface HandlersErrorResponse {
   /** @example "invalid request" */
   error?: string;
   /** @example false */
+  success?: boolean;
+}
+
+export interface HandlersFAQEnvelope {
+  data?: ModelsFAQ;
+  success?: boolean;
+}
+
+export interface HandlersFAQTagEnvelope {
+  data?: ModelsFAQTag;
   success?: boolean;
 }
 
@@ -252,6 +267,11 @@ export interface HandlersPaginatedClinicalProtocolsEnvelope {
   success?: boolean;
 }
 
+export interface HandlersPaginatedDocumentationEnvelope {
+  data?: ServicesPageResultModelsDocumentation;
+  success?: boolean;
+}
+
 export interface HandlersPaginatedDrugCategoriesEnvelope {
   data?: {
     items?: ModelsDrugCategory[];
@@ -303,6 +323,16 @@ export interface HandlersPaginatedDrugs {
 export interface HandlersPaginatedDrugsEnvelope {
   data?: HandlersPaginatedDrugs;
   /** @example true */
+  success?: boolean;
+}
+
+export interface HandlersPaginatedFAQTagsEnvelope {
+  data?: ServicesPageResultModelsFAQTag;
+  success?: boolean;
+}
+
+export interface HandlersPaginatedFAQsEnvelope {
+  data?: ServicesPageResultModelsFAQ;
   success?: boolean;
 }
 
@@ -604,6 +634,17 @@ export interface HandlersSyncPackageEnvelope {
   success?: boolean;
 }
 
+export interface HandlersTagUsageRecalculationEnvelope {
+  data?: HandlersTagUsageRecalculationResult;
+  /** @example true */
+  success?: boolean;
+}
+
+export interface HandlersTagUsageRecalculationResult {
+  /** @example true */
+  updated?: boolean;
+}
+
 export interface HandlersTherapeuticCategoryEnvelope {
   data?: ModelsTherapeuticCategory;
   /** @example true */
@@ -678,6 +719,18 @@ export interface ModelsClinicalProtocol {
   title?: string;
   updated_at?: string;
   version?: string;
+}
+
+export interface ModelsDocumentation {
+  category?: string;
+  content?: string;
+  created_at?: string;
+  description?: string;
+  id?: string;
+  status?: string;
+  tags?: string;
+  title?: string;
+  updated_at?: string;
 }
 
 export interface ModelsDrug {
@@ -759,6 +812,44 @@ export interface ModelsDrugUsageLog {
   id?: string;
   updated_at?: string;
   user_id?: string;
+}
+
+export interface ModelsFAQ {
+  answer?: string;
+  author_email?: string;
+  author_id?: string;
+  author_name?: string;
+  created_at?: string;
+  id?: string;
+  is_featured?: boolean;
+  keywords?: string;
+  priority?: string;
+  published_at?: string;
+  question?: string;
+  related_faqs?: string[];
+  review_due?: string;
+  reviewer_email?: string;
+  reviewer_id?: string;
+  reviewer_name?: string;
+  sort_order?: number;
+  status?: string;
+  tags?: string[];
+  target_audience?: string;
+  updated_at?: string;
+}
+
+export interface ModelsFAQTag {
+  color?: string;
+  created_at?: string;
+  description?: string;
+  icon?: string;
+  id?: string;
+  is_active?: boolean;
+  name?: string;
+  slug?: string;
+  sort_order?: number;
+  updated_at?: string;
+  usage_count?: number;
 }
 
 export interface ModelsFacilityUsageLog {
@@ -1120,6 +1211,15 @@ export interface ServicesCreateVersionInput {
   version?: string;
 }
 
+export interface ServicesDocumentationInput {
+  category?: string;
+  content?: string;
+  description?: string;
+  status?: string;
+  tags?: string;
+  title?: string;
+}
+
 export interface ServicesDrugCategoryInput {
   color?: string;
   description?: string;
@@ -1176,6 +1276,33 @@ export interface ServicesDrugTagInput {
   sort_order?: number;
   status?: string;
   tag_category?: string;
+}
+
+export interface ServicesFAQInput {
+  answer?: string;
+  author_id?: string;
+  is_featured?: boolean;
+  keywords?: string;
+  priority?: string;
+  published_at?: string;
+  question?: string;
+  related_faqs?: string[];
+  review_due?: string;
+  reviewer_id?: string;
+  sort_order?: number;
+  status?: string;
+  tags?: string[];
+  target_audience?: string;
+}
+
+export interface ServicesFAQTagInput {
+  color?: string;
+  description?: string;
+  icon?: string;
+  is_active?: boolean;
+  name?: string;
+  slug?: string;
+  sort_order?: number;
 }
 
 export interface ServicesFacilityInput {
@@ -1309,6 +1436,30 @@ export interface ServicesNotificationTemplateInput {
   subject?: string;
   type?: string;
   variables?: Record<string, any>;
+}
+
+export interface ServicesPageResultModelsDocumentation {
+  items?: ModelsDocumentation[];
+  page?: number;
+  per_page?: number;
+  total_items?: number;
+  total_pages?: number;
+}
+
+export interface ServicesPageResultModelsFAQ {
+  items?: ModelsFAQ[];
+  page?: number;
+  per_page?: number;
+  total_items?: number;
+  total_pages?: number;
+}
+
+export interface ServicesPageResultModelsFAQTag {
+  items?: ModelsFAQTag[];
+  page?: number;
+  per_page?: number;
+  total_items?: number;
+  total_pages?: number;
 }
 
 export interface ServicesPageResultModelsSupportTicket {

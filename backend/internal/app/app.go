@@ -92,6 +92,7 @@ func New(cfg config.Config) (*App, error) {
 	userSvc := services.UserService{DB: database}
 	notificationSvc := services.NotificationService{DB: database}
 	supportSvc := services.SupportService{DB: database}
+	helpContentSvc := services.HelpContentService{DB: database}
 	legacyAPISvc := services.LegacyAPIService{DB: database}
 	resourceSvc := services.ResourceService{DB: database}
 	facilitySvc := services.FacilityService{DB: database}
@@ -110,6 +111,7 @@ func New(cfg config.Config) (*App, error) {
 	userH := handlers.UserHandler{Service: userSvc}
 	notificationH := handlers.NotificationHandler{Service: notificationSvc}
 	supportH := handlers.SupportHandler{Service: supportSvc}
+	helpContentH := handlers.HelpContentHandler{Service: helpContentSvc}
 	legacyAPIH := handlers.LegacyAPIHandler{Service: legacyAPISvc, Cfg: cfg}
 	resourceH := handlers.ResourceHandler{Service: resourceSvc, Cfg: cfg}
 	facilityH := handlers.NewFacilityHandler(facilitySvc)
@@ -208,6 +210,23 @@ func New(cfg config.Config) (*App, error) {
 		protected.DELETE("/support/tickets/:id", supportH.DeleteTicket)
 		protected.GET("/support/tickets/:id/replies", supportH.ListReplies)
 		protected.POST("/support/tickets/:id/replies", supportH.CreateReply)
+
+		protected.GET("/faqs", helpContentH.ListFAQs)
+		protected.GET("/faqs/:id", helpContentH.GetFAQ)
+		protected.POST("/faqs", middleware.RequireAnyPermission("admin.all", "content.write", "guideline.write"), helpContentH.CreateFAQ)
+		protected.PATCH("/faqs/:id", middleware.RequireAnyPermission("admin.all", "content.write", "guideline.write"), helpContentH.UpdateFAQ)
+		protected.DELETE("/faqs/:id", middleware.RequireAnyPermission("admin.all", "content.write", "guideline.write"), helpContentH.DeleteFAQ)
+		protected.GET("/faq-tags", helpContentH.ListTags)
+		protected.GET("/faq-tags/:id", helpContentH.GetTag)
+		protected.POST("/faq-tags", middleware.RequireAnyPermission("admin.all", "content.write", "guideline.write"), helpContentH.CreateTag)
+		protected.PATCH("/faq-tags/:id", middleware.RequireAnyPermission("admin.all", "content.write", "guideline.write"), helpContentH.UpdateTag)
+		protected.DELETE("/faq-tags/:id", middleware.RequireAnyPermission("admin.all", "content.write", "guideline.write"), helpContentH.DeleteTag)
+		protected.POST("/faq-tags/recalculate-usage", middleware.RequireAnyPermission("admin.all", "content.write", "guideline.write"), helpContentH.RecalculateTagUsage)
+		protected.GET("/documentation", helpContentH.ListDocumentation)
+		protected.GET("/documentation/:id", helpContentH.GetDocumentation)
+		protected.POST("/documentation", middleware.RequireAnyPermission("admin.all", "content.write", "guideline.write"), helpContentH.CreateDocumentation)
+		protected.PATCH("/documentation/:id", middleware.RequireAnyPermission("admin.all", "content.write", "guideline.write"), helpContentH.UpdateDocumentation)
+		protected.DELETE("/documentation/:id", middleware.RequireAnyPermission("admin.all", "content.write", "guideline.write"), helpContentH.DeleteDocumentation)
 
 		protected.GET("/drug-categories", middleware.RequireAnyPermission("drug.read", "guideline.read"), drugReferenceH.ListCategories)
 		protected.GET("/drug-categories/:id", middleware.RequireAnyPermission("drug.read", "guideline.read"), drugReferenceH.GetCategory)
@@ -331,9 +350,6 @@ func registerResourceRoutes(group *gin.RouterGroup, handler handlers.ResourceHan
 		"medical_guidelines":      "/medical-guidelines",
 		"abbreviations":           "/abbreviations",
 		"emergency_protocols":     "/emergency-protocols",
-		"faqs":                    "/faqs",
-		"faq_tags":                "/faq-tags",
-		"documentation":           "/documentation",
 		"generic_pages":           "/pages",
 		"guideline_categories":    "/guideline-categories",
 		"guideline_tags":          "/guideline-tags",

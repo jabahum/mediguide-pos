@@ -63,65 +63,6 @@ var resourceSpecs = map[string]resourceSpec{
 			return query.Where("ep.deleted_at IS NULL")
 		},
 	},
-	"faqs": {
-		Table:        "faqs f",
-		IDColumn:     "f.id",
-		Select:       "f.*",
-		DefaultOrder: "coalesce(f.sort_order, 999999), f.created_at DESC",
-		SearchColumns: []string{
-			"f.question", "f.answer", "coalesce(f.keywords, '')", "coalesce(f.target_audience, '')",
-		},
-		FilterColumns: map[string]string{
-			"status":          "f.status",
-			"priority":        "f.priority",
-			"target_audience": "f.target_audience",
-			"is_featured":     "f.is_featured::text",
-		},
-		Access: resourceAccessPublic,
-		ApplyScopes: func(query *gorm.DB) *gorm.DB {
-			return query.Where("f.deleted_at IS NULL").Where("f.status = ?", "published")
-		},
-		ApplyAuth: func(query *gorm.DB) *gorm.DB {
-			return query.Where("f.deleted_at IS NULL")
-		},
-	},
-	"faq_tags": {
-		Table:        "faq_tags ft",
-		IDColumn:     "ft.id",
-		Select:       "ft.*",
-		DefaultOrder: "coalesce(ft.sort_order, 999999), ft.name ASC",
-		SearchColumns: []string{
-			"ft.name", "ft.slug", "coalesce(ft.description, '')",
-		},
-		FilterColumns: map[string]string{
-			"is_active": "ft.is_active::text",
-			"slug":      "ft.slug",
-		},
-		Access: resourceAccessAuth,
-		ApplyScopes: func(query *gorm.DB) *gorm.DB {
-			return query.Where("ft.deleted_at IS NULL")
-		},
-	},
-	"documentation": {
-		Table:        "documentation doc",
-		IDColumn:     "doc.id",
-		Select:       "doc.*",
-		DefaultOrder: "doc.title ASC",
-		SearchColumns: []string{
-			"doc.title", "coalesce(doc.description, '')", "doc.content", "coalesce(doc.category, '')", "coalesce(doc.tags, '')",
-		},
-		FilterColumns: map[string]string{
-			"status":   "doc.status",
-			"category": "doc.category",
-		},
-		Access: resourceAccessPublic,
-		ApplyScopes: func(query *gorm.DB) *gorm.DB {
-			return query.Where("doc.deleted_at IS NULL").Where("doc.status = ?", "published")
-		},
-		ApplyAuth: func(query *gorm.DB) *gorm.DB {
-			return query.Where("doc.deleted_at IS NULL")
-		},
-	},
 	"generic_pages": {
 		Table:        "generic_pages gp",
 		IDColumn:     "gp.id",

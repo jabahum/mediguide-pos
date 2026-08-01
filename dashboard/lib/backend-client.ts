@@ -12,9 +12,6 @@ const DOMAIN_COLLECTION_PATHS: Record<string, string> = {
   medical_guidelines: "/api/v2/medical-guidelines",
   abbreviations: "/api/v2/abbreviations",
   emergency_protocols: "/api/v2/emergency-protocols",
-  faqs: "/api/v2/faqs",
-  faq_tags: "/api/v2/faq-tags",
-  documentation: "/api/v2/documentation",
   generic_pages: "/api/v2/pages",
   guideline_categories: "/api/v2/guideline-categories",
   guideline_tags: "/api/v2/guideline-tags",
@@ -86,12 +83,6 @@ const RELATION_MAP: Record<string, Record<string, ExpandConfig>> = {
   drugs: {
     drug_class: { collection: "drug_classes" },
     therapeutic_category: { collection: "therapeutic_categories" },
-  },
-  faqs: {
-    author: { collection: "users" },
-    reviewer: { collection: "users" },
-    tags: { collection: "faq_tags", many: true },
-    related_faqs: { collection: "faqs", many: true },
   },
 }
 

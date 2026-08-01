@@ -11,6 +11,7 @@ import { createFaqRowActions, faqBulkActions } from "./faq-actions"
 import { faqAvailableFields } from "./fields"
 import type { FaqsWithExpanded } from "@/types/expanded"
 import type { AdvancedFilter } from "@/types/data-table"
+import { FaqService } from "@/services/faq.service"
 
 export default function FAQsPage() {
   const router = useRouter()
@@ -54,7 +55,8 @@ export default function FAQsPage() {
       />
 
       <EnhancedBackendDataTable<FaqsWithExpanded>
-        collectionName="faqs"
+        collection="help-faqs"
+        loadPage={FaqService.loadPage.bind(FaqService)}
         columns={columns}
         searchable={true}
         searchFields={["question", "answer", "keywords"]}
@@ -66,7 +68,6 @@ export default function FAQsPage() {
         persistColumnConfig={true}
         tableContext="faq-management"
         onAdvancedFilter={handleAdvancedFilter}
-        expand="tags,author,reviewer,related_faqs"
       />
     </div>
   )

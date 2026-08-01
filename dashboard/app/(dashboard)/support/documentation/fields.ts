@@ -2,7 +2,7 @@ import { FieldOption } from "@/types/data-table"
 
 /**
  * Available fields for documentation table advanced filtering
- * Based on legacy collection API documentation schema
+ * Based on the typed documentation API schema
  */
 export const documentationAvailableFields: FieldOption[] = [
   // Basic Information

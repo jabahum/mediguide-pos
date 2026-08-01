@@ -32,6 +32,13 @@ definitions:
         example: true
         type: boolean
     type: object
+  handlers.DocumentationEnvelope:
+    properties:
+      data:
+        $ref: '#/definitions/models.Documentation'
+      success:
+        type: boolean
+    type: object
   handlers.DownloadURLEnvelope:
     properties:
       data:
@@ -104,6 +111,20 @@ definitions:
         type: string
       success:
         example: false
+        type: boolean
+    type: object
+  handlers.FAQEnvelope:
+    properties:
+      data:
+        $ref: '#/definitions/models.FAQ'
+      success:
+        type: boolean
+    type: object
+  handlers.FAQTagEnvelope:
+    properties:
+      data:
+        $ref: '#/definitions/models.FAQTag'
+      success:
         type: boolean
     type: object
   handlers.GuidelineDocumentEnvelope:
@@ -364,6 +385,13 @@ definitions:
         example: true
         type: boolean
     type: object
+  handlers.PaginatedDocumentationEnvelope:
+    properties:
+      data:
+        $ref: '#/definitions/services.PageResult-models_Documentation'
+      success:
+        type: boolean
+    type: object
   handlers.PaginatedDrugCategoriesEnvelope:
     properties:
       data:
@@ -452,6 +480,20 @@ definitions:
         $ref: '#/definitions/handlers.PaginatedDrugs'
       success:
         example: true
+        type: boolean
+    type: object
+  handlers.PaginatedFAQTagsEnvelope:
+    properties:
+      data:
+        $ref: '#/definitions/services.PageResult-models_FAQTag'
+      success:
+        type: boolean
+    type: object
+  handlers.PaginatedFAQsEnvelope:
+    properties:
+      data:
+        $ref: '#/definitions/services.PageResult-models_FAQ'
+      success:
         type: boolean
     type: object
   handlers.PaginatedGuidelineChunks:
@@ -898,6 +940,20 @@ definitions:
         example: true
         type: boolean
     type: object
+  handlers.TagUsageRecalculationEnvelope:
+    properties:
+      data:
+        $ref: '#/definitions/handlers.TagUsageRecalculationResult'
+      success:
+        example: true
+        type: boolean
+    type: object
+  handlers.TagUsageRecalculationResult:
+    properties:
+      updated:
+        example: true
+        type: boolean
+    type: object
   handlers.TherapeuticCategoryEnvelope:
     properties:
       data:
@@ -1018,6 +1074,27 @@ definitions:
       updated_at:
         type: string
       version:
+        type: string
+    type: object
+  models.Documentation:
+    properties:
+      category:
+        type: string
+      content:
+        type: string
+      created_at:
+        type: string
+      description:
+        type: string
+      id:
+        type: string
+      status:
+        type: string
+      tags:
+        type: string
+      title:
+        type: string
+      updated_at:
         type: string
     type: object
   models.Drug:
@@ -1170,6 +1247,80 @@ definitions:
         type: string
       user_id:
         type: string
+    type: object
+  models.FAQ:
+    properties:
+      answer:
+        type: string
+      author_email:
+        type: string
+      author_id:
+        type: string
+      author_name:
+        type: string
+      created_at:
+        type: string
+      id:
+        type: string
+      is_featured:
+        type: boolean
+      keywords:
+        type: string
+      priority:
+        type: string
+      published_at:
+        type: string
+      question:
+        type: string
+      related_faqs:
+        items:
+          type: string
+        type: array
+      review_due:
+        type: string
+      reviewer_email:
+        type: string
+      reviewer_id:
+        type: string
+      reviewer_name:
+        type: string
+      sort_order:
+        type: integer
+      status:
+        type: string
+      tags:
+        items:
+          type: string
+        type: array
+      target_audience:
+        type: string
+      updated_at:
+        type: string
+    type: object
+  models.FAQTag:
+    properties:
+      color:
+        type: string
+      created_at:
+        type: string
+      description:
+        type: string
+      icon:
+        type: string
+      id:
+        type: string
+      is_active:
+        type: boolean
+      name:
+        type: string
+      slug:
+        type: string
+      sort_order:
+        type: integer
+      updated_at:
+        type: string
+      usage_count:
+        type: integer
     type: object
   models.FacilityUsageLog:
     properties:
@@ -1820,6 +1971,21 @@ definitions:
       version:
         type: string
     type: object
+  services.DocumentationInput:
+    properties:
+      category:
+        type: string
+      content:
+        type: string
+      description:
+        type: string
+      status:
+        type: string
+      tags:
+        type: string
+      title:
+        type: string
+    type: object
   services.DrugCategoryInput:
     properties:
       color:
@@ -1927,6 +2093,58 @@ definitions:
         type: string
       tag_category:
         type: string
+    type: object
+  services.FAQInput:
+    properties:
+      answer:
+        type: string
+      author_id:
+        type: string
+      is_featured:
+        type: boolean
+      keywords:
+        type: string
+      priority:
+        type: string
+      published_at:
+        type: string
+      question:
+        type: string
+      related_faqs:
+        items:
+          type: string
+        type: array
+      review_due:
+        type: string
+      reviewer_id:
+        type: string
+      sort_order:
+        type: integer
+      status:
+        type: string
+      tags:
+        items:
+          type: string
+        type: array
+      target_audience:
+        type: string
+    type: object
+  services.FAQTagInput:
+    properties:
+      color:
+        type: string
+      description:
+        type: string
+      icon:
+        type: string
+      is_active:
+        type: boolean
+      name:
+        type: string
+      slug:
+        type: string
+      sort_order:
+        type: integer
     type: object
   services.FacilityInput:
     properties:
@@ -2171,6 +2389,51 @@ definitions:
       variables:
         additionalProperties: {}
         type: object
+    type: object
+  services.PageResult-models_Documentation:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/models.Documentation'
+        type: array
+      page:
+        type: integer
+      per_page:
+        type: integer
+      total_items:
+        type: integer
+      total_pages:
+        type: integer
+    type: object
+  services.PageResult-models_FAQ:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/models.FAQ'
+        type: array
+      page:
+        type: integer
+      per_page:
+        type: integer
+      total_items:
+        type: integer
+      total_pages:
+        type: integer
+    type: object
+  services.PageResult-models_FAQTag:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/models.FAQTag'
+        type: array
+      page:
+        type: integer
+      per_page:
+        type: integer
+      total_items:
+        type: integer
+      total_pages:
+        type: integer
     type: object
   services.PageResult-models_SupportTicket:
     properties:
@@ -3215,6 +3478,121 @@ paths:
       summary: Ask the guideline assistant
       tags:
       - chat
+  /api/v2/documentation:
+    get:
+      parameters:
+      - description: Page number
+        in: query
+        name: page
+        type: integer
+      - description: Items per page
+        in: query
+        name: per_page
+        type: integer
+      - description: Title or content search
+        in: query
+        name: search
+        type: string
+      - description: Status filter (editors only)
+        in: query
+        name: status
+        type: string
+      - description: Category filter
+        in: query
+        name: category
+        type: string
+      - description: Allowlisted sort field
+        in: query
+        name: sort
+        type: string
+      - description: Sort direction (asc or desc)
+        in: query
+        name: order
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.PaginatedDocumentationEnvelope'
+      security:
+      - BearerAuth: []
+      summary: List documentation with published visibility for readers
+      tags:
+      - help-content
+    post:
+      parameters:
+      - description: Documentation UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Documentation
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/services.DocumentationInput'
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/handlers.DocumentationEnvelope'
+      security:
+      - BearerAuth: []
+      summary: Create a documentation entry
+      tags:
+      - help-content
+  /api/v2/documentation/{id}:
+    delete:
+      parameters:
+      - description: Documentation UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+      security:
+      - BearerAuth: []
+      summary: Archive a documentation entry
+      tags:
+      - help-content
+    get:
+      parameters:
+      - description: Documentation UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.DocumentationEnvelope'
+      security:
+      - BearerAuth: []
+      summary: Get a documentation entry
+      tags:
+      - help-content
+    patch:
+      parameters:
+      - description: Documentation
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/services.DocumentationInput'
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.DocumentationEnvelope'
+      security:
+      - BearerAuth: []
+      summary: Replace editable documentation fields
+      tags:
+      - help-content
   /api/v2/drug-categories:
     get:
       produces:
@@ -3811,6 +4189,256 @@ paths:
       summary: Record current-user facility usage
       tags:
       - facilities
+  /api/v2/faq-tags:
+    get:
+      parameters:
+      - description: Page number
+        in: query
+        name: page
+        type: integer
+      - description: Items per page
+        in: query
+        name: per_page
+        type: integer
+      - description: Name or slug search
+        in: query
+        name: search
+        type: string
+      - description: Active-state filter
+        in: query
+        name: is_active
+        type: boolean
+      - description: Allowlisted sort field
+        in: query
+        name: sort
+        type: string
+      - description: Sort direction (asc or desc)
+        in: query
+        name: order
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.PaginatedFAQTagsEnvelope'
+      security:
+      - BearerAuth: []
+      summary: List FAQ tags
+      tags:
+      - help-content
+    post:
+      parameters:
+      - description: FAQ-tag UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: FAQ tag
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/services.FAQTagInput'
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/handlers.FAQTagEnvelope'
+      security:
+      - BearerAuth: []
+      summary: Create an FAQ tag
+      tags:
+      - help-content
+  /api/v2/faq-tags/{id}:
+    delete:
+      parameters:
+      - description: FAQ-tag UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+      security:
+      - BearerAuth: []
+      summary: Archive an unused FAQ tag
+      tags:
+      - help-content
+    get:
+      parameters:
+      - description: FAQ-tag UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.FAQTagEnvelope'
+      security:
+      - BearerAuth: []
+      summary: Get an FAQ tag
+      tags:
+      - help-content
+    patch:
+      parameters:
+      - description: FAQ tag
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/services.FAQTagInput'
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.FAQTagEnvelope'
+      security:
+      - BearerAuth: []
+      summary: Replace editable FAQ-tag fields
+      tags:
+      - help-content
+  /api/v2/faq-tags/recalculate-usage:
+    post:
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.TagUsageRecalculationEnvelope'
+      security:
+      - BearerAuth: []
+      summary: Recalculate FAQ-tag usage counts
+      tags:
+      - help-content
+  /api/v2/faqs:
+    get:
+      parameters:
+      - description: Page number
+        in: query
+        name: page
+        type: integer
+      - description: Items per page
+        in: query
+        name: per_page
+        type: integer
+      - description: Question, answer or keyword search
+        in: query
+        name: search
+        type: string
+      - description: Status filter (editors only)
+        in: query
+        name: status
+        type: string
+      - description: Priority filter
+        in: query
+        name: priority
+        type: string
+      - description: Audience filter
+        in: query
+        name: target_audience
+        type: string
+      - description: FAQ tag UUID
+        in: query
+        name: tag_id
+        type: string
+      - description: Featured filter
+        in: query
+        name: is_featured
+        type: boolean
+      - description: Allowlisted sort field
+        in: query
+        name: sort
+        type: string
+      - description: Sort direction (asc or desc)
+        in: query
+        name: order
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.PaginatedFAQsEnvelope'
+      security:
+      - BearerAuth: []
+      summary: List FAQs with published visibility for readers
+      tags:
+      - help-content
+    post:
+      parameters:
+      - description: FAQ
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/services.FAQInput'
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/handlers.FAQEnvelope'
+      security:
+      - BearerAuth: []
+      summary: Create an FAQ
+      tags:
+      - help-content
+  /api/v2/faqs/{id}:
+    delete:
+      parameters:
+      - description: FAQ UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+      security:
+      - BearerAuth: []
+      summary: Archive an FAQ
+      tags:
+      - help-content
+    get:
+      parameters:
+      - description: FAQ UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.FAQEnvelope'
+      security:
+      - BearerAuth: []
+      summary: Get an FAQ
+      tags:
+      - help-content
+    patch:
+      parameters:
+      - description: FAQ UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: FAQ
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/services.FAQInput'
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.FAQEnvelope'
+      security:
+      - BearerAuth: []
+      summary: Replace editable FAQ fields
+      tags:
+      - help-content
   /api/v2/guideline-versions/{id}/chunks:
     get:
       parameters:

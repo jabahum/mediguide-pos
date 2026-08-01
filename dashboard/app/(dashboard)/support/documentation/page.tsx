@@ -11,6 +11,7 @@ import { documentationColumns, DocumentationType } from "./columns"
 import { createDocumentationRowActions, documentationBulkActions } from "./documentation-actions"
 import { documentationAvailableFields } from "./fields"
 import type { AdvancedFilter } from "@/types/data-table"
+import { DocumentationService } from "@/services/documentation.service"
 
 export default function DocumentationPage() {
   const router = useRouter()
@@ -32,8 +33,7 @@ export default function DocumentationPage() {
   // Event handlers (React 19 automatically optimizes these)
   const handleAdvancedFilter = (filters: AdvancedFilter[]) => {
     console.log('Advanced filters applied:', filters)
-    // Here you would convert the advanced filters to legacy collection API filter syntax
-    // and pass them to the data table hook
+    // Advanced filters are converted to typed query parameters by the domain service.
   }
 
   const handleSelectionChange = (selectedDocs: DocumentationType[]) => {
@@ -65,11 +65,10 @@ export default function DocumentationPage() {
       {/* Enhanced DataTable */}
       <EnhancedBackendDataTable<DocumentationType>
         // Collection settings
-        collectionName="documentation"
+        collection="help-documentation"
+        loadPage={DocumentationService.loadPage.bind(DocumentationService)}
         columns={documentationColumns}
         sort="-updated"
-        realtime={true}
-
         // Pagination
         defaultPageSize={20}
         pageSizeOptions={[10, 20, 50, 100]}

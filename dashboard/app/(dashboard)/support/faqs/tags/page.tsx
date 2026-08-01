@@ -72,7 +72,8 @@ export default function FAQTagsPage() {
       />
 
       <EnhancedBackendDataTable<FaqTagWithStats>
-        collectionName="faq_tags"
+        collection="help-faq-tags"
+        loadPage={FaqTagsService.loadPage.bind(FaqTagsService)}
         columns={columns}
         searchable={true}
         searchFields={["name", "description", "slug"]}

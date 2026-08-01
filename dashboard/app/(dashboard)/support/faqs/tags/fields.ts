@@ -2,7 +2,7 @@ import type { FieldOption } from "@/types/data-table"
 
 /**
  * Available fields for FAQ tags table advanced filtering
- * Based on legacy collection API faq_tags collection schema
+ * Based on the typed FAQ-tag API schema
  */
 export const tagAvailableFields: FieldOption[] = [
   // Basic Information

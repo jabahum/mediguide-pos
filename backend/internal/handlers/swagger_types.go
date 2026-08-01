@@ -100,6 +100,26 @@ type ErrorResponse struct {
 	Error   string `json:"error" example:"invalid request"`
 }
 
+type SupportTicketEnvelope struct {
+	Success bool                 `json:"success"`
+	Data    models.SupportTicket `json:"data"`
+}
+
+type SupportReplyEnvelope struct {
+	Success bool                      `json:"success"`
+	Data    models.SupportTicketReply `json:"data"`
+}
+
+type PaginatedSupportTicketsEnvelope struct {
+	Success bool                                      `json:"success"`
+	Data    services.PageResult[models.SupportTicket] `json:"data"`
+}
+
+type PaginatedSupportRepliesEnvelope struct {
+	Success bool                                           `json:"success"`
+	Data    services.PageResult[models.SupportTicketReply] `json:"data"`
+}
+
 type UserEnvelope struct {
 	Success bool        `json:"success" example:"true"`
 	Data    models.User `json:"data"`

@@ -446,6 +446,16 @@ export interface HandlersPaginatedSettingsEnvelope {
   success?: boolean;
 }
 
+export interface HandlersPaginatedSupportRepliesEnvelope {
+  data?: ServicesPageResultModelsSupportTicketReply;
+  success?: boolean;
+}
+
+export interface HandlersPaginatedSupportTicketsEnvelope {
+  data?: ServicesPageResultModelsSupportTicket;
+  success?: boolean;
+}
+
 export interface HandlersPaginatedTherapeuticCategoriesEnvelope {
   data?: {
     items?: ModelsTherapeuticCategory[];
@@ -575,6 +585,16 @@ export interface HandlersSearchResultsEnvelope {
 export interface HandlersSettingEnvelope {
   data?: ModelsSetting;
   /** @example true */
+  success?: boolean;
+}
+
+export interface HandlersSupportReplyEnvelope {
+  data?: ModelsSupportTicketReply;
+  success?: boolean;
+}
+
+export interface HandlersSupportTicketEnvelope {
+  data?: ModelsSupportTicket;
   success?: boolean;
 }
 
@@ -927,6 +947,34 @@ export interface ModelsSetting {
   value_json?: object;
 }
 
+export interface ModelsSupportTicket {
+  assigned_to?: string;
+  assignee_name?: string;
+  category?: string;
+  created_at?: string;
+  description?: string;
+  id?: string;
+  priority?: string;
+  status?: string;
+  subject?: string;
+  updated_at?: string;
+  user_email?: string;
+  user_id?: string;
+  user_name?: string;
+}
+
+export interface ModelsSupportTicketReply {
+  created_at?: string;
+  id?: string;
+  is_internal?: boolean;
+  message?: string;
+  ticket_id?: string;
+  updated_at?: string;
+  user_email?: string;
+  user_id?: string;
+  user_name?: string;
+}
+
 export interface ModelsSyncPackage {
   checksum?: string;
   created_at?: string;
@@ -1263,6 +1311,22 @@ export interface ServicesNotificationTemplateInput {
   variables?: Record<string, any>;
 }
 
+export interface ServicesPageResultModelsSupportTicket {
+  items?: ModelsSupportTicket[];
+  page?: number;
+  per_page?: number;
+  total_items?: number;
+  total_pages?: number;
+}
+
+export interface ServicesPageResultModelsSupportTicketReply {
+  items?: ModelsSupportTicketReply[];
+  page?: number;
+  per_page?: number;
+  total_items?: number;
+  total_pages?: number;
+}
+
 export interface ServicesPageResultServicesRoleView {
   items?: ServicesRoleView[];
   page?: number;
@@ -1335,6 +1399,27 @@ export interface ServicesSearchResult {
 export interface ServicesStartCalculatorUsageInput {
   calculator_type?: string;
   session_start?: string;
+}
+
+export interface ServicesSupportReplyCreate {
+  is_internal?: boolean;
+  message?: string;
+}
+
+export interface ServicesSupportTicketCreate {
+  category?: string;
+  description?: string;
+  priority?: string;
+  subject?: string;
+}
+
+export interface ServicesSupportTicketUpdate {
+  assigned_to?: string;
+  category?: string;
+  description?: string;
+  priority?: string;
+  status?: string;
+  subject?: string;
 }
 
 export interface ServicesTreeNode {

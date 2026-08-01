@@ -22,8 +22,6 @@ const DOMAIN_COLLECTION_PATHS: Record<string, string> = {
   consultants: "/api/v2/consultants",
   ministry_directory: "/api/v2/ministry-directory",
   languages: "/api/v2/reference-languages",
-  support_tickets: "/api/v2/support-tickets",
-  support_ticket_replies: "/api/v2/support-ticket-replies",
   conversations: "/api/v2/conversations",
   messages: "/api/v2/messages",
   reading_progress: "/api/v2/reading-progress",
@@ -94,14 +92,6 @@ const RELATION_MAP: Record<string, Record<string, ExpandConfig>> = {
     reviewer: { collection: "users" },
     tags: { collection: "faq_tags", many: true },
     related_faqs: { collection: "faqs", many: true },
-  },
-  support_tickets: {
-    assigned_to: { collection: "users" },
-    user_id: { collection: "users" },
-  },
-  support_ticket_replies: {
-    ticket_id: { collection: "support_tickets" },
-    user_id: { collection: "users" },
   },
 }
 

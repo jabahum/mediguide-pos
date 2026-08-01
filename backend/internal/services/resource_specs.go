@@ -261,48 +261,6 @@ var resourceSpecs = map[string]resourceSpec{
 			return query.Where("l.deleted_at IS NULL")
 		},
 	},
-	"support_tickets": {
-		Table:        "support_tickets st",
-		IDColumn:     "st.id",
-		Select:       "st.*",
-		DefaultOrder: "st.updated_at DESC",
-		SearchColumns: []string{
-			"st.subject", "st.description", "coalesce(st.category, '')", "st.status", "st.priority",
-		},
-		FilterColumns: map[string]string{
-			"status":   "st.status",
-			"priority": "st.priority",
-			"category": "st.category",
-		},
-		Access: resourceAccessUser,
-		ApplyScopes: func(query *gorm.DB) *gorm.DB {
-			return query.Where("st.deleted_at IS NULL")
-		},
-		ApplyUser: func(query *gorm.DB, userID string) *gorm.DB {
-			return query.Where("(st.user_id::text = ? OR st.assigned_to::text = ?)", userID, userID)
-		},
-	},
-	"support_ticket_replies": {
-		Table:        "support_ticket_replies str",
-		IDColumn:     "str.id",
-		Select:       "str.*, u.id::text AS user_expand_id, u.name AS user_expand_name, u.email AS user_expand_email, u.avatar AS user_expand_avatar, u.verified AS user_expand_verified",
-		DefaultOrder: "str.created_at ASC",
-		SearchColumns: []string{
-			"str.message",
-		},
-		FilterColumns: map[string]string{
-			"ticket_id":   "str.ticket_id::text",
-			"is_internal": "str.is_internal::text",
-		},
-		Access: resourceAccessUser,
-		Joins:  []string{"LEFT JOIN support_tickets st ON st.id = str.ticket_id", "LEFT JOIN users u ON u.id = str.user_id"},
-		ApplyScopes: func(query *gorm.DB) *gorm.DB {
-			return query.Where("str.deleted_at IS NULL")
-		},
-		ApplyUser: func(query *gorm.DB, userID string) *gorm.DB {
-			return query.Where("(str.user_id::text = ? OR st.user_id::text = ? OR st.assigned_to::text = ?)", userID, userID, userID)
-		},
-	},
 	"conversations": {
 		Table:        "conversations c",
 		IDColumn:     "c.id",

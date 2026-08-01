@@ -150,10 +150,6 @@ func (s ResourceService) Create(resource string, payload map[string]any, userID 
 	}
 
 	switch resource {
-	case "support_tickets":
-		return s.createSupportTicket(payload, userID)
-	case "support_ticket_replies":
-		return s.createSupportTicketReply(payload, userID)
 	case "conversations":
 		return s.createConversation(payload, userID)
 	case "messages":

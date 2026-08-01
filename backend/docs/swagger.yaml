@@ -668,6 +668,20 @@ definitions:
         example: true
         type: boolean
     type: object
+  handlers.PaginatedSupportRepliesEnvelope:
+    properties:
+      data:
+        $ref: '#/definitions/services.PageResult-models_SupportTicketReply'
+      success:
+        type: boolean
+    type: object
+  handlers.PaginatedSupportTicketsEnvelope:
+    properties:
+      data:
+        $ref: '#/definitions/services.PageResult-models_SupportTicket'
+      success:
+        type: boolean
+    type: object
   handlers.PaginatedTherapeuticCategoriesEnvelope:
     properties:
       data:
@@ -860,6 +874,20 @@ definitions:
         $ref: '#/definitions/models.Setting'
       success:
         example: true
+        type: boolean
+    type: object
+  handlers.SupportReplyEnvelope:
+    properties:
+      data:
+        $ref: '#/definitions/models.SupportTicketReply'
+      success:
+        type: boolean
+    type: object
+  handlers.SupportTicketEnvelope:
+    properties:
+      data:
+        $ref: '#/definitions/models.SupportTicket'
+      success:
         type: boolean
     type: object
   handlers.SyncPackageEnvelope:
@@ -1488,6 +1516,56 @@ definitions:
       value_json:
         type: object
     type: object
+  models.SupportTicket:
+    properties:
+      assigned_to:
+        type: string
+      assignee_name:
+        type: string
+      category:
+        type: string
+      created_at:
+        type: string
+      description:
+        type: string
+      id:
+        type: string
+      priority:
+        type: string
+      status:
+        type: string
+      subject:
+        type: string
+      updated_at:
+        type: string
+      user_email:
+        type: string
+      user_id:
+        type: string
+      user_name:
+        type: string
+    type: object
+  models.SupportTicketReply:
+    properties:
+      created_at:
+        type: string
+      id:
+        type: string
+      is_internal:
+        type: boolean
+      message:
+        type: string
+      ticket_id:
+        type: string
+      updated_at:
+        type: string
+      user_email:
+        type: string
+      user_id:
+        type: string
+      user_name:
+        type: string
+    type: object
   models.SyncPackage:
     properties:
       checksum:
@@ -2094,6 +2172,36 @@ definitions:
         additionalProperties: {}
         type: object
     type: object
+  services.PageResult-models_SupportTicket:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/models.SupportTicket'
+        type: array
+      page:
+        type: integer
+      per_page:
+        type: integer
+      total_items:
+        type: integer
+      total_pages:
+        type: integer
+    type: object
+  services.PageResult-models_SupportTicketReply:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/models.SupportTicketReply'
+        type: array
+      page:
+        type: integer
+      per_page:
+        type: integer
+      total_items:
+        type: integer
+      total_pages:
+        type: integer
+    type: object
   services.PageResult-services_RoleView:
     properties:
       items:
@@ -2227,6 +2335,39 @@ definitions:
       calculator_type:
         type: string
       session_start:
+        type: string
+    type: object
+  services.SupportReplyCreate:
+    properties:
+      is_internal:
+        type: boolean
+      message:
+        type: string
+    type: object
+  services.SupportTicketCreate:
+    properties:
+      category:
+        type: string
+      description:
+        type: string
+      priority:
+        type: string
+      subject:
+        type: string
+    type: object
+  services.SupportTicketUpdate:
+    properties:
+      assigned_to:
+        type: string
+      category:
+        type: string
+      description:
+        type: string
+      priority:
+        type: string
+      status:
+        type: string
+      subject:
         type: string
     type: object
   services.TreeNode:
@@ -5139,6 +5280,140 @@ paths:
       summary: Create a setting
       tags:
       - reference
+  /api/v2/support/tickets:
+    get:
+      parameters:
+      - description: Page
+        in: query
+        name: page
+        type: integer
+      - description: Items per page
+        in: query
+        name: per_page
+        type: integer
+      - description: Subject or description
+        in: query
+        name: search
+        type: string
+      - description: open, in_progress, resolved, or closed
+        in: query
+        name: status
+        type: string
+      - description: low, normal, high, or urgent
+        in: query
+        name: priority
+        type: string
+      - description: Category
+        in: query
+        name: category
+        type: string
+      - description: Owner UUID (staff only)
+        in: query
+        name: owner_id
+        type: string
+      - description: Assignee UUID (staff only)
+        in: query
+        name: assigned_to
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.PaginatedSupportTicketsEnvelope'
+      security:
+      - BearerAuth: []
+      summary: List support tickets available to the current user
+      tags:
+      - support
+    post:
+      parameters:
+      - description: Ticket
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/services.SupportTicketCreate'
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/handlers.SupportTicketEnvelope'
+      security:
+      - BearerAuth: []
+      summary: Create a support ticket owned by the current user
+      tags:
+      - support
+  /api/v2/support/tickets/{id}:
+    delete:
+      responses:
+        "204":
+          description: No Content
+      security:
+      - BearerAuth: []
+      summary: Archive an accessible support ticket
+      tags:
+      - support
+    get:
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.SupportTicketEnvelope'
+      security:
+      - BearerAuth: []
+      summary: Get an accessible support ticket
+      tags:
+      - support
+    patch:
+      description: Owners may edit open ticket content; support staff may assign and
+        transition status.
+      parameters:
+      - description: Ticket changes
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/services.SupportTicketUpdate'
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.SupportTicketEnvelope'
+      security:
+      - BearerAuth: []
+      summary: Update a support ticket
+      tags:
+      - support
+  /api/v2/support/tickets/{id}/replies:
+    get:
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.PaginatedSupportRepliesEnvelope'
+      security:
+      - BearerAuth: []
+      summary: List replies for an accessible support ticket
+      tags:
+      - support
+    post:
+      parameters:
+      - description: Reply
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/services.SupportReplyCreate'
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/handlers.SupportReplyEnvelope'
+      security:
+      - BearerAuth: []
+      summary: Reply to an accessible support ticket
+      tags:
+      - support
   /api/v2/sync/manifest:
     get:
       produces:

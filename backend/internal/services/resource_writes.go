@@ -6,56 +6,6 @@ import (
 	"github.com/google/uuid"
 )
 
-// createSupportTicket creates a new support ticket owned by the user.
-func (s ResourceService) createSupportTicket(payload map[string]any, userID string) (*ResourceItemResult, error) {
-	row := map[string]any{
-		"id":          uuid.New(),
-		"user_id":     mustUUID(userID),
-		"subject":     firstPayloadString(payload, "subject"),
-		"description": firstPayloadString(payload, "description"),
-		"status":      defaultString(firstPayloadString(payload, "status"), "open"),
-		"priority":    defaultString(firstPayloadString(payload, "priority"), "normal"),
-		"category":    nullableString(firstPayloadString(payload, "category")),
-		"created_at":  time.Now().UTC(),
-		"updated_at":  time.Now().UTC(),
-	}
-	if row["subject"] == "" || row["description"] == "" {
-		return nil, ErrResourceInvalid
-	}
-	if err := s.DB.Table("support_tickets").Create(&row).Error; err != nil {
-		return nil, err
-	}
-	return s.Get("support_tickets", row["id"].(uuid.UUID).String(), userID)
-}
-
-// createSupportTicketReply adds a reply to an existing ticket the user has access to.
-func (s ResourceService) createSupportTicketReply(payload map[string]any, userID string) (*ResourceItemResult, error) {
-	ticketID, err := parsePayloadUUID(payload, "ticket_id")
-	if err != nil {
-		return nil, ErrResourceInvalid
-	}
-	if err := s.ensureTicketAccess(ticketID, userID); err != nil {
-		return nil, err
-	}
-	message := firstPayloadString(payload, "message")
-	if message == "" {
-		return nil, ErrResourceInvalid
-	}
-	row := map[string]any{
-		"id":          uuid.New(),
-		"ticket_id":   ticketID,
-		"user_id":     mustUUID(userID),
-		"message":     message,
-		"is_internal": false,
-		"created_at":  time.Now().UTC(),
-		"updated_at":  time.Now().UTC(),
-	}
-	if err := s.DB.Table("support_ticket_replies").Create(&row).Error; err != nil {
-		return nil, err
-	}
-	return s.Get("support_ticket_replies", row["id"].(uuid.UUID).String(), userID)
-}
-
 // createConversation creates a new conversation between two participants (idempotent).
 func (s ResourceService) createConversation(payload map[string]any, userID string) (*ResourceItemResult, error) {
 	p1, err := parsePayloadUUIDAny(payload, "participant1_user_id", "participant1")

@@ -7,20 +7,6 @@ import (
 	"gorm.io/gorm"
 )
 
-// ensureTicketAccess verifies the user owns or is assigned to the ticket.
-func (s ResourceService) ensureTicketAccess(ticketID uuid.UUID, userID string) error {
-	var count int64
-	if err := s.DB.Table("support_tickets").
-		Where("id = ? AND deleted_at IS NULL AND (user_id::text = ? OR assigned_to::text = ?)", ticketID, userID, userID).
-		Count(&count).Error; err != nil {
-		return err
-	}
-	if count == 0 {
-		return ErrResourceForbidden
-	}
-	return nil
-}
-
 // ensureConversationAccess verifies the user is a participant in the conversation.
 func (s ResourceService) ensureConversationAccess(conversationID uuid.UUID, userID string) error {
 	var count int64

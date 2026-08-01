@@ -1551,8 +1551,6 @@ class BackendApiService extends GetxService {
       'consultants' => '/api/v2/consultants',
       'ministry_directory' => '/api/v2/ministry-directory',
       'languages' => '/api/v2/reference-languages',
-      'support_tickets' => '/api/v2/support-tickets',
-      'support_ticket_replies' => '/api/v2/support-ticket-replies',
       'conversations' => '/api/v2/conversations',
       'messages' => '/api/v2/messages',
       'guideline_usage_logs' => '/api/v2/guideline-usage',

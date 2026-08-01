@@ -4,8 +4,8 @@ import 'package:get/get.dart';
 import 'package:toastification/toastification.dart';
 import 'package:infinite_scroll_pagination/infinite_scroll_pagination.dart';
 import '../../data/models/models.dart';
+import '../../data/repositories/support_repository.dart';
 import '../../data/services/backend_api_service.dart';
-import '../../data/services/auth_service.dart';
 import '../../utils/common.dart';
 import '../../utils/constants.dart';
 import '../../widgets/generic_filter_bottom_sheet.dart';
@@ -13,6 +13,8 @@ import '../../data/models/filter_models.dart';
 
 /// Enhanced Help Center Controller with user-specific support ticket management
 class HelpCenterController extends GetxController {
+  SupportRepository get _repository => SupportRepository(BackendApiService.to);
+
   // Reactive state
   final isLoading = false.obs;
   final isCreatingTicket = false.obs;
@@ -53,18 +55,11 @@ class HelpCenterController extends GetxController {
     super.onInit();
     initializePagination();
     setupSearchListener();
-    subscribeToRealTimeUpdates();
   }
 
   @override
   void onClose() {
     pagingController.dispose();
-    BackendApiService.to.unsubscribeFromCollection(
-      collectionName: 'support_tickets',
-    );
-    BackendApiService.to.unsubscribeFromCollection(
-      collectionName: 'support_ticket_replies',
-    );
     super.onClose();
   }
 
@@ -99,32 +94,8 @@ class HelpCenterController extends GetxController {
         selectedPriority.value != 'all';
   }
 
-  /// Subscribe to real-time updates for user's tickets
-  void subscribeToRealTimeUpdates() {
-    final currentUser = AuthService.to.currentUser.value;
-    if (currentUser != null) {
-      subscribeToMyTickets((ticket) {
-        pagingController.refresh();
-        if (selectedTicket.value?.id == ticket.id) {
-          selectedTicket.value = ticket;
-        }
-      });
-
-      subscribeToMyTicketReplies((reply) {
-        if (selectedTicket.value?.id == reply.ticketId) {
-          currentTicketReplies.add(reply);
-        }
-      });
-    }
-  }
-
   /// Load tickets page for infinite scroll pagination
   Future<List<SupportTicket>> loadTicketsPage(int pageKey) async {
-    final currentUser = AuthService.to.currentUser.value;
-    if (currentUser == null) {
-      throw Exception('Please log in to view support tickets');
-    }
-
     return await searchMyTickets(
       query: searchQuery.value,
       page: pageKey,
@@ -202,16 +173,6 @@ class HelpCenterController extends GetxController {
     required String category,
     required TicketPriority priority,
   }) async {
-    final currentUser = AuthService.to.currentUser.value;
-    if (currentUser == null) {
-      Common.quickToast(
-        type: ToastificationType.error,
-        title: 'Error',
-        description: 'Please log in to create a support ticket',
-      );
-      return;
-    }
-
     try {
       isCreatingTicket.value = true;
 
@@ -380,10 +341,7 @@ class HelpCenterController extends GetxController {
     }
   }
 
-  // ==================== USER-SPECIFIC SUPPORT TICKET METHODS ====================
-
-  /// Get current user's support tickets only
-  /// All queries are automatically filtered by the authenticated user's ID
+  // Ownership is enforced by the typed backend using JWT claims.
   Future<List<SupportTicket>> getMyTickets({
     int page = 1,
     int perPage = 30,
@@ -391,157 +349,44 @@ class HelpCenterController extends GetxController {
     String? sort,
     String? expand,
   }) async {
-    // Get current authenticated user
-    final currentUser = AuthService.to.currentUser.value;
-    if (currentUser == null) {
-      throw Exception('User must be authenticated to view tickets');
-    }
-
-    // Build user-specific filter
-    final List<String> filters = ['user_id = "${currentUser.id}"'];
-
-    // Add any additional filters
-    if (additionalFilter != null && additionalFilter.isNotEmpty) {
-      filters.add(additionalFilter);
-    }
-
-    final combinedFilter = filters.join(' && ');
-
-    final result = await BackendApiService.to.getResourceList(
-      collectionName: 'support_tickets',
-      page: page,
-      perPage: perPage,
-      filter: combinedFilter,
-      sort: sort ?? '-updated',
-      expand: expand ?? 'user_id',
-    );
-
-    return result.items
-        .map((record) => SupportTicket.fromRecord(record))
-        .toList();
+    final result = await _repository.listTickets(page: page, perPage: perPage);
+    return result.items;
   }
 
-  /// Get a specific ticket by ID (only if it belongs to current user)
-  Future<SupportTicket?> getMyTicketById(
-    String ticketId, {
-    String? expand,
-  }) async {
-    // Get current authenticated user
-    final currentUser = AuthService.to.currentUser.value;
-    if (currentUser == null) {
-      throw Exception('User must be authenticated to view ticket');
-    }
+  Future<SupportTicket?> getMyTicketById(String ticketId, {String? expand}) =>
+      _repository.getTicket(ticketId);
 
-    try {
-      final record = await BackendApiService.to.getResource(
-        collectionName: 'support_tickets',
-        recordId: ticketId,
-        expand: expand ?? 'user_id',
-      );
-
-      if (record == null) return null;
-
-      final ticket = SupportTicket.fromRecord(record);
-
-      // Verify ticket belongs to current user
-      if (!ticket.isOwnedBy(currentUser.id)) {
-        throw Exception(
-          'Access denied: Ticket does not belong to current user',
-        );
-      }
-
-      return ticket;
-    } catch (e) {
-      rethrow;
-    }
-  }
-
-  /// Create a new support ticket for the current user
   Future<SupportTicket> createMyTicket({
     required String subject,
     required String description,
     String? category,
     TicketPriority priority = TicketPriority.normal,
-  }) async {
-    // Get current authenticated user
-    final currentUser = AuthService.to.currentUser.value;
-    if (currentUser == null) {
-      throw Exception('User must be authenticated to create ticket');
-    }
+  }) => _repository.createTicket(
+    subject: subject,
+    description: description,
+    category: category,
+    priority: priority,
+  );
 
-    final ticketData = {
-      'subject': subject,
-      'description': description,
-      'category': category ?? '',
-      'status': 'open',
-      'priority': priority.name,
-      'user_id': currentUser.id,
-    };
-
-    final record = await BackendApiService.to.createResource(
-      collectionName: 'support_tickets',
-      data: ticketData,
-    );
-
-    return SupportTicket.fromRecord(record);
-  }
-
-  /// Get replies for a specific ticket (only if ticket belongs to current user)
-  /// Excludes internal replies (is_internal = false only)
   Future<List<SupportTicketReply>> getMyTicketReplies({
     required String ticketId,
     int page = 1,
     int perPage = 50,
     String? sort,
   }) async {
-    // First verify the ticket belongs to current user
-    await getMyTicketById(ticketId);
-
-    // Get replies for this ticket (exclude internal replies)
-    final result = await BackendApiService.to.getResourceList(
-      collectionName: 'support_ticket_replies',
+    final result = await _repository.listReplies(
+      ticketId,
       page: page,
       perPage: perPage,
-      filter: 'ticket_id = "$ticketId" && is_internal = false',
-      sort: sort ?? 'created',
-      expand: 'user_id',
     );
-
-    return result.items
-        .map((record) => SupportTicketReply.fromRecord(record))
-        .toList();
+    return result.items;
   }
 
-  /// Add a reply to user's own ticket
   Future<SupportTicketReply> addReplyToMyTicket({
     required String ticketId,
     required String message,
-  }) async {
-    // Get current authenticated user
-    final currentUser = AuthService.to.currentUser.value;
-    if (currentUser == null) {
-      throw Exception('User must be authenticated to reply to ticket');
-    }
+  }) => _repository.createReply(ticketId: ticketId, message: message);
 
-    // Verify ticket belongs to current user
-    await getMyTicketById(ticketId);
-
-    final replyData = {
-      'ticket_id': ticketId,
-      'message': message,
-      'user_id': currentUser.id,
-      'is_internal': false, // User replies are always public
-    };
-
-    final record = await BackendApiService.to.createResource(
-      collectionName: 'support_ticket_replies',
-      data: replyData,
-    );
-
-    return SupportTicketReply.fromRecord(record);
-  }
-
-  /// Search current user's tickets
   Future<List<SupportTicket>> searchMyTickets({
     required String query,
     int page = 1,
@@ -550,89 +395,14 @@ class HelpCenterController extends GetxController {
     TicketPriority? priorityFilter,
     String? categoryFilter,
   }) async {
-    // Get current authenticated user
-    final currentUser = AuthService.to.currentUser.value;
-    if (currentUser == null) {
-      throw Exception('User must be authenticated to search tickets');
-    }
-
-    final List<String> filters = ['user_id = "${currentUser.id}"'];
-
-    // Search in subject and description
-    if (query.isNotEmpty) {
-      final q = BackendApiService.escapeFilterValue(query);
-      filters.add('(subject ~ "$q" || description ~ "$q")');
-    }
-
-    // Status filter
-    if (statusFilter != null) {
-      filters.add('status = "${statusFilter.name}"');
-    }
-
-    // Priority filter
-    if (priorityFilter != null) {
-      filters.add('priority = "${priorityFilter.name}"');
-    }
-
-    // Category filter
-    if (categoryFilter != null && categoryFilter.isNotEmpty) {
-      final category = BackendApiService.escapeFilterValue(categoryFilter);
-      filters.add('category = "$category"');
-    }
-
-    final combinedFilter = filters.join(' && ');
-
-    final result = await BackendApiService.to.getResourceList(
-      collectionName: 'support_tickets',
+    final result = await _repository.listTickets(
       page: page,
       perPage: perPage,
-      filter: combinedFilter,
-      sort: '-updated',
-      expand: 'user_id',
+      search: query,
+      status: statusFilter,
+      priority: priorityFilter,
+      category: categoryFilter,
     );
-
-    return result.items
-        .map((record) => SupportTicket.fromRecord(record))
-        .toList();
-  }
-
-  /// Subscribe to real-time updates for current user's tickets
-  void subscribeToMyTickets(Function(SupportTicket) onTicketUpdate) {
-    // Get current authenticated user
-    final currentUser = AuthService.to.currentUser.value;
-    if (currentUser == null) {
-      throw Exception('User must be authenticated to subscribe to tickets');
-    }
-
-    BackendApiService.to.subscribeToCollection('support_tickets', (event) {
-      if (event.record != null) {
-        final ticket = SupportTicket.fromRecord(event.record!);
-        // Only notify if ticket belongs to current user
-        if (ticket.isOwnedBy(currentUser.id)) {
-          onTicketUpdate(ticket);
-        }
-      }
-    }, filter: 'user_id = "${currentUser.id}"');
-  }
-
-  /// Subscribe to real-time updates for replies to current user's tickets
-  void subscribeToMyTicketReplies(Function(SupportTicketReply) onReplyUpdate) {
-    // Get current authenticated user
-    final currentUser = AuthService.to.currentUser.value;
-    if (currentUser == null) {
-      throw Exception('User must be authenticated to subscribe to replies');
-    }
-
-    BackendApiService.to.subscribeToCollection('support_ticket_replies', (
-      event,
-    ) {
-      if (event.record != null) {
-        final reply = SupportTicketReply.fromRecord(event.record!);
-        // Only show public replies (is_internal = false)
-        if (reply.isPublic) {
-          onReplyUpdate(reply);
-        }
-      }
-    }, filter: 'is_internal = false');
+    return result.items;
   }
 }

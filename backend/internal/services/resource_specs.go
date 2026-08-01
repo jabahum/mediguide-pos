@@ -261,61 +261,6 @@ var resourceSpecs = map[string]resourceSpec{
 			return query.Where("l.deleted_at IS NULL")
 		},
 	},
-	"notifications": {
-		Table:        "notifications n",
-		IDColumn:     "n.id",
-		Select:       "n.*",
-		DefaultOrder: "n.created_at DESC",
-		SearchColumns: []string{
-			"n.title", "n.message", "n.type", "n.priority",
-		},
-		FilterColumns: map[string]string{
-			"type":     "n.type",
-			"priority": "n.priority",
-		},
-		Access: resourceAccessUser,
-		ApplyScopes: func(query *gorm.DB) *gorm.DB {
-			return query.Where("n.deleted_at IS NULL")
-		},
-		ApplyUser: func(query *gorm.DB, userID string) *gorm.DB {
-			return query.Where("(n.user_id::text = ? OR n.user_id IS NULL)", userID)
-		},
-	},
-	"notification_templates": {
-		Table:        "notification_templates nt",
-		IDColumn:     "nt.id",
-		Select:       "nt.*",
-		DefaultOrder: "nt.name ASC",
-		SearchColumns: []string{
-			"nt.name", "nt.type", "nt.category", "coalesce(nt.subject, '')",
-		},
-		FilterColumns: map[string]string{
-			"status":   "nt.status",
-			"type":     "nt.type",
-			"category": "nt.category",
-		},
-		Access: resourceAccessAuth,
-		ApplyScopes: func(query *gorm.DB) *gorm.DB {
-			return query.Where("nt.deleted_at IS NULL")
-		},
-	},
-	"notification_campaigns": {
-		Table:        "notification_campaigns nc",
-		IDColumn:     "nc.id",
-		Select:       "nc.*",
-		DefaultOrder: "nc.created_at DESC",
-		SearchColumns: []string{
-			"nc.name", "nc.type", "nc.status",
-		},
-		FilterColumns: map[string]string{
-			"status": "nc.status",
-			"type":   "nc.type",
-		},
-		Access: resourceAccessAuth,
-		ApplyScopes: func(query *gorm.DB) *gorm.DB {
-			return query.Where("nc.deleted_at IS NULL")
-		},
-	},
 	"support_tickets": {
 		Table:        "support_tickets st",
 		IDColumn:     "st.id",

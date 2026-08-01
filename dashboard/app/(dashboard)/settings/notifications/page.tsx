@@ -44,8 +44,7 @@ import {
   Loader2
 } from "lucide-react"
 import { showToast } from "@/lib/toast"
-import { backendClient } from "@/lib/backend-client"
-import { Collections } from "@/types/backend-types"
+import { notificationsService } from "@/services/notifications.service"
 import type {
   NotificationTemplatesResponse,
   NotificationCampaignsResponse,
@@ -80,8 +79,8 @@ export default function NotificationsPage() {
   const fetchData = useCallback(async () => {
     try {
       const [templatesResult, campaignsResult] = await Promise.all([
-        backendClient.resource(Collections.NotificationTemplates).getList(1, 50),
-        backendClient.resource(Collections.NotificationCampaigns).getList(1, 50)
+        notificationsService.listTemplates({ page: 1, per_page: 50 }),
+        notificationsService.listCampaigns({ page: 1, per_page: 50 })
       ])
 
       setTemplates(templatesResult.items as NotificationTemplatesResponse[])
@@ -168,7 +167,7 @@ export default function NotificationsPage() {
   const handleToggleTemplate = async (templateId: string, currentStatus: string) => {
     const newStatus = currentStatus === "active" ? "inactive" : "active"
     try {
-      await backendClient.resource(Collections.NotificationTemplates).update(templateId, { status: newStatus })
+      await notificationsService.updateTemplateStatus(templateId, newStatus as "active" | "inactive")
       showToast.success(
         newStatus === "active" ? "Template activated" : "Template deactivated",
         `Notification template has been ${newStatus === "active" ? 'activated' : 'deactivated'}`
@@ -186,7 +185,7 @@ export default function NotificationsPage() {
       if (action === "resume") newStatus = "running"
       if (action === "stop") newStatus = "completed"
 
-      await backendClient.resource(Collections.NotificationCampaigns).update(campaignId, { status: newStatus })
+      await notificationsService.updateCampaignStatus(campaignId, newStatus as "running" | "paused" | "completed")
       showToast.success(`Campaign ${action}ed`, `Campaign has been ${action}ed`)
       fetchData()
     } catch (error) {

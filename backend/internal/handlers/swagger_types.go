@@ -402,6 +402,55 @@ type PaginatedLanguagesEnvelope struct {
 	Data    PaginatedLanguages `json:"data"`
 }
 
+type NotificationEnvelope struct {
+	Success bool                `json:"success" example:"true"`
+	Data    models.Notification `json:"data"`
+}
+
+type PaginatedNotifications struct {
+	Items      []models.Notification `json:"items"`
+	Page       int                   `json:"page" example:"1"`
+	PerPage    int                   `json:"per_page" example:"20"`
+	TotalItems int64                 `json:"total_items" example:"1"`
+	TotalPages int                   `json:"total_pages" example:"1"`
+}
+
+type PaginatedNotificationsEnvelope struct {
+	Success bool                   `json:"success" example:"true"`
+	Data    PaginatedNotifications `json:"data"`
+}
+
+type NotificationTemplateEnvelope struct {
+	Success bool                        `json:"success" example:"true"`
+	Data    models.NotificationTemplate `json:"data"`
+}
+type PaginatedNotificationTemplates struct {
+	Items      []models.NotificationTemplate `json:"items"`
+	Page       int                           `json:"page"`
+	PerPage    int                           `json:"per_page"`
+	TotalItems int64                         `json:"total_items"`
+	TotalPages int                           `json:"total_pages"`
+}
+type PaginatedNotificationTemplatesEnvelope struct {
+	Success bool                           `json:"success"`
+	Data    PaginatedNotificationTemplates `json:"data"`
+}
+type NotificationCampaignEnvelope struct {
+	Success bool                        `json:"success"`
+	Data    models.NotificationCampaign `json:"data"`
+}
+type PaginatedNotificationCampaigns struct {
+	Items      []models.NotificationCampaign `json:"items"`
+	Page       int                           `json:"page"`
+	PerPage    int                           `json:"per_page"`
+	TotalItems int64                         `json:"total_items"`
+	TotalPages int                           `json:"total_pages"`
+}
+type PaginatedNotificationCampaignsEnvelope struct {
+	Success bool                           `json:"success"`
+	Data    PaginatedNotificationCampaigns `json:"data"`
+}
+
 type LegacyTreeNode = services.TreeNode
 type LegacyTreeResult = services.TreeResult
 type LegacyOverviewResult = services.OverviewResult

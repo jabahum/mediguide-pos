@@ -109,10 +109,10 @@ class AboutUsPage extends GetWidget<AboutUsController> {
                       _ActionTile(
                         icon: LucideIcons.mail,
                         title: AppTranslationKey.emailSupport.tr,
-                        subtitle: 'support@mediguide.ug',
+                        subtitle: 'support@health.go.ug',
                         trailingIcon: LucideIcons.externalLink,
                         onTap: () =>
-                            controller.launchEmail('support@mediguide.ug'),
+                            controller.launchEmail('support@health.go.ug'),
                       ),
                       _SectionDivider(),
                       _ActionTile(

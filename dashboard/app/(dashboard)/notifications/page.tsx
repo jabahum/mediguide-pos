@@ -2,8 +2,7 @@
 
 import * as React from "react"
 import { useRouter } from "next/navigation"
-import { ColumnDef } from "@tanstack/react-table"
-import { Bell, Loader2, Plus } from "lucide-react"
+import { Bell, Loader2, Plus, RefreshCw } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import {
@@ -17,8 +16,8 @@ import {
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { BackendDataTable } from "@/components/ui/backend-data-table"
 import { PageHeader } from "@/components/ui/page-header"
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import {
   Select,
   SelectContent,
@@ -27,68 +26,26 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
-import { getBackendClient, hasAnyRole } from "@/lib/backend-client"
+import { hasAnyRole } from "@/lib/backend-client"
 import { showToast } from "@/lib/toast"
-import {
-  NotificationsPriorityOptions,
-  NotificationsResponse,
-  NotificationsTypeOptions,
-} from "@/types/backend-types"
+import { notificationsService, NotificationDto, NotificationPriority, NotificationType } from "@/services/notifications.service"
 import { usePermissionContext } from "@/lib/permission-context"
-
-const columns: ColumnDef<NotificationsResponse>[] = [
-  {
-    accessorKey: "title",
-    header: "Title",
-    cell: ({ row }) => <span className="font-medium">{row.getValue("title")}</span>,
-  },
-  {
-    accessorKey: "message",
-    header: "Message",
-    cell: ({ row }) => (
-      <span className="line-clamp-2 text-muted-foreground">
-        {row.getValue("message")}
-      </span>
-    ),
-  },
-  {
-    accessorKey: "type",
-    header: "Type",
-  },
-  {
-    accessorKey: "priority",
-    header: "Priority",
-  },
-  {
-    accessorKey: "created",
-    header: "Created",
-    cell: ({ row }) => {
-      const value = row.getValue("created")
-      if (!value) return null
-      return new Date(String(value)).toLocaleString()
-    },
-  },
-  {
-    accessorKey: "updated",
-    header: "Updated",
-    cell: ({ row }) => {
-      const value = row.getValue("updated")
-      if (!value) return null
-      return new Date(String(value)).toLocaleString()
-    },
-  },
-]
 
 export default function NotificationsPage() {
   const [dialogOpen, setDialogOpen] = React.useState(false)
   const [creating, setCreating] = React.useState(false)
   const [canCreateNotifications, setCanCreateNotifications] = React.useState(false)
-  const [tableRefreshSignal, setTableRefreshSignal] = React.useState(0)
+  const [items, setItems] = React.useState<NotificationDto[]>([])
+  const [fetching, setFetching] = React.useState(true)
+  const [listError, setListError] = React.useState("")
+  const [search, setSearch] = React.useState("")
+  const [page, setPage] = React.useState(1)
+  const [totalPages, setTotalPages] = React.useState(0)
   const [formData, setFormData] = React.useState({
     title: "",
     message: "",
-    type: "info" as NotificationsTypeOptions,
-    priority: "normal" as NotificationsPriorityOptions,
+    type: "info" as NotificationType,
+    priority: "normal" as NotificationPriority,
     action_url: "",
   })
 
@@ -101,6 +58,22 @@ export default function NotificationsPage() {
       router.replace("/")
     }
   }, [loading, hasPermission, router])
+
+  const loadNotifications = React.useCallback(async () => {
+    setFetching(true)
+    setListError("")
+    try {
+      const result = await notificationsService.list({ page, per_page: 20, search: search.trim() || undefined, sort: "created_at", order: "desc" })
+      setItems(result.items)
+      setTotalPages(result.total_pages)
+    } catch (error) {
+      setListError(error instanceof Error ? error.message : "Failed to load notifications")
+    } finally {
+      setFetching(false)
+    }
+  }, [page, search])
+
+  React.useEffect(() => { void loadNotifications() }, [loadNotifications])
 
   const resetForm = () => {
     setFormData({
@@ -148,9 +121,7 @@ export default function NotificationsPage() {
     setCreating(true)
 
     try {
-      const backend = getBackendClient()
-
-      await backend.resource("notifications").create({
+      await notificationsService.create({
         title,
         message,
         type: formData.type,
@@ -161,7 +132,8 @@ export default function NotificationsPage() {
       showToast.success("Notification published", "The notice has been added to the table and is available in the mobile app")
       resetForm()
       setDialogOpen(false)
-      setTableRefreshSignal((signal) => signal + 1)
+      setPage(1)
+      await loadNotifications()
     } catch (error: unknown) {
       console.error("Failed to create notification:", error)
       const message = error instanceof Error ? error.message : "Failed to create notification"
@@ -247,7 +219,7 @@ export default function NotificationsPage() {
                     <Label>Type</Label>
                     <Select
                       value={formData.type}
-                      onValueChange={(value: NotificationsTypeOptions) =>
+                      onValueChange={(value: NotificationType) =>
                         setFormData((current) => ({ ...current, type: value }))
                       }
                     >
@@ -267,7 +239,7 @@ export default function NotificationsPage() {
                     <Label>Priority</Label>
                     <Select
                       value={formData.priority}
-                      onValueChange={(value: NotificationsPriorityOptions) =>
+                      onValueChange={(value: NotificationPriority) =>
                         setFormData((current) => ({ ...current, priority: value }))
                       }
                     >
@@ -321,19 +293,29 @@ export default function NotificationsPage() {
         )}
       </div>
 
-      <BackendDataTable<NotificationsResponse>
-        collection="notifications"
-        columns={columns}
-        searchFields={["title", "message"]}
-        refreshSignal={tableRefreshSignal}
-        query={{
-          sort: "-created",
-        }}
-        ui={{
-          exportable: false,
-          importable: false,
-        }}
-      />
+      <div className="space-y-3 rounded-md border p-4">
+        <div className="flex gap-2">
+          <Input value={search} onChange={(event) => { setSearch(event.target.value); setPage(1) }} placeholder="Search notifications..." />
+          <Button variant="outline" size="icon" onClick={() => void loadNotifications()} aria-label="Refresh notifications">
+            <RefreshCw className={fetching ? "h-4 w-4 animate-spin" : "h-4 w-4"} />
+          </Button>
+        </div>
+        {listError ? (
+          <div className="rounded-md border border-destructive/40 p-4 text-sm text-destructive">{listError}</div>
+        ) : (
+          <Table>
+            <TableHeader><TableRow><TableHead>Title</TableHead><TableHead>Message</TableHead><TableHead>Type</TableHead><TableHead>Priority</TableHead><TableHead>Created</TableHead></TableRow></TableHeader>
+            <TableBody>
+              {!fetching && items.length === 0 && <TableRow><TableCell colSpan={5} className="py-8 text-center text-muted-foreground">No notifications found</TableCell></TableRow>}
+              {items.map((item) => <TableRow key={item.id}><TableCell className="font-medium">{item.title}</TableCell><TableCell className="max-w-md whitespace-normal text-muted-foreground">{item.message}</TableCell><TableCell>{item.type}</TableCell><TableCell>{item.priority}</TableCell><TableCell>{new Date(item.created_at).toLocaleString()}</TableCell></TableRow>)}
+            </TableBody>
+          </Table>
+        )}
+        <div className="flex items-center justify-between text-sm text-muted-foreground">
+          <span>Page {page}{totalPages > 0 ? ` of ${totalPages}` : ""}</span>
+          <div className="flex gap-2"><Button variant="outline" size="sm" disabled={page <= 1 || fetching} onClick={() => setPage((value) => value - 1)}>Previous</Button><Button variant="outline" size="sm" disabled={page >= totalPages || fetching} onClick={() => setPage((value) => value + 1)}>Next</Button></div>
+        </div>
+      </div>
     </div>
   )
 }

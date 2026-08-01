@@ -282,6 +282,34 @@ definitions:
         example: true
         type: boolean
     type: object
+  handlers.NotificationCampaignEnvelope:
+    properties:
+      data:
+        $ref: '#/definitions/models.NotificationCampaign'
+      success:
+        type: boolean
+    type: object
+  handlers.NotificationEnvelope:
+    properties:
+      data:
+        $ref: '#/definitions/models.Notification'
+      success:
+        example: true
+        type: boolean
+    type: object
+  handlers.NotificationStatusInput:
+    properties:
+      status:
+        type: string
+    type: object
+  handlers.NotificationTemplateEnvelope:
+    properties:
+      data:
+        $ref: '#/definitions/models.NotificationTemplate'
+      success:
+        example: true
+        type: boolean
+    type: object
   handlers.PaginatedCalculators:
     properties:
       items:
@@ -530,6 +558,77 @@ definitions:
     properties:
       data:
         $ref: '#/definitions/handlers.PaginatedLanguages'
+      success:
+        example: true
+        type: boolean
+    type: object
+  handlers.PaginatedNotificationCampaigns:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/models.NotificationCampaign'
+        type: array
+      page:
+        type: integer
+      per_page:
+        type: integer
+      total_items:
+        type: integer
+      total_pages:
+        type: integer
+    type: object
+  handlers.PaginatedNotificationCampaignsEnvelope:
+    properties:
+      data:
+        $ref: '#/definitions/handlers.PaginatedNotificationCampaigns'
+      success:
+        type: boolean
+    type: object
+  handlers.PaginatedNotificationTemplates:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/models.NotificationTemplate'
+        type: array
+      page:
+        type: integer
+      per_page:
+        type: integer
+      total_items:
+        type: integer
+      total_pages:
+        type: integer
+    type: object
+  handlers.PaginatedNotificationTemplatesEnvelope:
+    properties:
+      data:
+        $ref: '#/definitions/handlers.PaginatedNotificationTemplates'
+      success:
+        type: boolean
+    type: object
+  handlers.PaginatedNotifications:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/models.Notification'
+        type: array
+      page:
+        example: 1
+        type: integer
+      per_page:
+        example: 20
+        type: integer
+      total_items:
+        example: 1
+        type: integer
+      total_pages:
+        example: 1
+        type: integer
+    type: object
+  handlers.PaginatedNotificationsEnvelope:
+    properties:
+      data:
+        $ref: '#/definitions/handlers.PaginatedNotifications'
       success:
         example: true
         type: boolean
@@ -1237,6 +1336,103 @@ definitions:
       version:
         type: number
     type: object
+  models.Notification:
+    properties:
+      action_url:
+        type: string
+      created_at:
+        type: string
+      id:
+        type: string
+      is_read:
+        type: boolean
+      message:
+        type: string
+      priority:
+        type: string
+      title:
+        type: string
+      type:
+        type: string
+      updated_at:
+        type: string
+      user_id:
+        type: string
+    type: object
+  models.NotificationCampaign:
+    properties:
+      audience_countries:
+        items:
+          type: string
+        type: array
+      audience_roles:
+        items:
+          type: string
+        type: array
+      audience_total:
+        type: integer
+      channels:
+        items:
+          type: string
+        type: array
+      created_at:
+        type: string
+      id:
+        type: string
+      metrics_clicked:
+        type: integer
+      metrics_delivered:
+        type: integer
+      metrics_opened:
+        type: integer
+      metrics_sent:
+        type: integer
+      name:
+        type: string
+      schedule_end:
+        type: string
+      schedule_start:
+        type: string
+      status:
+        type: string
+      type:
+        type: string
+      updated_at:
+        type: string
+    type: object
+  models.NotificationTemplate:
+    properties:
+      audience:
+        type: string
+      category:
+        type: string
+      clicked_count:
+        type: integer
+      content:
+        type: string
+      created_at:
+        type: string
+      id:
+        type: string
+      last_sent:
+        type: string
+      name:
+        type: string
+      opened_count:
+        type: integer
+      sent_count:
+        type: integer
+      status:
+        type: string
+      subject:
+        type: string
+      type:
+        type: string
+      updated_at:
+        type: string
+      variables:
+        type: object
+    type: object
   models.Permission:
     properties:
       code:
@@ -1837,6 +2033,66 @@ definitions:
         items:
           $ref: '#/definitions/models.SyncPackage'
         type: array
+    type: object
+  services.NotificationCampaignInput:
+    properties:
+      audience_countries:
+        items:
+          type: string
+        type: array
+      audience_roles:
+        items:
+          type: string
+        type: array
+      channels:
+        items:
+          type: string
+        type: array
+      name:
+        type: string
+      schedule_end:
+        type: string
+      schedule_start:
+        type: string
+      status:
+        type: string
+      type:
+        type: string
+    type: object
+  services.NotificationInput:
+    properties:
+      action_url:
+        type: string
+      message:
+        type: string
+      priority:
+        type: string
+      title:
+        type: string
+      type:
+        type: string
+      user_id:
+        type: string
+    type: object
+  services.NotificationTemplateInput:
+    properties:
+      audience:
+        type: string
+      category:
+        type: string
+      content:
+        type: string
+      name:
+        type: string
+      status:
+        type: string
+      subject:
+        type: string
+      type:
+        type: string
+      variables:
+        additionalProperties: {}
+        type: object
     type: object
   services.PageResult-services_RoleView:
     properties:
@@ -4037,6 +4293,283 @@ paths:
       summary: Change the current user's password
       tags:
       - auth
+  /api/v2/notification-campaigns:
+    get:
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.PaginatedNotificationCampaignsEnvelope'
+      security:
+      - BearerAuth: []
+      summary: List notification campaigns
+      tags:
+      - notification-administration
+    post:
+      parameters:
+      - description: Campaign
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/services.NotificationCampaignInput'
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/handlers.NotificationCampaignEnvelope'
+      security:
+      - BearerAuth: []
+      summary: Create a notification campaign
+      tags:
+      - notification-administration
+  /api/v2/notification-campaigns/{id}:
+    delete:
+      responses:
+        "204":
+          description: No Content
+      security:
+      - BearerAuth: []
+      summary: Archive a notification campaign
+      tags:
+      - notification-administration
+    get:
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.NotificationCampaignEnvelope'
+      security:
+      - BearerAuth: []
+      summary: Get a notification campaign
+      tags:
+      - notification-administration
+    patch:
+      parameters:
+      - description: Campaign
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/services.NotificationCampaignInput'
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.NotificationCampaignEnvelope'
+      security:
+      - BearerAuth: []
+      summary: Replace editable notification-campaign fields
+      tags:
+      - notification-administration
+  /api/v2/notification-campaigns/{id}/status:
+    patch:
+      parameters:
+      - description: Status
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.NotificationStatusInput'
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.NotificationCampaignEnvelope'
+      security:
+      - BearerAuth: []
+      summary: Change notification-campaign status
+      tags:
+      - notification-administration
+  /api/v2/notification-templates:
+    get:
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.PaginatedNotificationTemplatesEnvelope'
+      security:
+      - BearerAuth: []
+      summary: List notification templates
+      tags:
+      - notification-administration
+    post:
+      parameters:
+      - description: Template
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/services.NotificationTemplateInput'
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/handlers.NotificationTemplateEnvelope'
+      security:
+      - BearerAuth: []
+      summary: Create a notification template
+      tags:
+      - notification-administration
+  /api/v2/notification-templates/{id}:
+    delete:
+      responses:
+        "204":
+          description: No Content
+      security:
+      - BearerAuth: []
+      summary: Archive a notification template
+      tags:
+      - notification-administration
+    get:
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.NotificationTemplateEnvelope'
+      security:
+      - BearerAuth: []
+      summary: Get a notification template
+      tags:
+      - notification-administration
+    patch:
+      parameters:
+      - description: Template
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/services.NotificationTemplateInput'
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.NotificationTemplateEnvelope'
+      security:
+      - BearerAuth: []
+      summary: Replace editable notification-template fields
+      tags:
+      - notification-administration
+  /api/v2/notification-templates/{id}/status:
+    patch:
+      parameters:
+      - description: Status
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.NotificationStatusInput'
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.NotificationTemplateEnvelope'
+      security:
+      - BearerAuth: []
+      summary: Change notification-template status
+      tags:
+      - notification-administration
+  /api/v2/notifications:
+    get:
+      parameters:
+      - description: Title or message search
+        in: query
+        name: search
+        type: string
+      - description: Notification type
+        in: query
+        name: type
+        type: string
+      - description: Priority
+        in: query
+        name: priority
+        type: string
+      - description: Read state
+        in: query
+        name: is_read
+        type: boolean
+      - description: Created at or after (RFC3339)
+        in: query
+        name: from
+        type: string
+      - description: Created at or before (RFC3339)
+        in: query
+        name: to
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.PaginatedNotificationsEnvelope'
+      security:
+      - BearerAuth: []
+      summary: List notifications visible to the current user
+      tags:
+      - notifications
+    post:
+      parameters:
+      - description: Notification
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/services.NotificationInput'
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/handlers.NotificationEnvelope'
+      security:
+      - BearerAuth: []
+      summary: Publish a notification
+      tags:
+      - notifications
+  /api/v2/notifications/{id}:
+    get:
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.NotificationEnvelope'
+      security:
+      - BearerAuth: []
+      summary: Get a notification visible to the current user
+      tags:
+      - notifications
+  /api/v2/notifications/{id}/read:
+    post:
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.NotificationEnvelope'
+      security:
+      - BearerAuth: []
+      summary: Mark a notification as read for the current user
+      tags:
+      - notifications
+  /api/v2/notifications/{id}/unread:
+    post:
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.NotificationEnvelope'
+      security:
+      - BearerAuth: []
+      summary: Mark a notification as unread for the current user
+      tags:
+      - notifications
+  /api/v2/notifications/read-all:
+    post:
+      responses:
+        "204":
+          description: No Content
+      security:
+      - BearerAuth: []
+      summary: Mark all visible notifications as read for the current user
+      tags:
+      - notifications
   /api/v2/permissions:
     get:
       responses:

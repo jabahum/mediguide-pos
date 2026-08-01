@@ -90,6 +90,7 @@ func New(cfg config.Config) (*App, error) {
 	drugSvc := services.DrugService{DB: database}
 	drugReferenceSvc := services.DrugReferenceService{DB: database}
 	userSvc := services.UserService{DB: database}
+	notificationSvc := services.NotificationService{DB: database}
 	legacyAPISvc := services.LegacyAPIService{DB: database}
 	resourceSvc := services.ResourceService{DB: database}
 	facilitySvc := services.FacilityService{DB: database}
@@ -106,6 +107,7 @@ func New(cfg config.Config) (*App, error) {
 	drugH := handlers.DrugHandler{Service: drugSvc}
 	drugReferenceH := handlers.DrugReferenceHandler{Service: drugReferenceSvc}
 	userH := handlers.UserHandler{Service: userSvc}
+	notificationH := handlers.NotificationHandler{Service: notificationSvc}
 	legacyAPIH := handlers.LegacyAPIHandler{Service: legacyAPISvc, Cfg: cfg}
 	resourceH := handlers.ResourceHandler{Service: resourceSvc, Cfg: cfg}
 	facilityH := handlers.NewFacilityHandler(facilitySvc)
@@ -176,6 +178,26 @@ func New(cfg config.Config) (*App, error) {
 		protected.GET("/permissions", middleware.RequirePermission("admin.all"), userH.ListPermissions)
 		protected.GET("/roles/:id/permissions", middleware.RequirePermission("admin.all"), userH.GetRolePermissions)
 		protected.PUT("/roles/:id/permissions", middleware.RequirePermission("admin.all"), userH.SetRolePermissions)
+
+		protected.GET("/notifications", notificationH.List)
+		protected.GET("/notifications/:id", notificationH.Get)
+		protected.POST("/notifications", middleware.RequirePermission("admin.all"), notificationH.Create)
+		protected.POST("/notifications/read-all", notificationH.MarkAllRead)
+		protected.POST("/notifications/:id/read", notificationH.MarkRead)
+		protected.POST("/notifications/:id/unread", notificationH.MarkUnread)
+
+		protected.GET("/notification-templates", middleware.RequirePermission("admin.all"), notificationH.ListTemplates)
+		protected.GET("/notification-templates/:id", middleware.RequirePermission("admin.all"), notificationH.GetTemplate)
+		protected.POST("/notification-templates", middleware.RequirePermission("admin.all"), notificationH.CreateTemplate)
+		protected.PATCH("/notification-templates/:id", middleware.RequirePermission("admin.all"), notificationH.UpdateTemplate)
+		protected.PATCH("/notification-templates/:id/status", middleware.RequirePermission("admin.all"), notificationH.UpdateTemplateStatus)
+		protected.DELETE("/notification-templates/:id", middleware.RequirePermission("admin.all"), notificationH.DeleteTemplate)
+		protected.GET("/notification-campaigns", middleware.RequirePermission("admin.all"), notificationH.ListCampaigns)
+		protected.GET("/notification-campaigns/:id", middleware.RequirePermission("admin.all"), notificationH.GetCampaign)
+		protected.POST("/notification-campaigns", middleware.RequirePermission("admin.all"), notificationH.CreateCampaign)
+		protected.PATCH("/notification-campaigns/:id", middleware.RequirePermission("admin.all"), notificationH.UpdateCampaign)
+		protected.PATCH("/notification-campaigns/:id/status", middleware.RequirePermission("admin.all"), notificationH.UpdateCampaignStatus)
+		protected.DELETE("/notification-campaigns/:id", middleware.RequirePermission("admin.all"), notificationH.DeleteCampaign)
 
 		protected.GET("/drug-categories", middleware.RequireAnyPermission("drug.read", "guideline.read"), drugReferenceH.ListCategories)
 		protected.GET("/drug-categories/:id", middleware.RequireAnyPermission("drug.read", "guideline.read"), drugReferenceH.GetCategory)
@@ -309,9 +331,6 @@ func registerResourceRoutes(group *gin.RouterGroup, handler handlers.ResourceHan
 		"consultants":             "/consultants",
 		"ministry_directory":      "/ministry-directory",
 		"languages":               "/reference-languages",
-		"notifications":           "/notifications",
-		"notification_templates":  "/notification-templates",
-		"notification_campaigns":  "/notification-campaigns",
 		"support_tickets":         "/support-tickets",
 		"support_ticket_replies":  "/support-ticket-replies",
 		"conversations":           "/conversations",

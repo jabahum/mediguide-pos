@@ -133,6 +133,7 @@ class NotificationsPage extends GetWidget<NotificationsController> {
   }
 
   void _handleTap(MyNotification notification) {
+    controller.markRead(notification).catchError((_) {});
     Get.snackbar(
       notification.title,
       notification.message,

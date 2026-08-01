@@ -195,6 +195,27 @@ export interface HandlersMarkdownUpdateResult {
   updated?: boolean;
 }
 
+export interface HandlersNotificationCampaignEnvelope {
+  data?: ModelsNotificationCampaign;
+  success?: boolean;
+}
+
+export interface HandlersNotificationEnvelope {
+  data?: ModelsNotification;
+  /** @example true */
+  success?: boolean;
+}
+
+export interface HandlersNotificationStatusInput {
+  status?: string;
+}
+
+export interface HandlersNotificationTemplateEnvelope {
+  data?: ModelsNotificationTemplate;
+  /** @example true */
+  success?: boolean;
+}
+
 export interface HandlersPaginatedCalculators {
   items?: ModelsCalculator[];
   /** @example 1 */
@@ -353,6 +374,50 @@ export interface HandlersPaginatedLanguages {
 
 export interface HandlersPaginatedLanguagesEnvelope {
   data?: HandlersPaginatedLanguages;
+  /** @example true */
+  success?: boolean;
+}
+
+export interface HandlersPaginatedNotificationCampaigns {
+  items?: ModelsNotificationCampaign[];
+  page?: number;
+  per_page?: number;
+  total_items?: number;
+  total_pages?: number;
+}
+
+export interface HandlersPaginatedNotificationCampaignsEnvelope {
+  data?: HandlersPaginatedNotificationCampaigns;
+  success?: boolean;
+}
+
+export interface HandlersPaginatedNotificationTemplates {
+  items?: ModelsNotificationTemplate[];
+  page?: number;
+  per_page?: number;
+  total_items?: number;
+  total_pages?: number;
+}
+
+export interface HandlersPaginatedNotificationTemplatesEnvelope {
+  data?: HandlersPaginatedNotificationTemplates;
+  success?: boolean;
+}
+
+export interface HandlersPaginatedNotifications {
+  items?: ModelsNotification[];
+  /** @example 1 */
+  page?: number;
+  /** @example 20 */
+  per_page?: number;
+  /** @example 1 */
+  total_items?: number;
+  /** @example 1 */
+  total_pages?: number;
+}
+
+export interface HandlersPaginatedNotificationsEnvelope {
+  data?: HandlersPaginatedNotifications;
   /** @example true */
   success?: boolean;
 }
@@ -781,6 +846,56 @@ export interface ModelsLanguage {
   version?: number;
 }
 
+export interface ModelsNotification {
+  action_url?: string;
+  created_at?: string;
+  id?: string;
+  is_read?: boolean;
+  message?: string;
+  priority?: string;
+  title?: string;
+  type?: string;
+  updated_at?: string;
+  user_id?: string;
+}
+
+export interface ModelsNotificationCampaign {
+  audience_countries?: string[];
+  audience_roles?: string[];
+  audience_total?: number;
+  channels?: string[];
+  created_at?: string;
+  id?: string;
+  metrics_clicked?: number;
+  metrics_delivered?: number;
+  metrics_opened?: number;
+  metrics_sent?: number;
+  name?: string;
+  schedule_end?: string;
+  schedule_start?: string;
+  status?: string;
+  type?: string;
+  updated_at?: string;
+}
+
+export interface ModelsNotificationTemplate {
+  audience?: string;
+  category?: string;
+  clicked_count?: number;
+  content?: string;
+  created_at?: string;
+  id?: string;
+  last_sent?: string;
+  name?: string;
+  opened_count?: number;
+  sent_count?: number;
+  status?: string;
+  subject?: string;
+  type?: string;
+  updated_at?: string;
+  variables?: object;
+}
+
 export interface ModelsPermission {
   code?: string;
   created_at?: string;
@@ -1115,6 +1230,37 @@ export interface ServicesLoginResult {
 export interface ServicesManifestResult {
   generated_at?: string;
   packages?: ModelsSyncPackage[];
+}
+
+export interface ServicesNotificationCampaignInput {
+  audience_countries?: string[];
+  audience_roles?: string[];
+  channels?: string[];
+  name?: string;
+  schedule_end?: string;
+  schedule_start?: string;
+  status?: string;
+  type?: string;
+}
+
+export interface ServicesNotificationInput {
+  action_url?: string;
+  message?: string;
+  priority?: string;
+  title?: string;
+  type?: string;
+  user_id?: string;
+}
+
+export interface ServicesNotificationTemplateInput {
+  audience?: string;
+  category?: string;
+  content?: string;
+  name?: string;
+  status?: string;
+  subject?: string;
+  type?: string;
+  variables?: Record<string, any>;
 }
 
 export interface ServicesPageResultServicesRoleView {

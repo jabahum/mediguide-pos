@@ -12,6 +12,7 @@ class MyNotification extends BaseModel {
   late final String? userId = get<String?>("user_id");
   late final String priority = get<String>("priority", "normal");
   late final String? actionUrl = get<String?>("action_url");
+  late final bool isRead = get<bool>("is_read", false);
 
   // Timestamps inherited from BaseModel (created, updated as String)
   // Use createdDate and updatedDate for DateTime values

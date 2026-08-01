@@ -4,7 +4,7 @@ import '../../data/services/auth_service.dart';
 import '../../data/services/openai_service.dart';
 import '../../data/services/backend_api_service.dart';
 import '../../data/services/ai_context_service.dart';
-import '../../data/models/ai_usage_log.dart';
+import '../../data/repositories/progress_usage_repository.dart';
 import '../../data/models/ai_context.dart';
 import '../../utils/common.dart';
 
@@ -218,13 +218,8 @@ class AiAssistantController extends GetxController {
       final currentUser = AuthService.to.currentUser.value;
       if (currentUser == null) return;
 
-      final usageData = AiUsageLog.forCreate(userId: currentUser.id);
-
-      // Save to backend resource API asynchronously (don't block UI)
-      BackendApiService.to.createResource(
-        collectionName: AiUsageLog.collection,
-        data: usageData,
-      );
+      // Save asynchronously; usage tracking must not block the chat flow.
+      UsageRepository(BackendApiService.to).ai();
     } catch (e) {
       // Silently fail - usage tracking shouldn't break the app
     }

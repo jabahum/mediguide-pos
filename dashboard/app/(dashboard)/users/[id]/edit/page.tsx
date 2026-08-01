@@ -19,7 +19,6 @@ import { useQueryClient } from "@tanstack/react-query"
 import { showToast } from "@/lib/toast"
 import { getBackendClient } from "@/lib/backend-client"
 import { usersService } from "@/services/user-management.service"
-import { backendRecordKeyPrefix } from "@/hooks/use-backend-record"
 import { 
   UsersStatusOptions, 
  
@@ -243,7 +242,7 @@ export default function EditUserPage() {
       
       await usersService.update(userId, userData)
 
-      await queryClient.invalidateQueries({ queryKey: backendRecordKeyPrefix('users', userId) })
+      await queryClient.invalidateQueries({ queryKey: ["backend", "users", "record", userId] })
 
       showToast.success(
         "User Updated Successfully",

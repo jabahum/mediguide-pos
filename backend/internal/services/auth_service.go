@@ -561,6 +561,7 @@ func deriveRolePermissions(roleKey, permissionsJSON string) []string {
 		case "reports":
 			if hasReadAny || hasReadOwn {
 				perms["sync.read"] = true
+				perms["analytics.read"] = true
 			}
 		}
 	}

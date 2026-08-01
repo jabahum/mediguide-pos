@@ -7,6 +7,7 @@ import 'package:get/get.dart';
 
 import 'package:user_app/app/data/models/filter_models.dart';
 import 'package:user_app/app/data/models/guideline_index.dart';
+import 'package:user_app/app/data/repositories/guideline_content_repository.dart';
 import 'package:user_app/app/data/services/backend_api_service.dart';
 import 'package:user_app/app/translations/app_translations.dart';
 import 'package:user_app/app/widgets/generic_filter_bottom_sheet.dart';
@@ -110,12 +111,9 @@ class GuidelinesIndexerController extends GetxController {
       isLoading.value = true;
       hasLoadError.value = false;
 
-      final result = await BackendApiService.to.getResourceList(
-        collectionName: GuidelineIndex.collection,
-        page: 1,
-        perPage: 500,
-        sort: 'level,order,title',
-      );
+      final result = await GuidelineContentRepository(
+        BackendApiService.to,
+      ).index(perPage: 500);
 
       final records = result.items.map(GuidelineIndex.fromRecord).toList();
 

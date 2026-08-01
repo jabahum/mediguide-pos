@@ -16,6 +16,7 @@ import { CreateIndexModal } from "./components/create-index-modal"
 import { EditIndexModal } from "./components/edit-index-modal"
 import { ExtendedColumnDef } from "@/types/data-table"
 import { usePermissionContext } from "@/lib/permission-context"
+import { guidelineIndexService } from "@/services/guideline-content.service"
 
 export default function GuidelineIndexPage() {
   const router = useRouter()
@@ -77,8 +78,8 @@ export default function GuidelineIndexPage() {
       <EnhancedBackendDataTable<GuidelineIndexType>
         key={refreshKey}
         collectionName="guideline_index"
+		loadPage={guidelineIndexService.listTable}
         columns={guidelineIndexColumns as ExtendedColumnDef<GuidelineIndexType>[]}
-        expand="parent"
         expandable={true}
         searchable={true}
         searchFields={["title", "description"]}

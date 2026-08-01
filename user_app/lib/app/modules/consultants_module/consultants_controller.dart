@@ -4,6 +4,7 @@ import 'package:infinite_scroll_pagination/infinite_scroll_pagination.dart';
 import 'package:user_app/app/data/models/filter_models.dart';
 
 import '../../data/models/models.dart';
+import '../../data/repositories/consultant_repository.dart';
 import '../../data/services/backend_api_service.dart';
 import '../../utils/constants.dart';
 import '../../utils/common.dart';
@@ -11,6 +12,8 @@ import '../../widgets/generic_filter_bottom_sheet.dart';
 import 'widgets/consultant_detail_modal.dart';
 
 class ConsultantsController extends GetxController {
+  ConsultantRepository get _repository =>
+      ConsultantRepository(BackendApiService.to);
   late final PagingController<int, Consultant> pagingController;
 
   // ================= FILTER STATE =================
@@ -58,49 +61,17 @@ class ConsultantsController extends GetxController {
 
   Future<List<Consultant>> _loadPage(int pageKey) async {
     try {
-      final filters = <String>['(status="active" || status="pendingApproval")'];
-
-      if (searchQuery.value.isNotEmpty) {
-        final q = BackendApiService.escapeFilterValue(searchQuery.value);
-        filters.add('(name~"$q" || organization~"$q" || specialty~"$q")');
-      }
-
-      if (selectedSpecialty.value.isNotEmpty) {
-        final specialty = BackendApiService.escapeFilterValue(
-          selectedSpecialty.value,
-        );
-        filters.add('specialty="$specialty"');
-      }
-
-      if (selectedRegion.value.isNotEmpty) {
-        final region = BackendApiService.escapeFilterValue(
-          selectedRegion.value,
-        );
-        filters.add('region="$region"');
-      }
-
-      if (selectedCity.value.isNotEmpty) {
-        final city = BackendApiService.escapeFilterValue(selectedCity.value);
-        filters.add('city="$city"');
-      }
-
-      if (showOnlineOnly.value) {
-        filters.add('status="active"');
-      }
-
-      if (showVerifiedOnly.value) {
-        filters.add('isVerified=true');
-      }
-
-      final filterString = filters.join(' && ');
-
-      final result = await BackendApiService.to.getResourceList(
-        collectionName: Consultant.collection,
+      final result = await _repository.list(
         page: pageKey,
         perPage: pageSize,
-        filter: filterString,
-        sort: '-rating,-totalConsultations',
-        expand: 'user',
+        search: searchQuery.value,
+        status: showOnlineOnly.value ? 'active' : null,
+        specialty: selectedSpecialty.value,
+        region: selectedRegion.value,
+        city: selectedCity.value,
+        verified: showVerifiedOnly.value ? true : null,
+        sort: 'rating',
+        order: 'desc',
       );
 
       return result.items.map((r) => Consultant.fromRecord(r)).toList();
@@ -268,11 +239,11 @@ class ConsultantsController extends GetxController {
     try {
       isLoadingFilters.value = true;
 
-      final result = await BackendApiService.to.getResourceList(
-        collectionName: Consultant.collection,
+      final result = await _repository.list(
         perPage: 100,
-        filter: 'status="active"',
-        expand: 'user',
+        status: 'active',
+        sort: 'name',
+        order: 'asc',
       );
 
       final consultants = result.items

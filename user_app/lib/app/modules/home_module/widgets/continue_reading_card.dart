@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../../data/models/models.dart';
 import '../../../data/services/backend_api_service.dart';
+import '../../../data/repositories/guideline_content_repository.dart';
 import '../../../utils/app_spacing.dart';
 import '../../../utils/responsive.dart';
 
@@ -35,11 +36,9 @@ class _ContinueReadingCardState extends State<ContinueReadingCard> {
 
   Future<void> _loadGuidelineTitle() async {
     try {
-      final record = await BackendApiService.to.getResource(
-        collectionName: Guideline.collection,
-        recordId: widget.progress.guidelineId,
-      );
-      if (record == null) throw Exception('Guideline not found');
+      final record = await GuidelineContentRepository(
+        BackendApiService.to,
+      ).guideline(widget.progress.guidelineId);
       final guideline = Guideline.fromRecord(record);
       if (mounted) {
         setState(() {

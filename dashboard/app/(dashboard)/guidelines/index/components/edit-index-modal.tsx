@@ -30,7 +30,7 @@ import {
 import { Check, ChevronDown, Search } from "lucide-react"
 import { GuidelineIndexType } from "../columns"
 import { showToast } from "@/lib/toast"
-import { getBackendClient } from "@/lib/backend-client"
+import { guidelineIndexService } from "@/services/guideline-content.service"
 
 const editIndexSchema = z.object({
   title: z.string().min(1, "Title is required").max(200, "Title must be less than 200 characters"),
@@ -78,7 +78,7 @@ export function EditIndexModal({
       reset({
         title: indexItem.title || "",
         description: indexItem.description || "",
-        parent: indexItem.parent?.[0] || "",
+        parent: typeof indexItem.parent === "string" ? indexItem.parent : "",
       })
       setParentSearch("")
       setSearchResults([])
@@ -94,16 +94,12 @@ export function EditIndexModal({
     
     setIsSearching(true)
     try {
-      const backend = getBackendClient()
-      const results = await backend.resource('guideline_index').getList(1, 50, {
-        filter: `title ~ "${searchTerm}" && id != "${indexItem.id}"`,
-        sort: 'level,order'
-      })
+      const results = await guidelineIndexService.all({ search: searchTerm, per_page: 50 })
       
       // Filter out invalid parent options (descendants and same level+)
-      const validParents = (results.items as GuidelineIndexType[]).filter(item => {
+      const validParents = (results as GuidelineIndexType[]).filter(item => {
         // Exclude items that have this item as parent (direct descendants)
-        if (item.parent?.[0] === indexItem.id) return false
+        if (item.parent === indexItem.id) return false
         
         // Only show items at same or higher level to prevent circular references
         if ((item.level || 0) >= (indexItem.level || 0)) return false
@@ -154,8 +150,6 @@ export function EditIndexModal({
 
     setIsSubmitting(true)
     try {
-      const backend = getBackendClient()
-      
       // Prepare update data
       const updateData: Record<string, unknown> = {
         title: data.title,
@@ -163,56 +157,19 @@ export function EditIndexModal({
       }
 
       // Handle parent change
-      if (data.parent !== (indexItem.parent?.[0] || "")) {
+      if (data.parent !== (typeof indexItem.parent === "string" ? indexItem.parent : "")) {
         if (data.parent) {
-          // Moving to new parent
-          updateData.parent = [data.parent]
-          
-          // Calculate new level based on parent
-          const newParent = allIndexItems.find(item => item.id === data.parent)
-          updateData.level = (newParent?.level || 0) + 1
-          
-          // Get next order under new parent
-          const siblings = await backend.resource('guideline_index').getList(1, 50, {
-            filter: `parent ~ "${data.parent}"`,
-            sort: '-order'
-          })
-          updateData.order = (siblings.items[0]?.order || 0) + 1
-          
-          // Update new parent to mark it has children
-          await backend.resource('guideline_index').update(data.parent, {
-            hasChildren: true
-          })
+          updateData.parent = data.parent
+          const siblings = allIndexItems.filter(item => item.parent === data.parent)
+          updateData.order = Math.max(0, ...siblings.map(item => item.order || 0)) + 1
         } else {
-          // Moving to root level
           updateData.parent = ""
-          updateData.level = 0
-          
-          // Get next order for root items
-          const rootItems = await backend.resource('guideline_index').getList(1, 1, {
-            filter: 'parent = ""',
-            sort: '-order'
-          })
-          updateData.order = (rootItems.items[0]?.order || 0) + 1
-        }
-
-        // Check if old parent should be updated (no longer has children)
-        if (indexItem.parent?.[0]) {
-          const oldParentId = indexItem.parent[0]
-          const remainingSiblings = await backend.resource('guideline_index').getList(1, 1, {
-            filter: `parent ~ "${oldParentId}" && id != "${indexItem.id}"`
-          })
-          
-          if (remainingSiblings.totalItems === 0) {
-            await backend.resource('guideline_index').update(oldParentId, {
-              hasChildren: false
-            })
-          }
+          const rootItems = allIndexItems.filter(item => !item.parent && item.id !== indexItem.id)
+          updateData.order = Math.max(0, ...rootItems.map(item => item.order || 0)) + 1
         }
       }
 
-      // Update the index item
-      await backend.resource('guideline_index').update(indexItem.id, updateData)
+      await guidelineIndexService.update(indexItem.id, updateData)
       
       showToast.success("Success", "Index item updated successfully")
       onSuccess()

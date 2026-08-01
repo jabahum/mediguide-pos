@@ -5,8 +5,8 @@ import { useRouter } from "next/navigation"
 import { PageHeader } from "@/components/ui/page-header"
 import { DrugForm } from "@/components/forms/drug-form"
 import { DrugCategoriesResponse, DrugTagsResponse } from "@/types/backend-types"
-import { useBackendCrud } from "@/hooks/use-backend-crud"
-import { getBackendClient } from "@/lib/backend-client"
+import { useDomainCrud } from "@/hooks/use-domain-crud"
+import { drugReferenceService, drugService } from "@/services/drug.service"
 import { usePermissionContext } from "@/lib/permission-context"
 
 export default function CreateDrugPage() {
@@ -22,26 +22,16 @@ export default function CreateDrugPage() {
   const [categories, setCategories] = React.useState<DrugCategoriesResponse[]>([])
   const [tags, setTags] = React.useState<DrugTagsResponse[]>([])
 
-  const { create, loading } = useBackendCrud({
-    collectionName: "drugs",
-    onSuccess: () => {
+  const { create, loading } = useDomainCrud("drugs", drugService, () => {
       router.push("/drugs")
-    }
   })
 
   React.useEffect(() => {
     const fetchData = async () => {
       try {
-        const backend = getBackendClient()
         const [categoriesResult, tagsResult] = await Promise.all([
-          backend.resource("drug_categories").getFullList({
-            filter: "status = 'active'",
-            sort: "sort_order,name"
-          }),
-          backend.resource("drug_tags").getFullList({
-            filter: "status = 'active'", 
-            sort: "sort_order,name"
-          })
+          drugReferenceService.allCategories(),
+          drugReferenceService.allTags(),
         ])
         
         setCategories(categoriesResult as DrugCategoriesResponse[])
@@ -55,7 +45,7 @@ export default function CreateDrugPage() {
   }, [])
 
   const handleSubmit = async (data: unknown) => {
-    await create(data)
+    await create(data as Record<string, unknown>)
   }
 
   const handleCancel = () => {

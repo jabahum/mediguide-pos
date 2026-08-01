@@ -10,18 +10,12 @@ import {
 export function EnhancedBackendDataTable<TData extends BaseRecord = BaseRecord>(
   props: EnhancedBackendDataTableProps<TData>
 ) {
-  // Map legacy props to new simplified structure
+  // Map the established presentation props to the typed table structure.
   const {
     collectionName,
-    collection = collectionName, // fallback to legacy prop
+    collection = collectionName,
     columns,
     loadPage,
-
-    // Legacy collection query settings
-    expand = "",
-    filter = "",
-    sort = "-created",
-    fields,
 
     // Legacy pagination
     defaultPageSize = 20,
@@ -66,12 +60,6 @@ export function EnhancedBackendDataTable<TData extends BaseRecord = BaseRecord>(
       rowActions={rowActions}
       bulkActions={selectable ? bulkActions : []}
       availableFields={availableFields}
-      query={{
-        expand,
-        filter,
-        sort,
-        fields,
-      }}
       ui={{
         pageSize: defaultPageSize,
         exportable,

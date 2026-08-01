@@ -11,6 +11,7 @@ import { createColumns, User } from "./columns"
 import { createUserRowActions, userBulkActions } from "./user-actions"
 import { createUsersAvailableFields } from "./fields"
 import { useRoleOptions } from "@/hooks/use-roles-options"
+import { usersService } from "@/services/user-management.service"
 
 export default function UsersPage() {
   const router = useRouter()
@@ -61,15 +62,18 @@ export default function UsersPage() {
       {/* Simplified DataTable */}
       <BackendDataTable<User>
         collection="users"
+        loadPage={async ({ page, perPage, search, filters }) => {
+          const status = filters.find((item) => item.field === "status" && item.condition === "equals")?.value
+          const roleId = filters.find((item) => item.field === "role_id" && item.condition === "equals")?.value
+          const result = await usersService.list<User>({ page, per_page: perPage, search, status: status ? String(status) : undefined, role_id: roleId ? String(roleId) : undefined, sort: "created_at", order: "desc" })
+          return { items: result.items, page: result.page, perPage: result.per_page, totalItems: result.total_items, totalPages: result.total_pages }
+        }}
         columns={columns}
         searchFields={["name", "email", "phone", "organization", "jobTitle"]}
         searchPlaceholder="Search users by name, email, phone, organization, or job title..."
         rowActions={userRowActions}
         bulkActions={userBulkActions}
         availableFields={usersAvailableFields}
-        query={{
-          sort: "-created",
-        }}
         ui={{
           pageSize: 20,
           exportable: true,

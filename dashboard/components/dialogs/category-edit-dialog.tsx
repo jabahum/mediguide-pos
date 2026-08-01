@@ -21,7 +21,8 @@ type CategoryFormData = {
   sort_order?: number
   status: "active" | "inactive"
 }
-import { useBackendCrud } from "@/hooks/use-backend-crud"
+import { useDomainCrud } from "@/hooks/use-domain-crud"
+import { drugCategoryCrud } from "@/services/drug.service"
 
 interface CategoryEditDialogProps {
   open: boolean
@@ -38,12 +39,9 @@ export function CategoryEditDialog({
   parentCategories = [],
   onSuccess
 }: CategoryEditDialogProps) {
-  const { update, loading } = useBackendCrud({
-    collectionName: "drug_categories",
-    onSuccess: () => {
+  const { update, loading } = useDomainCrud("drug_categories", drugCategoryCrud, () => {
       onOpenChange(false)
       onSuccess?.()
-    }
   })
 
   const handleSubmit = async (data: CategoryFormData) => {

@@ -10,7 +10,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
 import { PageHeader } from "@/components/ui/page-header"
-import { useBackendRecord } from "@/hooks/use-backend-record"
+import { useDomainRecord } from "@/hooks/use-domain-record"
+import { healthFacilitiesService } from "@/services/health-facilities.service"
 import { showToast } from "@/lib/toast"
 import { usePermissionContext } from "@/lib/permission-context"
 import { 
@@ -46,10 +47,10 @@ export default function FacilityDetailsPage() {
   const facilityId = params.id as string
   const { hasPermission, loading: permLoading } = usePermissionContext()
 
-  const { record: facility, loading: isLoading, error } = useBackendRecord<FacilityWithExpand>(
+  const { record: facility, loading: isLoading, error } = useDomainRecord<FacilityWithExpand>(
     "health_facilities",
     facilityId,
-    { expand: "facility_level,authority,ownership_type,region,health_sub_region,district,county,health_sub_district,subcounty,parish" }
+    healthFacilitiesService.getFacility as (id: string) => Promise<FacilityWithExpand>,
   )
 
   React.useEffect(() => {

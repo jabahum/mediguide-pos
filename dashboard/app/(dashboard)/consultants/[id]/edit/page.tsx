@@ -18,8 +18,7 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { PageHeader } from "@/components/ui/page-header"
 import { useQueryClient } from "@tanstack/react-query"
 import { showToast } from "@/lib/toast"
-import { getBackendClient } from "@/lib/backend-client"
-import { backendRecordKeyPrefix } from "@/hooks/use-backend-record"
+import { consultantService } from "@/services/consultant.service"
 import { SpecialtyOptions } from "../../columns"
 import type { Consultant } from "../../columns"
 import { usePermissionContext, WithPermission } from "@/lib/permission-context"
@@ -107,8 +106,7 @@ export default function EditConsultantPage({ params }: EditConsultantPageProps) 
 
     async function fetchConsultant() {
       try {
-        const backend = getBackendClient()
-        const record = await backend.resource('consultants').getOne(id!) as Consultant
+        const record = await consultantService.get(id!)
         setConsultant(record)
         
         // Populate form with existing data
@@ -151,12 +149,10 @@ export default function EditConsultantPage({ params }: EditConsultantPageProps) 
 
   async function onSubmit(data: ConsultantFormValues) {
     setIsLoading(true)
-    const backend = getBackendClient()
-    
     try {
-      await backend.resource('consultants').update(id!, data)
+      await consultantService.update(id!, data)
 
-      await queryClient.invalidateQueries({ queryKey: backendRecordKeyPrefix('consultants', id!) })
+      await queryClient.invalidateQueries({ queryKey: ["backend", "consultants", "record", id!] })
 
       showToast.success(
         "Consultant Updated",

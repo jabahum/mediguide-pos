@@ -20,13 +20,12 @@ import {
 } from "lucide-react"
 import { useCallback, useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
-import { backendClient } from "@/lib/backend-client"
 import {
-  Collections,
   CalculatorsStatusOptions,
   CalculatorsTypeOptions,
   CalculatorsCategoryOptions,
 } from "@/types/backend-types"
+import { calculatorService } from "@/services/calculator.service"
 import type { CalculatorsResponse } from "@/types/backend-types"
 import { showToast } from "@/lib/toast"
 import { formatDistanceToNow } from "date-fns"
@@ -65,11 +64,8 @@ export default function ChecklistsPage() {
   const fetchChecklists = useCallback(async () => {
     try {
       setIsFetching(true)
-      const result = await backendClient.resource(Collections.Calculators).getList(1, 100, {
-        filter: `type = "${CalculatorsTypeOptions.checklist}"`,
-        sort: "-updated",
-      })
-      setChecklists(result.items as CalculatorsResponse[])
+      const result = await calculatorService.list({ page: 1, perPage: 100, type: CalculatorsTypeOptions.checklist, sort: "updated_at" })
+      setChecklists(result.items as unknown as CalculatorsResponse[])
     } catch (error) {
       console.error("Failed to fetch checklists:", error)
       showToast.error("Error", "Failed to load checklists")

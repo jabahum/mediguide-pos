@@ -19,6 +19,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Checkbox } from "@/components/ui/checkbox"
 import { MultiSelect } from "@/components/ui/multi-select"
 import { SelectWithCreate } from "@/components/ui/select-with-create"
+import { drugReferenceService } from "@/services/drug.service"
 import { CreateDrugClassDialog } from "@/components/dialogs/create-drug-class-dialog"
 import { CreateTherapeuticCategoryDialog } from "@/components/dialogs/create-therapeutic-category-dialog"
 import { DrugsResponse, DrugCategoriesResponse, DrugTagsResponse } from "@/types/backend-types"
@@ -237,7 +238,7 @@ export function DrugForm({
                   value={watch("drug_class")}
                   onValueChange={(value) => setValue("drug_class", value)}
                   placeholder="Select drug class..."
-                  collection="drug_classes"
+                  loadOptions={drugReferenceService.allClasses}
                   onCreateClick={() => setDrugClassDialogOpen(true)}
                   disabled={loading}
                   refreshTrigger={drugClassRefreshTrigger}
@@ -250,7 +251,7 @@ export function DrugForm({
                   value={watch("therapeutic_category")}
                   onValueChange={(value) => setValue("therapeutic_category", value)}
                   placeholder="Select therapeutic category..."
-                  collection="therapeutic_categories"
+                  loadOptions={drugReferenceService.allTherapeuticCategories}
                   onCreateClick={() => setTherapeuticCategoryDialogOpen(true)}
                   disabled={loading}
                   refreshTrigger={therapeuticCategoryRefreshTrigger}

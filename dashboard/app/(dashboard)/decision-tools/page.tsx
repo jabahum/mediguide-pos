@@ -13,6 +13,7 @@ import { columns, DecisionToolWithRelations } from "./columns"
 import { createDecisionToolRowActions, decisionToolBulkActions } from "./decision-tool-actions"
 import { decisionToolsAvailableFields } from "./fields"
 import { usePermissionContext } from "@/lib/permission-context"
+import { calculatorService } from "@/services/calculator.service"
 
 export default function DecisionToolsPage() {
   const router = useRouter()
@@ -35,13 +36,11 @@ export default function DecisionToolsPage() {
     [router]
   )
 
-  const backendQueryOptions = React.useMemo(() => {
-    const opts: { expand: string; filter?: string } = { expand: "addedBy" }
-    if (typeFilter) {
-      opts.filter = `type = "${typeFilter.replace(/"/g, '\\"')}"`
-    }
-    return opts
-  }, [typeFilter])
+  const loadPage = React.useCallback(
+    (query: Parameters<typeof calculatorService.listTable>[0]) =>
+      calculatorService.listTable(query, typeFilter || undefined),
+    [typeFilter],
+  )
 
   return (
     <div className="space-y-6">
@@ -74,12 +73,12 @@ export default function DecisionToolsPage() {
       <BackendDataTable<DecisionToolWithRelations>
         key={typeFilter ?? "all"}
         collection="calculators"
+        loadPage={loadPage}
         columns={columns}
         searchFields={["name", "description", "type", "version"]}
         rowActions={decisionToolRowActions}
         bulkActions={decisionToolBulkActions}
         availableFields={decisionToolsAvailableFields}
-        query={backendQueryOptions}
         ui={{
           exportable: true
         }}

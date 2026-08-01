@@ -9,8 +9,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { GuidelineCategoryForm, GuidelineCategoryFormData } from "@/components/forms/guideline-category-form"
-import { useBackendCrud } from "@/hooks/use-backend-crud"
-import { showToast } from "@/lib/toast"
+import { useDomainCrud } from "@/hooks/use-domain-crud"
+import { guidelineCategoryCrud } from "@/services/guideline-content.service"
 import type { GuidelineCategoriesResponse } from "@/types/backend-types"
 
 interface CategoryEditModalProps {
@@ -26,16 +26,9 @@ export function CategoryEditModal({
   category,
   onSuccess
 }: CategoryEditModalProps) {
-  const { update, loading } = useBackendCrud({
-    collectionName: "guideline_categories",
-    onSuccess: () => {
-      showToast.success("Category updated", "The category has been updated successfully")
+  const { update, loading } = useDomainCrud("guideline-categories", guidelineCategoryCrud, () => {
       onOpenChange(false)
       onSuccess?.()
-    },
-    onError: (error) => {
-      showToast.error("Failed to update category", error.message)
-    }
   })
 
   const handleSubmit = async (data: GuidelineCategoryFormData) => {

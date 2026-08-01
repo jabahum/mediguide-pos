@@ -4,8 +4,7 @@ import * as React from "react"
 import { useRouter } from "next/navigation"
 import { useQueryClient } from "@tanstack/react-query"
 import { PageHeader } from "@/components/ui/page-header"
-import { getBackendClient } from "@/lib/backend-client"
-import { backendRecordKeyPrefix } from "@/hooks/use-backend-record"
+import { emergencyProtocolService } from "@/services/emergency-protocol.service"
 import { showToast } from "@/lib/toast"
 import {
   EmergencyProtocolForm,
@@ -39,9 +38,7 @@ export default function EmergencyProtocolEditPage({
   React.useEffect(() => {
     const fetchProtocol = async () => {
       try {
-        const backend = getBackendClient()
-        const result = await backend.resource("emergency_protocols").getOne(id)
-        setProtocol(result as EmergencyProtocolRecord)
+        setProtocol(await emergencyProtocolService.get(id) as EmergencyProtocolRecord)
       } catch (error) {
         console.error("Failed to load emergency protocol for editing:", error)
         showToast.error("Load Failed", "Could not load this emergency protocol")
@@ -57,9 +54,8 @@ export default function EmergencyProtocolEditPage({
   const handleSubmit = async (data: EmergencyProtocolPayload) => {
     try {
       setSaving(true)
-      const backend = getBackendClient()
-      await backend.resource("emergency_protocols").update(id, data)
-      await queryClient.invalidateQueries({ queryKey: backendRecordKeyPrefix("emergency_protocols", id) })
+      await emergencyProtocolService.update(id, data)
+      await queryClient.invalidateQueries({ queryKey: ["emergency-protocols",id] })
       showToast.success("Protocol Updated", "Emergency protocol changes were saved")
       router.push(`/emergency-protocols/${id}`)
     } catch (error) {

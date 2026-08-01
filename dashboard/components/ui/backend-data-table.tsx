@@ -61,8 +61,6 @@ export function BackendDataTable<TData extends BaseRecord = BaseRecord>({
   // Filtering
   availableFields = [],
 
-  // Backend query options
-  query = {},
   refreshSignal,
 
   // UI options with smart defaults
@@ -155,7 +153,6 @@ export function BackendDataTable<TData extends BaseRecord = BaseRecord>({
     rowActions,
     bulkActions,
     availableFields,
-    query,
     refreshSignal,
     ui: uiConfig,
     onRowClick,

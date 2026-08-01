@@ -27,8 +27,7 @@ import {
   Loader2,
   ArrowLeft
 } from "lucide-react"
-import { backendClient } from "@/lib/backend-client"
-import { Collections } from "@/types/backend-types"
+import { emergencyProtocolService } from "@/services/emergency-protocol.service"
 import type { EmergencyProtocolsResponse } from "@/types/backend-types"
 import { showToast } from "@/lib/toast"
 import { useRouter } from "next/navigation"
@@ -56,10 +55,7 @@ export default function TraumaProtocolsPage() {
 
   const fetchTraumaProtocols = async () => {
     try {
-      const result = await backendClient.resource(Collections.EmergencyProtocols).getList(1, 50, {
-        filter: "category = 'Trauma' && status = 'active'",
-        sort: "priority"
-      })
+      const result = await emergencyProtocolService.list({ category: "Trauma", status: "active", sort: "priority", order: "asc" })
       setProtocols(result.items as EmergencyProtocolsResponse[])
     } catch (error) {
       console.error("Failed to fetch trauma protocols:", error)

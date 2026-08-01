@@ -30,7 +30,7 @@ import { SimpleGuidelineCategorySelector } from "@/components/ui/guideline-categ
 import { MultiSelect } from "@/components/ui/multi-select"
 
 // Hooks and utilities
-import { useBackendCrud } from "@/hooks/use-backend-crud"
+import { abbreviationService } from "@/services/guideline-content.service"
 import { useGuidelineTags } from "@/hooks/use-guideline-tags"
 import { showToast } from "@/lib/toast"
 
@@ -62,16 +62,6 @@ export function AbbreviationCreateModal({
   // Load tags using the custom hook
   const { getMultiSelectOptions } = useGuidelineTags()
 
-  const { create } = useBackendCrud({
-    collectionName: "abbreviations",
-    onSuccess: () => {
-      // Success handled in onSubmit
-    },
-    onError: (error) => {
-      console.error("CRUD error:", error)
-    }
-  })
-
   const form = useForm<AbbreviationFormData>({
     resolver: zodResolver(abbreviationFormSchema),
     defaultValues: {
@@ -87,7 +77,7 @@ export function AbbreviationCreateModal({
   const onSubmit = async (data: AbbreviationFormData) => {
     setIsLoading(true)
     try {
-      await create({
+      await abbreviationService.create({
         abbreviation: data.abbreviation.toUpperCase(), // Convert to uppercase for consistency
         meaning: data.meaning,
         description: data.description || "",

@@ -1,5 +1,12 @@
 basePath: /
 definitions:
+  handlers.AbbreviationEnvelope:
+    properties:
+      data:
+        $ref: '#/definitions/models.Abbreviation'
+      success:
+        type: boolean
+    type: object
   handlers.AskEnvelope:
     properties:
       data:
@@ -30,6 +37,13 @@ definitions:
         $ref: '#/definitions/models.ClinicalProtocol'
       success:
         example: true
+        type: boolean
+    type: object
+  handlers.ConversationEnvelope:
+    properties:
+      data:
+        $ref: '#/definitions/services.ConversationView'
+      success:
         type: boolean
     type: object
   handlers.DocumentationEnvelope:
@@ -104,6 +118,13 @@ definitions:
         example: user@example.com
         type: string
     type: object
+  handlers.EmergencyProtocolEnvelope:
+    properties:
+      data:
+        $ref: '#/definitions/models.EmergencyProtocol'
+      success:
+        type: boolean
+    type: object
   handlers.ErrorResponse:
     properties:
       error:
@@ -127,12 +148,40 @@ definitions:
       success:
         type: boolean
     type: object
+  handlers.GenericPageEnvelope:
+    properties:
+      data:
+        $ref: '#/definitions/models.GenericPage'
+      success:
+        type: boolean
+    type: object
+  handlers.GuidelineCategoryEnvelope:
+    properties:
+      data:
+        $ref: '#/definitions/models.GuidelineCategory'
+      success:
+        type: boolean
+    type: object
   handlers.GuidelineDocumentEnvelope:
     properties:
       data:
         $ref: '#/definitions/models.GuidelineDocument'
       success:
         example: true
+        type: boolean
+    type: object
+  handlers.GuidelineIndexEnvelope:
+    properties:
+      data:
+        $ref: '#/definitions/models.GuidelineIndexEntry'
+      success:
+        type: boolean
+    type: object
+  handlers.GuidelineTagEnvelope:
+    properties:
+      data:
+        $ref: '#/definitions/models.GuidelineTag'
+      success:
         type: boolean
     type: object
   handlers.GuidelineVersionEnvelope:
@@ -303,6 +352,27 @@ definitions:
         example: true
         type: boolean
     type: object
+  handlers.MedicalGuidelineEnvelope:
+    properties:
+      data:
+        $ref: '#/definitions/models.MedicalGuideline'
+      success:
+        type: boolean
+    type: object
+  handlers.MessageEnvelope:
+    properties:
+      data:
+        $ref: '#/definitions/services.MessageView'
+      success:
+        type: boolean
+    type: object
+  handlers.MinistryDirectoryEnvelope:
+    properties:
+      data:
+        $ref: '#/definitions/models.MinistryDirectoryEntry'
+      success:
+        type: boolean
+    type: object
   handlers.NotificationCampaignEnvelope:
     properties:
       data:
@@ -329,6 +399,13 @@ definitions:
         $ref: '#/definitions/models.NotificationTemplate'
       success:
         example: true
+        type: boolean
+    type: object
+  handlers.PaginatedAbbreviationsEnvelope:
+    properties:
+      data:
+        $ref: '#/definitions/services.PageResult-models_Abbreviation'
+      success:
         type: boolean
     type: object
   handlers.PaginatedCalculators:
@@ -383,6 +460,13 @@ definitions:
         $ref: '#/definitions/handlers.PaginatedClinicalProtocols'
       success:
         example: true
+        type: boolean
+    type: object
+  handlers.PaginatedConversationsEnvelope:
+    properties:
+      data:
+        $ref: '#/definitions/services.PageResult-services_ConversationView'
+      success:
         type: boolean
     type: object
   handlers.PaginatedDocumentationEnvelope:
@@ -482,6 +566,13 @@ definitions:
         example: true
         type: boolean
     type: object
+  handlers.PaginatedEmergencyProtocolsEnvelope:
+    properties:
+      data:
+        $ref: '#/definitions/services.PageResult-models_EmergencyProtocol'
+      success:
+        type: boolean
+    type: object
   handlers.PaginatedFAQTagsEnvelope:
     properties:
       data:
@@ -493,6 +584,20 @@ definitions:
     properties:
       data:
         $ref: '#/definitions/services.PageResult-models_FAQ'
+      success:
+        type: boolean
+    type: object
+  handlers.PaginatedGenericPagesEnvelope:
+    properties:
+      data:
+        $ref: '#/definitions/services.PageResult-models_GenericPage'
+      success:
+        type: boolean
+    type: object
+  handlers.PaginatedGuidelineCategoriesEnvelope:
+    properties:
+      data:
+        $ref: '#/definitions/services.PageResult-models_GuidelineCategory'
       success:
         type: boolean
     type: object
@@ -550,6 +655,13 @@ definitions:
         example: true
         type: boolean
     type: object
+  handlers.PaginatedGuidelineIndexEnvelope:
+    properties:
+      data:
+        $ref: '#/definitions/services.PageResult-models_GuidelineIndexEntry'
+      success:
+        type: boolean
+    type: object
   handlers.PaginatedGuidelineSections:
     properties:
       items:
@@ -577,6 +689,13 @@ definitions:
         example: true
         type: boolean
     type: object
+  handlers.PaginatedGuidelineTagsEnvelope:
+    properties:
+      data:
+        $ref: '#/definitions/services.PageResult-models_GuidelineTag'
+      success:
+        type: boolean
+    type: object
   handlers.PaginatedLanguages:
     properties:
       items:
@@ -602,6 +721,27 @@ definitions:
         $ref: '#/definitions/handlers.PaginatedLanguages'
       success:
         example: true
+        type: boolean
+    type: object
+  handlers.PaginatedMedicalGuidelinesEnvelope:
+    properties:
+      data:
+        $ref: '#/definitions/services.PageResult-models_MedicalGuideline'
+      success:
+        type: boolean
+    type: object
+  handlers.PaginatedMessagesEnvelope:
+    properties:
+      data:
+        $ref: '#/definitions/services.PageResult-services_MessageView'
+      success:
+        type: boolean
+    type: object
+  handlers.PaginatedMinistryDirectoryEnvelope:
+    properties:
+      data:
+        $ref: '#/definitions/services.PageResult-models_MinistryDirectoryEntry'
+      success:
         type: boolean
     type: object
   handlers.PaginatedNotificationCampaigns:
@@ -673,6 +813,13 @@ definitions:
         $ref: '#/definitions/handlers.PaginatedNotifications'
       success:
         example: true
+        type: boolean
+    type: object
+  handlers.PaginatedReadingProgressEnvelope:
+    properties:
+      data:
+        $ref: '#/definitions/services.PageResult-models_ReadingProgress'
+      success:
         type: boolean
     type: object
   handlers.PaginatedRolesEnvelope:
@@ -815,6 +962,13 @@ definitions:
     properties:
       published:
         example: true
+        type: boolean
+    type: object
+  handlers.ReadingProgressEnvelope:
+    properties:
+      data:
+        $ref: '#/definitions/models.ReadingProgress'
+      success:
         type: boolean
     type: object
   handlers.RefreshRequest:
@@ -969,6 +1123,21 @@ definitions:
     required:
     - content
     type: object
+  handlers.UsageAggregatesEnvelope:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/services.UsageAggregate'
+        type: array
+      success:
+        type: boolean
+    type: object
+  handlers.UsageEventEnvelope:
+    properties:
+      data: {}
+      success:
+        type: boolean
+    type: object
   handlers.UserEnvelope:
     properties:
       data:
@@ -998,6 +1167,33 @@ definitions:
       success:
         example: true
         type: boolean
+    type: object
+  models.Abbreviation:
+    properties:
+      abbreviation:
+        type: string
+      categories:
+        items:
+          type: string
+        type: array
+      common_usage:
+        type: boolean
+      created_at:
+        type: string
+      description:
+        type: string
+      id:
+        type: string
+      meaning:
+        type: string
+      tags:
+        items:
+          type: string
+        type: array
+      updated_at:
+        type: string
+      usage_count:
+        type: integer
     type: object
   models.Calculator:
     properties:
@@ -1248,6 +1444,45 @@ definitions:
       user_id:
         type: string
     type: object
+  models.EmergencyProtocol:
+    properties:
+      access_count:
+        type: integer
+      category:
+        type: string
+      contact_info:
+        type: object
+      created_at:
+        type: string
+      critical_actions:
+        type: object
+      description:
+        type: string
+      id:
+        type: string
+      medications:
+        type: object
+      priority:
+        type: string
+      status:
+        type: string
+      steps:
+        type: object
+      tags:
+        items:
+          type: string
+        type: array
+      timeframe:
+        type: string
+      title:
+        type: string
+      transfer_checklist:
+        type: object
+      updated_at:
+        type: string
+      vital_signs:
+        type: object
+    type: object
   models.FAQ:
     properties:
       answer:
@@ -1335,6 +1570,50 @@ definitions:
       user_id:
         type: string
     type: object
+  models.GenericPage:
+    properties:
+      content:
+        type: object
+      created_at:
+        type: string
+      description:
+        type: string
+      id:
+        type: string
+      key:
+        type: string
+      title:
+        type: string
+      updated_at:
+        type: string
+    type: object
+  models.GuidelineCategory:
+    properties:
+      color:
+        type: string
+      created_at:
+        type: string
+      description:
+        type: string
+      icon:
+        type: string
+      id:
+        type: string
+      name:
+        type: string
+      parent_category_id:
+        type: string
+      parent_name:
+        type: string
+      slug:
+        type: string
+      sort_order:
+        type: integer
+      status:
+        type: string
+      updated_at:
+        type: string
+    type: object
   models.GuidelineChunk:
     properties:
       content:
@@ -1395,6 +1674,29 @@ definitions:
           $ref: '#/definitions/models.GuidelineVersion'
         type: array
     type: object
+  models.GuidelineIndexEntry:
+    properties:
+      created_at:
+        type: string
+      description:
+        type: string
+      has_children:
+        type: boolean
+      id:
+        type: string
+      level:
+        type: integer
+      parent_id:
+        type: string
+      parent_title:
+        type: string
+      sort_order:
+        type: integer
+      title:
+        type: string
+      updated_at:
+        type: string
+    type: object
   models.GuidelineSection:
     properties:
       created_at:
@@ -1422,6 +1724,19 @@ definitions:
       updated_at:
         type: string
       version_id:
+        type: string
+    type: object
+  models.GuidelineTag:
+    properties:
+      created_at:
+        type: string
+      description:
+        type: string
+      id:
+        type: string
+      name:
+        type: string
+      updated_at:
         type: string
     type: object
   models.GuidelineVersion:
@@ -1514,6 +1829,128 @@ definitions:
         type: string
       version:
         type: number
+    type: object
+  models.MedicalGuideline:
+    properties:
+      categories:
+        items:
+          type: string
+        type: array
+      causes:
+        type: string
+      classification_critical:
+        type: string
+      classification_mild:
+        type: string
+      classification_moderate:
+        type: string
+      classification_severe:
+        type: string
+      clinical_features:
+        type: string
+      condition_name:
+        type: string
+      contraindications:
+        type: string
+      created_at:
+        type: string
+      definition:
+        type: string
+      differential_diagnosis:
+        type: string
+      dosage_adult:
+        type: string
+      dosage_pediatric:
+        type: string
+      dosage_secondary_adult:
+        type: string
+      dosage_secondary_pediatric:
+        type: string
+      general_management:
+        type: string
+      healthcare_level_required:
+        type: string
+      icd10_code:
+        type: string
+      id:
+        type: string
+      index_item_id:
+        type: string
+      index_item_title:
+        type: string
+      is_published:
+        type: boolean
+      medication_primary:
+        type: string
+      medication_secondary:
+        type: string
+      monitoring_requirements:
+        type: string
+      prevention_measures:
+        type: string
+      priority:
+        type: string
+      route_administration:
+        type: string
+      special_notes:
+        type: string
+      status:
+        type: string
+      tags:
+        items:
+          type: string
+        type: array
+      target_population:
+        type: string
+      updated_at:
+        type: string
+      usage_count:
+        type: integer
+      version:
+        type: string
+    type: object
+  models.MinistryDirectoryEntry:
+    properties:
+      alternative_phone:
+        type: string
+      availability_hours:
+        type: string
+      created_at:
+        type: string
+      department:
+        type: string
+      district_id:
+        type: string
+      district_name:
+        type: string
+      email:
+        type: string
+      id:
+        type: string
+      ministry:
+        type: string
+      name:
+        type: string
+      notes:
+        type: string
+      office_address:
+        type: string
+      phone:
+        type: string
+      priority_level:
+        type: integer
+      region_id:
+        type: string
+      region_name:
+        type: string
+      specialization:
+        type: string
+      status:
+        type: string
+      title:
+        type: string
+      updated_at:
+        type: string
     type: object
   models.Notification:
     properties:
@@ -1623,6 +2060,35 @@ definitions:
       name:
         type: string
       updated_at:
+        type: string
+    type: object
+  models.ReadingProgress:
+    properties:
+      created_at:
+        type: string
+      current_section:
+        type: string
+      guideline_document_id:
+        type: string
+      id:
+        type: string
+      is_bookmarked:
+        type: boolean
+      is_completed:
+        type: boolean
+      last_read_at:
+        type: string
+      notes:
+        type: string
+      progress_percentage:
+        type: number
+      reading_time_seconds:
+        type: integer
+      total_sections:
+        type: integer
+      updated_at:
+        type: string
+      user_id:
         type: string
     type: object
   models.Role:
@@ -1814,6 +2280,25 @@ definitions:
       verified:
         type: boolean
     type: object
+  services.AbbreviationInput:
+    properties:
+      abbreviation:
+        type: string
+      categories:
+        items:
+          type: string
+        type: array
+      common_usage:
+        type: boolean
+      description:
+        type: string
+      meaning:
+        type: string
+      tags:
+        items:
+          type: string
+        type: array
+    type: object
   services.AccountActionResult:
     properties:
       accepted:
@@ -1862,6 +2347,215 @@ definitions:
       title:
         type: string
     type: object
+  services.ConsultantInput:
+    properties:
+      address:
+        type: string
+      alternative_phone:
+        type: string
+      availability:
+        type: object
+      avatar:
+        type: object
+      certifications:
+        type: string
+      city:
+        type: string
+      consultation_types:
+        items:
+          type: string
+        type: array
+      country:
+        type: string
+      department:
+        type: string
+      email:
+        type: string
+      is_verified:
+        type: boolean
+      license_number:
+        type: string
+      name:
+        type: string
+      notes:
+        type: string
+      organization:
+        type: string
+      phone:
+        type: string
+      postal_code:
+        type: string
+      preferred_language:
+        type: string
+      profile_picture:
+        type: object
+      qualifications:
+        items:
+          type: string
+        type: array
+      rating:
+        type: number
+      region:
+        type: string
+      specialty:
+        type: string
+      status:
+        type: string
+      timezone:
+        type: string
+      total_consultations:
+        type: integer
+      user_id:
+        type: string
+      years_of_experience:
+        type: number
+    type: object
+  services.ConsultantItem:
+    properties:
+      item:
+        $ref: '#/definitions/services.ConsultantView'
+    type: object
+  services.ConsultantPage:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/services.ConsultantView'
+        type: array
+      page:
+        type: integer
+      per_page:
+        type: integer
+      total_items:
+        type: integer
+      total_pages:
+        type: integer
+    type: object
+  services.ConsultantUserView:
+    properties:
+      avatar:
+        type: string
+      email:
+        type: string
+      id:
+        type: string
+      name:
+        type: string
+      verified:
+        type: boolean
+    type: object
+  services.ConsultantView:
+    properties:
+      address:
+        type: string
+      alternative_phone:
+        type: string
+      availability:
+        type: object
+      avatar:
+        type: object
+      certifications:
+        type: string
+      city:
+        type: string
+      consultation_types:
+        items:
+          type: string
+        type: array
+      country:
+        type: string
+      created_at:
+        type: string
+      department:
+        type: string
+      email:
+        type: string
+      id:
+        type: string
+      is_verified:
+        type: boolean
+      license_number:
+        type: string
+      name:
+        type: string
+      notes:
+        type: string
+      organization:
+        type: string
+      phone:
+        type: string
+      postal_code:
+        type: string
+      preferred_language:
+        type: string
+      profile_picture:
+        type: object
+      qualifications:
+        items:
+          type: string
+        type: array
+      rating:
+        type: number
+      region:
+        type: string
+      specialty:
+        type: string
+      status:
+        type: string
+      timezone:
+        type: string
+      total_consultations:
+        type: integer
+      updated_at:
+        type: string
+      usage_count:
+        type: integer
+      user:
+        $ref: '#/definitions/services.ConsultantUserView'
+      user_id:
+        type: string
+      years_of_experience:
+        type: number
+    type: object
+  services.ConversationCreate:
+    properties:
+      other_participant_id:
+        type: string
+    type: object
+  services.ConversationView:
+    properties:
+      created_at:
+        type: string
+      id:
+        type: string
+      last_activity:
+        type: string
+      last_message:
+        type: string
+      last_message_id:
+        type: string
+      participant1_avatar:
+        type: string
+      participant1_email:
+        type: string
+      participant1_name:
+        type: string
+      participant1_user_id:
+        type: string
+      participant1_verified:
+        type: boolean
+      participant2_avatar:
+        type: string
+      participant2_email:
+        type: string
+      participant2_name:
+        type: string
+      participant2_user_id:
+        type: string
+      participant2_verified:
+        type: boolean
+      updated_at:
+        type: string
+    type: object
   services.CreateCalculatorInput:
     properties:
       app_file_json:
@@ -1899,31 +2593,6 @@ definitions:
         type: string
       title:
         type: string
-    type: object
-  services.CreateLanguageInput:
-    properties:
-      code:
-        type: string
-      enabled_for_users:
-        type: boolean
-      is_active:
-        type: boolean
-      is_default:
-        type: boolean
-      name:
-        type: string
-      native_name:
-        type: string
-      progress:
-        type: number
-      status:
-        type: string
-      translations_json:
-        type: object
-      translations_url:
-        type: string
-      version:
-        type: number
     type: object
   services.CreateProtocolInput:
     properties:
@@ -2093,6 +2762,37 @@ definitions:
         type: string
       tag_category:
         type: string
+    type: object
+  services.EmergencyProtocolInput:
+    properties:
+      category:
+        type: string
+      contact_info:
+        type: object
+      critical_actions:
+        type: object
+      description:
+        type: string
+      medications:
+        type: object
+      priority:
+        type: string
+      status:
+        type: string
+      steps:
+        type: object
+      tags:
+        items:
+          type: string
+        type: array
+      timeframe:
+        type: string
+      title:
+        type: string
+      transfer_checklist:
+        type: object
+      vital_signs:
+        type: object
     type: object
   services.FAQInput:
     properties:
@@ -2306,6 +3006,79 @@ definitions:
       session_end:
         type: string
     type: object
+  services.GenericPageInput:
+    properties:
+      content:
+        type: object
+      description:
+        type: string
+      key:
+        type: string
+      title:
+        type: string
+    type: object
+  services.GuidelineCategoryInput:
+    properties:
+      color:
+        type: string
+      description:
+        type: string
+      icon:
+        type: string
+      name:
+        type: string
+      parent_category_id:
+        type: string
+      slug:
+        type: string
+      sort_order:
+        type: integer
+      status:
+        type: string
+    type: object
+  services.GuidelineIndexInput:
+    properties:
+      description:
+        type: string
+      parent_id:
+        type: string
+      sort_order:
+        type: integer
+      title:
+        type: string
+    type: object
+  services.GuidelineTagInput:
+    properties:
+      description:
+        type: string
+      name:
+        type: string
+    type: object
+  services.LanguageInput:
+    properties:
+      code:
+        type: string
+      enabled_for_users:
+        type: boolean
+      is_active:
+        type: boolean
+      is_default:
+        type: boolean
+      name:
+        type: string
+      native_name:
+        type: string
+      progress:
+        type: number
+      status:
+        type: string
+      translations:
+        type: object
+      translations_url:
+        type: string
+      version:
+        type: number
+    type: object
   services.LoginResult:
     properties:
       expires_at:
@@ -2329,6 +3102,172 @@ definitions:
         items:
           $ref: '#/definitions/models.SyncPackage'
         type: array
+    type: object
+  services.MedicalGuidelineInput:
+    properties:
+      categories:
+        items:
+          type: string
+        type: array
+      causes:
+        type: string
+      classification_critical:
+        type: string
+      classification_mild:
+        type: string
+      classification_moderate:
+        type: string
+      classification_severe:
+        type: string
+      clinical_features:
+        type: string
+      condition_name:
+        type: string
+      contraindications:
+        type: string
+      definition:
+        type: string
+      differential_diagnosis:
+        type: string
+      dosage_adult:
+        type: string
+      dosage_pediatric:
+        type: string
+      dosage_secondary_adult:
+        type: string
+      dosage_secondary_pediatric:
+        type: string
+      general_management:
+        type: string
+      healthcare_level_required:
+        type: string
+      icd10_code:
+        type: string
+      index_item_id:
+        type: string
+      is_published:
+        type: boolean
+      medication_primary:
+        type: string
+      medication_secondary:
+        type: string
+      monitoring_requirements:
+        type: string
+      prevention_measures:
+        type: string
+      priority:
+        type: string
+      route_administration:
+        type: string
+      special_notes:
+        type: string
+      status:
+        type: string
+      tags:
+        items:
+          type: string
+        type: array
+      target_population:
+        type: string
+      version:
+        type: string
+    type: object
+  services.MessageCreate:
+    properties:
+      attachments:
+        items:
+          type: string
+        type: array
+      content:
+        type: string
+      message_type:
+        type: string
+      reply_to_id:
+        type: string
+    type: object
+  services.MessageReactionInput:
+    properties:
+      active:
+        type: boolean
+      emoji:
+        type: string
+    type: object
+  services.MessageReadInput:
+    properties:
+      read_at:
+        type: string
+    type: object
+  services.MessageView:
+    properties:
+      attachments:
+        items:
+          type: string
+        type: array
+      content:
+        type: string
+      conversation_id:
+        type: string
+      created_at:
+        type: string
+      edited_at:
+        type: string
+      id:
+        type: string
+      is_edited:
+        type: boolean
+      message_type:
+        type: string
+      reactions:
+        type: object
+      read_by:
+        type: object
+      reply_to_id:
+        type: string
+      sender_avatar:
+        type: string
+      sender_email:
+        type: string
+      sender_name:
+        type: string
+      sender_user_id:
+        type: string
+      sender_verified:
+        type: boolean
+      updated_at:
+        type: string
+    type: object
+  services.MinistryDirectoryInput:
+    properties:
+      alternative_phone:
+        type: string
+      availability_hours:
+        type: string
+      department:
+        type: string
+      district_id:
+        type: string
+      email:
+        type: string
+      ministry:
+        type: string
+      name:
+        type: string
+      notes:
+        type: string
+      office_address:
+        type: string
+      phone:
+        type: string
+      priority_level:
+        type: integer
+      region_id:
+        type: string
+      specialization:
+        type: string
+      status:
+        type: string
+      title:
+        type: string
     type: object
   services.NotificationCampaignInput:
     properties:
@@ -2390,11 +3329,41 @@ definitions:
         additionalProperties: {}
         type: object
     type: object
+  services.PageResult-models_Abbreviation:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/models.Abbreviation'
+        type: array
+      page:
+        type: integer
+      per_page:
+        type: integer
+      total_items:
+        type: integer
+      total_pages:
+        type: integer
+    type: object
   services.PageResult-models_Documentation:
     properties:
       items:
         items:
           $ref: '#/definitions/models.Documentation'
+        type: array
+      page:
+        type: integer
+      per_page:
+        type: integer
+      total_items:
+        type: integer
+      total_pages:
+        type: integer
+    type: object
+  services.PageResult-models_EmergencyProtocol:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/models.EmergencyProtocol'
         type: array
       page:
         type: integer
@@ -2435,6 +3404,111 @@ definitions:
       total_pages:
         type: integer
     type: object
+  services.PageResult-models_GenericPage:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/models.GenericPage'
+        type: array
+      page:
+        type: integer
+      per_page:
+        type: integer
+      total_items:
+        type: integer
+      total_pages:
+        type: integer
+    type: object
+  services.PageResult-models_GuidelineCategory:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/models.GuidelineCategory'
+        type: array
+      page:
+        type: integer
+      per_page:
+        type: integer
+      total_items:
+        type: integer
+      total_pages:
+        type: integer
+    type: object
+  services.PageResult-models_GuidelineIndexEntry:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/models.GuidelineIndexEntry'
+        type: array
+      page:
+        type: integer
+      per_page:
+        type: integer
+      total_items:
+        type: integer
+      total_pages:
+        type: integer
+    type: object
+  services.PageResult-models_GuidelineTag:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/models.GuidelineTag'
+        type: array
+      page:
+        type: integer
+      per_page:
+        type: integer
+      total_items:
+        type: integer
+      total_pages:
+        type: integer
+    type: object
+  services.PageResult-models_MedicalGuideline:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/models.MedicalGuideline'
+        type: array
+      page:
+        type: integer
+      per_page:
+        type: integer
+      total_items:
+        type: integer
+      total_pages:
+        type: integer
+    type: object
+  services.PageResult-models_MinistryDirectoryEntry:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/models.MinistryDirectoryEntry'
+        type: array
+      page:
+        type: integer
+      per_page:
+        type: integer
+      total_items:
+        type: integer
+      total_pages:
+        type: integer
+    type: object
+  services.PageResult-models_ReadingProgress:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/models.ReadingProgress'
+        type: array
+      page:
+        type: integer
+      per_page:
+        type: integer
+      total_items:
+        type: integer
+      total_pages:
+        type: integer
+    type: object
   services.PageResult-models_SupportTicket:
     properties:
       items:
@@ -2455,6 +3529,36 @@ definitions:
       items:
         items:
           $ref: '#/definitions/models.SupportTicketReply'
+        type: array
+      page:
+        type: integer
+      per_page:
+        type: integer
+      total_items:
+        type: integer
+      total_pages:
+        type: integer
+    type: object
+  services.PageResult-services_ConversationView:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/services.ConversationView'
+        type: array
+      page:
+        type: integer
+      per_page:
+        type: integer
+      total_items:
+        type: integer
+      total_pages:
+        type: integer
+    type: object
+  services.PageResult-services_MessageView:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/services.MessageView'
         type: array
       page:
         type: integer
@@ -2516,6 +3620,25 @@ definitions:
         type: string
       type:
         type: string
+    type: object
+  services.ReadingProgressInput:
+    properties:
+      current_section:
+        type: string
+      is_bookmarked:
+        type: boolean
+      is_completed:
+        type: boolean
+      last_read_at:
+        type: string
+      notes:
+        type: string
+      progress_percentage:
+        type: number
+      reading_time_seconds:
+        type: integer
+      total_sections:
+        type: integer
     type: object
   services.RegionChildren:
     properties:
@@ -2688,6 +3811,20 @@ definitions:
       source_org:
         type: string
       title:
+        type: string
+    type: object
+  services.UsageAggregate:
+    properties:
+      count:
+        type: integer
+      event_type:
+        type: string
+    type: object
+  services.UsageEventInput:
+    properties:
+      idempotency_key:
+        type: string
+      resource_id:
         type: string
     type: object
   services.UserCreateInput:
@@ -2970,6 +4107,109 @@ paths:
       summary: Get legacy mobile stats
       tags:
       - legacy-v1
+  /api/v2/abbreviations:
+    get:
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.PaginatedAbbreviationsEnvelope'
+      security:
+      - BearerAuth: []
+      summary: List abbreviations
+      tags:
+      - guideline-content
+    post:
+      parameters:
+      - description: Abbreviation
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/services.AbbreviationInput'
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/handlers.AbbreviationEnvelope'
+      security:
+      - BearerAuth: []
+      summary: Create an abbreviation
+      tags:
+      - guideline-content
+  /api/v2/abbreviations/{id}:
+    delete:
+      parameters:
+      - description: Abbreviation UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+      security:
+      - BearerAuth: []
+      summary: Archive an abbreviation
+      tags:
+      - guideline-content
+    get:
+      parameters:
+      - description: Abbreviation UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.AbbreviationEnvelope'
+      security:
+      - BearerAuth: []
+      summary: Get an abbreviation
+      tags:
+      - guideline-content
+    patch:
+      parameters:
+      - description: Abbreviation UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Abbreviation changes
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/services.AbbreviationInput'
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.AbbreviationEnvelope'
+      security:
+      - BearerAuth: []
+      summary: Update an abbreviation
+      tags:
+      - guideline-content
+  /api/v2/analytics/usage:
+    get:
+      parameters:
+      - description: RFC3339 lower bound
+        in: query
+        name: since
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.UsageAggregatesEnvelope'
+      security:
+      - BearerAuth: []
+      summary: Get aggregate usage counts
+      tags:
+      - progress-usage
   /api/v2/auth/email-verification/confirm:
     post:
       consumes:
@@ -3245,6 +4485,10 @@ paths:
         in: query
         name: sort
         type: string
+      - description: Sort direction (asc or desc)
+        in: query
+        name: order
+        type: string
       produces:
       - application/json
       responses:
@@ -3478,6 +4722,385 @@ paths:
       summary: Ask the guideline assistant
       tags:
       - chat
+  /api/v2/consultants:
+    get:
+      parameters:
+      - description: Page
+        in: query
+        name: page
+        type: integer
+      - description: Items per page
+        in: query
+        name: per_page
+        type: integer
+      - description: Name, email, specialty, organization, city, or country
+        in: query
+        name: search
+        type: string
+      - description: Status
+        in: query
+        name: status
+        type: string
+      - description: Specialty
+        in: query
+        name: specialty
+        type: string
+      - description: Qualification
+        in: query
+        name: qualification
+        type: string
+      - description: Preferred language
+        in: query
+        name: language
+        type: string
+      - description: Region
+        in: query
+        name: region
+        type: string
+      - description: City
+        in: query
+        name: city
+        type: string
+      - description: Consultation type
+        in: query
+        name: consultation_type
+        type: string
+      - description: Verification state
+        in: query
+        name: verified
+        type: boolean
+      - description: name, specialty, rating, total_consultations, usage_count, created_at,
+          or updated_at
+        in: query
+        name: sort
+        type: string
+      - description: asc or desc
+        in: query
+        name: order
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/services.ConsultantPage'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: List consultants
+      tags:
+      - consultants
+    post:
+      parameters:
+      - description: Consultant
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/services.ConsultantInput'
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/services.ConsultantItem'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Create a consultant
+      tags:
+      - consultants
+  /api/v2/consultants/{id}:
+    delete:
+      parameters:
+      - description: Consultant UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Soft-delete a consultant
+      tags:
+      - consultants
+    get:
+      parameters:
+      - description: Consultant UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/services.ConsultantItem'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get a consultant
+      tags:
+      - consultants
+    patch:
+      parameters:
+      - description: Consultant UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Consultant changes
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/services.ConsultantInput'
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/services.ConsultantItem'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Update a consultant
+      tags:
+      - consultants
+  /api/v2/conversations:
+    get:
+      parameters:
+      - description: Other participant name or email
+        in: query
+        name: search
+        type: string
+      - description: RFC3339 last-activity lower bound
+        in: query
+        name: recent_since
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.PaginatedConversationsEnvelope'
+      security:
+      - BearerAuth: []
+      summary: List participant-owned conversations
+      tags:
+      - conversations
+    post:
+      parameters:
+      - description: Other participant
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/services.ConversationCreate'
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/handlers.ConversationEnvelope'
+      security:
+      - BearerAuth: []
+      summary: Find or create a one-to-one conversation
+      tags:
+      - conversations
+  /api/v2/conversations/{id}:
+    delete:
+      parameters:
+      - description: Conversation UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+      security:
+      - BearerAuth: []
+      summary: Delete a participant-owned conversation
+      tags:
+      - conversations
+    get:
+      parameters:
+      - description: Conversation UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.ConversationEnvelope'
+      security:
+      - BearerAuth: []
+      summary: Get a participant-owned conversation
+      tags:
+      - conversations
+  /api/v2/conversations/{id}/messages:
+    get:
+      parameters:
+      - description: Conversation UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: asc or desc
+        in: query
+        name: order
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.PaginatedMessagesEnvelope'
+      security:
+      - BearerAuth: []
+      summary: List messages in deterministic order
+      tags:
+      - conversations
+    post:
+      parameters:
+      - description: Conversation UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Message
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/services.MessageCreate'
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/handlers.MessageEnvelope'
+      security:
+      - BearerAuth: []
+      summary: Send a message as the authenticated participant
+      tags:
+      - conversations
+  /api/v2/conversations/{id}/messages/{messageId}/reaction:
+    post:
+      parameters:
+      - description: Conversation UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Message UUID
+        in: path
+        name: messageId
+        required: true
+        type: string
+      - description: Reaction
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/services.MessageReactionInput'
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.MessageEnvelope'
+      security:
+      - BearerAuth: []
+      summary: Add or remove the authenticated participant's reaction
+      tags:
+      - conversations
+  /api/v2/conversations/{id}/messages/{messageId}/read:
+    post:
+      parameters:
+      - description: Conversation UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Message UUID
+        in: path
+        name: messageId
+        required: true
+        type: string
+      - description: Read timestamp
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/services.MessageReadInput'
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.MessageEnvelope'
+      security:
+      - BearerAuth: []
+      summary: Mark a message read for the authenticated participant
+      tags:
+      - conversations
   /api/v2/documentation:
     get:
       parameters:
@@ -3966,6 +5589,126 @@ paths:
       summary: Record authenticated drug usage
       tags:
       - drugs
+  /api/v2/emergency-protocols:
+    get:
+      description: Readers see active protocols only; editors may filter all states.
+      parameters:
+      - description: Page
+        in: query
+        name: page
+        type: integer
+      - description: Items per page
+        in: query
+        name: per_page
+        type: integer
+      - description: Title or description
+        in: query
+        name: search
+        type: string
+      - description: Protocol category
+        in: query
+        name: category
+        type: string
+      - description: critical, high, medium, or low
+        in: query
+        name: priority
+        type: string
+      - description: active, draft, or archived (editors only)
+        in: query
+        name: status
+        type: string
+      - description: Allowlisted sort field
+        in: query
+        name: sort
+        type: string
+      - description: asc or desc
+        in: query
+        name: order
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.PaginatedEmergencyProtocolsEnvelope'
+      security:
+      - BearerAuth: []
+      summary: List emergency protocols
+      tags:
+      - emergency-protocols
+    post:
+      parameters:
+      - description: Protocol
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/services.EmergencyProtocolInput'
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/handlers.EmergencyProtocolEnvelope'
+      security:
+      - BearerAuth: []
+      summary: Create an emergency protocol
+      tags:
+      - emergency-protocols
+  /api/v2/emergency-protocols/{id}:
+    delete:
+      parameters:
+      - description: Protocol UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+      security:
+      - BearerAuth: []
+      summary: Archive an emergency protocol
+      tags:
+      - emergency-protocols
+    get:
+      parameters:
+      - description: Protocol UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.EmergencyProtocolEnvelope'
+      security:
+      - BearerAuth: []
+      summary: Get an emergency protocol
+      tags:
+      - emergency-protocols
+    patch:
+      parameters:
+      - description: Protocol UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Protocol changes
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/services.EmergencyProtocolInput'
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.EmergencyProtocolEnvelope'
+      security:
+      - BearerAuth: []
+      summary: Update an emergency protocol
+      tags:
+      - emergency-protocols
   /api/v2/facilities:
     get:
       parameters:
@@ -4439,6 +6182,311 @@ paths:
       summary: Replace editable FAQ fields
       tags:
       - help-content
+  /api/v2/guideline-categories:
+    get:
+      parameters:
+      - description: Page number
+        in: query
+        name: page
+        type: integer
+      - description: Items per page
+        in: query
+        name: per_page
+        type: integer
+      - description: Name, slug, or description
+        in: query
+        name: search
+        type: string
+      - description: Status (editors only)
+        in: query
+        name: status
+        type: string
+      - description: Parent UUID
+        in: query
+        name: parent_id
+        type: string
+      - description: Allowlisted sort field
+        in: query
+        name: sort
+        type: string
+      - description: asc or desc
+        in: query
+        name: order
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.PaginatedGuidelineCategoriesEnvelope'
+      security:
+      - BearerAuth: []
+      summary: List guideline categories
+      tags:
+      - guideline-taxonomy
+    post:
+      parameters:
+      - description: Category
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/services.GuidelineCategoryInput'
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/handlers.GuidelineCategoryEnvelope'
+      security:
+      - BearerAuth: []
+      summary: Create a guideline category
+      tags:
+      - guideline-taxonomy
+  /api/v2/guideline-categories/{id}:
+    delete:
+      parameters:
+      - description: Category UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+      security:
+      - BearerAuth: []
+      summary: Archive an unused guideline category
+      tags:
+      - guideline-taxonomy
+    get:
+      parameters:
+      - description: Category UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.GuidelineCategoryEnvelope'
+      security:
+      - BearerAuth: []
+      summary: Get a guideline category
+      tags:
+      - guideline-taxonomy
+    patch:
+      parameters:
+      - description: Category UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Category changes
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/services.GuidelineCategoryInput'
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.GuidelineCategoryEnvelope'
+      security:
+      - BearerAuth: []
+      summary: Update a guideline category
+      tags:
+      - guideline-taxonomy
+  /api/v2/guideline-index:
+    get:
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.PaginatedGuidelineIndexEnvelope'
+      security:
+      - BearerAuth: []
+      summary: List guideline index entries
+      tags:
+      - guideline-taxonomy
+    post:
+      parameters:
+      - description: Index entry
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/services.GuidelineIndexInput'
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/handlers.GuidelineIndexEnvelope'
+      security:
+      - BearerAuth: []
+      summary: Create a guideline index entry
+      tags:
+      - guideline-taxonomy
+  /api/v2/guideline-index/{id}:
+    delete:
+      parameters:
+      - description: Index-entry UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+      security:
+      - BearerAuth: []
+      summary: Archive an unused guideline index entry
+      tags:
+      - guideline-taxonomy
+    get:
+      parameters:
+      - description: Index-entry UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.GuidelineIndexEnvelope'
+      security:
+      - BearerAuth: []
+      summary: Get a guideline index entry
+      tags:
+      - guideline-taxonomy
+    patch:
+      parameters:
+      - description: Index-entry UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Index-entry changes
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/services.GuidelineIndexInput'
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.GuidelineIndexEnvelope'
+      security:
+      - BearerAuth: []
+      summary: Update a guideline index entry
+      tags:
+      - guideline-taxonomy
+  /api/v2/guideline-index/{id}/children:
+    get:
+      parameters:
+      - description: Index-entry UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.PaginatedGuidelineIndexEnvelope'
+      security:
+      - BearerAuth: []
+      summary: List direct children of an index entry
+      tags:
+      - guideline-taxonomy
+  /api/v2/guideline-tags:
+    get:
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.PaginatedGuidelineTagsEnvelope'
+      security:
+      - BearerAuth: []
+      summary: List guideline tags
+      tags:
+      - guideline-taxonomy
+    post:
+      parameters:
+      - description: Tag
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/services.GuidelineTagInput'
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/handlers.GuidelineTagEnvelope'
+      security:
+      - BearerAuth: []
+      summary: Create a guideline tag
+      tags:
+      - guideline-taxonomy
+  /api/v2/guideline-tags/{id}:
+    delete:
+      parameters:
+      - description: Tag UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+      security:
+      - BearerAuth: []
+      summary: Archive a guideline tag
+      tags:
+      - guideline-taxonomy
+    get:
+      parameters:
+      - description: Tag UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.GuidelineTagEnvelope'
+      security:
+      - BearerAuth: []
+      summary: Get a guideline tag
+      tags:
+      - guideline-taxonomy
+    patch:
+      parameters:
+      - description: Tag UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Tag changes
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/services.GuidelineTagInput'
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.GuidelineTagEnvelope'
+      security:
+      - BearerAuth: []
+      summary: Update a guideline tag
+      tags:
+      - guideline-taxonomy
   /api/v2/guideline-versions/{id}/chunks:
     get:
       parameters:
@@ -4938,76 +6986,90 @@ paths:
       - guidelines
   /api/v2/languages:
     get:
-      parameters:
-      - description: Active languages filter
-        in: query
-        name: is_active
-        type: boolean
-      - description: Page number
-        in: query
-        minimum: 1
-        name: page
-        type: integer
-      - description: Page size
-        in: query
-        maximum: 100
-        minimum: 1
-        name: per_page
-        type: integer
-      produces:
-      - application/json
       responses:
         "200":
           description: OK
           schema:
             $ref: '#/definitions/handlers.PaginatedLanguagesEnvelope'
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/handlers.ErrorResponse'
-        "401":
-          description: Unauthorized
-          schema:
-            $ref: '#/definitions/handlers.ErrorResponse'
       security:
       - BearerAuth: []
-      summary: List languages
+      summary: List languages with typed filters
       tags:
-      - reference
+      - content-reference
     post:
-      consumes:
-      - application/json
       parameters:
-      - description: Language payload
+      - description: Language
         in: body
         name: payload
         required: true
         schema:
-          $ref: '#/definitions/services.CreateLanguageInput'
-      produces:
-      - application/json
+          $ref: '#/definitions/services.LanguageInput'
       responses:
         "201":
           description: Created
           schema:
             $ref: '#/definitions/handlers.LanguageEnvelope'
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/handlers.ErrorResponse'
-        "401":
-          description: Unauthorized
-          schema:
-            $ref: '#/definitions/handlers.ErrorResponse'
-        "403":
-          description: Forbidden
-          schema:
-            $ref: '#/definitions/handlers.ErrorResponse'
       security:
       - BearerAuth: []
       summary: Create a language
       tags:
-      - reference
+      - content-reference
+  /api/v2/languages/{id}:
+    delete:
+      parameters:
+      - description: Language UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+      security:
+      - BearerAuth: []
+      summary: Delete a non-default language
+      tags:
+      - content-reference
+    get:
+      parameters:
+      - description: Language UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.LanguageEnvelope'
+      security:
+      - BearerAuth: []
+      summary: Get a language
+      tags:
+      - content-reference
+    patch:
+      parameters:
+      - description: Language UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Language changes
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/services.LanguageInput'
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.LanguageEnvelope'
+      security:
+      - BearerAuth: []
+      summary: Update a language
+      tags:
+      - content-reference
   /api/v2/me:
     get:
       description: Return the currently authenticated user.
@@ -5062,6 +7124,217 @@ paths:
       summary: Change the current user's password
       tags:
       - auth
+  /api/v2/medical-guidelines:
+    get:
+      description: Readers see published guidelines only. Editors may query any publication
+        state.
+      parameters:
+      - description: Page number
+        in: query
+        name: page
+        type: integer
+      - description: Items per page
+        in: query
+        name: per_page
+        type: integer
+      - description: Condition, ICD-10 code, or population
+        in: query
+        name: search
+        type: string
+      - description: Status (editors only)
+        in: query
+        name: status
+        type: string
+      - description: Category UUID
+        in: query
+        name: category_id
+        type: string
+      - description: Tag UUID
+        in: query
+        name: tag_id
+        type: string
+      - description: Publication state (editors only)
+        in: query
+        name: is_published
+        type: boolean
+      - description: Allowlisted sort field
+        in: query
+        name: sort
+        type: string
+      - description: asc or desc
+        in: query
+        name: order
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.PaginatedMedicalGuidelinesEnvelope'
+      security:
+      - BearerAuth: []
+      summary: List medical guidelines
+      tags:
+      - guideline-content
+    post:
+      parameters:
+      - description: Guideline
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/services.MedicalGuidelineInput'
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/handlers.MedicalGuidelineEnvelope'
+      security:
+      - BearerAuth: []
+      summary: Create a medical guideline
+      tags:
+      - guideline-content
+  /api/v2/medical-guidelines/{id}:
+    delete:
+      parameters:
+      - description: Guideline UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+      security:
+      - BearerAuth: []
+      summary: Archive a medical guideline
+      tags:
+      - guideline-content
+    get:
+      parameters:
+      - description: Guideline UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.MedicalGuidelineEnvelope'
+      security:
+      - BearerAuth: []
+      summary: Get a medical guideline
+      tags:
+      - guideline-content
+    patch:
+      parameters:
+      - description: Guideline UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Guideline changes
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/services.MedicalGuidelineInput'
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.MedicalGuidelineEnvelope'
+      security:
+      - BearerAuth: []
+      summary: Update a medical guideline
+      tags:
+      - guideline-content
+  /api/v2/ministry-directory:
+    get:
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.PaginatedMinistryDirectoryEnvelope'
+      security:
+      - BearerAuth: []
+      summary: List ministry directory entries
+      tags:
+      - content-reference
+    post:
+      parameters:
+      - description: Directory entry
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/services.MinistryDirectoryInput'
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/handlers.MinistryDirectoryEnvelope'
+      security:
+      - BearerAuth: []
+      summary: Create a ministry directory entry
+      tags:
+      - content-reference
+  /api/v2/ministry-directory/{id}:
+    delete:
+      parameters:
+      - description: Directory UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+      security:
+      - BearerAuth: []
+      summary: Delete a ministry directory entry
+      tags:
+      - content-reference
+    get:
+      parameters:
+      - description: Directory UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.MinistryDirectoryEnvelope'
+      security:
+      - BearerAuth: []
+      summary: Get a ministry directory entry
+      tags:
+      - content-reference
+    patch:
+      parameters:
+      - description: Directory UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Directory changes
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/services.MinistryDirectoryInput'
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.MinistryDirectoryEnvelope'
+      security:
+      - BearerAuth: []
+      summary: Update a ministry directory entry
+      tags:
+      - content-reference
   /api/v2/notification-campaigns:
     get:
       responses:
@@ -5339,6 +7612,127 @@ paths:
       summary: Mark all visible notifications as read for the current user
       tags:
       - notifications
+  /api/v2/pages:
+    get:
+      parameters:
+      - description: Page
+        in: query
+        name: page
+        type: integer
+      - description: Items per page
+        in: query
+        name: per_page
+        type: integer
+      - description: Title, key, or description
+        in: query
+        name: search
+        type: string
+      - description: Exact page key
+        in: query
+        name: key
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.PaginatedGenericPagesEnvelope'
+      security:
+      - BearerAuth: []
+      summary: List generic pages
+      tags:
+      - content-reference
+    post:
+      parameters:
+      - description: Page
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/services.GenericPageInput'
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/handlers.GenericPageEnvelope'
+      security:
+      - BearerAuth: []
+      summary: Create a generic page
+      tags:
+      - content-reference
+  /api/v2/pages/{id}:
+    delete:
+      parameters:
+      - description: Page UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+      security:
+      - BearerAuth: []
+      summary: Delete a generic page
+      tags:
+      - content-reference
+    get:
+      parameters:
+      - description: Page UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.GenericPageEnvelope'
+      security:
+      - BearerAuth: []
+      summary: Get a generic page
+      tags:
+      - content-reference
+    patch:
+      parameters:
+      - description: Page UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Page changes
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/services.GenericPageInput'
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.GenericPageEnvelope'
+      security:
+      - BearerAuth: []
+      summary: Update a generic page
+      tags:
+      - content-reference
+  /api/v2/pages/key/{key}:
+    get:
+      parameters:
+      - description: Page key
+        in: path
+        name: key
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.GenericPageEnvelope'
+      security:
+      - BearerAuth: []
+      summary: Get a generic page by key
+      tags:
+      - content-reference
   /api/v2/permissions:
     get:
       responses:
@@ -5505,6 +7899,91 @@ paths:
       summary: Run a clinical protocol
       tags:
       - protocols
+  /api/v2/reading-progress:
+    get:
+      parameters:
+      - description: Guideline document UUID
+        in: query
+        name: guideline_id
+        type: string
+      - description: Bookmark state
+        in: query
+        name: is_bookmarked
+        type: boolean
+      - description: Minimum progress from 0 to 1
+        in: query
+        name: progress_min
+        type: number
+      - description: Maximum progress from 0 to 1
+        in: query
+        name: progress_max
+        type: number
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.PaginatedReadingProgressEnvelope'
+      security:
+      - BearerAuth: []
+      summary: List the authenticated user's reading progress
+      tags:
+      - progress-usage
+  /api/v2/reading-progress/{guidelineId}:
+    delete:
+      parameters:
+      - description: Guideline document UUID
+        in: path
+        name: guidelineId
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+      security:
+      - BearerAuth: []
+      summary: Delete owned reading progress
+      tags:
+      - progress-usage
+    get:
+      parameters:
+      - description: Guideline document UUID
+        in: path
+        name: guidelineId
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.ReadingProgressEnvelope'
+      security:
+      - BearerAuth: []
+      summary: Get reading progress for one guideline
+      tags:
+      - progress-usage
+    put:
+      parameters:
+      - description: Guideline document UUID
+        in: path
+        name: guidelineId
+        required: true
+        type: string
+      - description: Progress
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/services.ReadingProgressInput'
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.ReadingProgressEnvelope'
+      security:
+      - BearerAuth: []
+      summary: Create or update owned reading progress
+      tags:
+      - progress-usage
   /api/v2/regions/{id}/children:
     get:
       parameters:
@@ -6199,6 +8678,82 @@ paths:
       summary: Update a therapeutic category
       tags:
       - drugs
+  /api/v2/usage/abbreviations:
+    post:
+      parameters:
+      - description: Usage event
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/services.UsageEventInput'
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.UsageEventEnvelope'
+      security:
+      - BearerAuth: []
+      summary: Record idempotent abbreviation usage
+      tags:
+      - progress-usage
+  /api/v2/usage/ai:
+    post:
+      parameters:
+      - description: Usage event
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/services.UsageEventInput'
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.UsageEventEnvelope'
+      security:
+      - BearerAuth: []
+      summary: Record idempotent AI usage
+      tags:
+      - progress-usage
+  /api/v2/usage/consultants:
+    post:
+      parameters:
+      - description: Usage event
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/services.UsageEventInput'
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.UsageEventEnvelope'
+      security:
+      - BearerAuth: []
+      summary: Record idempotent consultant usage
+      tags:
+      - progress-usage
+  /api/v2/usage/guidelines:
+    post:
+      parameters:
+      - description: Usage event
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/services.UsageEventInput'
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.UsageEventEnvelope'
+      security:
+      - BearerAuth: []
+      summary: Record idempotent guideline usage
+      tags:
+      - progress-usage
   /api/v2/users:
     get:
       parameters:

@@ -93,8 +93,11 @@ func New(cfg config.Config) (*App, error) {
 	notificationSvc := services.NotificationService{DB: database}
 	supportSvc := services.SupportService{DB: database}
 	helpContentSvc := services.HelpContentService{DB: database}
+	guidelineContentSvc := services.GuidelineContentService{DB: database}
+	emergencyProtocolSvc := services.EmergencyProtocolService{DB: database}
+	contentReferenceSvc := services.ContentReferenceService{DB: database}
+	consultantSvc := services.ConsultantService{DB: database}
 	legacyAPISvc := services.LegacyAPIService{DB: database}
-	resourceSvc := services.ResourceService{DB: database}
 	facilitySvc := services.FacilityService{DB: database}
 
 	authH := handlers.AuthHandler{Service: authSvc}
@@ -112,8 +115,13 @@ func New(cfg config.Config) (*App, error) {
 	notificationH := handlers.NotificationHandler{Service: notificationSvc}
 	supportH := handlers.SupportHandler{Service: supportSvc}
 	helpContentH := handlers.HelpContentHandler{Service: helpContentSvc}
+	guidelineContentH := handlers.GuidelineContentHandler{Service: guidelineContentSvc}
+	emergencyProtocolH := handlers.EmergencyProtocolHandler{Service: emergencyProtocolSvc}
+	contentReferenceH := handlers.ContentReferenceHandler{Service: contentReferenceSvc}
+	progressUsageH := handlers.ProgressUsageHandler{Service: services.ProgressUsageService{DB: database}}
+	conversationH := handlers.ConversationHandler{Service: services.ConversationService{DB: database}}
+	consultantH := handlers.ConsultantHandler{Service: consultantSvc}
 	legacyAPIH := handlers.LegacyAPIHandler{Service: legacyAPISvc, Cfg: cfg}
-	resourceH := handlers.ResourceHandler{Service: resourceSvc, Cfg: cfg}
 	facilityH := handlers.NewFacilityHandler(facilitySvc)
 
 	legacyV1 := r.Group("/api/v1")
@@ -228,6 +236,49 @@ func New(cfg config.Config) (*App, error) {
 		protected.PATCH("/documentation/:id", middleware.RequireAnyPermission("admin.all", "content.write", "guideline.write"), helpContentH.UpdateDocumentation)
 		protected.DELETE("/documentation/:id", middleware.RequireAnyPermission("admin.all", "content.write", "guideline.write"), helpContentH.DeleteDocumentation)
 
+		protected.GET("/medical-guidelines", middleware.RequirePermission("guideline.read"), guidelineContentH.ListMedicalGuidelines)
+		protected.GET("/medical-guidelines/:id", middleware.RequirePermission("guideline.read"), guidelineContentH.GetMedicalGuideline)
+		protected.POST("/medical-guidelines", middleware.RequirePermission("guideline.write"), guidelineContentH.CreateMedicalGuideline)
+		protected.PATCH("/medical-guidelines/:id", middleware.RequirePermission("guideline.write"), guidelineContentH.UpdateMedicalGuideline)
+		protected.DELETE("/medical-guidelines/:id", middleware.RequirePermission("guideline.write"), guidelineContentH.DeleteMedicalGuideline)
+		protected.GET("/guideline-categories", middleware.RequirePermission("guideline.read"), guidelineContentH.ListCategories)
+		protected.GET("/guideline-categories/:id", middleware.RequirePermission("guideline.read"), guidelineContentH.GetCategory)
+		protected.POST("/guideline-categories", middleware.RequirePermission("guideline.write"), guidelineContentH.CreateCategory)
+		protected.PATCH("/guideline-categories/:id", middleware.RequirePermission("guideline.write"), guidelineContentH.UpdateCategory)
+		protected.DELETE("/guideline-categories/:id", middleware.RequirePermission("guideline.write"), guidelineContentH.DeleteCategory)
+		protected.GET("/guideline-tags", middleware.RequirePermission("guideline.read"), guidelineContentH.ListTags)
+		protected.GET("/guideline-tags/:id", middleware.RequirePermission("guideline.read"), guidelineContentH.GetTag)
+		protected.POST("/guideline-tags", middleware.RequirePermission("guideline.write"), guidelineContentH.CreateTag)
+		protected.PATCH("/guideline-tags/:id", middleware.RequirePermission("guideline.write"), guidelineContentH.UpdateTag)
+		protected.DELETE("/guideline-tags/:id", middleware.RequirePermission("guideline.write"), guidelineContentH.DeleteTag)
+		protected.GET("/guideline-index", middleware.RequirePermission("guideline.read"), guidelineContentH.ListIndex)
+		protected.GET("/guideline-index/:id", middleware.RequirePermission("guideline.read"), guidelineContentH.GetIndex)
+		protected.GET("/guideline-index/:id/children", middleware.RequirePermission("guideline.read"), guidelineContentH.IndexChildren)
+		protected.POST("/guideline-index", middleware.RequirePermission("guideline.write"), guidelineContentH.CreateIndex)
+		protected.PATCH("/guideline-index/:id", middleware.RequirePermission("guideline.write"), guidelineContentH.UpdateIndex)
+		protected.DELETE("/guideline-index/:id", middleware.RequirePermission("guideline.write"), guidelineContentH.DeleteIndex)
+		protected.GET("/abbreviations", middleware.RequirePermission("guideline.read"), guidelineContentH.ListAbbreviations)
+		protected.GET("/abbreviations/:id", middleware.RequirePermission("guideline.read"), guidelineContentH.GetAbbreviation)
+		protected.POST("/abbreviations", middleware.RequirePermission("guideline.write"), guidelineContentH.CreateAbbreviation)
+		protected.PATCH("/abbreviations/:id", middleware.RequirePermission("guideline.write"), guidelineContentH.UpdateAbbreviation)
+		protected.DELETE("/abbreviations/:id", middleware.RequirePermission("guideline.write"), guidelineContentH.DeleteAbbreviation)
+		protected.GET("/emergency-protocols", middleware.RequireAnyPermission("protocol.read", "guideline.read"), emergencyProtocolH.List)
+		protected.GET("/emergency-protocols/:id", middleware.RequireAnyPermission("protocol.read", "guideline.read"), emergencyProtocolH.Get)
+		protected.POST("/emergency-protocols", middleware.RequireAnyPermission("protocol.write", "guideline.write"), emergencyProtocolH.Create)
+		protected.PATCH("/emergency-protocols/:id", middleware.RequireAnyPermission("protocol.write", "guideline.write"), emergencyProtocolH.Update)
+		protected.DELETE("/emergency-protocols/:id", middleware.RequireAnyPermission("protocol.write", "guideline.write"), emergencyProtocolH.Delete)
+		protected.GET("/pages", contentReferenceH.ListPages)
+		protected.GET("/pages/key/:key", contentReferenceH.GetPageByKey)
+		protected.GET("/pages/:id", contentReferenceH.GetPage)
+		protected.POST("/pages", middleware.RequireAnyPermission("content.write", "guideline.write"), contentReferenceH.CreatePage)
+		protected.PATCH("/pages/:id", middleware.RequireAnyPermission("content.write", "guideline.write"), contentReferenceH.UpdatePage)
+		protected.DELETE("/pages/:id", middleware.RequireAnyPermission("content.write", "guideline.write"), contentReferenceH.DeletePage)
+		protected.GET("/ministry-directory", contentReferenceH.ListDirectory)
+		protected.GET("/ministry-directory/:id", contentReferenceH.GetDirectory)
+		protected.POST("/ministry-directory", middleware.RequireAnyPermission("content.write", "facility.write"), contentReferenceH.CreateDirectory)
+		protected.PATCH("/ministry-directory/:id", middleware.RequireAnyPermission("content.write", "facility.write"), contentReferenceH.UpdateDirectory)
+		protected.DELETE("/ministry-directory/:id", middleware.RequireAnyPermission("content.write", "facility.write"), contentReferenceH.DeleteDirectory)
+
 		protected.GET("/drug-categories", middleware.RequireAnyPermission("drug.read", "guideline.read"), drugReferenceH.ListCategories)
 		protected.GET("/drug-categories/:id", middleware.RequireAnyPermission("drug.read", "guideline.read"), drugReferenceH.GetCategory)
 		protected.POST("/drug-categories", middleware.RequireAnyPermission("drug.write", "guideline.write"), drugReferenceH.CreateCategory)
@@ -274,8 +325,33 @@ func New(cfg config.Config) (*App, error) {
 
 		protected.GET("/settings", middleware.RequirePermission("admin.all"), referenceH.ListSettings)
 		protected.POST("/settings", middleware.RequirePermission("admin.all"), referenceH.CreateSetting)
-		protected.GET("/languages", referenceH.ListLanguages)
-		protected.POST("/languages", middleware.RequirePermission("admin.all"), referenceH.CreateLanguage)
+		protected.GET("/languages", contentReferenceH.ListLanguages)
+		protected.GET("/languages/:id", contentReferenceH.GetLanguage)
+		protected.POST("/languages", middleware.RequirePermission("admin.all"), contentReferenceH.CreateLanguage)
+		protected.PATCH("/languages/:id", middleware.RequirePermission("admin.all"), contentReferenceH.UpdateLanguage)
+		protected.DELETE("/languages/:id", middleware.RequirePermission("admin.all"), contentReferenceH.DeleteLanguage)
+		protected.GET("/reading-progress", progressUsageH.ListProgress)
+		protected.GET("/reading-progress/:guidelineId", progressUsageH.GetProgress)
+		protected.PUT("/reading-progress/:guidelineId", progressUsageH.UpsertProgress)
+		protected.DELETE("/reading-progress/:guidelineId", progressUsageH.DeleteProgress)
+		protected.POST("/usage/guidelines", progressUsageH.RecordGuidelineUsage)
+		protected.POST("/usage/abbreviations", progressUsageH.RecordAbbreviationUsage)
+		protected.POST("/usage/consultants", progressUsageH.RecordConsultantUsage)
+		protected.POST("/usage/ai", progressUsageH.RecordAIUsage)
+		protected.GET("/analytics/usage", middleware.RequireAnyPermission("admin.all", "analytics.read", "sync.read"), progressUsageH.UsageAggregates)
+		protected.GET("/conversations", conversationH.List)
+		protected.POST("/conversations", conversationH.Create)
+		protected.GET("/conversations/:id", conversationH.Get)
+		protected.DELETE("/conversations/:id", conversationH.Delete)
+		protected.GET("/conversations/:id/messages", conversationH.ListMessages)
+		protected.POST("/conversations/:id/messages", conversationH.CreateMessage)
+		protected.POST("/conversations/:id/messages/:messageId/read", conversationH.MarkRead)
+		protected.POST("/conversations/:id/messages/:messageId/reaction", conversationH.React)
+		protected.GET("/consultants", consultantH.List)
+		protected.GET("/consultants/:id", consultantH.Get)
+		protected.POST("/consultants", middleware.RequireAnyPermission("admin.all", "content.write", "consultant.write"), consultantH.Create)
+		protected.PATCH("/consultants/:id", middleware.RequireAnyPermission("admin.all", "content.write", "consultant.write"), consultantH.Update)
+		protected.DELETE("/consultants/:id", middleware.RequireAnyPermission("admin.all", "content.write", "consultant.write"), consultantH.Delete)
 
 		protected.GET("/facilities", facilityH.ListFacilities)
 		protected.GET("/facilities/:id", facilityH.GetFacility)
@@ -340,46 +416,8 @@ func New(cfg config.Config) (*App, error) {
 		protected.POST("/sync/packages", middleware.RequirePermission("admin.all"), syncH.CreatePackage)
 		protected.GET("/sync/packages/:id/download", middleware.RequirePermission("sync.read"), syncH.Download)
 
-		registerResourceRoutes(protected, resourceH)
 	}
 	return &App{Router: r, DB: database}, nil
-}
-
-func registerResourceRoutes(group *gin.RouterGroup, handler handlers.ResourceHandler) {
-	resourcePaths := map[string]string{
-		"medical_guidelines":      "/medical-guidelines",
-		"abbreviations":           "/abbreviations",
-		"emergency_protocols":     "/emergency-protocols",
-		"generic_pages":           "/pages",
-		"guideline_categories":    "/guideline-categories",
-		"guideline_tags":          "/guideline-tags",
-		"guideline_index":         "/guideline-index",
-		"consultants":             "/consultants",
-		"ministry_directory":      "/ministry-directory",
-		"languages":               "/reference-languages",
-		"conversations":           "/conversations",
-		"messages":                "/messages",
-		"reading_progress":        "/reading-progress",
-		"guideline_usage_logs":    "/guideline-usage",
-		"abbreviation_usage_logs": "/abbreviation-usage",
-		"consultant_usage_logs":   "/consultant-usage",
-		"ai_usage_logs":           "/ai-usage",
-	}
-
-	for resource, path := range resourcePaths {
-		resourceName := resource
-		setResource := func(next gin.HandlerFunc) gin.HandlerFunc {
-			return func(c *gin.Context) {
-				c.Set("resource", resourceName)
-				next(c)
-			}
-		}
-		group.GET(path, setResource(handler.List))
-		group.GET(path+"/:id", setResource(handler.Get))
-		group.POST(path, setResource(handler.Create))
-		group.PATCH(path+"/:id", setResource(handler.Update))
-		group.DELETE(path+"/:id", setResource(handler.Delete))
-	}
 }
 
 const swaggerChooserHTML = `<!doctype html>

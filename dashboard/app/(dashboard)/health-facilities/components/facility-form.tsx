@@ -14,7 +14,6 @@ import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Separator } from "@/components/ui/separator"
 import { showToast } from "@/lib/toast"
-import { backendRecordKeyPrefix } from "@/hooks/use-backend-record"
 import { healthFacilitiesService } from "@/services/health-facilities.service"
 import { 
   FacilityLevelsResponse, 
@@ -285,7 +284,7 @@ export function FacilityForm({ initialData, mode, facilityId }: FacilityFormProp
         showToast.success("Success", "Health facility created successfully")
       } else if (mode === "edit" && facilityId) {
         await healthFacilitiesService.updateFacility(facilityId, data)
-        await queryClient.invalidateQueries({ queryKey: backendRecordKeyPrefix('health_facilities', facilityId) })
+        await queryClient.invalidateQueries({ queryKey: ["backend", "health_facilities", "record", facilityId] })
         showToast.success("Success", "Health facility updated successfully")
       }
 

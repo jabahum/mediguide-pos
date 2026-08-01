@@ -229,6 +229,178 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/v2/abbreviations": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "guideline-content"
+                ],
+                "summary": "List abbreviations",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.PaginatedAbbreviationsEnvelope"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "guideline-content"
+                ],
+                "summary": "Create an abbreviation",
+                "parameters": [
+                    {
+                        "description": "Abbreviation",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/services.AbbreviationInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.AbbreviationEnvelope"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v2/abbreviations/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "guideline-content"
+                ],
+                "summary": "Get an abbreviation",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Abbreviation UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.AbbreviationEnvelope"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "guideline-content"
+                ],
+                "summary": "Archive an abbreviation",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Abbreviation UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    }
+                }
+            },
+            "patch": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "guideline-content"
+                ],
+                "summary": "Update an abbreviation",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Abbreviation UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Abbreviation changes",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/services.AbbreviationInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.AbbreviationEnvelope"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v2/analytics/usage": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "progress-usage"
+                ],
+                "summary": "Get aggregate usage counts",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "RFC3339 lower bound",
+                        "name": "since",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.UsageAggregatesEnvelope"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v2/auth/email-verification/confirm": {
             "post": {
                 "consumes": [
@@ -660,6 +832,12 @@ const docTemplate = `{
                         "description": "Sort field",
                         "name": "sort",
                         "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Sort direction (asc or desc)",
+                        "name": "order",
+                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -1016,6 +1194,610 @@ const docTemplate = `{
                         "description": "Internal Server Error",
                         "schema": {
                             "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v2/consultants": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "consultants"
+                ],
+                "summary": "List consultants",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Page",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Items per page",
+                        "name": "per_page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Name, email, specialty, organization, city, or country",
+                        "name": "search",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Status",
+                        "name": "status",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Specialty",
+                        "name": "specialty",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Qualification",
+                        "name": "qualification",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Preferred language",
+                        "name": "language",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Region",
+                        "name": "region",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "City",
+                        "name": "city",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Consultation type",
+                        "name": "consultation_type",
+                        "in": "query"
+                    },
+                    {
+                        "type": "boolean",
+                        "description": "Verification state",
+                        "name": "verified",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "name, specialty, rating, total_consultations, usage_count, created_at, or updated_at",
+                        "name": "sort",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "asc or desc",
+                        "name": "order",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/services.ConsultantPage"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "consultants"
+                ],
+                "summary": "Create a consultant",
+                "parameters": [
+                    {
+                        "description": "Consultant",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/services.ConsultantInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/services.ConsultantItem"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v2/consultants/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "consultants"
+                ],
+                "summary": "Get a consultant",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Consultant UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/services.ConsultantItem"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "consultants"
+                ],
+                "summary": "Soft-delete a consultant",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Consultant UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "patch": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "consultants"
+                ],
+                "summary": "Update a consultant",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Consultant UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Consultant changes",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/services.ConsultantInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/services.ConsultantItem"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v2/conversations": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "conversations"
+                ],
+                "summary": "List participant-owned conversations",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Other participant name or email",
+                        "name": "search",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "RFC3339 last-activity lower bound",
+                        "name": "recent_since",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.PaginatedConversationsEnvelope"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "conversations"
+                ],
+                "summary": "Find or create a one-to-one conversation",
+                "parameters": [
+                    {
+                        "description": "Other participant",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/services.ConversationCreate"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ConversationEnvelope"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v2/conversations/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "conversations"
+                ],
+                "summary": "Get a participant-owned conversation",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Conversation UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ConversationEnvelope"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "conversations"
+                ],
+                "summary": "Delete a participant-owned conversation",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Conversation UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    }
+                }
+            }
+        },
+        "/api/v2/conversations/{id}/messages": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "conversations"
+                ],
+                "summary": "List messages in deterministic order",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Conversation UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "asc or desc",
+                        "name": "order",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.PaginatedMessagesEnvelope"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "conversations"
+                ],
+                "summary": "Send a message as the authenticated participant",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Conversation UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Message",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/services.MessageCreate"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.MessageEnvelope"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v2/conversations/{id}/messages/{messageId}/reaction": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "conversations"
+                ],
+                "summary": "Add or remove the authenticated participant's reaction",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Conversation UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Message UUID",
+                        "name": "messageId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Reaction",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/services.MessageReactionInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.MessageEnvelope"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v2/conversations/{id}/messages/{messageId}/read": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "conversations"
+                ],
+                "summary": "Mark a message read for the authenticated participant",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Conversation UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Message UUID",
+                        "name": "messageId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Read timestamp",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/services.MessageReadInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.MessageEnvelope"
                         }
                     }
                 }
@@ -1801,6 +2583,200 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/v2/emergency-protocols": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Readers see active protocols only; editors may filter all states.",
+                "tags": [
+                    "emergency-protocols"
+                ],
+                "summary": "List emergency protocols",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Page",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Items per page",
+                        "name": "per_page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Title or description",
+                        "name": "search",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Protocol category",
+                        "name": "category",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "critical, high, medium, or low",
+                        "name": "priority",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "active, draft, or archived (editors only)",
+                        "name": "status",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Allowlisted sort field",
+                        "name": "sort",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "asc or desc",
+                        "name": "order",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.PaginatedEmergencyProtocolsEnvelope"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "emergency-protocols"
+                ],
+                "summary": "Create an emergency protocol",
+                "parameters": [
+                    {
+                        "description": "Protocol",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/services.EmergencyProtocolInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.EmergencyProtocolEnvelope"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v2/emergency-protocols/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "emergency-protocols"
+                ],
+                "summary": "Get an emergency protocol",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Protocol UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.EmergencyProtocolEnvelope"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "emergency-protocols"
+                ],
+                "summary": "Archive an emergency protocol",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Protocol UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    }
+                }
+            },
+            "patch": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "emergency-protocols"
+                ],
+                "summary": "Update an emergency protocol",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Protocol UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Protocol changes",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/services.EmergencyProtocolInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.EmergencyProtocolEnvelope"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v2/facilities": {
             "get": {
                 "security": [
@@ -2555,6 +3531,509 @@ const docTemplate = `{
                         "description": "OK",
                         "schema": {
                             "$ref": "#/definitions/handlers.FAQEnvelope"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v2/guideline-categories": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "guideline-taxonomy"
+                ],
+                "summary": "List guideline categories",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Page number",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Items per page",
+                        "name": "per_page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Name, slug, or description",
+                        "name": "search",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Status (editors only)",
+                        "name": "status",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Parent UUID",
+                        "name": "parent_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Allowlisted sort field",
+                        "name": "sort",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "asc or desc",
+                        "name": "order",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.PaginatedGuidelineCategoriesEnvelope"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "guideline-taxonomy"
+                ],
+                "summary": "Create a guideline category",
+                "parameters": [
+                    {
+                        "description": "Category",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/services.GuidelineCategoryInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.GuidelineCategoryEnvelope"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v2/guideline-categories/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "guideline-taxonomy"
+                ],
+                "summary": "Get a guideline category",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Category UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.GuidelineCategoryEnvelope"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "guideline-taxonomy"
+                ],
+                "summary": "Archive an unused guideline category",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Category UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    }
+                }
+            },
+            "patch": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "guideline-taxonomy"
+                ],
+                "summary": "Update a guideline category",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Category UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Category changes",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/services.GuidelineCategoryInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.GuidelineCategoryEnvelope"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v2/guideline-index": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "guideline-taxonomy"
+                ],
+                "summary": "List guideline index entries",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.PaginatedGuidelineIndexEnvelope"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "guideline-taxonomy"
+                ],
+                "summary": "Create a guideline index entry",
+                "parameters": [
+                    {
+                        "description": "Index entry",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/services.GuidelineIndexInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.GuidelineIndexEnvelope"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v2/guideline-index/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "guideline-taxonomy"
+                ],
+                "summary": "Get a guideline index entry",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Index-entry UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.GuidelineIndexEnvelope"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "guideline-taxonomy"
+                ],
+                "summary": "Archive an unused guideline index entry",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Index-entry UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    }
+                }
+            },
+            "patch": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "guideline-taxonomy"
+                ],
+                "summary": "Update a guideline index entry",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Index-entry UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Index-entry changes",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/services.GuidelineIndexInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.GuidelineIndexEnvelope"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v2/guideline-index/{id}/children": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "guideline-taxonomy"
+                ],
+                "summary": "List direct children of an index entry",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Index-entry UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.PaginatedGuidelineIndexEnvelope"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v2/guideline-tags": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "guideline-taxonomy"
+                ],
+                "summary": "List guideline tags",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.PaginatedGuidelineTagsEnvelope"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "guideline-taxonomy"
+                ],
+                "summary": "Create a guideline tag",
+                "parameters": [
+                    {
+                        "description": "Tag",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/services.GuidelineTagInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.GuidelineTagEnvelope"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v2/guideline-tags/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "guideline-taxonomy"
+                ],
+                "summary": "Get a guideline tag",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Tag UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.GuidelineTagEnvelope"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "guideline-taxonomy"
+                ],
+                "summary": "Archive a guideline tag",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Tag UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    }
+                }
+            },
+            "patch": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "guideline-taxonomy"
+                ],
+                "summary": "Update a guideline tag",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Tag UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Tag changes",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/services.GuidelineTagInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.GuidelineTagEnvelope"
                         }
                     }
                 }
@@ -3332,53 +4811,15 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "produces": [
-                    "application/json"
-                ],
                 "tags": [
-                    "reference"
+                    "content-reference"
                 ],
-                "summary": "List languages",
-                "parameters": [
-                    {
-                        "type": "boolean",
-                        "description": "Active languages filter",
-                        "name": "is_active",
-                        "in": "query"
-                    },
-                    {
-                        "minimum": 1,
-                        "type": "integer",
-                        "description": "Page number",
-                        "name": "page",
-                        "in": "query"
-                    },
-                    {
-                        "maximum": 100,
-                        "minimum": 1,
-                        "type": "integer",
-                        "description": "Page size",
-                        "name": "per_page",
-                        "in": "query"
-                    }
-                ],
+                "summary": "List languages with typed filters",
                 "responses": {
                     "200": {
                         "description": "OK",
                         "schema": {
                             "$ref": "#/definitions/handlers.PaginatedLanguagesEnvelope"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/handlers.ErrorResponse"
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthorized",
-                        "schema": {
-                            "$ref": "#/definitions/handlers.ErrorResponse"
                         }
                     }
                 }
@@ -3389,24 +4830,18 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
                 "tags": [
-                    "reference"
+                    "content-reference"
                 ],
                 "summary": "Create a language",
                 "parameters": [
                     {
-                        "description": "Language payload",
+                        "description": "Language",
                         "name": "payload",
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/services.CreateLanguageInput"
+                            "$ref": "#/definitions/services.LanguageInput"
                         }
                     }
                 ],
@@ -3416,23 +4851,97 @@ const docTemplate = `{
                         "schema": {
                             "$ref": "#/definitions/handlers.LanguageEnvelope"
                         }
-                    },
-                    "400": {
-                        "description": "Bad Request",
+                    }
+                }
+            }
+        },
+        "/api/v2/languages/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "content-reference"
+                ],
+                "summary": "Get a language",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Language UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/handlers.ErrorResponse"
+                            "$ref": "#/definitions/handlers.LanguageEnvelope"
                         }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "content-reference"
+                ],
+                "summary": "Delete a non-default language",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Language UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    }
+                }
+            },
+            "patch": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "content-reference"
+                ],
+                "summary": "Update a language",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Language UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
                     },
-                    "401": {
-                        "description": "Unauthorized",
+                    {
+                        "description": "Language changes",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
                         "schema": {
-                            "$ref": "#/definitions/handlers.ErrorResponse"
+                            "$ref": "#/definitions/services.LanguageInput"
                         }
-                    },
-                    "403": {
-                        "description": "Forbidden",
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/handlers.ErrorResponse"
+                            "$ref": "#/definitions/handlers.LanguageEnvelope"
                         }
                     }
                 }
@@ -3520,6 +5029,349 @@ const docTemplate = `{
                         "description": "Unauthorized",
                         "schema": {
                             "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v2/medical-guidelines": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Readers see published guidelines only. Editors may query any publication state.",
+                "tags": [
+                    "guideline-content"
+                ],
+                "summary": "List medical guidelines",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Page number",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Items per page",
+                        "name": "per_page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Condition, ICD-10 code, or population",
+                        "name": "search",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Status (editors only)",
+                        "name": "status",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Category UUID",
+                        "name": "category_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Tag UUID",
+                        "name": "tag_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "boolean",
+                        "description": "Publication state (editors only)",
+                        "name": "is_published",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Allowlisted sort field",
+                        "name": "sort",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "asc or desc",
+                        "name": "order",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.PaginatedMedicalGuidelinesEnvelope"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "guideline-content"
+                ],
+                "summary": "Create a medical guideline",
+                "parameters": [
+                    {
+                        "description": "Guideline",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/services.MedicalGuidelineInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.MedicalGuidelineEnvelope"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v2/medical-guidelines/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "guideline-content"
+                ],
+                "summary": "Get a medical guideline",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Guideline UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.MedicalGuidelineEnvelope"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "guideline-content"
+                ],
+                "summary": "Archive a medical guideline",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Guideline UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    }
+                }
+            },
+            "patch": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "guideline-content"
+                ],
+                "summary": "Update a medical guideline",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Guideline UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Guideline changes",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/services.MedicalGuidelineInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.MedicalGuidelineEnvelope"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v2/ministry-directory": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "content-reference"
+                ],
+                "summary": "List ministry directory entries",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.PaginatedMinistryDirectoryEnvelope"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "content-reference"
+                ],
+                "summary": "Create a ministry directory entry",
+                "parameters": [
+                    {
+                        "description": "Directory entry",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/services.MinistryDirectoryInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.MinistryDirectoryEnvelope"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v2/ministry-directory/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "content-reference"
+                ],
+                "summary": "Get a ministry directory entry",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Directory UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.MinistryDirectoryEnvelope"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "content-reference"
+                ],
+                "summary": "Delete a ministry directory entry",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Directory UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    }
+                }
+            },
+            "patch": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "content-reference"
+                ],
+                "summary": "Update a ministry directory entry",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Directory UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Directory changes",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/services.MinistryDirectoryInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.MinistryDirectoryEnvelope"
                         }
                     }
                 }
@@ -3995,6 +5847,205 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/v2/pages": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "content-reference"
+                ],
+                "summary": "List generic pages",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Page",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Items per page",
+                        "name": "per_page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Title, key, or description",
+                        "name": "search",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Exact page key",
+                        "name": "key",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.PaginatedGenericPagesEnvelope"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "content-reference"
+                ],
+                "summary": "Create a generic page",
+                "parameters": [
+                    {
+                        "description": "Page",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/services.GenericPageInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.GenericPageEnvelope"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v2/pages/key/{key}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "content-reference"
+                ],
+                "summary": "Get a generic page by key",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Page key",
+                        "name": "key",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.GenericPageEnvelope"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v2/pages/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "content-reference"
+                ],
+                "summary": "Get a generic page",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Page UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.GenericPageEnvelope"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "content-reference"
+                ],
+                "summary": "Delete a generic page",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Page UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    }
+                }
+            },
+            "patch": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "content-reference"
+                ],
+                "summary": "Update a generic page",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Page UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Page changes",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/services.GenericPageInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.GenericPageEnvelope"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v2/permissions": {
             "get": {
                 "security": [
@@ -4253,6 +6304,145 @@ const docTemplate = `{
                         "schema": {
                             "$ref": "#/definitions/handlers.ErrorResponse"
                         }
+                    }
+                }
+            }
+        },
+        "/api/v2/reading-progress": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "progress-usage"
+                ],
+                "summary": "List the authenticated user's reading progress",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Guideline document UUID",
+                        "name": "guideline_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "boolean",
+                        "description": "Bookmark state",
+                        "name": "is_bookmarked",
+                        "in": "query"
+                    },
+                    {
+                        "type": "number",
+                        "description": "Minimum progress from 0 to 1",
+                        "name": "progress_min",
+                        "in": "query"
+                    },
+                    {
+                        "type": "number",
+                        "description": "Maximum progress from 0 to 1",
+                        "name": "progress_max",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.PaginatedReadingProgressEnvelope"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v2/reading-progress/{guidelineId}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "progress-usage"
+                ],
+                "summary": "Get reading progress for one guideline",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Guideline document UUID",
+                        "name": "guidelineId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ReadingProgressEnvelope"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "progress-usage"
+                ],
+                "summary": "Create or update owned reading progress",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Guideline document UUID",
+                        "name": "guidelineId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Progress",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/services.ReadingProgressInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ReadingProgressEnvelope"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "progress-usage"
+                ],
+                "summary": "Delete owned reading progress",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Guideline document UUID",
+                        "name": "guidelineId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
                     }
                 }
             }
@@ -5363,6 +7553,134 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/v2/usage/abbreviations": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "progress-usage"
+                ],
+                "summary": "Record idempotent abbreviation usage",
+                "parameters": [
+                    {
+                        "description": "Usage event",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/services.UsageEventInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.UsageEventEnvelope"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v2/usage/ai": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "progress-usage"
+                ],
+                "summary": "Record idempotent AI usage",
+                "parameters": [
+                    {
+                        "description": "Usage event",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/services.UsageEventInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.UsageEventEnvelope"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v2/usage/consultants": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "progress-usage"
+                ],
+                "summary": "Record idempotent consultant usage",
+                "parameters": [
+                    {
+                        "description": "Usage event",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/services.UsageEventInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.UsageEventEnvelope"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v2/usage/guidelines": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "progress-usage"
+                ],
+                "summary": "Record idempotent guideline usage",
+                "parameters": [
+                    {
+                        "description": "Usage event",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/services.UsageEventInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.UsageEventEnvelope"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v2/users": {
             "get": {
                 "security": [
@@ -5715,6 +8033,17 @@ const docTemplate = `{
         }
     },
     "definitions": {
+        "handlers.AbbreviationEnvelope": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/models.Abbreviation"
+                },
+                "success": {
+                    "type": "boolean"
+                }
+            }
+        },
         "handlers.AskEnvelope": {
             "type": "object",
             "properties": {
@@ -5760,6 +8089,17 @@ const docTemplate = `{
                 "success": {
                     "type": "boolean",
                     "example": true
+                }
+            }
+        },
+        "handlers.ConversationEnvelope": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/services.ConversationView"
+                },
+                "success": {
+                    "type": "boolean"
                 }
             }
         },
@@ -5872,6 +8212,17 @@ const docTemplate = `{
                 }
             }
         },
+        "handlers.EmergencyProtocolEnvelope": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/models.EmergencyProtocol"
+                },
+                "success": {
+                    "type": "boolean"
+                }
+            }
+        },
         "handlers.ErrorResponse": {
             "type": "object",
             "properties": {
@@ -5907,6 +8258,28 @@ const docTemplate = `{
                 }
             }
         },
+        "handlers.GenericPageEnvelope": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/models.GenericPage"
+                },
+                "success": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "handlers.GuidelineCategoryEnvelope": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/models.GuidelineCategory"
+                },
+                "success": {
+                    "type": "boolean"
+                }
+            }
+        },
         "handlers.GuidelineDocumentEnvelope": {
             "type": "object",
             "properties": {
@@ -5916,6 +8289,28 @@ const docTemplate = `{
                 "success": {
                     "type": "boolean",
                     "example": true
+                }
+            }
+        },
+        "handlers.GuidelineIndexEnvelope": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/models.GuidelineIndexEntry"
+                },
+                "success": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "handlers.GuidelineTagEnvelope": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/models.GuidelineTag"
+                },
+                "success": {
+                    "type": "boolean"
                 }
             }
         },
@@ -6167,6 +8562,39 @@ const docTemplate = `{
                 }
             }
         },
+        "handlers.MedicalGuidelineEnvelope": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/models.MedicalGuideline"
+                },
+                "success": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "handlers.MessageEnvelope": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/services.MessageView"
+                },
+                "success": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "handlers.MinistryDirectoryEnvelope": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/models.MinistryDirectoryEntry"
+                },
+                "success": {
+                    "type": "boolean"
+                }
+            }
+        },
         "handlers.NotificationCampaignEnvelope": {
             "type": "object",
             "properties": {
@@ -6207,6 +8635,17 @@ const docTemplate = `{
                 "success": {
                     "type": "boolean",
                     "example": true
+                }
+            }
+        },
+        "handlers.PaginatedAbbreviationsEnvelope": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/services.PageResult-models_Abbreviation"
+                },
+                "success": {
+                    "type": "boolean"
                 }
             }
         },
@@ -6285,6 +8724,17 @@ const docTemplate = `{
                 "success": {
                     "type": "boolean",
                     "example": true
+                }
+            }
+        },
+        "handlers.PaginatedConversationsEnvelope": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/services.PageResult-services_ConversationView"
+                },
+                "success": {
+                    "type": "boolean"
                 }
             }
         },
@@ -6434,6 +8884,17 @@ const docTemplate = `{
                 }
             }
         },
+        "handlers.PaginatedEmergencyProtocolsEnvelope": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/services.PageResult-models_EmergencyProtocol"
+                },
+                "success": {
+                    "type": "boolean"
+                }
+            }
+        },
         "handlers.PaginatedFAQTagsEnvelope": {
             "type": "object",
             "properties": {
@@ -6450,6 +8911,28 @@ const docTemplate = `{
             "properties": {
                 "data": {
                     "$ref": "#/definitions/services.PageResult-models_FAQ"
+                },
+                "success": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "handlers.PaginatedGenericPagesEnvelope": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/services.PageResult-models_GenericPage"
+                },
+                "success": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "handlers.PaginatedGuidelineCategoriesEnvelope": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/services.PageResult-models_GuidelineCategory"
                 },
                 "success": {
                     "type": "boolean"
@@ -6534,6 +9017,17 @@ const docTemplate = `{
                 }
             }
         },
+        "handlers.PaginatedGuidelineIndexEnvelope": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/services.PageResult-models_GuidelineIndexEntry"
+                },
+                "success": {
+                    "type": "boolean"
+                }
+            }
+        },
         "handlers.PaginatedGuidelineSections": {
             "type": "object",
             "properties": {
@@ -6573,6 +9067,17 @@ const docTemplate = `{
                 }
             }
         },
+        "handlers.PaginatedGuidelineTagsEnvelope": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/services.PageResult-models_GuidelineTag"
+                },
+                "success": {
+                    "type": "boolean"
+                }
+            }
+        },
         "handlers.PaginatedLanguages": {
             "type": "object",
             "properties": {
@@ -6609,6 +9114,39 @@ const docTemplate = `{
                 "success": {
                     "type": "boolean",
                     "example": true
+                }
+            }
+        },
+        "handlers.PaginatedMedicalGuidelinesEnvelope": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/services.PageResult-models_MedicalGuideline"
+                },
+                "success": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "handlers.PaginatedMessagesEnvelope": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/services.PageResult-services_MessageView"
+                },
+                "success": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "handlers.PaginatedMinistryDirectoryEnvelope": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/services.PageResult-models_MinistryDirectoryEntry"
+                },
+                "success": {
+                    "type": "boolean"
                 }
             }
         },
@@ -6716,6 +9254,17 @@ const docTemplate = `{
                 "success": {
                     "type": "boolean",
                     "example": true
+                }
+            }
+        },
+        "handlers.PaginatedReadingProgressEnvelope": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/services.PageResult-models_ReadingProgress"
+                },
+                "success": {
+                    "type": "boolean"
                 }
             }
         },
@@ -6930,6 +9479,17 @@ const docTemplate = `{
                 "published": {
                     "type": "boolean",
                     "example": true
+                }
+            }
+        },
+        "handlers.ReadingProgressEnvelope": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/models.ReadingProgress"
+                },
+                "success": {
+                    "type": "boolean"
                 }
             }
         },
@@ -7154,6 +9714,29 @@ const docTemplate = `{
                 }
             }
         },
+        "handlers.UsageAggregatesEnvelope": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/services.UsageAggregate"
+                    }
+                },
+                "success": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "handlers.UsageEventEnvelope": {
+            "type": "object",
+            "properties": {
+                "data": {},
+                "success": {
+                    "type": "boolean"
+                }
+            }
+        },
         "handlers.UserEnvelope": {
             "type": "object",
             "properties": {
@@ -7196,6 +9779,47 @@ const docTemplate = `{
                 "success": {
                     "type": "boolean",
                     "example": true
+                }
+            }
+        },
+        "models.Abbreviation": {
+            "type": "object",
+            "properties": {
+                "abbreviation": {
+                    "type": "string"
+                },
+                "categories": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "common_usage": {
+                    "type": "boolean"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "meaning": {
+                    "type": "string"
+                },
+                "tags": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "updated_at": {
+                    "type": "string"
+                },
+                "usage_count": {
+                    "type": "integer"
                 }
             }
         },
@@ -7577,6 +10201,65 @@ const docTemplate = `{
                 }
             }
         },
+        "models.EmergencyProtocol": {
+            "type": "object",
+            "properties": {
+                "access_count": {
+                    "type": "integer"
+                },
+                "category": {
+                    "type": "string"
+                },
+                "contact_info": {
+                    "type": "object"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "critical_actions": {
+                    "type": "object"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "medications": {
+                    "type": "object"
+                },
+                "priority": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "steps": {
+                    "type": "object"
+                },
+                "tags": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "timeframe": {
+                    "type": "string"
+                },
+                "title": {
+                    "type": "string"
+                },
+                "transfer_checklist": {
+                    "type": "object"
+                },
+                "updated_at": {
+                    "type": "string"
+                },
+                "vital_signs": {
+                    "type": "object"
+                }
+            }
+        },
         "models.FAQ": {
             "type": "object",
             "properties": {
@@ -7709,6 +10392,73 @@ const docTemplate = `{
                 }
             }
         },
+        "models.GenericPage": {
+            "type": "object",
+            "properties": {
+                "content": {
+                    "type": "object"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "key": {
+                    "type": "string"
+                },
+                "title": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                }
+            }
+        },
+        "models.GuidelineCategory": {
+            "type": "object",
+            "properties": {
+                "color": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "icon": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "parent_category_id": {
+                    "type": "string"
+                },
+                "parent_name": {
+                    "type": "string"
+                },
+                "slug": {
+                    "type": "string"
+                },
+                "sort_order": {
+                    "type": "integer"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                }
+            }
+        },
         "models.GuidelineChunk": {
             "type": "object",
             "properties": {
@@ -7800,6 +10550,41 @@ const docTemplate = `{
                 }
             }
         },
+        "models.GuidelineIndexEntry": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "has_children": {
+                    "type": "boolean"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "level": {
+                    "type": "integer"
+                },
+                "parent_id": {
+                    "type": "string"
+                },
+                "parent_title": {
+                    "type": "string"
+                },
+                "sort_order": {
+                    "type": "integer"
+                },
+                "title": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                }
+            }
+        },
         "models.GuidelineSection": {
             "type": "object",
             "properties": {
@@ -7840,6 +10625,26 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "version_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "models.GuidelineTag": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "updated_at": {
                     "type": "string"
                 }
             }
@@ -7979,6 +10784,190 @@ const docTemplate = `{
                 },
                 "version": {
                     "type": "number"
+                }
+            }
+        },
+        "models.MedicalGuideline": {
+            "type": "object",
+            "properties": {
+                "categories": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "causes": {
+                    "type": "string"
+                },
+                "classification_critical": {
+                    "type": "string"
+                },
+                "classification_mild": {
+                    "type": "string"
+                },
+                "classification_moderate": {
+                    "type": "string"
+                },
+                "classification_severe": {
+                    "type": "string"
+                },
+                "clinical_features": {
+                    "type": "string"
+                },
+                "condition_name": {
+                    "type": "string"
+                },
+                "contraindications": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "definition": {
+                    "type": "string"
+                },
+                "differential_diagnosis": {
+                    "type": "string"
+                },
+                "dosage_adult": {
+                    "type": "string"
+                },
+                "dosage_pediatric": {
+                    "type": "string"
+                },
+                "dosage_secondary_adult": {
+                    "type": "string"
+                },
+                "dosage_secondary_pediatric": {
+                    "type": "string"
+                },
+                "general_management": {
+                    "type": "string"
+                },
+                "healthcare_level_required": {
+                    "type": "string"
+                },
+                "icd10_code": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "index_item_id": {
+                    "type": "string"
+                },
+                "index_item_title": {
+                    "type": "string"
+                },
+                "is_published": {
+                    "type": "boolean"
+                },
+                "medication_primary": {
+                    "type": "string"
+                },
+                "medication_secondary": {
+                    "type": "string"
+                },
+                "monitoring_requirements": {
+                    "type": "string"
+                },
+                "prevention_measures": {
+                    "type": "string"
+                },
+                "priority": {
+                    "type": "string"
+                },
+                "route_administration": {
+                    "type": "string"
+                },
+                "special_notes": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "tags": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "target_population": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                },
+                "usage_count": {
+                    "type": "integer"
+                },
+                "version": {
+                    "type": "string"
+                }
+            }
+        },
+        "models.MinistryDirectoryEntry": {
+            "type": "object",
+            "properties": {
+                "alternative_phone": {
+                    "type": "string"
+                },
+                "availability_hours": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "department": {
+                    "type": "string"
+                },
+                "district_id": {
+                    "type": "string"
+                },
+                "district_name": {
+                    "type": "string"
+                },
+                "email": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "ministry": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "notes": {
+                    "type": "string"
+                },
+                "office_address": {
+                    "type": "string"
+                },
+                "phone": {
+                    "type": "string"
+                },
+                "priority_level": {
+                    "type": "integer"
+                },
+                "region_id": {
+                    "type": "string"
+                },
+                "region_name": {
+                    "type": "string"
+                },
+                "specialization": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "title": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
                 }
             }
         },
@@ -8145,6 +11134,50 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "updated_at": {
+                    "type": "string"
+                }
+            }
+        },
+        "models.ReadingProgress": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "current_section": {
+                    "type": "string"
+                },
+                "guideline_document_id": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "is_bookmarked": {
+                    "type": "boolean"
+                },
+                "is_completed": {
+                    "type": "boolean"
+                },
+                "last_read_at": {
+                    "type": "string"
+                },
+                "notes": {
+                    "type": "string"
+                },
+                "progress_percentage": {
+                    "type": "number"
+                },
+                "reading_time_seconds": {
+                    "type": "integer"
+                },
+                "total_sections": {
+                    "type": "integer"
+                },
+                "updated_at": {
+                    "type": "string"
+                },
+                "user_id": {
                     "type": "string"
                 }
             }
@@ -8436,6 +11469,35 @@ const docTemplate = `{
                 }
             }
         },
+        "services.AbbreviationInput": {
+            "type": "object",
+            "properties": {
+                "abbreviation": {
+                    "type": "string"
+                },
+                "categories": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "common_usage": {
+                    "type": "boolean"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "meaning": {
+                    "type": "string"
+                },
+                "tags": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
         "services.AccountActionResult": {
             "type": "object",
             "properties": {
@@ -8510,6 +11572,323 @@ const docTemplate = `{
                 }
             }
         },
+        "services.ConsultantInput": {
+            "type": "object",
+            "properties": {
+                "address": {
+                    "type": "string"
+                },
+                "alternative_phone": {
+                    "type": "string"
+                },
+                "availability": {
+                    "type": "object"
+                },
+                "avatar": {
+                    "type": "object"
+                },
+                "certifications": {
+                    "type": "string"
+                },
+                "city": {
+                    "type": "string"
+                },
+                "consultation_types": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "country": {
+                    "type": "string"
+                },
+                "department": {
+                    "type": "string"
+                },
+                "email": {
+                    "type": "string"
+                },
+                "is_verified": {
+                    "type": "boolean"
+                },
+                "license_number": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "notes": {
+                    "type": "string"
+                },
+                "organization": {
+                    "type": "string"
+                },
+                "phone": {
+                    "type": "string"
+                },
+                "postal_code": {
+                    "type": "string"
+                },
+                "preferred_language": {
+                    "type": "string"
+                },
+                "profile_picture": {
+                    "type": "object"
+                },
+                "qualifications": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "rating": {
+                    "type": "number"
+                },
+                "region": {
+                    "type": "string"
+                },
+                "specialty": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "timezone": {
+                    "type": "string"
+                },
+                "total_consultations": {
+                    "type": "integer"
+                },
+                "user_id": {
+                    "type": "string"
+                },
+                "years_of_experience": {
+                    "type": "number"
+                }
+            }
+        },
+        "services.ConsultantItem": {
+            "type": "object",
+            "properties": {
+                "item": {
+                    "$ref": "#/definitions/services.ConsultantView"
+                }
+            }
+        },
+        "services.ConsultantPage": {
+            "type": "object",
+            "properties": {
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/services.ConsultantView"
+                    }
+                },
+                "page": {
+                    "type": "integer"
+                },
+                "per_page": {
+                    "type": "integer"
+                },
+                "total_items": {
+                    "type": "integer"
+                },
+                "total_pages": {
+                    "type": "integer"
+                }
+            }
+        },
+        "services.ConsultantUserView": {
+            "type": "object",
+            "properties": {
+                "avatar": {
+                    "type": "string"
+                },
+                "email": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "verified": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "services.ConsultantView": {
+            "type": "object",
+            "properties": {
+                "address": {
+                    "type": "string"
+                },
+                "alternative_phone": {
+                    "type": "string"
+                },
+                "availability": {
+                    "type": "object"
+                },
+                "avatar": {
+                    "type": "object"
+                },
+                "certifications": {
+                    "type": "string"
+                },
+                "city": {
+                    "type": "string"
+                },
+                "consultation_types": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "country": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "department": {
+                    "type": "string"
+                },
+                "email": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "is_verified": {
+                    "type": "boolean"
+                },
+                "license_number": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "notes": {
+                    "type": "string"
+                },
+                "organization": {
+                    "type": "string"
+                },
+                "phone": {
+                    "type": "string"
+                },
+                "postal_code": {
+                    "type": "string"
+                },
+                "preferred_language": {
+                    "type": "string"
+                },
+                "profile_picture": {
+                    "type": "object"
+                },
+                "qualifications": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "rating": {
+                    "type": "number"
+                },
+                "region": {
+                    "type": "string"
+                },
+                "specialty": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "timezone": {
+                    "type": "string"
+                },
+                "total_consultations": {
+                    "type": "integer"
+                },
+                "updated_at": {
+                    "type": "string"
+                },
+                "usage_count": {
+                    "type": "integer"
+                },
+                "user": {
+                    "$ref": "#/definitions/services.ConsultantUserView"
+                },
+                "user_id": {
+                    "type": "string"
+                },
+                "years_of_experience": {
+                    "type": "number"
+                }
+            }
+        },
+        "services.ConversationCreate": {
+            "type": "object",
+            "properties": {
+                "other_participant_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "services.ConversationView": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "last_activity": {
+                    "type": "string"
+                },
+                "last_message": {
+                    "type": "string"
+                },
+                "last_message_id": {
+                    "type": "string"
+                },
+                "participant1_avatar": {
+                    "type": "string"
+                },
+                "participant1_email": {
+                    "type": "string"
+                },
+                "participant1_name": {
+                    "type": "string"
+                },
+                "participant1_user_id": {
+                    "type": "string"
+                },
+                "participant1_verified": {
+                    "type": "boolean"
+                },
+                "participant2_avatar": {
+                    "type": "string"
+                },
+                "participant2_email": {
+                    "type": "string"
+                },
+                "participant2_name": {
+                    "type": "string"
+                },
+                "participant2_user_id": {
+                    "type": "string"
+                },
+                "participant2_verified": {
+                    "type": "boolean"
+                },
+                "updated_at": {
+                    "type": "string"
+                }
+            }
+        },
         "services.CreateCalculatorInput": {
             "type": "object",
             "properties": {
@@ -8565,44 +11944,6 @@ const docTemplate = `{
                 },
                 "title": {
                     "type": "string"
-                }
-            }
-        },
-        "services.CreateLanguageInput": {
-            "type": "object",
-            "properties": {
-                "code": {
-                    "type": "string"
-                },
-                "enabled_for_users": {
-                    "type": "boolean"
-                },
-                "is_active": {
-                    "type": "boolean"
-                },
-                "is_default": {
-                    "type": "boolean"
-                },
-                "name": {
-                    "type": "string"
-                },
-                "native_name": {
-                    "type": "string"
-                },
-                "progress": {
-                    "type": "number"
-                },
-                "status": {
-                    "type": "string"
-                },
-                "translations_json": {
-                    "type": "object"
-                },
-                "translations_url": {
-                    "type": "string"
-                },
-                "version": {
-                    "type": "number"
                 }
             }
         },
@@ -8861,6 +12202,53 @@ const docTemplate = `{
                 },
                 "tag_category": {
                     "type": "string"
+                }
+            }
+        },
+        "services.EmergencyProtocolInput": {
+            "type": "object",
+            "properties": {
+                "category": {
+                    "type": "string"
+                },
+                "contact_info": {
+                    "type": "object"
+                },
+                "critical_actions": {
+                    "type": "object"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "medications": {
+                    "type": "object"
+                },
+                "priority": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "steps": {
+                    "type": "object"
+                },
+                "tags": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "timeframe": {
+                    "type": "string"
+                },
+                "title": {
+                    "type": "string"
+                },
+                "transfer_checklist": {
+                    "type": "object"
+                },
+                "vital_signs": {
+                    "type": "object"
                 }
             }
         },
@@ -9186,6 +12574,118 @@ const docTemplate = `{
                 }
             }
         },
+        "services.GenericPageInput": {
+            "type": "object",
+            "properties": {
+                "content": {
+                    "type": "object"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "key": {
+                    "type": "string"
+                },
+                "title": {
+                    "type": "string"
+                }
+            }
+        },
+        "services.GuidelineCategoryInput": {
+            "type": "object",
+            "properties": {
+                "color": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "icon": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "parent_category_id": {
+                    "type": "string"
+                },
+                "slug": {
+                    "type": "string"
+                },
+                "sort_order": {
+                    "type": "integer"
+                },
+                "status": {
+                    "type": "string"
+                }
+            }
+        },
+        "services.GuidelineIndexInput": {
+            "type": "object",
+            "properties": {
+                "description": {
+                    "type": "string"
+                },
+                "parent_id": {
+                    "type": "string"
+                },
+                "sort_order": {
+                    "type": "integer"
+                },
+                "title": {
+                    "type": "string"
+                }
+            }
+        },
+        "services.GuidelineTagInput": {
+            "type": "object",
+            "properties": {
+                "description": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                }
+            }
+        },
+        "services.LanguageInput": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "string"
+                },
+                "enabled_for_users": {
+                    "type": "boolean"
+                },
+                "is_active": {
+                    "type": "boolean"
+                },
+                "is_default": {
+                    "type": "boolean"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "native_name": {
+                    "type": "string"
+                },
+                "progress": {
+                    "type": "number"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "translations": {
+                    "type": "object"
+                },
+                "translations_url": {
+                    "type": "string"
+                },
+                "version": {
+                    "type": "number"
+                }
+            }
+        },
         "services.LoginResult": {
             "type": "object",
             "properties": {
@@ -9220,6 +12720,258 @@ const docTemplate = `{
                     "items": {
                         "$ref": "#/definitions/models.SyncPackage"
                     }
+                }
+            }
+        },
+        "services.MedicalGuidelineInput": {
+            "type": "object",
+            "properties": {
+                "categories": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "causes": {
+                    "type": "string"
+                },
+                "classification_critical": {
+                    "type": "string"
+                },
+                "classification_mild": {
+                    "type": "string"
+                },
+                "classification_moderate": {
+                    "type": "string"
+                },
+                "classification_severe": {
+                    "type": "string"
+                },
+                "clinical_features": {
+                    "type": "string"
+                },
+                "condition_name": {
+                    "type": "string"
+                },
+                "contraindications": {
+                    "type": "string"
+                },
+                "definition": {
+                    "type": "string"
+                },
+                "differential_diagnosis": {
+                    "type": "string"
+                },
+                "dosage_adult": {
+                    "type": "string"
+                },
+                "dosage_pediatric": {
+                    "type": "string"
+                },
+                "dosage_secondary_adult": {
+                    "type": "string"
+                },
+                "dosage_secondary_pediatric": {
+                    "type": "string"
+                },
+                "general_management": {
+                    "type": "string"
+                },
+                "healthcare_level_required": {
+                    "type": "string"
+                },
+                "icd10_code": {
+                    "type": "string"
+                },
+                "index_item_id": {
+                    "type": "string"
+                },
+                "is_published": {
+                    "type": "boolean"
+                },
+                "medication_primary": {
+                    "type": "string"
+                },
+                "medication_secondary": {
+                    "type": "string"
+                },
+                "monitoring_requirements": {
+                    "type": "string"
+                },
+                "prevention_measures": {
+                    "type": "string"
+                },
+                "priority": {
+                    "type": "string"
+                },
+                "route_administration": {
+                    "type": "string"
+                },
+                "special_notes": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "tags": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "target_population": {
+                    "type": "string"
+                },
+                "version": {
+                    "type": "string"
+                }
+            }
+        },
+        "services.MessageCreate": {
+            "type": "object",
+            "properties": {
+                "attachments": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "content": {
+                    "type": "string"
+                },
+                "message_type": {
+                    "type": "string"
+                },
+                "reply_to_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "services.MessageReactionInput": {
+            "type": "object",
+            "properties": {
+                "active": {
+                    "type": "boolean"
+                },
+                "emoji": {
+                    "type": "string"
+                }
+            }
+        },
+        "services.MessageReadInput": {
+            "type": "object",
+            "properties": {
+                "read_at": {
+                    "type": "string"
+                }
+            }
+        },
+        "services.MessageView": {
+            "type": "object",
+            "properties": {
+                "attachments": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "content": {
+                    "type": "string"
+                },
+                "conversation_id": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "edited_at": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "is_edited": {
+                    "type": "boolean"
+                },
+                "message_type": {
+                    "type": "string"
+                },
+                "reactions": {
+                    "type": "object"
+                },
+                "read_by": {
+                    "type": "object"
+                },
+                "reply_to_id": {
+                    "type": "string"
+                },
+                "sender_avatar": {
+                    "type": "string"
+                },
+                "sender_email": {
+                    "type": "string"
+                },
+                "sender_name": {
+                    "type": "string"
+                },
+                "sender_user_id": {
+                    "type": "string"
+                },
+                "sender_verified": {
+                    "type": "boolean"
+                },
+                "updated_at": {
+                    "type": "string"
+                }
+            }
+        },
+        "services.MinistryDirectoryInput": {
+            "type": "object",
+            "properties": {
+                "alternative_phone": {
+                    "type": "string"
+                },
+                "availability_hours": {
+                    "type": "string"
+                },
+                "department": {
+                    "type": "string"
+                },
+                "district_id": {
+                    "type": "string"
+                },
+                "email": {
+                    "type": "string"
+                },
+                "ministry": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "notes": {
+                    "type": "string"
+                },
+                "office_address": {
+                    "type": "string"
+                },
+                "phone": {
+                    "type": "string"
+                },
+                "priority_level": {
+                    "type": "integer"
+                },
+                "region_id": {
+                    "type": "string"
+                },
+                "specialization": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "title": {
+                    "type": "string"
                 }
             }
         },
@@ -9314,6 +13066,29 @@ const docTemplate = `{
                 }
             }
         },
+        "services.PageResult-models_Abbreviation": {
+            "type": "object",
+            "properties": {
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.Abbreviation"
+                    }
+                },
+                "page": {
+                    "type": "integer"
+                },
+                "per_page": {
+                    "type": "integer"
+                },
+                "total_items": {
+                    "type": "integer"
+                },
+                "total_pages": {
+                    "type": "integer"
+                }
+            }
+        },
         "services.PageResult-models_Documentation": {
             "type": "object",
             "properties": {
@@ -9321,6 +13096,29 @@ const docTemplate = `{
                     "type": "array",
                     "items": {
                         "$ref": "#/definitions/models.Documentation"
+                    }
+                },
+                "page": {
+                    "type": "integer"
+                },
+                "per_page": {
+                    "type": "integer"
+                },
+                "total_items": {
+                    "type": "integer"
+                },
+                "total_pages": {
+                    "type": "integer"
+                }
+            }
+        },
+        "services.PageResult-models_EmergencyProtocol": {
+            "type": "object",
+            "properties": {
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.EmergencyProtocol"
                     }
                 },
                 "page": {
@@ -9383,6 +13181,167 @@ const docTemplate = `{
                 }
             }
         },
+        "services.PageResult-models_GenericPage": {
+            "type": "object",
+            "properties": {
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.GenericPage"
+                    }
+                },
+                "page": {
+                    "type": "integer"
+                },
+                "per_page": {
+                    "type": "integer"
+                },
+                "total_items": {
+                    "type": "integer"
+                },
+                "total_pages": {
+                    "type": "integer"
+                }
+            }
+        },
+        "services.PageResult-models_GuidelineCategory": {
+            "type": "object",
+            "properties": {
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.GuidelineCategory"
+                    }
+                },
+                "page": {
+                    "type": "integer"
+                },
+                "per_page": {
+                    "type": "integer"
+                },
+                "total_items": {
+                    "type": "integer"
+                },
+                "total_pages": {
+                    "type": "integer"
+                }
+            }
+        },
+        "services.PageResult-models_GuidelineIndexEntry": {
+            "type": "object",
+            "properties": {
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.GuidelineIndexEntry"
+                    }
+                },
+                "page": {
+                    "type": "integer"
+                },
+                "per_page": {
+                    "type": "integer"
+                },
+                "total_items": {
+                    "type": "integer"
+                },
+                "total_pages": {
+                    "type": "integer"
+                }
+            }
+        },
+        "services.PageResult-models_GuidelineTag": {
+            "type": "object",
+            "properties": {
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.GuidelineTag"
+                    }
+                },
+                "page": {
+                    "type": "integer"
+                },
+                "per_page": {
+                    "type": "integer"
+                },
+                "total_items": {
+                    "type": "integer"
+                },
+                "total_pages": {
+                    "type": "integer"
+                }
+            }
+        },
+        "services.PageResult-models_MedicalGuideline": {
+            "type": "object",
+            "properties": {
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.MedicalGuideline"
+                    }
+                },
+                "page": {
+                    "type": "integer"
+                },
+                "per_page": {
+                    "type": "integer"
+                },
+                "total_items": {
+                    "type": "integer"
+                },
+                "total_pages": {
+                    "type": "integer"
+                }
+            }
+        },
+        "services.PageResult-models_MinistryDirectoryEntry": {
+            "type": "object",
+            "properties": {
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.MinistryDirectoryEntry"
+                    }
+                },
+                "page": {
+                    "type": "integer"
+                },
+                "per_page": {
+                    "type": "integer"
+                },
+                "total_items": {
+                    "type": "integer"
+                },
+                "total_pages": {
+                    "type": "integer"
+                }
+            }
+        },
+        "services.PageResult-models_ReadingProgress": {
+            "type": "object",
+            "properties": {
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.ReadingProgress"
+                    }
+                },
+                "page": {
+                    "type": "integer"
+                },
+                "per_page": {
+                    "type": "integer"
+                },
+                "total_items": {
+                    "type": "integer"
+                },
+                "total_pages": {
+                    "type": "integer"
+                }
+            }
+        },
         "services.PageResult-models_SupportTicket": {
             "type": "object",
             "properties": {
@@ -9413,6 +13372,52 @@ const docTemplate = `{
                     "type": "array",
                     "items": {
                         "$ref": "#/definitions/models.SupportTicketReply"
+                    }
+                },
+                "page": {
+                    "type": "integer"
+                },
+                "per_page": {
+                    "type": "integer"
+                },
+                "total_items": {
+                    "type": "integer"
+                },
+                "total_pages": {
+                    "type": "integer"
+                }
+            }
+        },
+        "services.PageResult-services_ConversationView": {
+            "type": "object",
+            "properties": {
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/services.ConversationView"
+                    }
+                },
+                "page": {
+                    "type": "integer"
+                },
+                "per_page": {
+                    "type": "integer"
+                },
+                "total_items": {
+                    "type": "integer"
+                },
+                "total_pages": {
+                    "type": "integer"
+                }
+            }
+        },
+        "services.PageResult-services_MessageView": {
+            "type": "object",
+            "properties": {
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/services.MessageView"
                     }
                 },
                 "page": {
@@ -9505,6 +13510,35 @@ const docTemplate = `{
                 },
                 "type": {
                     "type": "string"
+                }
+            }
+        },
+        "services.ReadingProgressInput": {
+            "type": "object",
+            "properties": {
+                "current_section": {
+                    "type": "string"
+                },
+                "is_bookmarked": {
+                    "type": "boolean"
+                },
+                "is_completed": {
+                    "type": "boolean"
+                },
+                "last_read_at": {
+                    "type": "string"
+                },
+                "notes": {
+                    "type": "string"
+                },
+                "progress_percentage": {
+                    "type": "number"
+                },
+                "reading_time_seconds": {
+                    "type": "integer"
+                },
+                "total_sections": {
+                    "type": "integer"
                 }
             }
         },
@@ -9769,6 +13803,28 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "title": {
+                    "type": "string"
+                }
+            }
+        },
+        "services.UsageAggregate": {
+            "type": "object",
+            "properties": {
+                "count": {
+                    "type": "integer"
+                },
+                "event_type": {
+                    "type": "string"
+                }
+            }
+        },
+        "services.UsageEventInput": {
+            "type": "object",
+            "properties": {
+                "idempotency_key": {
+                    "type": "string"
+                },
+                "resource_id": {
                     "type": "string"
                 }
             }

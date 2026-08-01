@@ -6,6 +6,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import '../../data/services/backend_api_service.dart';
+import '../../data/repositories/calculator_repository.dart';
 import '../../data/services/auth_service.dart';
 import '../../data/models/models.dart';
 import '../../utils/constants.dart';
@@ -68,9 +69,9 @@ class UseCalculatorController extends GetxController {
       final metadataFile = File(
         '${directory.path}/calculator_${calculator!.id}.json',
       );
-      final downloadUrl = BackendApiService.to.getCalculatorContentUrl(
-        calculator!.id,
-      );
+      final downloadUrl = CalculatorRepository(
+        BackendApiService.to,
+      ).contentUrl(calculator!.id);
       contentBaseUrl = _deriveContentBaseUrl(downloadUrl);
 
       debugPrint('🔗 FINAL URL: $downloadUrl');
@@ -105,9 +106,9 @@ class UseCalculatorController extends GetxController {
       /// ================================
       /// 2. DOWNLOAD OR UPSERT FILE
       /// ================================
-      final body = await BackendApiService.to.getCalculatorContent(
-        calculator!.id,
-      );
+      final body = await CalculatorRepository(
+        BackendApiService.to,
+      ).content(calculator!.id);
 
       if (!body.trim().startsWith('<')) {
         throw Exception('Invalid HTML received from server');
@@ -192,15 +193,16 @@ class UseCalculatorController extends GetxController {
 
       sessionStartTime = DateTime.now();
 
-      final record = await BackendApiService.to.startCalculatorUsage(
-        calculatorId: calculator!.id,
-        sessionStart: sessionStartTime!.toIso8601String(),
-        calculatorType: switch (calculator!.type) {
-          CalculatorType.calculator => 'calculator',
-          CalculatorType.decisionTool => 'decision_tool',
-          CalculatorType.checklist => 'checklist',
-        },
-      );
+      final record = await CalculatorRepository(BackendApiService.to)
+          .startUsage(
+            calculatorId: calculator!.id,
+            sessionStart: sessionStartTime!.toIso8601String(),
+            calculatorType: switch (calculator!.type) {
+              CalculatorType.calculator => 'calculator',
+              CalculatorType.decisionTool => 'decision_tool',
+              CalculatorType.checklist => 'checklist',
+            },
+          );
 
       currentUsageLogId = record.id;
     } catch (e) {
@@ -217,7 +219,7 @@ class UseCalculatorController extends GetxController {
 
       if (duration.inSeconds < 5) return;
 
-      await BackendApiService.to.finishCalculatorUsage(
+      await CalculatorRepository(BackendApiService.to).finishUsage(
         usageId: currentUsageLogId!,
         sessionEnd: end.toIso8601String(),
       );

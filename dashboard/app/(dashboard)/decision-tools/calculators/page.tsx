@@ -42,13 +42,15 @@ import {
 import { useState, useEffect, useCallback } from "react";
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { backendClient, getCurrentUser } from "@/lib/backend-client";
-import { Collections } from "@/types/backend-types";
+import { getCurrentUser } from "@/lib/backend-client";
 import type { CalculatorsResponse } from "@/types/backend-types";
 import { showToast } from "@/lib/toast";
 import { Skeleton } from "@/components/ui/skeleton";
 import { usePermissionContext } from "@/lib/permission-context";
 import { getBundledAppFileUrl } from "../app-file";
+import { calculatorService } from "@/services/calculator.service";
+import { SupportTicketsService } from "@/services/support-tickets.service";
+import { SupportTicketsPriorityOptions } from "@/types/backend-types";
 
 // Built-in calculators that don't require uploaded files
 const builtInCalculators = [
@@ -381,37 +383,14 @@ export default function CalculatorsPage() {
       .join("");
 
     setRequestSubmitting(true);
-    let requestRecordId: string | null = null;
     try {
-      const requestRecord = await backendClient.resource("calculator_requests").create({
-        name,
-        category: category || undefined,
-        description,
-        justification: justification || undefined,
-        requestedBy: user.id,
-        status: "pending",
-      })
-      requestRecordId = requestRecord.id
-
-      const ticket = await backendClient.resource("support_tickets").create({
+      await SupportTicketsService.createTicket({
         subject: `Calculator Request: ${name}`,
         description: ticketDescription,
-        status: "open",
-        priority: "normal",
+        priority: SupportTicketsPriorityOptions.normal,
         category: "Calculator Request",
         user_id: user.id,
       });
-
-      try {
-        await backendClient.resource("calculator_requests").update(requestRecord.id, {
-          supportTicket: ticket.id,
-        })
-      } catch (linkError) {
-        console.warn(
-          "Created ticket but failed to link it back to the request:",
-          linkError,
-        );
-      }
 
       showToast.success(
         "Request submitted",
@@ -421,19 +400,10 @@ export default function CalculatorsPage() {
       resetRequestForm();
     } catch (error) {
       console.error("Failed to submit calculator request:", error);
-      if (requestRecordId) {
-        showToast.error(
-          "Partial submission",
-          "Request saved but creating the support ticket failed. An admin will follow up.",
-        );
-        setRequestOpen(false);
-        resetRequestForm();
-      } else {
-        showToast.error(
-          "Submission failed",
-          "Could not submit your request. Try again later.",
-        );
-      }
+      showToast.error(
+        "Submission failed",
+        "Could not submit your request. Try again later.",
+      );
     } finally {
       setRequestSubmitting(false);
     }
@@ -455,11 +425,8 @@ export default function CalculatorsPage() {
 
   const fetchCalculators = useCallback(async () => {
     try {
-      const result = await backendClient.resource(Collections.Calculators).getList(1, 50, {
-        filter: "status = 'active'",
-        sort: "-featured,name"
-      })
-      setDbCalculators(result.items as CalculatorsResponse[])
+      const result = await calculatorService.list({ page: 1, perPage: 50, status: "active", sort: "name" })
+      setDbCalculators(result.items as unknown as CalculatorsResponse[])
     } catch (error) {
       console.error("Failed to fetch calculators:", error);
       showToast.error("Error", "Failed to load calculators");

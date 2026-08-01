@@ -4,6 +4,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:toastification/toastification.dart';
 
 import '../../data/services/backend_api_service.dart';
+import '../../data/repositories/content_reference_repository.dart';
 import '../../models/generic_page.dart';
 import '../../routes/app_pages.dart';
 import '../../translations/app_translations.dart';
@@ -120,16 +121,10 @@ class AllActionsController extends GetxController {
     try {
       isLoadingPages.value = true;
 
-      final records = await BackendApiService.to.getResourceList(
-        collectionName: 'generic_pages',
-        perPage: 50,
-      );
-
-      final pages = records.items
-          .map((record) => GenericPage.fromJson(record.toJson()))
-          .toList();
-
-      genericPages.assignAll(pages);
+      final result = await GenericPageRepository(
+        BackendApiService.to,
+      ).list(perPage: 50);
+      genericPages.assignAll(result.items);
     } catch (e) {
       Common.quickToast(
         title: 'Failed to load pages',

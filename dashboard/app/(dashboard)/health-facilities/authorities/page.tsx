@@ -93,7 +93,6 @@ export default function AuthoritiesPage() {
         collectionName="authorities"
         loadPage={healthFacilitiesService.listAuthorities}
         columns={authoritiesColumns}
-        expand="ownership_type"
         expandable={true}
         searchable={true}
         searchFields={["name", "code"]}

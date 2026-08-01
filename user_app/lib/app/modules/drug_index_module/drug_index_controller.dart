@@ -5,6 +5,8 @@ import 'package:infinite_scroll_pagination/infinite_scroll_pagination.dart';
 import '../../data/models/models.dart';
 import '../../data/models/filter_models.dart';
 import '../../data/services/backend_api_service.dart';
+import '../../data/repositories/drug_reference_repository.dart';
+import '../../data/repositories/calculator_repository.dart';
 import '../../translations/app_translations.dart';
 import '../../utils/common.dart';
 import '../../utils/constants.dart';
@@ -13,6 +15,10 @@ import 'widgets/drug_details_bottom_sheet.dart';
 
 class DrugIndexController extends GetxController {
   final BackendApiService _apiService = BackendApiService.to;
+  late final DrugReferenceRepository _references = DrugReferenceRepository(
+    _apiService,
+  );
+  late final DrugRepository _drugs = DrugRepository(_apiService);
 
   late final PagingController<int, Drug> pagingController;
 
@@ -81,27 +87,8 @@ class DrugIndexController extends GetxController {
     try {
       isLoadingFilters.value = true;
 
-      final categoriesResult = await _apiService.getResourceList(
-        collectionName: DrugCategory.collection,
-        page: 1,
-        perPage: 100,
-        sort: 'name',
-      );
-
-      categories.value = categoriesResult.items
-          .map((r) => r.data['name'] as String)
-          .toList();
-
-      final tagsResult = await _apiService.getResourceList(
-        collectionName: DrugTag.collection,
-        page: 1,
-        perPage: 100,
-        sort: 'name',
-      );
-
-      tags.value = tagsResult.items
-          .map((r) => r.data['name'] as String)
-          .toList();
+      categories.value = await _references.categoryNames();
+      tags.value = await _references.tagNames();
 
       routes.value = [
         'oral',
@@ -292,7 +279,7 @@ class DrugIndexController extends GetxController {
   // API
   // =========================
   Future<List<Drug>> getDrugs({int page = 1, int perPage = 30}) async {
-    final result = await _apiService.getDrugs(
+    final result = await _drugs.list(
       page: page,
       perPage: perPage,
       search: searchQuery.value,

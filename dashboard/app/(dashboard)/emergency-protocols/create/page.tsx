@@ -3,7 +3,7 @@
 import * as React from "react"
 import { useRouter } from "next/navigation"
 import { PageHeader } from "@/components/ui/page-header"
-import { getBackendClient } from "@/lib/backend-client"
+import { emergencyProtocolService } from "@/services/emergency-protocol.service"
 import { showToast } from "@/lib/toast"
 import {
   EmergencyProtocolForm,
@@ -24,8 +24,7 @@ export default function CreateEmergencyProtocolPage() {
 
   const handleSubmit = async (data: EmergencyProtocolPayload) => {
     try {
-      const backend = getBackendClient()
-      const created = await backend.resource("emergency_protocols").create(data)
+      const created = await emergencyProtocolService.create(data)
       showToast.success("Protocol Created", `"${created.title}" was created`)
       router.push(`/emergency-protocols/${created.id}`)
     } catch (error) {

@@ -5,7 +5,6 @@ import { useQuery } from "@tanstack/react-query"
 import { Check, ChevronsUpDown } from "lucide-react"
 
 import { cn } from "@/lib/utils"
-import { getBackendClient } from "@/lib/backend-client"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import {
@@ -160,13 +159,10 @@ function StaticSelect({
 }
 
 export interface RelationSelectConfig {
-  collection?: string
-  key?: string
-  loadOptions?: (search: string, pageSize: number) => Promise<Array<Record<string, unknown>>>
+  key: string
+  loadOptions: (search: string, pageSize: number) => Promise<Array<Record<string, unknown>>>
   labelField?: string
   valueField?: string
-  sort?: string
-  filter?: string
   pageSize?: number
 }
 
@@ -210,44 +206,27 @@ function RelationSelect({
   const [open, setOpen] = React.useState(false)
   const [search, setSearch] = React.useState("")
   const [debounced, setDebounced] = React.useState("")
-  const backend = React.useMemo(() => getBackendClient(), [])
 
   const relation = field.relation!
   const labelField = relation.labelField ?? "name"
   const valueField = relation.valueField ?? "id"
-  const sort = relation.sort ?? labelField
   const pageSize = relation.pageSize ?? 50
-  const relationKey = relation.key ?? relation.collection ?? "relation"
+  const relationKey = relation.key
 
   React.useEffect(() => {
     const t = setTimeout(() => setDebounced(search.trim()), 250)
     return () => clearTimeout(t)
   }, [search])
 
-  const escapeForFilter = (raw: string) =>
-    raw.replace(/\\/g, "\\\\").replace(/"/g, '\\"')
-
   const listQuery = useQuery({
     enabled: open,
     queryKey: [
       "backend-filter-relation",
       relationKey,
-      { labelField, valueField, sort, pageSize, debounced, base: relation.filter ?? "" },
+      { labelField, valueField, pageSize, debounced },
     ],
     queryFn: async () => {
-      if (relation.loadOptions) {
-        return relation.loadOptions(debounced, pageSize)
-      }
-      if (!relation.collection) return []
-      const filters: string[] = []
-      if (relation.filter) filters.push(`(${relation.filter})`)
-      if (debounced) filters.push(`${labelField} ~ "${escapeForFilter(debounced)}"`)
-      const result = await backend.resource(relation.collection).getList(1, pageSize, {
-        filter: filters.join(" && ") || undefined,
-        sort,
-        fields: `${valueField},${labelField}`,
-      })
-      return result.items as Array<Record<string, unknown>>
+      return relation.loadOptions(debounced, pageSize)
     },
   })
 
@@ -255,15 +234,8 @@ function RelationSelect({
     enabled: !!value,
     queryKey: ["backend-filter-relation-one", relationKey, value, labelField, valueField],
     queryFn: async () => {
-      if (relation.loadOptions) {
-        const items = await relation.loadOptions("", Math.max(pageSize, 200))
-        return items.find((item) => String(item[valueField]) === value) ?? null
-      }
-      if (!relation.collection) return null
-      const item = await backend
-        .resource(relation.collection)
-        .getOne(value, { fields: `${valueField},${labelField}` })
-      return item as Record<string, unknown>
+      const items = await relation.loadOptions?.("", Math.max(pageSize, 200)) ?? []
+      return items.find((item) => String(item[valueField]) === value) ?? null
     },
   })
 

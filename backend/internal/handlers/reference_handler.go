@@ -74,64 +74,6 @@ func (h ReferenceHandler) CreateSetting(c *gin.Context) {
 	httpx.Created(c, row)
 }
 
-// ListLanguages godoc
-// @Summary List languages
-// @Tags reference
-// @Produce json
-// @Security BearerAuth
-// @Param is_active query boolean false "Active languages filter"
-// @Param page query int false "Page number" minimum(1)
-// @Param per_page query int false "Page size" minimum(1) maximum(100)
-// @Success 200 {object} handlers.PaginatedLanguagesEnvelope
-// @Failure 400 {object} handlers.ErrorResponse
-// @Failure 401 {object} handlers.ErrorResponse
-// @Router /api/v2/languages [get]
-func (h ReferenceHandler) ListLanguages(c *gin.Context) {
-	page, err := parsePageQuery(c, 20, 100)
-	if err != nil {
-		httpx.Error(c, http.StatusBadRequest, "invalid pagination parameters")
-		return
-	}
-
-	activeOnly, err := optionalBoolQuery(c, "is_active")
-	if err != nil {
-		httpx.Error(c, http.StatusBadRequest, err.Error())
-		return
-	}
-	rows, err := h.Service.ListLanguages(activeOnly, page)
-	if err != nil {
-		httpx.Error(c, http.StatusInternalServerError, "internal server error")
-		return
-	}
-	httpx.OK(c, rows)
-}
-
-// CreateLanguage godoc
-// @Summary Create a language
-// @Tags reference
-// @Accept json
-// @Produce json
-// @Security BearerAuth
-// @Param payload body services.CreateLanguageInput true "Language payload"
-// @Success 201 {object} handlers.LanguageEnvelope
-// @Failure 400 {object} handlers.ErrorResponse
-// @Failure 401 {object} handlers.ErrorResponse
-// @Failure 403 {object} handlers.ErrorResponse
-// @Router /api/v2/languages [post]
-func (h ReferenceHandler) CreateLanguage(c *gin.Context) {
-	var in services.CreateLanguageInput
-	if err := c.ShouldBindJSON(&in); err != nil {
-		httpx.Error(c, http.StatusBadRequest, err.Error())
-		return
-	}
-	row, err := h.Service.CreateLanguage(in)
-	if err != nil {
-		httpx.Error(c, http.StatusBadRequest, err.Error())
-		return
-	}
-	httpx.Created(c, row)
-}
-
 func optionalBoolQuery(c *gin.Context, key string) (*bool, error) {
 	raw := c.Query(key)
 	if raw == "" {

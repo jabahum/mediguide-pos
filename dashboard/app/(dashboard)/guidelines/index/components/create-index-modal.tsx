@@ -17,7 +17,7 @@ import { Label } from "@/components/ui/label"
 import { GuidelineIndexSelector } from "@/components/ui/guideline-index-selector"
 import { GuidelineIndexType } from "../columns"
 import { showToast } from "@/lib/toast"
-import { getBackendClient } from "@/lib/backend-client"
+import { guidelineIndexService } from "@/services/guideline-content.service"
 
 const createIndexSchema = z.object({
   title: z.string().min(1, "Title is required").max(200, "Title must be less than 200 characters"),
@@ -70,44 +70,15 @@ export function CreateIndexModal({
   const onSubmit = async (data: CreateIndexFormData) => {
     setIsSubmitting(true)
     try {
-      const backend = getBackendClient()
-      
-      let level = 0
-      let order = 0
-      
-      if (data.parent) {
-        // Creating under a parent
-        const parent = allIndexItems.find(item => item.id === data.parent)
-        level = (parent?.level || 0) + 1
-        
-        // Get next order under this parent
-        const siblings = await backend.resource('guideline_index').getList(1, 50, {
-          filter: `parent ~ "${data.parent}"`,
-          sort: '-order'
-        })
-        order = (siblings.items[0]?.order || 0) + 1
-        
-        // Update parent to mark it has children
-        await backend.resource('guideline_index').update(data.parent, {
-          hasChildren: true
-        })
-      } else {
-        // Creating at root level
-        const rootItems = await backend.resource('guideline_index').getList(1, 1, {
-          filter: 'parent = ""',
-          sort: '-order'
-        })
-        order = (rootItems.items[0]?.order || 0) + 1
-      }
-
-      // Create the new index item
-      await backend.resource('guideline_index').create({
+      const siblings = data.parent
+        ? allIndexItems.filter(item => item.parent === data.parent)
+        : allIndexItems.filter(item => !item.parent)
+      const order = Math.max(0, ...siblings.map(item => item.order || 0)) + 1
+      await guidelineIndexService.create({
         title: data.title,
         description: data.description || "",
-        parent: data.parent ? [data.parent] : undefined,
-        level,
+        parent: data.parent || "",
         order,
-        hasChildren: false,
       })
       
       showToast.success("Success", "Index item created successfully")

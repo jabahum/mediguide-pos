@@ -100,7 +100,6 @@ export default function SubcountiesPage() {
         collectionName="subcounties"
         loadPage={healthFacilitiesService.listSubcounties}
         columns={subcountiesColumns}
-        expand="county,district"
         expandable={true}
         searchable={true}
         searchFields={["name", "nhpi_code", "hsdt_code"]}

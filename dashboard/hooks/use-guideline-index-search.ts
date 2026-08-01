@@ -2,7 +2,7 @@
 
 import * as React from "react"
 import { GuidelineIndexResponse } from "@/types/backend-types"
-import { getBackendClient } from "@/lib/backend-client"
+import { guidelineIndexService } from "@/services/guideline-content.service"
 
 export type GuidelineIndexItem = GuidelineIndexResponse
 
@@ -126,39 +126,9 @@ export function useGuidelineIndexSearch(
     setError(null)
 
     try {
-      const backend = getBackendClient()
-      
-      // Build filter conditions
-      const filterConditions: string[] = []
-      
-      // Search by title using simple contains filter
-      filterConditions.push(`title ~ "${trimmedTerm}"`)
-      
-      // Exclude specific IDs
       const excludeIdsArray = stableExcludeIds ? stableExcludeIds.split(',').filter(Boolean) : []
-      if (excludeIdsArray.length > 0) {
-        const excludeFilter = excludeIdsArray.map(id => `id != "${id}"`).join(" && ")
-        filterConditions.push(`(${excludeFilter})`)
-      }
-      
-      // Level restriction
-      if (typeof stableMaxLevel === 'number') {
-        filterConditions.push(`level < ${stableMaxLevel}`)
-      }
-      
-      // Additional filter
-      if (stableAdditionalFilter) {
-        filterConditions.push(`(${stableAdditionalFilter})`)
-      }
-      
-      const filter = filterConditions.join(" && ")
-      
-      const response = await backend.resource('guideline_index').getList(1, stableMaxResults, {
-        filter,
-        sort: 'level,order,title',
-      })
-      
-      setResults(response.items as GuidelineIndexItem[])
+      const records = await guidelineIndexService.all({ search: trimmedTerm, per_page: stableMaxResults })
+      setResults(records.filter(item => !excludeIdsArray.includes(item.id) && (typeof stableMaxLevel !== "number" || (item.level || 0) < stableMaxLevel)))
     } catch (err) {
       console.error("Failed to search guideline index items:", err)
       setError("Failed to search items")

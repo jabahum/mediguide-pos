@@ -18,6 +18,7 @@ import { useRoles } from "./hooks/use-roles"
 // Modal components
 import { CreateRoleModal } from "./modals/create-role-modal"
 import { EditRoleModal } from "./modals/edit-role-modal"
+import { rolesService } from "@/services/user-management.service"
 
 export default function RolesPage() {
   const router = useRouter()
@@ -141,15 +142,16 @@ export default function RolesPage() {
       {/* Simplified DataTable */}
       <BackendDataTable<Role>
         collection="roles"
+        loadPage={async ({ page, perPage, search }) => {
+          const result = await rolesService.list<Role>({ page, per_page: perPage, search })
+          return { items: result.items, page: result.page, perPage: result.per_page, totalItems: result.total_items, totalPages: result.total_pages }
+        }}
         columns={columns}
         searchFields={["name", "key", "description"]}
         searchPlaceholder="Search roles by name, key, or description..."
         rowActions={roleRowActions}
         bulkActions={[]} // No bulk actions for roles
         availableFields={rolesAvailableFields}
-        query={{
-          sort: "-created"
-        }}
         ui={{
           pageSize: 10,
           exportable: true,

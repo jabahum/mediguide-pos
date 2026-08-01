@@ -4,7 +4,7 @@ import { RowAction, BulkAction } from "@/types/data-table"
 import { GuidelineIndexType } from "./columns"
 import { Edit, Trash2, FolderPlus, ArrowUp, ArrowDown } from "lucide-react"
 import { showToast } from "@/lib/toast"
-import { getBackendClient } from "@/lib/backend-client"
+import { guidelineIndexService } from "@/services/guideline-content.service"
 
 /**
  * Factory function to create row actions with navigation dependency injection
@@ -44,18 +44,10 @@ export const createGuidelineIndexRowActions = (
         // Fallback to direct creation
         try {
           const newOrder = await getNextOrderForParent(indexItem.id)
-          const newLevel = (indexItem.level || 0) + 1
-          
-          await getBackendClient().resource('guideline_index').create({
+          await guidelineIndexService.create({
             title: "New Sub-item",
-            parent: [indexItem.id],
-            level: newLevel,
+            parent: indexItem.id,
             order: newOrder,
-            hasChildren: false,
-          })
-          
-          await getBackendClient().resource('guideline_index').update(indexItem.id, {
-            hasChildren: true
           })
           
           showToast.success("Success", "Sub-item created successfully")
@@ -107,16 +99,14 @@ export const createGuidelineIndexRowActions = (
     onClick: async (indexItem) => {
       try {
         // Check if this item has children
-        const children = await getBackendClient().resource('guideline_index').getList(1, 1, {
-          filter: `parent ~ "${indexItem.id}"`
-        })
+        const children = await guidelineIndexService.children(indexItem.id, { per_page: 1 })
         
-        if (children.totalItems > 0) {
+        if (children.length > 0) {
           showToast.error("Cannot Delete", "This item has sub-items. Delete sub-items first.")
           return
         }
         
-        await getBackendClient().resource('guideline_index').delete(indexItem.id)
+        await guidelineIndexService.delete(indexItem.id)
         showToast.success("Deleted", "Index item deleted successfully")
         onRefresh?.()
       } catch (error) {
@@ -141,11 +131,9 @@ export const guidelineIndexBulkActions: BulkAction<GuidelineIndexType>[] = [
       try {
         // Check if any selected items have children
         for (const item of indexItems) {
-          const children = await getBackendClient().resource('guideline_index').getList(1, 1, {
-            filter: `parent ~ "${item.id}"`
-          })
+          const children = await guidelineIndexService.children(item.id, { per_page: 1 })
           
-          if (children.totalItems > 0) {
+          if (children.length > 0) {
             showToast.error("Cannot Delete", `Item "${item.title}" has sub-items. Delete sub-items first.`)
             return
           }
@@ -154,7 +142,7 @@ export const guidelineIndexBulkActions: BulkAction<GuidelineIndexType>[] = [
         // Delete all selected items
         await Promise.all(
           indexItems.map(item => 
-            getBackendClient().resource('guideline_index').delete(item.id)
+            guidelineIndexService.delete(item.id)
           )
         )
         
@@ -174,12 +162,9 @@ export const guidelineIndexBulkActions: BulkAction<GuidelineIndexType>[] = [
  */
 async function getNextOrderForParent(parentId: string): Promise<number> {
   try {
-    const siblings = await getBackendClient().resource('guideline_index').getList(1, 1, {
-      filter: `parent ~ "${parentId}"`,
-      sort: '-order'
-    })
+    const siblings = await guidelineIndexService.children(parentId, { per_page: 100 })
     
-    const maxOrder = siblings.items[0]?.order || 0
+    const maxOrder = Math.max(0, ...siblings.map(item => item.order || 0))
     return maxOrder + 1
   } catch (error) {
     console.error("Failed to get next order:", error)
@@ -195,21 +180,20 @@ async function moveIndexItem(item: GuidelineIndexType, direction: 'up' | 'down')
   const newOrder = direction === 'up' ? currentOrder - 1 : currentOrder + 1
   
   // Find the item that currently occupies the target position
-  const parentFilter = item.parent?.length ? `parent ~ "${item.parent[0]}"` : 'parent = ""'
-  const targetItems = await getBackendClient().resource('guideline_index').getList(1, 50, {
-    filter: `${parentFilter} && order = ${newOrder}`
-  })
+  const parentId = typeof item.parent === "string" ? item.parent : ""
+  const siblings = parentId ? await guidelineIndexService.children(parentId, { per_page: 100 }) : await guidelineIndexService.all({ per_page: 100 })
+  const targetItems = siblings.filter(candidate => (candidate.parent || "") === parentId && (candidate.order || 0) === newOrder)
   
-  if (targetItems.items.length > 0) {
-    const targetItem = targetItems.items[0]
+  if (targetItems.length > 0) {
+    const targetItem = targetItems[0]
     // Swap orders
-    await getBackendClient().resource('guideline_index').update(targetItem.id, {
+    await guidelineIndexService.update(targetItem.id, {
       order: currentOrder
     })
   }
   
   // Update the current item's order
-  await getBackendClient().resource('guideline_index').update(item.id, {
+  await guidelineIndexService.update(item.id, {
     order: newOrder
   })
 }

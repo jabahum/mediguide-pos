@@ -10,6 +10,11 @@
  * ---------------------------------------------------------------
  */
 
+export interface HandlersAbbreviationEnvelope {
+  data?: ModelsAbbreviation;
+  success?: boolean;
+}
+
 export interface HandlersAskEnvelope {
   data?: ServicesAskResponse;
   /** @example true */
@@ -31,6 +36,11 @@ export interface HandlersCalculatorUsageEnvelope {
 export interface HandlersClinicalProtocolEnvelope {
   data?: ModelsClinicalProtocol;
   /** @example true */
+  success?: boolean;
+}
+
+export interface HandlersConversationEnvelope {
+  data?: ServicesConversationView;
   success?: boolean;
 }
 
@@ -89,6 +99,11 @@ export interface HandlersEmailVerificationRequest {
   email?: string;
 }
 
+export interface HandlersEmergencyProtocolEnvelope {
+  data?: ModelsEmergencyProtocol;
+  success?: boolean;
+}
+
 export interface HandlersErrorResponse {
   /** @example "invalid request" */
   error?: string;
@@ -106,9 +121,29 @@ export interface HandlersFAQTagEnvelope {
   success?: boolean;
 }
 
+export interface HandlersGenericPageEnvelope {
+  data?: ModelsGenericPage;
+  success?: boolean;
+}
+
+export interface HandlersGuidelineCategoryEnvelope {
+  data?: ModelsGuidelineCategory;
+  success?: boolean;
+}
+
 export interface HandlersGuidelineDocumentEnvelope {
   data?: ModelsGuidelineDocument;
   /** @example true */
+  success?: boolean;
+}
+
+export interface HandlersGuidelineIndexEnvelope {
+  data?: ModelsGuidelineIndexEntry;
+  success?: boolean;
+}
+
+export interface HandlersGuidelineTagEnvelope {
+  data?: ModelsGuidelineTag;
   success?: boolean;
 }
 
@@ -210,6 +245,21 @@ export interface HandlersMarkdownUpdateResult {
   updated?: boolean;
 }
 
+export interface HandlersMedicalGuidelineEnvelope {
+  data?: ModelsMedicalGuideline;
+  success?: boolean;
+}
+
+export interface HandlersMessageEnvelope {
+  data?: ServicesMessageView;
+  success?: boolean;
+}
+
+export interface HandlersMinistryDirectoryEnvelope {
+  data?: ModelsMinistryDirectoryEntry;
+  success?: boolean;
+}
+
 export interface HandlersNotificationCampaignEnvelope {
   data?: ModelsNotificationCampaign;
   success?: boolean;
@@ -228,6 +278,11 @@ export interface HandlersNotificationStatusInput {
 export interface HandlersNotificationTemplateEnvelope {
   data?: ModelsNotificationTemplate;
   /** @example true */
+  success?: boolean;
+}
+
+export interface HandlersPaginatedAbbreviationsEnvelope {
+  data?: ServicesPageResultModelsAbbreviation;
   success?: boolean;
 }
 
@@ -264,6 +319,11 @@ export interface HandlersPaginatedClinicalProtocols {
 export interface HandlersPaginatedClinicalProtocolsEnvelope {
   data?: HandlersPaginatedClinicalProtocols;
   /** @example true */
+  success?: boolean;
+}
+
+export interface HandlersPaginatedConversationsEnvelope {
+  data?: ServicesPageResultServicesConversationView;
   success?: boolean;
 }
 
@@ -326,6 +386,11 @@ export interface HandlersPaginatedDrugsEnvelope {
   success?: boolean;
 }
 
+export interface HandlersPaginatedEmergencyProtocolsEnvelope {
+  data?: ServicesPageResultModelsEmergencyProtocol;
+  success?: boolean;
+}
+
 export interface HandlersPaginatedFAQTagsEnvelope {
   data?: ServicesPageResultModelsFAQTag;
   success?: boolean;
@@ -333,6 +398,16 @@ export interface HandlersPaginatedFAQTagsEnvelope {
 
 export interface HandlersPaginatedFAQsEnvelope {
   data?: ServicesPageResultModelsFAQ;
+  success?: boolean;
+}
+
+export interface HandlersPaginatedGenericPagesEnvelope {
+  data?: ServicesPageResultModelsGenericPage;
+  success?: boolean;
+}
+
+export interface HandlersPaginatedGuidelineCategoriesEnvelope {
+  data?: ServicesPageResultModelsGuidelineCategory;
   success?: boolean;
 }
 
@@ -372,6 +447,11 @@ export interface HandlersPaginatedGuidelineDocumentsEnvelope {
   success?: boolean;
 }
 
+export interface HandlersPaginatedGuidelineIndexEnvelope {
+  data?: ServicesPageResultModelsGuidelineIndexEntry;
+  success?: boolean;
+}
+
 export interface HandlersPaginatedGuidelineSections {
   items?: ModelsGuidelineSection[];
   /** @example 1 */
@@ -390,6 +470,11 @@ export interface HandlersPaginatedGuidelineSectionsEnvelope {
   success?: boolean;
 }
 
+export interface HandlersPaginatedGuidelineTagsEnvelope {
+  data?: ServicesPageResultModelsGuidelineTag;
+  success?: boolean;
+}
+
 export interface HandlersPaginatedLanguages {
   items?: ModelsLanguage[];
   /** @example 1 */
@@ -405,6 +490,21 @@ export interface HandlersPaginatedLanguages {
 export interface HandlersPaginatedLanguagesEnvelope {
   data?: HandlersPaginatedLanguages;
   /** @example true */
+  success?: boolean;
+}
+
+export interface HandlersPaginatedMedicalGuidelinesEnvelope {
+  data?: ServicesPageResultModelsMedicalGuideline;
+  success?: boolean;
+}
+
+export interface HandlersPaginatedMessagesEnvelope {
+  data?: ServicesPageResultServicesMessageView;
+  success?: boolean;
+}
+
+export interface HandlersPaginatedMinistryDirectoryEnvelope {
+  data?: ServicesPageResultModelsMinistryDirectoryEntry;
   success?: boolean;
 }
 
@@ -449,6 +549,11 @@ export interface HandlersPaginatedNotifications {
 export interface HandlersPaginatedNotificationsEnvelope {
   data?: HandlersPaginatedNotifications;
   /** @example true */
+  success?: boolean;
+}
+
+export interface HandlersPaginatedReadingProgressEnvelope {
+  data?: ServicesPageResultModelsReadingProgress;
   success?: boolean;
 }
 
@@ -548,6 +653,11 @@ export interface HandlersPublishEnvelope {
 export interface HandlersPublishResult {
   /** @example true */
   published?: boolean;
+}
+
+export interface HandlersReadingProgressEnvelope {
+  data?: ModelsReadingProgress;
+  success?: boolean;
 }
 
 export interface HandlersRefreshRequest {
@@ -655,6 +765,16 @@ export interface HandlersUpdateMarkdownInput {
   content: string;
 }
 
+export interface HandlersUsageAggregatesEnvelope {
+  data?: ServicesUsageAggregate[];
+  success?: boolean;
+}
+
+export interface HandlersUsageEventEnvelope {
+  data?: any;
+  success?: boolean;
+}
+
 export interface HandlersUserEnvelope {
   data?: ModelsUser;
   /** @example true */
@@ -676,6 +796,19 @@ export interface HandlersVerificationResultEnvelope {
   data?: HandlersVerificationResult;
   /** @example true */
   success?: boolean;
+}
+
+export interface ModelsAbbreviation {
+  abbreviation?: string;
+  categories?: string[];
+  common_usage?: boolean;
+  created_at?: string;
+  description?: string;
+  id?: string;
+  meaning?: string;
+  tags?: string[];
+  updated_at?: string;
+  usage_count?: number;
 }
 
 export interface ModelsCalculator {
@@ -814,6 +947,26 @@ export interface ModelsDrugUsageLog {
   user_id?: string;
 }
 
+export interface ModelsEmergencyProtocol {
+  access_count?: number;
+  category?: string;
+  contact_info?: object;
+  created_at?: string;
+  critical_actions?: object;
+  description?: string;
+  id?: string;
+  medications?: object;
+  priority?: string;
+  status?: string;
+  steps?: object;
+  tags?: string[];
+  timeframe?: string;
+  title?: string;
+  transfer_checklist?: object;
+  updated_at?: string;
+  vital_signs?: object;
+}
+
 export interface ModelsFAQ {
   answer?: string;
   author_email?: string;
@@ -860,6 +1013,31 @@ export interface ModelsFacilityUsageLog {
   user_id?: string;
 }
 
+export interface ModelsGenericPage {
+  content?: object;
+  created_at?: string;
+  description?: string;
+  id?: string;
+  key?: string;
+  title?: string;
+  updated_at?: string;
+}
+
+export interface ModelsGuidelineCategory {
+  color?: string;
+  created_at?: string;
+  description?: string;
+  icon?: string;
+  id?: string;
+  name?: string;
+  parent_category_id?: string;
+  parent_name?: string;
+  slug?: string;
+  sort_order?: number;
+  status?: string;
+  updated_at?: string;
+}
+
 export interface ModelsGuidelineChunk {
   content?: string;
   created_at?: string;
@@ -892,6 +1070,19 @@ export interface ModelsGuidelineDocument {
   versions?: ModelsGuidelineVersion[];
 }
 
+export interface ModelsGuidelineIndexEntry {
+  created_at?: string;
+  description?: string;
+  has_children?: boolean;
+  id?: string;
+  level?: number;
+  parent_id?: string;
+  parent_title?: string;
+  sort_order?: number;
+  title?: string;
+  updated_at?: string;
+}
+
 export interface ModelsGuidelineSection {
   created_at?: string;
   html?: string;
@@ -906,6 +1097,14 @@ export interface ModelsGuidelineSection {
   title?: string;
   updated_at?: string;
   version_id?: string;
+}
+
+export interface ModelsGuidelineTag {
+  created_at?: string;
+  description?: string;
+  id?: string;
+  name?: string;
+  updated_at?: string;
 }
 
 export interface ModelsGuidelineVersion {
@@ -955,6 +1154,68 @@ export interface ModelsLanguage {
   translations_url?: string;
   updated_at?: string;
   version?: number;
+}
+
+export interface ModelsMedicalGuideline {
+  icd10_code?: string;
+  categories?: string[];
+  causes?: string;
+  classification_critical?: string;
+  classification_mild?: string;
+  classification_moderate?: string;
+  classification_severe?: string;
+  clinical_features?: string;
+  condition_name?: string;
+  contraindications?: string;
+  created_at?: string;
+  definition?: string;
+  differential_diagnosis?: string;
+  dosage_adult?: string;
+  dosage_pediatric?: string;
+  dosage_secondary_adult?: string;
+  dosage_secondary_pediatric?: string;
+  general_management?: string;
+  healthcare_level_required?: string;
+  id?: string;
+  index_item_id?: string;
+  index_item_title?: string;
+  is_published?: boolean;
+  medication_primary?: string;
+  medication_secondary?: string;
+  monitoring_requirements?: string;
+  prevention_measures?: string;
+  priority?: string;
+  route_administration?: string;
+  special_notes?: string;
+  status?: string;
+  tags?: string[];
+  target_population?: string;
+  updated_at?: string;
+  usage_count?: number;
+  version?: string;
+}
+
+export interface ModelsMinistryDirectoryEntry {
+  alternative_phone?: string;
+  availability_hours?: string;
+  created_at?: string;
+  department?: string;
+  district_id?: string;
+  district_name?: string;
+  email?: string;
+  id?: string;
+  ministry?: string;
+  name?: string;
+  notes?: string;
+  office_address?: string;
+  phone?: string;
+  priority_level?: number;
+  region_id?: string;
+  region_name?: string;
+  specialization?: string;
+  status?: string;
+  title?: string;
+  updated_at?: string;
 }
 
 export interface ModelsNotification {
@@ -1013,6 +1274,22 @@ export interface ModelsPermission {
   id?: string;
   name?: string;
   updated_at?: string;
+}
+
+export interface ModelsReadingProgress {
+  created_at?: string;
+  current_section?: string;
+  guideline_document_id?: string;
+  id?: string;
+  is_bookmarked?: boolean;
+  is_completed?: boolean;
+  last_read_at?: string;
+  notes?: string;
+  progress_percentage?: number;
+  reading_time_seconds?: number;
+  total_sections?: number;
+  updated_at?: string;
+  user_id?: string;
 }
 
 export interface ModelsRole {
@@ -1117,6 +1394,15 @@ export interface ModelsUser {
   verified?: boolean;
 }
 
+export interface ServicesAbbreviationInput {
+  abbreviation?: string;
+  categories?: string[];
+  common_usage?: boolean;
+  description?: string;
+  meaning?: string;
+  tags?: string[];
+}
+
 export interface ServicesAccountActionResult {
   accepted?: boolean;
   delivery_accepted?: boolean;
@@ -1146,6 +1432,116 @@ export interface ServicesCitation {
   title?: string;
 }
 
+export interface ServicesConsultantInput {
+  address?: string;
+  alternative_phone?: string;
+  availability?: object;
+  avatar?: object;
+  certifications?: string;
+  city?: string;
+  consultation_types?: string[];
+  country?: string;
+  department?: string;
+  email?: string;
+  is_verified?: boolean;
+  license_number?: string;
+  name?: string;
+  notes?: string;
+  organization?: string;
+  phone?: string;
+  postal_code?: string;
+  preferred_language?: string;
+  profile_picture?: object;
+  qualifications?: string[];
+  rating?: number;
+  region?: string;
+  specialty?: string;
+  status?: string;
+  timezone?: string;
+  total_consultations?: number;
+  user_id?: string;
+  years_of_experience?: number;
+}
+
+export interface ServicesConsultantItem {
+  item?: ServicesConsultantView;
+}
+
+export interface ServicesConsultantPage {
+  items?: ServicesConsultantView[];
+  page?: number;
+  per_page?: number;
+  total_items?: number;
+  total_pages?: number;
+}
+
+export interface ServicesConsultantUserView {
+  avatar?: string;
+  email?: string;
+  id?: string;
+  name?: string;
+  verified?: boolean;
+}
+
+export interface ServicesConsultantView {
+  address?: string;
+  alternative_phone?: string;
+  availability?: object;
+  avatar?: object;
+  certifications?: string;
+  city?: string;
+  consultation_types?: string[];
+  country?: string;
+  created_at?: string;
+  department?: string;
+  email?: string;
+  id?: string;
+  is_verified?: boolean;
+  license_number?: string;
+  name?: string;
+  notes?: string;
+  organization?: string;
+  phone?: string;
+  postal_code?: string;
+  preferred_language?: string;
+  profile_picture?: object;
+  qualifications?: string[];
+  rating?: number;
+  region?: string;
+  specialty?: string;
+  status?: string;
+  timezone?: string;
+  total_consultations?: number;
+  updated_at?: string;
+  usage_count?: number;
+  user?: ServicesConsultantUserView;
+  user_id?: string;
+  years_of_experience?: number;
+}
+
+export interface ServicesConversationCreate {
+  other_participant_id?: string;
+}
+
+export interface ServicesConversationView {
+  participant1_avatar?: string;
+  participant1_email?: string;
+  participant1_name?: string;
+  participant1_user_id?: string;
+  participant1_verified?: boolean;
+  participant2_avatar?: string;
+  participant2_email?: string;
+  participant2_name?: string;
+  participant2_user_id?: string;
+  participant2_verified?: boolean;
+  created_at?: string;
+  id?: string;
+  last_activity?: string;
+  last_message?: string;
+  last_message_id?: string;
+  updated_at?: string;
+}
+
 export interface ServicesCreateCalculatorInput {
   app_file_json?: object;
   background_color?: string;
@@ -1166,20 +1562,6 @@ export interface ServicesCreateGuidelineInput {
   program_area?: string;
   source_org?: string;
   title?: string;
-}
-
-export interface ServicesCreateLanguageInput {
-  code?: string;
-  enabled_for_users?: boolean;
-  is_active?: boolean;
-  is_default?: boolean;
-  name?: string;
-  native_name?: string;
-  progress?: number;
-  status?: string;
-  translations_json?: object;
-  translations_url?: string;
-  version?: number;
 }
 
 export interface ServicesCreateProtocolInput {
@@ -1276,6 +1658,22 @@ export interface ServicesDrugTagInput {
   sort_order?: number;
   status?: string;
   tag_category?: string;
+}
+
+export interface ServicesEmergencyProtocolInput {
+  category?: string;
+  contact_info?: object;
+  critical_actions?: object;
+  description?: string;
+  medications?: object;
+  priority?: string;
+  status?: string;
+  steps?: object;
+  tags?: string[];
+  timeframe?: string;
+  title?: string;
+  transfer_checklist?: object;
+  vital_signs?: object;
 }
 
 export interface ServicesFAQInput {
@@ -1393,6 +1791,50 @@ export interface ServicesFinishCalculatorUsageInput {
   session_end?: string;
 }
 
+export interface ServicesGenericPageInput {
+  content?: object;
+  description?: string;
+  key?: string;
+  title?: string;
+}
+
+export interface ServicesGuidelineCategoryInput {
+  color?: string;
+  description?: string;
+  icon?: string;
+  name?: string;
+  parent_category_id?: string;
+  slug?: string;
+  sort_order?: number;
+  status?: string;
+}
+
+export interface ServicesGuidelineIndexInput {
+  description?: string;
+  parent_id?: string;
+  sort_order?: number;
+  title?: string;
+}
+
+export interface ServicesGuidelineTagInput {
+  description?: string;
+  name?: string;
+}
+
+export interface ServicesLanguageInput {
+  code?: string;
+  enabled_for_users?: boolean;
+  is_active?: boolean;
+  is_default?: boolean;
+  name?: string;
+  native_name?: string;
+  progress?: number;
+  status?: string;
+  translations?: object;
+  translations_url?: string;
+  version?: number;
+}
+
 export interface ServicesLoginResult {
   expires_at?: string;
   refresh_expires_at?: string;
@@ -1405,6 +1847,94 @@ export interface ServicesLoginResult {
 export interface ServicesManifestResult {
   generated_at?: string;
   packages?: ModelsSyncPackage[];
+}
+
+export interface ServicesMedicalGuidelineInput {
+  icd10_code?: string;
+  categories?: string[];
+  causes?: string;
+  classification_critical?: string;
+  classification_mild?: string;
+  classification_moderate?: string;
+  classification_severe?: string;
+  clinical_features?: string;
+  condition_name?: string;
+  contraindications?: string;
+  definition?: string;
+  differential_diagnosis?: string;
+  dosage_adult?: string;
+  dosage_pediatric?: string;
+  dosage_secondary_adult?: string;
+  dosage_secondary_pediatric?: string;
+  general_management?: string;
+  healthcare_level_required?: string;
+  index_item_id?: string;
+  is_published?: boolean;
+  medication_primary?: string;
+  medication_secondary?: string;
+  monitoring_requirements?: string;
+  prevention_measures?: string;
+  priority?: string;
+  route_administration?: string;
+  special_notes?: string;
+  status?: string;
+  tags?: string[];
+  target_population?: string;
+  version?: string;
+}
+
+export interface ServicesMessageCreate {
+  attachments?: string[];
+  content?: string;
+  message_type?: string;
+  reply_to_id?: string;
+}
+
+export interface ServicesMessageReactionInput {
+  active?: boolean;
+  emoji?: string;
+}
+
+export interface ServicesMessageReadInput {
+  read_at?: string;
+}
+
+export interface ServicesMessageView {
+  attachments?: string[];
+  content?: string;
+  conversation_id?: string;
+  created_at?: string;
+  edited_at?: string;
+  id?: string;
+  is_edited?: boolean;
+  message_type?: string;
+  reactions?: object;
+  read_by?: object;
+  reply_to_id?: string;
+  sender_avatar?: string;
+  sender_email?: string;
+  sender_name?: string;
+  sender_user_id?: string;
+  sender_verified?: boolean;
+  updated_at?: string;
+}
+
+export interface ServicesMinistryDirectoryInput {
+  alternative_phone?: string;
+  availability_hours?: string;
+  department?: string;
+  district_id?: string;
+  email?: string;
+  ministry?: string;
+  name?: string;
+  notes?: string;
+  office_address?: string;
+  phone?: string;
+  priority_level?: number;
+  region_id?: string;
+  specialization?: string;
+  status?: string;
+  title?: string;
 }
 
 export interface ServicesNotificationCampaignInput {
@@ -1438,8 +1968,24 @@ export interface ServicesNotificationTemplateInput {
   variables?: Record<string, any>;
 }
 
+export interface ServicesPageResultModelsAbbreviation {
+  items?: ModelsAbbreviation[];
+  page?: number;
+  per_page?: number;
+  total_items?: number;
+  total_pages?: number;
+}
+
 export interface ServicesPageResultModelsDocumentation {
   items?: ModelsDocumentation[];
+  page?: number;
+  per_page?: number;
+  total_items?: number;
+  total_pages?: number;
+}
+
+export interface ServicesPageResultModelsEmergencyProtocol {
+  items?: ModelsEmergencyProtocol[];
   page?: number;
   per_page?: number;
   total_items?: number;
@@ -1462,6 +2008,62 @@ export interface ServicesPageResultModelsFAQTag {
   total_pages?: number;
 }
 
+export interface ServicesPageResultModelsGenericPage {
+  items?: ModelsGenericPage[];
+  page?: number;
+  per_page?: number;
+  total_items?: number;
+  total_pages?: number;
+}
+
+export interface ServicesPageResultModelsGuidelineCategory {
+  items?: ModelsGuidelineCategory[];
+  page?: number;
+  per_page?: number;
+  total_items?: number;
+  total_pages?: number;
+}
+
+export interface ServicesPageResultModelsGuidelineIndexEntry {
+  items?: ModelsGuidelineIndexEntry[];
+  page?: number;
+  per_page?: number;
+  total_items?: number;
+  total_pages?: number;
+}
+
+export interface ServicesPageResultModelsGuidelineTag {
+  items?: ModelsGuidelineTag[];
+  page?: number;
+  per_page?: number;
+  total_items?: number;
+  total_pages?: number;
+}
+
+export interface ServicesPageResultModelsMedicalGuideline {
+  items?: ModelsMedicalGuideline[];
+  page?: number;
+  per_page?: number;
+  total_items?: number;
+  total_pages?: number;
+}
+
+export interface ServicesPageResultModelsMinistryDirectoryEntry {
+  items?: ModelsMinistryDirectoryEntry[];
+  page?: number;
+  per_page?: number;
+  total_items?: number;
+  total_pages?: number;
+}
+
+export interface ServicesPageResultModelsReadingProgress {
+  items?: ModelsReadingProgress[];
+  page?: number;
+  per_page?: number;
+  total_items?: number;
+  total_pages?: number;
+}
+
 export interface ServicesPageResultModelsSupportTicket {
   items?: ModelsSupportTicket[];
   page?: number;
@@ -1472,6 +2074,22 @@ export interface ServicesPageResultModelsSupportTicket {
 
 export interface ServicesPageResultModelsSupportTicketReply {
   items?: ModelsSupportTicketReply[];
+  page?: number;
+  per_page?: number;
+  total_items?: number;
+  total_pages?: number;
+}
+
+export interface ServicesPageResultServicesConversationView {
+  items?: ServicesConversationView[];
+  page?: number;
+  per_page?: number;
+  total_items?: number;
+  total_pages?: number;
+}
+
+export interface ServicesPageResultServicesMessageView {
+  items?: ServicesMessageView[];
   page?: number;
   per_page?: number;
   total_items?: number;
@@ -1502,6 +2120,17 @@ export interface ServicesProtocolStep {
   options?: string[];
   question?: string;
   type?: string;
+}
+
+export interface ServicesReadingProgressInput {
+  current_section?: string;
+  is_bookmarked?: boolean;
+  is_completed?: boolean;
+  last_read_at?: string;
+  notes?: string;
+  progress_percentage?: number;
+  reading_time_seconds?: number;
+  total_sections?: number;
 }
 
 export interface ServicesRegionChildren {
@@ -1603,6 +2232,16 @@ export interface ServicesUpdateGuidelineInput {
   program_area?: string;
   source_org?: string;
   title?: string;
+}
+
+export interface ServicesUsageAggregate {
+  count?: number;
+  event_type?: string;
+}
+
+export interface ServicesUsageEventInput {
+  idempotency_key?: string;
+  resource_id?: string;
 }
 
 export interface ServicesUserCreateInput {

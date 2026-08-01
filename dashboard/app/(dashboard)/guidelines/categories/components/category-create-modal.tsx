@@ -9,8 +9,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { GuidelineCategoryForm, GuidelineCategoryFormData } from "@/components/forms/guideline-category-form"
-import { useBackendCrud } from "@/hooks/use-backend-crud"
-import { showToast } from "@/lib/toast"
+import { useDomainCrud } from "@/hooks/use-domain-crud"
+import { guidelineCategoryCrud } from "@/services/guideline-content.service"
 
 interface CategoryCreateModalProps {
   open: boolean
@@ -23,16 +23,9 @@ export function CategoryCreateModal({
   onOpenChange,
   onSuccess
 }: CategoryCreateModalProps) {
-  const { create, loading } = useBackendCrud({
-    collectionName: "guideline_categories",
-    onSuccess: () => {
-      showToast.success("Category created", "The category has been created successfully")
+  const { create, loading } = useDomainCrud("guideline-categories", guidelineCategoryCrud, () => {
       onOpenChange(false)
       onSuccess?.()
-    },
-    onError: (error) => {
-      showToast.error("Failed to create category", error.message)
-    }
   })
 
   const handleSubmit = async (data: GuidelineCategoryFormData) => {

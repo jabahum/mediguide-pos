@@ -13,6 +13,7 @@ import { columns, DrugWithRelations } from "./columns"
 import { createDrugRowActions, drugBulkActions } from "./drug-actions"
 import { drugAvailableFields } from "./fields"
 import { usePermissionContext } from "@/lib/permission-context"
+import { drugService } from "@/services/drug.service"
 
 export default function DrugsPage() {
   const router = useRouter()
@@ -51,14 +52,12 @@ export default function DrugsPage() {
       {/* Simplified DataTable */}
       <BackendDataTable<DrugWithRelations>
         collection="drugs"
+        loadPage={drugService.listTable.bind(drugService)}
         columns={columns}
         searchFields={["name", "brand_names", "drug_class", "therapeutic_category", "search_keywords"]}
         rowActions={drugRowActions}
         bulkActions={drugBulkActions}
         availableFields={drugAvailableFields}
-        query={{
-          expand: "categories,tags,drug_class,therapeutic_category"
-        }}
         ui={{
           exportable: true
         }}

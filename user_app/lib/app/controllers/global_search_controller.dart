@@ -9,6 +9,11 @@ import '../data/models/abbreviation.dart';
 import '../data/models/calculator.dart';
 import '../data/services/backend_api_service.dart';
 import '../data/services/auth_service.dart';
+import '../data/repositories/guideline_content_repository.dart';
+import '../data/repositories/consultant_repository.dart';
+import '../data/repositories/facility_repository.dart';
+import '../data/repositories/help_content_repository.dart';
+import '../data/repositories/calculator_repository.dart';
 import '../modules/drug_index_module/widgets/drug_details_bottom_sheet.dart';
 import '../routes/app_pages.dart';
 import '../utils/common.dart';
@@ -194,7 +199,7 @@ class GlobalSearchController extends GetxController {
     try {
       if (AuthService.to.currentUser.value == null) return;
 
-      await BackendApiService.to.recordDrugUsage(drugId);
+      await DrugRepository(BackendApiService.to).recordUsage(drugId);
     } catch (e) {
       // Handle error silently to not disrupt user experience
     }
@@ -207,45 +212,6 @@ class GlobalSearchController extends GetxController {
     if (count == 1) return '1 result';
     return '$count results';
   }
-
-  // Collection search configuration
-  static const Map<SearchCategory, Map<String, dynamic>> _searchConfig = {
-    SearchCategory.drugs: {
-      'collection': 'drugs',
-      'fields': ['name', 'brand_names', 'description'],
-      'expand': 'categories,tags,therapeutic_category',
-    },
-    SearchCategory.guidelines: {
-      'collection': 'medical_guidelines',
-      'fields': ['condition_name', 'definition', 'causes'],
-      'expand': null,
-    },
-    SearchCategory.consultants: {
-      'collection': 'consultants',
-      'fields': ['name', 'specialty', 'department'],
-      'expand': null,
-    },
-    SearchCategory.healthFacilities: {
-      'collection': 'health_facilities',
-      'fields': ['name', 'nhpi_code', 'hsdt_code'],
-      'expand': null,
-    },
-    SearchCategory.abbreviations: {
-      'collection': 'abbreviations',
-      'fields': ['abbreviation', 'meaning', 'description'],
-      'expand': null,
-    },
-    SearchCategory.faq: {
-      'collection': 'faqs',
-      'fields': ['question', 'answer'],
-      'expand': null,
-    },
-    SearchCategory.tools: {
-      'collection': 'calculators',
-      'fields': ['name', 'description'],
-      'expand': null,
-    },
-  };
 
   /// Search all collections in parallel with error handling
   Future<List<SearchResult>> _searchAllCollections(String query) async {
@@ -287,52 +253,95 @@ class GlobalSearchController extends GetxController {
     return allResults.take(20).toList();
   }
 
-  /// Generic method to search a specific collection
+  /// Search one typed domain.
   Future<List<SearchResult>> _searchCollection(
     SearchCategory category,
     String query,
   ) async {
-    final config = _searchConfig[category];
-    if (config == null) return [];
-
     try {
       if (category == SearchCategory.drugs) {
-        final response = await BackendApiService.to.getDrugs(
-          page: 1,
-          perPage: 10,
-          search: query,
-          status: 'active',
-        );
+        final response = await DrugRepository(
+          BackendApiService.to,
+        ).list(page: 1, perPage: 10, search: query, status: 'active');
         return response.items
             .map((record) => _createSearchResult(record, category, query))
             .toList();
       }
 
-      // Build filter for search fields
-      final fields = config['fields'] as List<String>;
-      final escapedQuery = BackendApiService.escapeFilterValue(query);
-      final filterParts = fields
-          .map((field) => '$field ~ "$escapedQuery"')
-          .toList();
-      final filter = '(${filterParts.join(' || ')})';
-
-      final response = await BackendApiService.to.getResourceList(
-        collectionName: config['collection'],
-        page: 1,
-        perPage: 10,
-        filter: filter,
-        sort: '-created',
-        expand: config['expand'],
-      );
-
-      return response.items
-          .map((record) => _createSearchResult(record, category, query))
-          .toList();
-    } catch (e) {
-      // Try fallback collection name for FAQ
-      if (category == SearchCategory.faq) {
-        return _searchFAQFallback(query);
+      if (category == SearchCategory.guidelines ||
+          category == SearchCategory.abbreviations) {
+        final repository = GuidelineContentRepository(BackendApiService.to);
+        final response = category == SearchCategory.guidelines
+            ? await repository.guidelines(
+                page: 1,
+                perPage: 10,
+                search: query,
+                published: true,
+                status: 'published',
+              )
+            : await repository.abbreviations(
+                page: 1,
+                perPage: 10,
+                search: query,
+              );
+        return response.items
+            .map((record) => _createSearchResult(record, category, query))
+            .toList();
       }
+
+      if (category == SearchCategory.consultants) {
+        final response = await ConsultantRepository(
+          BackendApiService.to,
+        ).list(page: 1, perPage: 10, search: query);
+        return response.items
+            .map((record) => _createSearchResult(record, category, query))
+            .toList();
+      }
+
+      if (category == SearchCategory.healthFacilities) {
+        final response = await FacilityRepository(
+          BackendApiService.to,
+        ).listFacilities(page: 1, perPage: 10, search: query);
+        return response.items
+            .map((record) => _createSearchResult(record, category, query))
+            .toList();
+      }
+
+      if (category == SearchCategory.tools) {
+        final response = await CalculatorRepository(
+          BackendApiService.to,
+        ).list(page: 1, perPage: 10, search: query, statuses: const ['active']);
+        return response.items
+            .map((record) => _createSearchResult(record, category, query))
+            .toList();
+      }
+
+      if (category == SearchCategory.faq) {
+        final response = await HelpContentRepository(
+          BackendApiService.to,
+        ).listFAQs(page: 1, perPage: 10, search: query);
+        return response.items.map((faq) {
+          final answer = _stripHtml(faq.answer);
+          return _withRelevance(
+            SearchResult(
+              id: faq.id,
+              title: _stripHtml(faq.question),
+              description: answer.length > 100
+                  ? '${answer.substring(0, 100)}...'
+                  : answer,
+              category: category,
+              route: AppRoutes.faq,
+              routeArguments: {'faqId': faq.id},
+              relevanceScore: 0,
+              item: faq,
+            ),
+            query,
+          );
+        }).toList();
+      }
+
+      return [];
+    } catch (e) {
       return [];
     }
   }
@@ -517,29 +526,6 @@ class GlobalSearchController extends GetxController {
 
       default:
         throw UnsupportedError('Unsupported search category: $category');
-    }
-  }
-
-  /// Fallback search for FAQ with alternative collection name
-  Future<List<SearchResult>> _searchFAQFallback(String query) async {
-    try {
-      final escapedQuery = BackendApiService.escapeFilterValue(query);
-      final filter = '(question ~ "$escapedQuery" || answer ~ "$escapedQuery")';
-      final response = await BackendApiService.to.getResourceList(
-        collectionName: 'faq',
-        page: 1,
-        perPage: 10,
-        filter: filter,
-        sort: '-created',
-      );
-
-      return response.items
-          .map(
-            (record) => _createSearchResult(record, SearchCategory.faq, query),
-          )
-          .toList();
-    } catch (e) {
-      return [];
     }
   }
 }

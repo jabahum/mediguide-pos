@@ -94,7 +94,6 @@ export default function ParishesPage() {
         collectionName="parishes"
         loadPage={healthFacilitiesService.listParishes}
         columns={parishesColumns}
-        expand="subcounty"
         expandable={true}
         searchable={true}
         searchFields={["name", "nhpi_code", "hsdt_code"]}

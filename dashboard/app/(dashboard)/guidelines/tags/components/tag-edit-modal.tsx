@@ -22,7 +22,7 @@ import {
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Button } from "@/components/ui/button"
-import { getBackendClient } from "@/lib/backend-client"
+import { guidelineTagService } from "@/services/guideline-content.service"
 import { showToast } from "@/lib/toast"
 import type { GuidelineTagsResponse } from "@/types/backend-types"
 
@@ -80,14 +80,13 @@ export function TagEditModal({
     setIsSubmitting(true)
     
     try {
-      const backend = getBackendClient()
       
       const tagData = {
         name: values.name.trim(),
         description: values.description?.trim() || "",
       }
 
-      await backend.resource("guideline_tags").update(tag.id, tagData)
+      await guidelineTagService.update(tag.id, tagData)
 
       showToast.success("Tag updated", "Guideline tag has been updated successfully")
       

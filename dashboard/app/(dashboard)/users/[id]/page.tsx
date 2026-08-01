@@ -10,7 +10,8 @@ import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Skeleton } from "@/components/ui/skeleton"
 import { showToast } from "@/lib/toast"
-import { useBackendRecord } from "@/hooks/use-backend-record"
+import { useDomainRecord } from "@/hooks/use-domain-record"
+import { usersService } from "@/services/user-management.service"
 import { UsersResponse } from "@/types/backend-types"
 import { usePermissionContext } from "@/lib/permission-context"
 
@@ -19,9 +20,10 @@ export default function UserProfilePage() {
   const params = useParams()
   const userId = params.id as string
 
-  const { record: user, loading: isLoading, error } = useBackendRecord<UsersResponse>(
+  const { record: user, loading: isLoading, error } = useDomainRecord<UsersResponse>(
     "users",
-    userId
+    userId,
+    usersService.get<UsersResponse>,
   )
 
   React.useEffect(() => {

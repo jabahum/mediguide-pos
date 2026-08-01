@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:toastification/toastification.dart';
 import '../../data/services/backend_api_service.dart';
+import '../../data/repositories/content_reference_repository.dart';
 import '../../models/generic_page.dart';
 import '../../utils/common.dart';
 
@@ -52,22 +53,10 @@ class GenericViewerController extends GetxController {
     try {
       isLoading.value = true;
 
-      final records = await BackendApiService.to.getResourceList(
-        collectionName: 'generic_pages',
-        filter: 'key="$pageKey"',
-        perPage: 1,
-      );
-
-      if (records.items.isNotEmpty) {
-        page.value = GenericPage.fromJson(records.items.first.toJson());
-        _setupSections();
-      } else {
-        Common.quickToast(
-          title: 'Page not found',
-          description: 'The requested page could not be found.',
-          type: ToastificationType.error,
-        );
-      }
+      page.value = await GenericPageRepository(
+        BackendApiService.to,
+      ).byKey(pageKey);
+      _setupSections();
     } catch (e) {
       Common.quickToast(
         title: 'Failed to load page',

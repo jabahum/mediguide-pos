@@ -8,8 +8,8 @@ import { Badge } from "@/components/ui/badge"
 import { Label } from "@/components/ui/label"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { DrugWithRelations } from "../columns"
-import { getBackendClient } from "@/lib/backend-client"
-import { useBackendRecord } from "@/hooks/use-backend-record"
+import { useDomainRecord } from "@/hooks/use-domain-record"
+import { drugService } from "@/services/drug.service"
 import { formatDistanceToNow } from "date-fns"
 import { Edit, Copy, Trash2, Pill, AlertTriangle, Calendar, FileText, Activity } from "lucide-react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -36,11 +36,7 @@ export default function DrugViewPage({ params }: DrugViewPageProps) {
   // Unwrap params using React.use()
   const { id } = React.use(params)
 
-  const { record: drug, loading, error } = useBackendRecord<DrugWithRelations>(
-    "drugs",
-    id,
-    { expand: "categories,tags,drug_class,therapeutic_category" }
-  )
+  const { record: drug, loading, error } = useDomainRecord<DrugWithRelations>("drugs", id, drugService.get)
 
   React.useEffect(() => {
     if (error) {
@@ -60,8 +56,7 @@ export default function DrugViewPage({ params }: DrugViewPageProps) {
   const handleDelete = async () => {
     if (window.confirm("Are you sure you want to delete this drug? This action cannot be undone.")) {
       try {
-        const backend = getBackendClient()
-        await backend.resource("drugs").delete(id)
+        await drugService.delete(id)
         router.push("/drugs")
       } catch (error) {
         console.error("Failed to delete drug:", error)

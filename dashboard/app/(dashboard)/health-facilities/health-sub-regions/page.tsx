@@ -94,7 +94,6 @@ export default function HealthSubRegionsPage() {
         collectionName="health_sub_regions"
         loadPage={healthFacilitiesService.listHealthSubRegions}
         columns={healthSubRegionsColumns}
-        expand="region"
         expandable={true}
         searchable={true}
         searchFields={["name", "nhpi_code", "hsdt_code"]}

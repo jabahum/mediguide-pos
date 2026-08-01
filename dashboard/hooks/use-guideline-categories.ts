@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect, useMemo, useCallback } from "react"
-import { getBackendClient } from "@/lib/backend-client"
+import { guidelineCategoryService } from "@/services/guideline-content.service"
 import type { GuidelineCategoriesResponse } from "@/types/backend-types"
 
 export interface CategoryTreeNode extends GuidelineCategoriesResponse {
@@ -23,43 +23,16 @@ export function useGuidelineCategories(options: UseGuidelineCategoriesOptions = 
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  // Fetch categories from the backend compatibility API.
+  // Fetch categories from the typed taxonomy API.
   const fetchCategories = useCallback(async () => {
     try {
       setLoading(true)
       setError(null)
 
-      let filter = ""
-      const filterParts: string[] = []
-
-      // Status filter
-      if (!includeInactive) {
-        filterParts.push('status = "active"')
-      }
-
-      // Parent filter
-      if (parentId !== undefined) {
-        if (parentId === null) {
-          filterParts.push('parent_category = ""')
-        } else {
-          filterParts.push(`parent_category = "${parentId}"`)
-        }
-      }
-
-      // Search filter
-      if (searchTerm) {
-        filterParts.push(`(name ~ "${searchTerm}" || description ~ "${searchTerm}")`)
-      }
-
-      if (filterParts.length > 0) {
-        filter = filterParts.join(" && ")
-      }
-
-      const backend = getBackendClient()
-      const records = await backend.resource("guideline_categories").getFullList<GuidelineCategoriesResponse>({
-        sort: "parent_category,sort_order,name",
-        filter,
-        expand: "parent_category"
+      const records = await guidelineCategoryService.all({
+        status: includeInactive ? undefined : "active",
+        parent_id: parentId || undefined,
+        search: searchTerm || undefined,
       })
 
       setCategories(records)

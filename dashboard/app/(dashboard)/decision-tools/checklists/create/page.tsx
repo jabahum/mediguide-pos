@@ -5,27 +5,17 @@ import { useRouter } from "next/navigation"
 import { PageHeader } from "@/components/ui/page-header"
 import { DecisionToolForm } from "@/components/forms/decision-tool-form"
 import { CalculatorsTypeOptions } from "@/types/backend-types"
-import { useBackendCrud } from "@/hooks/use-backend-crud"
-import { getBackendClient } from "@/lib/backend-client"
+import { useDomainCrud } from "@/hooks/use-domain-crud"
+import { calculatorService } from "@/services/calculator.service"
 
 export default function CreateChecklistPage() {
   const router = useRouter()
 
-  const { create, loading } = useBackendCrud({
-    collectionName: "calculators",
-    onSuccess: () => {
+  const { create, loading } = useDomainCrud("calculators", calculatorService, () => {
       router.push("/decision-tools/checklists")
-    },
   })
 
   const handleSubmit = async (data: Record<string, unknown>) => {
-    const backend = getBackendClient()
-    const currentUser = backend.authStore.model
-
-    if (!currentUser) {
-      throw new Error("User not authenticated")
-    }
-
     const formData = new FormData()
 
     Object.keys(data).forEach((key) => {
@@ -36,8 +26,6 @@ export default function CreateChecklistPage() {
         formData.append(key, String(value))
       }
     })
-
-    formData.append("addedBy", currentUser.id)
 
     await create(formData)
   }

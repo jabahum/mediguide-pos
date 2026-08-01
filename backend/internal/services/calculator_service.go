@@ -37,6 +37,7 @@ type CalculatorListInput struct {
 	Status   string
 	Featured *bool
 	Sort     string
+	Order    string
 }
 
 type CreateCalculatorInput struct {
@@ -117,7 +118,7 @@ func (s CalculatorService) List(in CalculatorListInput) (*PageResult[models.Calc
 
 	items := []models.Calculator{}
 	if err := query.Session(&gorm.Session{}).
-		Order(calculatorSort(in.Sort)).
+		Order(calculatorSort(in.Sort, in.Order)).
 		Limit(page.PerPage).
 		Offset(page.Offset()).
 		Find(&items).Error; err != nil {
@@ -339,27 +340,19 @@ func allCalculatorValuesValid(values []string, validate func(string) bool) bool 
 	return true
 }
 
-func calculatorSort(value string) string {
-	switch strings.TrimSpace(value) {
-	case "name", "+name":
-		return "name ASC"
-	case "-name":
-		return "name DESC"
-	case "created", "created_at", "+created":
-		return "created_at ASC"
-	case "-created", "-created_at":
-		return "created_at DESC"
-	case "updated", "updated_at", "+updated":
-		return "updated_at ASC"
-	case "-updated", "-updated_at":
-		return "updated_at DESC"
-	case "usage_count", "+usage_count":
-		return "usage_count ASC"
-	case "-usage_count":
-		return "usage_count DESC"
-	default:
-		return "name ASC"
+func calculatorSort(field, order string) string {
+	columns := map[string]string{
+		"name": "name", "created_at": "created_at", "updated_at": "updated_at", "usage_count": "usage_count",
 	}
+	column := columns[strings.TrimSpace(field)]
+	if column == "" {
+		column = "name"
+	}
+	direction := "ASC"
+	if strings.EqualFold(strings.TrimSpace(order), "desc") {
+		direction = "DESC"
+	}
+	return column + " " + direction
 }
 
 func copyCalculatorString(updates map[string]any, column string, value *string) {

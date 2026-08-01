@@ -5,9 +5,13 @@ import 'package:toastification/toastification.dart';
 import '../../data/models/models.dart';
 import '../../data/services/auth_service.dart';
 import '../../data/services/backend_api_service.dart';
+import '../../data/repositories/progress_usage_repository.dart';
 import '../../utils/common.dart';
 
 class ReadGuidelineController extends GetxController {
+  ReadingProgressRepository get _progressRepository =>
+      ReadingProgressRepository(BackendApiService.to);
+  UsageRepository get _usageRepository => UsageRepository(BackendApiService.to);
   // Observable state
   final Rx<Guideline?> guideline = Rx<Guideline?>(null);
   final Rx<ReadingProgress?> readingProgress = Rx<ReadingProgress?>(null);
@@ -106,13 +110,13 @@ class ReadGuidelineController extends GetxController {
       final userId = AuthService.to.currentUser.value!.id;
       final guidelineId = guideline.value!.id;
 
-      final records = await BackendApiService.to.getResourceList(
-        collectionName: 'reading_progress',
-        filter: 'user_id="$userId" && guideline_id="$guidelineId"',
+      final record = await _progressRepository.forGuideline(
+        userId,
+        guidelineId,
       );
 
-      if (records.items.isNotEmpty) {
-        readingProgress.value = ReadingProgress.fromRecord(records.items.first);
+      if (record != null) {
+        readingProgress.value = ReadingProgress.fromRecord(record);
         currentSection.value = readingProgress.value!.currentSection;
         progressPercentage.value = readingProgress.value!.progressPercentage;
         isBookmarked.value = readingProgress.value!.isBookmarked;
@@ -141,9 +145,10 @@ class ReadGuidelineController extends GetxController {
         progressPercentage: 0.0,
       );
 
-      final record = await BackendApiService.to.createResource(
-        collectionName: 'reading_progress',
-        data: progressData,
+      final record = await _progressRepository.upsert(
+        userId,
+        guidelineId,
+        progressData,
       );
 
       readingProgress.value = ReadingProgress.fromRecord(record);
@@ -163,16 +168,13 @@ class ReadGuidelineController extends GetxController {
     try {
       final isCompleted = progressPercentage.value >= 0.95;
 
-      await BackendApiService.to.updateResource(
-        collectionName: 'reading_progress',
-        recordId: readingProgress.value!.id,
-        data: {
-          'current_section': currentSection.value,
-          'progress_percentage': progressPercentage.value,
-          'last_read_at': DateTime.now().toIso8601String(),
-          'is_completed': isCompleted,
-        },
-      );
+      await _progressRepository
+          .upsert(AuthService.to.currentUser.value!.id, guideline.value!.id, {
+            'current_section': currentSection.value,
+            'progress_percentage': progressPercentage.value,
+            'last_read_at': DateTime.now().toIso8601String(),
+            'is_completed': isCompleted,
+          });
 
       final updatedData = Map<String, dynamic>.from(
         readingProgress.value!.data,
@@ -221,10 +223,10 @@ class ReadGuidelineController extends GetxController {
       isLoading.value = true;
       final newBookmarkStatus = !isBookmarked.value;
 
-      await BackendApiService.to.updateResource(
-        collectionName: 'reading_progress',
-        recordId: readingProgress.value!.id,
-        data: {'is_bookmarked': newBookmarkStatus},
+      await _progressRepository.upsert(
+        AuthService.to.currentUser.value!.id,
+        guideline.value!.id,
+        {'is_bookmarked': newBookmarkStatus},
       );
 
       isBookmarked.value = newBookmarkStatus;
@@ -248,15 +250,12 @@ class ReadGuidelineController extends GetxController {
     try {
       isLoading.value = true;
 
-      await BackendApiService.to.updateResource(
-        collectionName: 'reading_progress',
-        recordId: readingProgress.value!.id,
-        data: {
-          'progress_percentage': 1.0,
-          'is_completed': true,
-          'last_read_at': DateTime.now().toIso8601String(),
-        },
-      );
+      await _progressRepository
+          .upsert(AuthService.to.currentUser.value!.id, guideline.value!.id, {
+            'progress_percentage': 1.0,
+            'is_completed': true,
+            'last_read_at': DateTime.now().toIso8601String(),
+          });
 
       progressPercentage.value = 1.0;
 
@@ -387,21 +386,7 @@ class ReadGuidelineController extends GetxController {
       if (AuthService.to.currentUser.value == null) return;
 
       // Create guideline usage log
-      final logData = GuidelineUsageLog.forCreate(
-        userId: AuthService.to.currentUser.value!.id,
-        guidelineId: guidelineId,
-      );
-
-      await BackendApiService.to.createResource(
-        collectionName: GuidelineUsageLog.collection,
-        data: logData,
-      );
-
-      // Increment guideline usage count
-      await BackendApiService.to.incrementUsageCount(
-        Guideline.collection,
-        guidelineId,
-      );
+      await _usageRepository.guideline(guidelineId);
     } catch (e) {
       // Handle error silently to not disrupt user experience
     }

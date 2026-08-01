@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { getBackendClient } from "@/lib/backend-client"
+import { drugReferenceService } from "@/services/drug.service"
 import { showToast } from "@/lib/toast"
 
 interface CreateDrugClassDialogProps {
@@ -30,8 +30,7 @@ export function CreateDrugClassDialog({ open, onOpenChange, onSuccess }: CreateD
     setLoading(true)
 
     try {
-      const backend = getBackendClient()
-      const drugClass = await backend.resource("drug_classes").create(formData)
+      const drugClass = await drugReferenceService.createClass(formData)
       
       showToast.success("Success", "Drug class created successfully")
       onSuccess?.(drugClass as unknown as { id: string; name: string })

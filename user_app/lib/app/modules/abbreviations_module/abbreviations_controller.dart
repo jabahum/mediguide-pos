@@ -3,7 +3,6 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:infinite_scroll_pagination/infinite_scroll_pagination.dart';
-import 'package:user_app/app/data/models/abbreviation_usage_log.dart';
 import 'package:user_app/app/data/models/guideline_category.dart';
 import 'package:user_app/app/data/models/guideline_tag.dart';
 
@@ -11,6 +10,8 @@ import '../../data/models/abbreviation.dart';
 import '../../data/models/filter_models.dart';
 import '../../data/services/auth_service.dart';
 import '../../data/services/backend_api_service.dart';
+import '../../data/repositories/guideline_content_repository.dart';
+import '../../data/repositories/progress_usage_repository.dart';
 import '../../utils/constants.dart';
 import '../../utils/common.dart';
 import '../../widgets/generic_filter_bottom_sheet.dart';
@@ -59,6 +60,9 @@ class AbbreviationQuery {
 /// CONTROLLER
 /// ===============================
 class AbbreviationsController extends GetxController {
+  UsageRepository get _usageRepository => UsageRepository(BackendApiService.to);
+  GuidelineContentRepository get _contentRepository =>
+      GuidelineContentRepository(BackendApiService.to);
   late final PagingController<int, Abbreviation> pagingController;
 
   final Rx<AbbreviationQuery> query = AbbreviationQuery.empty.obs;
@@ -204,24 +208,18 @@ class AbbreviationsController extends GetxController {
     int page = 1,
     int perPage = 30,
   }) async {
-    final result = await BackendApiService.to.getResourceList(
-      collectionName: Abbreviation.collection,
+    final result = await _contentRepository.abbreviations(
       page: page,
       perPage: perPage,
-      sort: '-created',
-      expand: 'category,tags',
     );
 
     return result.items.map(Abbreviation.fromRecord).toList();
   }
 
   Future<List<Abbreviation>> getCommonAbbreviations() async {
-    final result = await BackendApiService.to.getResourceList(
-      collectionName: Abbreviation.collection,
+    final result = await _contentRepository.abbreviations(
       perPage: 50,
-      filter: 'common_usage = true',
-      sort: 'abbreviation',
-      expand: 'category,tags',
+      commonUsage: true,
     );
 
     return result.items.map(Abbreviation.fromRecord).toList();
@@ -232,37 +230,12 @@ class AbbreviationsController extends GetxController {
     required int page,
     required int perPage,
   }) async {
-    final filters = <String>[];
-
-    if (query.search.isNotEmpty) {
-      final q = BackendApiService.escapeFilterValue(query.search);
-      filters.add(
-        '(abbreviation ~ "$q" || '
-        'meaning ~ "$q" || '
-        'description ~ "$q")',
-      );
-    }
-
-    if (query.categoryId != null) {
-      final categoryId = BackendApiService.escapeFilterValue(query.categoryId);
-      filters.add('category = "$categoryId"');
-    }
-
-    if (query.tagIds.isNotEmpty) {
-      final tagFilter = query.tagIds
-          .map((e) => 'tags ~ "${BackendApiService.escapeFilterValue(e)}"')
-          .join(' || ');
-
-      filters.add('($tagFilter)');
-    }
-
-    final result = await BackendApiService.to.getResourceList(
-      collectionName: Abbreviation.collection,
+    final result = await _contentRepository.abbreviations(
       page: page,
       perPage: perPage,
-      filter: filters.isEmpty ? null : filters.join(' && '),
-      sort: 'abbreviation',
-      expand: 'category,tags',
+      search: query.search,
+      categoryId: query.categoryId,
+      tagId: query.tagIds.isEmpty ? null : query.tagIds.join(','),
     );
 
     return result.items.map(Abbreviation.fromRecord).toList();
@@ -286,18 +259,7 @@ class AbbreviationsController extends GetxController {
 
       if (user == null) return;
 
-      await BackendApiService.to.createResource(
-        collectionName: AbbreviationUsageLog.collection,
-        data: AbbreviationUsageLog.forCreate(
-          userId: user.id,
-          abbreviationId: id,
-        ),
-      );
-
-      await BackendApiService.to.incrementUsageCount(
-        Abbreviation.collection,
-        id,
-      );
+      await _usageRepository.abbreviation(id);
     } catch (_) {}
   }
 
@@ -306,12 +268,7 @@ class AbbreviationsController extends GetxController {
     String? filter,
     String? sort,
   }) async {
-    final result = await BackendApiService.to.getResourceList(
-      collectionName: GuidelineCategory.collection,
-      filter: filter ?? 'status = "active"',
-      sort: sort ?? 'sort_order,name',
-      expand: 'parent_category',
-    );
+    final result = await _contentRepository.categories();
     return result.items
         .map((record) => GuidelineCategory.fromRecord(record))
         .toList();
@@ -322,11 +279,7 @@ class AbbreviationsController extends GetxController {
     String? filter,
     String? sort,
   }) async {
-    final result = await BackendApiService.to.getResourceList(
-      collectionName: GuidelineTag.collection,
-      filter: filter,
-      sort: sort ?? 'name',
-    );
+    final result = await _contentRepository.tags();
     return result.items
         .map((record) => GuidelineTag.fromRecord(record))
         .toList();

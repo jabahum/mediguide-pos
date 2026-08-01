@@ -1,14 +1,19 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:toastification/toastification.dart';
 import '../../data/services/backend_api_service.dart';
 import '../../data/services/auth_service.dart';
-import '../../data/models/conversation.dart';
+import '../../data/repositories/conversation_repository.dart';
 import '../../data/models/message.dart';
 import '../../data/models/user.dart';
 import '../../utils/common.dart';
 
 class ChatInterfaceController extends GetxController {
+  ConversationRepository get _repository =>
+      ConversationRepository(BackendApiService.to);
+  Timer? _pollTimer;
   // Reactive variables (public, following project guidelines)
   final RxList<Message> messages = <Message>[].obs;
   final RxBool isLoading = false.obs;
@@ -38,12 +43,7 @@ class ChatInterfaceController extends GetxController {
 
   @override
   void onClose() {
-    // Clean up real-time subscriptions
-    if (conversationId.value.isNotEmpty) {
-      BackendApiService.to.unsubscribeFromCollection(
-        collectionName: 'messages',
-      );
-    }
+    _pollTimer?.cancel();
     scrollController.dispose();
     super.onClose();
   }
@@ -55,36 +55,10 @@ class ChatInterfaceController extends GetxController {
 
     isLoading.value = true;
     try {
-      final currentUserId = AuthService.to.currentUser.value?.id;
-      if (currentUserId == null) return;
-
-      // Try to find existing conversation
-      final filter =
-          '(participant1 = "$currentUserId" && participant2 = "${user.id}") || (participant1 = "${user.id}" && participant2 = "$currentUserId")';
-
-      final existingConversations = await BackendApiService.to.getResourceList(
-        collectionName: 'conversations',
-        filter: filter,
-      );
-
-      if (existingConversations.items.isNotEmpty) {
-        // Use existing conversation
-        conversationId.value = existingConversations.items.first.id;
-        loadMessages();
-        subscribeToMessages();
-      } else {
-        // Create new conversation
-        final newConversation = await BackendApiService.to.createResource(
-          collectionName: 'conversations',
-          data: Conversation.forCreate(
-            participant1: currentUserId,
-            participant2: user.id,
-          ),
-        );
-
-        conversationId.value = newConversation.id;
-        subscribeToMessages();
-      }
+      final conversation = await _repository.findOrCreate(user.id);
+      conversationId.value = conversation.id;
+      await loadMessages();
+      subscribeToMessages();
     } catch (e) {
       Common.quickToast(
         type: ToastificationType.error,
@@ -102,12 +76,7 @@ class ChatInterfaceController extends GetxController {
 
     isLoading.value = true;
     try {
-      final result = await BackendApiService.to.getResourceList(
-        collectionName: 'messages',
-        filter: 'conversation = "${conversationId.value}"',
-        sort: 'created',
-        expand: 'sender,reply_to',
-      );
+      final result = await _repository.messages(conversationId.value);
 
       messages.clear();
       for (final record in result.items) {
@@ -137,26 +106,13 @@ class ChatInterfaceController extends GetxController {
   Future<void> sendMessage(String content, MessageType type) async {
     if (conversationId.value.isEmpty || content.trim().isEmpty) return;
 
-    final currentUserId = AuthService.to.currentUser.value?.id;
-    if (currentUserId == null) return;
-
     try {
-      await BackendApiService.to.createResource(
-        collectionName: 'messages',
-        data: Message.forCreate(
-          conversation: conversationId.value,
-          sender: currentUserId,
-          content: content.trim(),
-          messageType: type,
-        ),
+      final record = await _repository.send(
+        conversationId.value,
+        content: content.trim(),
+        messageType: type.name,
       );
-
-      // Update conversation last activity
-      await BackendApiService.to.updateResource(
-        collectionName: 'conversations',
-        recordId: conversationId.value,
-        data: Conversation.forUpdate(lastActivity: DateTime.now()),
-      );
+      messages.add(Message.fromRecord(record));
 
       // Scroll to bottom after sending message
       _scrollToBottom();
@@ -174,39 +130,14 @@ class ChatInterfaceController extends GetxController {
     sendMessage(content, MessageType.text);
   }
 
-  /// Subscribe to real-time message updates
+  /// Poll for message updates. The backend does not expose realtime transport.
   void subscribeToMessages() {
     if (conversationId.value.isEmpty) return;
-
     isConnected.value = true;
-
-    BackendApiService.to.subscribeToCollection('messages', (e) {
-      try {
-        final record = e.record;
-        if (record == null) return;
-
-        final message = Message.fromRecord(record);
-
-        switch (e.action) {
-          case 'create':
-            messages.add(message);
-            // Scroll to bottom when new message arrives
-            _scrollToBottom();
-            break;
-          case 'update':
-            final index = messages.indexWhere((m) => m.id == message.id);
-            if (index != -1) {
-              messages[index] = message;
-            }
-            break;
-          case 'delete':
-            messages.removeWhere((m) => m.id == message.id);
-            break;
-        }
-      } catch (e) {
-        // Silently handle real-time message errors to avoid disrupting chat flow
-      }
-    }, filter: 'conversation = "${conversationId.value}"');
+    _pollTimer?.cancel();
+    _pollTimer = Timer.periodic(const Duration(seconds: 5), (_) {
+      loadMessages();
+    });
   }
 
   /// Mark message as read
@@ -218,14 +149,13 @@ class ChatInterfaceController extends GetxController {
       final message = messages.firstWhereOrNull((m) => m.id == messageId);
       if (message == null) return;
 
-      final updatedReadBy = Map<String, dynamic>.from(message.readBy);
-      updatedReadBy[currentUserId] = DateTime.now().toIso8601String();
-
-      await BackendApiService.to.updateResource(
-        collectionName: 'messages',
-        recordId: messageId,
-        data: Message.forUpdate(readBy: updatedReadBy),
+      final record = await _repository.markRead(
+        conversationId.value,
+        messageId,
+        DateTime.now(),
       );
+      final index = messages.indexWhere((item) => item.id == messageId);
+      if (index >= 0) messages[index] = Message.fromRecord(record);
     } catch (e) {
       // Silently handle read status errors
     }
@@ -240,18 +170,15 @@ class ChatInterfaceController extends GetxController {
       final message = messages.firstWhereOrNull((m) => m.id == messageId);
       if (message == null) return;
 
-      final updatedReactions = Map<String, dynamic>.from(message.reactions);
-      final userIds = List<String>.from(updatedReactions[emoji] ?? []);
-
-      if (!userIds.contains(currentUserId)) {
-        userIds.add(currentUserId);
-        updatedReactions[emoji] = userIds;
-
-        await BackendApiService.to.updateResource(
-          collectionName: 'messages',
-          recordId: messageId,
-          data: Message.forUpdate(reactions: updatedReactions),
+      if (!message.hasUserReacted(currentUserId, emoji)) {
+        final record = await _repository.react(
+          conversationId.value,
+          messageId,
+          emoji,
+          active: true,
         );
+        final index = messages.indexWhere((item) => item.id == messageId);
+        if (index >= 0) messages[index] = Message.fromRecord(record);
       }
     } catch (e) {
       Common.quickToast(
@@ -266,20 +193,14 @@ class ChatInterfaceController extends GetxController {
   Future<void> replyToMessage(String replyToId, String content) async {
     if (conversationId.value.isEmpty || content.trim().isEmpty) return;
 
-    final currentUserId = AuthService.to.currentUser.value?.id;
-    if (currentUserId == null) return;
-
     try {
-      await BackendApiService.to.createResource(
-        collectionName: 'messages',
-        data: Message.forCreate(
-          conversation: conversationId.value,
-          sender: currentUserId,
-          content: content.trim(),
-          messageType: MessageType.text,
-          replyTo: replyToId,
-        ),
+      final record = await _repository.send(
+        conversationId.value,
+        content: content.trim(),
+        messageType: MessageType.text.name,
+        replyToId: replyToId,
       );
+      messages.add(Message.fromRecord(record));
     } catch (e) {
       Common.quickToast(
         type: ToastificationType.error,

@@ -154,6 +154,102 @@ type PaginatedDocumentationEnvelope struct {
 	Data    services.PageResult[models.Documentation] `json:"data"`
 }
 
+type MedicalGuidelineEnvelope struct {
+	Success bool                    `json:"success"`
+	Data    models.MedicalGuideline `json:"data"`
+}
+type GuidelineCategoryEnvelope struct {
+	Success bool                     `json:"success"`
+	Data    models.GuidelineCategory `json:"data"`
+}
+type GuidelineTagEnvelope struct {
+	Success bool                `json:"success"`
+	Data    models.GuidelineTag `json:"data"`
+}
+type AbbreviationEnvelope struct {
+	Success bool                `json:"success"`
+	Data    models.Abbreviation `json:"data"`
+}
+type GuidelineIndexEnvelope struct {
+	Success bool                       `json:"success"`
+	Data    models.GuidelineIndexEntry `json:"data"`
+}
+type PaginatedMedicalGuidelinesEnvelope struct {
+	Success bool                                         `json:"success"`
+	Data    services.PageResult[models.MedicalGuideline] `json:"data"`
+}
+type PaginatedGuidelineCategoriesEnvelope struct {
+	Success bool                                          `json:"success"`
+	Data    services.PageResult[models.GuidelineCategory] `json:"data"`
+}
+type PaginatedGuidelineTagsEnvelope struct {
+	Success bool                                     `json:"success"`
+	Data    services.PageResult[models.GuidelineTag] `json:"data"`
+}
+type PaginatedAbbreviationsEnvelope struct {
+	Success bool                                     `json:"success"`
+	Data    services.PageResult[models.Abbreviation] `json:"data"`
+}
+type PaginatedGuidelineIndexEnvelope struct {
+	Success bool                                            `json:"success"`
+	Data    services.PageResult[models.GuidelineIndexEntry] `json:"data"`
+}
+type EmergencyProtocolEnvelope struct {
+	Success bool                     `json:"success"`
+	Data    models.EmergencyProtocol `json:"data"`
+}
+type PaginatedEmergencyProtocolsEnvelope struct {
+	Success bool                                          `json:"success"`
+	Data    services.PageResult[models.EmergencyProtocol] `json:"data"`
+}
+type GenericPageEnvelope struct {
+	Success bool               `json:"success"`
+	Data    models.GenericPage `json:"data"`
+}
+type PaginatedGenericPagesEnvelope struct {
+	Success bool                                    `json:"success"`
+	Data    services.PageResult[models.GenericPage] `json:"data"`
+}
+type MinistryDirectoryEnvelope struct {
+	Success bool                          `json:"success"`
+	Data    models.MinistryDirectoryEntry `json:"data"`
+}
+type PaginatedMinistryDirectoryEnvelope struct {
+	Success bool                                               `json:"success"`
+	Data    services.PageResult[models.MinistryDirectoryEntry] `json:"data"`
+}
+type ReadingProgressEnvelope struct {
+	Success bool                   `json:"success"`
+	Data    models.ReadingProgress `json:"data"`
+}
+type PaginatedReadingProgressEnvelope struct {
+	Success bool                                        `json:"success"`
+	Data    services.PageResult[models.ReadingProgress] `json:"data"`
+}
+type UsageEventEnvelope struct {
+	Success bool `json:"success"`
+	Data    any  `json:"data"`
+}
+type UsageAggregatesEnvelope struct {
+	Success bool                      `json:"success"`
+	Data    []services.UsageAggregate `json:"data"`
+}
+type ConversationEnvelope struct {
+	Success bool                      `json:"success"`
+	Data    services.ConversationView `json:"data"`
+}
+type PaginatedConversationsEnvelope struct {
+	Success bool                                           `json:"success"`
+	Data    services.PageResult[services.ConversationView] `json:"data"`
+}
+type MessageEnvelope struct {
+	Success bool                 `json:"success"`
+	Data    services.MessageView `json:"data"`
+}
+type PaginatedMessagesEnvelope struct {
+	Success bool                                      `json:"success"`
+	Data    services.PageResult[services.MessageView] `json:"data"`
+}
 type UserEnvelope struct {
 	Success bool        `json:"success" example:"true"`
 	Data    models.User `json:"data"`
@@ -548,4 +644,3 @@ type RunProtocolResult = services.RunProtocolResult
 type CreateSyncPackageInput = services.CreateSyncPackageInput
 type ManifestResult = services.ManifestResult
 type CreateSettingInput = services.CreateSettingInput
-type CreateLanguageInput = services.CreateLanguageInput

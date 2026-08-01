@@ -32,6 +32,7 @@ type CalculatorHandler struct {
 // @Param status query string false "Comma-separated active, draft, or archived values"
 // @Param featured query bool false "Featured filter"
 // @Param sort query string false "Sort field"
+// @Param order query string false "Sort direction (asc or desc)"
 // @Success 200 {object} handlers.PaginatedCalculatorsEnvelope
 // @Failure 400 {object} handlers.ErrorResponse
 // @Failure 401 {object} handlers.ErrorResponse
@@ -58,6 +59,7 @@ func (h CalculatorHandler) List(c *gin.Context) {
 		Status:   c.Query("status"),
 		Featured: featured,
 		Sort:     c.Query("sort"),
+		Order:    c.Query("order"),
 	})
 	if err != nil {
 		h.writeError(c, err)

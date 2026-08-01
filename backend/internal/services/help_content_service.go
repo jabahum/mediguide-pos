@@ -273,7 +273,7 @@ func (s HelpContentService) faqQuery() *gorm.DB {
 	return s.DB.Table("faqs f").Select("f.*, author.name AS author_name, author.email AS author_email, reviewer.name AS reviewer_name, reviewer.email AS reviewer_email").Joins("LEFT JOIN users author ON author.id=f.author_id").Joins("LEFT JOIN users reviewer ON reviewer.id=f.reviewer_id").Where("f.deleted_at IS NULL")
 }
 func normalizeFAQInput(in FAQInput) (*models.FAQ, error) {
-	if strings.TrimSpace(in.Question) == "" || strings.TrimSpace(in.Answer) == "" || !validFAQStatus(defaultString(in.Status, "draft")) || !oneOf(defaultString(in.Priority, "normal"), "low", "normal", "high", "critical") {
+	if strings.TrimSpace(in.Question) == "" || strings.TrimSpace(in.Answer) == "" || !validFAQStatus(defaultHelpString(in.Status, "draft")) || !oneOf(defaultHelpString(in.Priority, "normal"), "low", "normal", "high", "critical") {
 		return nil, ErrHelpContentInvalid
 	}
 	tags, err := validUUIDStrings(in.Tags)
@@ -292,7 +292,7 @@ func normalizeFAQInput(in FAQInput) (*models.FAQ, error) {
 	if err != nil {
 		return nil, ErrHelpContentInvalid
 	}
-	return &models.FAQ{AuthorID: author, ReviewerID: reviewer, Question: strings.TrimSpace(in.Question), Answer: strings.TrimSpace(in.Answer), Status: defaultString(in.Status, "draft"), Priority: defaultString(in.Priority, "normal"), SortOrder: in.SortOrder, IsFeatured: in.IsFeatured, TargetAudience: defaultString(in.TargetAudience, "all"), Keywords: strings.TrimSpace(in.Keywords), PublishedAt: cleanOptional(in.PublishedAt), ReviewDue: cleanOptional(in.ReviewDue), Tags: models.StringList(tags), RelatedFAQs: models.StringList(related)}, nil
+	return &models.FAQ{AuthorID: author, ReviewerID: reviewer, Question: strings.TrimSpace(in.Question), Answer: strings.TrimSpace(in.Answer), Status: defaultHelpString(in.Status, "draft"), Priority: defaultHelpString(in.Priority, "normal"), SortOrder: in.SortOrder, IsFeatured: in.IsFeatured, TargetAudience: defaultHelpString(in.TargetAudience, "all"), Keywords: strings.TrimSpace(in.Keywords), PublishedAt: cleanOptional(in.PublishedAt), ReviewDue: cleanOptional(in.ReviewDue), Tags: models.StringList(tags), RelatedFAQs: models.StringList(related)}, nil
 }
 func pageHelp[T any](q *gorm.DB, p PageInput, orders map[string]string, sort, order, fallback string) (*PageResult[T], error) {
 	var total int64
@@ -317,7 +317,13 @@ func recalculateFAQTagUsage(db *gorm.DB) error {
 	return db.Exec(`UPDATE faq_tags SET usage_count=(SELECT COUNT(*) FROM faqs WHERE faqs.deleted_at IS NULL AND faqs.tags_json @> ('["' || faq_tags.id::text || '"]')::jsonb), updated_at=now() WHERE deleted_at IS NULL`).Error
 }
 func validFAQStatus(v string) bool { return oneOf(v, "draft", "review", "published", "archived") }
-func validSlug(v string) bool      { return regexp.MustCompile(`^[a-z0-9]+(?:-[a-z0-9]+)*$`).MatchString(v) }
+func defaultHelpString(value, fallback string) string {
+	if value = strings.TrimSpace(value); value != "" {
+		return value
+	}
+	return fallback
+}
+func validSlug(v string) bool { return regexp.MustCompile(`^[a-z0-9]+(?:-[a-z0-9]+)*$`).MatchString(v) }
 func helpSlugify(v string) string {
 	value := strings.ToLower(strings.TrimSpace(v))
 	value = regexp.MustCompile(`[^a-z0-9]+`).ReplaceAllString(value, "-")

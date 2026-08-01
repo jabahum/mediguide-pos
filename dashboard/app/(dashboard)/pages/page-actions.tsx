@@ -8,7 +8,7 @@ import {
   Download,
 } from "lucide-react"
 
-import { getBackendClient } from "@/lib/backend-client"
+import { GenericPagesService } from "@/services/generic-pages.service"
 import { showToast } from "@/lib/toast"
 import { RowAction, BulkAction } from "@/types/data-table"
 import { GenericPage } from "./columns"
@@ -16,8 +16,7 @@ import { GenericPage } from "./columns"
 // Helper function to delete a page
 const deletePage = async (page: GenericPage) => {
   try {
-    const backend = getBackendClient()
-    await backend.resource('generic_pages').delete(page.id)
+    await GenericPagesService.deletePage(page.id)
     showToast.success("Page Deleted", `Page "${page.title}" has been deleted successfully`)
   } catch (error) {
     console.error('Error deleting page:', error)
@@ -150,12 +149,7 @@ export const pageBulkActions: BulkAction<GenericPage>[] = [
     variant: "destructive",
     onClick: async (pages) => {
       try {
-        const backend = getBackendClient()
-        
-        // Delete all selected pages
-        await Promise.all(
-          pages.map(page => backend.resource('generic_pages').delete(page.id))
-        )
+        await Promise.all(pages.map(page => GenericPagesService.deletePage(page.id)))
         
         showToast.success("Pages Deleted", `Successfully deleted ${pages.length} pages`)
       } catch (error) {

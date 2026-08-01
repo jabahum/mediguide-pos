@@ -11,11 +11,9 @@ import {
   Archive,
   Clock,
 } from "lucide-react"
-import { getBackendClient } from "@/lib/backend-client"
+import { calculatorService } from "@/services/calculator.service"
 import { showToast } from "@/lib/toast"
 import { downloadJson } from "@/lib/client-download"
-
-const backend = getBackendClient()
 
 function getExportFilename(prefix: string) {
   return `${prefix}-${new Date().toISOString().slice(0, 10)}.json`
@@ -27,7 +25,7 @@ async function updateToolStatus(
   actionLabel: string
 ) {
   const results = await Promise.allSettled(
-    tools.map((tool) => backend.resource("calculators").update(tool.id, { status }))
+    tools.map((tool) => calculatorService.update(tool.id, { status }))
   )
 
   const successCount = results.filter((result) => result.status === "fulfilled").length
@@ -48,13 +46,13 @@ async function updateToolStatus(
 }
 
 async function deleteTool(tool: DecisionToolWithRelations) {
-  await backend.resource("calculators").delete(tool.id)
+  await calculatorService.delete(tool.id)
   showToast.success("Decision Tool Deleted", `"${tool.name}" was deleted`)
 }
 
 async function deleteManyTools(tools: DecisionToolWithRelations[]) {
   const results = await Promise.allSettled(
-    tools.map((tool) => backend.resource("calculators").delete(tool.id))
+    tools.map((tool) => calculatorService.delete(tool.id))
   )
 
   const successCount = results.filter((result) => result.status === "fulfilled").length

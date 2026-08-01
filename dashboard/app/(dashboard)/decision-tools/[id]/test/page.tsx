@@ -14,6 +14,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Play } from "lucide-react";
 import { getBackendClient } from "@/lib/backend-client";
+import { calculatorService } from "@/services/calculator.service";
 import { showToast } from "@/lib/toast";
 import { DecisionToolWithRelations } from "../../types";
 import { usePermissionContext } from "@/lib/permission-context";
@@ -81,10 +82,7 @@ export default function DecisionToolTestPage({
   React.useEffect(() => {
     const fetchTool = async () => {
       try {
-        const backend = getBackendClient();
-        const toolData = await backend.resource("calculators").getOne(id, {
-          expand: "addedBy",
-        }) as DecisionToolWithRelations;
+        const toolData = await calculatorService.get(id) as DecisionToolWithRelations;
 
         setTool(toolData);
       } catch (error) {

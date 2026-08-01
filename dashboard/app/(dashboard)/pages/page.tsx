@@ -14,6 +14,7 @@ import { columns, GenericPage } from "./columns"
 import { createPageRowActions, pageBulkActions } from "./page-actions"
 import { pagesAvailableFields } from "./fields"
 import { AdvancedFilter } from "@/types/data-table"
+import { GenericPagesService } from "@/services/generic-pages.service"
 
 export default function PagesPage() {
   const router = useRouter()
@@ -56,6 +57,9 @@ export default function PagesPage() {
       <div className="grid grid-cols-1">
         <EnhancedBackendDataTable<GenericPage>
           collectionName="generic_pages"
+          loadPage={({ page, perPage, search }) =>
+            GenericPagesService.list({ page, perPage, search })
+          }
           columns={columns}
           searchable={true}
           searchFields={["title", "key", "description"]}
@@ -67,7 +71,6 @@ export default function PagesPage() {
           bulkActions={pageBulkActions}
           persistColumnConfig={true}
           tableContext="pages-management"
-          fields="id,title,key,description,created,updated"
           onAdvancedFilter={handleAdvancedFilter}
         />
       </div>

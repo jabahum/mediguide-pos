@@ -10,8 +10,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { DecisionToolWithRelations } from "../types"
 import { CalculatorsStatusOptions, CalculatorsTypeOptions } from "@/types/backend-types"
-import { getBackendClient } from "@/lib/backend-client"
-import { useBackendRecord } from "@/hooks/use-backend-record"
+import { calculatorService } from "@/services/calculator.service"
+import { useDomainRecord } from "@/hooks/use-domain-record"
 import { formatDistanceToNow } from "date-fns"
 import { Edit, Copy, Trash2, Play, Calculator, Brain, CheckSquare, Info, Settings, Activity, Calendar } from "lucide-react"
 import { usePermissionContext } from "@/lib/permission-context"
@@ -46,11 +46,7 @@ export default function DecisionToolViewPage({ params }: DecisionToolViewPagePro
     }
   }
 
-  const { record: tool, loading, error } = useBackendRecord<DecisionToolWithRelations>(
-    "calculators",
-    id,
-    { expand: "addedBy" }
-  )
+  const { record: tool, loading, error } = useDomainRecord<DecisionToolWithRelations>("calculators", id, calculatorService.get)
 
   const handleEdit = () => {
     router.push(`/decision-tools/${id}/edit`)
@@ -68,8 +64,7 @@ export default function DecisionToolViewPage({ params }: DecisionToolViewPagePro
   const handleDelete = async () => {
     if (window.confirm("Are you sure you want to delete this decision tool? This action cannot be undone.")) {
       try {
-        const backend = getBackendClient()
-        await backend.resource("calculators").delete(id)
+        await calculatorService.delete(id)
         router.push(getListPath(tool?.type))
       } catch (error) {
         console.error("Failed to delete decision tool:", error)

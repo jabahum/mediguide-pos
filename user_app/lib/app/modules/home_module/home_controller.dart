@@ -5,10 +5,17 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../data/models/models.dart';
 import '../../data/services/auth_service.dart';
 import '../../data/services/backend_api_service.dart';
+import '../../data/repositories/guideline_content_repository.dart';
+import '../../data/repositories/progress_usage_repository.dart';
+import '../../data/repositories/calculator_repository.dart';
 import '../../routes/app_pages.dart';
 import './models/stats_model.dart';
 
 class HomeController extends GetxController {
+  GuidelineContentRepository get _contentRepository =>
+      GuidelineContentRepository(_apiService);
+  ReadingProgressRepository get _progressRepository =>
+      ReadingProgressRepository(_apiService);
   // =========================
   // SERVICES
   // =========================
@@ -95,11 +102,9 @@ class HomeController extends GetxController {
     try {
       isLoadingGuidelines.value = true;
 
-      final result = await _apiService.getResourceList(
-        collectionName: GuidelineCategory.collection,
+      final result = await _contentRepository.categories(
         perPage: 30,
-        filter: 'status="active" && parent_category=""',
-        sort: 'sort_order,name',
+        rootOnly: true,
       );
 
       guidelineCategories.assignAll(
@@ -117,12 +122,10 @@ class HomeController extends GetxController {
   // =====================================================
   Future<void> _loadPinnedGuidelines() async {
     try {
-      final result = await _apiService.getResourceList(
-        collectionName: Guideline.collection,
+      final result = await _contentRepository.guidelines(
         perPage: 5,
-        filter: 'is_published=true && status="published" && pinned=true',
-        sort: '-updated',
-        expand: 'categories,tags,index_item',
+        published: true,
+        status: 'published',
       );
 
       pinnedGuidelines.assignAll(
@@ -138,12 +141,10 @@ class HomeController extends GetxController {
   // =====================================================
   Future<void> _loadRecentlyUpdatedGuidelines() async {
     try {
-      final result = await _apiService.getResourceList(
-        collectionName: Guideline.collection,
+      final result = await _contentRepository.guidelines(
         perPage: 5,
-        filter: 'is_published=true && status="published"',
-        sort: '-updated',
-        expand: 'categories,tags,index_item',
+        published: true,
+        status: 'published',
       );
 
       recentlyUpdatedGuidelines.assignAll(
@@ -163,13 +164,7 @@ class HomeController extends GetxController {
 
       if (user == null) return;
 
-      final records = await _apiService.getResourceList(
-        collectionName: 'reading_progress',
-        perPage: 6,
-        filter:
-            'user_id="${user.id}" && progress_percentage>0 && progress_percentage<1',
-        sort: '-last_read_at',
-      );
+      final records = await _progressRepository.inProgress(user.id, perPage: 6);
 
       continueReadingItems.assignAll(
         records.items.map((e) => ReadingProgress.fromRecord(e)).toList(),
@@ -187,7 +182,8 @@ class HomeController extends GetxController {
       final featured = await getCalculators(
         perPage: 6,
         featured: true,
-        sort: '-usage_count',
+        sort: 'usage_count',
+        order: 'desc',
       );
 
       final calculators = List<Calculator>.from(featured);
@@ -196,7 +192,8 @@ class HomeController extends GetxController {
         final fallback = await getCalculators(
           perPage: 6 - calculators.length,
           featured: false,
-          sort: '-usage_count',
+          sort: 'usage_count',
+          order: 'desc',
         );
 
         calculators.addAll(fallback);
@@ -434,13 +431,7 @@ class HomeController extends GetxController {
 
   Future<void> navigateToContinueReading(ReadingProgress progress) async {
     try {
-      final record = await _apiService.getResource(
-        collectionName: Guideline.collection,
-        recordId: progress.guidelineId,
-        expand: 'categories,tags,index_item',
-      );
-
-      if (record == null) return;
+      final record = await _contentRepository.guideline(progress.guidelineId);
 
       final guideline = Guideline.fromRecord(record);
 
@@ -458,14 +449,16 @@ class HomeController extends GetxController {
     int perPage = 30,
     List<String> statuses = const ['active'],
     bool? featured,
-    String sort = '-usage_count',
+    String sort = 'usage_count',
+    String order = 'desc',
   }) async {
-    final result = await _apiService.getCalculators(
+    final result = await CalculatorRepository(_apiService).list(
       page: page,
       perPage: perPage,
       statuses: statuses,
       featured: featured,
       sort: sort,
+      order: order,
     );
 
     return result.items.map((record) => Calculator.fromRecord(record)).toList();

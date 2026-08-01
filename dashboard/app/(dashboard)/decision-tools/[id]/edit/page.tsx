@@ -6,8 +6,8 @@ import { notFound } from "next/navigation"
 import { PageHeader } from "@/components/ui/page-header"
 import { DecisionToolForm } from "@/components/forms/decision-tool-form"
 import { CalculatorsResponse, CalculatorsTypeOptions } from "@/types/backend-types"
-import { useBackendCrud } from "@/hooks/use-backend-crud"
-import { getBackendClient } from "@/lib/backend-client"
+import { useDomainCrud } from "@/hooks/use-domain-crud"
+import { calculatorService } from "@/services/calculator.service"
 import { usePermissionContext } from "@/lib/permission-context"
 
 interface DecisionToolEditPageProps {
@@ -52,15 +52,12 @@ export default function DecisionToolEditPage({ params, searchParams }: DecisionT
     searchParams.then(setResolvedSearchParams)
   }, [params, searchParams])
 
-  const { update, create, loading } = useBackendCrud({
-    collectionName: "calculators",
-    onSuccess: () => {
+  const { update, create, loading } = useDomainCrud("calculators", calculatorService, () => {
       if (resolvedParams?.id && !isDuplicate) {
         router.push(`/decision-tools/${resolvedParams.id}`)
       } else {
         router.push(getListPath(tool?.type))
       }
-    }
   })
 
   React.useEffect(() => {
@@ -68,10 +65,7 @@ export default function DecisionToolEditPage({ params, searchParams }: DecisionT
       if (!resolvedParams?.id) return
       
       try {
-        const backend = getBackendClient()
-        const toolData = await backend.resource("calculators").getOne(resolvedParams.id, {
-          expand: "addedBy"
-        }) as CalculatorWithRelations
+        const toolData = await calculatorService.get(resolvedParams.id) as CalculatorWithRelations
         
         setTool(toolData)
       } catch (error: unknown) {
@@ -91,13 +85,6 @@ export default function DecisionToolEditPage({ params, searchParams }: DecisionT
     if (!resolvedParams?.id) return
 
     try {
-      const backend = getBackendClient()
-      const currentUser = backend.authStore.model
-      
-      if (!currentUser) {
-        throw new Error("User not authenticated")
-      }
-
       // Create FormData for file upload
       const formData = new FormData()
       
@@ -112,23 +99,6 @@ export default function DecisionToolEditPage({ params, searchParams }: DecisionT
         }
       })
       
-      // Handle addedBy field
-      if (isDuplicate) {
-        // For duplicating, set current user as addedBy
-        formData.append('addedBy', currentUser.id)
-      } else {
-        // For editing, preserve existing addedBy unless it's empty
-        const addedByUsers = tool?.addedBy
-        const addedByList = Array.isArray(addedByUsers)
-          ? addedByUsers
-          : addedByUsers
-          ? [addedByUsers]
-          : [currentUser.id]
-        addedByList.forEach((userId: string) => {
-          formData.append('addedBy', userId)
-        })
-      }
-
       if (isDuplicate) {
         // If duplicating, create a new record
         await create(formData)

@@ -7,8 +7,8 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Edit, Trash2 } from "lucide-react"
-import { getBackendClient } from "@/lib/backend-client"
-import { useBackendRecord } from "@/hooks/use-backend-record"
+import { useDomainRecord } from "@/hooks/use-domain-record"
+import { emergencyProtocolService } from "@/services/emergency-protocol.service"
 import { showToast } from "@/lib/toast"
 import { EmergencyProtocolRecord, stringifyJsonField } from "../protocol-helpers"
 import { usePermissionContext } from "@/lib/permission-context"
@@ -48,10 +48,7 @@ export default function EmergencyProtocolViewPage({
   const router = useRouter()
   const { hasPermission, loading: permLoading } = usePermissionContext()
   const { id } = React.use(params)
-  const { record: protocol, loading, error } = useBackendRecord<EmergencyProtocolRecord>(
-    "emergency_protocols",
-    id
-  )
+  const { record: protocol, loading, error } = useDomainRecord<EmergencyProtocolRecord>("emergency-protocols",id,emergencyProtocolService.get)
 
   React.useEffect(() => {
     if (permLoading) return
@@ -77,8 +74,7 @@ export default function EmergencyProtocolViewPage({
     }
 
     try {
-      const backend = getBackendClient()
-      await backend.resource("emergency_protocols").delete(protocol.id)
+      await emergencyProtocolService.delete(protocol.id)
       showToast.success("Protocol Deleted", `"${protocol.title}" was deleted`)
       router.push("/emergency-protocols")
     } catch (error) {

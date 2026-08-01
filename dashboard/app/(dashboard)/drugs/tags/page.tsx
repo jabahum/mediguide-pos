@@ -16,7 +16,8 @@ import { TagViewDialog } from "@/components/dialogs/tag-view-dialog"
 // Types
 import { DrugTagsResponse } from "@/types/backend-types"
 import { RowAction, BulkAction, FieldOption } from "@/types/data-table"
-import { useBackendCrud } from "@/hooks/use-backend-crud"
+import { useDomainCrud } from "@/hooks/use-domain-crud"
+import { drugReferenceService, drugTagCrud } from "@/services/drug.service"
 
 // Page-specific imports
 import { tagColumns } from "../columns"
@@ -138,10 +139,7 @@ export default function DrugTagsPage() {
   const [refreshTrigger, setRefreshTrigger] = React.useState(0)
 
   // Delete functionality
-  const { deleteRecord } = useBackendCrud({
-    collectionName: "drug_tags",
-    onSuccess: () => setRefreshTrigger(prev => prev + 1)
-  })
+  const { deleteRecord } = useDomainCrud("drug_tags", drugTagCrud, () => setRefreshTrigger(prev => prev + 1))
 
   // Dialog handlers
   const handleView = React.useCallback((tag: DrugTagsResponse) => {
@@ -189,6 +187,7 @@ export default function DrugTagsPage() {
       {/* Simplified DataTable */}
       <BackendDataTable<DrugTagsResponse>
         collection="drug_tags"
+        loadPage={drugReferenceService.listTagsTable}
         columns={tagColumns}
         searchFields={["name", "description"]}
         rowActions={tagRowActions}

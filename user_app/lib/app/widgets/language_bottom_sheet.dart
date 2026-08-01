@@ -6,6 +6,7 @@ import 'dart:convert';
 import '../translations/app_translations.dart';
 import '../utils/app_spacing.dart';
 import '../data/services/backend_api_service.dart';
+import '../data/repositories/content_reference_repository.dart';
 import '../data/models/language_model.dart';
 import '../utils/preference_utils.dart';
 import '../utils/constants.dart';
@@ -38,15 +39,9 @@ class LanguageController extends GetxController {
     try {
       isLoading.value = true;
 
-      final response = await BackendApiService.to.getResourceList(
-        collectionName: 'languages',
-        filter: 'is_active = true || enabled_for_users = true',
-        sort: 'is_default desc, name asc',
-      );
-
-      final languages = response.items
-          .map((record) => LanguageModel.fromRecord(record))
-          .toList();
+      final languages = await LanguageRepository(
+        BackendApiService.to,
+      ).available();
       availableLanguages.assignAll(languages);
 
       return languages;

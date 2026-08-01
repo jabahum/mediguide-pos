@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { getBackendClient } from "@/lib/backend-client"
+import { drugReferenceService } from "@/services/drug.service"
 import { showToast } from "@/lib/toast"
 
 interface CreateTherapeuticCategoryDialogProps {
@@ -30,8 +30,7 @@ export function CreateTherapeuticCategoryDialog({ open, onOpenChange, onSuccess 
     setLoading(true)
 
     try {
-      const backend = getBackendClient()
-      const category = await backend.resource("therapeutic_categories").create(formData)
+      const category = await drugReferenceService.createTherapeuticCategory(formData)
       
       showToast.success("Success", "Therapeutic category created successfully")
       onSuccess?.(category as unknown as { id: string; name: string })

@@ -5,6 +5,7 @@ import 'package:infinite_scroll_pagination/infinite_scroll_pagination.dart';
 import '../../data/models/models.dart';
 import '../../data/models/filter_models.dart';
 import '../../data/services/backend_api_service.dart';
+import '../../data/repositories/calculator_repository.dart';
 import '../../utils/common.dart';
 import '../../utils/constants.dart';
 import '../../widgets/generic_filter_bottom_sheet.dart';
@@ -61,13 +62,14 @@ class ToolsController extends GetxController {
       final statuses = selectedStatuses.isNotEmpty
           ? selectedStatuses.map(_statusToString).toList()
           : const ['active'];
-      final result = await _apiService.getCalculators(
+      final result = await CalculatorRepository(_apiService).list(
         page: page,
         perPage: pageSize,
         search: searchQuery.value,
         types: types,
         statuses: statuses,
-        sort: '-created',
+        sort: 'created_at',
+        order: 'desc',
       );
 
       return result.items.map((r) => Calculator.fromRecord(r)).toList();

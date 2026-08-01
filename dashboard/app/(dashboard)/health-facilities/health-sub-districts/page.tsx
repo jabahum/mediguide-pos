@@ -95,7 +95,6 @@ export default function HealthSubDistrictsPage() {
         collectionName="health_sub_districts"
         loadPage={healthFacilitiesService.listHealthSubDistricts}
         columns={healthSubDistrictsColumns as ExtendedColumnDef<HealthSubDistrictsResponse>[]}
-        expand="district"
         expandable={true}
         searchable={true}
         searchFields={["name", "nhpi_code", "hsdt_code"]}

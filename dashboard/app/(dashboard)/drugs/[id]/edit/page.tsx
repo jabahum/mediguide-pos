@@ -6,8 +6,8 @@ import { notFound } from "next/navigation"
 import { PageHeader } from "@/components/ui/page-header"
 import { DrugForm } from "@/components/forms/drug-form"
 import { DrugsResponse, DrugCategoriesResponse, DrugTagsResponse } from "@/types/backend-types"
-import { useBackendCrud } from "@/hooks/use-backend-crud"
-import { getBackendClient } from "@/lib/backend-client"
+import { useDomainCrud } from "@/hooks/use-domain-crud"
+import { drugReferenceService, drugService } from "@/services/drug.service"
 import { usePermissionContext } from "@/lib/permission-context"
 
 interface DrugEditPageProps {
@@ -45,13 +45,10 @@ export default function DrugEditPage({ params, searchParams }: DrugEditPageProps
     searchParams.then(setResolvedSearchParams)
   }, [params, searchParams])
 
-  const { update, loading } = useBackendCrud({
-    collectionName: "drugs",
-    onSuccess: () => {
+  const { update, loading } = useDomainCrud("drugs", drugService, () => {
       if (resolvedParams?.id) {
         router.push(`/drugs/${resolvedParams.id}`)
       }
-    }
   })
 
   React.useEffect(() => {
@@ -59,19 +56,10 @@ export default function DrugEditPage({ params, searchParams }: DrugEditPageProps
       if (!resolvedParams?.id) return
       
       try {
-        const backend = getBackendClient()
         const [drugData, categoriesResult, tagsResult] = await Promise.all([
-          backend.resource("drugs").getOne(resolvedParams.id, {
-            expand: "categories,tags"
-          }) as Promise<DrugWithRelations>,
-          backend.resource("drug_categories").getFullList({
-            filter: "status = 'active'",
-            sort: "sort_order,name"
-          }),
-          backend.resource("drug_tags").getFullList({
-            filter: "status = 'active'", 
-            sort: "sort_order,name"
-          })
+          drugService.get(resolvedParams.id) as Promise<DrugWithRelations>,
+          drugReferenceService.allCategories(),
+          drugReferenceService.allTags(),
         ])
         
         setDrug(drugData)
@@ -92,7 +80,7 @@ export default function DrugEditPage({ params, searchParams }: DrugEditPageProps
 
   const handleSubmit = async (data: unknown) => {
     if (resolvedParams?.id) {
-      await update(resolvedParams.id, data)
+      await update(resolvedParams.id, data as Record<string, unknown>)
     }
   }
 
@@ -124,8 +112,8 @@ export default function DrugEditPage({ params, searchParams }: DrugEditPageProps
   // Prepare initial data with expanded relations
   const initialData = {
     ...drug,
-    categories: drug.expand?.categories?.map(c => c.id) || [],
-    tags: drug.expand?.tags?.map(t => t.id) || []
+    categories: drug.categories || [],
+    tags: drug.tags || []
   }
 
   const pageTitle = isDuplicate ? `Duplicate "${drug.name}"` : `Edit "${drug.name}"`

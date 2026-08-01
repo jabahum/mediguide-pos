@@ -3,7 +3,6 @@
 import * as React from "react"
 import { Plus } from "lucide-react"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { getBackendClient } from "@/lib/backend-client"
 
 interface SelectOptionRecord {
   id: string
@@ -14,7 +13,7 @@ interface SelectWithCreateProps {
   value?: string
   onValueChange?: (value: string) => void
   placeholder?: string
-  collection: string
+  loadOptions: () => Promise<SelectOptionRecord[]>
   onCreateClick: () => void
   disabled?: boolean
   className?: string
@@ -25,7 +24,7 @@ export function SelectWithCreate({
   value,
   onValueChange,
   placeholder,
-  collection,
+  loadOptions,
   onCreateClick,
   disabled,
   className,
@@ -36,19 +35,14 @@ export function SelectWithCreate({
 
   const fetchOptions = React.useCallback(async () => {
     try {
-      const backend = getBackendClient()
-      const records = await backend.resource(collection).getFullList({
-        filter: "status = 'active'",
-        sort: "sort_order,name"
-      })
-      setOptions(records)
+      setOptions(await loadOptions())
     } catch (error) {
-      console.error(`Failed to fetch ${collection}:`, error)
+      console.error("Failed to fetch select options:", error)
       setOptions([])
     } finally {
       setLoading(false)
     }
-  }, [collection])
+  }, [loadOptions])
 
   React.useEffect(() => {
     fetchOptions()
@@ -93,37 +87,4 @@ export function SelectWithCreate({
       </Select>
     </div>
   )
-}
-
-// Hook to manage the select with create functionality
-export function useSelectWithCreate(collection: string) {
-  const [options, setOptions] = React.useState<SelectOptionRecord[]>([])
-  const [loading, setLoading] = React.useState(true)
-
-  const fetchOptions = React.useCallback(async () => {
-    try {
-      const backend = getBackendClient()
-      const records = await backend.resource(collection).getFullList({
-        filter: "status = 'active'",
-        sort: "sort_order,name"
-      })
-      setOptions(records)
-    } catch (error) {
-      console.error(`Failed to fetch ${collection}:`, error)
-      setOptions([])
-    } finally {
-      setLoading(false)
-    }
-  }, [collection])
-
-  React.useEffect(() => {
-    fetchOptions()
-  }, [fetchOptions])
-
-  const refresh = React.useCallback(() => {
-    setLoading(true)
-    fetchOptions()
-  }, [fetchOptions])
-
-  return { options, loading, refresh }
 }

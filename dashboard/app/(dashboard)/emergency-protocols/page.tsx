@@ -7,9 +7,8 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { PageHeader } from "@/components/ui/page-header"
 import { Phone, Plus, AlertTriangle, Heart, Zap, MoreVertical, Loader2 } from "lucide-react"
-import { backendClient } from "@/lib/backend-client"
-import { Collections } from "@/types/backend-types"
 import type { EmergencyProtocolsResponse, EmergencyProtocolsCategoryOptions, EmergencyProtocolsPriorityOptions } from "@/types/backend-types"
+import { emergencyProtocolService } from "@/services/emergency-protocol.service"
 import { showToast } from "@/lib/toast"
 import { usePermissionContext } from "@/lib/permission-context"
 
@@ -38,14 +37,11 @@ export default function EmergencyProtocolsPage() {
 
   const fetchProtocols = async () => {
     try {
-      const result = await backendClient.resource(Collections.EmergencyProtocols).getList(1, 50, {
-        sort: "-priority,title",
-        filter: "status = 'active'"
-      })
-      setProtocols(result.items as EmergencyProtocolsResponse[])
+      const result = await emergencyProtocolService.list({status:"active",sort:"priority",order:"asc"})
+      setProtocols(result.items)
 
       // Calculate stats
-      const total = result.totalItems
+      const total = result.total_items
       const critical = result.items.filter(p => p.priority === "critical").length
       const resuscitation = result.items.filter(p => p.category === "Resuscitation").length
       const trauma = result.items.filter(p => p.category === "Trauma").length

@@ -7,6 +7,7 @@ import 'package:user_app/app/data/models/filter_models.dart';
 
 import '../../data/models/models.dart';
 import '../../data/services/backend_api_service.dart';
+import '../../data/repositories/guideline_content_repository.dart';
 import '../../utils/common.dart';
 import '../../utils/constants.dart';
 import '../../widgets/generic_filter_bottom_sheet.dart';
@@ -14,6 +15,8 @@ import '../../widgets/generic_filter_bottom_sheet.dart';
 enum GuidelineRouteFilterType { all, category, categoryTree, indexItem, tag }
 
 class GuidelinesController extends GetxController {
+  GuidelineContentRepository get _contentRepository =>
+      GuidelineContentRepository(BackendApiService.to);
   // ==================== CONSTANTS ====================
   static const Set<String> emergencyCategoryNames = {
     'emergencies and trauma',
@@ -346,12 +349,8 @@ class GuidelinesController extends GetxController {
 
   Future<void> _loadChildCategoryIds(String parentCategoryId) async {
     try {
-      final result = await BackendApiService.to.getResourceList(
-        collectionName: GuidelineCategory.collection,
-        perPage: 100,
-        filter:
-            'status="active" && parent_category="${BackendApiService.escapeFilterValue(parentCategoryId)}"',
-        sort: 'sort_order,name',
+      final result = await _contentRepository.categories(
+        parentId: parentCategoryId,
       );
 
       final childIds = result.items
@@ -374,12 +373,8 @@ class GuidelinesController extends GetxController {
 
     for (final parentCategoryId in parentCategoryIds) {
       try {
-        final result = await BackendApiService.to.getResourceList(
-          collectionName: GuidelineCategory.collection,
-          perPage: 100,
-          filter:
-              'status="active" && parent_category="${BackendApiService.escapeFilterValue(parentCategoryId)}"',
-          sort: 'sort_order,name',
+        final result = await _contentRepository.categories(
+          parentId: parentCategoryId,
         );
 
         final childIds = result.items
@@ -475,17 +470,28 @@ class GuidelinesController extends GetxController {
   // ==================== PAGE LOADING ====================
   Future<List<Guideline>> _loadPage(int pageKey) async {
     try {
-      final filter = _buildFilter();
-
-      debugPrint('Guidelines filter: $filter');
-
-      final result = await BackendApiService.to.getResourceList(
-        collectionName: Guideline.collection,
+      final categoryIds = <String>{
+        ...routeCategoryIds,
+        if (selectedCategoryId.value.isNotEmpty) selectedCategoryId.value,
+      };
+      final tagIds = <String>{
+        if (selectedTagId.value.isNotEmpty) selectedTagId.value,
+        ...selectedTagIds,
+      };
+      final result = await _contentRepository.guidelines(
         page: pageKey,
         perPage: pageSize,
-        filter: filter,
-        sort: '-updated',
-        expand: 'categories,tags,index_item',
+        search: searchQuery.value,
+        published: true,
+        status: 'published',
+        indexId: isInIndexMode.value ? selectedIndex.value?.id : null,
+        categoryId: categoryIds.isEmpty ? null : categoryIds.join(','),
+        tagId: tagIds.isEmpty ? null : tagIds.join(','),
+        priority: selectedPriority.value.isNotEmpty
+            ? selectedPriority.value
+            : (showHighPriorityOnly.value ? 'high' : null),
+        healthcareLevel: selectedHealthcareLevel.value,
+        targetPopulation: selectedTargetPopulation.value,
       );
 
       return result.items
@@ -496,97 +502,6 @@ class GuidelinesController extends GetxController {
       Common.quickToast(title: 'errorLoadingGuidelines'.tr);
       rethrow;
     }
-  }
-
-  String _buildFilter() {
-    final filters = <String>[];
-
-    filters.add('is_published=true');
-    filters.add('status="published"');
-
-    if (isInIndexMode.value && selectedIndex.value != null) {
-      filters.add(
-        'index_item="${BackendApiService.escapeFilterValue(selectedIndex.value!.id)}"',
-      );
-    }
-
-    if (isInCategoryMode.value) {
-      final categoryIds = routeCategoryIds.isNotEmpty
-          ? routeCategoryIds
-          : routeCategoryId.value.isNotEmpty
-          ? <String>[routeCategoryId.value]
-          : <String>[];
-
-      if (categoryIds.isNotEmpty) {
-        final categoryFilter = categoryIds
-            .map(
-              (id) => 'categories~"${BackendApiService.escapeFilterValue(id)}"',
-            )
-            .join(' || ');
-
-        filters.add('($categoryFilter)');
-      }
-    }
-
-    if (!isInCategoryMode.value && selectedCategoryId.value.isNotEmpty) {
-      filters.add(
-        'categories~"${BackendApiService.escapeFilterValue(selectedCategoryId.value)}"',
-      );
-    }
-
-    if (isInTagMode.value && selectedTagId.value.isNotEmpty) {
-      filters.add(
-        'tags~"${BackendApiService.escapeFilterValue(selectedTagId.value)}"',
-      );
-    }
-
-    final search = searchQuery.value.trim();
-    if (search.isNotEmpty) {
-      final q = BackendApiService.escapeFilterValue(search);
-
-      filters.add(
-        '('
-        'condition_name~"$q" || '
-        'definition~"$q" || '
-        'clinical_features~"$q" || '
-        'causes~"$q" || '
-        'icd10_code~"$q" || '
-        'icd11_code~"$q"'
-        ')',
-      );
-    }
-
-    if (selectedTagIds.isNotEmpty) {
-      final tagFilter = selectedTagIds
-          .map((id) => 'tags~"${BackendApiService.escapeFilterValue(id)}"')
-          .join(' || ');
-
-      filters.add('($tagFilter)');
-    }
-
-    if (selectedPriority.value.isNotEmpty) {
-      filters.add(
-        'priority="${BackendApiService.escapeFilterValue(selectedPriority.value)}"',
-      );
-    }
-
-    if (selectedHealthcareLevel.value.isNotEmpty) {
-      filters.add(
-        'healthcare_level_required~"${BackendApiService.escapeFilterValue(selectedHealthcareLevel.value)}"',
-      );
-    }
-
-    if (selectedTargetPopulation.value.isNotEmpty) {
-      filters.add(
-        'target_population~"${BackendApiService.escapeFilterValue(selectedTargetPopulation.value)}"',
-      );
-    }
-
-    if (showHighPriorityOnly.value) {
-      filters.add('(priority="critical" || priority="high")');
-    }
-
-    return filters.join(' && ');
   }
 
   void _updateFilterState() {
@@ -808,22 +723,13 @@ class GuidelinesController extends GetxController {
   }
 
   Future<List<GuidelineCategory>> getGuidelineCategories() async {
-    final result = await BackendApiService.to.getResourceList(
-      collectionName: GuidelineCategory.collection,
-      perPage: 100,
-      filter: 'status="active"',
-      sort: 'sort_order,name',
-    );
+    final result = await _contentRepository.categories();
 
     return result.items.map((e) => GuidelineCategory.fromRecord(e)).toList();
   }
 
   Future<List<GuidelineTag>> getGuidelineTags() async {
-    final result = await BackendApiService.to.getResourceList(
-      collectionName: GuidelineTag.collection,
-      perPage: 100,
-      sort: 'name',
-    );
+    final result = await _contentRepository.tags();
 
     return result.items.map((e) => GuidelineTag.fromRecord(e)).toList();
   }

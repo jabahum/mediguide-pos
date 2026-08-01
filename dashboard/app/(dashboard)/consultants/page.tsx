@@ -10,6 +10,8 @@ import { createColumns, Consultant } from "./columns"
 import { createConsultantRowActions, consultantBulkActions } from "./consultant-actions"
 import { consultantsAvailableFields } from "./fields"
 import { usePermissionContext } from "@/lib/permission-context"
+import { consultantService } from "@/services/consultant.service"
+import type { AdvancedFilter } from "@/types/data-table"
 
 export default function ConsultantsPage() {
   const router = useRouter()
@@ -29,21 +31,20 @@ export default function ConsultantsPage() {
   // Create columns
   const columns = React.useMemo(() => createColumns(), [])
   
-  // Convert URL filter to legacy collection API filter syntax
-  const getInitialFilter = React.useMemo(() => {
+  const initialFilters = React.useMemo<AdvancedFilter[]>(() => {
     switch (urlFilter) {
       case 'verified':
-        return 'isVerified = true'
+        return [{ id: "url-verified", field: "verified", condition: "equals", value: true }]
       case 'pending':
-        return 'status = "pending_approval"'
+        return [{ id: "url-status", field: "status", condition: "equals", value: "pending_approval" }]
       case 'active':
-        return 'status = "active"'
+        return [{ id: "url-status", field: "status", condition: "equals", value: "active" }]
       case 'inactive':
-        return 'status = "inactive"'
+        return [{ id: "url-status", field: "status", condition: "equals", value: "inactive" }]
       case 'suspended':
-        return 'status = "suspended"'
+        return [{ id: "url-status", field: "status", condition: "equals", value: "suspended" }]
       default:
-        return undefined
+        return []
     }
   }, [urlFilter])
 
@@ -60,6 +61,12 @@ export default function ConsultantsPage() {
   const handleError = React.useCallback((error: Error) => {
     console.error('Consultants table error:', error)
   }, [])
+
+  const loadPage = React.useCallback(
+    (query: Parameters<typeof consultantService.loadPage>[0]) =>
+      consultantService.loadPage({ ...query, filters: [...query.filters, ...initialFilters] }),
+    [initialFilters],
+  )
 
   // Dynamic page title and description based on filter
   const getPageTitleAndDescription = React.useMemo(() => {
@@ -114,16 +121,13 @@ export default function ConsultantsPage() {
       {/* Simplified DataTable */}
       <BackendDataTable<Consultant>
         collection="consultants"
+        loadPage={loadPage}
         columns={columns}
         searchFields={["name", "email", "specialty", "organization", "city", "country"]}
         searchPlaceholder="Search consultants by name, email, specialty, organization, or location..."
         rowActions={consultantRowActions}
         bulkActions={consultantBulkActions}
         availableFields={consultantsAvailableFields}
-        query={{
-          sort: "-created",
-          filter: getInitialFilter,
-        }}
         ui={{
           pageSize: 20,
           exportable: true,

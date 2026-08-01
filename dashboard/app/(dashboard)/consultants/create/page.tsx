@@ -16,7 +16,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Checkbox } from "@/components/ui/checkbox"
 import { PageHeader } from "@/components/ui/page-header"
 import { showToast } from "@/lib/toast"
-import { getBackendClient } from "@/lib/backend-client"
+import { consultantService } from "@/services/consultant.service"
 import { SpecialtyOptions } from "../columns"
 import { usePermissionContext, WithPermission } from "@/lib/permission-context"
 
@@ -89,10 +89,8 @@ export default function CreateConsultantPage() {
 
   async function onSubmit(data: ConsultantFormValues) {
     setIsLoading(true)
-    const backend = getBackendClient()
-    
     try {
-      await backend.resource('consultants').create(data)
+      await consultantService.create(data)
       
       showToast.success(
         "Consultant Created",

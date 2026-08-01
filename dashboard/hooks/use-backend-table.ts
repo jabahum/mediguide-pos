@@ -2,7 +2,6 @@
 
 import { useState, useCallback, useEffect, useMemo, useRef } from 'react'
 import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-query"
-import { getBackendClient } from '@/lib/backend-client'
 import { showToast } from '@/lib/toast'
 import {
   BaseRecord,
@@ -33,7 +32,6 @@ export function useBackendTable<TData extends BaseRecord = BaseRecord>(
     bulkAction: false,
   })
 
-  const backendClient = useMemo(() => getBackendClient(), [])
   const hasLoadedRef = useRef(false)
   const actionRef = useRef<'initial' | 'pagination' | 'table' | 'refresh'>('initial')
   const queryClient = useQueryClient()
@@ -48,106 +46,25 @@ export function useBackendTable<TData extends BaseRecord = BaseRecord>(
     hasPreviousPage: currentPage > 1
   }), [currentPage, currentPageSize, totalItems])
 
-  // Convert advanced filters to the temporary compatibility query syntax.
-  const convertAdvancedFilterCondition = useCallback((filter: AdvancedFilter) => {
-    const { field, condition, value } = filter
-
-    switch (condition) {
-      case 'equals':
-        return `${field} = "${value}"`
-      case 'not_equals':
-        return `${field} != "${value}"`
-      case 'contains':
-        return `${field} ~ "${value}"`
-      case 'starts_with':
-        return `${field} ~ "^${value}"`
-      case 'ends_with':
-        return `${field} ~ "${value}$"`
-      case 'greater_than':
-        return `${field} > "${value}"`
-      case 'less_than':
-        return `${field} < "${value}"`
-      case 'greater_equal':
-        return `${field} >= "${value}"`
-      case 'less_equal':
-        return `${field} <= "${value}"`
-      case 'is_empty':
-        return `${field} = ""`
-      case 'is_not_empty':
-        return `${field} != ""`
-      default:
-        return `${field} = "${value}"`
-    }
-  }, [])
-
-  // Build filter query
-  const buildFilterQuery = useCallback(() => {
-    const filters: string[] = []
-
-    // Add base filter if provided
-    if (config.query?.filter) {
-      filters.push(`(${config.query.filter})`)
-    }
-
-    // Add search filters
-    if (globalFilter && config.searchFields?.length) {
-      const searchConditions = config.searchFields.map(field =>
-        `${field} ~ "${globalFilter}"`
-      ).join(' || ')
-      filters.push(`(${searchConditions})`)
-    }
-
-    // Add advanced filters
-    if (advancedFilters.length > 0) {
-      const advancedConditions = advancedFilters.map(filter =>
-        convertAdvancedFilterCondition(filter)
-      )
-      filters.push(...advancedConditions)
-    }
-
-    return filters.join(' && ')
-  }, [config.query?.filter, config.searchFields, globalFilter, advancedFilters, convertAdvancedFilterCondition])
-
-  // Build sort query
-  const buildSortQuery = useCallback(() => {
-    return config.query?.sort || '-created'
-  }, [config.query?.sort])
-
-  const filterQuery = useMemo(() => buildFilterQuery(), [buildFilterQuery])
-  const sortQuery = useMemo(() => buildSortQuery(), [buildSortQuery])
-
   const queryKey = useMemo(() => [
     "backend",
     config.collection,
     {
       page: currentPage,
       perPage: currentPageSize,
-      filter: filterQuery,
-      sort: sortQuery,
-      expand: config.query?.expand || "",
-      fields: config.query?.fields || "",
-      typed: Boolean(config.loadPage),
-      search: config.loadPage ? globalFilter : undefined,
-      filters: config.loadPage ? advancedFilters : undefined,
+      search: globalFilter,
+      filters: advancedFilters,
     }
-  ], [config.collection, currentPage, currentPageSize, filterQuery, sortQuery, config.query?.expand, config.query?.fields, config.loadPage, globalFilter, advancedFilters])
+  ], [config.collection, currentPage, currentPageSize, globalFilter, advancedFilters])
 
   const query = useQuery({
     queryKey,
     queryFn: async () => {
-      if (config.loadPage) {
-        return config.loadPage({
-          page: currentPage,
-          perPage: currentPageSize,
-          search: globalFilter,
-          filters: advancedFilters,
-        })
-      }
-      return backendClient.resource(config.collection).getList(currentPage, currentPageSize, {
-        filter: filterQuery || undefined,
-        sort: sortQuery,
-        expand: config.query?.expand || undefined,
-        fields: config.query?.fields || undefined,
+      return config.loadPage({
+        page: currentPage,
+        perPage: currentPageSize,
+        search: globalFilter,
+        filters: advancedFilters,
       })
     },
     placeholderData: keepPreviousData,
@@ -256,32 +173,6 @@ export function useBackendTable<TData extends BaseRecord = BaseRecord>(
       setActionLoading(prev => ({ ...prev, export: false }))
     }
   }, [selectedRows, data, config.collection])
-
-  // Realtime subscriptions (always enabled)
-  useEffect(() => {
-    if (config.loadPage) return
-    void backendClient.resource(config.collection).subscribe('*', (e) => {
-      if (e.action === 'create') {
-        setData(prev => [e.record as unknown as TData, ...prev.slice(0, currentPageSize - 1)])
-        setTotalItems(prev => prev + 1)
-        showToast.info('New Record', `A new ${config.collection} record was created`)
-      } else if (e.action === 'update') {
-        setData(prev => prev.map(item =>
-          item.id === e.record.id ? e.record as unknown as TData : item
-        ))
-        showToast.info('Record Updated', `A ${config.collection} record was updated`)
-      } else if (e.action === 'delete') {
-        setData(prev => prev.filter(item => item.id !== e.record.id))
-        setTotalItems(prev => prev - 1)
-        setSelectedRows(prev => prev.filter(item => item.id !== e.record.id))
-        showToast.info('Record Deleted', `A ${config.collection} record was deleted`)
-      }
-    })
-
-    return () => {
-      backendClient.resource(config.collection).unsubscribe('*')
-    }
-  }, [config.collection, config.loadPage, currentPageSize, backendClient])
 
   // Effects for data fetching
   useEffect(() => {

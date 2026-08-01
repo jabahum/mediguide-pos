@@ -16,8 +16,8 @@ import { CategoryViewDialog } from "@/components/dialogs/category-view-dialog"
 // Types
 import { DrugCategoriesResponse } from "@/types/backend-types"
 import { RowAction, BulkAction, FieldOption } from "@/types/data-table"
-import { useBackendCrud } from "@/hooks/use-backend-crud"
-import { getBackendClient } from "@/lib/backend-client"
+import { useDomainCrud } from "@/hooks/use-domain-crud"
+import { drugCategoryCrud, drugReferenceService } from "@/services/drug.service"
 
 // Page-specific imports
 import { categoryColumns, CategoryWithRelations } from "../columns"
@@ -118,20 +118,13 @@ export default function DrugCategoriesPage() {
   const [refreshTrigger, setRefreshTrigger] = React.useState(0)
 
   // Delete functionality
-  const { deleteRecord } = useBackendCrud({
-    collectionName: "drug_categories",
-    onSuccess: () => setRefreshTrigger(prev => prev + 1)
-  })
+  const { deleteRecord } = useDomainCrud("drug_categories", drugCategoryCrud, () => setRefreshTrigger(prev => prev + 1))
 
   // Load all categories for parent selection
   React.useEffect(() => {
     const fetchAllCategories = async () => {
       try {
-        const backend = getBackendClient()
-        const categories = await backend.resource("drug_categories").getFullList({
-          sort: "name"
-        })
-        setAllCategories(categories as DrugCategoriesResponse[])
+        setAllCategories(await drugReferenceService.allCategories())
       } catch (error) {
         console.error("Failed to fetch categories:", error)
       }
@@ -185,14 +178,12 @@ export default function DrugCategoriesPage() {
       {/* Simplified DataTable */}
       <BackendDataTable<CategoryWithRelations>
         collection="drug_categories"
+        loadPage={drugReferenceService.listCategoriesTable}
         columns={categoryColumns}
         searchFields={["name", "description"]}
         rowActions={categoryRowActions}
         bulkActions={categoryBulkActions}
         availableFields={categoryAvailableFields}
-        query={{
-          expand: "parent_category"
-        }}
         ui={{
           exportable: true,
           importable: true

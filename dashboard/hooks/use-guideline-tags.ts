@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect, useMemo, useCallback } from "react"
-import { getBackendClient } from "@/lib/backend-client"
+import { guidelineTagService } from "@/services/guideline-content.service"
 import type { GuidelineTagsResponse } from "@/types/backend-types"
 
 interface UseGuidelineTagsOptions {
@@ -15,24 +15,13 @@ export function useGuidelineTags(options: UseGuidelineTagsOptions = {}) {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  // Fetch tags from the backend compatibility API.
+  // Fetch tags from the typed taxonomy API.
   const fetchTags = useCallback(async () => {
     try {
       setLoading(true)
       setError(null)
 
-      let filter = ""
-      
-      // Search filter
-      if (searchTerm) {
-        filter = `(name ~ "${searchTerm}" || description ~ "${searchTerm}")`
-      }
-
-      const backend = getBackendClient()
-      const records = await backend.resource("guideline_tags").getFullList<GuidelineTagsResponse>({
-        sort: "name",
-        filter: filter || undefined
-      })
+      const records = await guidelineTagService.all({ search: searchTerm || undefined })
 
       setTags(records)
     } catch (err) {

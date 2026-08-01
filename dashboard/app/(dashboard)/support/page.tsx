@@ -14,6 +14,7 @@ import { columns } from "./columns"
 import { createSupportTicketRowActions, supportTicketBulkActions } from "./ticket-actions"
 import { supportTicketsAvailableFields } from "./fields"
 import type { SupportTicketsWithExpanded } from "@/types/expanded"
+import { SupportTicketsService } from "@/services/support-tickets.service"
 
 export default function SupportPage() {
   const router = useRouter()
@@ -76,15 +77,12 @@ export default function SupportPage() {
       {/* Simplified DataTable */}
       <BackendDataTable<SupportTicketsWithExpanded>
         collection="support_tickets"
+        loadPage={({ page, perPage, search }) => SupportTicketsService.getTickets({ page, per_page: perPage, search })}
         columns={columns}
         searchFields={["subject", "description", "category"]}
         rowActions={rowActions}
         bulkActions={supportTicketBulkActions}
         availableFields={supportTicketsAvailableFields}
-        query={{
-          expand: "user_id,assigned_to",
-          sort: "-created"
-        }}
         ui={{
           exportable: true
         }}

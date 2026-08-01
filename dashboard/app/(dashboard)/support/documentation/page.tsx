@@ -68,7 +68,6 @@ export default function DocumentationPage() {
         collection="help-documentation"
         loadPage={DocumentationService.loadPage.bind(DocumentationService)}
         columns={documentationColumns}
-        sort="-updated"
         // Pagination
         defaultPageSize={20}
         pageSizeOptions={[10, 20, 50, 100]}

@@ -10,7 +10,8 @@ import {
 } from "@/components/ui/dialog"
 import { CategoryForm } from "@/components/forms/category-form"
 import { DrugCategoriesResponse } from "@/types/backend-types"
-import { useBackendCrud } from "@/hooks/use-backend-crud"
+import { useDomainCrud } from "@/hooks/use-domain-crud"
+import { drugCategoryCrud } from "@/services/drug.service"
 
 type CategoryFormData = {
   name: string
@@ -35,12 +36,9 @@ export function CategoryCreateDialog({
   parentCategories = [],
   onSuccess
 }: CategoryCreateDialogProps) {
-  const { create, loading } = useBackendCrud({
-    collectionName: "drug_categories",
-    onSuccess: () => {
+  const { create, loading } = useDomainCrud("drug_categories", drugCategoryCrud, () => {
       onOpenChange(false)
       onSuccess?.()
-    }
   })
 
   const handleSubmit = async (data: CategoryFormData) => {

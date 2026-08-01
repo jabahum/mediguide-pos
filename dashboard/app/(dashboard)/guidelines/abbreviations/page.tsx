@@ -17,6 +17,7 @@ import { AbbreviationEditModal } from "./components/abbreviation-edit-modal"
 import { AbbreviationViewModal } from "./components/abbreviation-view-modal"
 import { useRouter } from "next/navigation"
 import { usePermissionContext } from "@/lib/permission-context"
+import { abbreviationService } from "@/services/guideline-content.service"
 
 export default function AbbreviationsPage() {
   const router = useRouter()
@@ -75,14 +76,12 @@ export default function AbbreviationsPage() {
       {/* Simplified DataTable */}
       <BackendDataTable<AbbreviationsWithExpanded>
         collection="abbreviations"
+		loadPage={abbreviationService.listTable}
         columns={abbreviationsColumns}
         searchFields={["abbreviation", "meaning", "description"]}
         rowActions={abbreviationRowActions}
         bulkActions={abbreviationBulkActions}
         availableFields={abbreviationsAvailableFields}
-        query={{
-          expand: "category,tags"
-        }}
         ui={{
           exportable: true
         }}

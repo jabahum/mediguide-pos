@@ -30,7 +30,7 @@ import { SimpleGuidelineCategorySelector } from "@/components/ui/guideline-categ
 import { MultiSelect } from "@/components/ui/multi-select"
 
 // Hooks and utilities
-import { useBackendCrud } from "@/hooks/use-backend-crud"
+import { abbreviationService } from "@/services/guideline-content.service"
 import { useGuidelineTags } from "@/hooks/use-guideline-tags"
 import { showToast } from "@/lib/toast"
 import { AbbreviationsWithExpanded } from "@/types/expanded"
@@ -64,16 +64,6 @@ export function AbbreviationEditModal({
   
   // Load tags using the custom hook
   const { getMultiSelectOptions } = useGuidelineTags()
-
-  const { update } = useBackendCrud({
-    collectionName: "abbreviations",
-    onSuccess: () => {
-      // Success handled in onSubmit
-    },
-    onError: (error) => {
-      console.error("CRUD error:", error)
-    }
-  })
 
   const form = useForm<AbbreviationFormData>({
     resolver: zodResolver(abbreviationFormSchema),
@@ -112,7 +102,7 @@ export function AbbreviationEditModal({
 
     setIsLoading(true)
     try {
-      await update(abbreviation.id, {
+      await abbreviationService.update(abbreviation.id, {
         abbreviation: data.abbreviation.toUpperCase(),
         meaning: data.meaning,
         description: data.description || "",

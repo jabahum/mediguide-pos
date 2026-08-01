@@ -3,7 +3,7 @@
 import { Eye, Edit, Trash2, Copy, ToggleLeft, ToggleRight } from "lucide-react"
 import type { RowAction, BulkAction } from "@/types/data-table"
 import type { GuidelineCategoriesResponse } from "@/types/backend-types"
-import { getBackendClient } from "@/lib/backend-client"
+import { guidelineCategoryService } from "@/services/guideline-content.service"
 import { showToast } from "@/lib/toast"
 
 // Row Actions Factory
@@ -116,8 +116,6 @@ export const categoryBulkActions: BulkAction<GuidelineCategoriesResponse>[] = [
 
 // Action implementation functions
 async function duplicateCategory(category: GuidelineCategoriesResponse): Promise<void> {
-  const backend = getBackendClient()
-  
   const duplicateData = {
     name: `${category.name} (Copy)`,
     slug: category.slug ? `${category.slug}-copy` : undefined,
@@ -130,7 +128,7 @@ async function duplicateCategory(category: GuidelineCategoriesResponse): Promise
   }
 
   try {
-    await backend.resource("guideline_categories").create(duplicateData)
+    await guidelineCategoryService.create(duplicateData)
     showToast.success("Category duplicated", "Category has been duplicated successfully")
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Failed to duplicate category'
@@ -140,11 +138,9 @@ async function duplicateCategory(category: GuidelineCategoriesResponse): Promise
 }
 
 async function toggleCategoryStatus(category: GuidelineCategoriesResponse): Promise<void> {
-  const backend = getBackendClient()
-  
   try {
     const newStatus = category.status === "active" ? "inactive" : "active"
-    await backend.resource("guideline_categories").update(category.id, { status: newStatus })
+    await guidelineCategoryService.update(category.id, { status: newStatus })
     
     showToast.success(
       "Status Updated",
@@ -158,10 +154,8 @@ async function toggleCategoryStatus(category: GuidelineCategoriesResponse): Prom
 }
 
 async function deleteCategory(category: GuidelineCategoriesResponse): Promise<void> {
-  const backend = getBackendClient()
-  
   try {
-    await backend.resource("guideline_categories").delete(category.id)
+    await guidelineCategoryService.delete(category.id)
     
     showToast.success(
       "Category Deleted",
@@ -176,7 +170,6 @@ async function deleteCategory(category: GuidelineCategoriesResponse): Promise<vo
 
 // Bulk action implementation functions
 async function bulkUpdateCategoryStatus(categories: GuidelineCategoriesResponse[], status: "active" | "inactive"): Promise<void> {
-  const backend = getBackendClient()
   const targetCategories = categories.filter(cat => cat.status !== status)
   
   if (targetCategories.length === 0) {
@@ -189,7 +182,7 @@ async function bulkUpdateCategoryStatus(categories: GuidelineCategoriesResponse[
 
   for (const category of targetCategories) {
     try {
-      await backend.resource("guideline_categories").update(category.id, { status })
+      await guidelineCategoryService.update(category.id, { status })
       successCount++
     } catch (error) {
       errorCount++
@@ -251,13 +244,12 @@ async function exportCategories(categories: GuidelineCategoriesResponse[]): Prom
 }
 
 async function bulkDeleteCategories(categories: GuidelineCategoriesResponse[]): Promise<void> {
-  const backend = getBackendClient()
   let successCount = 0
   let errorCount = 0
 
   for (const category of categories) {
     try {
-      await backend.resource("guideline_categories").delete(category.id)
+      await guidelineCategoryService.delete(category.id)
       successCount++
     } catch (error) {
       errorCount++

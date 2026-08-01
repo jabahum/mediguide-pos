@@ -13,6 +13,7 @@ import { guidelineCategoryAvailableFields } from "./fields"
 import type { GuidelineCategoriesWithParent } from "@/types/expanded"
 import { usePermissionContext } from "@/lib/permission-context"
 import { useRouter } from "next/navigation"
+import { guidelineCategoryService } from "@/services/guideline-content.service"
 
 export default function GuidelineCategoriesPage() {
   const router = useRouter()
@@ -71,8 +72,8 @@ export default function GuidelineCategoriesPage() {
       {/* Enhanced DataTable */}
       <EnhancedBackendDataTable<GuidelineCategoriesWithParent>
         collectionName="guideline_categories"
+		loadPage={guidelineCategoryService.listTable}
         columns={columns}
-        expand="parent_category"
         expandable={true}
         searchable={true}
         searchFields={["name", "description", "slug"]}

@@ -1,7 +1,7 @@
 import { ColumnDef } from "@tanstack/react-table"
 import { LucideIcon } from "lucide-react"
 
-// Base shape shared by records returned from the backend compatibility API.
+// Base shape shared by records returned from typed backend endpoints.
 export interface BaseRecord {
   id: string
   created: string
@@ -10,7 +10,7 @@ export interface BaseRecord {
   [key: string]: unknown
 }
 
-// Filter types (includes legacy types for compatibility)
+// Filter types used by the domain-aware table UI.
 export type FilterType = 'text' | 'select' | 'date' | 'dateRange' | 'number' | 'numberRange' | 'boolean' | 'json'
 export type FilterCondition = 'equals' | 'contains' | 'starts_with' | 'ends_with' | 'greater_than' | 'less_than' | 'greater_equal' | 'less_equal' | 'not_equals' | 'is_empty' | 'is_not_empty'
 
@@ -19,7 +19,7 @@ export interface AdvancedFilter {
   field: string
   condition: FilterCondition
   value: string | number | boolean | null
-  /** Human-readable form of `value` for fields whose stored value is an opaque id (e.g. PB relation). */
+  /** Human-readable form of `value` for fields whose stored value is an opaque id. */
   displayValue?: string
 }
 
@@ -30,18 +30,15 @@ export interface FieldOption {
   /** Static options for select-type fields */
   options?: FilterOption[]
   /**
-   * Dynamic options sourced from a backend collection. Use this for
+   * Dynamic options sourced from a typed backend endpoint. Use this for
    * relation fields so the filter UI shows human-readable labels while the
    * underlying filter value remains the related record id.
    */
   relation?: {
-    collection?: string
-    key?: string
-    loadOptions?: (search: string, pageSize: number) => Promise<Array<Record<string, unknown>>>
+    key: string
+    loadOptions: (search: string, pageSize: number) => Promise<Array<Record<string, unknown>>>
     labelField?: string
     valueField?: string
-    sort?: string
-    filter?: string
     pageSize?: number
   }
 }
@@ -138,14 +135,6 @@ export interface BulkAction<TData = BaseRecord> {
 // Simplified Export types
 export type ExportFormat = 'csv' | 'json' | 'xlsx'
 
-// Query options supported by the temporary collection compatibility API.
-export interface BackendQueryOptions {
-  expand?: string
-  filter?: string
-  sort?: string
-  fields?: string
-}
-
 export interface DomainPageQuery {
   page: number
   perPage: number
@@ -179,7 +168,7 @@ export interface BackendDataTableProps<TData = BaseRecord> {
   // Core required
   collection: string
   columns: ColumnDef<TData>[]
-  loadPage?: DomainPageLoader<TData>
+  loadPage: DomainPageLoader<TData>
 
   // Search (explicit)
   searchFields?: string[]
@@ -192,8 +181,6 @@ export interface BackendDataTableProps<TData = BaseRecord> {
   // Filtering (explicit)
   availableFields?: FieldOption[]
 
-  // Backend collection query options
-  query?: BackendQueryOptions
   refreshSignal?: number | string
 
   // UI options (grouped)
@@ -209,18 +196,11 @@ export interface BackendDataTableProps<TData = BaseRecord> {
 export interface EnhancedBackendDataTableProps<TData = BaseRecord> {
   // Required
   columns: ColumnDef<TData>[]
-  loadPage?: DomainPageLoader<TData>
+  loadPage: DomainPageLoader<TData>
 
   // Legacy collection prop mapping
   collection?: string
   collectionName?: string // fallback to this if collection not provided
-
-  // Legacy collection query settings
-  expand?: string
-  filter?: string
-  sort?: string
-  realtime?: boolean
-  fields?: string
 
   // Legacy pagination
   defaultPageSize?: number
@@ -309,12 +289,11 @@ export interface TableError {
 // Simplified hook interface
 export interface UseBackendTableConfig<TData = BaseRecord> {
   collection: string
-  loadPage?: DomainPageLoader<TData>
+  loadPage: DomainPageLoader<TData>
   searchFields?: string[]
   rowActions?: RowAction<TData>[]
   bulkActions?: BulkAction<TData>[]
   availableFields?: FieldOption[]
-  query?: BackendQueryOptions
   refreshSignal?: number | string
   ui?: UIOptions
   onRowClick?: (row: TData) => void

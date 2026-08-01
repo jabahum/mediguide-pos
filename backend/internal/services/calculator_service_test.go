@@ -36,7 +36,8 @@ func TestCalculatorServiceCRUDAndFilters(t *testing.T) {
 		Search: "triage",
 		Type:   "decision_tool",
 		Status: "active",
-		Sort:   "-created",
+		Sort:   "created_at",
+		Order:  "desc",
 	})
 	if err != nil {
 		t.Fatalf("list calculators: %v", err)

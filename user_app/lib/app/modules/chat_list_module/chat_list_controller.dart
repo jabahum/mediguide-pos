@@ -6,12 +6,15 @@ import 'package:infinite_scroll_pagination/infinite_scroll_pagination.dart';
 import '../../data/models/models.dart';
 import '../../data/models/filter_models.dart';
 import '../../data/services/backend_api_service.dart';
+import '../../data/repositories/conversation_repository.dart';
 import '../../data/services/auth_service.dart';
 import '../../routes/app_pages.dart';
 import '../../utils/common.dart';
 import '../../widgets/generic_filter_bottom_sheet.dart';
 
 class ChatListController extends GetxController {
+  ConversationRepository get _repository =>
+      ConversationRepository(BackendApiService.to);
   late final PagingController<int, Conversation> pagingController;
 
   final RxString searchQuery = ''.obs;
@@ -56,15 +59,13 @@ class ChatListController extends GetxController {
       final userId = AuthService.to.currentUser.value?.id;
       if (userId == null) return [];
 
-      final filter = _buildFilter(userId);
-
-      final result = await BackendApiService.to.getResourceList(
-        collectionName: Conversation.collection,
+      final result = await _repository.list(
         page: pageKey,
         perPage: 20,
-        filter: filter.isEmpty ? null : filter,
-        sort: '-last_activity',
-        expand: 'participant1,participant2,messages_via_conversation',
+        search: searchQuery.value,
+        recentSince: showRecentOnly.value
+            ? DateTime.now().subtract(const Duration(days: 7))
+            : null,
       );
 
       return result.items
@@ -83,19 +84,6 @@ class ChatListController extends GetxController {
   // =========================
   // FILTER BUILDING
   // =========================
-
-  String _buildFilter(String userId) {
-    final filters = <String>[];
-
-    filters.add('(participant1 = "$userId" || participant2 = "$userId")');
-
-    if (showRecentOnly.value) {
-      final weekAgo = DateTime.now().subtract(const Duration(days: 7));
-      filters.add('last_activity >= "${weekAgo.toIso8601String()}"');
-    }
-
-    return filters.join(' && ');
-  }
 
   bool _applyLocalSearch(Conversation conversation, String userId) {
     if (searchQuery.value.isEmpty && !showVerifiedOnly.value) {

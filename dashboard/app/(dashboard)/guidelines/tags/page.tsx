@@ -12,6 +12,7 @@ import { createTagRowActions, tagBulkActions } from "./tag-actions"
 import { guidelineTagAvailableFields } from "./fields"
 import type { GuidelineTagsResponse } from "@/types/backend-types"
 import { useRouter } from "next/navigation"
+import { guidelineTagService } from "@/services/guideline-content.service"
 import { usePermissionContext } from "@/lib/permission-context"
 
 export default function GuidelineTagsPage() {
@@ -71,6 +72,7 @@ export default function GuidelineTagsPage() {
       {/* Enhanced DataTable */}
       <EnhancedBackendDataTable<GuidelineTagsResponse>
         collectionName="guideline_tags"
+		loadPage={guidelineTagService.listTable}
         columns={columns}
         searchable={true}
         searchFields={["name", "description"]}

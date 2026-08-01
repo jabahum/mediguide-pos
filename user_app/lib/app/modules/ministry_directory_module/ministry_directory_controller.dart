@@ -5,6 +5,7 @@ import 'package:user_app/app/data/models/filter_models.dart';
 
 import '../../data/models/models.dart';
 import '../../data/repositories/facility_repository.dart';
+import '../../data/repositories/content_reference_repository.dart';
 import '../../data/services/backend_api_service.dart';
 import '../../utils/constants.dart';
 import '../../utils/common.dart';
@@ -13,6 +14,10 @@ import '../../widgets/generic_filter_bottom_sheet.dart';
 class MinistryDirectoryController extends GetxController {
   FacilityRepository get _facilityRepository =>
       FacilityRepository(BackendApiService.to);
+  MinistryDirectoryRepository get _directoryRepository =>
+      MinistryDirectoryRepository(BackendApiService.to);
+  final Map<String, String> _districtIds = {};
+  final Map<String, String> _regionIds = {};
 
   // ================= PAGINATION =================
   late final PagingController<int, MinistryDirectory> pagingController;
@@ -65,18 +70,26 @@ class MinistryDirectoryController extends GetxController {
 
   Future<List<MinistryDirectory>> _loadPage(int pageKey) async {
     try {
-      final filter = _buildFilter();
-
-      final result = await BackendApiService.to.getResourceList(
-        collectionName: 'ministry_directory',
+      final result = await _directoryRepository.list(
         page: pageKey,
         perPage: pageSize,
-        filter: filter.isEmpty ? null : filter,
-        sort: 'priority_level,name',
-        expand: 'district,region',
+        search: searchQuery.value,
+        ministry: selectedMinistry.value,
+        department: selectedDepartment.value,
+        districtId:
+            _districtIds[selectedDistrict.value] ?? selectedDistrict.value,
+        regionId: _regionIds[selectedRegion.value] ?? selectedRegion.value,
+        status: selectedStatus.value.isNotEmpty
+            ? selectedStatus.value
+            : showActiveOnly.value
+            ? 'active'
+            : null,
       );
-
-      return result.items.map((e) => MinistryDirectory.fromRecord(e)).toList();
+      var items = result.items;
+      if (showEmergencyOnly.value) {
+        items = items.where((entry) => entry.isEmergencyContact).toList();
+      }
+      return items;
     } catch (e) {
       Common.quickToast(
         title: 'Error loading directory',
@@ -88,60 +101,6 @@ class MinistryDirectoryController extends GetxController {
 
   // ================= FILTER BUILDING =================
 
-  String _buildFilter() {
-    final filters = <String>[];
-
-    // Status logic
-    if (selectedStatus.value.isNotEmpty) {
-      final status = BackendApiService.escapeFilterValue(selectedStatus.value);
-      filters.add('status="$status"');
-    } else if (showActiveOnly.value) {
-      filters.add('status="active"');
-    }
-
-    // Search
-    if (searchQuery.value.isNotEmpty) {
-      final q = BackendApiService.escapeFilterValue(searchQuery.value);
-      filters.add(
-        '(name~"$q" || title~"$q" || department~"$q" || ministry~"$q" || email~"$q")',
-      );
-    }
-
-    // Simple filters
-    if (selectedMinistry.value.isNotEmpty) {
-      final ministry = BackendApiService.escapeFilterValue(
-        selectedMinistry.value,
-      );
-      filters.add('ministry="$ministry"');
-    }
-
-    if (selectedDepartment.value.isNotEmpty) {
-      final department = BackendApiService.escapeFilterValue(
-        selectedDepartment.value,
-      );
-      filters.add('department~"$department"');
-    }
-
-    if (selectedDistrict.value.isNotEmpty) {
-      final district = BackendApiService.escapeFilterValue(
-        selectedDistrict.value,
-      );
-      filters.add('district.name~"$district"');
-    }
-
-    if (selectedRegion.value.isNotEmpty) {
-      final region = BackendApiService.escapeFilterValue(selectedRegion.value);
-      filters.add('region.name~"$region"');
-    }
-
-    // Flags
-    if (showEmergencyOnly.value) {
-      filters.add('priority_level=1');
-    }
-
-    return filters.join(' && ');
-  }
-
   // ================= FILTER OPTIONS =================
 
   Future<void> _loadFilterOptions() async {
@@ -152,15 +111,21 @@ class MinistryDirectoryController extends GetxController {
 
       final districts = await _facilityRepository.districts(perPage: 500);
 
-      availableDistricts.value = districts.items
-          .map((e) => e.data['name'] as String)
-          .toList();
+      _districtIds
+        ..clear()
+        ..addEntries(
+          districts.items.map((e) => MapEntry(e.data['name'] as String, e.id)),
+        );
+      availableDistricts.value = _districtIds.keys.toList();
 
       final regions = await _facilityRepository.regions(perPage: 500);
 
-      availableRegions.value = regions.items
-          .map((e) => e.data['name'] as String)
-          .toList();
+      _regionIds
+        ..clear()
+        ..addEntries(
+          regions.items.map((e) => MapEntry(e.data['name'] as String, e.id)),
+        );
+      availableRegions.value = _regionIds.keys.toList();
     } catch (e) {
       Common.quickToast(
         title: 'Error loading filters',

@@ -9,7 +9,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { TagForm } from "@/components/forms/tag-form"
-import { useBackendCrud } from "@/hooks/use-backend-crud"
+import { useDomainCrud } from "@/hooks/use-domain-crud"
+import { drugTagCrud } from "@/services/drug.service"
 
 type TagFormData = {
   name: string
@@ -31,12 +32,9 @@ export function TagCreateDialog({
   onOpenChange,
   onSuccess
 }: TagCreateDialogProps) {
-  const { create, loading } = useBackendCrud({
-    collectionName: "drug_tags",
-    onSuccess: () => {
+  const { create, loading } = useDomainCrud("drug_tags", drugTagCrud, () => {
       onOpenChange(false)
       onSuccess?.()
-    }
   })
 
   const handleSubmit = async (data: TagFormData) => {

@@ -5,8 +5,8 @@ import { useRouter, useSearchParams } from "next/navigation"
 import { PageHeader } from "@/components/ui/page-header"
 import { DecisionToolForm } from "@/components/forms/decision-tool-form"
 import { CalculatorsResponse } from "@/types/backend-types"
-import { useBackendCrud } from "@/hooks/use-backend-crud"
-import { getBackendClient } from "@/lib/backend-client"
+import { useDomainCrud } from "@/hooks/use-domain-crud"
+import { calculatorService } from "@/services/calculator.service"
 import { usePermissionContext } from "@/lib/permission-context"
 
 export default function CreateDecisionToolPage() {
@@ -25,11 +25,8 @@ export default function CreateDecisionToolPage() {
   const [duplicateData, setDuplicateData] = React.useState<CalculatorsResponse | null>(null)
   const [loadingDuplicate, setLoadingDuplicate] = React.useState(!!duplicateId)
 
-  const { create, loading } = useBackendCrud({
-    collectionName: "calculators",
-    onSuccess: () => {
+  const { create, loading } = useDomainCrud("calculators", calculatorService, () => {
       router.push("/decision-tools")
-    }
   })
 
   // Fetch duplicate data if needed
@@ -41,10 +38,7 @@ export default function CreateDecisionToolPage() {
       }
 
       try {
-        const backend = getBackendClient()
-        const duplicateResult = await backend.resource("calculators").getOne(duplicateId, {
-          expand: "addedBy"
-        }) as CalculatorsResponse
+        const duplicateResult = await calculatorService.get(duplicateId) as CalculatorsResponse
         
         setDuplicateData(duplicateResult)
       } catch (error) {
@@ -59,13 +53,6 @@ export default function CreateDecisionToolPage() {
 
   const handleSubmit = async (data: Record<string, unknown>) => {
     try {
-      const backend = getBackendClient()
-      const currentUser = backend.authStore.model
-      
-      if (!currentUser) {
-        throw new Error("User not authenticated")
-      }
-
       // Create FormData for file upload
       const formData = new FormData()
       
@@ -80,9 +67,6 @@ export default function CreateDecisionToolPage() {
         }
       })
       
-      // Add current user as addedBy
-      formData.append('addedBy', currentUser.id)
-
       await create(formData)
     } catch (error) {
       console.error("Failed to submit form:", error)

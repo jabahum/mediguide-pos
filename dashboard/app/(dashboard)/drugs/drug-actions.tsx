@@ -14,11 +14,9 @@ import {
   XCircle,
   Clock,
 } from "lucide-react"
-import { getBackendClient } from "@/lib/backend-client"
+import { drugService } from "@/services/drug.service"
 import { showToast } from "@/lib/toast"
 import { downloadCsv, downloadJson } from "@/lib/client-download"
-
-const backend = getBackendClient()
 
 function getExportFilename(prefix: string) {
   return `${prefix}-${new Date().toISOString().slice(0, 10)}`
@@ -40,7 +38,7 @@ function mapDrugForCsv(drug: DrugWithRelations) {
 }
 
 async function updateDrug(id: string, data: Partial<DrugWithRelations>) {
-  await backend.resource("drugs").update(id, data)
+  await drugService.update(id, data)
 }
 
 async function updateManyDrugs(
@@ -70,13 +68,13 @@ async function updateManyDrugs(
 }
 
 async function deleteDrug(drug: DrugWithRelations) {
-  await backend.resource("drugs").delete(drug.id)
+  await drugService.delete(drug.id)
   showToast.success("Drug Deleted", `"${drug.name}" was deleted`)
 }
 
 async function deleteManyDrugs(drugs: DrugWithRelations[]) {
   const results = await Promise.allSettled(
-    drugs.map((drug) => backend.resource("drugs").delete(drug.id))
+    drugs.map((drug) => drugService.delete(drug.id))
   )
 
   const successCount = results.filter((result) => result.status === "fulfilled").length

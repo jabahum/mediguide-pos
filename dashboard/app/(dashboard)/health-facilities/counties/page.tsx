@@ -94,7 +94,6 @@ export default function CountiesPage() {
         collectionName="counties"
         loadPage={healthFacilitiesService.listCounties}
         columns={countiesColumns}
-        expand="district"
         expandable={true}
         searchable={true}
         searchFields={["name", "nhpi_code", "hsdt_code"]}

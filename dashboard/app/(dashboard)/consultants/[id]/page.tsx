@@ -24,11 +24,11 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
 import { PageHeader } from "@/components/ui/page-header"
-import { useBackendRecord } from "@/hooks/use-backend-record"
+import { useDomainRecord } from "@/hooks/use-domain-record"
 import { formatLocation, getStatusBadgeVariant } from "../columns"
 import type { Consultant } from "../columns"
 import { usePermissionContext, WithPermission } from "@/lib/permission-context"
-import { getBackendClient } from "@/lib/backend-client"
+import { consultantService } from "@/services/consultant.service"
 
 interface ConsultantDetailPageProps {
   params: Promise<{
@@ -41,9 +41,10 @@ export default function ConsultantDetailPage({ params }: ConsultantDetailPagePro
   const router = useRouter()
   const { id } = React.use(params)
 
-  const { record: consultant, loading: isLoading, error } = useBackendRecord<Consultant & { id: string }>(
+  const { record: consultant, loading: isLoading, error } = useDomainRecord<Consultant & { id: string }>(
     "consultants",
-    id
+    id,
+    consultantService.get,
   )
 
   React.useEffect(() => {

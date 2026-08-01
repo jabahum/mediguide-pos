@@ -100,7 +100,6 @@ export default function DistrictsPage() {
         collectionName="districts"
         loadPage={healthFacilitiesService.listDistricts}
         columns={districtsColumns}
-        expand="region,health_sub_region"
         expandable={true}
         searchable={true}
         searchFields={["name", "nhpi_code", "hsdt_code"]}

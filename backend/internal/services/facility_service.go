@@ -52,8 +52,11 @@ type FacilityInput struct {
 type FacilityView struct {
 	models.HealthFacility
 	FacilityLevelName     string `json:"facility_level_name"`
+	FacilityLevelCode     string `json:"facility_level_code"`
 	AuthorityName         string `json:"authority_name"`
+	AuthorityCode         string `json:"authority_code"`
 	OwnershipTypeName     string `json:"ownership_type_name"`
+	OwnershipTypeCode     string `json:"ownership_type_code"`
 	HealthSubDistrictName string `json:"health_sub_district_name"`
 	ParishName            string `json:"parish_name"`
 	SubcountyName         string `json:"subcounty_name"`
@@ -227,7 +230,7 @@ func (s FacilityService) facilityQuery() *gorm.DB {
 		Joins("LEFT JOIN regions r ON r.id = hf.region_id").Where("hf.deleted_at IS NULL")
 }
 
-const facilitySelect = "hf.*, fl.name AS facility_level_name, a.name AS authority_name, ot.name AS ownership_type_name, hsd.name AS health_sub_district_name, p.name AS parish_name, sc.name AS subcounty_name, c.name AS county_name, d.name AS district_name, hsr.name AS health_sub_region_name, r.name AS region_name"
+const facilitySelect = "hf.*, fl.name AS facility_level_name, fl.code AS facility_level_code, a.name AS authority_name, a.code AS authority_code, ot.name AS ownership_type_name, ot.code AS ownership_type_code, hsd.name AS health_sub_district_name, p.name AS parish_name, sc.name AS subcounty_name, c.name AS county_name, d.name AS district_name, hsr.name AS health_sub_region_name, r.name AS region_name"
 
 func facilityOrder(sort, order string) (string, error) {
 	columns := map[string]string{"": "hf.name", "name": "hf.name", "created_at": "hf.created_at", "updated_at": "hf.updated_at", "usage_count": "hf.usage_count"}

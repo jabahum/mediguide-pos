@@ -90,18 +90,19 @@ export const createColumns = (): ExtendedColumnDef<HealthFacility>[] => [
       const level = row.original.expand?.facility_level
       if (!level) return <span className="text-muted-foreground">—</span>
 
-      const getLevelVariant = (code: string) => {
-        if (code.includes('Hospital')) return 'destructive'
-        if (code.includes('HC IV')) return 'default'
-        if (code.includes('HC III')) return 'secondary'
-        if (code.includes('HC II')) return 'outline'
+      const getLevelVariant = (code?: string, name?: string) => {
+        const value = `${code ?? ''} ${name ?? ''}`.toUpperCase()
+        if (value.includes('HOSPITAL') || value.includes('HOSP')) return 'destructive'
+        if (value.includes('HC IV') || value.includes('HCIV')) return 'default'
+        if (value.includes('HC III') || value.includes('HCIII')) return 'secondary'
+        if (value.includes('HC II') || value.includes('HCII')) return 'outline'
         return 'outline'
       }
 
       return (
         <div className="flex items-center space-x-2">
           <Stethoscope className="h-3 w-3 text-muted-foreground" />
-          <Badge variant={getLevelVariant(level.code)}>
+          <Badge variant={getLevelVariant(level.code, level.name)}>
             {level.name}
           </Badge>
         </div>

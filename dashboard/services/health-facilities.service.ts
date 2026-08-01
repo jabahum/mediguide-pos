@@ -112,9 +112,13 @@ function normalizeRecord<T>(value: unknown): T {
   } as T
 }
 
-function related(id: unknown, name: unknown) {
-  if (!id && !name) return undefined
-  return { id: String(id ?? ""), name: String(name ?? "") }
+function related(id: unknown, name: unknown, code?: unknown) {
+  if (!id && !name && !code) return undefined
+  return {
+    id: String(id ?? ""),
+    name: String(name ?? ""),
+    ...(code == null || code === "" ? {} : { code: String(code) }),
+  }
 }
 
 function facilityFilters(filters: TableListParams["filters"]) {
@@ -137,9 +141,9 @@ export const healthFacilitiesService = {
     return tableResource<T>("/api/v2/facilities", params, (raw) => ({
       ...normalizeRecord<HealthFacilitiesResponse>(raw),
       expand: {
-        facility_level: related(raw.facility_level_id, raw.facility_level_name),
-        authority: related(raw.authority_id, raw.authority_name),
-        ownership_type: related(raw.ownership_type_id, raw.ownership_type_name),
+        facility_level: related(raw.facility_level_id, raw.facility_level_name, raw.facility_level_code),
+        authority: related(raw.authority_id, raw.authority_name, raw.authority_code),
+        ownership_type: related(raw.ownership_type_id, raw.ownership_type_name, raw.ownership_type_code),
         region: related(raw.region_id, raw.region_name),
         district: related(raw.district_id, raw.district_name),
         county: related(raw.county_id, raw.county_name),

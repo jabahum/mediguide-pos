@@ -20,6 +20,9 @@ describe("healthFacilitiesService", () => {
           updated_at: "2026-01-02T00:00:00Z",
           region_id: "region-id",
           region_name: "Central",
+          facility_level_id: "level-id",
+          facility_level_name: "Health Centre III",
+          facility_level_code: "HCIII",
         }],
       }), { status: 200, headers: { "Content-Type": "application/json" } }),
     )
@@ -39,6 +42,11 @@ describe("healthFacilitiesService", () => {
     expect((result.items[0].expand as Record<string, unknown>).region).toEqual({
       id: "region-id",
       name: "Central",
+    })
+    expect((result.items[0].expand as Record<string, unknown>).facility_level).toEqual({
+      id: "level-id",
+      name: "Health Centre III",
+      code: "HCIII",
     })
   })
 

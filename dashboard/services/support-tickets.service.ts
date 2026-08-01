@@ -4,6 +4,7 @@
  */
 
 import { getBackendClient } from "@/lib/backend-client"
+import { usersService } from "@/services/user-management.service"
 import { Collections } from "@/types/backend-types"
 import type {
   SupportTicketsResponse,
@@ -340,15 +341,11 @@ export class SupportTicketsService {
    */
   static async getAssignableUsers(): Promise<UsersResponse[]> {
     try {
-      const backend = getBackendClient()
-      
-      // Get users with admin, contentManager, or other relevant roles
-      const users = await backend.resource(Collections.Users).getFullList({
-        filter: 'status="active"',
-        sort: "name"
+      return await usersService.all<UsersResponse>({
+        status: "active",
+        sort: "name",
+        order: "asc",
       })
-
-      return users as UsersResponse[]
     } catch (error) {
       console.error('Error fetching assignable users:', error)
       throw error

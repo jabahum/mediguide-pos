@@ -150,8 +150,6 @@ func (s ResourceService) Create(resource string, payload map[string]any, userID 
 	}
 
 	switch resource {
-	case "users":
-		return s.createUser(payload)
 	case "support_tickets":
 		return s.createSupportTicket(payload, userID)
 	case "support_ticket_replies":
@@ -185,11 +183,6 @@ func (s ResourceService) Update(resource, id string, payload map[string]any, use
 	}
 
 	switch resource {
-	case "users":
-		if id == userID {
-			return s.updateUser(id, payload, userID)
-		}
-		return s.updateUserAdmin(id, payload)
 	case "conversations":
 		return s.updateConversation(id, payload, userID)
 	case "messages":
@@ -210,12 +203,7 @@ func (s ResourceService) Delete(resource, id, userID string) error {
 		return err
 	}
 
-	switch resource {
-	case "users":
-		return s.deleteUser(id)
-	default:
-		return s.deleteGeneric(resource, id, userID)
-	}
+	return s.deleteGeneric(resource, id, userID)
 }
 
 func (s ResourceService) buildQuery(spec resourceSpec, userID string) *gorm.DB {

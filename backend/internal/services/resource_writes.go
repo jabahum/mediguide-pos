@@ -3,9 +3,6 @@ package services
 import (
 	"time"
 
-	"mediguide/internal/models"
-	"mediguide/internal/security"
-
 	"github.com/google/uuid"
 )
 
@@ -215,66 +212,6 @@ func (s ResourceService) createUsageLog(resource string, payload map[string]any,
 		return nil, err
 	}
 	return s.Get(resource, row["id"].(uuid.UUID).String(), userID)
-}
-
-// updateUser applies allowed profile field updates for the authenticated user only.
-func (s ResourceService) updateUser(id string, payload map[string]any, userID string) (*ResourceItemResult, error) {
-	if id != userID {
-		return nil, ErrResourceForbidden
-	}
-
-	updates := map[string]any{}
-	if password := firstPayloadString(payload, "password"); password != "" {
-		passwordConfirm := firstPayloadStringAny(payload, "passwordConfirm", "password_confirm")
-		if passwordConfirm != "" && passwordConfirm != password {
-			return nil, ErrResourceInvalid
-		}
-		hash, err := security.HashPassword(password)
-		if err != nil {
-			return nil, err
-		}
-		updates["password_hash"] = hash
-	}
-	copyStringUpdate(payload, updates, "name")
-	copyStringUpdate(payload, updates, "phone")
-	copyNullableStringUpdate(payload, updates, "alternative_phone")
-	copyNullableStringUpdate(payload, updates, "facility_id")
-	copyNullableStringUpdate(payload, updates, "address")
-	copyNullableStringUpdate(payload, updates, "city")
-	copyNullableStringUpdate(payload, updates, "state")
-	copyNullableStringUpdate(payload, updates, "country")
-	copyNullableStringUpdate(payload, updates, "postal_code")
-	copyNullableStringUpdate(payload, updates, "license_number")
-	copyNullableStringUpdate(payload, updates, "organization")
-	copyNullableStringUpdate(payload, updates, "department")
-	copyNullableStringUpdate(payload, updates, "job_title")
-	copyNullableStringUpdate(payload, updates, "preferred_language")
-	copyNullableStringUpdate(payload, updates, "timezone")
-	copyNullableStringUpdate(payload, updates, "notes")
-	if specialization, ok := payload["specialization"]; ok {
-		list, err := stringListPayload(specialization)
-		if err != nil {
-			return nil, ErrResourceInvalid
-		}
-		updates["specialization_json"] = models.StringList(list)
-	}
-	if len(updates) == 0 {
-		return nil, ErrResourceInvalid
-	}
-	updates["updated_at"] = time.Now().UTC()
-	if err := s.DB.Model(&models.User{}).Where("id = ?", mustUUID(userID)).Updates(updates).Error; err != nil {
-		return nil, err
-	}
-
-	var user models.User
-	if err := s.DB.Preload("Roles.Permissions").First(&user, "id = ?", mustUUID(userID)).Error; err != nil {
-		return nil, err
-	}
-	item, err := structToMap(user)
-	if err != nil {
-		return nil, err
-	}
-	return &ResourceItemResult{Success: true, Resource: "users", Item: item}, nil
 }
 
 // updateConversation updates the last_activity timestamp for a conversation.

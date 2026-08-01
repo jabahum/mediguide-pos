@@ -33,11 +33,7 @@ class AuthService extends GetxService {
   String? get userProfilePicture {
     final user = currentUser.value;
     if (user?.avatar.isNotEmpty == true) {
-      return BackendApiService.to.getFileUrl(
-        collectionName: 'users',
-        recordId: user!.id,
-        filename: user.avatar,
-      );
+      return BackendApiService.to.getFileUrl(filename: user!.avatar);
     }
     return null;
   }

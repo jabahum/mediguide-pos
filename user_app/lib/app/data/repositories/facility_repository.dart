@@ -30,12 +30,18 @@ final class FacilityRepository {
     },
   );
 
-  Future<PagedResult<ApiRecord>> regions() =>
-      _list('/api/v2/regions', Region.collection);
+  Future<PagedResult<ApiRecord>> regions({int page = 1, int perPage = 100}) =>
+      _list('/api/v2/regions', Region.collection, page: page, perPage: perPage);
 
-  Future<PagedResult<ApiRecord>> districts({String? regionId}) => _list(
+  Future<PagedResult<ApiRecord>> districts({
+    String? regionId,
+    int page = 1,
+    int perPage = 100,
+  }) => _list(
     '/api/v2/districts',
     District.collection,
+    page: page,
+    perPage: perPage,
     query: {if (_present(regionId)) 'region_id': regionId!},
   );
 

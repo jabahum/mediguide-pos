@@ -43,6 +43,7 @@ class BackendApiService extends GetxService {
   String _accessToken = '';
   String _refreshToken = '';
   String _sessionId = '';
+  Future<void>? _refreshInFlight;
 
   Future<BackendApiService> init() async {
     _prefs = await SharedPreferences.getInstance();
@@ -122,7 +123,20 @@ class BackendApiService extends GetxService {
 
   Future<List<String>> getAuthMethods() async => const ['password'];
 
-  Future<void> refreshAuth() async {
+  Future<void> refreshAuth() {
+    final activeRefresh = _refreshInFlight;
+    if (activeRefresh != null) return activeRefresh;
+
+    final refresh = _performRefresh();
+    _refreshInFlight = refresh;
+    return refresh.whenComplete(() {
+      if (identical(_refreshInFlight, refresh)) {
+        _refreshInFlight = null;
+      }
+    });
+  }
+
+  Future<void> _performRefresh() async {
     if (_refreshToken.isEmpty) {
       throw Exception('No refresh token available');
     }
@@ -267,6 +281,7 @@ class BackendApiService extends GetxService {
     Map<String, String>? query,
     Map<String, String>? extraHeaders,
     bool includeAuth = true,
+    bool retryAfterRefresh = true,
   }) async {
     final uri = Uri.parse(mediguideApiBaseUrl).replace(
       path: _joinPath(Uri.parse(mediguideApiBaseUrl).path, path),
@@ -312,6 +327,22 @@ class BackendApiService extends GetxService {
     final map = decoded is Map<String, dynamic>
         ? decoded
         : <String, dynamic>{'data': decoded};
+
+    if (response.statusCode == 401 &&
+        includeAuth &&
+        retryAfterRefresh &&
+        _refreshToken.isNotEmpty) {
+      await refreshAuth();
+      return _requestJson(
+        path,
+        method: method,
+        body: body,
+        query: query,
+        extraHeaders: extraHeaders,
+        includeAuth: includeAuth,
+        retryAfterRefresh: false,
+      );
+    }
 
     if (response.statusCode >= 400 || map['success'] == false) {
       throw BackendApiException(

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:get/get.dart';
 import 'package:responsive_framework/responsive_framework.dart';
 import 'package:toastification/toastification.dart';
@@ -7,6 +8,8 @@ import 'package:user_app/app/data/services/auth_service.dart';
 import 'package:user_app/app/data/services/main_service.dart';
 import 'package:user_app/app/data/services/openai_service.dart';
 import 'package:user_app/app/data/services/ai_context_service.dart';
+import 'package:user_app/app/features/auth/auth_controller.dart';
+import 'package:user_app/app/providers/core_providers.dart';
 import 'package:user_app/app/routes/app_pages.dart';
 import 'package:user_app/app/themes/app_theme.dart';
 import 'package:user_app/app/translations/app_translations.dart';
@@ -17,7 +20,7 @@ import 'app/utils/preference_utils.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  await PreferenceUtils.init();
+  final preferences = await PreferenceUtils.init();
 
   // Initialize workmanager for background tasks (available for future use)
   // await Workmanager().initialize(callbackDispatcher);
@@ -25,7 +28,12 @@ void main() async {
   // Initialize services
   await _initServices();
 
-  runApp(const MyApp());
+  runApp(
+    ProviderScope(
+      overrides: [sharedPreferencesProvider.overrideWithValue(preferences)],
+      child: const MyApp(),
+    ),
+  );
 }
 
 /// Initialize all required services
@@ -49,11 +57,15 @@ Future<void> _initServices() async {
   // Get.put<LanguageController>(LanguageController(), permanent: true);
 }
 
-class MyApp extends StatelessWidget {
+class MyApp extends ConsumerWidget {
   const MyApp({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    // Start session restoration before protected routes make redirect
+    // decisions. GetX remains the temporary router while feature state moves
+    // to Riverpod.
+    ref.watch(authControllerProvider);
     return GestureDetector(
       onTap: () => Common.dismissKeyboard(),
       child: ToastificationWrapper(

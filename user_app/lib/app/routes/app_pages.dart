@@ -52,7 +52,6 @@ import 'package:user_app/app/modules/register_module/register_binding.dart';
 import 'package:user_app/app/modules/register_module/register_page.dart';
 import 'package:user_app/app/modules/onboarding_module/onboarding_binding.dart';
 import 'package:user_app/app/modules/onboarding_module/onboarding_page.dart';
-import 'package:user_app/app/modules/login_module/login_binding.dart';
 import 'package:user_app/app/modules/login_module/login_page.dart';
 part './app_routes.dart';
 
@@ -62,7 +61,6 @@ class AppPages {
     GetPage(
       name: AppRoutes.login,
       page: () => const LoginPage(),
-      binding: LoginBinding(),
       middlewares: [OnboardingMiddleware()],
     ),
     GetPage(

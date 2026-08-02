@@ -3,6 +3,9 @@
 The user application is built with Flutter 3.44.8 for Android, iOS, macOS, and
 web.
 
+The mobile state-management architecture and staged GetX-to-Riverpod migration
+are documented in [docs/riverpod-migration.md](docs/riverpod-migration.md).
+
 ## Continuous integration
 
 Changes under `user_app` run formatting, static analysis, and tests through

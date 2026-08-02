@@ -1,4 +1,5 @@
 # Miscellaneous
+!docs/riverpod-migration.md
 *.class
 *.log
 *.pyc

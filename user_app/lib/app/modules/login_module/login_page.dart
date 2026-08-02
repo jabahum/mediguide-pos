@@ -2,25 +2,69 @@ import 'package:flex_color_scheme/flex_color_scheme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:form_builder_validators/form_builder_validators.dart';
 import 'package:get/get.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'package:toastification/toastification.dart';
 
 import '../../routes/app_pages.dart';
+import '../../features/auth/auth_controller.dart';
+import '../../features/auth/auth_state.dart';
 import '../../translations/app_translations.dart';
 import '../../utils/app_spacing.dart';
+import '../../utils/common.dart';
 import '../../utils/responsive.dart';
 import '../../widgets/app_button.dart';
 import '../../widgets/app_logo.dart';
 import '../../widgets/copyright_terms_widget.dart';
 import '../../widgets/glass_card.dart';
-import 'login_controller.dart';
 
-class LoginPage extends GetWidget<LoginController> {
+final _passwordVisibleProvider = StateProvider.autoDispose<bool>(
+  (ref) => false,
+);
+
+class LoginPage extends ConsumerStatefulWidget {
   const LoginPage({super.key});
 
   @override
+  ConsumerState<LoginPage> createState() => _LoginPageState();
+}
+
+class _LoginPageState extends ConsumerState<LoginPage> {
+  static const _emailField = 'email';
+  static const _passwordField = 'password';
+  final _formKey = GlobalKey<FormBuilderState>();
+
+  Future<void> _submit() async {
+    if (!(_formKey.currentState?.saveAndValidate() ?? false)) return;
+
+    final formData = _formKey.currentState!.value;
+    try {
+      final loggedIn = await ref
+          .read(authControllerProvider.notifier)
+          .login(
+            email: formData[_emailField] as String,
+            password: formData[_passwordField] as String,
+          );
+      if (loggedIn && mounted) {
+        Get.offAllNamed(AppRoutes.main);
+      }
+    } catch (error) {
+      if (!mounted) return;
+      Common.quickToast(
+        type: ToastificationType.error,
+        title: AppTranslationKey.loginError,
+        description: Common.parseApiError(error),
+      );
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final auth = ref.watch(authControllerProvider).valueOrNull;
+    final isLoading = auth?.phase == AuthPhase.authenticating;
+    final isPasswordVisible = ref.watch(_passwordVisibleProvider);
     final theme = context.theme;
     final cs = theme.colorScheme;
     final size = MediaQuery.sizeOf(context);
@@ -78,7 +122,7 @@ class LoginPage extends GetWidget<LoginController> {
                           // ───────────────── Login Card ─────────────────
                           GlassCard.auth(
                             child: FormBuilder(
-                              key: controller.formKey,
+                              key: _formKey,
                               autovalidateMode:
                                   AutovalidateMode.onUserInteraction,
                               child: Column(
@@ -103,7 +147,7 @@ class LoginPage extends GetWidget<LoginController> {
 
                                   // ───────────────── Email ─────────────────
                                   FormBuilderTextField(
-                                    name: LoginController.emailField,
+                                    name: _emailField,
                                     keyboardType: TextInputType.emailAddress,
                                     textInputAction: TextInputAction.next,
                                     autofillHints: const [
@@ -124,41 +168,42 @@ class LoginPage extends GetWidget<LoginController> {
                                   AppSpacing.fieldGap,
 
                                   // ───────────────── Password ─────────────────
-                                  Obx(
-                                    () => FormBuilderTextField(
-                                      name: LoginController.passwordField,
-                                      obscureText:
-                                          !controller.isPasswordVisible.value,
-                                      textInputAction: TextInputAction.done,
-                                      autofillHints: const [
-                                        AutofillHints.password,
-                                      ],
-                                      onSubmitted: (_) => controller.onSubmit(),
-                                      decoration: _inputDecoration(
-                                        context,
-                                        label: AppTranslationKey.password.tr,
-                                        icon: LucideIcons.lock,
-                                        suffixIcon: IconButton(
-                                          tooltip:
-                                              controller.isPasswordVisible.value
-                                              ? 'Hide password'
-                                              : 'Show password',
-                                          icon: Icon(
-                                            controller.isPasswordVisible.value
-                                                ? LucideIcons.eyeOff
-                                                : LucideIcons.eye,
-                                            color: cs.primary,
-                                          ),
-                                          onPressed: controller
-                                              .isPasswordVisible
-                                              .toggle,
+                                  FormBuilderTextField(
+                                    name: _passwordField,
+                                    obscureText: !isPasswordVisible,
+                                    textInputAction: TextInputAction.done,
+                                    autofillHints: const [
+                                      AutofillHints.password,
+                                    ],
+                                    onSubmitted: (_) => _submit(),
+                                    decoration: _inputDecoration(
+                                      context,
+                                      label: AppTranslationKey.password.tr,
+                                      icon: LucideIcons.lock,
+                                      suffixIcon: IconButton(
+                                        tooltip: isPasswordVisible
+                                            ? 'Hide password'
+                                            : 'Show password',
+                                        icon: Icon(
+                                          isPasswordVisible
+                                              ? LucideIcons.eyeOff
+                                              : LucideIcons.eye,
+                                          color: cs.primary,
                                         ),
+                                        onPressed: () =>
+                                            ref
+                                                    .read(
+                                                      _passwordVisibleProvider
+                                                          .notifier,
+                                                    )
+                                                    .state =
+                                                !isPasswordVisible,
                                       ),
-                                      validator: FormBuilderValidators.compose([
-                                        FormBuilderValidators.required(),
-                                        FormBuilderValidators.minLength(6),
-                                      ]),
                                     ),
+                                    validator: FormBuilderValidators.compose([
+                                      FormBuilderValidators.required(),
+                                      FormBuilderValidators.minLength(6),
+                                    ]),
                                   ),
 
                                   AppSpacing.gapSm,
@@ -188,17 +233,12 @@ class LoginPage extends GetWidget<LoginController> {
                                   AppSpacing.elementGap,
 
                                   // ───────────────── Sign In ─────────────────
-                                  Obx(
-                                    () => AppButton.large(
-                                      text: AppTranslationKey.signIn.tr,
-                                      onPressed: controller.isLoading.value
-                                          ? null
-                                          : controller.onSubmit,
-                                      isLoading: controller.isLoading.value,
-                                      loadingText:
-                                          AppTranslationKey.signingIn.tr,
-                                      width: double.infinity,
-                                    ),
+                                  AppButton.large(
+                                    text: AppTranslationKey.signIn.tr,
+                                    onPressed: isLoading ? null : _submit,
+                                    isLoading: isLoading,
+                                    loadingText: AppTranslationKey.signingIn.tr,
+                                    width: double.infinity,
                                   ),
 
                                   AppSpacing.fieldGap,

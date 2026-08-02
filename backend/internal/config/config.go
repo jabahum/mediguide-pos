@@ -3,6 +3,7 @@ package config
 import (
 	"os"
 	"strconv"
+	"strings"
 
 	"github.com/joho/godotenv"
 )
@@ -32,14 +33,24 @@ type Config struct {
 	// Shared secret sent as X-Worker-Secret to the ai-worker API.
 	AIWorkerSecret string
 	// Comma-separated list of allowed CORS origins (use "*" for local dev only).
-	AllowedOrigins string
-	PublicAppURL   string
-	MailDriver     string
-	MailFrom       string
-	SMTPHost       string
-	SMTPPort       int
-	SMTPUsername   string
-	SMTPPassword   string
+	AllowedOrigins      string
+	PublicAppURL        string
+	MailDriver          string
+	MailFrom            string
+	SMTPHost            string
+	SMTPPort            int
+	SMTPUsername        string
+	SMTPPassword        string
+	RedisURL            string
+	RedisKeyPrefix      string
+	RedisConnectTimeout int
+	RedisReadTimeout    int
+	RedisWriteTimeout   int
+	RateLimitEnabled    bool
+	CacheEnabled        bool
+	CacheDefaultTTL     int
+	CacheMaxItemBytes   int
+	TrustedProxies      []string
 }
 
 func Load() Config {
@@ -75,6 +86,16 @@ func Load() Config {
 		SMTPPort:             getInt("SMTP_PORT", 587),
 		SMTPUsername:         get("SMTP_USERNAME", ""),
 		SMTPPassword:         get("SMTP_PASSWORD", ""),
+		RedisURL:             get("REDIS_URL", "redis://localhost:6379"),
+		RedisKeyPrefix:       get("REDIS_KEY_PREFIX", "mediguide:"+get("APP_ENV", "development")),
+		RedisConnectTimeout:  getInt("REDIS_CONNECT_TIMEOUT_MS", 2000),
+		RedisReadTimeout:     getInt("REDIS_READ_TIMEOUT_MS", 1000),
+		RedisWriteTimeout:    getInt("REDIS_WRITE_TIMEOUT_MS", 1000),
+		RateLimitEnabled:     getBool("RATE_LIMIT_ENABLED", true),
+		CacheEnabled:         getBool("CACHE_ENABLED", true),
+		CacheDefaultTTL:      getInt("CACHE_DEFAULT_TTL_SECONDS", 300),
+		CacheMaxItemBytes:    getInt("CACHE_MAX_ITEM_BYTES", 1_048_576),
+		TrustedProxies:       getCSV("TRUSTED_PROXIES"),
 	}
 }
 
@@ -112,4 +133,14 @@ func getBool(key string, fallback bool) bool {
 		return fallback
 	}
 	return v
+}
+
+func getCSV(key string) []string {
+	values := []string{}
+	for _, value := range strings.Split(get(key, ""), ",") {
+		if trimmed := strings.TrimSpace(value); trimmed != "" {
+			values = append(values, trimmed)
+		}
+	}
+	return values
 }

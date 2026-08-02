@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	cachepkg "mediguide/internal/cache"
 	"mediguide/internal/models"
 
 	"github.com/google/uuid"
@@ -17,7 +18,10 @@ var (
 	ErrFAQTagInUse        = errors.New("FAQ tag is in use")
 )
 
-type HelpContentService struct{ DB *gorm.DB }
+type HelpContentService struct {
+	DB    *gorm.DB
+	Cache *cachepkg.Store
+}
 
 type HelpContentQuery struct {
 	Page                                                             PageInput
@@ -62,6 +66,16 @@ type DocumentationInput struct {
 }
 
 func (s HelpContentService) ListFAQs(editor bool, in HelpContentQuery) (*PageResult[models.FAQ], error) {
+	if !editor && strings.TrimSpace(in.Search) == "" {
+		return cachedServiceValue(s.Cache, "published-help-content", struct {
+			Kind  string           `json:"kind"`
+			Query HelpContentQuery `json:"query"`
+		}{"faqs", in}, 15*time.Minute, func() (*PageResult[models.FAQ], error) { return s.listFAQsUncached(editor, in) })
+	}
+	return s.listFAQsUncached(editor, in)
+}
+
+func (s HelpContentService) listFAQsUncached(editor bool, in HelpContentQuery) (*PageResult[models.FAQ], error) {
 	p := in.Page.Normalize(20, 100)
 	query := s.faqQuery()
 	if !editor {
@@ -99,6 +113,13 @@ func (s HelpContentService) ListFAQs(editor bool, in HelpContentQuery) (*PageRes
 }
 
 func (s HelpContentService) GetFAQ(id uuid.UUID, editor bool) (*models.FAQ, error) {
+	if !editor {
+		return cachedServiceValue(s.Cache, "published-help-content", "faq:"+id.String(), 15*time.Minute, func() (*models.FAQ, error) { return s.getFAQUncached(id, editor) })
+	}
+	return s.getFAQUncached(id, editor)
+}
+
+func (s HelpContentService) getFAQUncached(id uuid.UUID, editor bool) (*models.FAQ, error) {
 	query := s.faqQuery().Where("f.id = ?", id)
 	if !editor {
 		query = query.Where("f.status = ?", "published")
@@ -143,18 +164,33 @@ func (s HelpContentService) SaveFAQ(id *uuid.UUID, actor uuid.UUID, in FAQInput)
 	if err != nil {
 		return nil, err
 	}
+	invalidateServiceCaches(s.Cache, "published-help-content")
 	return s.GetFAQ(item.ID, true)
 }
 func (s HelpContentService) DeleteFAQ(id uuid.UUID) error {
-	return s.DB.Transaction(func(tx *gorm.DB) error {
+	err := s.DB.Transaction(func(tx *gorm.DB) error {
 		if err := tx.Delete(&models.FAQ{}, "id = ?", id).Error; err != nil {
 			return err
 		}
 		return recalculateFAQTagUsage(tx)
 	})
+	if err == nil {
+		invalidateServiceCaches(s.Cache, "published-help-content")
+	}
+	return err
 }
 
 func (s HelpContentService) ListTags(editor bool, in HelpContentQuery) (*PageResult[models.FAQTag], error) {
+	if !editor && strings.TrimSpace(in.Search) == "" {
+		return cachedServiceValue(s.Cache, "published-help-content", struct {
+			Kind  string           `json:"kind"`
+			Query HelpContentQuery `json:"query"`
+		}{"faq-tags", in}, 30*time.Minute, func() (*PageResult[models.FAQTag], error) { return s.listTagsUncached(editor, in) })
+	}
+	return s.listTagsUncached(editor, in)
+}
+
+func (s HelpContentService) listTagsUncached(editor bool, in HelpContentQuery) (*PageResult[models.FAQTag], error) {
 	p := in.Page.Normalize(20, 100)
 	q := s.DB.Model(&models.FAQTag{})
 	if !editor {
@@ -202,6 +238,7 @@ func (s HelpContentService) SaveTag(id *uuid.UUID, in FAQTagInput) (*models.FAQT
 	if err := s.DB.Save(&item).Error; err != nil {
 		return nil, err
 	}
+	invalidateServiceCaches(s.Cache, "published-help-content")
 	return &item, nil
 }
 func (s HelpContentService) DeleteTag(id uuid.UUID) error {
@@ -212,11 +249,31 @@ func (s HelpContentService) DeleteTag(id uuid.UUID) error {
 	if count > 0 {
 		return ErrFAQTagInUse
 	}
-	return s.DB.Delete(&models.FAQTag{}, "id = ?", id).Error
+	err := s.DB.Delete(&models.FAQTag{}, "id = ?", id).Error
+	if err == nil {
+		invalidateServiceCaches(s.Cache, "published-help-content")
+	}
+	return err
 }
-func (s HelpContentService) RecalculateTagUsage() error { return recalculateFAQTagUsage(s.DB) }
+func (s HelpContentService) RecalculateTagUsage() error {
+	err := recalculateFAQTagUsage(s.DB)
+	if err == nil {
+		invalidateServiceCaches(s.Cache, "published-help-content")
+	}
+	return err
+}
 
 func (s HelpContentService) ListDocumentation(editor bool, in HelpContentQuery) (*PageResult[models.Documentation], error) {
+	if !editor && strings.TrimSpace(in.Search) == "" {
+		return cachedServiceValue(s.Cache, "published-help-content", struct {
+			Kind  string           `json:"kind"`
+			Query HelpContentQuery `json:"query"`
+		}{"documentation", in}, 15*time.Minute, func() (*PageResult[models.Documentation], error) { return s.listDocumentationUncached(editor, in) })
+	}
+	return s.listDocumentationUncached(editor, in)
+}
+
+func (s HelpContentService) listDocumentationUncached(editor bool, in HelpContentQuery) (*PageResult[models.Documentation], error) {
 	p := in.Page.Normalize(20, 100)
 	q := s.DB.Model(&models.Documentation{})
 	if !editor {
@@ -237,6 +294,13 @@ func (s HelpContentService) ListDocumentation(editor bool, in HelpContentQuery) 
 	return pageHelp[models.Documentation](q, p, map[string]string{"title": "title", "created_at": "created_at", "updated_at": "updated_at", "status": "status"}, in.Sort, in.Order, "created_at DESC")
 }
 func (s HelpContentService) GetDocumentation(id uuid.UUID, editor bool) (*models.Documentation, error) {
+	if !editor {
+		return cachedServiceValue(s.Cache, "published-help-content", "documentation:"+id.String(), 15*time.Minute, func() (*models.Documentation, error) { return s.getDocumentationUncached(id, editor) })
+	}
+	return s.getDocumentationUncached(id, editor)
+}
+
+func (s HelpContentService) getDocumentationUncached(id uuid.UUID, editor bool) (*models.Documentation, error) {
 	q := s.DB.Model(&models.Documentation{}).Where("id = ?", id)
 	if !editor {
 		q = q.Where("status = ?", "published")
@@ -263,10 +327,15 @@ func (s HelpContentService) SaveDocumentation(id *uuid.UUID, in DocumentationInp
 	if err := s.DB.Save(&item).Error; err != nil {
 		return nil, err
 	}
+	invalidateServiceCaches(s.Cache, "published-help-content")
 	return &item, nil
 }
 func (s HelpContentService) DeleteDocumentation(id uuid.UUID) error {
-	return s.DB.Delete(&models.Documentation{}, "id = ?", id).Error
+	err := s.DB.Delete(&models.Documentation{}, "id = ?", id).Error
+	if err == nil {
+		invalidateServiceCaches(s.Cache, "published-help-content")
+	}
+	return err
 }
 
 func (s HelpContentService) faqQuery() *gorm.DB {

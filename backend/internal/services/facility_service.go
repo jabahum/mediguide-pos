@@ -1,11 +1,13 @@
 package services
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"strings"
 	"time"
 
+	cachepkg "mediguide/internal/cache"
 	"mediguide/internal/models"
 
 	"github.com/google/uuid"
@@ -14,7 +16,10 @@ import (
 
 var ErrFacilityInvalid = errors.New("invalid facility payload")
 
-type FacilityService struct{ DB *gorm.DB }
+type FacilityService struct {
+	DB    *gorm.DB
+	Cache *cachepkg.Store
+}
 
 type FacilityQuery struct {
 	Page                PageInput
@@ -141,6 +146,7 @@ func (s FacilityService) CreateFacility(in FacilityInput) (*FacilityItem, error)
 	if err := s.DB.Create(model).Error; err != nil {
 		return nil, err
 	}
+	s.invalidateFacilityCaches()
 	return s.GetFacility(model.ID)
 }
 
@@ -157,6 +163,7 @@ func (s FacilityService) UpdateFacility(id uuid.UUID, in FacilityInput) (*Facili
 	if err := s.DB.Save(&current).Error; err != nil {
 		return nil, err
 	}
+	s.invalidateFacilityCaches()
 	return s.GetFacility(id)
 }
 
@@ -168,6 +175,7 @@ func (s FacilityService) DeleteFacility(id uuid.UUID) error {
 	if result.RowsAffected == 0 {
 		return gorm.ErrRecordNotFound
 	}
+	s.invalidateFacilityCaches()
 	return nil
 }
 
@@ -185,7 +193,19 @@ func (s FacilityService) RecordUsage(userID, facilityID uuid.UUID) (*models.Faci
 	}); err != nil {
 		return nil, err
 	}
+	if s.Cache != nil {
+		_ = s.Cache.InvalidateNamespace(context.Background(), "dashboard-aggregates")
+	}
 	return &usage, nil
+}
+
+func (s FacilityService) invalidateFacilityCaches() {
+	if s.Cache == nil {
+		return
+	}
+	ctx := context.Background()
+	_ = s.Cache.InvalidateNamespace(ctx, "facility-hierarchy")
+	_ = s.Cache.InvalidateNamespace(ctx, "dashboard-aggregates")
 }
 
 func (s FacilityService) validateFacility(f *models.HealthFacility) error {

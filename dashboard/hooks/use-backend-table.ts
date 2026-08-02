@@ -3,6 +3,7 @@
 import { useState, useCallback, useEffect, useMemo, useRef } from 'react'
 import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-query"
 import { showToast } from '@/lib/toast'
+import { staleTimeForDomain } from '@/lib/query-cache-policy'
 import {
   BaseRecord,
   UseBackendTableConfig,
@@ -68,6 +69,7 @@ export function useBackendTable<TData extends BaseRecord = BaseRecord>(
       })
     },
     placeholderData: keepPreviousData,
+    staleTime: staleTimeForDomain(config.collection),
   })
 
   useEffect(() => {

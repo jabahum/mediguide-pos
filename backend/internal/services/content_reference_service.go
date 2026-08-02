@@ -5,7 +5,9 @@ import (
 	"errors"
 	"regexp"
 	"strings"
+	"time"
 
+	cachepkg "mediguide/internal/cache"
 	"mediguide/internal/models"
 
 	"github.com/google/uuid"
@@ -18,7 +20,10 @@ var (
 	ErrDefaultLanguage          = errors.New("default language cannot be deleted")
 )
 
-type ContentReferenceService struct{ DB *gorm.DB }
+type ContentReferenceService struct {
+	DB    *gorm.DB
+	Cache *cachepkg.Store
+}
 type ContentReferenceQuery struct {
 	Page                                                                               PageInput
 	Search, Key, Ministry, Department, DistrictID, RegionID, Status, Code, Sort, Order string
@@ -237,13 +242,27 @@ func (s ContentReferenceService) SaveDirectory(id *uuid.UUID, in MinistryDirecto
 	if err := s.DB.Save(&v).Error; err != nil {
 		return nil, err
 	}
+	invalidateServiceCaches(s.Cache, "ministry-hierarchy")
 	return s.GetDirectory(v.ID, true)
 }
 func (s ContentReferenceService) DeleteDirectory(id uuid.UUID) error {
-	return deleteExisting(s.DB, &models.MinistryDirectoryEntry{}, id)
+	err := deleteExisting(s.DB, &models.MinistryDirectoryEntry{}, id)
+	if err == nil {
+		invalidateServiceCaches(s.Cache, "ministry-hierarchy")
+	}
+	return err
 }
 
 func (s ContentReferenceService) ListLanguages(in ContentReferenceQuery) (*PageResult[models.Language], error) {
+	if strings.TrimSpace(in.Search) != "" {
+		return s.listLanguagesUncached(in)
+	}
+	return cachedServiceValue(s.Cache, "languages", in, 30*time.Minute, func() (*PageResult[models.Language], error) {
+		return s.listLanguagesUncached(in)
+	})
+}
+
+func (s ContentReferenceService) listLanguagesUncached(in ContentReferenceQuery) (*PageResult[models.Language], error) {
 	p := in.Page.Normalize(20, 100)
 	q := s.DB.Model(&models.Language{})
 	if in.Active != nil {
@@ -281,6 +300,12 @@ func (s ContentReferenceService) ListLanguages(in ContentReferenceQuery) (*PageR
 	return pageHelp[models.Language](q, p, map[string]string{"name": "name", "code": "code", "status": "status", "progress": "progress", "created_at": "created_at", "updated_at": "updated_at"}, in.Sort, in.Order, "is_default DESC, name ASC")
 }
 func (s ContentReferenceService) GetLanguage(id uuid.UUID) (*models.Language, error) {
+	return cachedServiceValue(s.Cache, "languages", id.String(), 30*time.Minute, func() (*models.Language, error) {
+		return s.getLanguageUncached(id)
+	})
+}
+
+func (s ContentReferenceService) getLanguageUncached(id uuid.UUID) (*models.Language, error) {
 	var v models.Language
 	err := s.DB.First(&v, "id=?", id).Error
 	return &v, err
@@ -355,6 +380,7 @@ func (s ContentReferenceService) SaveLanguage(id *uuid.UUID, in LanguageInput) (
 	if err != nil {
 		return nil, err
 	}
+	invalidateServiceCaches(s.Cache, "languages")
 	return &v, nil
 }
 func (s ContentReferenceService) DeleteLanguage(id uuid.UUID) error {
@@ -365,7 +391,11 @@ func (s ContentReferenceService) DeleteLanguage(id uuid.UUID) error {
 	if v.IsDefault {
 		return ErrDefaultLanguage
 	}
-	return deleteExisting(s.DB, &models.Language{}, id)
+	err = deleteExisting(s.DB, &models.Language{}, id)
+	if err == nil {
+		invalidateServiceCaches(s.Cache, "languages")
+	}
+	return err
 }
 func existsActive(db *gorm.DB, model any, id uuid.UUID) bool {
 	var count int64

@@ -2,6 +2,7 @@ import '../models/api_record.dart';
 import '../models/language_model.dart';
 import '../models/ministry_directory.dart';
 import '../services/backend_api_service.dart';
+import '../services/ttl_response_cache.dart';
 import '../../models/generic_page.dart';
 
 final class GenericPageRepository {
@@ -147,22 +148,28 @@ final class MinistryDirectoryRepository {
 }
 
 final class LanguageRepository {
-  LanguageRepository(this._api);
+  LanguageRepository(this._api, {TtlResponseCache? cache})
+    : _cache = cache ?? TtlResponseCache();
   final BackendApiService _api;
+  final TtlResponseCache _cache;
 
   Future<List<LanguageModel>> available() async {
     final data = _data(
-      await _api.requestJson(
-        '/api/v2/languages',
-        method: 'GET',
-        query: {
-          'page': '1',
-          'per_page': '100',
-          'is_active': 'true',
-          'enabled_for_users': 'true',
-          'sort': 'name',
-          'order': 'asc',
-        },
+      await _cache.getOrLoad(
+        key: 'languages:available',
+        ttl: const Duration(minutes: 30),
+        load: () => _api.requestJson(
+          '/api/v2/languages',
+          method: 'GET',
+          query: {
+            'page': '1',
+            'per_page': '100',
+            'is_active': 'true',
+            'enabled_for_users': 'true',
+            'sort': 'name',
+            'order': 'asc',
+          },
+        ),
       ),
     );
     return (data['items'] as List? ?? const [])

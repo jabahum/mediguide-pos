@@ -1,0 +1,7 @@
+**
+!guidelines-platform/
+!guidelines-platform/**
+guidelines-platform/node_modules
+guidelines-platform/dist
+guidelines-platform/.vite
+guidelines-platform/coverage

@@ -49,27 +49,46 @@ export type PublicApiErrorKind =
   | "not-found"
   | "timeout"
   | "network"
+  | "rate-limited"
   | "server"
   | "invalid-response";
 
 export class PublicApiError extends Error {
   readonly kind: PublicApiErrorKind;
   readonly status?: number;
+  readonly retryAfterSeconds?: number;
 
   constructor(
     kind: PublicApiErrorKind,
     status?: number,
+    retryAfterSeconds?: number,
   ) {
-    super(kind === "not-found" ? "Guideline not found" : "Unable to load guideline");
+    super(
+      kind === "not-found"
+        ? "Guideline not found"
+        : kind === "rate-limited"
+          ? `Too many requests. Try again${retryAfterSeconds === undefined ? " shortly" : ` in ${retryAfterSeconds} seconds`}.`
+          : "Unable to load guideline",
+    );
     this.name = "PublicApiError";
     this.kind = kind;
     this.status = status;
+    this.retryAfterSeconds = retryAfterSeconds;
   }
 }
 
 const requestTimeoutMs = 12_000;
 const markdownCache = new Map<string, PublicMarkdown>();
+const listCache = new Map<string, CacheEntry<PublicGuidelinePage>>();
+const detailCache = new Map<string, CacheEntry<PublicGuideline>>();
+const inFlight = new Map<string, Promise<unknown>>();
 const maxCachedDocuments = 8;
+const maxCachedLists = 16;
+const maxCachedDetails = 40;
+const listTtlMs = 60_000;
+const detailTtlMs = 5 * 60_000;
+
+type CacheEntry<T> = { value: T; expiresAt: number };
 
 function publicUrl(path: string, query?: URLSearchParams) {
   const suffix = query?.size ? `?${query.toString()}` : "";
@@ -103,6 +122,9 @@ async function request(
 async function requestJson<T>(url: string, signal?: AbortSignal): Promise<T> {
   const response = await request(url, { headers: { Accept: "application/json" } }, signal);
   if (response.status === 404) throw new PublicApiError("not-found", 404);
+  if (response.status === 429) {
+    throw new PublicApiError("rate-limited", 429, parseRetryAfter(response.headers.get("Retry-After")));
+  }
   if (!response.ok) throw new PublicApiError("server", response.status);
   let envelope: ApiEnvelope<T>;
   try {
@@ -116,6 +138,45 @@ async function requestJson<T>(url: string, signal?: AbortSignal): Promise<T> {
   return envelope.data;
 }
 
+function parseRetryAfter(value: string | null): number | undefined {
+  if (!value) return undefined;
+  const seconds = Number(value);
+  if (Number.isFinite(seconds) && seconds >= 0) return Math.ceil(seconds);
+  const date = Date.parse(value);
+  if (Number.isNaN(date)) return undefined;
+  return Math.max(0, Math.ceil((date - Date.now()) / 1000));
+}
+
+function cached<T>(cache: Map<string, CacheEntry<T>>, key: string): T | undefined {
+  const entry = cache.get(key);
+  if (!entry) return undefined;
+  if (entry.expiresAt <= Date.now()) {
+    cache.delete(key);
+    return undefined;
+  }
+  cache.delete(key);
+  cache.set(key, entry);
+  return entry.value;
+}
+
+function remember<T>(cache: Map<string, CacheEntry<T>>, key: string, value: T, ttlMs: number, maximum: number) {
+  cache.delete(key);
+  cache.set(key, { value, expiresAt: Date.now() + ttlMs });
+  while (cache.size > maximum) {
+    const oldest = cache.keys().next().value;
+    if (oldest === undefined) break;
+    cache.delete(oldest);
+  }
+}
+
+function deduplicated<T>(key: string, load: () => Promise<T>): Promise<T> {
+  const existing = inFlight.get(key) as Promise<T> | undefined;
+  if (existing) return existing;
+  const pending = load().finally(() => inFlight.delete(key));
+  inFlight.set(key, pending);
+  return pending;
+}
+
 export function listPublicGuidelines(
   filters: PublicGuidelineFilters = {},
   signal?: AbortSignal,
@@ -127,14 +188,27 @@ export function listPublicGuidelines(
   if (filters.language) query.set("language", filters.language);
   if (filters.page) query.set("page", String(filters.page));
   if (filters.perPage) query.set("per_page", String(filters.perPage));
-  return requestJson<PublicGuidelinePage>(publicUrl("/guidelines", query), signal);
+  const url = publicUrl("/guidelines", query);
+  const hit = cached(listCache, url);
+  if (hit) return Promise.resolve(hit);
+  const load = async () => {
+    const value = await requestJson<PublicGuidelinePage>(url, signal);
+    remember(listCache, url, value, listTtlMs, maxCachedLists);
+    return value;
+  };
+  return signal ? load() : deduplicated(`list:${url}`, load);
 }
 
 export function getPublicGuideline(id: string, signal?: AbortSignal) {
-  return requestJson<PublicGuideline>(
-    publicUrl(`/guidelines/${encodeURIComponent(id)}`),
-    signal,
-  );
+  const url = publicUrl(`/guidelines/${encodeURIComponent(id)}`);
+  const hit = cached(detailCache, url);
+  if (hit) return Promise.resolve(hit);
+  const load = async () => {
+    const value = await requestJson<PublicGuideline>(url, signal);
+    remember(detailCache, url, value, detailTtlMs, maxCachedDetails);
+    return value;
+  };
+  return signal ? load() : deduplicated(`detail:${url}`, load);
 }
 
 export async function getPublicGuidelineMarkdown(
@@ -157,6 +231,9 @@ export async function getPublicGuidelineMarkdown(
     return { ...cached, fromCache: true };
   }
   if (response.status === 404) throw new PublicApiError("not-found", 404);
+  if (response.status === 429) {
+    throw new PublicApiError("rate-limited", 429, parseRetryAfter(response.headers.get("Retry-After")));
+  }
   if (!response.ok) throw new PublicApiError("server", response.status);
 
   const result: PublicMarkdown = {
@@ -176,4 +253,7 @@ export async function getPublicGuidelineMarkdown(
 
 export function clearPublicMarkdownCache() {
   markdownCache.clear();
+  listCache.clear();
+  detailCache.clear();
+  inFlight.clear();
 }

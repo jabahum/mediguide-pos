@@ -6,7 +6,7 @@ import (
 )
 
 // Overview aggregates dashboard metrics across all major tables.
-func (s LegacyAPIService) Overview() (OverviewResult, error) {
+func (s LegacyAPIService) overviewUncached() (OverviewResult, error) {
 	now := time.Now().UTC().Format(time.RFC3339)
 	metrics := map[string]int64{}
 	pipeline := map[string]int64{}
@@ -223,7 +223,7 @@ func (s LegacyAPIService) Overview() (OverviewResult, error) {
 }
 
 // Stats returns mobile-home-screen counters, optionally enriched with user-specific message data.
-func (s LegacyAPIService) Stats(userID string) (StatsResult, error) {
+func (s LegacyAPIService) statsUncached(userID string) (StatsResult, error) {
 	now := time.Now().UTC().Format(time.RFC3339)
 	res := StatsResult{Success: true, CachedAt: now}
 	var err error

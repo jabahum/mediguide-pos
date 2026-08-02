@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest"
 
-import { BackendAuthStore, BackendClient } from "./backend-client"
+import { BackendAuthStore, BackendClient, BackendRequestError } from "./backend-client"
 
 describe("BackendClient authentication", () => {
   afterEach(() => {
@@ -145,5 +145,23 @@ describe("BackendClient authentication", () => {
     await expect(client.ensureSession()).resolves.toBe(false)
     expect(fetchMock).not.toHaveBeenCalled()
     expect(client.authStore.isValid).toBe(false)
+  })
+
+  it("exposes Retry-After metadata without retrying a 429 response", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify({ success: false, error: "rate limit exceeded" }), {
+        status: 429,
+        headers: { "Content-Type": "application/json", "Retry-After": "23" },
+      }),
+    )
+    vi.stubGlobal("fetch", fetchMock)
+
+    const client = new BackendClient()
+    const error = await client.request("/api/v2/search").catch((value) => value)
+
+    expect(error).toBeInstanceOf(BackendRequestError)
+    expect(error).toMatchObject({ status: 429, retryAfterSeconds: 23 })
+    expect(error.message).toContain("23 seconds")
+    expect(fetchMock).toHaveBeenCalledTimes(1)
   })
 })

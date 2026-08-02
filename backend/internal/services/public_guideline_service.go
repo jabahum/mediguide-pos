@@ -3,6 +3,7 @@ package services
 import (
 	"context"
 	"crypto/sha256"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -10,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	cachepkg "mediguide/internal/cache"
 	"mediguide/internal/storage"
 
 	"github.com/google/uuid"
@@ -27,6 +29,7 @@ var (
 type PublicGuidelineService struct {
 	DB    *gorm.DB
 	Store storage.ObjectStore
+	Cache *cachepkg.Store
 }
 
 type PublicGuidelineFilter struct {
@@ -77,6 +80,13 @@ type publicGuidelineRow struct {
 }
 
 func (s PublicGuidelineService) List(ctx context.Context, filter PublicGuidelineFilter) (*PageResult[PublicGuideline], error) {
+	key, _ := json.Marshal(filter)
+	return cachepkg.GetOrLoad(ctx, s.Cache, "public-guidelines", "list:"+string(key), 2*time.Minute, func() (*PageResult[PublicGuideline], error) {
+		return s.listUncached(ctx, filter)
+	})
+}
+
+func (s PublicGuidelineService) listUncached(ctx context.Context, filter PublicGuidelineFilter) (*PageResult[PublicGuideline], error) {
 	page := filter.Page.Normalize(20, 100)
 	query := s.visibleQuery(ctx)
 	query = applyPublicGuidelineFilters(query, filter)
@@ -104,6 +114,12 @@ func (s PublicGuidelineService) List(ctx context.Context, filter PublicGuideline
 }
 
 func (s PublicGuidelineService) Get(ctx context.Context, id uuid.UUID) (*PublicGuideline, error) {
+	return cachepkg.GetOrLoad(ctx, s.Cache, "public-guidelines", "detail:"+id.String(), 5*time.Minute, func() (*PublicGuideline, error) {
+		return s.getUncached(ctx, id)
+	})
+}
+
+func (s PublicGuidelineService) getUncached(ctx context.Context, id uuid.UUID) (*PublicGuideline, error) {
 	row, err := s.getVisibleRow(ctx, id)
 	if err != nil {
 		return nil, err
@@ -113,6 +129,12 @@ func (s PublicGuidelineService) Get(ctx context.Context, id uuid.UUID) (*PublicG
 }
 
 func (s PublicGuidelineService) Markdown(ctx context.Context, id uuid.UUID) (*PublicGuidelineMarkdown, error) {
+	return cachepkg.GetOrLoad(ctx, s.Cache, "public-guidelines", "markdown:"+id.String(), 5*time.Minute, func() (*PublicGuidelineMarkdown, error) {
+		return s.markdownUncached(ctx, id)
+	})
+}
+
+func (s PublicGuidelineService) markdownUncached(ctx context.Context, id uuid.UUID) (*PublicGuidelineMarkdown, error) {
 	row, err := s.getVisibleRow(ctx, id)
 	if err != nil {
 		return nil, err

@@ -63,4 +63,34 @@ describe("public guideline API client", () => {
     controller.abort();
     await expect(request).rejects.toMatchObject({ name: "AbortError" });
   });
+
+  it("deduplicates concurrent list requests and keeps the result briefly", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify({
+        success: true,
+        data: { items: [], page: 1, per_page: 20, total_items: 0, total_pages: 0 },
+      }), { status: 200, headers: { "Content-Type": "application/json" } }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    await Promise.all([listPublicGuidelines(), listPublicGuidelines()]);
+    await listPublicGuidelines();
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("exposes Retry-After on rate-limit responses", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(
+      new Response(JSON.stringify({ success: false, error: "rate limit exceeded" }), {
+        status: 429,
+        headers: { "Retry-After": "17", "Content-Type": "application/json" },
+      }),
+    ));
+
+    await expect(listPublicGuidelines()).rejects.toMatchObject({
+      kind: "rate-limited",
+      status: 429,
+      retryAfterSeconds: 17,
+    });
+  });
 });

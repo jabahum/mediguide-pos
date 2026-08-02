@@ -2,6 +2,7 @@
 !README.md
 !**/README.md
 !docs/pocketbase-removal.md
+!docs/rate-limits-and-cache.md
 !guidelines-platform/src/content/**/*.md
 backend/.env
 backend/.env.local

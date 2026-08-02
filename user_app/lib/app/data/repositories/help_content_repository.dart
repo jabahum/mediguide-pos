@@ -1,9 +1,14 @@
+import 'dart:convert';
+
 import '../models/models.dart';
 import '../services/backend_api_service.dart';
+import '../services/ttl_response_cache.dart';
 
 final class HelpContentRepository {
-  HelpContentRepository(this._api);
+  HelpContentRepository(this._api, {TtlResponseCache? cache})
+    : _cache = cache ?? TtlResponseCache();
   final BackendApiService _api;
+  final TtlResponseCache _cache;
 
   Future<PagedResult<FAQ>> listFAQs({
     int page = 1,
@@ -11,18 +16,23 @@ final class HelpContentRepository {
     String? search,
     bool? featured,
   }) async {
-    final response = await _api.requestJson(
-      '/api/v2/faqs',
-      method: 'GET',
-      query: {
-        'page': '$page',
-        'per_page': '$perPage',
-        'sort': 'sort_order',
-        'order': 'asc',
-        if (search?.trim().isNotEmpty == true) 'search': search!.trim(),
-        if (featured != null) 'is_featured': '$featured',
-      },
-    );
+    final query = {
+      'page': '$page',
+      'per_page': '$perPage',
+      'sort': 'sort_order',
+      'order': 'asc',
+      if (search?.trim().isNotEmpty == true) 'search': search!.trim(),
+      if (featured != null) 'is_featured': '$featured',
+    };
+    Future<Map<String, dynamic>> load() =>
+        _api.requestJson('/api/v2/faqs', method: 'GET', query: query);
+    final response = search?.trim().isNotEmpty == true
+        ? await load()
+        : await _cache.getOrLoad(
+            key: 'published-faqs:${jsonEncode(query)}',
+            ttl: const Duration(minutes: 15),
+            load: load,
+          );
     final data = _data(response);
     final items = (data['items'] as List? ?? const [])
         .whereType<Map>()
@@ -40,7 +50,11 @@ final class HelpContentRepository {
   }
 
   Future<FAQ> getFAQ(String id) async {
-    final response = await _api.requestJson('/api/v2/faqs/$id', method: 'GET');
+    final response = await _cache.getOrLoad(
+      key: 'published-faq:$id',
+      ttl: const Duration(minutes: 15),
+      load: () => _api.requestJson('/api/v2/faqs/$id', method: 'GET'),
+    );
     return FAQ.fromJson(_normalize(_data(response), 'faqs'));
   }
 
@@ -50,16 +64,21 @@ final class HelpContentRepository {
     String? search,
     String? category,
   }) async {
-    final response = await _api.requestJson(
-      '/api/v2/documentation',
-      method: 'GET',
-      query: {
-        'page': '$page',
-        'per_page': '$perPage',
-        if (search?.trim().isNotEmpty == true) 'search': search!.trim(),
-        if (category?.trim().isNotEmpty == true) 'category': category!.trim(),
-      },
-    );
+    final query = {
+      'page': '$page',
+      'per_page': '$perPage',
+      if (search?.trim().isNotEmpty == true) 'search': search!.trim(),
+      if (category?.trim().isNotEmpty == true) 'category': category!.trim(),
+    };
+    Future<Map<String, dynamic>> load() =>
+        _api.requestJson('/api/v2/documentation', method: 'GET', query: query);
+    final response = search?.trim().isNotEmpty == true
+        ? await load()
+        : await _cache.getOrLoad(
+            key: 'published-documentation:${jsonEncode(query)}',
+            ttl: const Duration(minutes: 15),
+            load: load,
+          );
     final data = _data(response);
     final items = (data['items'] as List? ?? const [])
         .whereType<Map>()

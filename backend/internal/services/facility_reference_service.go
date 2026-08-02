@@ -1,8 +1,12 @@
 package services
 
 import (
+	"context"
+	"encoding/json"
 	"strings"
 	"time"
+
+	cachepkg "mediguide/internal/cache"
 
 	"github.com/google/uuid"
 	"gorm.io/gorm"
@@ -117,6 +121,19 @@ type facilityReferenceSpec struct {
 }
 
 func (s FacilityService) ListReferences(resource FacilityReference, in FacilityReferenceQuery) (*FacilityReferencePage, error) {
+	if strings.TrimSpace(in.Search) != "" {
+		return s.listReferencesUncached(resource, in)
+	}
+	encoded, _ := json.Marshal(struct {
+		Resource FacilityReference      `json:"resource"`
+		Query    FacilityReferenceQuery `json:"query"`
+	}{resource, in})
+	return cachepkg.GetOrLoad(context.Background(), s.Cache, "facility-references", string(encoded), 15*time.Minute, func() (*FacilityReferencePage, error) {
+		return s.listReferencesUncached(resource, in)
+	})
+}
+
+func (s FacilityService) listReferencesUncached(resource FacilityReference, in FacilityReferenceQuery) (*FacilityReferencePage, error) {
 	spec, ok := facilityReferenceSpecs[resource]
 	if !ok {
 		return nil, ErrFacilityInvalid
@@ -161,6 +178,13 @@ func (s FacilityService) ListReferences(resource FacilityReference, in FacilityR
 }
 
 func (s FacilityService) GetReference(resource FacilityReference, id uuid.UUID) (*FacilityReferenceItem, error) {
+	key := string(resource) + ":" + id.String()
+	return cachepkg.GetOrLoad(context.Background(), s.Cache, "facility-references", key, 30*time.Minute, func() (*FacilityReferenceItem, error) {
+		return s.getReferenceUncached(resource, id)
+	})
+}
+
+func (s FacilityService) getReferenceUncached(resource FacilityReference, id uuid.UUID) (*FacilityReferenceItem, error) {
 	spec, ok := facilityReferenceSpecs[resource]
 	if !ok {
 		return nil, ErrFacilityInvalid
@@ -183,6 +207,7 @@ func (s FacilityService) CreateReference(resource FacilityReference, in Facility
 	if err := s.DB.Table(spec.table).Create(&values).Error; err != nil {
 		return nil, err
 	}
+	s.invalidateReferenceCaches()
 	return s.GetReference(resource, values["id"].(uuid.UUID))
 }
 
@@ -204,6 +229,7 @@ func (s FacilityService) UpdateReference(resource FacilityReference, id uuid.UUI
 	if err := s.DB.Table(spec.table).Where("id = ? AND deleted_at IS NULL", id).Updates(values).Error; err != nil {
 		return nil, err
 	}
+	s.invalidateReferenceCaches()
 	return s.GetReference(resource, id)
 }
 
@@ -222,7 +248,18 @@ func (s FacilityService) DeleteReference(resource FacilityReference, id uuid.UUI
 	if result.RowsAffected == 0 {
 		return gorm.ErrRecordNotFound
 	}
+	s.invalidateReferenceCaches()
 	return nil
+}
+
+func (s FacilityService) invalidateReferenceCaches() {
+	if s.Cache == nil {
+		return
+	}
+	ctx := context.Background()
+	_ = s.Cache.InvalidateNamespace(ctx, "facility-references")
+	_ = s.Cache.InvalidateNamespace(ctx, "facility-hierarchy")
+	_ = s.Cache.InvalidateNamespace(ctx, "dashboard-aggregates")
 }
 
 func (s FacilityService) referenceHasChildren(resource FacilityReference, id uuid.UUID) bool {

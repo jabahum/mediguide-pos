@@ -7,7 +7,7 @@ import (
 )
 
 // ConsultantsTree groups consultants by region → city → specialty.
-func (s LegacyAPIService) ConsultantsTree(level int, filters map[string]string) (TreeResult, error) {
+func (s LegacyAPIService) consultantsTreeUncached(level int, filters map[string]string) (TreeResult, error) {
 	var rows []treeRow
 	query := s.DB.Table("consultants").
 		Where("deleted_at IS NULL").
@@ -58,7 +58,7 @@ func (s LegacyAPIService) ConsultantsTree(level int, filters map[string]string) 
 }
 
 // HealthFacilitiesTree groups facilities by region → district → facility level.
-func (s LegacyAPIService) HealthFacilitiesTree(level int, filters map[string]string) (TreeResult, error) {
+func (s LegacyAPIService) healthFacilitiesTreeUncached(level int, filters map[string]string) (TreeResult, error) {
 	var rows []treeRow
 
 	query := s.DB.Table("health_facilities hf").
@@ -103,7 +103,7 @@ func (s LegacyAPIService) HealthFacilitiesTree(level int, filters map[string]str
 }
 
 // MinistryDirectoryTree groups directory entries by region → district → ministry.
-func (s LegacyAPIService) MinistryDirectoryTree(level int, filters map[string]string) (TreeResult, error) {
+func (s LegacyAPIService) ministryDirectoryTreeUncached(level int, filters map[string]string) (TreeResult, error) {
 	var rows []treeRow
 
 	query := s.DB.Table("ministry_directory md").

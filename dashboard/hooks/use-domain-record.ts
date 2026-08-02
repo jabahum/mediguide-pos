@@ -1,8 +1,9 @@
 "use client"
 
 import { useQuery } from "@tanstack/react-query"
+import { staleTimeForDomain } from "@/lib/query-cache-policy"
 
 export function useDomainRecord<T>(domainKey:string,id:string,load:(id:string)=>Promise<T>){
-  const query=useQuery({queryKey:["backend",domainKey,"record",id],queryFn:()=>load(id),enabled:Boolean(id)})
+  const query=useQuery({queryKey:["backend",domainKey,"record",id],queryFn:()=>load(id),enabled:Boolean(id),staleTime:staleTimeForDomain(domainKey)})
   return{record:query.data??null,loading:query.isPending,error:query.error??null,refresh:query.refetch}
 }

@@ -3,7 +3,9 @@ package services
 import (
 	"errors"
 	"strings"
+	"time"
 
+	cachepkg "mediguide/internal/cache"
 	"mediguide/internal/models"
 
 	"github.com/google/uuid"
@@ -12,7 +14,10 @@ import (
 
 var ErrDrugReferenceInvalidPayload = errors.New("invalid drug reference payload")
 
-type DrugReferenceService struct{ DB *gorm.DB }
+type DrugReferenceService struct {
+	DB    *gorm.DB
+	Cache *cachepkg.Store
+}
 
 type DrugReferenceListInput struct {
 	Page   PageInput
@@ -47,19 +52,27 @@ type DrugNamedReferenceInput struct {
 }
 
 func (s DrugReferenceService) ListCategories(in DrugReferenceListInput) (*PageResult[models.DrugCategory], error) {
-	return listDrugReferences[models.DrugCategory](s.DB, in, "COALESCE(sort_order, 999999), name ASC")
+	return cachedDrugReferenceList(s, "categories", in, func() (*PageResult[models.DrugCategory], error) {
+		return listDrugReferences[models.DrugCategory](s.DB, in, "COALESCE(sort_order, 999999), name ASC")
+	})
 }
 
 func (s DrugReferenceService) ListTags(in DrugReferenceListInput) (*PageResult[models.DrugTag], error) {
-	return listDrugReferences[models.DrugTag](s.DB, in, "name ASC")
+	return cachedDrugReferenceList(s, "tags", in, func() (*PageResult[models.DrugTag], error) {
+		return listDrugReferences[models.DrugTag](s.DB, in, "name ASC")
+	})
 }
 
 func (s DrugReferenceService) ListClasses(in DrugReferenceListInput) (*PageResult[models.DrugClass], error) {
-	return listDrugReferences[models.DrugClass](s.DB, in, "name ASC")
+	return cachedDrugReferenceList(s, "classes", in, func() (*PageResult[models.DrugClass], error) {
+		return listDrugReferences[models.DrugClass](s.DB, in, "name ASC")
+	})
 }
 
 func (s DrugReferenceService) ListTherapeuticCategories(in DrugReferenceListInput) (*PageResult[models.TherapeuticCategory], error) {
-	return listDrugReferences[models.TherapeuticCategory](s.DB, in, "name ASC")
+	return cachedDrugReferenceList(s, "therapeutic-categories", in, func() (*PageResult[models.TherapeuticCategory], error) {
+		return listDrugReferences[models.TherapeuticCategory](s.DB, in, "name ASC")
+	})
 }
 
 func (s DrugReferenceService) GetCategory(id uuid.UUID) (*models.DrugCategory, error) {
@@ -83,7 +96,8 @@ func (s DrugReferenceService) CreateCategory(in DrugCategoryInput) (*models.Drug
 	if err := applyDrugCategoryInput(&item, in); err != nil {
 		return nil, err
 	}
-	return createDrugReference(s.DB, &item)
+	result, err := createDrugReference(s.DB, &item)
+	return invalidateDrugReferenceResult(s, result, err)
 }
 
 func (s DrugReferenceService) UpdateCategory(id uuid.UUID, in DrugCategoryInput) (*models.DrugCategory, error) {
@@ -94,7 +108,8 @@ func (s DrugReferenceService) UpdateCategory(id uuid.UUID, in DrugCategoryInput)
 	if err := applyDrugCategoryInput(item, in); err != nil {
 		return nil, err
 	}
-	return saveDrugReference(s.DB, item)
+	result, err := saveDrugReference(s.DB, item)
+	return invalidateDrugReferenceResult(s, result, err)
 }
 
 func (s DrugReferenceService) CreateTag(in DrugTagInput) (*models.DrugTag, error) {
@@ -102,7 +117,8 @@ func (s DrugReferenceService) CreateTag(in DrugTagInput) (*models.DrugTag, error
 	if err := applyDrugTagInput(&item, in); err != nil {
 		return nil, err
 	}
-	return createDrugReference(s.DB, &item)
+	result, err := createDrugReference(s.DB, &item)
+	return invalidateDrugReferenceResult(s, result, err)
 }
 
 func (s DrugReferenceService) UpdateTag(id uuid.UUID, in DrugTagInput) (*models.DrugTag, error) {
@@ -113,7 +129,8 @@ func (s DrugReferenceService) UpdateTag(id uuid.UUID, in DrugTagInput) (*models.
 	if err := applyDrugTagInput(item, in); err != nil {
 		return nil, err
 	}
-	return saveDrugReference(s.DB, item)
+	result, err := saveDrugReference(s.DB, item)
+	return invalidateDrugReferenceResult(s, result, err)
 }
 
 func (s DrugReferenceService) CreateClass(in DrugNamedReferenceInput) (*models.DrugClass, error) {
@@ -121,7 +138,8 @@ func (s DrugReferenceService) CreateClass(in DrugNamedReferenceInput) (*models.D
 	if err := applyNamedReference(&item.Name, &item.Description, &item.SortOrder, &item.Status, in); err != nil {
 		return nil, err
 	}
-	return createDrugReference(s.DB, &item)
+	result, err := createDrugReference(s.DB, &item)
+	return invalidateDrugReferenceResult(s, result, err)
 }
 
 func (s DrugReferenceService) UpdateClass(id uuid.UUID, in DrugNamedReferenceInput) (*models.DrugClass, error) {
@@ -132,7 +150,8 @@ func (s DrugReferenceService) UpdateClass(id uuid.UUID, in DrugNamedReferenceInp
 	if err := applyNamedReference(&item.Name, &item.Description, &item.SortOrder, &item.Status, in); err != nil {
 		return nil, err
 	}
-	return saveDrugReference(s.DB, item)
+	result, err := saveDrugReference(s.DB, item)
+	return invalidateDrugReferenceResult(s, result, err)
 }
 
 func (s DrugReferenceService) CreateTherapeuticCategory(in DrugNamedReferenceInput) (*models.TherapeuticCategory, error) {
@@ -140,7 +159,8 @@ func (s DrugReferenceService) CreateTherapeuticCategory(in DrugNamedReferenceInp
 	if err := applyNamedReference(&item.Name, &item.Description, &item.SortOrder, &item.Status, in); err != nil {
 		return nil, err
 	}
-	return createDrugReference(s.DB, &item)
+	result, err := createDrugReference(s.DB, &item)
+	return invalidateDrugReferenceResult(s, result, err)
 }
 
 func (s DrugReferenceService) UpdateTherapeuticCategory(id uuid.UUID, in DrugNamedReferenceInput) (*models.TherapeuticCategory, error) {
@@ -151,7 +171,8 @@ func (s DrugReferenceService) UpdateTherapeuticCategory(id uuid.UUID, in DrugNam
 	if err := applyNamedReference(&item.Name, &item.Description, &item.SortOrder, &item.Status, in); err != nil {
 		return nil, err
 	}
-	return saveDrugReference(s.DB, item)
+	result, err := saveDrugReference(s.DB, item)
+	return invalidateDrugReferenceResult(s, result, err)
 }
 
 func (s DrugReferenceService) Delete(kind string, id uuid.UUID) error {
@@ -175,7 +196,25 @@ func (s DrugReferenceService) Delete(kind string, id uuid.UUID) error {
 	if result.RowsAffected == 0 {
 		return gorm.ErrRecordNotFound
 	}
+	invalidateServiceCaches(s.Cache, "drug-references")
 	return nil
+}
+
+func cachedDrugReferenceList[T any](s DrugReferenceService, kind string, in DrugReferenceListInput, load func() (*PageResult[T], error)) (*PageResult[T], error) {
+	if strings.TrimSpace(in.Search) != "" {
+		return load()
+	}
+	return cachedServiceValue(s.Cache, "drug-references", struct {
+		Kind  string                 `json:"kind"`
+		Query DrugReferenceListInput `json:"query"`
+	}{kind, in}, 30*time.Minute, load)
+}
+
+func invalidateDrugReferenceResult[T any](s DrugReferenceService, item *T, err error) (*T, error) {
+	if err == nil {
+		invalidateServiceCaches(s.Cache, "drug-references")
+	}
+	return item, err
 }
 
 func listDrugReferences[T any](db *gorm.DB, in DrugReferenceListInput, order string) (*PageResult[T], error) {

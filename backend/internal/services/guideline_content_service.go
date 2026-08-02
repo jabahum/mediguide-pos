@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	cachepkg "mediguide/internal/cache"
 	"mediguide/internal/models"
 
 	"github.com/google/uuid"
@@ -19,7 +20,10 @@ var (
 	ErrGuidelineParentInUse     = errors.New("guideline hierarchy item has children")
 )
 
-type GuidelineContentService struct{ DB *gorm.DB }
+type GuidelineContentService struct {
+	DB    *gorm.DB
+	Cache *cachepkg.Store
+}
 
 type GuidelineContentQuery struct {
 	Page                                                                                                  PageInput
@@ -95,6 +99,16 @@ type MedicalGuidelineInput struct {
 }
 
 func (s GuidelineContentService) ListCategories(editor bool, in GuidelineContentQuery) (*PageResult[models.GuidelineCategory], error) {
+	if !editor && strings.TrimSpace(in.Search) == "" {
+		return cachedServiceValue(s.Cache, "guideline-taxonomy", struct {
+			Kind  string                `json:"kind"`
+			Query GuidelineContentQuery `json:"query"`
+		}{"categories", in}, 30*time.Minute, func() (*PageResult[models.GuidelineCategory], error) { return s.listCategoriesUncached(editor, in) })
+	}
+	return s.listCategoriesUncached(editor, in)
+}
+
+func (s GuidelineContentService) listCategoriesUncached(editor bool, in GuidelineContentQuery) (*PageResult[models.GuidelineCategory], error) {
 	p := in.Page.Normalize(20, 100)
 	q := s.DB.Table("guideline_categories gc").Select("gc.*, parent.name AS parent_name").Joins("LEFT JOIN guideline_categories parent ON parent.id=gc.parent_category_id").Where("gc.deleted_at IS NULL")
 	if !editor {
@@ -194,6 +208,7 @@ func (s GuidelineContentService) SaveCategory(id *uuid.UUID, in GuidelineCategor
 	if err := s.DB.Save(&item).Error; err != nil {
 		return nil, err
 	}
+	invalidateServiceCaches(s.Cache, "guideline-taxonomy", "public-guidelines", "guideline-search")
 	return s.GetCategory(item.ID, true)
 }
 
@@ -205,10 +220,24 @@ func (s GuidelineContentService) DeleteCategory(id uuid.UUID) error {
 	if count > 0 {
 		return ErrGuidelineParentInUse
 	}
-	return deleteExisting(s.DB, &models.GuidelineCategory{}, id)
+	err := deleteExisting(s.DB, &models.GuidelineCategory{}, id)
+	if err == nil {
+		invalidateServiceCaches(s.Cache, "guideline-taxonomy", "public-guidelines", "guideline-search")
+	}
+	return err
 }
 
 func (s GuidelineContentService) ListTags(in GuidelineContentQuery) (*PageResult[models.GuidelineTag], error) {
+	if strings.TrimSpace(in.Search) == "" {
+		return cachedServiceValue(s.Cache, "guideline-taxonomy", struct {
+			Kind  string                `json:"kind"`
+			Query GuidelineContentQuery `json:"query"`
+		}{"tags", in}, 30*time.Minute, func() (*PageResult[models.GuidelineTag], error) { return s.listTagsUncached(in) })
+	}
+	return s.listTagsUncached(in)
+}
+
+func (s GuidelineContentService) listTagsUncached(in GuidelineContentQuery) (*PageResult[models.GuidelineTag], error) {
 	p := in.Page.Normalize(20, 100)
 	q := s.DB.Model(&models.GuidelineTag{})
 	if search := strings.TrimSpace(in.Search); search != "" {
@@ -243,11 +272,16 @@ func (s GuidelineContentService) SaveTag(id *uuid.UUID, in GuidelineTagInput) (*
 	if err := s.DB.Save(&item).Error; err != nil {
 		return nil, err
 	}
+	invalidateServiceCaches(s.Cache, "guideline-taxonomy", "public-guidelines", "guideline-search")
 	return &item, nil
 }
 
 func (s GuidelineContentService) DeleteTag(id uuid.UUID) error {
-	return deleteExisting(s.DB, &models.GuidelineTag{}, id)
+	err := deleteExisting(s.DB, &models.GuidelineTag{}, id)
+	if err == nil {
+		invalidateServiceCaches(s.Cache, "guideline-taxonomy", "public-guidelines", "guideline-search")
+	}
+	return err
 }
 
 func (s GuidelineContentService) ListAbbreviations(in GuidelineContentQuery) (*PageResult[models.Abbreviation], error) {

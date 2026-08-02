@@ -1,20 +1,25 @@
 package app
 
 import (
+	"context"
 	"net/http"
 	"strings"
 	"time"
 
+	cachepkg "mediguide/internal/cache"
 	"mediguide/internal/config"
 	"mediguide/internal/db"
 	"mediguide/internal/handlers"
 	"mediguide/internal/mailer"
 	"mediguide/internal/middleware"
+	"mediguide/internal/redisx"
 	"mediguide/internal/services"
 	"mediguide/internal/storage"
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
+	"github.com/redis/go-redis/v9"
+	"github.com/rs/zerolog/log"
 	"gorm.io/gorm"
 
 	swaggerFiles "github.com/swaggo/files"
@@ -24,6 +29,8 @@ import (
 type App struct {
 	Router *gin.Engine
 	DB     *gorm.DB
+	Redis  *redis.Client
+	Cache  *cachepkg.Store
 }
 
 func New(cfg config.Config) (*App, error) {
@@ -39,8 +46,22 @@ func New(cfg config.Config) (*App, error) {
 	if err != nil {
 		return nil, err
 	}
+	redisClient, err := redisx.NewClient(cfg)
+	if err != nil {
+		return nil, err
+	}
+	redisContext, cancelRedis := context.WithTimeout(context.Background(), 3*time.Second)
+	if err := redisx.Ping(redisContext, redisClient); err != nil {
+		log.Warn().Err(err).Msg("redis unavailable during startup; fallbacks will be used")
+	}
+	cancelRedis()
+	cacheStore := cachepkg.New(redisClient, cfg.RedisKeyPrefix, cfg.CacheEnabled, cfg.CacheMaxItemBytes)
+	rateLimiter := middleware.NewRateLimiter(redisClient, cfg.RedisKeyPrefix, cfg.RateLimitEnabled)
 
 	r := gin.New()
+	if err := r.SetTrustedProxies(cfg.TrustedProxies); err != nil {
+		return nil, err
+	}
 	r.Use(gin.Recovery(), middleware.RequestLogger())
 
 	// Build CORS allow-list from config (comma-separated).
@@ -53,7 +74,7 @@ func New(cfg config.Config) (*App, error) {
 	r.Use(cors.New(cors.Config{
 		AllowOrigins:  allowedOrigins,
 		AllowHeaders:  []string{"Accept", "Authorization", "Content-Type", "If-None-Match"},
-		ExposeHeaders: []string{"ETag", "Last-Modified"},
+		ExposeHeaders: []string{"ETag", "Last-Modified", "Retry-After", "RateLimit-Limit", "RateLimit-Remaining", "RateLimit-Reset"},
 		AllowMethods:  []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
 	}))
 
@@ -75,30 +96,38 @@ func New(cfg config.Config) (*App, error) {
 			c.JSON(http.StatusServiceUnavailable, gin.H{"ok": false, "reason": "db_unavailable"})
 			return
 		}
+		if cfg.RateLimitEnabled || cfg.CacheEnabled {
+			ctx, cancel := context.WithTimeout(c.Request.Context(), time.Second)
+			defer cancel()
+			if err := redisx.Ping(ctx, redisClient); err != nil {
+				c.JSON(http.StatusServiceUnavailable, gin.H{"ok": false, "reason": "redis_unavailable"})
+				return
+			}
+		}
 		c.JSON(http.StatusOK, gin.H{"ok": true, "service": cfg.AppName})
 	})
 
 	authSvc := services.AuthService{DB: database, Cfg: cfg, Mailer: emailSender}
-	guidelineSvc := services.GuidelineService{DB: database, Store: store}
-	publicGuidelineSvc := services.PublicGuidelineService{DB: database, Store: store}
-	searchSvc := services.SearchService{DB: database}
+	guidelineSvc := services.GuidelineService{DB: database, Store: store, Cache: cacheStore}
+	publicGuidelineSvc := services.PublicGuidelineService{DB: database, Store: store, Cache: cacheStore}
+	searchSvc := services.SearchService{DB: database, Cache: cacheStore}
 	ragSvc := services.RAGService{DB: database, Search: searchSvc, Cfg: cfg}
 	protocolSvc := services.ProtocolService{DB: database}
 	syncSvc := services.SyncService{DB: database, Store: store, Cfg: cfg}
 	referenceSvc := services.ReferenceService{DB: database}
 	calculatorSvc := services.CalculatorService{DB: database, StaticSamplesDir: cfg.StaticSamplesDir}
 	drugSvc := services.DrugService{DB: database}
-	drugReferenceSvc := services.DrugReferenceService{DB: database}
+	drugReferenceSvc := services.DrugReferenceService{DB: database, Cache: cacheStore}
 	userSvc := services.UserService{DB: database}
 	notificationSvc := services.NotificationService{DB: database}
 	supportSvc := services.SupportService{DB: database}
-	helpContentSvc := services.HelpContentService{DB: database}
-	guidelineContentSvc := services.GuidelineContentService{DB: database}
+	helpContentSvc := services.HelpContentService{DB: database, Cache: cacheStore}
+	guidelineContentSvc := services.GuidelineContentService{DB: database, Cache: cacheStore}
 	emergencyProtocolSvc := services.EmergencyProtocolService{DB: database}
-	contentReferenceSvc := services.ContentReferenceService{DB: database}
+	contentReferenceSvc := services.ContentReferenceService{DB: database, Cache: cacheStore}
 	consultantSvc := services.ConsultantService{DB: database}
-	legacyAPISvc := services.LegacyAPIService{DB: database}
-	facilitySvc := services.FacilityService{DB: database}
+	legacyAPISvc := services.LegacyAPIService{DB: database, Cache: cacheStore}
+	facilitySvc := services.FacilityService{DB: database, Cache: cacheStore}
 
 	authH := handlers.AuthHandler{Service: authSvc}
 	guidelineH := handlers.GuidelineHandler{Service: guidelineSvc, MaxUploadMB: cfg.MaxUploadMB}
@@ -125,40 +154,60 @@ func New(cfg config.Config) (*App, error) {
 	facilityH := handlers.NewFacilityHandler(facilitySvc)
 
 	legacyV1 := r.Group("/api/v1")
-	legacyV1.GET("/stats", legacyAPIH.Stats)
-	legacyV1.GET("/consultants/tree", legacyAPIH.ConsultantsTree)
-	legacyV1.GET("/health-facilities/tree", legacyAPIH.HealthFacilitiesTree)
-	legacyV1.GET("/ministry-directory/tree", legacyAPIH.MinistryDirectoryTree)
+	legacyV1.GET("/stats", rateLimiter.Limit(middleware.Policy("legacy-public", 60, time.Minute, 10), middleware.IPIdentity), legacyAPIH.Stats)
+	legacyV1.GET("/consultants/tree", rateLimiter.Limit(middleware.Policy("legacy-public", 60, time.Minute, 10), middleware.IPIdentity), legacyAPIH.ConsultantsTree)
+	legacyV1.GET("/health-facilities/tree", rateLimiter.Limit(middleware.Policy("legacy-public", 60, time.Minute, 10), middleware.IPIdentity), legacyAPIH.HealthFacilitiesTree)
+	legacyV1.GET("/ministry-directory/tree", rateLimiter.Limit(middleware.Policy("legacy-public", 60, time.Minute, 10), middleware.IPIdentity), legacyAPIH.MinistryDirectoryTree)
 	legacyProtected := legacyV1.Group("")
-	legacyProtected.Use(middleware.AuthRequired(cfg, database))
+	legacyProtected.Use(middleware.AuthRequired(cfg, database), middleware.PrivateNoStore())
 	legacyProtected.GET("/overview", legacyAPIH.Overview)
 
 	legacyCompat := r.Group("/api")
-	legacyCompat.Use(middleware.AuthRequired(cfg, database))
+	legacyCompat.Use(middleware.AuthRequired(cfg, database), middleware.PrivateNoStore())
 	legacyCompat.GET("/overview", legacyAPIH.Overview)
 
 	public := r.Group("/api/public")
-	public.Use(middleware.PublicRateLimit(120, time.Minute))
+	public.Use(rateLimiter.Limit(middleware.Policy("public-guidelines", 120, time.Minute, 20), middleware.IPIdentity))
 	{
 		public.GET("/guidelines", publicGuidelineH.List)
 		public.GET("/guidelines/:id", publicGuidelineH.Get)
-		public.GET("/guidelines/:id/markdown", publicGuidelineH.Markdown)
+		public.GET("/guidelines/:id/markdown", rateLimiter.Limit(middleware.Policy("public-markdown", 60, time.Minute, 10), middleware.IPIdentity), publicGuidelineH.Markdown)
 	}
 
 	v2 := r.Group("/api/v2")
 	{
-		v2.POST("/auth/register", authH.Register)
-		v2.POST("/auth/login", authH.Login)
-		v2.POST("/auth/refresh", authH.Refresh)
-		v2.POST("/auth/password-reset/request", middleware.PublicRateLimit(5, 15*time.Minute), authH.RequestPasswordReset)
-		v2.POST("/auth/password-reset/confirm", middleware.PublicRateLimit(10, 15*time.Minute), authH.ConfirmPasswordReset)
-		v2.POST("/auth/email-verification/request", middleware.PublicRateLimit(5, 15*time.Minute), authH.RequestEmailVerification)
-		v2.POST("/auth/email-verification/confirm", middleware.PublicRateLimit(10, 15*time.Minute), authH.ConfirmEmailVerification)
+		privateNoStore := middleware.PrivateNoStore()
+		v2.POST("/auth/register", privateNoStore, rateLimiter.Limit(middleware.Policy("auth-register", 5, time.Hour, 1), middleware.IPIdentity), authH.Register)
+		v2.POST("/auth/login",
+			privateNoStore,
+			rateLimiter.Limit(middleware.Policy("auth-login-ip", 10, 5*time.Minute, 2), middleware.IPIdentity),
+			rateLimiter.Limit(middleware.Policy("auth-login-account", 5, 15*time.Minute, 0), middleware.IPAndJSONFieldIdentity("email")), authH.Login)
+		v2.POST("/auth/refresh",
+			privateNoStore,
+			rateLimiter.Limit(middleware.Policy("auth-refresh-ip", 60, time.Minute, 5), middleware.IPIdentity),
+			rateLimiter.Limit(middleware.Policy("auth-refresh-session", 30, time.Minute, 5), middleware.IPAndJSONFieldIdentity("refresh_token")), authH.Refresh)
+		v2.POST("/auth/password-reset/request",
+			privateNoStore,
+			rateLimiter.Limit(middleware.Policy("password-reset-ip", 5, 15*time.Minute, 0), middleware.IPIdentity),
+			rateLimiter.Limit(middleware.Policy("password-reset-account", 3, time.Hour, 0), middleware.IPAndJSONFieldIdentity("email")), authH.RequestPasswordReset)
+		v2.POST("/auth/password-reset/confirm",
+			privateNoStore,
+			rateLimiter.Limit(middleware.Policy("password-reset-confirm-ip", 10, 15*time.Minute, 0), middleware.IPIdentity),
+			rateLimiter.Limit(middleware.Policy("password-reset-confirm-token", 5, 15*time.Minute, 0), middleware.IPAndJSONFieldIdentity("token")), authH.ConfirmPasswordReset)
+		v2.POST("/auth/email-verification/request", privateNoStore, rateLimiter.Limit(middleware.Policy("email-verification-request", 5, 15*time.Minute, 0), middleware.IPAndJSONFieldIdentity("email")), authH.RequestEmailVerification)
+		v2.POST("/auth/email-verification/confirm", privateNoStore, rateLimiter.Limit(middleware.Policy("email-verification-confirm", 10, 15*time.Minute, 0), middleware.IPAndJSONFieldIdentity("token")), authH.ConfirmEmailVerification)
 		protected := v2.Group("")
-		protected.Use(middleware.AuthRequired(cfg, database))
+		protected.Use(
+			middleware.AuthRequired(cfg, database),
+			privateNoStore,
+			middleware.ByMethod(
+				rateLimiter.Limit(middleware.Policy("authenticated-read", 300, time.Minute, 30), middleware.UserIdentity),
+				rateLimiter.Limit(middleware.Policy("authenticated-write", 120, time.Minute, 20), middleware.UserIdentity),
+			),
+		)
 		protected.POST("/auth/logout", authH.Logout)
 		protected.GET("/me", authH.Me)
-		protected.POST("/me/password", authH.ChangePassword)
+		protected.POST("/me/password", rateLimiter.Limit(middleware.Policy("password-change", 5, time.Hour, 0), middleware.UserIdentity), authH.ChangePassword)
 
 		protected.GET("/calculators", middleware.RequireAnyPermission("calculator.read", "guideline.read"), calculatorH.List)
 		protected.GET("/calculators/:id", middleware.RequireAnyPermission("calculator.read", "guideline.read"), calculatorH.Get)
@@ -206,18 +255,18 @@ func New(cfg config.Config) (*App, error) {
 		protected.DELETE("/notification-templates/:id", middleware.RequirePermission("admin.all"), notificationH.DeleteTemplate)
 		protected.GET("/notification-campaigns", middleware.RequirePermission("admin.all"), notificationH.ListCampaigns)
 		protected.GET("/notification-campaigns/:id", middleware.RequirePermission("admin.all"), notificationH.GetCampaign)
-		protected.POST("/notification-campaigns", middleware.RequirePermission("admin.all"), notificationH.CreateCampaign)
+		protected.POST("/notification-campaigns", middleware.RequirePermission("admin.all"), rateLimiter.Limit(middleware.Policy("notification-campaign-write", 10, time.Hour, 0), middleware.UserIdentity), notificationH.CreateCampaign)
 		protected.PATCH("/notification-campaigns/:id", middleware.RequirePermission("admin.all"), notificationH.UpdateCampaign)
-		protected.PATCH("/notification-campaigns/:id/status", middleware.RequirePermission("admin.all"), notificationH.UpdateCampaignStatus)
+		protected.PATCH("/notification-campaigns/:id/status", middleware.RequirePermission("admin.all"), rateLimiter.Limit(middleware.Policy("notification-campaign-write", 10, time.Hour, 0), middleware.UserIdentity), notificationH.UpdateCampaignStatus)
 		protected.DELETE("/notification-campaigns/:id", middleware.RequirePermission("admin.all"), notificationH.DeleteCampaign)
 
 		protected.GET("/support/tickets", supportH.ListTickets)
 		protected.GET("/support/tickets/:id", supportH.GetTicket)
-		protected.POST("/support/tickets", supportH.CreateTicket)
+		protected.POST("/support/tickets", rateLimiter.Limit(middleware.Policy("support-ticket-create", 5, time.Hour, 1), middleware.UserIdentity), supportH.CreateTicket)
 		protected.PATCH("/support/tickets/:id", supportH.UpdateTicket)
 		protected.DELETE("/support/tickets/:id", supportH.DeleteTicket)
 		protected.GET("/support/tickets/:id/replies", supportH.ListReplies)
-		protected.POST("/support/tickets/:id/replies", supportH.CreateReply)
+		protected.POST("/support/tickets/:id/replies", rateLimiter.Limit(middleware.Policy("support-reply-create", 30, time.Minute, 5), middleware.UserIdentity), supportH.CreateReply)
 
 		protected.GET("/faqs", helpContentH.ListFAQs)
 		protected.GET("/faqs/:id", helpContentH.GetFAQ)
@@ -229,7 +278,7 @@ func New(cfg config.Config) (*App, error) {
 		protected.POST("/faq-tags", middleware.RequireAnyPermission("admin.all", "content.write", "guideline.write"), helpContentH.CreateTag)
 		protected.PATCH("/faq-tags/:id", middleware.RequireAnyPermission("admin.all", "content.write", "guideline.write"), helpContentH.UpdateTag)
 		protected.DELETE("/faq-tags/:id", middleware.RequireAnyPermission("admin.all", "content.write", "guideline.write"), helpContentH.DeleteTag)
-		protected.POST("/faq-tags/recalculate-usage", middleware.RequireAnyPermission("admin.all", "content.write", "guideline.write"), helpContentH.RecalculateTagUsage)
+		protected.POST("/faq-tags/recalculate-usage", middleware.RequireAnyPermission("admin.all", "content.write", "guideline.write"), rateLimiter.Limit(middleware.Policy("faq-tag-recalculation", 5, 15*time.Minute, 0), middleware.UserIdentity), helpContentH.RecalculateTagUsage)
 		protected.GET("/documentation", helpContentH.ListDocumentation)
 		protected.GET("/documentation/:id", helpContentH.GetDocumentation)
 		protected.POST("/documentation", middleware.RequireAnyPermission("admin.all", "content.write", "guideline.write"), helpContentH.CreateDocumentation)
@@ -308,20 +357,24 @@ func New(cfg config.Config) (*App, error) {
 		protected.GET("/guidelines/:id", middleware.RequirePermission("guideline.read"), guidelineH.Get)
 		protected.PATCH("/guidelines/:id", middleware.RequirePermission("guideline.write"), guidelineH.Update)
 		protected.POST("/guidelines/:id/versions", middleware.RequirePermission("guideline.write"), guidelineH.CreateVersion)
-		protected.POST("/guideline-versions/:id/upload", middleware.RequirePermission("guideline.write"), guidelineH.UploadPDF)
-		protected.POST("/guideline-versions/:id/publish", middleware.RequirePermission("guideline.publish"), guidelineH.Publish)
+		protected.POST("/guideline-versions/:id/upload", middleware.RequirePermission("guideline.write"), rateLimiter.Limit(middleware.Policy("guideline-upload", 10, time.Hour, 0), middleware.UserIdentity), rateLimiter.Concurrency("guideline-upload", 1, 15*time.Minute, middleware.UserIdentity), guidelineH.UploadPDF)
+		protected.POST("/guideline-versions/:id/publish", middleware.RequirePermission("guideline.publish"), rateLimiter.Limit(middleware.Policy("guideline-publish", 10, time.Hour, 0), middleware.UserIdentity), guidelineH.Publish)
 		protected.GET("/guideline-versions/:id/sections", middleware.RequirePermission("guideline.read"), guidelineH.Sections)
 		protected.GET("/guideline-versions/:id/chunks", middleware.RequirePermission("guideline.read"), guidelineH.Chunks)
 		protected.GET("/guideline-versions/:id/extracted/:format", middleware.RequirePermission("guideline.read"), guidelineH.ExtractedAsset)
 		protected.PUT("/guideline-versions/:id/extracted/markdown", middleware.RequirePermission("guideline.write"), guidelineH.UpdateMarkdown)
 
-		protected.GET("/search", middleware.RequirePermission("guideline.read"), searchH.Search)
-		protected.POST("/chat/ask", middleware.RequirePermission("chat.ask"), ragH.Ask)
+		protected.GET("/search", middleware.RequirePermission("guideline.read"), rateLimiter.Limit(middleware.Policy("guideline-search", 60, time.Minute, 10), middleware.UserIdentity), searchH.Search)
+		protected.POST("/chat/ask", middleware.RequirePermission("chat.ask"),
+			rateLimiter.Limit(middleware.Policy("ai-chat-minute", 10, time.Minute, 2), middleware.UserIdentity),
+			rateLimiter.Limit(middleware.Policy("ai-chat-daily", 100, 24*time.Hour, 0), middleware.UserIdentity),
+			rateLimiter.Concurrency("ai-chat-user", 2, 3*time.Minute, middleware.UserIdentity),
+			rateLimiter.Concurrency("ai-chat-global", 20, 3*time.Minute, middleware.StaticIdentity("global")), ragH.Ask)
 
 		protected.POST("/protocols", middleware.RequirePermission("protocol.write"), protocolH.Create)
 		protected.GET("/protocols", middleware.RequirePermission("protocol.read"), protocolH.List)
 		protected.GET("/protocols/:id", middleware.RequirePermission("protocol.read"), protocolH.Get)
-		protected.POST("/protocols/:id/run", middleware.RequirePermission("protocol.read"), protocolH.Run)
+		protected.POST("/protocols/:id/run", middleware.RequirePermission("protocol.read"), rateLimiter.Limit(middleware.Policy("protocol-run", 60, time.Minute, 10), middleware.UserIdentity), protocolH.Run)
 
 		protected.GET("/settings", middleware.RequirePermission("admin.all"), referenceH.ListSettings)
 		protected.POST("/settings", middleware.RequirePermission("admin.all"), referenceH.CreateSetting)
@@ -332,19 +385,19 @@ func New(cfg config.Config) (*App, error) {
 		protected.DELETE("/languages/:id", middleware.RequirePermission("admin.all"), contentReferenceH.DeleteLanguage)
 		protected.GET("/reading-progress", progressUsageH.ListProgress)
 		protected.GET("/reading-progress/:guidelineId", progressUsageH.GetProgress)
-		protected.PUT("/reading-progress/:guidelineId", progressUsageH.UpsertProgress)
+		protected.PUT("/reading-progress/:guidelineId", rateLimiter.Limit(middleware.Policy("reading-progress-write", 120, time.Minute, 20), middleware.UserIdentity), progressUsageH.UpsertProgress)
 		protected.DELETE("/reading-progress/:guidelineId", progressUsageH.DeleteProgress)
-		protected.POST("/usage/guidelines", progressUsageH.RecordGuidelineUsage)
-		protected.POST("/usage/abbreviations", progressUsageH.RecordAbbreviationUsage)
-		protected.POST("/usage/consultants", progressUsageH.RecordConsultantUsage)
-		protected.POST("/usage/ai", progressUsageH.RecordAIUsage)
-		protected.GET("/analytics/usage", middleware.RequireAnyPermission("admin.all", "analytics.read", "sync.read"), progressUsageH.UsageAggregates)
+		protected.POST("/usage/guidelines", rateLimiter.Limit(middleware.Policy("usage-event-write", 120, time.Minute, 20), middleware.UserIdentity), progressUsageH.RecordGuidelineUsage)
+		protected.POST("/usage/abbreviations", rateLimiter.Limit(middleware.Policy("usage-event-write", 120, time.Minute, 20), middleware.UserIdentity), progressUsageH.RecordAbbreviationUsage)
+		protected.POST("/usage/consultants", rateLimiter.Limit(middleware.Policy("usage-event-write", 120, time.Minute, 20), middleware.UserIdentity), progressUsageH.RecordConsultantUsage)
+		protected.POST("/usage/ai", rateLimiter.Limit(middleware.Policy("usage-event-write", 120, time.Minute, 20), middleware.UserIdentity), progressUsageH.RecordAIUsage)
+		protected.GET("/analytics/usage", middleware.RequireAnyPermission("admin.all", "analytics.read", "sync.read"), rateLimiter.Limit(middleware.Policy("analytics-read", 30, time.Minute, 5), middleware.UserIdentity), progressUsageH.UsageAggregates)
 		protected.GET("/conversations", conversationH.List)
-		protected.POST("/conversations", conversationH.Create)
+		protected.POST("/conversations", rateLimiter.Limit(middleware.Policy("conversation-create", 10, time.Hour, 2), middleware.UserIdentity), conversationH.Create)
 		protected.GET("/conversations/:id", conversationH.Get)
 		protected.DELETE("/conversations/:id", conversationH.Delete)
 		protected.GET("/conversations/:id/messages", conversationH.ListMessages)
-		protected.POST("/conversations/:id/messages", conversationH.CreateMessage)
+		protected.POST("/conversations/:id/messages", rateLimiter.Limit(middleware.Policy("conversation-message", 30, time.Minute, 5), middleware.UserIdentity), conversationH.CreateMessage)
 		protected.POST("/conversations/:id/messages/:messageId/read", conversationH.MarkRead)
 		protected.POST("/conversations/:id/messages/:messageId/reaction", conversationH.React)
 		protected.GET("/consultants", consultantH.List)
@@ -413,11 +466,18 @@ func New(cfg config.Config) (*App, error) {
 		protected.DELETE("/authorities/:id", middleware.RequireAnyPermission("admin.all", "facility.write"), facilityH.DeleteAuthority)
 
 		protected.GET("/sync/manifest", middleware.RequirePermission("sync.read"), syncH.Manifest)
-		protected.POST("/sync/packages", middleware.RequirePermission("admin.all"), syncH.CreatePackage)
-		protected.GET("/sync/packages/:id/download", middleware.RequirePermission("sync.read"), syncH.Download)
+		protected.POST("/sync/packages", middleware.RequirePermission("admin.all"), rateLimiter.Limit(middleware.Policy("sync-package-create", 5, time.Hour, 0), middleware.UserIdentity), rateLimiter.Concurrency("sync-package-create", 1, 30*time.Minute, middleware.UserIdentity), syncH.CreatePackage)
+		protected.GET("/sync/packages/:id/download", middleware.RequirePermission("sync.read"), rateLimiter.Limit(middleware.Policy("sync-download-url", 30, time.Minute, 5), middleware.UserIdentity), syncH.Download)
 
 	}
-	return &App{Router: r, DB: database}, nil
+	return &App{Router: r, DB: database, Redis: redisClient, Cache: cacheStore}, nil
+}
+
+func (a *App) Close() error {
+	if a == nil || a.Redis == nil {
+		return nil
+	}
+	return a.Redis.Close()
 }
 
 const swaggerChooserHTML = `<!doctype html>

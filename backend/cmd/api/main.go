@@ -41,6 +41,11 @@ func main() {
 	if err != nil {
 		log.Fatal().Err(err).Msg("failed to initialize app")
 	}
+	defer func() {
+		if err := application.Close(); err != nil {
+			log.Error().Err(err).Msg("failed to close application resources")
+		}
+	}()
 
 	srv := &http.Server{
 		Addr:              fmt.Sprintf(":%s", cfg.Port),

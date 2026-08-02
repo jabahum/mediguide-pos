@@ -13,6 +13,7 @@ import (
 	"strings"
 	"time"
 
+	cachepkg "mediguide/internal/cache"
 	"mediguide/internal/models"
 	"mediguide/internal/storage"
 
@@ -24,6 +25,7 @@ import (
 type GuidelineService struct {
 	DB    *gorm.DB
 	Store storage.ObjectStore
+	Cache *cachepkg.Store
 }
 
 type CreateGuidelineInput struct {
@@ -104,7 +106,11 @@ func (s GuidelineService) UpdateDocument(id uuid.UUID, in UpdateGuidelineInput) 
 	}).Error; err != nil {
 		return nil, err
 	}
-	return s.GetDocument(id)
+	result, err := s.GetDocument(id)
+	if err == nil {
+		s.invalidatePublishedCaches(context.Background())
+	}
+	return result, err
 }
 func (s GuidelineService) CreateVersion(docID uuid.UUID, in CreateVersionInput) (*models.GuidelineVersion, error) {
 	v := models.GuidelineVersion{DocumentID: docID, Version: in.Version, PublicationDate: in.PublicationDate, ReviewDate: in.ReviewDate, Status: "draft"}
@@ -139,7 +145,7 @@ func (s GuidelineService) UploadPDF(ctx context.Context, versionID uuid.UUID, fi
 }
 func (s GuidelineService) PublishVersion(versionID uuid.UUID, userID uuid.UUID) error {
 	now := time.Now().Format(time.RFC3339)
-	return s.DB.Transaction(func(tx *gorm.DB) error {
+	err := s.DB.Transaction(func(tx *gorm.DB) error {
 		var v models.GuidelineVersion
 		if err := tx.First(&v, "id = ?", versionID).Error; err != nil {
 			return err
@@ -155,6 +161,10 @@ func (s GuidelineService) PublishVersion(versionID uuid.UUID, userID uuid.UUID) 
 		}
 		return tx.Model(&models.GuidelineDocument{}).Where("id = ?", v.DocumentID).Update("current_version_id", versionID).Error
 	})
+	if err == nil {
+		s.invalidatePublishedCaches(context.Background())
+	}
+	return err
 }
 func (s GuidelineService) Sections(versionID uuid.UUID, page PageInput) (*PageResult[models.GuidelineSection], error) {
 	var rows []models.GuidelineSection
@@ -243,7 +253,19 @@ func (s GuidelineService) UpdateMarkdown(ctx context.Context, versionID uuid.UUI
 	); err != nil {
 		return err
 	}
-	return s.DB.Model(&version).Update("updated_at", time.Now()).Error
+	err := s.DB.Model(&version).Update("updated_at", time.Now()).Error
+	if err == nil {
+		s.invalidatePublishedCaches(ctx)
+	}
+	return err
+}
+
+func (s GuidelineService) invalidatePublishedCaches(ctx context.Context) {
+	if s.Cache == nil {
+		return
+	}
+	_ = s.Cache.InvalidateNamespace(ctx, "public-guidelines")
+	_ = s.Cache.InvalidateNamespace(ctx, "guideline-search")
 }
 
 func validateMarkdownUpdate(version *models.GuidelineVersion, content []byte) error {

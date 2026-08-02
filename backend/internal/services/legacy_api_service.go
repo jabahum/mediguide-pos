@@ -1,11 +1,54 @@
 package services
 
 import (
+	"context"
+	"encoding/json"
+	"strconv"
+	"time"
+
 	"gorm.io/gorm"
+	cachepkg "mediguide/internal/cache"
 )
 
 type LegacyAPIService struct {
-	DB *gorm.DB
+	DB    *gorm.DB
+	Cache *cachepkg.Store
+}
+
+func (s LegacyAPIService) Overview() (OverviewResult, error) {
+	return cachepkg.GetOrLoad(context.Background(), s.Cache, "dashboard-aggregates", "overview", 45*time.Second, s.overviewUncached)
+}
+
+func (s LegacyAPIService) Stats(userID string) (StatsResult, error) {
+	if userID != "" {
+		return s.statsUncached(userID)
+	}
+	return cachepkg.GetOrLoad(context.Background(), s.Cache, "dashboard-aggregates", "public-stats", 45*time.Second, func() (StatsResult, error) {
+		return s.statsUncached("")
+	})
+}
+
+func (s LegacyAPIService) ConsultantsTree(level int, filters map[string]string) (TreeResult, error) {
+	return cachepkg.GetOrLoad(context.Background(), s.Cache, "consultant-hierarchy", treeCacheKey(level, filters), 10*time.Minute, func() (TreeResult, error) {
+		return s.consultantsTreeUncached(level, filters)
+	})
+}
+
+func (s LegacyAPIService) HealthFacilitiesTree(level int, filters map[string]string) (TreeResult, error) {
+	return cachepkg.GetOrLoad(context.Background(), s.Cache, "facility-hierarchy", treeCacheKey(level, filters), 10*time.Minute, func() (TreeResult, error) {
+		return s.healthFacilitiesTreeUncached(level, filters)
+	})
+}
+
+func (s LegacyAPIService) MinistryDirectoryTree(level int, filters map[string]string) (TreeResult, error) {
+	return cachepkg.GetOrLoad(context.Background(), s.Cache, "ministry-hierarchy", treeCacheKey(level, filters), 10*time.Minute, func() (TreeResult, error) {
+		return s.ministryDirectoryTreeUncached(level, filters)
+	})
+}
+
+func treeCacheKey(level int, filters map[string]string) string {
+	encoded, _ := json.Marshal(filters)
+	return strconv.Itoa(level) + ":" + string(encoded)
 }
 
 type TreeNode struct {

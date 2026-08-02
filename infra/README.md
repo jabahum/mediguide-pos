@@ -23,6 +23,9 @@ Both environments use the same Compose project and `guidelines` service. The
 Guidelines application is started, stopped, inspected, and networked as part of
 the complete MediGuide stack.
 
+Distributed rate-limit and cache tuning, failure behavior, and data exclusions
+are documented in [`../docs/rate-limits-and-cache.md`](../docs/rate-limits-and-cache.md).
+
 ## Public guideline API
 
 The public site reads published content through the backend policy boundary:

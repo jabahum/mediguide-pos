@@ -1,10 +1,15 @@
+import 'dart:convert';
+
 import '../models/models.dart';
 import '../services/backend_api_service.dart';
+import '../services/ttl_response_cache.dart';
 
 final class FacilityRepository {
-  FacilityRepository(this._api);
+  FacilityRepository(this._api, {TtlResponseCache? cache})
+    : _cache = cache ?? TtlResponseCache();
 
   final BackendApiService _api;
+  final TtlResponseCache _cache;
 
   Future<PagedResult<ApiRecord>> listFacilities({
     required int page,
@@ -65,11 +70,16 @@ final class FacilityRepository {
     int perPage = 100,
     Map<String, String> query = const {},
   }) async {
-    final response = await _api.requestJson(
-      path,
-      method: 'GET',
-      query: {'page': '$page', 'per_page': '$perPage', ...query},
-    );
+    final requestQuery = {'page': '$page', 'per_page': '$perPage', ...query};
+    Future<Map<String, dynamic>> load() =>
+        _api.requestJson(path, method: 'GET', query: requestQuery);
+    final response = collectionName == HealthFacility.collection
+        ? await load()
+        : await _cache.getOrLoad(
+            key: 'facility-reference:$path:${jsonEncode(requestQuery)}',
+            ttl: const Duration(minutes: 30),
+            load: load,
+          );
     final data = _data(response);
     final items = (data['items'] as List? ?? const [])
         .whereType<Map>()

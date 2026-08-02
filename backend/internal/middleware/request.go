@@ -11,6 +11,18 @@ func RequestLogger() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		start := time.Now()
 		c.Next()
-		log.Info().Str("method", c.Request.Method).Str("path", c.Request.URL.Path).Int("status", c.Writer.Status()).Dur("latency", time.Since(start)).Msg("request")
+		route := c.FullPath()
+		if route == "" {
+			route = "unmatched"
+		}
+		log.Info().Str("method", c.Request.Method).Str("route", route).Int("status", c.Writer.Status()).Dur("latency", time.Since(start)).Msg("request")
+	}
+}
+
+func PrivateNoStore() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		c.Header("Cache-Control", "private, no-store")
+		c.Header("Pragma", "no-cache")
+		c.Next()
 	}
 }

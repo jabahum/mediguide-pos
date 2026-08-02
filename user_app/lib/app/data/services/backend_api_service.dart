@@ -9,6 +9,28 @@ import 'package:user_app/app/utils/constants.dart';
 import '../models/models.dart';
 import 'main_service.dart';
 
+class BackendApiException implements Exception {
+  BackendApiException(
+    this.message, {
+    required this.statusCode,
+    this.retryAfter,
+  });
+
+  final String message;
+  final int statusCode;
+  final Duration? retryAfter;
+
+  bool get isRateLimited => statusCode == 429;
+
+  @override
+  String toString() {
+    if (isRateLimited && retryAfter != null) {
+      return '$message Try again in ${retryAfter!.inSeconds} seconds.';
+    }
+    return message;
+  }
+}
+
 class BackendApiService extends GetxService {
   static BackendApiService get to => Get.find();
 
@@ -292,7 +314,11 @@ class BackendApiService extends GetxService {
         : <String, dynamic>{'data': decoded};
 
     if (response.statusCode >= 400 || map['success'] == false) {
-      throw Exception(_extractErrorMessage(map));
+      throw BackendApiException(
+        _extractErrorMessage(map),
+        statusCode: response.statusCode,
+        retryAfter: _parseRetryAfter(response.headers['retry-after']),
+      );
     }
 
     return map;
@@ -325,8 +351,10 @@ class BackendApiService extends GetxService {
       },
     );
     if (response.statusCode >= 400) {
-      throw Exception(
+      throw BackendApiException(
         'Failed to load calculator content (${response.statusCode})',
+        statusCode: response.statusCode,
+        retryAfter: _parseRetryAfter(response.headers['retry-after']),
       );
     }
     return utf8.decode(response.bodyBytes);
@@ -487,4 +515,14 @@ class BackendApiService extends GetxService {
 
     return <String, dynamic>{};
   }
+}
+
+Duration? _parseRetryAfter(String? value) {
+  if (value == null || value.trim().isEmpty) return null;
+  final seconds = int.tryParse(value.trim());
+  if (seconds != null && seconds >= 0) return Duration(seconds: seconds);
+  final date = DateTime.tryParse(value);
+  if (date == null) return null;
+  final difference = date.toUtc().difference(DateTime.now().toUtc());
+  return difference.isNegative ? Duration.zero : difference;
 }

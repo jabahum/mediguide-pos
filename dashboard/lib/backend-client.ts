@@ -11,6 +11,7 @@ export class BackendRequestError extends Error {
   constructor(
     message: string,
     public readonly status: number,
+    public readonly retryAfterSeconds?: number,
   ) {
     super(message)
     this.name = "BackendRequestError"
@@ -241,7 +242,12 @@ export class BackendClient {
 
     if (!response.ok) {
       const errorMessage = await extractError(response)
-      throw new BackendRequestError(errorMessage, response.status)
+      const retryAfterSeconds = parseRetryAfter(response.headers.get("Retry-After"))
+      const message =
+        response.status === 429 && retryAfterSeconds !== undefined
+          ? `${errorMessage} Try again in ${retryAfterSeconds} seconds.`
+          : errorMessage
+      throw new BackendRequestError(message, response.status, retryAfterSeconds)
     }
 
     if (options.responseType === "blob") {
@@ -276,6 +282,15 @@ export class BackendClient {
     )
     return { token, record, session }
   }
+}
+
+function parseRetryAfter(value: string | null): number | undefined {
+  if (!value) return undefined
+  const seconds = Number(value)
+  if (Number.isFinite(seconds) && seconds >= 0) return Math.ceil(seconds)
+  const date = Date.parse(value)
+  if (Number.isNaN(date)) return undefined
+  return Math.max(0, Math.ceil((date - Date.now()) / 1000))
 }
 
 let backendClientInstance: BackendClient | null = null

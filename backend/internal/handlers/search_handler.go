@@ -26,7 +26,7 @@ type SearchHandler struct{ Service services.SearchService }
 // @Router /api/v2/search [get]
 func (h SearchHandler) Search(c *gin.Context) {
 	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "10"))
-	rows, err := h.Service.Search(c.Query("q"), c.Query("program_area"), limit)
+	rows, err := h.Service.SearchContext(c.Request.Context(), c.Query("q"), c.Query("program_area"), limit)
 	if err != nil {
 		httpx.Error(c, 500, "internal server error")
 		return

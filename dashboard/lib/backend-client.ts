@@ -2,6 +2,9 @@ const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_BASE_URL?.trim() || "http://127.0.0.1:8080"
 
 const AUTH_COOKIE_NAME = "mediguide_auth"
+const AUTH_STORAGE_KEY = "mediguide.auth.v1"
+const AUTH_SNAPSHOT_VERSION = 1
+const EXPIRY_CLOCK_SKEW_MS = 30_000
 type JsonRecord = Record<string, any>
 
 export class BackendRequestError extends Error {
@@ -20,10 +23,12 @@ type RequestOptions = RequestInit & {
 }
 
 type AuthSnapshot = {
+  version: typeof AUTH_SNAPSHOT_VERSION
   token: string
-  refreshToken?: string
+  refreshToken: string
   record: JsonRecord | null
-  model: JsonRecord | null
+  expiresAt: string
+  refreshExpiresAt: string
 }
 
 export type LoginRequest = {
@@ -40,22 +45,32 @@ export type AuthSession = {
   user: JsonRecord
 }
 
-class BackendAuthStore {
+export class BackendAuthStore {
   token = ""
   refreshToken = ""
   record: JsonRecord | null = null
   model: JsonRecord | null = null
+  expiresAt = ""
+  refreshExpiresAt = ""
   private listeners = new Set<() => void>()
 
   get isValid() {
     return Boolean(this.token && this.record)
   }
 
-  save(token: string, record: JsonRecord | null, refreshToken = "") {
+  save(
+    token: string,
+    record: JsonRecord | null,
+    refreshToken = "",
+    expiresAt = "",
+    refreshExpiresAt = "",
+  ) {
     this.token = token
     this.refreshToken = refreshToken
     this.record = record
     this.model = record
+    this.expiresAt = expiresAt
+    this.refreshExpiresAt = refreshExpiresAt
     this.emit()
   }
 
@@ -64,32 +79,45 @@ class BackendAuthStore {
     this.refreshToken = ""
     this.record = null
     this.model = null
+    this.expiresAt = ""
+    this.refreshExpiresAt = ""
     this.emit()
   }
 
-  exportToCookie(): string {
+  serialize(): string {
     const snapshot: AuthSnapshot = {
+      version: AUTH_SNAPSHOT_VERSION,
       token: this.token,
       refreshToken: this.refreshToken,
       record: this.record,
-      model: this.model,
+      expiresAt: this.expiresAt,
+      refreshExpiresAt: this.refreshExpiresAt,
     }
-    const value = encodeURIComponent(JSON.stringify(snapshot))
-    return `${AUTH_COOKIE_NAME}=${value}; Path=/; SameSite=Lax`
+    return JSON.stringify(snapshot)
   }
 
-  loadFromCookie(cookie: string) {
-    const parsed = parseCookie(cookie, AUTH_COOKIE_NAME)
-    if (!parsed) return
+  restore(serialized: string): boolean {
     try {
-      const snapshot = JSON.parse(decodeURIComponent(parsed)) as AuthSnapshot
+      const snapshot = JSON.parse(serialized) as Partial<AuthSnapshot>
+      if (!snapshot.token || !snapshot.record) return false
       this.token = snapshot.token || ""
       this.refreshToken = snapshot.refreshToken || ""
       this.record = snapshot.record || null
-      this.model = snapshot.model || snapshot.record || null
+      this.model = this.record
+      this.expiresAt = snapshot.expiresAt || ""
+      this.refreshExpiresAt = snapshot.refreshExpiresAt || ""
+      return true
     } catch {
-      this.clear()
+      return false
     }
+  }
+
+  isAccessTokenExpired(now = Date.now()) {
+    return isExpired(this.expiresAt, now)
+  }
+
+  isRefreshTokenExpired(now = Date.now()) {
+    return isExpired(this.refreshExpiresAt, now)
   }
 
   onChange(listener: () => void) {
@@ -145,6 +173,26 @@ export class BackendClient {
     return this.saveSession(session)
   }
 
+  async ensureSession() {
+    if (!this.authStore.isValid) return false
+    if (!this.authStore.isAccessTokenExpired()) return true
+    if (
+      !this.authStore.refreshToken ||
+      this.authStore.isRefreshTokenExpired()
+    ) {
+      this.authStore.clear()
+      return false
+    }
+
+    try {
+      await this.refreshAuth()
+      return true
+    } catch {
+      this.authStore.clear()
+      return false
+    }
+  }
+
   async currentUser() {
     const user = await this.request<JsonRecord>("/api/v2/me")
     const record = normalizeRecord("users", user)
@@ -152,6 +200,8 @@ export class BackendClient {
       this.authStore.token,
       record,
       this.authStore.refreshToken,
+      this.authStore.expiresAt,
+      this.authStore.refreshExpiresAt,
     )
     return record
   }
@@ -217,7 +267,13 @@ export class BackendClient {
       ? session.token
       : `Bearer ${session.token}`
     const record = normalizeRecord("users", session.user)
-    this.authStore.save(token, record, session.refresh_token)
+    this.authStore.save(
+      token,
+      record,
+      session.refresh_token,
+      session.expires_at,
+      session.refresh_expires_at,
+    )
     return { token, record, session }
   }
 }
@@ -228,10 +284,10 @@ export function createBackendClient(): BackendClient {
   if (backendClientInstance) return backendClientInstance
 
   const client = new BackendClient()
-  if (typeof document !== "undefined") {
-    client.authStore.loadFromCookie(document.cookie || "")
+  if (typeof window !== "undefined") {
+    restoreBrowserSession(client)
     client.authStore.onChange(() => {
-      document.cookie = client.authStore.exportToCookie()
+      persistBrowserSession(client)
     })
   }
 
@@ -389,6 +445,52 @@ function parseCookie(cookie: string, name: string) {
     .map((part) => part.trim())
     .find((part) => part.startsWith(`${name}=`))
   return entry ? entry.slice(name.length + 1) : null
+}
+
+function restoreBrowserSession(client: BackendClient) {
+  try {
+    const stored = window.localStorage.getItem(AUTH_STORAGE_KEY)
+    if (stored && client.authStore.restore(stored)) {
+      clearLegacyAuthCookie()
+      return
+    }
+    if (stored) window.localStorage.removeItem(AUTH_STORAGE_KEY)
+
+    const legacyValue = parseCookie(document.cookie || "", AUTH_COOKIE_NAME)
+    if (legacyValue) {
+      const decoded = decodeURIComponent(legacyValue)
+      if (client.authStore.restore(decoded)) {
+        persistBrowserSession(client)
+      }
+    }
+  } catch {
+    // Storage can be unavailable in hardened or private browser contexts.
+  } finally {
+    clearLegacyAuthCookie()
+  }
+}
+
+function persistBrowserSession(client: BackendClient) {
+  try {
+    if (client.authStore.isValid) {
+      window.localStorage.setItem(AUTH_STORAGE_KEY, client.authStore.serialize())
+    } else {
+      window.localStorage.removeItem(AUTH_STORAGE_KEY)
+    }
+  } catch {
+    // Keep the in-memory session usable even when persistence is unavailable.
+  }
+}
+
+function clearLegacyAuthCookie() {
+  if (typeof document === "undefined") return
+  document.cookie = `${AUTH_COOKIE_NAME}=; Path=/; Max-Age=0; SameSite=Lax`
+}
+
+function isExpired(value: string, now: number) {
+  if (!value) return false
+  const expiresAt = Date.parse(value)
+  return Number.isNaN(expiresAt) || expiresAt <= now + EXPIRY_CLOCK_SKEW_MS
 }
 
 async function extractError(response: Response) {

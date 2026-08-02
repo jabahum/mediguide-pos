@@ -24,7 +24,7 @@ static `.to` or `Get.find` consumer migrates.
 | Authentication/session | `AuthService` compatibility adapter | `AuthController`, `AuthState`, biometric notifier | Application | Forms, session and profile actions migrated; router pending |
 | Core dependencies | GetX service registration | `core_providers.dart` | Application | Provider graph added; bridge retained |
 | Registration/recovery | Removed GetX controllers | Auth/recovery notifiers | Route | Migrated |
-| Settings/theme/language | `MainService`, language controller | Settings notifier | Application | Theme migrated; language pending |
+| Settings/theme/language | `MainService` update bridge | Settings and language notifiers | Application | Theme and language migrated; app-update state pending |
 | Guidelines/reading | GetX feature controllers | Repository-backed families | Route/resource | Pending |
 | Drugs/calculators | GetX feature controllers | Repository-backed families | Route/resource | Pending |
 | Facilities/consultants | GetX feature controllers | Repository-backed families | Route/resource | Pending |

@@ -53,9 +53,6 @@ Future<void> _initServices() async {
 
   // Initialize AI Context service for context-aware AI assistance
   await Get.putAsync(() => AiContextService().init());
-
-  // Initialize LanguageController for language management
-  // Get.put<LanguageController>(LanguageController(), permanent: true);
 }
 
 class MyApp extends ConsumerWidget {

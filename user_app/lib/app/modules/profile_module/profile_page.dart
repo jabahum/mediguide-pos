@@ -9,6 +9,7 @@ import '../../data/services/main_service.dart';
 import '../../features/auth/auth_controller.dart';
 import '../../features/auth/auth_state.dart';
 import '../../features/auth/biometric_controller.dart';
+import '../../features/settings/language_controller.dart';
 import '../../providers/core_providers.dart';
 import '../../routes/app_pages.dart';
 import '../../translations/app_translations.dart';
@@ -33,6 +34,12 @@ class ProfilePage extends ConsumerWidget {
     final auth = ref.watch(authControllerProvider).valueOrNull;
     final isLoading = auth?.phase == AuthPhase.refreshing;
     final biometric = ref.watch(biometricControllerProvider).valueOrNull;
+    final languageName = ref.watch(
+      languageControllerProvider.select(
+        (value) =>
+            value.valueOrNull?.displayName ?? AppTranslationKey.english.tr,
+      ),
+    );
 
     return Scaffold(
       appBar: AppBar(
@@ -107,7 +114,7 @@ class ProfilePage extends ConsumerWidget {
               _SettingsTile(
                 icon: LucideIcons.languages,
                 title: AppTranslationKey.language.tr,
-                subtitle: _languageDisplayName(),
+                subtitle: languageName,
                 onTap: () => LanguageBottomSheet.show(),
               ),
             ],
@@ -302,15 +309,6 @@ class ProfilePage extends ConsumerWidget {
         title: AppTranslationKey.error.tr,
         description: AppTranslationKey.ratingFailed.tr,
       );
-    }
-  }
-
-  String _languageDisplayName() {
-    try {
-      return LanguageController.to.currentLanguage?.shortDisplayName ??
-          AppTranslationKey.english.tr;
-    } catch (_) {
-      return AppTranslationKey.english.tr;
     }
   }
 

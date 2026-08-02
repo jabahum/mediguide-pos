@@ -2,27 +2,99 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:form_builder_validators/form_builder_validators.dart';
 import 'package:form_builder_phone_field/form_builder_phone_field.dart';
 import 'package:get/get.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:flex_color_scheme/flex_color_scheme.dart';
+import 'package:toastification/toastification.dart';
+import '../../data/models/models.dart';
+import '../../features/auth/auth_controller.dart';
+import '../../features/auth/auth_state.dart';
 import '../../routes/app_pages.dart';
 import '../../translations/app_translations.dart';
 import '../../utils/app_spacing.dart';
 import '../../utils/responsive.dart';
+import '../../utils/common.dart';
 import '../../widgets/copyright_terms_widget.dart';
 import '../../widgets/app_logo.dart';
 import '../../widgets/app_button.dart';
 import '../../widgets/glass_card.dart';
-import '../../data/enums/user_enums.dart';
-import 'register_controller.dart';
 
-class RegisterPage extends GetWidget<RegisterController> {
+final _registerPasswordVisibleProvider = StateProvider.autoDispose<bool>(
+  (ref) => false,
+);
+
+class RegisterPage extends ConsumerStatefulWidget {
   const RegisterPage({super.key});
 
   @override
+  ConsumerState<RegisterPage> createState() => _RegisterPageState();
+}
+
+class _RegisterPageState extends ConsumerState<RegisterPage> {
+  final _formKey = GlobalKey<FormBuilderState>();
+
+  String? _licenseNumberValidator(String? value) {
+    if (value == null || value.trim().isEmpty) {
+      return 'License number is required';
+    }
+    if (value.trim().length < 3) {
+      return 'License number must be at least 3 characters';
+    }
+    return null;
+  }
+
+  Future<void> _submit() async {
+    if (!(_formKey.currentState?.saveAndValidate() ?? false)) return;
+    final formData = _formKey.currentState!.value;
+    if (formData['agreeToTerms'] != true) {
+      Common.quickToast(
+        type: ToastificationType.error,
+        title: AppTranslationKey.registrationError,
+        description: AppTranslationKey.pleaseAgreeToTerms,
+      );
+      return;
+    }
+
+    try {
+      final userData = User.forCreate(
+        email: formData['email'] as String,
+        password: formData['password'] as String,
+        name: formData['fullName'] as String,
+        role: UserRole.healthcareProvider,
+        status: UserStatus.pendingActivation,
+        phone: formData['phoneNumber'] as String?,
+        alternativePhone: formData['alternativePhone'] as String?,
+        licenseNumber: formData['licenseNumber'] as String?,
+        specialization: formData['specialization'] as String?,
+        preferredLanguage: PreferredLanguage.english,
+      );
+      final registered = await ref
+          .read(authControllerProvider.notifier)
+          .register(
+            email: formData['email'] as String,
+            password: formData['password'] as String,
+            passwordConfirm: formData['password'] as String,
+            additionalData: userData,
+          );
+      if (registered && mounted) Get.offAllNamed(AppRoutes.main);
+    } catch (error) {
+      if (!mounted) return;
+      Common.quickToast(
+        type: ToastificationType.error,
+        title: AppTranslationKey.registrationError,
+        description: Common.parseApiError(error),
+      );
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final auth = ref.watch(authControllerProvider).valueOrNull;
+    final isLoading = auth?.phase == AuthPhase.authenticating;
+    final isPasswordVisible = ref.watch(_registerPasswordVisibleProvider);
     final theme = Theme.of(context);
     final size = MediaQuery.of(context).size;
 
@@ -75,7 +147,7 @@ class RegisterPage extends GetWidget<RegisterController> {
                       ),
                       child: GlassCard.auth(
                         child: FormBuilder(
-                          key: controller.formKey,
+                          key: _formKey,
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.stretch,
                             children: [
@@ -261,7 +333,7 @@ class RegisterPage extends GetWidget<RegisterController> {
                                     ),
                                   ),
                                 ),
-                                validator: controller.licenseNumberValidator,
+                                validator: _licenseNumberValidator,
                               ),
 
                               AppSpacing.fieldGap,
@@ -303,43 +375,46 @@ class RegisterPage extends GetWidget<RegisterController> {
                               AppSpacing.gapMd,
 
                               // Password Field
-                              Obx(
-                                () => FormBuilderTextField(
-                                  name: 'password',
-                                  obscureText:
-                                      !controller.isPasswordVisible.value,
-                                  decoration: InputDecoration(
-                                    labelText: AppTranslationKey.password.tr,
-                                    prefixIcon: Icon(
-                                      LucideIcons.lock,
+                              FormBuilderTextField(
+                                name: 'password',
+                                obscureText: !isPasswordVisible,
+                                decoration: InputDecoration(
+                                  labelText: AppTranslationKey.password.tr,
+                                  prefixIcon: Icon(
+                                    LucideIcons.lock,
+                                    color: theme.colorScheme.primary,
+                                  ),
+                                  suffixIcon: IconButton(
+                                    icon: Icon(
+                                      isPasswordVisible
+                                          ? LucideIcons.eyeOff
+                                          : LucideIcons.eye,
                                       color: theme.colorScheme.primary,
                                     ),
-                                    suffixIcon: IconButton(
-                                      icon: Icon(
-                                        controller.isPasswordVisible.value
-                                            ? LucideIcons.eyeOff
-                                            : LucideIcons.eye,
-                                        color: theme.colorScheme.primary,
-                                      ),
-                                      onPressed: () =>
-                                          controller.isPasswordVisible.toggle(),
-                                    ),
-                                    border: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(12),
-                                    ),
-                                    focusedBorder: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(12),
-                                      borderSide: BorderSide(
-                                        color: theme.colorScheme.primary,
-                                        width: 2,
-                                      ),
+                                    onPressed: () =>
+                                        ref
+                                                .read(
+                                                  _registerPasswordVisibleProvider
+                                                      .notifier,
+                                                )
+                                                .state =
+                                            !isPasswordVisible,
+                                  ),
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  focusedBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                    borderSide: BorderSide(
+                                      color: theme.colorScheme.primary,
+                                      width: 2,
                                     ),
                                   ),
-                                  validator: FormBuilderValidators.compose([
-                                    FormBuilderValidators.required(),
-                                    FormBuilderValidators.minLength(8),
-                                  ]),
                                 ),
+                                validator: FormBuilderValidators.compose([
+                                  FormBuilderValidators.required(),
+                                  FormBuilderValidators.minLength(8),
+                                ]),
                               ),
 
                               AppSpacing.fieldGap,
@@ -392,15 +467,13 @@ class RegisterPage extends GetWidget<RegisterController> {
                               AppSpacing.gapMd,
 
                               // Register Button
-                              Obx(
-                                () => AppButton.large(
-                                  text: AppTranslationKey.createAccount.tr,
-                                  onPressed: controller.onSubmit,
-                                  isLoading: controller.isLoading.value,
-                                  loadingText:
-                                      AppTranslationKey.creatingAccount.tr,
-                                  width: double.infinity,
-                                ),
+                              AppButton.large(
+                                text: AppTranslationKey.createAccount.tr,
+                                onPressed: isLoading ? null : _submit,
+                                isLoading: isLoading,
+                                loadingText:
+                                    AppTranslationKey.creatingAccount.tr,
+                                width: double.infinity,
                               ),
 
                               AppSpacing.fieldGap,

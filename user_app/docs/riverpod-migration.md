@@ -21,10 +21,10 @@ static `.to` or `Get.find` consumer migrates.
 
 | Slice | Current owner | Riverpod target | Lifetime | Status |
 | --- | --- | --- | --- | --- |
-| Authentication/session | `AuthService`, login controller | `AuthController` + `AuthState` | Application | Login and restoration migrated |
+| Authentication/session | `AuthService` compatibility adapter | `AuthController`, `AuthState`, biometric notifier | Application | Forms, session and profile actions migrated; router pending |
 | Core dependencies | GetX service registration | `core_providers.dart` | Application | Provider graph added; bridge retained |
-| Registration/recovery | GetX controllers | Auth/recovery notifiers | Route | Pending |
-| Settings/theme/language | `MainService`, widget controller | Settings notifier | Application | Pending |
+| Registration/recovery | Removed GetX controllers | Auth/recovery notifiers | Route | Migrated |
+| Settings/theme/language | `MainService`, language controller | Settings notifier | Application | Theme migrated; language pending |
 | Guidelines/reading | GetX feature controllers | Repository-backed families | Route/resource | Pending |
 | Drugs/calculators | GetX feature controllers | Repository-backed families | Route/resource | Pending |
 | Facilities/consultants | GetX feature controllers | Repository-backed families | Route/resource | Pending |

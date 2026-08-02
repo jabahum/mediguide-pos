@@ -1,10 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:get/get.dart';
+import 'package:in_app_review/in_app_review.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:toastification/toastification.dart';
 
-import '../../data/services/auth_service.dart';
 import '../../data/services/main_service.dart';
+import '../../features/auth/auth_controller.dart';
+import '../../features/auth/auth_state.dart';
+import '../../features/auth/biometric_controller.dart';
+import '../../providers/core_providers.dart';
 import '../../routes/app_pages.dart';
 import '../../translations/app_translations.dart';
 import '../../utils/app_spacing.dart';
@@ -18,14 +23,16 @@ import '../../widgets/user_avatar.dart';
 
 import 'change_password_bottom_sheet.dart';
 import 'edit_profile_dialog.dart';
-import 'profile_controller.dart';
 
-class ProfilePage extends GetWidget<ProfileController> {
+class ProfilePage extends ConsumerWidget {
   const ProfilePage({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final cs = context.theme.colorScheme;
+    final auth = ref.watch(authControllerProvider).valueOrNull;
+    final isLoading = auth?.phase == AuthPhase.refreshing;
+    final biometric = ref.watch(biometricControllerProvider).valueOrNull;
 
     return Scaffold(
       appBar: AppBar(
@@ -50,7 +57,7 @@ class ProfilePage extends GetWidget<ProfileController> {
           vertical: context.responsiveVerticalPadding,
         ),
         children: [
-          _ProfileHeaderCard(onEditProfile: _showEditProfileDialog),
+          _ProfileHeaderCard(onEditProfile: () => _showEditProfileDialog(ref)),
 
           AppSpacing.lg.gap,
 
@@ -61,7 +68,7 @@ class ProfilePage extends GetWidget<ProfileController> {
                 icon: LucideIcons.user,
                 title: AppTranslationKey.editProfile.tr,
                 subtitle: AppTranslationKey.updatePersonalInformation.tr,
-                onTap: _showEditProfileDialog,
+                onTap: () => _showEditProfileDialog(ref),
               ),
               _SettingsTile(
                 icon: LucideIcons.lock,
@@ -69,21 +76,19 @@ class ProfilePage extends GetWidget<ProfileController> {
                 subtitle: AppTranslationKey.updateSecurityCredentials.tr,
                 onTap: _showChangePasswordBottomSheet,
               ),
-              Obx(
-                () => _SettingsTile(
-                  icon: LucideIcons.fingerprint,
-                  title: AppTranslationKey.biometricAuthentication.tr,
-                  subtitle: AuthService.to.isBiometricAvailable.value
-                      ? AppTranslationKey.biometricAuthDesc.tr
-                      : AppTranslationKey.biometricNotAvailable.tr,
-                  trailing: Switch(
-                    value: AuthService.to.isBiometricEnabled.value,
-                    onChanged: AuthService.to.isBiometricAvailable.value
-                        ? _toggleBiometric
-                        : null,
-                  ),
-                  showChevron: false,
+              _SettingsTile(
+                icon: LucideIcons.fingerprint,
+                title: AppTranslationKey.biometricAuthentication.tr,
+                subtitle: biometric?.available == true
+                    ? AppTranslationKey.biometricAuthDesc.tr
+                    : AppTranslationKey.biometricNotAvailable.tr,
+                trailing: Switch(
+                  value: biometric?.enabled ?? false,
+                  onChanged: biometric?.available == true
+                      ? (value) => _toggleBiometric(ref, value)
+                      : null,
                 ),
+                showChevron: false,
               ),
             ],
           ),
@@ -102,7 +107,7 @@ class ProfilePage extends GetWidget<ProfileController> {
               _SettingsTile(
                 icon: LucideIcons.languages,
                 title: AppTranslationKey.language.tr,
-                subtitle: controller.settings.languageDisplayName,
+                subtitle: _languageDisplayName(),
                 onTap: () => LanguageBottomSheet.show(),
               ),
             ],
@@ -161,7 +166,7 @@ class ProfilePage extends GetWidget<ProfileController> {
                 icon: LucideIcons.star,
                 title: AppTranslationKey.rateApp.tr,
                 subtitle: AppTranslationKey.rateUsOnAppStore.tr,
-                onTap: () => controller.rateApp(),
+                onTap: _rateApp,
               ),
             ],
           ),
@@ -171,45 +176,37 @@ class ProfilePage extends GetWidget<ProfileController> {
           _SettingsSection(
             title: AppTranslationKey.accountActions.tr,
             children: [
-              Obx(
-                () => _SettingsTile(
-                  icon: LucideIcons.logOut,
-                  title: AppTranslationKey.signOut.tr,
-                  subtitle: AppTranslationKey.signOutOfAccount.tr,
-                  iconColor: cs.primary,
-                  titleColor: cs.primary,
-                  trailing: controller.isLoading.value
-                      ? const SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : const Icon(LucideIcons.chevronRight),
-                  showChevron: false,
-                  onTap: controller.isLoading.value
-                      ? null
-                      : () => controller.logout(),
-                ),
+              _SettingsTile(
+                icon: LucideIcons.logOut,
+                title: AppTranslationKey.signOut.tr,
+                subtitle: AppTranslationKey.signOutOfAccount.tr,
+                iconColor: cs.primary,
+                titleColor: cs.primary,
+                trailing: isLoading
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(LucideIcons.chevronRight),
+                showChevron: false,
+                onTap: isLoading ? null : () => _logout(ref),
               ),
-              Obx(
-                () => _SettingsTile(
-                  icon: LucideIcons.trash2,
-                  title: AppTranslationKey.deleteAccount.tr,
-                  subtitle: AppTranslationKey.permanentlyDeleteAccount.tr,
-                  iconColor: cs.error,
-                  titleColor: cs.error,
-                  trailing: controller.isLoading.value
-                      ? const SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : Icon(LucideIcons.chevronRight, color: cs.error),
-                  showChevron: false,
-                  onTap: controller.isLoading.value
-                      ? null
-                      : () => controller.deleteAccount(),
-                ),
+              _SettingsTile(
+                icon: LucideIcons.trash2,
+                title: AppTranslationKey.deleteAccount.tr,
+                subtitle: AppTranslationKey.permanentlyDeleteAccount.tr,
+                iconColor: cs.error,
+                titleColor: cs.error,
+                trailing: isLoading
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : Icon(LucideIcons.chevronRight, color: cs.error),
+                showChevron: false,
+                onTap: isLoading ? null : () => _deleteAccount(ref),
               ),
             ],
           ),
@@ -227,19 +224,21 @@ class ProfilePage extends GetWidget<ProfileController> {
     );
   }
 
-  Future<void> _showEditProfileDialog() async {
+  Future<void> _showEditProfileDialog(WidgetRef ref) async {
     final result = await Get.dialog(
       const EditProfileDialog(),
       barrierDismissible: false,
     );
 
     if (result == true) {
-      controller.update();
+      await ref.read(authControllerProvider.notifier).refreshProfile();
     }
   }
 
-  Future<void> _toggleBiometric(bool value) async {
-    final success = await AuthService.to.toggleBiometricSetting(value);
+  Future<void> _toggleBiometric(WidgetRef ref, bool value) async {
+    final success = await ref
+        .read(biometricControllerProvider.notifier)
+        .setEnabled(value);
 
     if (success) {
       Common.quickToast(
@@ -255,6 +254,63 @@ class ProfilePage extends GetWidget<ProfileController> {
         title: AppTranslationKey.biometricAuthentication.tr,
         description: AppTranslationKey.failedToUpdateBiometricSettings.tr,
       );
+    }
+  }
+
+  Future<void> _logout(WidgetRef ref) async {
+    try {
+      await ref.read(authControllerProvider.notifier).logout();
+      Get.offAllNamed(AppRoutes.login);
+    } catch (error) {
+      Common.quickToast(
+        type: ToastificationType.error,
+        title: AppTranslationKey.error.tr,
+        description: Common.parseApiError(error),
+      );
+    }
+  }
+
+  Future<void> _deleteAccount(WidgetRef ref) async {
+    final confirmed = await Get.dialog<bool>(
+      AlertDialog(
+        title: Text(AppTranslationKey.deleteAccount.tr),
+        content: const Text(
+          'Account deletion is not available in this version. Contact support for assistance.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Get.back(result: false),
+            child: Text(AppTranslationKey.cancel.tr),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == true) return;
+  }
+
+  Future<void> _rateApp() async {
+    try {
+      final review = InAppReview.instance;
+      if (await review.isAvailable()) {
+        await review.requestReview();
+      } else {
+        await review.openStoreListing();
+      }
+    } catch (_) {
+      Common.quickToast(
+        type: ToastificationType.error,
+        title: AppTranslationKey.error.tr,
+        description: AppTranslationKey.ratingFailed.tr,
+      );
+    }
+  }
+
+  String _languageDisplayName() {
+    try {
+      return LanguageController.to.currentLanguage?.shortDisplayName ??
+          AppTranslationKey.english.tr;
+    } catch (_) {
+      return AppTranslationKey.english.tr;
     }
   }
 
@@ -290,99 +346,98 @@ class ProfilePage extends GetWidget<ProfileController> {
   }
 }
 
-class _ProfileHeaderCard extends StatelessWidget {
+class _ProfileHeaderCard extends ConsumerWidget {
   final VoidCallback onEditProfile;
 
   const _ProfileHeaderCard({required this.onEditProfile});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final cs = context.theme.colorScheme;
+    final user = ref.watch(
+      authControllerProvider.select((value) => value.valueOrNull?.user),
+    );
+    final name = user?.name ?? AppTranslationKey.user.tr;
+    final specialization = user?.specialization ?? '';
+    final avatarUrl = user?.avatar.isNotEmpty == true
+        ? ref.read(backendApiServiceProvider).getFileUrl(filename: user!.avatar)
+        : null;
 
-    return Obx(() {
-      final user = AuthService.to.currentUser.value;
-      final name = user?.name ?? AppTranslationKey.user.tr;
-      final specialization = user?.specialization ?? '';
-
-      return Container(
-        width: double.infinity,
-        padding: const EdgeInsets.all(AppSpacing.lg),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(28),
-          color: cs.primaryContainer.withValues(alpha: 0.35),
-          border: Border.all(color: cs.primary.withValues(alpha: 0.08)),
-        ),
-        child: Column(
-          children: [
-            Stack(
-              alignment: Alignment.bottomRight,
-              children: [
-                UserAvatar(
-                  name: AuthService.to.userName,
-                  avatarUrl: AuthService.to.userProfilePicture,
-                  radius: Responsive.doubleValue(
-                    context,
-                    mobile: 42.0,
-                    tablet: 52.0,
-                    desktop: 60.0,
-                  ),
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(AppSpacing.lg),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(28),
+        color: cs.primaryContainer.withValues(alpha: 0.35),
+        border: Border.all(color: cs.primary.withValues(alpha: 0.08)),
+      ),
+      child: Column(
+        children: [
+          Stack(
+            alignment: Alignment.bottomRight,
+            children: [
+              UserAvatar(
+                name: name,
+                avatarUrl: avatarUrl,
+                radius: Responsive.doubleValue(
+                  context,
+                  mobile: 42.0,
+                  tablet: 52.0,
+                  desktop: 60.0,
                 ),
-                Material(
-                  color: cs.primary,
-                  shape: const CircleBorder(),
-                  child: InkWell(
-                    customBorder: const CircleBorder(),
-                    onTap: onEditProfile,
-                    child: Padding(
-                      padding: const EdgeInsets.all(8),
-                      child: Icon(
-                        LucideIcons.pencil,
-                        color: cs.onPrimary,
-                        size: 16,
-                      ),
+              ),
+              Material(
+                color: cs.primary,
+                shape: const CircleBorder(),
+                child: InkWell(
+                  customBorder: const CircleBorder(),
+                  onTap: onEditProfile,
+                  child: Padding(
+                    padding: const EdgeInsets.all(8),
+                    child: Icon(
+                      LucideIcons.pencil,
+                      color: cs.onPrimary,
+                      size: 16,
                     ),
                   ),
                 ),
-              ],
-            ),
-
-            AppSpacing.md.gap,
-
-            Text(
-              name,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: context.textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.w800,
-              ),
-              textAlign: TextAlign.center,
-            ),
-
-            if (specialization.trim().isNotEmpty) ...[
-              const SizedBox(height: 6),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 6,
-                ),
-                decoration: BoxDecoration(
-                  color: cs.primary.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(999),
-                ),
-                child: Text(
-                  specialization,
-                  style: context.textTheme.labelMedium?.copyWith(
-                    color: cs.primary,
-                    fontWeight: FontWeight.w700,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
               ),
             ],
+          ),
+
+          AppSpacing.md.gap,
+
+          Text(
+            name,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: context.textTheme.titleLarge?.copyWith(
+              fontWeight: FontWeight.w800,
+            ),
+            textAlign: TextAlign.center,
+          ),
+
+          if (specialization.trim().isNotEmpty) ...[
+            const SizedBox(height: 6),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                color: cs.primary.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(999),
+              ),
+              child: Text(
+                specialization,
+                style: context.textTheme.labelMedium?.copyWith(
+                  color: cs.primary,
+                  fontWeight: FontWeight.w700,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ),
           ],
-        ),
-      );
-    });
+        ],
+      ),
+    );
   }
 }
 

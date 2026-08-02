@@ -1,24 +1,64 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:form_builder_validators/form_builder_validators.dart';
 import 'package:get/get.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:flex_color_scheme/flex_color_scheme.dart';
+import 'package:toastification/toastification.dart';
+import '../../features/auth/password_recovery_controller.dart';
 import '../../translations/app_translations.dart';
 import '../../utils/app_spacing.dart';
 import '../../utils/responsive.dart';
+import '../../utils/common.dart';
 import '../../widgets/copyright_terms_widget.dart';
 import '../../widgets/app_logo.dart';
 import '../../widgets/app_button.dart';
 import '../../widgets/glass_card.dart';
-import 'forgot_password_controller.dart';
 
-class ForgotPasswordPage extends GetWidget<ForgotPasswordController> {
+class ForgotPasswordPage extends ConsumerStatefulWidget {
   const ForgotPasswordPage({super.key});
 
   @override
+  ConsumerState<ForgotPasswordPage> createState() => _ForgotPasswordPageState();
+}
+
+class _ForgotPasswordPageState extends ConsumerState<ForgotPasswordPage> {
+  static const _emailField = 'email';
+  final _formKey = GlobalKey<FormBuilderState>();
+
+  Future<void> _submit() async {
+    if (!(_formKey.currentState?.saveAndValidate() ?? false)) return;
+    final email = _formKey.currentState!.value[_emailField] as String;
+    try {
+      final result = await ref
+          .read(passwordRecoveryControllerProvider.notifier)
+          .requestReset(email);
+      if (result == null || !result.accepted || !mounted) return;
+      Common.quickToast(
+        type: ToastificationType.success,
+        title: AppTranslationKey.passwordResetSent,
+        description: result.deliveryAccepted
+            ? AppTranslationKey.checkEmailForReset
+            : result.hasDevelopmentToken
+            ? 'Request accepted in development mode. Email delivery is not configured.'
+            : 'If the account exists, the request was accepted. Email delivery is not currently confirmed.',
+      );
+      Get.back();
+    } catch (error) {
+      if (!mounted) return;
+      Common.quickToast(
+        type: ToastificationType.error,
+        title: AppTranslationKey.passwordResetError,
+        description: Common.parseApiError(error),
+      );
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final isLoading = ref.watch(passwordRecoveryControllerProvider).isLoading;
     final theme = Theme.of(context);
     final size = MediaQuery.of(context).size;
 
@@ -71,7 +111,7 @@ class ForgotPasswordPage extends GetWidget<ForgotPasswordController> {
                       ),
                       child: GlassCard.auth(
                         child: FormBuilder(
-                          key: controller.formKey,
+                          key: _formKey,
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.stretch,
                             children: [
@@ -111,7 +151,7 @@ class ForgotPasswordPage extends GetWidget<ForgotPasswordController> {
 
                               // Email Field
                               FormBuilderTextField(
-                                name: ForgotPasswordController.emailField,
+                                name: _emailField,
                                 decoration: InputDecoration(
                                   labelText: AppTranslationKey.email.tr,
                                   hintText: AppTranslationKey.email.tr,
@@ -145,15 +185,13 @@ class ForgotPasswordPage extends GetWidget<ForgotPasswordController> {
                               AppSpacing.elementGap,
 
                               // Send Reset Button
-                              Obx(
-                                () => AppButton.large(
-                                  text: AppTranslationKey.sendResetLink.tr,
-                                  onPressed: controller.onSubmit,
-                                  isLoading: controller.isLoading,
-                                  loadingText:
-                                      AppTranslationKey.sendingResetLink.tr,
-                                  width: double.infinity,
-                                ),
+                              AppButton.large(
+                                text: AppTranslationKey.sendResetLink.tr,
+                                onPressed: isLoading ? null : _submit,
+                                isLoading: isLoading,
+                                loadingText:
+                                    AppTranslationKey.sendingResetLink.tr,
+                                width: double.infinity,
                               ),
 
                               AppSpacing.fieldGap,
@@ -161,7 +199,7 @@ class ForgotPasswordPage extends GetWidget<ForgotPasswordController> {
                               // Back to Login Button
                               AppButtonVariants.textButton(
                                 text: AppTranslationKey.backToLogin.tr,
-                                onPressed: controller.onBackToLogin,
+                                onPressed: Get.back,
                                 width: double.infinity,
                               ),
                             ],

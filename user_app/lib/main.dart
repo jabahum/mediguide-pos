@@ -9,6 +9,7 @@ import 'package:user_app/app/data/services/main_service.dart';
 import 'package:user_app/app/data/services/openai_service.dart';
 import 'package:user_app/app/data/services/ai_context_service.dart';
 import 'package:user_app/app/features/auth/auth_controller.dart';
+import 'package:user_app/app/features/settings/app_settings_controller.dart';
 import 'package:user_app/app/providers/core_providers.dart';
 import 'package:user_app/app/routes/app_pages.dart';
 import 'package:user_app/app/themes/app_theme.dart';
@@ -66,6 +67,11 @@ class MyApp extends ConsumerWidget {
     // decisions. GetX remains the temporary router while feature state moves
     // to Riverpod.
     ref.watch(authControllerProvider);
+    final themeMode = ref.watch(
+      appSettingsControllerProvider.select(
+        (settings) => settings.materialThemeMode,
+      ),
+    );
     return GestureDetector(
       onTap: () => Common.dismissKeyboard(),
       child: ToastificationWrapper(
@@ -73,6 +79,7 @@ class MyApp extends ConsumerWidget {
           initialRoute: AppRoutes.main,
           theme: AppTheme.light,
           darkTheme: AppTheme.dark,
+          themeMode: themeMode,
           getPages: AppPages.pages,
           locale: AppTranslation.locale,
           translationsKeys: AppTranslation.translations,

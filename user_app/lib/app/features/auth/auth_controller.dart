@@ -113,8 +113,13 @@ class AuthController extends AsyncNotifier<AuthState> {
   }
 
   Future<void> logout() async {
+    final user = state.valueOrNull?.user ?? _store.currentUser;
+    if (user != null) state = AsyncData(AuthState.refreshing(user));
     try {
       await _api.logout();
+    } catch (_) {
+      // Local logout must still complete when the revocation request cannot
+      // reach the server. The transport clears its local tokens in `finally`.
     } finally {
       await _store.clearUser();
       state = const AsyncData(AuthState.unauthenticated());

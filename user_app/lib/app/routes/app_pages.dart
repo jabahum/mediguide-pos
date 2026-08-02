@@ -34,7 +34,6 @@ import 'package:user_app/app/modules/all_actions_module/all_actions_binding.dart
 import 'package:user_app/app/modules/all_actions_module/all_actions_page.dart';
 import 'package:user_app/app/modules/drug_index_module/drug_index_binding.dart';
 import 'package:user_app/app/modules/drug_index_module/drug_index_page.dart';
-import 'package:user_app/app/modules/profile_module/profile_binding.dart';
 import 'package:user_app/app/modules/profile_module/profile_page.dart';
 import 'package:user_app/app/modules/tools_module/tools_binding.dart';
 import 'package:user_app/app/modules/tools_module/tools_page.dart';
@@ -46,9 +45,7 @@ import 'package:user_app/app/middleware/auth.dart';
 import 'package:user_app/app/middleware/onboarding.dart';
 import 'package:user_app/app/modules/main_module/main_binding.dart';
 import 'package:user_app/app/modules/main_module/main_page.dart';
-import 'package:user_app/app/modules/forgot_password_module/forgot_password_binding.dart';
 import 'package:user_app/app/modules/forgot_password_module/forgot_password_page.dart';
-import 'package:user_app/app/modules/register_module/register_binding.dart';
 import 'package:user_app/app/modules/register_module/register_page.dart';
 import 'package:user_app/app/modules/onboarding_module/onboarding_binding.dart';
 import 'package:user_app/app/modules/onboarding_module/onboarding_page.dart';
@@ -71,13 +68,11 @@ class AppPages {
     GetPage(
       name: AppRoutes.register,
       page: () => const RegisterPage(),
-      binding: RegisterBinding(),
       middlewares: [OnboardingMiddleware()],
     ),
     GetPage(
       name: AppRoutes.forgotPassword,
       page: () => const ForgotPasswordPage(),
-      binding: ForgotPasswordBinding(),
     ),
     GetPage(
       name: AppRoutes.main,
@@ -100,11 +95,7 @@ class AppPages {
       page: () => const ToolsPage(),
       binding: ToolsBinding(),
     ),
-    GetPage(
-      name: AppRoutes.profile,
-      page: () => const ProfilePage(),
-      binding: ProfileBinding(),
-    ),
+    GetPage(name: AppRoutes.profile, page: () => const ProfilePage()),
     GetPage(
       name: AppRoutes.drugIndex,
       page: () => const DrugIndexPage(),

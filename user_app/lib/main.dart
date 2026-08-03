@@ -5,11 +5,11 @@ import 'package:responsive_framework/responsive_framework.dart';
 import 'package:toastification/toastification.dart';
 import 'package:user_app/app/data/services/backend_api_service.dart';
 import 'package:user_app/app/data/services/auth_service.dart';
-import 'package:user_app/app/data/services/main_service.dart';
 import 'package:user_app/app/data/services/openai_service.dart';
 import 'package:user_app/app/data/services/ai_context_service.dart';
 import 'package:user_app/app/features/auth/auth_controller.dart';
 import 'package:user_app/app/features/settings/app_settings_controller.dart';
+import 'package:user_app/app/features/settings/connectivity_provider.dart';
 import 'package:user_app/app/providers/core_providers.dart';
 import 'package:user_app/app/routes/app_pages.dart';
 import 'package:user_app/app/themes/app_theme.dart';
@@ -42,9 +42,6 @@ Future<void> _initServices() async {
   // Initialize core services in order
   await Get.putAsync(() => AuthService().init());
 
-  // Initialize connectivity monitoring before the backend API client.
-  await Get.putAsync(() => MainService().init());
-
   // Initialize the Go backend compatibility client.
   await Get.putAsync(() => BackendApiService().init());
 
@@ -64,6 +61,7 @@ class MyApp extends ConsumerWidget {
     // decisions. GetX remains the temporary router while feature state moves
     // to Riverpod.
     ref.watch(authControllerProvider);
+    ref.watch(backendReconnectProvider);
     final themeMode = ref.watch(
       appSettingsControllerProvider.select(
         (settings) => settings.materialThemeMode,

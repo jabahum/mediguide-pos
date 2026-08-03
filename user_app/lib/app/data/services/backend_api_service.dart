@@ -1,4 +1,3 @@
-import 'dart:async';
 import 'dart:convert';
 
 import 'package:get/get.dart';
@@ -7,7 +6,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:user_app/app/utils/constants.dart';
 
 import '../models/models.dart';
-import 'main_service.dart';
 
 class BackendApiException implements Exception {
   BackendApiException(
@@ -50,12 +48,6 @@ class BackendApiService extends GetxService {
     _accessToken = _prefs.getString(SharedPreferencesKeys.userToken) ?? '';
     _refreshToken = _prefs.getString(_refreshTokenKey) ?? '';
     _sessionId = _prefs.getString(_sessionIdKey) ?? '';
-
-    ever(MainService.to.isOnline, (bool online) {
-      if (online) {
-        unawaited(_onReconnect());
-      }
-    });
 
     schemaLoaded.value = true;
     return this;
@@ -247,18 +239,6 @@ class BackendApiService extends GetxService {
     }
 
     return '';
-  }
-
-  Future<void> _onReconnect() async {
-    if (!isAuthenticated || _refreshToken.isEmpty) {
-      return;
-    }
-
-    try {
-      await refreshAuth();
-    } catch (_) {
-      // Ignore background refresh failures.
-    }
   }
 
   Future<bool> checkConnection() async {

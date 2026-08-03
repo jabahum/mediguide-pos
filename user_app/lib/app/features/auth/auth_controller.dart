@@ -112,6 +112,11 @@ class AuthController extends AsyncNotifier<AuthState> {
     }
   }
 
+  Future<void> replaceUser(User user) async {
+    await _store.saveUser(user);
+    state = AsyncData(AuthState.authenticated(user));
+  }
+
   Future<void> logout() async {
     final user = state.valueOrNull?.user ?? _store.currentUser;
     if (user != null) state = AsyncData(AuthState.refreshing(user));

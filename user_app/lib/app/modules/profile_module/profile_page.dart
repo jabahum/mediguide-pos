@@ -5,11 +5,11 @@ import 'package:in_app_review/in_app_review.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:toastification/toastification.dart';
 
-import '../../data/services/main_service.dart';
 import '../../features/auth/auth_controller.dart';
 import '../../features/auth/auth_state.dart';
 import '../../features/auth/biometric_controller.dart';
 import '../../features/settings/language_controller.dart';
+import '../../features/settings/app_update_controller.dart';
 import '../../providers/core_providers.dart';
 import '../../routes/app_pages.dart';
 import '../../translations/app_translations.dart';
@@ -40,6 +40,9 @@ class ProfilePage extends ConsumerWidget {
             value.valueOrNull?.displayName ?? AppTranslationKey.english.tr,
       ),
     );
+    final isCheckingForUpdate = ref
+        .watch(appUpdateControllerProvider)
+        .isLoading;
 
     return Scaffold(
       appBar: AppBar(
@@ -137,25 +140,21 @@ class ProfilePage extends ConsumerWidget {
                 subtitle: AppTranslationKey.getAnswersToCommonQuestions.tr,
                 onTap: () => Get.toNamed(AppRoutes.faq),
               ),
-              Obx(
-                () => _SettingsTile(
-                  icon: LucideIcons.download,
-                  title: AppTranslationKey.checkForUpdate.tr,
-                  subtitle: MainService.to.isCheckingForUpdate.value
-                      ? AppTranslationKey.checkingForUpdates.tr
-                      : AppTranslationKey.upToDate.tr,
-                  trailing: MainService.to.isCheckingForUpdate.value
-                      ? const SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : const Icon(LucideIcons.chevronRight),
-                  showChevron: false,
-                  onTap: MainService.to.isCheckingForUpdate.value
-                      ? null
-                      : () => MainService.to.checkForUpdate(),
-                ),
+              _SettingsTile(
+                icon: LucideIcons.download,
+                title: AppTranslationKey.checkForUpdate.tr,
+                subtitle: isCheckingForUpdate
+                    ? AppTranslationKey.checkingForUpdates.tr
+                    : AppTranslationKey.upToDate.tr,
+                trailing: isCheckingForUpdate
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(LucideIcons.chevronRight),
+                showChevron: false,
+                onTap: isCheckingForUpdate ? null : () => _checkForUpdate(ref),
               ),
               _SettingsTile(
                 icon: LucideIcons.info,
@@ -308,6 +307,37 @@ class ProfilePage extends ConsumerWidget {
         type: ToastificationType.error,
         title: AppTranslationKey.error.tr,
         description: AppTranslationKey.ratingFailed.tr,
+      );
+    }
+  }
+
+  Future<void> _checkForUpdate(WidgetRef ref) async {
+    try {
+      final result = await ref
+          .read(appUpdateControllerProvider.notifier)
+          .check();
+      if (result == null) return;
+      final description = switch (result) {
+        AppUpdateResult.unsupported =>
+          'Updates are only supported on Android devices',
+        AppUpdateResult.downloading =>
+          AppTranslationKey.updateDownloadingInBackground.tr,
+        AppUpdateResult.upToDate => AppTranslationKey.appIsUpToDate.tr,
+      };
+      Common.quickToast(
+        type: result == AppUpdateResult.downloading
+            ? ToastificationType.success
+            : ToastificationType.info,
+        title: result == AppUpdateResult.downloading
+            ? AppTranslationKey.downloadingUpdate.tr
+            : AppTranslationKey.update.tr,
+        description: description,
+      );
+    } catch (_) {
+      Common.quickToast(
+        type: ToastificationType.error,
+        title: AppTranslationKey.error.tr,
+        description: AppTranslationKey.failedToCheckForUpdates.tr,
       );
     }
   }

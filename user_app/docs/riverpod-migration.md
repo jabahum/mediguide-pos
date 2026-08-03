@@ -21,10 +21,10 @@ static `.to` or `Get.find` consumer migrates.
 
 | Slice | Current owner | Riverpod target | Lifetime | Status |
 | --- | --- | --- | --- | --- |
-| Authentication/session | `AuthService` compatibility adapter | `AuthController`, `AuthState`, biometric notifier | Application | Forms, session and profile actions migrated; router pending |
+| Authentication/session | `AuthService` compatibility adapter | `AuthController`, `AuthState`, biometric and profile notifiers | Application | Forms, session and profile editing migrated; router pending |
 | Core dependencies | GetX service registration | `core_providers.dart` | Application | Provider graph added; bridge retained |
 | Registration/recovery | Removed GetX controllers | Auth/recovery notifiers | Route | Migrated |
-| Settings/theme/language | `MainService` update bridge | Settings and language notifiers | Application | Theme and language migrated; app-update state pending |
+| Settings/theme/language | Riverpod providers | Settings, language, connectivity and update providers | Application | Migrated |
 | Guidelines/reading | GetX feature controllers | Repository-backed families | Route/resource | Pending |
 | Drugs/calculators | GetX feature controllers | Repository-backed families | Route/resource | Pending |
 | Facilities/consultants | GetX feature controllers | Repository-backed families | Route/resource | Pending |
@@ -44,9 +44,10 @@ duplicate submissions. Logout clears tokens and identity and invalidates
 user-scoped repository providers.
 
 The HTTP transport coalesces concurrent token refreshes and retries an eligible
-authenticated request once after a `401`. GetX middleware is still the routing
-bridge and must be replaced by a Riverpod-aware router before routing is fully
-migrated.
+authenticated request once after a `401`. Connectivity is observed through a
+Riverpod stream and refreshes tokens only after an offline-to-online
+transition. GetX middleware is still the routing bridge and must be replaced by
+a Riverpod-aware router before routing is fully migrated.
 
 ## Offline and provider rules
 

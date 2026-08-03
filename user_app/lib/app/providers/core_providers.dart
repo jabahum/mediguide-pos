@@ -17,7 +17,6 @@ import '../data/repositories/user_repository.dart';
 import '../data/services/ai_context_service.dart';
 import '../data/services/auth_service.dart';
 import '../data/services/backend_api_service.dart';
-import '../data/services/main_service.dart';
 import '../data/services/openai_service.dart';
 import '../data/services/ttl_response_cache.dart';
 
@@ -37,10 +36,6 @@ final backendApiServiceProvider = Provider<BackendApiService>(
 
 final legacyAuthServiceProvider = Provider<AuthService>(
   (ref) => Get.find<AuthService>(),
-);
-
-final mainServiceProvider = Provider<MainService>(
-  (ref) => Get.find<MainService>(),
 );
 
 final openAiServiceProvider = Provider<OpenAiService>(

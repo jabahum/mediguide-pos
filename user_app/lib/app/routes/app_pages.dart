@@ -1,11 +1,8 @@
 import 'package:get/get.dart';
-import 'package:user_app/app/modules/ai_assistant_module/ai_assistant_binding.dart';
 import 'package:user_app/app/modules/ai_assistant_module/ai_assistant_page.dart';
 import 'package:user_app/app/modules/generic_viewer_module/generic_viewer_binding.dart';
 import 'package:user_app/app/modules/generic_viewer_module/generic_viewer_page.dart';
-import 'package:user_app/app/modules/chat_interface_module/chat_interface_binding.dart';
 import 'package:user_app/app/modules/chat_interface_module/chat_interface_page.dart';
-import 'package:user_app/app/modules/chat_list_module/chat_list_binding.dart';
 import 'package:user_app/app/modules/chat_list_module/chat_list_page.dart';
 import 'package:user_app/app/modules/help_center_module/help_center_page.dart';
 import 'package:user_app/app/modules/faq_module/faq_binding.dart';
@@ -109,11 +106,7 @@ class AppPages {
       name: AppRoutes.readGuideline,
       page: () => const ReadGuidelinePage(),
     ),
-    GetPage(
-      name: AppRoutes.aiAssistant,
-      page: () => const AiAssistantPage(),
-      binding: AiAssistantBinding(),
-    ),
+    GetPage(name: AppRoutes.aiAssistant, page: () => const AiAssistantPage()),
     GetPage(
       name: AppRoutes.ministryDirectory,
       page: () => const MinistryDirectoryPage(),
@@ -133,22 +126,12 @@ class AppPages {
     GetPage(
       name: AppRoutes.chatInterface,
       page: () => const ChatInterfacePage(),
-      binding: ChatInterfaceBinding(),
     ),
-    GetPage(
-      name: AppRoutes.chatList,
-      page: () => const ChatListPage(),
-      binding: ChatListBinding(),
-    ),
+    GetPage(name: AppRoutes.chatList, page: () => const ChatListPage()),
     GetPage(
       name: AppRoutes.genericViewer,
       page: () => const GenericViewerPage(),
       binding: GenericViewerBinding(),
-    ),
-    GetPage(
-      name: AppRoutes.aiAssistant,
-      page: () => const AiAssistantPage(),
-      binding: AiAssistantBinding(),
     ),
   ];
 }

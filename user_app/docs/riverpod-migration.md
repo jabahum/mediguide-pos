@@ -31,7 +31,7 @@ static `.to` or `Get.find` consumer migrates.
 | Drugs/calculators | Riverpod-scoped catalogues and calculator runner family | Typed repositories, cached HTML and usage sessions | Route/resource | Migrated |
 | Facilities/consultants | Riverpod-scoped typed catalogues | Geographic filters, consultant discovery and usage events | Route/resource | Migrated |
 | Support/notifications | Riverpod-scoped typed repositories | Ticket, reply, filter and notification-read notifiers | Route/user | Migrated |
-| Conversations/AI | GetX controllers/services | Conversation/assistant notifiers | Route/session | Pending |
+| Conversations/AI | Riverpod-scoped typed repositories and service adapters | Conversation catalogue, polling chat and contextual assistant notifiers | Route/session | Migrated |
 
 Focus nodes, form keys, animation and tab controllers, and temporary password
 visibility remain widget-local. Server data, authenticated identity, shared

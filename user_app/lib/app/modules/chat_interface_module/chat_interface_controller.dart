@@ -1,225 +1,212 @@
 import 'dart:async';
 
-import 'package:flutter/material.dart';
-import 'package:get/get.dart';
+import 'package:flutter/foundation.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:toastification/toastification.dart';
-import '../../data/services/backend_api_service.dart';
-import '../../data/services/auth_service.dart';
-import '../../data/repositories/conversation_repository.dart';
+
 import '../../data/models/message.dart';
 import '../../data/models/user.dart';
+import '../../data/repositories/conversation_repository.dart';
+import '../../features/auth/auth_controller.dart';
+import '../../providers/core_providers.dart';
 import '../../utils/common.dart';
 
-class ChatInterfaceController extends GetxController {
-  ConversationRepository get _repository =>
-      ConversationRepository(BackendApiService.to);
+final chatInterfaceControllerProvider = ChangeNotifierProvider.autoDispose
+    .family<ChatInterfaceController, User>((ref, otherUser) {
+      final controller = ChatInterfaceController(
+        ref.watch(conversationRepositoryProvider),
+        otherUser: otherUser,
+        currentUserId: ref.watch(authControllerProvider).valueOrNull?.user?.id,
+      );
+      unawaited(controller.initialize());
+      return controller;
+    });
+
+class ChatInterfaceController extends ChangeNotifier {
+  ChatInterfaceController(
+    this._repository, {
+    required this.otherUser,
+    required this.currentUserId,
+  });
+
+  final ConversationRepository _repository;
+  final User otherUser;
+  final String? currentUserId;
+  final List<Message> messages = [];
+
   Timer? _pollTimer;
-  // Reactive variables (public, following project guidelines)
-  final RxList<Message> messages = <Message>[].obs;
-  final RxBool isLoading = false.obs;
-  final RxBool isConnected = false.obs;
-  final RxString conversationId = ''.obs;
-  User? otherUser;
-  final RxBool isTyping = false.obs;
+  bool _disposed = false;
+  bool _refreshing = false;
+  bool isLoading = false;
+  bool isConnected = false;
+  bool isTyping = false;
+  String conversationId = '';
 
-  // Scroll controller for message list
-  final ScrollController scrollController = ScrollController();
+  Future<void> initialize() => findOrCreateConversation();
 
   @override
-  void onInit() {
-    super.onInit();
-
-    // Get User object from arguments
-    final args = Get.arguments;
-    if (args is User) {
-      otherUser = args;
-    }
-
-    // Find or create conversation with the user
-    if (otherUser != null) {
-      findOrCreateConversation();
-    }
-  }
-
-  @override
-  void onClose() {
+  void dispose() {
+    _disposed = true;
     _pollTimer?.cancel();
-    scrollController.dispose();
-    super.onClose();
+    super.dispose();
   }
 
-  /// Find existing conversation or create new one
   Future<void> findOrCreateConversation() async {
-    final user = otherUser;
-    if (user == null) return;
-
-    isLoading.value = true;
+    if (isLoading || conversationId.isNotEmpty) return;
+    isLoading = true;
+    _notify();
     try {
-      final conversation = await _repository.findOrCreate(user.id);
-      conversationId.value = conversation.id;
-      await loadMessages();
-      subscribeToMessages();
-    } catch (e) {
+      final conversation = await _repository.findOrCreate(otherUser.id);
+      conversationId = conversation.id;
+      await loadMessages(showLoading: false);
+      startPolling();
+    } catch (error) {
       Common.quickToast(
         type: ToastificationType.error,
         title: 'Failed to load conversation',
-        description: e.toString(),
+        description: error.toString(),
       );
     } finally {
-      isLoading.value = false;
+      isLoading = false;
+      _notify();
     }
   }
 
-  /// Load messages for current conversation
-  Future<void> loadMessages() async {
-    if (conversationId.value.isEmpty) return;
-
-    isLoading.value = true;
+  Future<void> loadMessages({bool showLoading = true}) async {
+    if (conversationId.isEmpty || _refreshing) return;
+    _refreshing = true;
+    if (showLoading && messages.isEmpty) {
+      isLoading = true;
+      _notify();
+    }
     try {
-      final result = await _repository.messages(conversationId.value);
-
-      messages.clear();
+      final result = await _repository.messages(conversationId);
+      final loaded = <Message>[];
       for (final record in result.items) {
         try {
-          final message = Message.fromRecord(record);
-          messages.add(message);
-        } catch (e) {
-          debugPrint('Error creating Message from record: $e');
-          debugPrint('Record data: ${record.data}');
+          loaded.add(Message.fromRecord(record));
+        } catch (error) {
+          debugPrint('Error creating Message from record: $error');
         }
       }
-
-      // Scroll to bottom after loading messages
-      _scrollToBottom();
-    } catch (e) {
+      messages
+        ..clear()
+        ..addAll(loaded);
+      _notify();
+    } catch (error) {
       Common.quickToast(
         type: ToastificationType.error,
         title: 'Failed to load messages',
-        description: e.toString(),
+        description: error.toString(),
       );
     } finally {
-      isLoading.value = false;
+      _refreshing = false;
+      if (showLoading) isLoading = false;
+      _notify();
     }
   }
 
-  /// Send a new message
-  Future<void> sendMessage(String content, MessageType type) async {
-    if (conversationId.value.isEmpty || content.trim().isEmpty) return;
-
+  Future<bool> sendMessage(String content, MessageType type) async {
+    final trimmed = content.trim();
+    if (conversationId.isEmpty || trimmed.isEmpty) return false;
     try {
       final record = await _repository.send(
-        conversationId.value,
-        content: content.trim(),
+        conversationId,
+        content: trimmed,
         messageType: type.name,
       );
       messages.add(Message.fromRecord(record));
-
-      // Scroll to bottom after sending message
-      _scrollToBottom();
-    } catch (e) {
+      _notify();
+      return true;
+    } catch (error) {
       Common.quickToast(
         type: ToastificationType.error,
         title: 'Failed to send message',
-        description: e.toString(),
+        description: error.toString(),
       );
+      return false;
     }
   }
 
-  /// Send text message (called from UI)
-  void sendTextMessage(String content) {
-    sendMessage(content, MessageType.text);
-  }
+  Future<bool> sendTextMessage(String content) =>
+      sendMessage(content, MessageType.text);
 
-  /// Poll for message updates. The backend does not expose realtime transport.
-  void subscribeToMessages() {
-    if (conversationId.value.isEmpty) return;
-    isConnected.value = true;
+  /// The backend has no realtime transport, so this feature explicitly polls.
+  void startPolling() {
+    if (conversationId.isEmpty || _disposed) return;
+    isConnected = true;
+    _notify();
     _pollTimer?.cancel();
-    _pollTimer = Timer.periodic(const Duration(seconds: 5), (_) {
-      loadMessages();
-    });
+    _pollTimer = Timer.periodic(
+      const Duration(seconds: 5),
+      (_) => unawaited(loadMessages(showLoading: false)),
+    );
   }
 
-  /// Mark message as read
   Future<void> markAsRead(String messageId) async {
+    if (currentUserId == null || conversationId.isEmpty) return;
+    final index = messages.indexWhere((message) => message.id == messageId);
+    if (index < 0) return;
     try {
-      final currentUserId = AuthService.to.currentUser.value?.id;
-      if (currentUserId == null) return;
-
-      final message = messages.firstWhereOrNull((m) => m.id == messageId);
-      if (message == null) return;
-
       final record = await _repository.markRead(
-        conversationId.value,
+        conversationId,
         messageId,
         DateTime.now(),
       );
-      final index = messages.indexWhere((item) => item.id == messageId);
-      if (index >= 0) messages[index] = Message.fromRecord(record);
-    } catch (e) {
-      // Silently handle read status errors
+      messages[index] = Message.fromRecord(record);
+      _notify();
+    } catch (_) {
+      // Read receipts are best effort and polling will reconcile their state.
     }
   }
 
-  /// Add reaction to message
   Future<void> addReaction(String messageId, String emoji) async {
+    final userId = currentUserId;
+    if (userId == null || conversationId.isEmpty) return;
+    final index = messages.indexWhere((message) => message.id == messageId);
+    if (index < 0 || messages[index].hasUserReacted(userId, emoji)) return;
     try {
-      final currentUserId = AuthService.to.currentUser.value?.id;
-      if (currentUserId == null) return;
-
-      final message = messages.firstWhereOrNull((m) => m.id == messageId);
-      if (message == null) return;
-
-      if (!message.hasUserReacted(currentUserId, emoji)) {
-        final record = await _repository.react(
-          conversationId.value,
-          messageId,
-          emoji,
-          active: true,
-        );
-        final index = messages.indexWhere((item) => item.id == messageId);
-        if (index >= 0) messages[index] = Message.fromRecord(record);
-      }
-    } catch (e) {
+      final record = await _repository.react(
+        conversationId,
+        messageId,
+        emoji,
+        active: true,
+      );
+      messages[index] = Message.fromRecord(record);
+      _notify();
+    } catch (error) {
       Common.quickToast(
         type: ToastificationType.error,
         title: 'Failed to add reaction',
-        description: e.toString(),
+        description: error.toString(),
       );
     }
   }
 
-  /// Reply to a message
-  Future<void> replyToMessage(String replyToId, String content) async {
-    if (conversationId.value.isEmpty || content.trim().isEmpty) return;
-
+  Future<bool> replyToMessage(String replyToId, String content) async {
+    final trimmed = content.trim();
+    if (conversationId.isEmpty || trimmed.isEmpty) return false;
     try {
       final record = await _repository.send(
-        conversationId.value,
-        content: content.trim(),
+        conversationId,
+        content: trimmed,
         messageType: MessageType.text.name,
         replyToId: replyToId,
       );
       messages.add(Message.fromRecord(record));
-    } catch (e) {
+      _notify();
+      return true;
+    } catch (error) {
       Common.quickToast(
         type: ToastificationType.error,
         title: 'Failed to send reply',
-        description: e.toString(),
+        description: error.toString(),
       );
+      return false;
     }
   }
 
-  /// Scroll to bottom of message list
-  void _scrollToBottom() {
-    if (scrollController.hasClients) {
-      Future.delayed(const Duration(milliseconds: 100), () {
-        scrollController.animateTo(
-          scrollController.position.maxScrollExtent,
-          duration: const Duration(milliseconds: 300),
-          curve: Curves.easeOut,
-        );
-      });
-    }
+  void _notify() {
+    if (!_disposed) notifyListeners();
   }
 }

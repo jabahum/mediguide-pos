@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:get/get.dart';
 import 'package:bubble/bubble.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
@@ -6,23 +7,21 @@ import 'package:user_app/app/utils/app_spacing.dart';
 
 import '../../../app/modules/chat_interface_module/chat_interface_controller.dart';
 import '../../data/models/message.dart';
-import '../../data/services/auth_service.dart';
+import '../../data/models/user.dart';
 import '../../utils/loading.dart';
 import '../../widgets/user_avatar.dart';
 
-class ChatInterfacePage extends StatefulWidget {
+class ChatInterfacePage extends ConsumerStatefulWidget {
   const ChatInterfacePage({super.key});
 
   @override
-  State<ChatInterfacePage> createState() => _ChatInterfacePageState();
+  ConsumerState<ChatInterfacePage> createState() => _ChatInterfacePageState();
 }
 
-class _ChatInterfacePageState extends State<ChatInterfacePage> {
-  final ChatInterfaceController controller =
-      Get.find<ChatInterfaceController>();
-
+class _ChatInterfacePageState extends ConsumerState<ChatInterfacePage> {
   final TextEditingController textController = TextEditingController();
   final FocusNode inputFocusNode = FocusNode();
+  final ScrollController scrollController = ScrollController();
 
   bool canSend = false;
 
@@ -45,71 +44,91 @@ class _ChatInterfacePageState extends State<ChatInterfacePage> {
   void dispose() {
     textController.dispose();
     inputFocusNode.dispose();
+    scrollController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
+    final otherUser = Get.arguments;
+    if (otherUser is! User) {
+      return const Scaffold(
+        body: Center(child: Text('Conversation unavailable')),
+      );
+    }
+    final provider = chatInterfaceControllerProvider(otherUser);
+    final controller = ref.watch(provider);
+    ref.listen<int>(provider.select((value) => value.messages.length), (
+      previous,
+      next,
+    ) {
+      if (next != previous) _scrollToBottom();
+    });
     final cs = context.theme.colorScheme;
 
     return Scaffold(
       appBar: AppBar(
         titleSpacing: AppSpacing.sm,
-        title: _ChatAppBarTitle(controller: controller),
+        title: _ChatAppBarTitle(otherUser: controller.otherUser),
       ),
       body: Column(
         children: [
           Expanded(
-            child: Obx(() {
-              if (controller.isLoading.value) {
-                return const CenteredLoading.medium();
-              }
+            child: Builder(
+              builder: (context) {
+                if (controller.isLoading) {
+                  return const CenteredLoading.medium();
+                }
 
-              if (controller.messages.isEmpty) {
-                return _EmptyChatState(
-                  onFocusInput: () => inputFocusNode.requestFocus(),
-                );
-              }
-
-              return ListView.builder(
-                controller: controller.scrollController,
-                padding: const EdgeInsets.fromLTRB(
-                  AppSpacing.md,
-                  AppSpacing.md,
-                  AppSpacing.md,
-                  AppSpacing.lg,
-                ),
-                itemCount: controller.messages.length,
-                itemBuilder: (context, index) {
-                  final message = controller.messages[index];
-                  final previous = index > 0
-                      ? controller.messages[index - 1]
-                      : null;
-
-                  final showDateSeparator = _shouldShowDateSeparator(
-                    previous?.createdDate,
-                    message.createdDate,
+                if (controller.messages.isEmpty) {
+                  return _EmptyChatState(
+                    onFocusInput: () => inputFocusNode.requestFocus(),
                   );
+                }
 
-                  return Column(
-                    children: [
-                      if (showDateSeparator)
-                        _DateSeparator(
-                          label: _formatMessageDate(message.createdDate),
+                return ListView.builder(
+                  controller: scrollController,
+                  padding: const EdgeInsets.fromLTRB(
+                    AppSpacing.md,
+                    AppSpacing.md,
+                    AppSpacing.md,
+                    AppSpacing.lg,
+                  ),
+                  itemCount: controller.messages.length,
+                  itemBuilder: (context, index) {
+                    final message = controller.messages[index];
+                    final previous = index > 0
+                        ? controller.messages[index - 1]
+                        : null;
+
+                    final showDateSeparator = _shouldShowDateSeparator(
+                      previous?.createdDate,
+                      message.createdDate,
+                    );
+
+                    return Column(
+                      children: [
+                        if (showDateSeparator)
+                          _DateSeparator(
+                            label: _formatMessageDate(message.createdDate),
+                          ),
+                        _MessageBubble(
+                          message: message,
+                          currentUserId: controller.currentUserId,
                         ),
-                      _MessageBubble(message: message),
-                    ],
-                  );
-                },
-              );
-            }),
+                      ],
+                    );
+                  },
+                );
+              },
+            ),
           ),
 
           _MessageInputBar(
             controller: textController,
             focusNode: inputFocusNode,
             canSend: canSend,
-            onSend: _sendMessage,
+            onSend: () => _sendMessage(controller),
           ),
         ],
       ),
@@ -117,15 +136,27 @@ class _ChatInterfacePageState extends State<ChatInterfacePage> {
     );
   }
 
-  void _sendMessage() {
+  void _sendMessage(ChatInterfaceController controller) {
     final text = textController.text.trim();
 
     if (text.isEmpty) {
       return;
     }
 
-    controller.sendTextMessage(text);
-    textController.clear();
+    controller.sendTextMessage(text).then((sent) {
+      if (sent && mounted) textController.clear();
+    });
+  }
+
+  void _scrollToBottom() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || !scrollController.hasClients) return;
+      scrollController.animateTo(
+        scrollController.position.maxScrollExtent,
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeOut,
+      );
+    });
   }
 
   bool _shouldShowDateSeparator(DateTime? previous, DateTime? current) {
@@ -162,27 +193,24 @@ class _ChatInterfacePageState extends State<ChatInterfacePage> {
 }
 
 class _ChatAppBarTitle extends StatelessWidget {
-  final ChatInterfaceController controller;
+  final User otherUser;
 
-  const _ChatAppBarTitle({required this.controller});
+  const _ChatAppBarTitle({required this.otherUser});
 
   @override
   Widget build(BuildContext context) {
     final cs = context.theme.colorScheme;
 
-    final displayName = controller.otherUser?.name.isNotEmpty == true
-        ? controller.otherUser!.name
-        : controller.otherUser?.email ?? 'Chat';
+    final displayName = otherUser.name.isNotEmpty
+        ? otherUser.name
+        : otherUser.email;
 
-    final subtitle = controller.otherUser?.email ?? 'Conversation';
+    final subtitle = otherUser.email;
 
     return Row(
       children: [
         UserAvatar.small(
-          name:
-              controller.otherUser?.name ??
-              controller.otherUser?.email ??
-              'Unknown',
+          name: otherUser.name.isNotEmpty ? otherUser.name : otherUser.email,
         ),
 
         AppSpacing.md.gap,
@@ -315,14 +343,14 @@ class _DateSeparator extends StatelessWidget {
 
 class _MessageBubble extends StatelessWidget {
   final Message message;
+  final String? currentUserId;
 
-  const _MessageBubble({required this.message});
+  const _MessageBubble({required this.message, required this.currentUserId});
 
   @override
   Widget build(BuildContext context) {
     final cs = context.theme.colorScheme;
 
-    final currentUserId = AuthService.to.currentUser.value?.id;
     final isMe = message.sender == currentUserId;
 
     final bubbleColor = isMe ? cs.primary : cs.surfaceContainerHighest;

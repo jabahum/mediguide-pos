@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:get/get.dart';
 import 'package:infinite_scroll_pagination/infinite_scroll_pagination.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:user_app/app/modules/chat_list_module/chat_list_controller.dart';
 
 import '../../data/models/models.dart';
+import '../../routes/app_pages.dart';
 import '../../translations/app_translations.dart';
 import '../../utils/app_spacing.dart';
 import '../../utils/loading.dart';
@@ -12,11 +14,12 @@ import '../../widgets/conversation_card.dart';
 import '../../widgets/empty_state.dart';
 import '../../widgets/filter_button.dart';
 
-class ChatListPage extends GetView<ChatListController> {
+class ChatListPage extends ConsumerWidget {
   const ChatListPage({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final controller = ref.watch(chatListControllerProvider);
     final cs = context.theme.colorScheme;
 
     return Scaffold(
@@ -29,14 +32,12 @@ class ChatListPage extends GetView<ChatListController> {
           ),
         ),
         actions: [
-          Obx(
-            () => FilterButton(
-              hasActiveFilters: controller.hasActiveFilters.value,
-              onPressed: () => controller.showFilterModal(context),
-              onReset: controller.hasActiveFilters.value
-                  ? controller.clearAllFilters
-                  : null,
-            ),
+          FilterButton(
+            hasActiveFilters: controller.hasActiveFilters,
+            onPressed: () => controller.showFilterModal(context),
+            onReset: controller.hasActiveFilters
+                ? controller.clearAllFilters
+                : null,
           ),
           AppSpacing.xs.gap,
         ],
@@ -79,7 +80,8 @@ class ChatListPage extends GetView<ChatListController> {
                         return _ConversationCardShell(
                           child: ConversationCard(
                             conversation: conversation,
-                            onTap: () => _openConversation(conversation),
+                            onTap: () =>
+                                _openConversation(conversation, controller),
                             getOtherParticipant: controller.getOtherParticipant,
                             getConversationName: controller.getConversationName,
                             getRelativeTime: controller.getRelativeTime,
@@ -114,14 +116,10 @@ class ChatListPage extends GetView<ChatListController> {
                       // EMPTY STATE
                       // =========================
                       noItemsFoundIndicatorBuilder: (context) {
-                        return Obx(() {
-                          final isFiltered = controller.hasActiveFilters.value;
-
-                          return _EmptyConversationState(
-                            isFiltered: isFiltered,
-                            onClearFilters: controller.clearAllFilters,
-                          );
-                        });
+                        return _EmptyConversationState(
+                          isFiltered: controller.hasActiveFilters,
+                          onClearFilters: controller.clearAllFilters,
+                        );
                       },
 
                       // =========================
@@ -153,11 +151,14 @@ class ChatListPage extends GetView<ChatListController> {
     );
   }
 
-  void _openConversation(Conversation conversation) {
+  void _openConversation(
+    Conversation conversation,
+    ChatListController controller,
+  ) {
     final otherUser = controller.getOtherParticipant(conversation);
 
     if (otherUser != null) {
-      controller.openChatWith(otherUser);
+      Get.toNamed(AppRoutes.chatInterface, arguments: otherUser);
     }
   }
 }

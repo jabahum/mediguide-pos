@@ -1,157 +1,131 @@
 import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:get/get.dart';
 import 'package:infinite_scroll_pagination/infinite_scroll_pagination.dart';
 
-import '../../data/models/models.dart';
 import '../../data/models/filter_models.dart';
-import '../../data/services/backend_api_service.dart';
+import '../../data/models/models.dart';
 import '../../data/repositories/conversation_repository.dart';
-import '../../data/services/auth_service.dart';
-import '../../routes/app_pages.dart';
+import '../../features/auth/auth_controller.dart';
+import '../../providers/core_providers.dart';
 import '../../utils/common.dart';
 import '../../widgets/generic_filter_bottom_sheet.dart';
 
-class ChatListController extends GetxController {
-  ConversationRepository get _repository =>
-      ConversationRepository(BackendApiService.to);
-  late final PagingController<int, Conversation> pagingController;
+final chatListControllerProvider = ChangeNotifierProvider.autoDispose((ref) {
+  final userId = ref.watch(authControllerProvider).valueOrNull?.user?.id;
+  return ChatListController(
+    ref.watch(conversationRepositoryProvider),
+    currentUserId: userId,
+  );
+});
 
-  final RxString searchQuery = ''.obs;
-  final RxBool hasActiveFilters = false.obs;
-  final RxBool showRecentOnly = false.obs;
-  final RxBool showVerifiedOnly = false.obs;
-
-  Timer? _debounce;
-
-  @override
-  void onInit() {
-    super.onInit();
-
+class ChatListController extends ChangeNotifier {
+  ChatListController(this._repository, {required this.currentUserId}) {
     User.ensureRegistration();
     Conversation.ensureRegistration();
     Message.ensureRegistration();
-
     pagingController = PagingController<int, Conversation>(
       getNextPageKey: (state) =>
           state.lastPageIsEmpty ? null : state.nextIntPageKey,
       fetchPage: _loadPage,
     );
-
-    ever(searchQuery, (_) => _onFilterChanged());
-    ever(showRecentOnly, (_) => _onFilterChanged());
-    ever(showVerifiedOnly, (_) => _onFilterChanged());
   }
+
+  final ConversationRepository _repository;
+  final String? currentUserId;
+  late final PagingController<int, Conversation> pagingController;
+
+  String searchQuery = '';
+  bool hasActiveFilters = false;
+  bool showRecentOnly = false;
+  bool showVerifiedOnly = false;
+
+  Timer? _debounce;
 
   @override
-  void onClose() {
+  void dispose() {
     _debounce?.cancel();
     pagingController.dispose();
-    super.onClose();
+    super.dispose();
   }
-
-  // =========================
-  // DATA LOADING
-  // =========================
 
   Future<List<Conversation>> _loadPage(int pageKey) async {
     try {
-      final userId = AuthService.to.currentUser.value?.id;
+      final userId = currentUserId;
       if (userId == null) return [];
 
       final result = await _repository.list(
         page: pageKey,
         perPage: 20,
-        search: searchQuery.value,
-        recentSince: showRecentOnly.value
+        search: searchQuery.trim().isEmpty ? null : searchQuery.trim(),
+        recentSince: showRecentOnly
             ? DateTime.now().subtract(const Duration(days: 7))
             : null,
       );
 
       return result.items
-          .map((r) => Conversation.fromRecord(r))
-          .where((c) => _applyLocalSearch(c, userId))
+          .map(Conversation.fromRecord)
+          .where((conversation) => _applyLocalFilters(conversation, userId))
           .toList();
-    } catch (e) {
+    } catch (error) {
       Common.quickToast(
         title: 'Failed to load conversations',
-        description: e.toString(),
+        description: error.toString(),
       );
       rethrow;
     }
   }
 
-  // =========================
-  // FILTER BUILDING
-  // =========================
-
-  bool _applyLocalSearch(Conversation conversation, String userId) {
-    if (searchQuery.value.isEmpty && !showVerifiedOnly.value) {
-      return true;
-    }
-
+  bool _applyLocalFilters(Conversation conversation, String userId) {
+    if (searchQuery.isEmpty && !showVerifiedOnly) return true;
     final other = conversation.getOtherParticipant(userId);
 
-    if (searchQuery.value.isNotEmpty) {
-      final q = searchQuery.value.toLowerCase();
+    if (searchQuery.isNotEmpty) {
+      final query = searchQuery.toLowerCase();
       final name = (other?.name ?? '').toLowerCase();
       final email = (other?.email ?? '').toLowerCase();
-
-      if (!name.contains(q) && !email.contains(q)) {
-        return false;
-      }
+      if (!name.contains(query) && !email.contains(query)) return false;
     }
 
-    if (showVerifiedOnly.value) {
-      if (other?.emailVisibility != true) {
-        return false;
-      }
-    }
-
-    return true;
+    return !showVerifiedOnly || other?.verified == true;
   }
 
-  // =========================
-  // FILTER HANDLING
-  // =========================
+  void setSearchQuery(String value) {
+    searchQuery = value;
+    _onFilterChanged();
+  }
+
+  void setRecentOnly(bool value) {
+    showRecentOnly = value;
+    _onFilterChanged();
+  }
+
+  void setVerifiedOnly(bool value) {
+    showVerifiedOnly = value;
+    _onFilterChanged();
+  }
 
   void _onFilterChanged() {
-    _updateFilterState();
-
+    hasActiveFilters =
+        searchQuery.isNotEmpty || showRecentOnly || showVerifiedOnly;
+    notifyListeners();
     _debounce?.cancel();
-    _debounce = Timer(const Duration(milliseconds: 250), () {
-      pagingController.refresh();
-    });
-  }
-
-  void _updateFilterState() {
-    hasActiveFilters.value =
-        searchQuery.value.isNotEmpty ||
-        showRecentOnly.value ||
-        showVerifiedOnly.value;
+    _debounce = Timer(
+      const Duration(milliseconds: 250),
+      pagingController.refresh,
+    );
   }
 
   void clearAllFilters() {
-    searchQuery.value = '';
-    showRecentOnly.value = false;
-    showVerifiedOnly.value = false;
+    searchQuery = '';
+    showRecentOnly = false;
+    showVerifiedOnly = false;
+    _onFilterChanged();
   }
 
-  void refreshConversations() {
-    pagingController.refresh();
-  }
-
-  // =========================
-  // NAVIGATION
-  // =========================
-
-  void openChatWith(User otherUser) {
-    Get.toNamed(AppRoutes.chatInterface, arguments: otherUser);
-  }
-
-  // =========================
-  // FILTER UI
-  // =========================
+  void refreshConversations() => pagingController.refresh();
 
   Future<void> showFilterModal(BuildContext context) async {
     final result = await GenericFilterBottomSheet.show(
@@ -163,59 +137,36 @@ class ChatListController extends GetxController {
         FilterField.boolean('verified', 'Verified Users Only'),
       ],
       initialValues: {
-        'search': searchQuery.value,
-        'recent': showRecentOnly.value,
-        'verified': showVerifiedOnly.value,
+        'search': searchQuery,
+        'recent': showRecentOnly,
+        'verified': showVerifiedOnly,
       },
     );
 
-    if (result != null && result.isNotEmpty) {
-      _applyFilters(result);
-    }
+    if (result == null || result.isEmpty) return;
+    searchQuery = result.getValue<String>('search') ?? '';
+    showRecentOnly = result.getValue<bool>('recent') ?? false;
+    showVerifiedOnly = result.getValue<bool>('verified') ?? false;
+    _onFilterChanged();
   }
-
-  void _applyFilters(FilterResult result) {
-    searchQuery.value = result.getValue<String>('search') ?? '';
-
-    showRecentOnly.value = result.getValue<bool>('recent') ?? false;
-
-    showVerifiedOnly.value = result.getValue<bool>('verified') ?? false;
-  }
-
-  // =========================
-  // UI HELPERS (REQUIRED BY PAGE)
-  // =========================
 
   User? getOtherParticipant(Conversation conversation) {
-    final userId = AuthService.to.currentUser.value?.id;
-    if (userId == null) return null;
-
-    return conversation.getOtherParticipant(userId);
+    final userId = currentUserId;
+    return userId == null ? null : conversation.getOtherParticipant(userId);
   }
 
   String getConversationName(Conversation conversation) {
-    final userId = AuthService.to.currentUser.value?.id;
-    if (userId == null) return 'Unknown';
-
-    return conversation.getDisplayName(userId);
+    final userId = currentUserId;
+    return userId == null ? 'Unknown' : conversation.getDisplayName(userId);
   }
 
   String getRelativeTime(DateTime? dateTime) {
     if (dateTime == null) return '';
-
-    final now = DateTime.now();
-    final diff = now.difference(dateTime);
-
-    if (diff.inMinutes < 1) {
-      return 'Just now';
-    } else if (diff.inMinutes < 60) {
-      return '${diff.inMinutes}m ago';
-    } else if (diff.inHours < 24) {
-      return '${diff.inHours}h ago';
-    } else if (diff.inDays < 7) {
-      return '${diff.inDays}d ago';
-    } else {
-      return '${dateTime.day}/${dateTime.month}/${dateTime.year}';
-    }
+    final difference = DateTime.now().difference(dateTime);
+    if (difference.inMinutes < 1) return 'Just now';
+    if (difference.inMinutes < 60) return '${difference.inMinutes}m ago';
+    if (difference.inHours < 24) return '${difference.inHours}h ago';
+    if (difference.inDays < 7) return '${difference.inDays}d ago';
+    return '${dateTime.day}/${dateTime.month}/${dateTime.year}';
   }
 }

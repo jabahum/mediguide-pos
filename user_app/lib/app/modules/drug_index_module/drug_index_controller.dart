@@ -1,61 +1,66 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:get/get.dart';
 import 'package:infinite_scroll_pagination/infinite_scroll_pagination.dart';
 
 import '../../data/models/models.dart';
 import '../../data/models/filter_models.dart';
-import '../../data/services/backend_api_service.dart';
 import '../../data/repositories/drug_reference_repository.dart';
 import '../../data/repositories/calculator_repository.dart';
+import '../../providers/core_providers.dart';
 import '../../translations/app_translations.dart';
 import '../../utils/common.dart';
 import '../../utils/constants.dart';
 import '../../widgets/generic_filter_bottom_sheet.dart';
 import 'widgets/drug_details_bottom_sheet.dart';
 
-class DrugIndexController extends GetxController {
-  final BackendApiService _apiService = BackendApiService.to;
-  late final DrugReferenceRepository _references = DrugReferenceRepository(
-    _apiService,
+final drugIndexControllerProvider = ChangeNotifierProvider.autoDispose((ref) {
+  return DrugIndexController(
+    ref.watch(drugReferenceRepositoryProvider),
+    ref.watch(drugRepositoryProvider),
   );
-  late final DrugRepository _drugs = DrugRepository(_apiService);
+});
+
+class DrugIndexController extends ChangeNotifier {
+  DrugIndexController(this._references, this._drugs) {
+    _initPaging();
+    _loadFilterOptions();
+  }
+
+  final DrugReferenceRepository _references;
+  final DrugRepository _drugs;
 
   late final PagingController<int, Drug> pagingController;
 
   // =========================
   // FILTER STATE
   // =========================
-  final RxString searchQuery = ''.obs;
-  final RxBool hasActiveFilters = false.obs;
+  String searchQuery = '';
+  bool hasActiveFilters = false;
 
-  final RxList<String> selectedCategories = <String>[].obs;
-  final RxList<String> selectedTags = <String>[].obs;
-  final RxList<String> selectedRoutes = <String>[].obs;
-  final RxList<String> selectedPregnancyCategories = <String>[].obs;
+  List<String> selectedCategories = [];
+  List<String> selectedTags = [];
+  List<String> selectedRoutes = [];
+  List<String> selectedPregnancyCategories = [];
 
-  final RxBool whoEmlOnly = false.obs;
-  final RxBool antimicrobialOnly = false.obs;
+  bool whoEmlOnly = false;
+  bool antimicrobialOnly = false;
 
   // =========================
   // FILTER OPTIONS
   // =========================
-  final RxList<String> categories = <String>[].obs;
-  final RxList<String> tags = <String>[].obs;
-  final RxList<String> routes = <String>[].obs;
-  final RxList<String> pregnancyCategories = <String>[].obs;
-  final RxBool isLoadingFilters = false.obs;
+  List<String> categories = [];
+  List<String> tags = [];
+  List<String> routes = [];
+  List<String> pregnancyCategories = [];
+  bool isLoadingFilters = false;
+  bool _disposed = false;
 
   @override
-  void onInit() {
-    super.onInit();
-    _initPaging();
-    _loadFilterOptions();
-  }
-
-  @override
-  void onClose() {
+  void dispose() {
+    _disposed = true;
     pagingController.dispose();
-    super.onClose();
+    super.dispose();
   }
 
   // =========================
@@ -85,12 +90,12 @@ class DrugIndexController extends GetxController {
   // =========================
   Future<void> _loadFilterOptions() async {
     try {
-      isLoadingFilters.value = true;
+      isLoadingFilters = true;
 
-      categories.value = await _references.categoryNames();
-      tags.value = await _references.tagNames();
+      categories = await _references.categoryNames();
+      tags = await _references.tagNames();
 
-      routes.value = [
+      routes = [
         'oral',
         'IV',
         'IM',
@@ -103,11 +108,12 @@ class DrugIndexController extends GetxController {
         'subcutaneous',
       ];
 
-      pregnancyCategories.value = ['A', 'B', 'C', 'D', 'X', 'Unknown'];
+      pregnancyCategories = ['A', 'B', 'C', 'D', 'X', 'Unknown'];
     } catch (e) {
       Common.quickToast(title: 'errorLoadingFilters'.tr);
     } finally {
-      isLoadingFilters.value = false;
+      isLoadingFilters = false;
+      if (!_disposed) notifyListeners();
     }
   }
 
@@ -115,14 +121,15 @@ class DrugIndexController extends GetxController {
   // FILTER STATE
   // =========================
   void _updateActiveFilters() {
-    hasActiveFilters.value =
-        searchQuery.value.isNotEmpty ||
+    hasActiveFilters =
+        searchQuery.isNotEmpty ||
         selectedCategories.isNotEmpty ||
         selectedTags.isNotEmpty ||
         selectedRoutes.isNotEmpty ||
         selectedPregnancyCategories.isNotEmpty ||
-        whoEmlOnly.value ||
-        antimicrobialOnly.value;
+        whoEmlOnly ||
+        antimicrobialOnly;
+    if (!_disposed) notifyListeners();
   }
 
   // =========================
@@ -133,18 +140,18 @@ class DrugIndexController extends GetxController {
   }
 
   void clearAllFilters() {
-    searchQuery.value = '';
+    searchQuery = '';
 
     selectedCategories.clear();
     selectedTags.clear();
     selectedRoutes.clear();
     selectedPregnancyCategories.clear();
 
-    whoEmlOnly.value = false;
-    antimicrobialOnly.value = false;
+    whoEmlOnly = false;
+    antimicrobialOnly = false;
 
-    hasActiveFilters.value = false;
-
+    hasActiveFilters = false;
+    if (!_disposed) notifyListeners();
     pagingController.refresh();
   }
 
@@ -185,13 +192,13 @@ class DrugIndexController extends GetxController {
   }
 
   void toggleWhoEml() {
-    whoEmlOnly.value = !whoEmlOnly.value;
+    whoEmlOnly = !whoEmlOnly;
     _updateActiveFilters();
     pagingController.refresh();
   }
 
   void toggleAntimicrobial() {
-    antimicrobialOnly.value = !antimicrobialOnly.value;
+    antimicrobialOnly = !antimicrobialOnly;
     _updateActiveFilters();
     pagingController.refresh();
   }
@@ -226,9 +233,9 @@ class DrugIndexController extends GetxController {
     ];
 
     final initial = <String, dynamic>{
-      if (searchQuery.value.isNotEmpty) 'search': searchQuery.value,
-      if (whoEmlOnly.value) 'whoEmlOnly': true,
-      if (antimicrobialOnly.value) 'antimicrobialOnly': true,
+      if (searchQuery.isNotEmpty) 'search': searchQuery,
+      if (whoEmlOnly) 'whoEmlOnly': true,
+      if (antimicrobialOnly) 'antimicrobialOnly': true,
       if (selectedCategories.isNotEmpty) 'categories': selectedCategories,
       if (selectedTags.isNotEmpty) 'tags': selectedTags,
       if (selectedRoutes.isNotEmpty) 'routes': selectedRoutes,
@@ -251,11 +258,10 @@ class DrugIndexController extends GetxController {
   void _applyFilters(FilterResult result) {
     clearAllFilters();
 
-    searchQuery.value = result.getValue<String>('search') ?? '';
+    searchQuery = result.getValue<String>('search') ?? '';
 
-    whoEmlOnly.value = result.getValue<bool>('whoEmlOnly') ?? false;
-    antimicrobialOnly.value =
-        result.getValue<bool>('antimicrobialOnly') ?? false;
+    whoEmlOnly = result.getValue<bool>('whoEmlOnly') ?? false;
+    antimicrobialOnly = result.getValue<bool>('antimicrobialOnly') ?? false;
 
     selectedCategories.addAll(
       (result.getValue<List>('categories') ?? []).cast<String>(),
@@ -282,14 +288,14 @@ class DrugIndexController extends GetxController {
     final result = await _drugs.list(
       page: page,
       perPage: perPage,
-      search: searchQuery.value,
+      search: searchQuery,
       status: 'active',
       route: selectedRoutes.length == 1 ? selectedRoutes.single : null,
       pregnancyCategory: selectedPregnancyCategories.length == 1
           ? selectedPregnancyCategories.single
           : null,
-      whoEml: whoEmlOnly.value ? true : null,
-      antimicrobial: antimicrobialOnly.value ? true : null,
+      whoEml: whoEmlOnly ? true : null,
+      antimicrobial: antimicrobialOnly ? true : null,
     );
 
     return result.items.map((e) => Drug.fromRecord(e)).toList();

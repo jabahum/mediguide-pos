@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:get/get.dart';
 import 'package:infinite_scroll_pagination/infinite_scroll_pagination.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
@@ -11,11 +12,12 @@ import '../../widgets/pagination_indicators.dart';
 import 'drug_index_controller.dart';
 import 'widgets/drug_card.dart';
 
-class DrugIndexPage extends GetWidget<DrugIndexController> {
+class DrugIndexPage extends ConsumerWidget {
   const DrugIndexPage({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final controller = ref.watch(drugIndexControllerProvider);
     return Scaffold(
       appBar: AppBar(
         titleSpacing: AppSpacing.md,
@@ -26,14 +28,12 @@ class DrugIndexPage extends GetWidget<DrugIndexController> {
           ),
         ),
         actions: [
-          Obx(
-            () => FilterButton(
-              hasActiveFilters: controller.hasActiveFilters.value,
-              onPressed: () => controller.showFilterModal(context),
-              onReset: controller.hasActiveFilters.value
-                  ? controller.clearAllFilters
-                  : null,
-            ),
+          FilterButton(
+            hasActiveFilters: controller.hasActiveFilters,
+            onPressed: () => controller.showFilterModal(context),
+            onReset: controller.hasActiveFilters
+                ? controller.clearAllFilters
+                : null,
           ),
           AppSpacing.xs.gap,
         ],
@@ -101,14 +101,10 @@ class DrugIndexPage extends GetWidget<DrugIndexController> {
                       newPageProgressIndicatorBuilder: (context) =>
                           PaginationIndicators.newPageProgress(),
                       noItemsFoundIndicatorBuilder: (context) {
-                        return Obx(() {
-                          final hasFilters = controller.hasActiveFilters.value;
-
-                          return _EmptyDrugState(
-                            hasFilters: hasFilters,
-                            onClearFilters: controller.clearAllFilters,
-                          );
-                        });
+                        return _EmptyDrugState(
+                          hasFilters: controller.hasActiveFilters,
+                          onClearFilters: controller.clearAllFilters,
+                        );
                       },
                       noMoreItemsIndicatorBuilder: (context) =>
                           PaginationIndicators.noMoreItems(),

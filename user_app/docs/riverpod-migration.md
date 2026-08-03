@@ -28,7 +28,7 @@ static `.to` or `Get.find` consumer migrates.
 | Main shell/home | Nested GetX route adapter | Navigation index and repository-backed home notifier | Shell/route | State migrated; router adapter pending |
 | Global search | Removed GetX controller and main binding | Auto-disposed search notifier and injected typed repositories | Search overlay | Migrated |
 | Guidelines/reading | Riverpod-scoped catalogue plus reader family | Typed catalogue pagination and offline progress repository | Route/resource | Migrated |
-| Drugs/calculators | GetX feature controllers | Repository-backed families | Route/resource | Pending |
+| Drugs/calculators | Riverpod-scoped catalogues and calculator runner family | Typed repositories, cached HTML and usage sessions | Route/resource | Migrated |
 | Facilities/consultants | GetX feature controllers | Repository-backed families | Route/resource | Pending |
 | Support/notifications | GetX feature controllers | User-scoped notifiers | Route/user | Pending |
 | Conversations/AI | GetX controllers/services | Conversation/assistant notifiers | Route/session | Pending |

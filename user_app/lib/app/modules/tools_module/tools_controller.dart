@@ -1,40 +1,45 @@
 import 'package:flutter/material.dart';
-import 'package:get/get.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:infinite_scroll_pagination/infinite_scroll_pagination.dart';
 
 import '../../data/models/models.dart';
 import '../../data/models/filter_models.dart';
-import '../../data/services/backend_api_service.dart';
 import '../../data/repositories/calculator_repository.dart';
+import '../../providers/core_providers.dart';
 import '../../utils/common.dart';
 import '../../utils/constants.dart';
 import '../../widgets/generic_filter_bottom_sheet.dart';
 
-class ToolsController extends GetxController {
-  final BackendApiService _apiService = BackendApiService.to;
+final toolsControllerProvider = ChangeNotifierProvider.autoDispose
+    .family<ToolsController, Object?>((ref, arguments) {
+      return ToolsController(
+        ref.watch(calculatorRepositoryProvider),
+        arguments,
+      );
+    });
+
+class ToolsController extends ChangeNotifier {
+  ToolsController(this._repository, Object? arguments) {
+    _initPaging();
+    _handleArgs(arguments);
+  }
+
+  final CalculatorRepository _repository;
 
   late final PagingController<int, Calculator> pagingController;
 
-  final hasActiveFilters = false.obs;
+  bool hasActiveFilters = false;
 
-  final searchQuery = ''.obs;
-  final selectedTypes = <CalculatorType>[].obs;
-  final selectedStatuses = <CalculatorStatus>[].obs;
-  final selectedTabIndex = 0.obs;
+  String searchQuery = '';
+  List<CalculatorType> selectedTypes = [];
+  List<CalculatorStatus> selectedStatuses = [];
+  int selectedTabIndex = 0;
 
-  @override
-  void onInit() {
-    super.onInit();
-    _initPaging();
-    _handleArgs();
-  }
-
-  void _handleArgs() {
-    final args = Get.arguments;
+  void _handleArgs(Object? args) {
     if (args is Map<String, dynamic>) {
       final tab = args['initialTab'];
       if (tab is int && tab >= 0 && tab <= 3) {
-        selectedTabIndex.value = tab;
+        selectedTabIndex = tab;
         _updateFilterState();
       }
     }
@@ -53,7 +58,7 @@ class ToolsController extends GetxController {
   // ================================
   Future<List<Calculator>> _fetchPage(int page) async {
     try {
-      final tabType = _getTabType(selectedTabIndex.value);
+      final tabType = _getTabType(selectedTabIndex);
       final types = selectedTypes.isNotEmpty
           ? selectedTypes.map(_typeToString).toList()
           : tabType == null
@@ -62,10 +67,10 @@ class ToolsController extends GetxController {
       final statuses = selectedStatuses.isNotEmpty
           ? selectedStatuses.map(_statusToString).toList()
           : const ['active'];
-      final result = await CalculatorRepository(_apiService).list(
+      final result = await _repository.list(
         page: page,
         perPage: pageSize,
-        search: searchQuery.value,
+        search: searchQuery,
         types: types,
         statuses: statuses,
         sort: 'created_at',
@@ -85,7 +90,7 @@ class ToolsController extends GetxController {
   void refreshData() => pagingController.refresh();
 
   void onTabChanged(int index) {
-    selectedTabIndex.value = index;
+    selectedTabIndex = index;
     _updateFilterState();
     pagingController.refresh();
   }
@@ -113,7 +118,7 @@ class ToolsController extends GetxController {
       title: 'Filter Calculators',
       fields: fields,
       initialValues: {
-        'search': searchQuery.value,
+        'search': searchQuery,
         'types': selectedTypes.map((e) => e.name).toList(),
         'statuses': selectedStatuses.map((e) => e.name).toList(),
       },
@@ -125,13 +130,13 @@ class ToolsController extends GetxController {
   }
 
   void _applyFilters(FilterResult result) {
-    searchQuery.value = '';
+    searchQuery = '';
 
     selectedTypes.clear();
     selectedStatuses.clear();
 
     final search = result.getValue<String>('search');
-    if (search != null) searchQuery.value = search;
+    if (search != null) searchQuery = search;
 
     final types = result.getValue<List>('types');
     if (types != null) {
@@ -154,10 +159,10 @@ class ToolsController extends GetxController {
   }
 
   void clearAllFilters() {
-    searchQuery.value = '';
+    searchQuery = '';
     selectedTypes.clear();
     selectedStatuses.clear();
-    selectedTabIndex.value = 0;
+    selectedTabIndex = 0;
 
     _updateFilterState();
     pagingController.refresh();
@@ -167,11 +172,18 @@ class ToolsController extends GetxController {
   // STATE
   // ================================
   void _updateFilterState() {
-    hasActiveFilters.value =
-        searchQuery.value.isNotEmpty ||
+    hasActiveFilters =
+        searchQuery.isNotEmpty ||
         selectedTypes.isNotEmpty ||
         selectedStatuses.isNotEmpty ||
-        selectedTabIndex.value > 0;
+        selectedTabIndex > 0;
+    notifyListeners();
+  }
+
+  @override
+  void dispose() {
+    pagingController.dispose();
+    super.dispose();
   }
 
   // ================================

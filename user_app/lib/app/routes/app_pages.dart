@@ -16,7 +16,6 @@ import 'package:user_app/app/modules/guidelines_indexer_module/guidelines_indexe
 import 'package:user_app/app/modules/ministry_directory_module/ministry_directory_binding.dart';
 import 'package:user_app/app/modules/ministry_directory_module/ministry_directory_page.dart';
 import 'package:user_app/app/modules/read_guideline_module/read_guideline_page.dart';
-import 'package:user_app/app/modules/use_calculator_module/use_calculator_binding.dart';
 import 'package:user_app/app/modules/use_calculator_module/use_calculator_page.dart';
 import 'package:user_app/app/modules/notifications_module/notifications_binding.dart';
 import 'package:user_app/app/modules/notifications_module/notifications_page.dart';
@@ -31,10 +30,8 @@ import 'package:user_app/app/modules/abbreviations_module/abbreviations_binding.
 import 'package:user_app/app/modules/abbreviations_module/abbreviations_page.dart';
 import 'package:user_app/app/modules/all_actions_module/all_actions_binding.dart';
 import 'package:user_app/app/modules/all_actions_module/all_actions_page.dart';
-import 'package:user_app/app/modules/drug_index_module/drug_index_binding.dart';
 import 'package:user_app/app/modules/drug_index_module/drug_index_page.dart';
 import 'package:user_app/app/modules/profile_module/profile_page.dart';
-import 'package:user_app/app/modules/tools_module/tools_binding.dart';
 import 'package:user_app/app/modules/tools_module/tools_page.dart';
 import 'package:user_app/app/modules/guidelines_module/guidelines_page.dart';
 import 'package:user_app/app/modules/home_module/home_page.dart';
@@ -77,17 +74,9 @@ class AppPages {
     ),
     GetPage(name: AppRoutes.home, page: () => const HomePage()),
     GetPage(name: AppRoutes.guidelines, page: () => const GuidelinesPage()),
-    GetPage(
-      name: AppRoutes.tools,
-      page: () => const ToolsPage(),
-      binding: ToolsBinding(),
-    ),
+    GetPage(name: AppRoutes.tools, page: () => const ToolsPage()),
     GetPage(name: AppRoutes.profile, page: () => const ProfilePage()),
-    GetPage(
-      name: AppRoutes.drugIndex,
-      page: () => const DrugIndexPage(),
-      binding: DrugIndexBinding(),
-    ),
+    GetPage(name: AppRoutes.drugIndex, page: () => const DrugIndexPage()),
     GetPage(
       name: AppRoutes.allActions,
       page: () => const AllActionsPage(),
@@ -125,7 +114,6 @@ class AppPages {
     GetPage(
       name: AppRoutes.useCalculator,
       page: () => const UseCalculatorPage(),
-      binding: UseCalculatorBinding(),
     ),
     GetPage(
       name: AppRoutes.readGuideline,

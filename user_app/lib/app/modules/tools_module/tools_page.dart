@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:get/get.dart';
 import 'package:infinite_scroll_pagination/infinite_scroll_pagination.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
@@ -11,8 +12,15 @@ import '../../widgets/pagination_indicators.dart';
 import '../../../app/modules/tools_module/tools_controller.dart';
 import 'widgets/calculator_card.dart';
 
-class ToolsPage extends GetWidget<ToolsController> {
+class ToolsPage extends ConsumerStatefulWidget {
   const ToolsPage({super.key});
+
+  @override
+  ConsumerState<ToolsPage> createState() => _ToolsPageState();
+}
+
+class _ToolsPageState extends ConsumerState<ToolsPage> {
+  late final Object? _routeArguments;
 
   static const List<_ToolTypeFilter> _toolFilters = [
     _ToolTypeFilter(label: 'All', icon: LucideIcons.layoutGrid, tabIndex: 0),
@@ -34,7 +42,14 @@ class ToolsPage extends GetWidget<ToolsController> {
   ];
 
   @override
+  void initState() {
+    super.initState();
+    _routeArguments = Get.arguments;
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final controller = ref.watch(toolsControllerProvider(_routeArguments));
     return Scaffold(
       appBar: AppBar(
         automaticallyImplyLeading: false,
@@ -46,12 +61,10 @@ class ToolsPage extends GetWidget<ToolsController> {
           ),
         ),
         actions: [
-          Obx(
-            () => FilterButton(
-              hasActiveFilters: controller.hasActiveFilters.value,
-              onPressed: () => controller.showFilterModal(context),
-              onReset: controller.clearAllFilters,
-            ),
+          FilterButton(
+            hasActiveFilters: controller.hasActiveFilters,
+            onPressed: () => controller.showFilterModal(context),
+            onReset: controller.clearAllFilters,
           ),
           AppSpacing.xs.gap,
         ],
@@ -83,12 +96,10 @@ class ToolsPage extends GetWidget<ToolsController> {
                 0,
               ),
               sliver: SliverToBoxAdapter(
-                child: Obx(
-                  () => _ToolTypeFilterBar(
-                    filters: _toolFilters,
-                    selectedIndex: controller.selectedTabIndex.value,
-                    onChanged: controller.onTabChanged,
-                  ),
+                child: _ToolTypeFilterBar(
+                  filters: _toolFilters,
+                  selectedIndex: controller.selectedTabIndex,
+                  onChanged: controller.onTabChanged,
                 ),
               ),
             ),
@@ -139,7 +150,7 @@ class ToolsPage extends GetWidget<ToolsController> {
                       newPageProgressIndicatorBuilder: (context) =>
                           PaginationIndicators.newPageProgress(),
                       noItemsFoundIndicatorBuilder: (context) {
-                        final hasFilters = controller.hasActiveFilters.value;
+                        final hasFilters = controller.hasActiveFilters;
 
                         return _EmptyToolsState(
                           hasFilters: hasFilters,

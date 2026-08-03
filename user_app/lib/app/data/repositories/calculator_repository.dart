@@ -35,6 +35,15 @@ final class CalculatorRepository {
 
   Future<String> content(String id) =>
       _api.requestText('/api/v2/calculators/$id/content');
+
+  Future<ApiRecord> get(String id) async {
+    final response = await _api.requestJson(
+      '/api/v2/calculators/$id',
+      method: 'GET',
+    );
+    return ApiRecord(_normalize(_data(response), Calculator.collection));
+  }
+
   String contentUrl(String id) =>
       '$mediguideApiBaseUrl/api/v2/calculators/$id/content';
 

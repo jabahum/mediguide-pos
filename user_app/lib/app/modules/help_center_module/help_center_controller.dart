@@ -1,38 +1,50 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
-import 'package:flutter_form_builder/flutter_form_builder.dart';
-import 'package:get/get.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:toastification/toastification.dart';
 import 'package:infinite_scroll_pagination/infinite_scroll_pagination.dart';
 import '../../data/models/models.dart';
 import '../../data/repositories/support_repository.dart';
-import '../../data/services/backend_api_service.dart';
+import '../../providers/core_providers.dart';
 import '../../utils/common.dart';
 import '../../utils/constants.dart';
 import '../../widgets/generic_filter_bottom_sheet.dart';
 import '../../data/models/filter_models.dart';
 
 /// Enhanced Help Center Controller with user-specific support ticket management
-class HelpCenterController extends GetxController {
-  SupportRepository get _repository => SupportRepository(BackendApiService.to);
+final helpCenterControllerProvider = ChangeNotifierProvider.autoDispose((ref) {
+  return HelpCenterController(ref.watch(supportRepositoryProvider));
+});
+
+class HelpCenterController extends ChangeNotifier {
+  HelpCenterController(this._repository) {
+    initializePagination();
+  }
+
+  final SupportRepository _repository;
 
   // Reactive state
-  final isLoading = false.obs;
-  final isCreatingTicket = false.obs;
-  final isAddingReply = false.obs;
-  final searchQuery = ''.obs;
-  final selectedStatus = 'all'.obs;
-  final selectedPriority = 'all'.obs;
+  bool isLoading = false;
+  bool isCreatingTicket = false;
+  bool isAddingReply = false;
+  String searchQuery = '';
+  String selectedStatus = 'all';
+  String selectedPriority = 'all';
+  String selectedCategory = 'all';
 
   // Ticket data
-  final tickets = <SupportTicket>[].obs;
-  final selectedTicket = Rx<SupportTicket?>(null);
-  final currentTicketReplies = <SupportTicketReply>[].obs;
+  final tickets = <SupportTicket>[];
+  SupportTicket? selectedTicket;
+  List<SupportTicketReply> currentTicketReplies = [];
 
   // Infinite scroll pagination
   late PagingController<int, SupportTicket> pagingController;
 
   // Filter helpers
-  final hasActiveFilters = false.obs;
+  bool hasActiveFilters = false;
+  Timer? _searchDebounce;
+  bool _disposed = false;
 
   // Available categories for tickets
   final List<String> availableCategories = [
@@ -44,23 +56,12 @@ class HelpCenterController extends GetxController {
     'Other',
   ];
 
-  // Create ticket form state
-  final formKey = GlobalKey<FormBuilderState>();
-
-  // Reply form state
-  final replyFormKey = GlobalKey<FormBuilderState>();
-
   @override
-  void onInit() {
-    super.onInit();
-    initializePagination();
-    setupSearchListener();
-  }
-
-  @override
-  void onClose() {
+  void dispose() {
+    _disposed = true;
+    _searchDebounce?.cancel();
     pagingController.dispose();
-    super.onClose();
+    super.dispose();
   }
 
   /// Initialize pagination controller
@@ -72,44 +73,33 @@ class HelpCenterController extends GetxController {
     );
   }
 
-  /// Setup search query listener with debouncing
-  void setupSearchListener() {
-    debounce(
-      searchQuery,
-      (_) => pagingController.refresh(),
-      time: const Duration(milliseconds: 500),
-    );
-
-    // Update hasActiveFilters when search or filters change
-    ever(searchQuery, (_) => updateActiveFilters());
-    ever(selectedStatus, (_) => updateActiveFilters());
-    ever(selectedPriority, (_) => updateActiveFilters());
-  }
-
   /// Update active filters indicator
   void updateActiveFilters() {
-    hasActiveFilters.value =
-        searchQuery.value.isNotEmpty ||
-        selectedStatus.value != 'all' ||
-        selectedPriority.value != 'all';
+    hasActiveFilters =
+        searchQuery.isNotEmpty ||
+        selectedStatus != 'all' ||
+        selectedPriority != 'all' ||
+        selectedCategory != 'all';
+    if (!_disposed) notifyListeners();
   }
 
   /// Load tickets page for infinite scroll pagination
   Future<List<SupportTicket>> loadTicketsPage(int pageKey) async {
     return await searchMyTickets(
-      query: searchQuery.value,
+      query: searchQuery,
       page: pageKey,
       perPage: pageSize,
       statusFilter: getStatusFilter(),
       priorityFilter: getPriorityFilter(),
+      categoryFilter: selectedCategory == 'all' ? null : selectedCategory,
     );
   }
 
   /// Get status filter enum
   TicketStatus? getStatusFilter() {
-    if (selectedStatus.value == 'all') return null;
+    if (selectedStatus == 'all') return null;
 
-    switch (selectedStatus.value) {
+    switch (selectedStatus) {
       case 'open':
         return TicketStatus.open;
       case 'inProgress':
@@ -125,9 +115,9 @@ class HelpCenterController extends GetxController {
 
   /// Get priority filter enum
   TicketPriority? getPriorityFilter() {
-    if (selectedPriority.value == 'all') return null;
+    if (selectedPriority == 'all') return null;
 
-    switch (selectedPriority.value) {
+    switch (selectedPriority) {
       case 'low':
         return TicketPriority.low;
       case 'normal':
@@ -146,35 +136,16 @@ class HelpCenterController extends GetxController {
     pagingController.refresh();
   }
 
-  /// Submit create ticket form
-  Future<void> submitCreateTicketForm() async {
-    if (formKey.currentState?.saveAndValidate() ?? false) {
-      final formData = formKey.currentState!.value;
-
-      await createTicket(
-        subject: formData['subject'] as String,
-        description: formData['description'] as String,
-        category: formData['category'] as String,
-        priority: formData['priority'] as TicketPriority,
-      );
-
-      // Clear form on success
-      if (!isCreatingTicket.value) {
-        formKey.currentState?.reset();
-        Get.back(); // Close dialog
-      }
-    }
-  }
-
   /// Create a new support ticket
-  Future<void> createTicket({
+  Future<bool> createTicket({
     required String subject,
     required String description,
     required String category,
     required TicketPriority priority,
   }) async {
     try {
-      isCreatingTicket.value = true;
+      isCreatingTicket = true;
+      notifyListeners();
 
       final ticket = await createMyTicket(
         subject: subject,
@@ -191,27 +162,33 @@ class HelpCenterController extends GetxController {
         title: 'Success',
         description: 'Support ticket created successfully',
       );
+      return true;
     } catch (e) {
       Common.quickToast(
         type: ToastificationType.error,
         title: 'Error',
         description: 'Failed to create ticket: $e',
       );
+      return false;
     } finally {
-      isCreatingTicket.value = false;
+      isCreatingTicket = false;
+      if (!_disposed) notifyListeners();
     }
   }
 
   /// Load ticket details with replies
   Future<void> loadTicketDetails(String ticketId) async {
     try {
-      isLoading.value = true;
+      isLoading = true;
+      selectedTicket = null;
+      currentTicketReplies = [];
+      notifyListeners();
 
       final ticket = await getMyTicketById(ticketId);
-      selectedTicket.value = ticket;
+      selectedTicket = ticket;
 
       final replies = await getMyTicketReplies(ticketId: ticketId);
-      currentTicketReplies.value = replies;
+      currentTicketReplies = replies;
     } catch (e) {
       Common.quickToast(
         type: ToastificationType.error,
@@ -219,17 +196,19 @@ class HelpCenterController extends GetxController {
         description: 'Failed to load ticket details: $e',
       );
     } finally {
-      isLoading.value = false;
+      isLoading = false;
+      if (!_disposed) notifyListeners();
     }
   }
 
   /// Add reply to current ticket
-  Future<void> addReplyToCurrentTicket(String message) async {
-    final ticket = selectedTicket.value;
-    if (ticket == null) return;
+  Future<bool> addReplyToCurrentTicket(String message) async {
+    final ticket = selectedTicket;
+    if (ticket == null) return false;
 
     try {
-      isAddingReply.value = true;
+      isAddingReply = true;
+      notifyListeners();
 
       final reply = await addReplyToMyTicket(
         ticketId: ticket.id,
@@ -243,39 +222,58 @@ class HelpCenterController extends GetxController {
         title: 'Success',
         description: 'Reply added successfully',
       );
+      return true;
     } catch (e) {
       Common.quickToast(
         type: ToastificationType.error,
         title: 'Error',
         description: 'Failed to add reply: $e',
       );
+      return false;
     } finally {
-      isAddingReply.value = false;
+      isAddingReply = false;
+      if (!_disposed) notifyListeners();
     }
   }
 
   /// Update search query and refresh
   void updateSearchQuery(String query) {
-    searchQuery.value = query;
+    searchQuery = query;
+    updateActiveFilters();
+    _searchDebounce?.cancel();
+    _searchDebounce = Timer(
+      const Duration(milliseconds: 500),
+      pagingController.refresh,
+    );
   }
 
   /// Update status filter and refresh
   void updateStatusFilter(String status) {
-    selectedStatus.value = status;
+    selectedStatus = status;
+    updateActiveFilters();
     refreshTickets();
   }
 
   /// Update priority filter and refresh
   void updatePriorityFilter(String priority) {
-    selectedPriority.value = priority;
+    selectedPriority = priority;
+    updateActiveFilters();
+    refreshTickets();
+  }
+
+  void updateCategoryFilter(String category) {
+    selectedCategory = category;
+    updateActiveFilters();
     refreshTickets();
   }
 
   /// Clear all filters
   void clearFilters() {
-    searchQuery.value = '';
-    selectedStatus.value = 'all';
-    selectedPriority.value = 'all';
+    searchQuery = '';
+    selectedStatus = 'all';
+    selectedPriority = 'all';
+    selectedCategory = 'all';
+    updateActiveFilters();
     refreshTickets();
   }
 
@@ -310,9 +308,10 @@ class HelpCenterController extends GetxController {
         ]),
       ],
       initialValues: {
-        'search': searchQuery.value,
-        'status': selectedStatus.value,
-        'priority': selectedPriority.value,
+        'search': searchQuery,
+        'status': selectedStatus,
+        'priority': selectedPriority,
+        'category': selectedCategory,
       },
     );
 
@@ -334,10 +333,9 @@ class HelpCenterController extends GetxController {
         updatePriorityFilter(filters['priority'] as String);
       }
 
-      // Note: Category filtering would need to be implemented in the search method
-      // if (filters['category'] != null) {
-      //   updateCategoryFilter(filters['category'] as String);
-      // }
+      if (filters['category'] != null) {
+        updateCategoryFilter(filters['category'] as String);
+      }
     }
   }
 

@@ -7,7 +7,6 @@ import 'package:user_app/app/modules/chat_interface_module/chat_interface_bindin
 import 'package:user_app/app/modules/chat_interface_module/chat_interface_page.dart';
 import 'package:user_app/app/modules/chat_list_module/chat_list_binding.dart';
 import 'package:user_app/app/modules/chat_list_module/chat_list_page.dart';
-import 'package:user_app/app/modules/help_center_module/help_center_binding.dart';
 import 'package:user_app/app/modules/help_center_module/help_center_page.dart';
 import 'package:user_app/app/modules/faq_module/faq_binding.dart';
 import 'package:user_app/app/modules/faq_module/faq_page.dart';
@@ -17,7 +16,6 @@ import 'package:user_app/app/modules/ministry_directory_module/ministry_director
 import 'package:user_app/app/modules/ministry_directory_module/ministry_directory_page.dart';
 import 'package:user_app/app/modules/read_guideline_module/read_guideline_page.dart';
 import 'package:user_app/app/modules/use_calculator_module/use_calculator_page.dart';
-import 'package:user_app/app/modules/notifications_module/notifications_binding.dart';
 import 'package:user_app/app/modules/notifications_module/notifications_page.dart';
 import 'package:user_app/app/modules/about_us_module/about_us_binding.dart';
 import 'package:user_app/app/modules/about_us_module/about_us_page.dart';
@@ -102,7 +100,6 @@ class AppPages {
     GetPage(
       name: AppRoutes.notifications,
       page: () => const NotificationsPage(),
-      binding: NotificationsBinding(),
     ),
     GetPage(
       name: AppRoutes.useCalculator,
@@ -127,11 +124,7 @@ class AppPages {
       page: () => const GuidelinesIndexerPage(),
       binding: GuidelinesIndexerBinding(),
     ),
-    GetPage(
-      name: AppRoutes.helpCenter,
-      page: () => const HelpCenterPage(),
-      binding: HelpCenterBinding(),
-    ),
+    GetPage(name: AppRoutes.helpCenter, page: () => const HelpCenterPage()),
     GetPage(
       name: AppRoutes.faq,
       page: () => const FaqPage(),

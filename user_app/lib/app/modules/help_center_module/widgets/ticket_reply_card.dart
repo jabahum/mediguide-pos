@@ -1,19 +1,20 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:get/get.dart';
 import '../../../data/models/support_ticket_reply.dart';
-import '../../../data/services/auth_service.dart';
+import '../../../features/auth/auth_controller.dart';
 import '../../../utils/app_spacing.dart';
 import '../../../widgets/user_avatar.dart';
 
 /// Card widget for displaying a support ticket reply in the conversation
-class TicketReplyCard extends StatelessWidget {
+class TicketReplyCard extends ConsumerWidget {
   final SupportTicketReply reply;
 
   const TicketReplyCard({super.key, required this.reply});
 
   @override
-  Widget build(BuildContext context) {
-    final currentUser = AuthService.to.currentUser.value;
+  Widget build(BuildContext context, WidgetRef ref) {
+    final currentUser = ref.watch(authControllerProvider).valueOrNull?.user;
     final isFromCurrentUser =
         currentUser != null && reply.isFromUser(currentUser.id);
     final isFromSupport = reply.isFromSupport;
@@ -125,7 +126,7 @@ class TicketReplyCard extends StatelessWidget {
           AppSpacing.gapSm,
           UserAvatar.small(
             name: reply.authorName,
-            avatarUrl: AuthService.to.userProfilePicture, // Current user avatar
+            avatarUrl: currentUser.avatar,
           ),
         ],
       ],

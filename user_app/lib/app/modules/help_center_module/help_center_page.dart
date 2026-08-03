@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:get/get.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:infinite_scroll_pagination/infinite_scroll_pagination.dart';
@@ -11,7 +12,7 @@ import '../../../app/modules/help_center_module/help_center_controller.dart';
 import 'widgets/create_ticket_dialog.dart';
 import 'widgets/support_ticket_card.dart';
 
-class HelpCenterPage extends GetWidget<HelpCenterController> {
+class HelpCenterPage extends ConsumerWidget {
   const HelpCenterPage({super.key});
 
   static const List<_TicketStatusFilter> _filters = [
@@ -35,7 +36,8 @@ class HelpCenterPage extends GetWidget<HelpCenterController> {
   ];
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final controller = ref.watch(helpCenterControllerProvider);
     return Scaffold(
       appBar: AppBar(
         titleSpacing: AppSpacing.md,
@@ -55,7 +57,7 @@ class HelpCenterPage extends GetWidget<HelpCenterController> {
         ],
       ),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => CreateTicketDialog.show(),
+        onPressed: () => CreateTicketDialog.show(context),
         icon: const Icon(LucideIcons.plus),
         label: const Text('New Ticket'),
       ),
@@ -73,7 +75,7 @@ class HelpCenterPage extends GetWidget<HelpCenterController> {
               ),
               sliver: SliverToBoxAdapter(
                 child: _SupportHeaderCard(
-                  onCreateTicket: () => CreateTicketDialog.show(),
+                  onCreateTicket: () => CreateTicketDialog.show(context),
                 ),
               ),
             ),
@@ -88,6 +90,7 @@ class HelpCenterPage extends GetWidget<HelpCenterController> {
               sliver: SliverToBoxAdapter(
                 child: _StatusFilterBar(
                   filters: _filters,
+                  selectedValue: controller.selectedStatus,
                   onChanged: controller.updateStatusFilter,
                 ),
               ),
@@ -131,7 +134,8 @@ class HelpCenterPage extends GetWidget<HelpCenterController> {
                             PaginationIndicators.newPageProgress(),
                         noItemsFoundIndicatorBuilder: (context) =>
                             _EmptySupportState(
-                              onCreateTicket: () => CreateTicketDialog.show(),
+                              onCreateTicket: () =>
+                                  CreateTicketDialog.show(context),
                             ),
                         noMoreItemsIndicatorBuilder: (context) =>
                             PaginationIndicators.noMoreItems(),
@@ -211,18 +215,16 @@ class _SupportHeaderCard extends StatelessWidget {
   }
 }
 
-class _StatusFilterBar extends StatefulWidget {
+class _StatusFilterBar extends StatelessWidget {
   final List<_TicketStatusFilter> filters;
+  final String selectedValue;
   final ValueChanged<String> onChanged;
 
-  const _StatusFilterBar({required this.filters, required this.onChanged});
-
-  @override
-  State<_StatusFilterBar> createState() => _StatusFilterBarState();
-}
-
-class _StatusFilterBarState extends State<_StatusFilterBar> {
-  String selectedValue = 'all';
+  const _StatusFilterBar({
+    required this.filters,
+    required this.selectedValue,
+    required this.onChanged,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -230,10 +232,10 @@ class _StatusFilterBarState extends State<_StatusFilterBar> {
       height: 42,
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
-        itemCount: widget.filters.length,
+        itemCount: filters.length,
         separatorBuilder: (_, _) => AppSpacing.sm.gap,
         itemBuilder: (context, index) {
-          final filter = widget.filters[index];
+          final filter = filters[index];
           final selected = selectedValue == filter.value;
 
           return _StatusFilterChip(
@@ -242,12 +244,7 @@ class _StatusFilterBarState extends State<_StatusFilterBar> {
             selected: selected,
             onTap: () {
               if (selectedValue == filter.value) return;
-
-              setState(() {
-                selectedValue = filter.value;
-              });
-
-              widget.onChanged(filter.value);
+              onChanged(filter.value);
             },
           );
         },

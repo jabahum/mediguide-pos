@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:get/get.dart';
 import 'package:infinite_scroll_pagination/infinite_scroll_pagination.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
@@ -11,11 +12,12 @@ import '../../widgets/filter_button.dart';
 import '../../widgets/my_notification_card.dart';
 import '../../widgets/pagination_indicators.dart';
 
-class NotificationsPage extends GetWidget<NotificationsController> {
+class NotificationsPage extends ConsumerWidget {
   const NotificationsPage({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final controller = ref.watch(notificationsControllerProvider);
     final cs = context.theme.colorScheme;
 
     return Scaffold(
@@ -28,14 +30,12 @@ class NotificationsPage extends GetWidget<NotificationsController> {
           ),
         ),
         actions: [
-          Obx(
-            () => FilterButton(
-              hasActiveFilters: controller.hasActiveFilters.value,
-              onPressed: () => _showFilterModal(context),
-              onReset: controller.hasActiveFilters.value
-                  ? controller.clearAllFilters
-                  : null,
-            ),
+          FilterButton(
+            hasActiveFilters: controller.hasActiveFilters,
+            onPressed: () => _showFilterModal(context),
+            onReset: controller.hasActiveFilters
+                ? controller.clearAllFilters
+                : null,
           ),
           AppSpacing.xs.gap,
         ],
@@ -55,14 +55,12 @@ class NotificationsPage extends GetWidget<NotificationsController> {
                 0,
               ),
               sliver: SliverToBoxAdapter(
-                child: Obx(
-                  () => _NotificationsHeaderCard(
-                    hasFilters: controller.hasActiveFilters.value,
-                    selectedType: controller.selectedType.value,
-                    selectedPriority: controller.selectedPriority.value,
-                    onOpenFilters: () => _showFilterModal(context),
-                    onClearFilters: controller.clearAllFilters,
-                  ),
+                child: _NotificationsHeaderCard(
+                  hasFilters: controller.hasActiveFilters,
+                  selectedType: controller.selectedType,
+                  selectedPriority: controller.selectedPriority,
+                  onOpenFilters: () => _showFilterModal(context),
+                  onClearFilters: controller.clearAllFilters,
                 ),
               ),
             ),
@@ -86,7 +84,7 @@ class NotificationsPage extends GetWidget<NotificationsController> {
                         return _NotificationCardShell(
                           child: MyNotificationCard(
                             notification: notification,
-                            onTap: () => _handleTap(notification),
+                            onTap: () => _handleTap(notification, controller),
                           ),
                         );
                       },
@@ -109,14 +107,10 @@ class NotificationsPage extends GetWidget<NotificationsController> {
                       newPageProgressIndicatorBuilder: (context) =>
                           PaginationIndicators.newPageProgress(),
                       noItemsFoundIndicatorBuilder: (context) {
-                        return Obx(() {
-                          final isFiltered = controller.hasActiveFilters.value;
-
-                          return _EmptyNotificationsState(
-                            isFiltered: isFiltered,
-                            onClearFilters: controller.clearAllFilters,
-                          );
-                        });
+                        return _EmptyNotificationsState(
+                          isFiltered: controller.hasActiveFilters,
+                          onClearFilters: controller.clearAllFilters,
+                        );
                       },
                       noMoreItemsIndicatorBuilder: (context) =>
                           PaginationIndicators.noMoreItems(),
@@ -132,7 +126,10 @@ class NotificationsPage extends GetWidget<NotificationsController> {
     );
   }
 
-  void _handleTap(MyNotification notification) {
+  void _handleTap(
+    MyNotification notification,
+    NotificationsController controller,
+  ) {
     controller.markRead(notification).catchError((_) {});
     Get.snackbar(
       notification.title,
@@ -150,55 +147,56 @@ class NotificationsPage extends GetWidget<NotificationsController> {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
-      builder: (_) {
-        return SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(
-              AppSpacing.md,
-              AppSpacing.sm,
-              AppSpacing.md,
-              AppSpacing.md,
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Row(
-                  children: [
-                    Container(
-                      width: 42,
-                      height: 42,
-                      decoration: BoxDecoration(
-                        color: context.theme.colorScheme.primary.withValues(
-                          alpha: 0.1,
+      builder: (_) => Consumer(
+        builder: (context, ref, _) {
+          final controller = ref.watch(notificationsControllerProvider);
+          return SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(
+                AppSpacing.md,
+                AppSpacing.sm,
+                AppSpacing.md,
+                AppSpacing.md,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        width: 42,
+                        height: 42,
+                        decoration: BoxDecoration(
+                          color: context.theme.colorScheme.primary.withValues(
+                            alpha: 0.1,
+                          ),
+                          borderRadius: BorderRadius.circular(14),
                         ),
-                        borderRadius: BorderRadius.circular(14),
-                      ),
-                      child: Icon(
-                        LucideIcons.slidersHorizontal,
-                        color: context.theme.colorScheme.primary,
-                      ),
-                    ),
-                    AppSpacing.md.gap,
-                    Expanded(
-                      child: Text(
-                        'Filter Notifications',
-                        style: context.textTheme.titleLarge?.copyWith(
-                          fontWeight: FontWeight.w800,
+                        child: Icon(
+                          LucideIcons.slidersHorizontal,
+                          color: context.theme.colorScheme.primary,
                         ),
                       ),
-                    ),
-                  ],
-                ),
+                      AppSpacing.md.gap,
+                      Expanded(
+                        child: Text(
+                          'Filter Notifications',
+                          style: context.textTheme.titleLarge?.copyWith(
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
 
-                AppSpacing.lg.gap,
+                  AppSpacing.lg.gap,
 
-                _FilterSectionTitle(title: 'Type', icon: LucideIcons.bell),
+                  _FilterSectionTitle(title: 'Type', icon: LucideIcons.bell),
 
-                AppSpacing.sm.gap,
+                  AppSpacing.sm.gap,
 
-                Obx(() {
-                  return Wrap(
+                  Wrap(
                     spacing: AppSpacing.sm,
                     runSpacing: AppSpacing.sm,
                     children:
@@ -223,25 +221,22 @@ class NotificationsPage extends GetWidget<NotificationsController> {
                         ].map((option) {
                           return _FilterChoiceChip(
                             label: option.label,
-                            selected:
-                                controller.selectedType.value == option.value,
+                            selected: controller.selectedType == option.value,
                             onTap: () => controller.setTypeFilter(option.value),
                           );
                         }).toList(),
-                  );
-                }),
+                  ),
 
-                AppSpacing.lg.gap,
+                  AppSpacing.lg.gap,
 
-                _FilterSectionTitle(
-                  title: 'Priority',
-                  icon: LucideIcons.triangleAlert,
-                ),
+                  _FilterSectionTitle(
+                    title: 'Priority',
+                    icon: LucideIcons.triangleAlert,
+                  ),
 
-                AppSpacing.sm.gap,
+                  AppSpacing.sm.gap,
 
-                Obx(() {
-                  return Wrap(
+                  Wrap(
                     spacing: AppSpacing.sm,
                     runSpacing: AppSpacing.sm,
                     children:
@@ -264,44 +259,43 @@ class NotificationsPage extends GetWidget<NotificationsController> {
                           return _FilterChoiceChip(
                             label: option.label,
                             selected:
-                                controller.selectedPriority.value ==
-                                option.value,
+                                controller.selectedPriority == option.value,
                             onTap: () =>
                                 controller.setPriorityFilter(option.value),
                           );
                         }).toList(),
-                  );
-                }),
+                  ),
 
-                AppSpacing.lg.gap,
+                  AppSpacing.lg.gap,
 
-                Row(
-                  children: [
-                    Expanded(
-                      child: OutlinedButton.icon(
-                        onPressed: () {
-                          controller.clearAllFilters();
-                          Navigator.pop(context);
-                        },
-                        icon: const Icon(LucideIcons.x),
-                        label: const Text('Clear'),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          onPressed: () {
+                            controller.clearAllFilters();
+                            Navigator.pop(context);
+                          },
+                          icon: const Icon(LucideIcons.x),
+                          label: const Text('Clear'),
+                        ),
                       ),
-                    ),
-                    AppSpacing.sm.gap,
-                    Expanded(
-                      child: FilledButton.icon(
-                        onPressed: () => Navigator.pop(context),
-                        icon: const Icon(LucideIcons.check),
-                        label: const Text('Done'),
+                      AppSpacing.sm.gap,
+                      Expanded(
+                        child: FilledButton.icon(
+                          onPressed: () => Navigator.pop(context),
+                          icon: const Icon(LucideIcons.check),
+                          label: const Text('Done'),
+                        ),
                       ),
-                    ),
-                  ],
-                ),
-              ],
+                    ],
+                  ),
+                ],
+              ),
             ),
-          ),
-        );
-      },
+          );
+        },
+      ),
     );
   }
 }

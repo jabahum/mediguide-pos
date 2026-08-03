@@ -16,7 +16,7 @@ class SupportTicketCard extends StatelessWidget {
     final cs = context.theme.colorScheme;
 
     return InkWell(
-      onTap: () => TicketDetailDialog.show(ticket.id),
+      onTap: () => TicketDetailDialog.show(context, ticket.id),
       child: Padding(
         padding: const EdgeInsets.symmetric(
           horizontal: AppSpacing.md,

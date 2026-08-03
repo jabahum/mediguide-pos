@@ -1,45 +1,42 @@
 import 'dart:async';
-import 'package:get/get.dart';
+import 'package:flutter/foundation.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:infinite_scroll_pagination/infinite_scroll_pagination.dart';
 
 import '../../data/models/models.dart';
 import '../../data/repositories/notification_repository.dart';
-import '../../data/services/backend_api_service.dart';
+import '../../providers/core_providers.dart';
 import '../../utils/constants.dart';
 import '../../utils/common.dart';
 
-class NotificationsController extends GetxController {
-  NotificationRepository get _repository =>
-      NotificationRepository(BackendApiService.to);
-  late final PagingController<int, MyNotification> pagingController;
+final notificationsControllerProvider = ChangeNotifierProvider.autoDispose(
+  (ref) => NotificationsController(ref.watch(notificationRepositoryProvider)),
+);
 
-  final RxString searchQuery = ''.obs;
-  final RxBool hasActiveFilters = false.obs;
-  final RxString selectedType = ''.obs;
-  final RxString selectedPriority = ''.obs;
-
-  Timer? _debounce;
-
-  @override
-  void onInit() {
-    super.onInit();
-
+class NotificationsController extends ChangeNotifier {
+  NotificationsController(this._repository) {
     pagingController = PagingController<int, MyNotification>(
       getNextPageKey: (state) =>
           state.lastPageIsEmpty ? null : state.nextIntPageKey,
       fetchPage: _loadPage,
     );
-
-    ever(searchQuery, (_) => _onFilterChanged());
-    ever(selectedType, (_) => _onFilterChanged());
-    ever(selectedPriority, (_) => _onFilterChanged());
   }
 
+  final NotificationRepository _repository;
+  late final PagingController<int, MyNotification> pagingController;
+
+  String searchQuery = '';
+  bool hasActiveFilters = false;
+  String selectedType = '';
+  String selectedPriority = '';
+
+  Timer? _debounce;
+
   @override
-  void onClose() {
+  void dispose() {
     _debounce?.cancel();
     pagingController.dispose();
-    super.onClose();
+    super.dispose();
   }
 
   // =========================
@@ -51,11 +48,9 @@ class NotificationsController extends GetxController {
       final result = await _repository.list(
         page: pageKey,
         perPage: pageSize,
-        search: searchQuery.value.isEmpty ? null : searchQuery.value,
-        type: selectedType.value.isEmpty ? null : selectedType.value,
-        priority: selectedPriority.value.isEmpty
-            ? null
-            : selectedPriority.value,
+        search: searchQuery.isEmpty ? null : searchQuery,
+        type: selectedType.isEmpty ? null : selectedType,
+        priority: selectedPriority.isEmpty ? null : selectedPriority,
       );
       return result.items;
     } catch (e) {
@@ -87,23 +82,27 @@ class NotificationsController extends GetxController {
   }
 
   void _updateFilterState() {
-    hasActiveFilters.value =
-        searchQuery.value.isNotEmpty ||
-        selectedType.value.isNotEmpty ||
-        selectedPriority.value.isNotEmpty;
+    hasActiveFilters =
+        searchQuery.isNotEmpty ||
+        selectedType.isNotEmpty ||
+        selectedPriority.isNotEmpty;
+    notifyListeners();
   }
 
   void clearAllFilters() {
-    searchQuery.value = '';
-    selectedType.value = '';
-    selectedPriority.value = '';
+    searchQuery = '';
+    selectedType = '';
+    selectedPriority = '';
+    _onFilterChanged();
   }
 
   void setTypeFilter(String type) {
-    selectedType.value = type;
+    selectedType = type;
+    _onFilterChanged();
   }
 
   void setPriorityFilter(String priority) {
-    selectedPriority.value = priority;
+    selectedPriority = priority;
+    _onFilterChanged();
   }
 }

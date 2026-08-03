@@ -30,7 +30,7 @@ static `.to` or `Get.find` consumer migrates.
 | Guidelines/reading | Riverpod-scoped catalogue plus reader family | Typed catalogue pagination and offline progress repository | Route/resource | Migrated |
 | Drugs/calculators | Riverpod-scoped catalogues and calculator runner family | Typed repositories, cached HTML and usage sessions | Route/resource | Migrated |
 | Facilities/consultants | Riverpod-scoped typed catalogues | Geographic filters, consultant discovery and usage events | Route/resource | Migrated |
-| Support/notifications | GetX feature controllers | User-scoped notifiers | Route/user | Pending |
+| Support/notifications | Riverpod-scoped typed repositories | Ticket, reply, filter and notification-read notifiers | Route/user | Migrated |
 | Conversations/AI | GetX controllers/services | Conversation/assistant notifiers | Route/session | Pending |
 
 Focus nodes, form keys, animation and tab controllers, and temporary password

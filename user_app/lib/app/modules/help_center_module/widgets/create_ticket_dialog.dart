@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'package:form_builder_validators/form_builder_validators.dart';
-import 'package:get/get.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../../utils/loading.dart';
 import '../../../utils/app_spacing.dart';
@@ -9,13 +9,13 @@ import '../../../data/models/models.dart';
 import '../help_center_controller.dart';
 
 /// Full screen dialog for creating a new support ticket
-class CreateTicketDialog extends StatelessWidget {
+class CreateTicketDialog extends ConsumerStatefulWidget {
   const CreateTicketDialog({super.key});
 
   /// Show the full screen create ticket dialog
-  static Future<void> show() {
+  static Future<void> show(BuildContext context) {
     return showDialog<void>(
-      context: Get.overlayContext!,
+      context: context,
       barrierDismissible: false,
       useSafeArea: false,
       builder: (context) => const CreateTicketDialog(),
@@ -23,8 +23,15 @@ class CreateTicketDialog extends StatelessWidget {
   }
 
   @override
+  ConsumerState<CreateTicketDialog> createState() => _CreateTicketDialogState();
+}
+
+class _CreateTicketDialogState extends ConsumerState<CreateTicketDialog> {
+  final _formKey = GlobalKey<FormBuilderState>();
+
+  @override
   Widget build(BuildContext context) {
-    final controller = Get.find<HelpCenterController>();
+    final controller = ref.watch(helpCenterControllerProvider);
     return Scaffold(
       appBar: AppBar(
         title: const Text('Create Support Ticket'),
@@ -33,24 +40,20 @@ class CreateTicketDialog extends StatelessWidget {
           onPressed: () => Navigator.pop(context),
         ),
         actions: [
-          Obx(
-            () => TextButton.icon(
-              onPressed: controller.isCreatingTicket.value
-                  ? null
-                  : controller.submitCreateTicketForm,
-              icon: controller.isCreatingTicket.value
-                  ? const Loading.small()
-                  : const Icon(LucideIcons.save, size: 18),
-              label: Text(
-                controller.isCreatingTicket.value ? 'Creating...' : 'Create',
-              ),
-            ),
+          TextButton.icon(
+            onPressed: controller.isCreatingTicket
+                ? null
+                : () => _submit(controller),
+            icon: controller.isCreatingTicket
+                ? const Loading.small()
+                : const Icon(LucideIcons.save, size: 18),
+            label: Text(controller.isCreatingTicket ? 'Creating...' : 'Create'),
           ),
         ],
         elevation: 1,
       ),
       body: FormBuilder(
-        key: controller.formKey,
+        key: _formKey,
         child: ListView(
           padding: AppSpacing.pagePadding,
           children: [
@@ -150,5 +153,17 @@ class CreateTicketDialog extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  Future<void> _submit(HelpCenterController controller) async {
+    if (!(_formKey.currentState?.saveAndValidate() ?? false)) return;
+    final values = _formKey.currentState!.value;
+    final created = await controller.createTicket(
+      subject: values['subject'] as String,
+      description: values['description'] as String,
+      category: values['category'] as String,
+      priority: values['priority'] as TicketPriority,
+    );
+    if (created && mounted) Navigator.pop(context);
   }
 }

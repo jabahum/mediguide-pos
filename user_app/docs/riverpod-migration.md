@@ -25,6 +25,7 @@ static `.to` or `Get.find` consumer migrates.
 | Core dependencies | GetX service registration | `core_providers.dart` | Application | Provider graph added; bridge retained |
 | Registration/recovery | Removed GetX controllers | Auth/recovery notifiers | Route | Migrated |
 | Settings/theme/language | Riverpod providers | Settings, language, connectivity and update providers | Application | Migrated |
+| Main shell/home | Nested GetX route adapter | Navigation index and repository-backed home notifier | Shell/route | State migrated; router adapter pending |
 | Guidelines/reading | GetX feature controllers | Repository-backed families | Route/resource | Pending |
 | Drugs/calculators | GetX feature controllers | Repository-backed families | Route/resource | Pending |
 | Facilities/consultants | GetX feature controllers | Repository-backed families | Route/resource | Pending |

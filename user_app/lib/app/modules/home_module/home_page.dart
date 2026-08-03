@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:get/get.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:user_app/app/routes/app_pages.dart';
 import 'package:user_app/app/utils/date_utils.dart';
 
 import '../../data/models/models.dart';
-import '../../data/services/auth_service.dart';
+import '../../features/auth/auth_controller.dart';
+import '../../features/home/home_controller.dart';
 import '../../translations/app_translations.dart';
 import '../../utils/app_spacing.dart';
 import '../../utils/loading.dart';
@@ -15,18 +17,24 @@ import '../../widgets/global_search_delegate.dart';
 import '../../widgets/glass_card.dart';
 import '../../widgets/section_header.dart';
 
-import './home_controller.dart';
 import './widgets/continue_reading_card.dart';
 
 import '../tree_selector_module/models/tree_selector_models.dart';
 import '../tree_selector_module/tree_selector_page.dart';
 
-class HomePage extends GetWidget<HomeController> {
+class HomePage extends ConsumerWidget {
   const HomePage({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final cs = context.theme.colorScheme;
+    final home = ref.watch(homeControllerProvider);
+    final data = home.valueOrNull ?? const HomeState();
+    final userName = ref.watch(
+      authControllerProvider.select(
+        (value) => value.valueOrNull?.user?.name ?? 'Healthcare Professional',
+      ),
+    );
 
     return Scaffold(
       appBar: AppBar(
@@ -43,7 +51,7 @@ class HomePage extends GetWidget<HomeController> {
               ),
             ),
             Text(
-              AuthService.to.userName,
+              userName,
               style: context.textTheme.headlineSmall?.copyWith(
                 fontWeight: FontWeight.w700,
               ),
@@ -70,164 +78,189 @@ class HomePage extends GetWidget<HomeController> {
         ],
       ),
 
-      floatingActionButton: Obx(() {
-        final unread = controller.unreadMessagesCount.value.clamp(0, 9999);
+      floatingActionButton: Builder(
+        builder: (context) {
+          final unread = data.unreadMessagesCount.clamp(0, 9999);
 
-        return FloatingActionButton.small(
-          onPressed: () => Get.toNamed(AppRoutes.chatList),
-          backgroundColor: cs.primary,
-          child: Badge(
-            isLabelVisible: unread > 0,
-            label: Text(unread > 99 ? '99+' : '$unread'),
-            child: Icon(LucideIcons.messageCircle, color: cs.onPrimary),
-          ),
-        );
-      }),
-
-      body: Obx(() {
-        final loading = controller.isLoading.value;
-
-        if (loading && controller.featuredCalculators.isEmpty) {
-          return const Center(child: Loading.large());
-        }
-
-        return RefreshIndicator(
-          onRefresh: controller.refreshData,
-          child: ListView(
-            physics: const AlwaysScrollableScrollPhysics(),
-            padding: EdgeInsets.symmetric(
-              horizontal: context.responsiveHorizontalPadding,
-              vertical: AppSpacing.md,
+          return FloatingActionButton.small(
+            onPressed: () => Get.toNamed(AppRoutes.chatList),
+            backgroundColor: cs.primary,
+            child: Badge(
+              isLabelVisible: unread > 0,
+              label: Text(unread > 99 ? '99+' : '$unread'),
+              child: Icon(LucideIcons.messageCircle, color: cs.onPrimary),
             ),
-            children: [
-              // =====================================================
-              // GUIDELINES
-              // =====================================================
-              SectionHeader(
-                title: AppTranslationKey.guidelines,
-                subtitle: 'Recently added and updated clinical guidance',
-                icon: LucideIcons.bookOpenText,
-                onSeeAll: controller.openAllGuidelines,
+          );
+        },
+      ),
+
+      body: Builder(
+        builder: (context) {
+          final loading = home.isLoading;
+
+          if (loading && !data.hasContent) {
+            return const Center(child: Loading.large());
+          }
+
+          return RefreshIndicator(
+            onRefresh: ref.read(homeControllerProvider.notifier).refresh,
+            child: ListView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              padding: EdgeInsets.symmetric(
+                horizontal: context.responsiveHorizontalPadding,
+                vertical: AppSpacing.md,
               ),
-
-              AppSpacing.md.gap,
-
-              if (controller.recentlyUpdatedGuidelines.isNotEmpty) ...[
-                _GuidelinesPreviewList(
-                  guidelines: controller.recentlyUpdatedGuidelines,
-                  onOpenGuideline: controller.openGuideline,
-                ),
-                AppSpacing.lg.gap,
-              ] else ...[
-                _NoRecentGuidelinesCard(onBrowse: controller.openAllGuidelines),
-                AppSpacing.lg.gap,
-              ],
-
-              // =====================================================
-              // PINNED GUIDELINES
-              // =====================================================
-              // if (controller.pinnedGuidelines.isNotEmpty) ...[
-              //   SectionHeader(
-              //     title: 'Pinned Guidelines',
-              //     subtitle: 'Frequently used references',
-              //     icon: LucideIcons.pin,
-              //   ),
-
-              //   AppSpacing.md.gap,
-
-              //   SizedBox(
-              //     height: 140,
-              //     child: ListView.separated(
-              //       scrollDirection: Axis.horizontal,
-              //       itemCount: controller.pinnedGuidelines.length,
-              //       separatorBuilder: (_, _) => AppSpacing.sm.gap,
-              //       itemBuilder: (context, index) {
-              //         final guideline = controller.pinnedGuidelines[index];
-
-              //         return _PinnedGuidelineCard(
-              //           title: guideline.displayName,
-              //           category: guideline.categories.firstOrNull?.name ?? '',
-              //           onTap: () => controller.openGuideline(guideline),
-              //         );
-              //       },
-              //     ),
-              //   ),
-
-              //   AppSpacing.lg.gap,
-              // ],
-
-              // =====================================================
-              // CONTINUE READING
-              // =====================================================
-              if (controller.continueReadingItems.isNotEmpty) ...[
+              children: [
+                // =====================================================
+                // GUIDELINES
+                // =====================================================
                 SectionHeader(
-                  title: AppTranslationKey.continueReading,
-                  subtitle: AppTranslationKey.resumeWhereYouLeftOff,
-                  icon: LucideIcons.bookOpen,
+                  title: AppTranslationKey.guidelines,
+                  subtitle: 'Recently added and updated clinical guidance',
+                  icon: LucideIcons.bookOpenText,
+                  onSeeAll: _openAllGuidelines,
                 ),
 
                 AppSpacing.md.gap,
 
-                SizedBox(
-                  height: 220,
-                  child: ListView.separated(
-                    scrollDirection: Axis.horizontal,
-                    itemCount: controller.continueReadingItems.length,
-                    separatorBuilder: (_, _) => AppSpacing.md.gap,
-                    itemBuilder: (context, index) {
-                      final progress = controller.continueReadingItems[index];
-
-                      return ContinueReadingCard(
-                        progress: progress,
-                        onTap: () =>
-                            controller.navigateToContinueReading(progress),
-                      );
-                    },
+                if (data.recentlyUpdatedGuidelines.isNotEmpty) ...[
+                  _GuidelinesPreviewList(
+                    guidelines: data.recentlyUpdatedGuidelines,
+                    onOpenGuideline: _openGuideline,
                   ),
-                ),
+                  AppSpacing.lg.gap,
+                ] else ...[
+                  _NoRecentGuidelinesCard(onBrowse: _openAllGuidelines),
+                  AppSpacing.lg.gap,
+                ],
 
-                AppSpacing.lg.gap,
+                // =====================================================
+                // PINNED GUIDELINES
+                // =====================================================
+                // if (controller.pinnedGuidelines.isNotEmpty) ...[
+                //   SectionHeader(
+                //     title: 'Pinned Guidelines',
+                //     subtitle: 'Frequently used references',
+                //     icon: LucideIcons.pin,
+                //   ),
+
+                //   AppSpacing.md.gap,
+
+                //   SizedBox(
+                //     height: 140,
+                //     child: ListView.separated(
+                //       scrollDirection: Axis.horizontal,
+                //       itemCount: controller.pinnedGuidelines.length,
+                //       separatorBuilder: (_, _) => AppSpacing.sm.gap,
+                //       itemBuilder: (context, index) {
+                //         final guideline = controller.pinnedGuidelines[index];
+
+                //         return _PinnedGuidelineCard(
+                //           title: guideline.displayName,
+                //           category: guideline.categories.firstOrNull?.name ?? '',
+                //           onTap: () => controller.openGuideline(guideline),
+                //         );
+                //       },
+                //     ),
+                //   ),
+
+                //   AppSpacing.lg.gap,
+                // ],
+
+                // =====================================================
+                // CONTINUE READING
+                // =====================================================
+                if (data.continueReadingItems.isNotEmpty) ...[
+                  SectionHeader(
+                    title: AppTranslationKey.continueReading,
+                    subtitle: AppTranslationKey.resumeWhereYouLeftOff,
+                    icon: LucideIcons.bookOpen,
+                  ),
+
+                  AppSpacing.md.gap,
+
+                  SizedBox(
+                    height: 220,
+                    child: ListView.separated(
+                      scrollDirection: Axis.horizontal,
+                      itemCount: data.continueReadingItems.length,
+                      separatorBuilder: (_, _) => AppSpacing.md.gap,
+                      itemBuilder: (context, index) {
+                        final progress = data.continueReadingItems[index];
+
+                        return ContinueReadingCard(
+                          progress: progress,
+                          onTap: () => _continueReading(ref, progress),
+                        );
+                      },
+                    ),
+                  ),
+
+                  AppSpacing.lg.gap,
+                ],
+
+                // =====================================================
+                // FEATURED TOOLS
+                // =====================================================
+                // if (controller.featuredCalculators.isNotEmpty && !loading) ...[
+                //   SectionHeader(
+                //     title: AppTranslationKey.featuredTools,
+                //     subtitle: AppTranslationKey.essentialCalculatorsAndTools,
+                //     icon: LucideIcons.calculator,
+                //     onSeeAll: () => Get.toNamed(AppRoutes.tools),
+                //   ),
+
+                //   AppSpacing.md.gap,
+
+                //   SizedBox(
+                //     height: 140,
+                //     child: ListView.separated(
+                //       scrollDirection: Axis.horizontal,
+                //       itemCount: controller.featuredCalculators.length,
+                //       separatorBuilder: (_, _) => AppSpacing.sm.gap,
+                //       itemBuilder: (context, index) {
+                //         final calculator = controller.featuredCalculators[index];
+
+                //         return FeaturedCalculatorChip(
+                //           calculator: calculator,
+                //           onTap: () => Get.toNamed(
+                //             AppRoutes.useCalculator,
+                //             arguments: calculator,
+                //           ),
+                //         );
+                //       },
+                //     ),
+                //   ),
+                // ],
+                AppSpacing.xxxl.gap,
               ],
-
-              // =====================================================
-              // FEATURED TOOLS
-              // =====================================================
-              // if (controller.featuredCalculators.isNotEmpty && !loading) ...[
-              //   SectionHeader(
-              //     title: AppTranslationKey.featuredTools,
-              //     subtitle: AppTranslationKey.essentialCalculatorsAndTools,
-              //     icon: LucideIcons.calculator,
-              //     onSeeAll: () => Get.toNamed(AppRoutes.tools),
-              //   ),
-
-              //   AppSpacing.md.gap,
-
-              //   SizedBox(
-              //     height: 140,
-              //     child: ListView.separated(
-              //       scrollDirection: Axis.horizontal,
-              //       itemCount: controller.featuredCalculators.length,
-              //       separatorBuilder: (_, _) => AppSpacing.sm.gap,
-              //       itemBuilder: (context, index) {
-              //         final calculator = controller.featuredCalculators[index];
-
-              //         return FeaturedCalculatorChip(
-              //           calculator: calculator,
-              //           onTap: () => Get.toNamed(
-              //             AppRoutes.useCalculator,
-              //             arguments: calculator,
-              //           ),
-              //         );
-              //       },
-              //     ),
-              //   ),
-              // ],
-              AppSpacing.xxxl.gap,
-            ],
-          ),
-        );
-      }),
+            ),
+          );
+        },
+      ),
     );
+  }
+
+  void _openAllGuidelines() {
+    Get.toNamed(
+      AppRoutes.guidelines,
+      arguments: {'filterType': 'all', 'title': 'All Guidelines'},
+    );
+  }
+
+  void _openGuideline(Guideline guideline) {
+    Get.toNamed(AppRoutes.readGuideline, arguments: guideline);
+  }
+
+  Future<void> _continueReading(WidgetRef ref, ReadingProgress progress) async {
+    try {
+      final guideline = await ref
+          .read(homeControllerProvider.notifier)
+          .guideline(progress.guidelineId);
+      _openGuideline(guideline);
+    } catch (_) {
+      // The existing card remains visible and can be retried while offline.
+    }
   }
 
   Future<void> _showQuickActionsMenu(BuildContext context) async {

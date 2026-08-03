@@ -1,14 +1,22 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:get/get.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../../data/models/models.dart';
-import '../../../data/services/backend_api_service.dart';
-import '../../../data/repositories/guideline_content_repository.dart';
+import '../../../providers/core_providers.dart';
 import '../../../utils/app_spacing.dart';
 import '../../../utils/responsive.dart';
 
 /// A card widget for displaying continue reading progress for guidelines
-class ContinueReadingCard extends StatefulWidget {
+final _guidelineTitleProvider = FutureProvider.autoDispose
+    .family<String, String>((ref, id) async {
+      final record = await ref
+          .read(guidelineContentRepositoryProvider)
+          .guideline(id);
+      return Guideline.fromRecord(record).conditionName;
+    });
+
+class ContinueReadingCard extends ConsumerWidget {
   final ReadingProgress progress;
   final VoidCallback onTap;
   final VoidCallback? onBookmark;
@@ -21,55 +29,20 @@ class ContinueReadingCard extends StatefulWidget {
   });
 
   @override
-  State<ContinueReadingCard> createState() => _ContinueReadingCardState();
-}
-
-class _ContinueReadingCardState extends State<ContinueReadingCard> {
-  String? _guidelineTitle;
-  bool _isLoading = true;
-
-  @override
-  void initState() {
-    super.initState();
-    _loadGuidelineTitle();
-  }
-
-  Future<void> _loadGuidelineTitle() async {
-    try {
-      final record = await GuidelineContentRepository(
-        BackendApiService.to,
-      ).guideline(widget.progress.guidelineId);
-      final guideline = Guideline.fromRecord(record);
-      if (mounted) {
-        setState(() {
-          _guidelineTitle = guideline.conditionName;
-          _isLoading = false;
-        });
-      }
-    } catch (e) {
-      if (mounted) {
-        setState(() {
-          _guidelineTitle = 'Medical Guideline';
-          _isLoading = false;
-        });
-      }
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final title = ref.watch(_guidelineTitleProvider(progress.guidelineId));
     return SizedBox(
       width: 280,
       child: Card(
         clipBehavior: Clip.antiAlias,
         child: InkWell(
-          onTap: widget.onTap,
+          onTap: onTap,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // Progress indicator at top
               LinearProgressIndicator(
-                value: widget.progress.progressPercentage,
+                value: progress.progressPercentage,
                 backgroundColor: context.theme.colorScheme.surfaceContainer,
                 valueColor: AlwaysStoppedAnimation<Color>(
                   context.theme.colorScheme.primary,
@@ -125,15 +98,15 @@ class _ContinueReadingCardState extends State<ContinueReadingCard> {
                           const Spacer(),
 
                           // Bookmark button
-                          if (widget.onBookmark != null)
+                          if (onBookmark != null)
                             IconButton(
-                              onPressed: widget.onBookmark,
+                              onPressed: onBookmark,
                               icon: Icon(
-                                widget.progress.isBookmarked
+                                progress.isBookmarked
                                     ? LucideIcons.bookmark
                                     : LucideIcons.bookmarkPlus,
                                 size: 18,
-                                color: widget.progress.isBookmarked
+                                color: progress.isBookmarked
                                     ? context.theme.colorScheme.primary
                                     : context
                                           .theme
@@ -152,7 +125,7 @@ class _ContinueReadingCardState extends State<ContinueReadingCard> {
                       AppSpacing.sm.gap,
 
                       // Guideline title
-                      _isLoading
+                      title.isLoading
                           ? Container(
                               height: 16,
                               width: 200,
@@ -163,7 +136,7 @@ class _ContinueReadingCardState extends State<ContinueReadingCard> {
                               ),
                             )
                           : Text(
-                              _guidelineTitle ?? 'Medical Guideline',
+                              title.valueOrNull ?? 'Medical Guideline',
                               style: context.textTheme.titleSmall?.copyWith(
                                 fontWeight: FontWeight.w600,
                               ),
@@ -184,7 +157,7 @@ class _ContinueReadingCardState extends State<ContinueReadingCard> {
                           AppSpacing.xs.gap,
                           Expanded(
                             child: Text(
-                              'Section: ${widget.progress.currentSection}',
+                              'Section: ${progress.currentSection}',
                               style: context.textTheme.bodySmall?.copyWith(
                                 color:
                                     context.theme.colorScheme.onSurfaceVariant,
@@ -202,7 +175,7 @@ class _ContinueReadingCardState extends State<ContinueReadingCard> {
                       Row(
                         children: [
                           Text(
-                            widget.progress.progressText,
+                            progress.progressText,
                             style: context.textTheme.labelSmall?.copyWith(
                               color: context.theme.colorScheme.primary,
                               fontWeight: FontWeight.w500,
@@ -210,7 +183,7 @@ class _ContinueReadingCardState extends State<ContinueReadingCard> {
                           ),
                           const Spacer(),
                           Text(
-                            widget.progress.status.label,
+                            progress.status.label,
                             style: context.textTheme.labelSmall?.copyWith(
                               color: context.theme.colorScheme.onSurfaceVariant,
                             ),
@@ -233,7 +206,7 @@ class _ContinueReadingCardState extends State<ContinueReadingCard> {
                               ),
                               AppSpacing.xs.gap,
                               Text(
-                                widget.progress.lastReadFormatted,
+                                progress.lastReadFormatted,
                                 style: context.textTheme.labelSmall?.copyWith(
                                   color: context.theme.colorScheme.outline,
                                 ),
@@ -257,7 +230,7 @@ class _ContinueReadingCardState extends State<ContinueReadingCard> {
                               mainAxisSize: MainAxisSize.min,
                               children: [
                                 Text(
-                                  widget.progress.progressPercentage > 0
+                                  progress.progressPercentage > 0
                                       ? 'Continue'
                                       : 'Start',
                                   style: context.textTheme.labelSmall?.copyWith(

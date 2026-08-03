@@ -39,7 +39,6 @@ import 'package:user_app/app/modules/tools_module/tools_binding.dart';
 import 'package:user_app/app/modules/tools_module/tools_page.dart';
 import 'package:user_app/app/modules/guidelines_module/guidelines_binding.dart';
 import 'package:user_app/app/modules/guidelines_module/guidelines_page.dart';
-import 'package:user_app/app/modules/home_module/home_binding.dart';
 import 'package:user_app/app/modules/home_module/home_page.dart';
 import 'package:user_app/app/middleware/auth.dart';
 import 'package:user_app/app/middleware/onboarding.dart';
@@ -80,11 +79,7 @@ class AppPages {
       binding: MainBinding(),
       middlewares: [AuthMiddleware()],
     ),
-    GetPage(
-      name: AppRoutes.home,
-      page: () => const HomePage(),
-      binding: HomeBinding(),
-    ),
+    GetPage(name: AppRoutes.home, page: () => const HomePage()),
     GetPage(
       name: AppRoutes.guidelines,
       page: () => const GuidelinesPage(),

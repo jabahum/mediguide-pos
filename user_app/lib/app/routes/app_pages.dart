@@ -42,7 +42,6 @@ import 'package:user_app/app/modules/guidelines_module/guidelines_page.dart';
 import 'package:user_app/app/modules/home_module/home_page.dart';
 import 'package:user_app/app/middleware/auth.dart';
 import 'package:user_app/app/middleware/onboarding.dart';
-import 'package:user_app/app/modules/main_module/main_binding.dart';
 import 'package:user_app/app/modules/main_module/main_page.dart';
 import 'package:user_app/app/modules/forgot_password_module/forgot_password_page.dart';
 import 'package:user_app/app/modules/register_module/register_page.dart';
@@ -76,7 +75,6 @@ class AppPages {
     GetPage(
       name: AppRoutes.main,
       page: () => const MainPage(),
-      binding: MainBinding(),
       middlewares: [AuthMiddleware()],
     ),
     GetPage(name: AppRoutes.home, page: () => const HomePage()),

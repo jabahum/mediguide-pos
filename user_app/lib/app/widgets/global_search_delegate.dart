@@ -1,8 +1,18 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:get/get.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
-import '../controllers/global_search_controller.dart';
+import '../data/models/abbreviation.dart';
+import '../data/models/calculator.dart';
+import '../data/models/consultant.dart';
+import '../data/models/drug.dart';
+import '../data/models/guideline.dart';
+import '../data/models/health_facility.dart';
 import '../data/models/search_models.dart';
+import '../features/search/global_search_controller.dart';
+import '../modules/drug_index_module/widgets/drug_details_bottom_sheet.dart';
+import '../routes/app_pages.dart';
+import '../utils/common.dart';
 import '../utils/loading.dart';
 import '../utils/responsive.dart';
 import '../utils/app_spacing.dart';
@@ -45,14 +55,16 @@ class GlobalSearchDelegate extends SearchDelegate<String?> {
     return [
       // Clear search button
       if (query.isNotEmpty)
-        IconButton(
-          icon: const Icon(LucideIcons.x),
-          onPressed: () {
-            query = '';
-            GlobalSearchController.to.clearSearch();
-            showSuggestions(context);
-          },
-          tooltip: 'Clear search',
+        Consumer(
+          builder: (context, ref, _) => IconButton(
+            icon: const Icon(LucideIcons.x),
+            onPressed: () {
+              query = '';
+              ref.read(globalSearchControllerProvider.notifier).clear();
+              showSuggestions(context);
+            },
+            tooltip: 'Clear search',
+          ),
         ),
     ];
   }
@@ -68,40 +80,42 @@ class GlobalSearchDelegate extends SearchDelegate<String?> {
 
   @override
   Widget buildResults(BuildContext context) {
-    // Trigger search when results are requested (Enter key pressed)
-    if (query != GlobalSearchController.to.currentQuery.value) {
-      GlobalSearchController.to.searchController.text = query;
-      GlobalSearchController.to.onSearchSubmitted();
-    }
+    return Consumer(
+      builder: (context, ref, _) {
+        final search = ref.watch(globalSearchControllerProvider);
+        if (query.trim() != search.query) {
+          Future<void>.microtask(
+            () =>
+                ref.read(globalSearchControllerProvider.notifier).search(query),
+          );
+        }
 
-    return Obx(() {
-      if (GlobalSearchController.to.validationMessage.value.isNotEmpty) {
-        return _buildMessageState(
-          context,
-          GlobalSearchController.to.validationMessage.value,
-        );
-      }
+        if (search.validationMessage.isNotEmpty) {
+          return _buildMessageState(context, search.validationMessage);
+        }
 
-      if (GlobalSearchController.to.isLoading.value &&
-          GlobalSearchController.to.searchResults.isEmpty) {
-        return _buildLoadingState(context);
-      }
+        if (search.isLoading && search.results.isEmpty) {
+          return _buildLoadingState(context);
+        }
 
-      if (GlobalSearchController.to.searchResults.isEmpty && query.isNotEmpty) {
-        return _buildEmptyState(context, GlobalSearchController.to);
-      }
+        if (search.error != null) {
+          return _buildMessageState(
+            context,
+            'Search failed. Please try again.',
+          );
+        }
 
-      return _buildResultsList(context, GlobalSearchController.to);
-    });
+        if (search.results.isEmpty && query.isNotEmpty) {
+          return _buildEmptyState(context);
+        }
+
+        return _buildResultsList(context, ref, search);
+      },
+    );
   }
 
   @override
   Widget buildSuggestions(BuildContext context) {
-    // Update controller query but don't trigger search
-    if (query != GlobalSearchController.to.currentQuery.value) {
-      GlobalSearchController.to.searchController.text = query;
-    }
-
     // Always show search prompt in suggestions (no auto-search)
     return _buildSearchPrompt(context);
   }
@@ -154,10 +168,7 @@ class GlobalSearchDelegate extends SearchDelegate<String?> {
   }
 
   /// Build empty state
-  Widget _buildEmptyState(
-    BuildContext context,
-    GlobalSearchController controller,
-  ) {
+  Widget _buildEmptyState(BuildContext context) {
     final theme = Theme.of(context);
 
     return Center(
@@ -204,11 +215,12 @@ class GlobalSearchDelegate extends SearchDelegate<String?> {
   /// Build results list
   Widget _buildResultsList(
     BuildContext context,
-    GlobalSearchController controller,
+    WidgetRef ref,
+    GlobalSearchState search,
   ) {
     // Group results by category
     final grouped = <SearchCategory, List<SearchResult>>{};
-    for (final result in controller.searchResults) {
+    for (final result in search.results) {
       grouped.putIfAbsent(result.category, () => []).add(result);
     }
 
@@ -261,7 +273,7 @@ class GlobalSearchDelegate extends SearchDelegate<String?> {
               return _buildSearchResultItem(
                 context,
                 entry.value,
-                controller,
+                ref,
                 showDivider: !isLast,
               );
             }),
@@ -275,13 +287,13 @@ class GlobalSearchDelegate extends SearchDelegate<String?> {
   Widget _buildSearchResultItem(
     BuildContext context,
     SearchResult result,
-    GlobalSearchController controller, {
+    WidgetRef ref, {
     bool showDivider = true,
   }) {
     return InkWell(
-      onTap: () {
-        controller.selectSearchResult(result);
+      onTap: () async {
         close(context, result.title);
+        await _selectSearchResult(ref, result);
       },
       borderRadius: BorderRadius.circular(8),
       child: Padding(
@@ -351,6 +363,57 @@ class GlobalSearchDelegate extends SearchDelegate<String?> {
         ),
       ),
     );
+  }
+
+  Future<void> _selectSearchResult(WidgetRef ref, SearchResult result) async {
+    switch (result.category) {
+      case SearchCategory.drugs:
+        final drug = result.getItem<Drug>();
+        if (drug == null) {
+          Common.quickToast(title: 'drugNotFound'.tr);
+          return;
+        }
+        await ref
+            .read(globalSearchControllerProvider.notifier)
+            .recordDrugUsage(drug.id);
+        final appContext = Get.context;
+        if (appContext == null || !appContext.mounted) return;
+        await DrugDetailsBottomSheet.show(context: appContext, drug: drug);
+      case SearchCategory.guidelines:
+        final guideline = result.getItem<Guideline>();
+        if (guideline != null) {
+          Get.toNamed(AppRoutes.readGuideline, arguments: guideline);
+        }
+      case SearchCategory.consultants:
+        final consultant = result.getItem<Consultant>();
+        if (consultant != null) {
+          Get.toNamed(AppRoutes.consultants, arguments: consultant);
+        }
+      case SearchCategory.healthFacilities:
+        final facility = result.getItem<HealthFacility>();
+        if (facility != null) {
+          Get.toNamed(AppRoutes.healthInfrastructure, arguments: facility);
+        }
+      case SearchCategory.abbreviations:
+        final abbreviation = result.getItem<Abbreviation>();
+        if (abbreviation != null) {
+          Get.toNamed(AppRoutes.abbreviations, arguments: abbreviation);
+        }
+      case SearchCategory.tools:
+        final calculator = result.getItem<Calculator>();
+        Get.toNamed(
+          AppRoutes.useCalculator,
+          arguments: calculator ?? {'calculatorId': result.id},
+        );
+      case SearchCategory.faq:
+        if (result.item != null) {
+          Get.toNamed(AppRoutes.faq, arguments: result.item);
+        }
+      case SearchCategory.all:
+        if (result.route != null) {
+          Get.toNamed(result.route!, arguments: result.routeArguments);
+        }
+    }
   }
 
   /// Build search prompt

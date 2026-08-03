@@ -1,66 +1,71 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:get/get.dart';
 import 'package:infinite_scroll_pagination/infinite_scroll_pagination.dart';
 import 'package:user_app/app/data/models/filter_models.dart';
 import 'package:user_app/app/widgets/generic_filter_bottom_sheet.dart';
 
 import '../../data/models/models.dart';
-import '../../data/services/backend_api_service.dart';
 import '../../data/repositories/facility_repository.dart';
+import '../../providers/core_providers.dart';
 import '../../utils/constants.dart';
 import '../../utils/common.dart';
 import 'health_facility_detail_page.dart';
 
-class HealthInfrastructureController extends GetxController {
-  FacilityRepository get _repository =>
-      FacilityRepository(BackendApiService.to);
-  late final PagingController<int, HealthFacility> pagingController;
+final healthInfrastructureControllerProvider = ChangeNotifierProvider
+    .autoDispose
+    .family<HealthInfrastructureController, Object?>((ref, arguments) {
+      return HealthInfrastructureController(
+        ref.watch(facilityRepositoryProvider),
+        arguments,
+      );
+    });
 
-  // ==================== FILTER STATE ====================
-  final _filters = _Filters();
-  final RxMap<String, dynamic> treeFilters = <String, dynamic>{}.obs;
-
-  // ==================== DATA STATE ====================
-  final RxList<Region> availableRegions = <Region>[].obs;
-  final RxList<District> availableDistricts = <District>[].obs;
-  final RxList<FacilityLevel> availableFacilityLevels = <FacilityLevel>[].obs;
-  final RxList<OwnershipType> availableOwnershipTypes = <OwnershipType>[].obs;
-
-  final RxBool isLoadingFilters = false.obs;
-
-  final RxBool hasActiveFilters = false.obs;
-
-  bool get isFiltering => _filters.isActive;
-
-  @override
-  void onInit() {
-    super.onInit();
-
-    _initFromArguments();
-
+class HealthInfrastructureController extends ChangeNotifier {
+  HealthInfrastructureController(this._repository, Object? arguments) {
+    _initFromArguments(arguments);
     pagingController = PagingController<int, HealthFacility>(
       getNextPageKey: (state) =>
           state.lastPageIsEmpty ? null : state.nextIntPageKey,
       fetchPage: _loadPage,
     );
-
-    _loadFilterOptions();
+    unawaited(_loadFilterOptions());
     _updateActiveFilters();
   }
 
+  final FacilityRepository _repository;
+  late final PagingController<int, HealthFacility> pagingController;
+
+  // ==================== FILTER STATE ====================
+  final _filters = _Filters();
+  Map<String, dynamic> treeFilters = {};
+
+  // ==================== DATA STATE ====================
+  List<Region> availableRegions = [];
+  List<District> availableDistricts = [];
+  List<FacilityLevel> availableFacilityLevels = [];
+  List<OwnershipType> availableOwnershipTypes = [];
+
+  bool isLoadingFilters = false;
+  bool hasActiveFilters = false;
+  bool _disposed = false;
+
+  bool get isFiltering => _filters.isActive;
+
   @override
-  void onClose() {
+  void dispose() {
+    _disposed = true;
     pagingController.dispose();
-    super.onClose();
+    super.dispose();
   }
 
   // ==================== INIT ====================
 
-  void _initFromArguments() {
-    final args = Get.arguments;
-
+  void _initFromArguments(Object? args) {
     if (args is Map && args['treeFilters'] is Map) {
-      treeFilters.assignAll(Map<String, dynamic>.from(args['treeFilters']));
+      treeFilters = Map<String, dynamic>.from(args['treeFilters']);
       _updateFromTreeFilters(treeFilters);
     }
 
@@ -145,13 +150,17 @@ class HealthInfrastructureController extends GetxController {
     if (result != null) _applyFilters(result);
   }
 
-  void _applyFilters(dynamic result) {
+  void _applyFilters(FilterResult result) {
     _filters
-      ..query = result.get<String>('search')
-      ..regionId = _resolveRegion(result.get('region'))
-      ..districtId = _resolveDistrict(result.get('district'))
-      ..facilityLevelId = _resolveFacilityLevel(result.get('facilityLevel'))
-      ..ownershipTypeId = _resolveOwnership(result.get('ownershipType'));
+      ..query = result.getValue<String>('search') ?? ''
+      ..regionId = _resolveRegion(result.getValue<String>('region'))
+      ..districtId = _resolveDistrict(result.getValue<String>('district'))
+      ..facilityLevelId = _resolveFacilityLevel(
+        result.getValue<String>('facilityLevel'),
+      )
+      ..ownershipTypeId = _resolveOwnership(
+        result.getValue<String>('ownershipType'),
+      );
 
     if (_filters.regionId.isNotEmpty) {
       _loadDistricts(_filters.regionId);
@@ -167,29 +176,30 @@ class HealthInfrastructureController extends GetxController {
 
   Future<void> _loadFilterOptions() async {
     try {
-      isLoadingFilters.value = true;
+      isLoadingFilters = true;
 
       final regions = await getRegions();
 
-      availableRegions.assignAll(regions);
+      availableRegions = regions;
 
       final levels = await _repository.levels();
 
-      availableFacilityLevels.assignAll(
-        levels.items.map((e) => FacilityLevel.fromRecord(e)),
-      );
+      availableFacilityLevels = levels.items
+          .map(FacilityLevel.fromRecord)
+          .toList();
 
       final ownership = await _repository.ownershipTypes();
 
-      availableOwnershipTypes.assignAll(
-        ownership.items.map((e) => OwnershipType.fromRecord(e)),
-      );
+      availableOwnershipTypes = ownership.items
+          .map(OwnershipType.fromRecord)
+          .toList();
 
       if (_filters.regionId.isNotEmpty) {
         await _loadDistricts(_filters.regionId);
       }
     } finally {
-      isLoadingFilters.value = false;
+      isLoadingFilters = false;
+      if (!_disposed) notifyListeners();
     }
   }
 
@@ -202,9 +212,10 @@ class HealthInfrastructureController extends GetxController {
   Future<void> _loadDistricts(String regionId) async {
     final districts = await _repository.districts(regionId: regionId);
 
-    availableDistricts.value = districts.items
+    availableDistricts = districts.items
         .map((e) => District.fromRecord(e))
         .toList();
+    if (!_disposed) notifyListeners();
   }
 
   String _resolveRegion(String? name) =>
@@ -220,7 +231,16 @@ class HealthInfrastructureController extends GetxController {
       availableOwnershipTypes.firstWhereOrNull((e) => e.name == name)?.id ?? '';
 
   void goToFacilityDetail(HealthFacility facility) {
+    unawaited(_recordUsage(facility.id));
     Get.to(() => const HealthFacilityDetailPage(), arguments: facility);
+  }
+
+  Future<void> _recordUsage(String id) async {
+    try {
+      await _repository.recordUsage(id);
+    } catch (_) {
+      // Analytics must not block facility details.
+    }
   }
 
   // ==================== TREE FILTERS ====================
@@ -236,7 +256,8 @@ class HealthInfrastructureController extends GetxController {
   }
 
   void _updateActiveFilters() {
-    hasActiveFilters.value = _filters.isActive;
+    hasActiveFilters = _filters.isActive;
+    if (!_disposed) notifyListeners();
   }
 }
 

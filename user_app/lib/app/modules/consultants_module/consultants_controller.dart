@@ -1,60 +1,67 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:get/get.dart';
 import 'package:infinite_scroll_pagination/infinite_scroll_pagination.dart';
 import 'package:user_app/app/data/models/filter_models.dart';
 
 import '../../data/models/models.dart';
 import '../../data/repositories/consultant_repository.dart';
-import '../../data/services/backend_api_service.dart';
+import '../../providers/core_providers.dart';
 import '../../utils/constants.dart';
 import '../../utils/common.dart';
 import '../../widgets/generic_filter_bottom_sheet.dart';
 import 'widgets/consultant_detail_modal.dart';
 
-class ConsultantsController extends GetxController {
-  ConsultantRepository get _repository =>
-      ConsultantRepository(BackendApiService.to);
-  late final PagingController<int, Consultant> pagingController;
+final consultantsControllerProvider = ChangeNotifierProvider.autoDispose
+    .family<ConsultantsController, Object?>((ref, arguments) {
+      return ConsultantsController(
+        ref.watch(consultantRepositoryProvider),
+        arguments,
+      );
+    });
 
-  // ================= FILTER STATE =================
-  final RxString searchQuery = ''.obs;
-  final RxBool hasActiveFilters = false.obs;
-
-  final RxString selectedSpecialty = ''.obs;
-  final RxString selectedLocation = ''.obs;
-
-  final RxString selectedRegion = ''.obs;
-  final RxString selectedCity = ''.obs;
-
-  final RxBool showOnlineOnly = false.obs;
-  final RxBool showVerifiedOnly = false.obs;
-
-  final RxMap<String, dynamic> treeFilters = <String, dynamic>{}.obs;
-
-  // options
-  final RxList<String> availableSpecialties = <String>[].obs;
-  final RxList<String> availableLocations = <String>[].obs;
-  final RxBool isLoadingFilters = false.obs;
-
-  @override
-  void onInit() {
-    super.onInit();
-
-    _applyTreeFiltersFromArguments();
-
+class ConsultantsController extends ChangeNotifier {
+  ConsultantsController(this._repository, Object? arguments) {
+    _applyTreeFiltersFromArguments(arguments);
     pagingController = PagingController<int, Consultant>(
       getNextPageKey: (state) =>
           state.lastPageIsEmpty ? null : state.nextIntPageKey,
       fetchPage: _loadPage,
     );
-
-    _loadFilterOptions();
+    unawaited(_loadFilterOptions());
   }
 
+  final ConsultantRepository _repository;
+  late final PagingController<int, Consultant> pagingController;
+
+  // ================= FILTER STATE =================
+  String searchQuery = '';
+  bool hasActiveFilters = false;
+
+  String selectedSpecialty = '';
+  String selectedLocation = '';
+
+  String selectedRegion = '';
+  String selectedCity = '';
+
+  bool showOnlineOnly = false;
+  bool showVerifiedOnly = false;
+
+  Map<String, dynamic> treeFilters = {};
+
+  // options
+  List<String> availableSpecialties = [];
+  List<String> availableLocations = [];
+  bool isLoadingFilters = false;
+  bool _disposed = false;
+
   @override
-  void onClose() {
+  void dispose() {
+    _disposed = true;
     pagingController.dispose();
-    super.onClose();
+    super.dispose();
   }
 
   // ================= DATA LOADING =================
@@ -64,12 +71,12 @@ class ConsultantsController extends GetxController {
       final result = await _repository.list(
         page: pageKey,
         perPage: pageSize,
-        search: searchQuery.value,
-        status: showOnlineOnly.value ? 'active' : null,
-        specialty: selectedSpecialty.value,
-        region: selectedRegion.value,
-        city: selectedCity.value,
-        verified: showVerifiedOnly.value ? true : null,
+        search: searchQuery,
+        status: showOnlineOnly ? 'active' : null,
+        specialty: selectedSpecialty,
+        region: selectedRegion,
+        city: selectedCity,
+        verified: showVerifiedOnly ? true : null,
         sort: 'rating',
         order: 'desc',
       );
@@ -84,24 +91,25 @@ class ConsultantsController extends GetxController {
   // ================= FILTER STATE HELPERS =================
 
   void _updateHasActiveFilters() {
-    hasActiveFilters.value =
-        searchQuery.value.isNotEmpty ||
-        selectedSpecialty.value.isNotEmpty ||
-        selectedLocation.value.isNotEmpty ||
-        selectedRegion.value.isNotEmpty ||
-        selectedCity.value.isNotEmpty ||
-        showOnlineOnly.value ||
-        showVerifiedOnly.value;
+    hasActiveFilters =
+        searchQuery.isNotEmpty ||
+        selectedSpecialty.isNotEmpty ||
+        selectedLocation.isNotEmpty ||
+        selectedRegion.isNotEmpty ||
+        selectedCity.isNotEmpty ||
+        showOnlineOnly ||
+        showVerifiedOnly;
+    if (!_disposed) notifyListeners();
   }
 
   void clearAllFilters() {
-    searchQuery.value = '';
-    selectedSpecialty.value = '';
-    selectedLocation.value = '';
-    selectedRegion.value = '';
-    selectedCity.value = '';
-    showOnlineOnly.value = false;
-    showVerifiedOnly.value = false;
+    searchQuery = '';
+    selectedSpecialty = '';
+    selectedLocation = '';
+    selectedRegion = '';
+    selectedCity = '';
+    showOnlineOnly = false;
+    showVerifiedOnly = false;
     treeFilters.clear();
 
     _updateHasActiveFilters();
@@ -109,7 +117,7 @@ class ConsultantsController extends GetxController {
   }
 
   void searchConsultants(String query) {
-    searchQuery.value = query.trim();
+    searchQuery = query.trim();
     _updateHasActiveFilters();
     pagingController.refresh();
   }
@@ -144,12 +152,11 @@ class ConsultantsController extends GetxController {
     }
 
     final values = <String, dynamic>{
-      if (searchQuery.value.isNotEmpty) 'search': searchQuery.value,
-      if (showOnlineOnly.value) 'showOnlineOnly': true,
-      if (showVerifiedOnly.value) 'showVerifiedOnly': true,
-      if (selectedSpecialty.value.isNotEmpty)
-        'specialty': selectedSpecialty.value,
-      if (selectedLocation.value.isNotEmpty) 'location': selectedLocation.value,
+      if (searchQuery.isNotEmpty) 'search': searchQuery,
+      if (showOnlineOnly) 'showOnlineOnly': true,
+      if (showVerifiedOnly) 'showVerifiedOnly': true,
+      if (selectedSpecialty.isNotEmpty) 'specialty': selectedSpecialty,
+      if (selectedLocation.isNotEmpty) 'location': selectedLocation,
     };
 
     final result = await GenericFilterBottomSheet.show(
@@ -164,36 +171,37 @@ class ConsultantsController extends GetxController {
     }
   }
 
-  void _applyFilters(dynamic result) {
-    searchQuery.value = '';
-    selectedSpecialty.value = '';
-    selectedLocation.value = '';
-    selectedRegion.value = '';
-    selectedCity.value = '';
-    showOnlineOnly.value = false;
-    showVerifiedOnly.value = false;
+  void _applyFilters(FilterResult result) {
+    searchQuery = '';
+    selectedSpecialty = '';
+    selectedLocation = '';
+    selectedRegion = '';
+    selectedCity = '';
+    showOnlineOnly = false;
+    showVerifiedOnly = false;
 
     final search = result.getValue<String>('search');
     if (search != null && search.isNotEmpty) {
-      searchQuery.value = search;
+      searchQuery = search;
     }
 
     if (result.getValue<bool>('showOnlineOnly') == true) {
-      showOnlineOnly.value = true;
+      showOnlineOnly = true;
     }
 
     if (result.getValue<bool>('showVerifiedOnly') == true) {
-      showVerifiedOnly.value = true;
+      showVerifiedOnly = true;
     }
 
     final specialty = result.getValue<String>('specialty');
     if (specialty != null && specialty.isNotEmpty) {
-      selectedSpecialty.value = specialty;
+      selectedSpecialty = specialty;
     }
 
     final location = result.getValue<String>('location');
     if (location != null && location.isNotEmpty) {
-      selectedLocation.value = location;
+      selectedLocation = location;
+      selectedCity = location;
     }
 
     _updateHasActiveFilters();
@@ -202,22 +210,21 @@ class ConsultantsController extends GetxController {
 
   // ================= TREE FILTERS =================
 
-  void _applyTreeFiltersFromArguments() {
-    final args = Get.arguments;
+  void _applyTreeFiltersFromArguments(Object? args) {
     if (args is! Map) return;
 
     final raw = args['treeFilters'];
     if (raw is! Map) return;
 
-    treeFilters.assignAll(Map<String, dynamic>.from(raw));
+    treeFilters = Map<String, dynamic>.from(raw);
 
     final region = _read(raw, 'region');
     final city = _read(raw, 'city');
     final specialty = _read(raw, 'specialty');
 
-    selectedRegion.value = region;
-    selectedCity.value = city;
-    selectedSpecialty.value = specialty;
+    selectedRegion = region;
+    selectedCity = city;
+    selectedSpecialty = specialty;
 
     _updateHasActiveFilters();
   }
@@ -230,14 +237,23 @@ class ConsultantsController extends GetxController {
     BuildContext context,
     Consultant consultant,
   ) async {
+    unawaited(_recordUsage(consultant.id));
     await ConsultantDetailModal.show(context, consultant);
+  }
+
+  Future<void> _recordUsage(String id) async {
+    try {
+      await _repository.recordUsage(id);
+    } catch (_) {
+      // Analytics must not block consultant details.
+    }
   }
 
   // ================= FILTER OPTIONS =================
 
   Future<void> _loadFilterOptions() async {
     try {
-      isLoadingFilters.value = true;
+      isLoadingFilters = true;
 
       final result = await _repository.list(
         perPage: 100,
@@ -250,15 +266,15 @@ class ConsultantsController extends GetxController {
           .map((r) => Consultant.fromRecord(r))
           .toList();
 
-      availableSpecialties.value =
+      availableSpecialties =
           consultants
-              .map((c) => c.specialty?.toString() ?? '')
+              .map((c) => c.specialty?.name ?? '')
               .where((s) => s.isNotEmpty)
               .toSet()
               .toList()
             ..sort();
 
-      availableLocations.value =
+      availableLocations =
           consultants
               .map((c) => c.city)
               .where((c) => c.isNotEmpty)
@@ -266,9 +282,10 @@ class ConsultantsController extends GetxController {
               .toList()
             ..sort();
     } catch (e) {
-      Common.quickToast(title: 'errorLoadingFilters'.tr);
+      if (!_disposed) Common.quickToast(title: 'errorLoadingFilters'.tr);
     } finally {
-      isLoadingFilters.value = false;
+      isLoadingFilters = false;
+      if (!_disposed) notifyListeners();
     }
   }
 }

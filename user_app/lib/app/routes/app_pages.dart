@@ -22,9 +22,7 @@ import 'package:user_app/app/modules/notifications_module/notifications_page.dar
 import 'package:user_app/app/modules/about_us_module/about_us_binding.dart';
 import 'package:user_app/app/modules/about_us_module/about_us_page.dart';
 import 'package:user_app/app/modules/terms_and_conditions_module/terms_and_conditions_page.dart';
-import 'package:user_app/app/modules/consultants_module/consultants_binding.dart';
 import 'package:user_app/app/modules/consultants_module/consultants_page.dart';
-import 'package:user_app/app/modules/health_infrastructure_module/health_infrastructure_binding.dart';
 import 'package:user_app/app/modules/health_infrastructure_module/health_infrastructure_page.dart';
 import 'package:user_app/app/modules/abbreviations_module/abbreviations_binding.dart';
 import 'package:user_app/app/modules/abbreviations_module/abbreviations_page.dart';
@@ -90,13 +88,8 @@ class AppPages {
     GetPage(
       name: AppRoutes.healthInfrastructure,
       page: () => const HealthInfrastructurePage(),
-      binding: HealthInfrastructureBinding(),
     ),
-    GetPage(
-      name: AppRoutes.consultants,
-      page: () => const ConsultantsPage(),
-      binding: ConsultantsBinding(),
-    ),
+    GetPage(name: AppRoutes.consultants, page: () => const ConsultantsPage()),
     GetPage(
       name: AppRoutes.termsAndConditions,
       page: () => const TermsAndConditionsPage(),

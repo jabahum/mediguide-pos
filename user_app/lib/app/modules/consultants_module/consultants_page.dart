@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:get/get.dart';
 import 'package:infinite_scroll_pagination/infinite_scroll_pagination.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
@@ -10,11 +11,27 @@ import '../../widgets/pagination_indicators.dart';
 import 'consultants_controller.dart';
 import 'widgets/consultant_card.dart';
 
-class ConsultantsPage extends GetWidget<ConsultantsController> {
+class ConsultantsPage extends ConsumerStatefulWidget {
   const ConsultantsPage({super.key});
 
   @override
+  ConsumerState<ConsultantsPage> createState() => _ConsultantsPageState();
+}
+
+class _ConsultantsPageState extends ConsumerState<ConsultantsPage> {
+  late final Object? _routeArguments;
+
+  @override
+  void initState() {
+    super.initState();
+    _routeArguments = Get.arguments;
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final controller = ref.watch(
+      consultantsControllerProvider(_routeArguments),
+    );
     final cs = context.theme.colorScheme;
 
     return Scaffold(
@@ -27,14 +44,12 @@ class ConsultantsPage extends GetWidget<ConsultantsController> {
           ),
         ),
         actions: [
-          Obx(
-            () => FilterButton(
-              hasActiveFilters: controller.hasActiveFilters.value,
-              onPressed: () => controller.showFilterModal(context),
-              onReset: controller.hasActiveFilters.value
-                  ? controller.clearAllFilters
-                  : null,
-            ),
+          FilterButton(
+            hasActiveFilters: controller.hasActiveFilters,
+            onPressed: () => controller.showFilterModal(context),
+            onReset: controller.hasActiveFilters
+                ? controller.clearAllFilters
+                : null,
           ),
           AppSpacing.xs.gap,
         ],
@@ -103,14 +118,10 @@ class ConsultantsPage extends GetWidget<ConsultantsController> {
                       newPageProgressIndicatorBuilder: (context) =>
                           PaginationIndicators.newPageProgress(),
                       noItemsFoundIndicatorBuilder: (context) {
-                        return Obx(() {
-                          final hasFilters = controller.hasActiveFilters.value;
-
-                          return _EmptyConsultantsState(
-                            hasFilters: hasFilters,
-                            onClearFilters: controller.clearAllFilters,
-                          );
-                        });
+                        return _EmptyConsultantsState(
+                          hasFilters: controller.hasActiveFilters,
+                          onClearFilters: controller.clearAllFilters,
+                        );
                       },
                       noMoreItemsIndicatorBuilder: (context) =>
                           PaginationIndicators.noMoreItems(),

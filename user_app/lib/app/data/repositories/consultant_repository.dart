@@ -62,6 +62,10 @@ final class ConsultantRepository {
     return Consultant.fromRecord(ApiRecord(_normalize(_data(response))));
   }
 
+  Future<void> recordUsage(String id) async {
+    await _api.requestJson('/api/v2/consultants/$id/usage', method: 'POST');
+  }
+
   Map<String, dynamic> _normalize(Map<String, dynamic> raw) {
     final user = raw['user'];
     return {

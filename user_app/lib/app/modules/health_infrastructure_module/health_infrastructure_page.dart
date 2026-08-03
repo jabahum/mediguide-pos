@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:get/get.dart';
 import 'package:infinite_scroll_pagination/infinite_scroll_pagination.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
@@ -11,12 +12,29 @@ import '../../widgets/pagination_indicators.dart';
 import 'health_infrastructure_controller.dart';
 import 'widgets/health_facility_card.dart';
 
-class HealthInfrastructurePage
-    extends GetWidget<HealthInfrastructureController> {
+class HealthInfrastructurePage extends ConsumerStatefulWidget {
   const HealthInfrastructurePage({super.key});
 
   @override
+  ConsumerState<HealthInfrastructurePage> createState() =>
+      _HealthInfrastructurePageState();
+}
+
+class _HealthInfrastructurePageState
+    extends ConsumerState<HealthInfrastructurePage> {
+  late final Object? _routeArguments;
+
+  @override
+  void initState() {
+    super.initState();
+    _routeArguments = Get.arguments;
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final controller = ref.watch(
+      healthInfrastructureControllerProvider(_routeArguments),
+    );
     final cs = context.theme.colorScheme;
 
     return Scaffold(
@@ -29,14 +47,12 @@ class HealthInfrastructurePage
           ),
         ),
         actions: [
-          Obx(
-            () => FilterButton(
-              hasActiveFilters: controller.hasActiveFilters.value,
-              onPressed: () => controller.showFilterModal(context),
-              onReset: controller.hasActiveFilters.value
-                  ? controller.clearAllFilters
-                  : null,
-            ),
+          FilterButton(
+            hasActiveFilters: controller.hasActiveFilters,
+            onPressed: () => controller.showFilterModal(context),
+            onReset: controller.hasActiveFilters
+                ? controller.clearAllFilters
+                : null,
           ),
           AppSpacing.xs.gap,
         ],
@@ -116,14 +132,10 @@ class HealthInfrastructurePage
 
                       // ================= EMPTY STATE =================
                       noItemsFoundIndicatorBuilder: (context) {
-                        return Obx(() {
-                          final hasFilters = controller.hasActiveFilters.value;
-
-                          return _EmptyFacilitiesState(
-                            hasFilters: hasFilters,
-                            onClearFilters: controller.clearAllFilters,
-                          );
-                        });
+                        return _EmptyFacilitiesState(
+                          hasFilters: controller.hasActiveFilters,
+                          onClearFilters: controller.clearAllFilters,
+                        );
                       },
 
                       // ================= END STATE =================

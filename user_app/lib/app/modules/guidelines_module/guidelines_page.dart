@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:get/get.dart';
 import 'package:infinite_scroll_pagination/infinite_scroll_pagination.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
@@ -11,39 +12,44 @@ import '../../widgets/pagination_indicators.dart';
 import 'guidelines_controller.dart';
 import 'widgets/guideline_card.dart';
 
-class GuidelinesPage extends GetWidget<GuidelinesController> {
+class GuidelinesPage extends ConsumerStatefulWidget {
   const GuidelinesPage({super.key});
 
   @override
+  ConsumerState<GuidelinesPage> createState() => _GuidelinesPageState();
+}
+
+class _GuidelinesPageState extends ConsumerState<GuidelinesPage> {
+  late final Object? _routeArguments;
+
+  @override
+  void initState() {
+    super.initState();
+    _routeArguments = Get.arguments;
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final controller = ref.watch(guidelinesControllerProvider(_routeArguments));
     return Scaffold(
       appBar: AppBar(
-        title: Obx(() {
-          return Text(
-            controller.effectivePageTitle,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-          );
-        }),
+        title: Text(
+          controller.effectivePageTitle,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
         actions: [
-          Obx(
-            () => FilterButton(
-              hasActiveFilters: controller.hasActiveFilters.value,
-              onPressed: () => controller.showFilterModal(context),
-              onReset: controller.clearAllFilters,
-            ),
+          FilterButton(
+            hasActiveFilters: controller.hasActiveFilters,
+            onPressed: () => controller.showFilterModal(context),
+            onReset: controller.clearAllFilters,
           ),
-          Obx(() {
-            if (!controller.hasPermanentFilter) {
-              return const SizedBox.shrink();
-            }
-
-            return IconButton(
+          if (controller.hasPermanentFilter)
+            IconButton(
               tooltip: 'Show all guidelines',
               onPressed: controller.showAllGuidelines,
               icon: const Icon(LucideIcons.listRestart),
-            );
-          }),
+            ),
         ],
       ),
       body: RefreshIndicator(
@@ -62,23 +68,18 @@ class GuidelinesPage extends GetWidget<GuidelinesController> {
                     _GuidelinesSearchBox(controller: controller),
                     AppSpacing.md.gap,
                     _QuickFilters(controller: controller),
-                    Obx(() {
-                      if (!controller.hasPermanentFilter &&
-                          !controller.hasActiveFilters.value) {
-                        return const SizedBox.shrink();
-                      }
-
-                      return Padding(
+                    if (controller.hasPermanentFilter ||
+                        controller.hasActiveFilters)
+                      Padding(
                         padding: const EdgeInsets.only(top: AppSpacing.md),
                         child: _ActiveGuidelineContext(
                           title: controller.effectivePageTitle,
                           hasPermanentFilter: controller.hasPermanentFilter,
-                          hasFilters: controller.hasActiveFilters.value,
+                          hasFilters: controller.hasActiveFilters,
                           onClearFilters: controller.clearAllFilters,
                           onShowAll: controller.showAllGuidelines,
                         ),
-                      );
-                    }),
+                      ),
                     AppSpacing.md.gap,
                   ],
                 ),
@@ -124,16 +125,14 @@ class GuidelinesPage extends GetWidget<GuidelinesController> {
                       return PaginationIndicators.newPageProgress();
                     },
                     noItemsFoundIndicatorBuilder: (_) {
-                      return Obx(
-                        () => _GuidelinesEmptyState(
-                          icon: _getEmptyIcon(),
-                          title: _getEmptyTitle(),
-                          subtitle: _getEmptySubtitle(),
-                          hasFilters: controller.hasActiveFilters.value,
-                          hasPermanentFilter: controller.hasPermanentFilter,
-                          onClearFilters: controller.clearAllFilters,
-                          onShowAll: controller.showAllGuidelines,
-                        ),
+                      return _GuidelinesEmptyState(
+                        icon: _getEmptyIcon(controller),
+                        title: _getEmptyTitle(controller),
+                        subtitle: _getEmptySubtitle(controller),
+                        hasFilters: controller.hasActiveFilters,
+                        hasPermanentFilter: controller.hasPermanentFilter,
+                        onClearFilters: controller.clearAllFilters,
+                        onShowAll: controller.showAllGuidelines,
                       );
                     },
                     noMoreItemsIndicatorBuilder: (_) {
@@ -158,52 +157,52 @@ class GuidelinesPage extends GetWidget<GuidelinesController> {
     Get.toNamed(AppRoutes.readGuideline, arguments: guideline);
   }
 
-  IconData _getEmptyIcon() {
-    if (controller.isInCategoryMode.value) {
+  IconData _getEmptyIcon(GuidelinesController controller) {
+    if (controller.isInCategoryMode) {
       return LucideIcons.folderOpen;
     }
 
-    if (controller.isInTagMode.value) {
+    if (controller.isInTagMode) {
       return LucideIcons.tags;
     }
 
-    if (controller.isInIndexMode.value) {
+    if (controller.isInIndexMode) {
       return LucideIcons.bookOpenText;
     }
 
     return LucideIcons.stethoscope;
   }
 
-  String _getEmptyTitle() {
-    final hasFilters = controller.hasActiveFilters.value;
+  String _getEmptyTitle(GuidelinesController controller) {
+    final hasFilters = controller.hasActiveFilters;
 
     if (hasFilters) {
       return 'No matching guidelines';
     }
 
-    if (controller.isInCategoryMode.value) {
+    if (controller.isInCategoryMode) {
       return 'No guidelines in this category';
     }
 
-    if (controller.isInTagMode.value) {
+    if (controller.isInTagMode) {
       return 'No guidelines with this tag';
     }
 
     return 'No guidelines found';
   }
 
-  String _getEmptySubtitle() {
-    final hasFilters = controller.hasActiveFilters.value;
+  String _getEmptySubtitle(GuidelinesController controller) {
+    final hasFilters = controller.hasActiveFilters;
 
     if (hasFilters) {
       return 'Try adjusting your search or filters.';
     }
 
-    if (controller.isInCategoryMode.value) {
+    if (controller.isInCategoryMode) {
       return 'This category does not have published guidelines yet.';
     }
 
-    if (controller.isInTagMode.value) {
+    if (controller.isInTagMode) {
       return 'No published guidelines are currently linked to this tag.';
     }
 
@@ -219,64 +218,60 @@ class _GuidelinesHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cs = context.theme.colorScheme;
-
-    return Obx(() {
-      final title = controller.effectivePageTitle;
-
-      return Container(
-        width: double.infinity,
-        padding: const EdgeInsets.all(AppSpacing.md),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(24),
-          color: cs.primaryContainer.withValues(alpha: 0.35),
-          border: Border.all(color: cs.primary.withValues(alpha: 0.08)),
-        ),
-        child: Row(
-          children: [
-            Container(
-              width: 54,
-              height: 54,
-              decoration: BoxDecoration(
-                color: cs.primary.withValues(alpha: 0.12),
-                borderRadius: BorderRadius.circular(18),
-              ),
-              child: Icon(
-                controller.hasPermanentFilter
-                    ? LucideIcons.folderOpen
-                    : LucideIcons.library,
-                color: cs.primary,
-              ),
+    final title = controller.effectivePageTitle;
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(AppSpacing.md),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(24),
+        color: cs.primaryContainer.withValues(alpha: 0.35),
+        border: Border.all(color: cs.primary.withValues(alpha: 0.08)),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 54,
+            height: 54,
+            decoration: BoxDecoration(
+              color: cs.primary.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(18),
             ),
-            AppSpacing.md.gap,
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: context.textTheme.titleLarge?.copyWith(
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    controller.hasPermanentFilter
-                        ? 'Browse guidelines in this section or search within results.'
-                        : 'Search and browse all published clinical guidelines.',
-                    style: context.textTheme.bodySmall?.copyWith(
-                      color: cs.onSurfaceVariant,
-                      height: 1.4,
-                    ),
-                  ),
-                ],
-              ),
+            child: Icon(
+              controller.hasPermanentFilter
+                  ? LucideIcons.folderOpen
+                  : LucideIcons.library,
+              color: cs.primary,
             ),
-          ],
-        ),
-      );
-    });
+          ),
+          AppSpacing.md.gap,
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: context.textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  controller.hasPermanentFilter
+                      ? 'Browse guidelines in this section or search within results.'
+                      : 'Search and browse all published clinical guidelines.',
+                  style: context.textTheme.bodySmall?.copyWith(
+                    color: cs.onSurfaceVariant,
+                    height: 1.4,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
 
@@ -291,31 +286,30 @@ class _GuidelinesSearchBox extends StatefulWidget {
 
 class _GuidelinesSearchBoxState extends State<_GuidelinesSearchBox> {
   late final TextEditingController _textController;
-  Worker? _searchWorker;
 
   @override
   void initState() {
     super.initState();
 
     _textController = TextEditingController(
-      text: widget.controller.searchQuery.value,
+      text: widget.controller.searchQuery,
     );
+  }
 
-    _searchWorker = ever<String>(widget.controller.searchQuery, (value) {
-      if (!mounted) return;
-
-      if (_textController.text != value) {
-        _textController.value = TextEditingValue(
-          text: value,
-          selection: TextSelection.collapsed(offset: value.length),
-        );
-      }
-    });
+  @override
+  void didUpdateWidget(covariant _GuidelinesSearchBox oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    final value = widget.controller.searchQuery;
+    if (_textController.text != value) {
+      _textController.value = TextEditingValue(
+        text: value,
+        selection: TextSelection.collapsed(offset: value.length),
+      );
+    }
   }
 
   @override
   void dispose() {
-    _searchWorker?.dispose();
     _textController.dispose();
     super.dispose();
   }
@@ -337,40 +331,37 @@ class _GuidelinesSearchBoxState extends State<_GuidelinesSearchBox> {
   Widget build(BuildContext context) {
     final cs = context.theme.colorScheme;
 
-    return Obx(() {
-      final hasSearch = widget.controller.searchQuery.value.trim().isNotEmpty;
-
-      return TextField(
-        controller: _textController,
-        textInputAction: TextInputAction.search,
-        onChanged: _changeSearch,
-        onSubmitted: _submitSearch,
-        decoration: InputDecoration(
-          hintText: 'Search guidelines, conditions, ICD codes...',
-          prefixIcon: const Icon(LucideIcons.search),
-          suffixIcon: hasSearch
-              ? IconButton(
-                  onPressed: _clearSearch,
-                  icon: const Icon(LucideIcons.x),
-                )
-              : null,
-          filled: true,
-          fillColor: cs.surfaceContainerLowest,
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(18),
-            borderSide: BorderSide(color: cs.outlineVariant),
-          ),
-          enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(18),
-            borderSide: BorderSide(color: cs.outlineVariant),
-          ),
-          focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(18),
-            borderSide: BorderSide(color: cs.primary),
-          ),
+    final hasSearch = widget.controller.searchQuery.trim().isNotEmpty;
+    return TextField(
+      controller: _textController,
+      textInputAction: TextInputAction.search,
+      onChanged: _changeSearch,
+      onSubmitted: _submitSearch,
+      decoration: InputDecoration(
+        hintText: 'Search guidelines, conditions, ICD codes...',
+        prefixIcon: const Icon(LucideIcons.search),
+        suffixIcon: hasSearch
+            ? IconButton(
+                onPressed: _clearSearch,
+                icon: const Icon(LucideIcons.x),
+              )
+            : null,
+        filled: true,
+        fillColor: cs.surfaceContainerLowest,
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(18),
+          borderSide: BorderSide(color: cs.outlineVariant),
         ),
-      );
-    });
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(18),
+          borderSide: BorderSide(color: cs.outlineVariant),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(18),
+          borderSide: BorderSide(color: cs.primary),
+        ),
+      ),
+    );
   }
 }
 
@@ -381,55 +372,52 @@ class _QuickFilters extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Obx(() {
-      return SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        child: Row(
-          children: [
-            _QuickFilterChip(
-              label: 'All',
-              icon: LucideIcons.library,
-              selected:
-                  !controller.hasPermanentFilter &&
-                  !controller.hasActiveFilters.value,
-              onTap: controller.showAllGuidelines,
-            ),
-            AppSpacing.sm.gap,
-            _QuickFilterChip(
-              label: 'High Priority',
-              icon: LucideIcons.triangleAlert,
-              selected: controller.showHighPriorityOnly.value,
-              onTap: controller.toggleHighPriorityOnly,
-            ),
-            AppSpacing.sm.gap,
-            _QuickFilterChip(
-              label: 'Emergency',
-              icon: LucideIcons.siren,
-              selected: controller.isEmergencyRoute,
-              onTap: controller.openEmergencyGuidelines,
-            ),
-            AppSpacing.sm.gap,
-            _QuickFilterChip(
-              label: 'Children',
-              icon: LucideIcons.baby,
-              selected: controller.selectedTargetPopulation.value
-                  .toLowerCase()
-                  .contains('children'),
-              onTap: () => controller.setTargetPopulation('Children'),
-            ),
-            AppSpacing.sm.gap,
-            _QuickFilterChip(
-              label: 'Adults',
-              icon: LucideIcons.user,
-              selected: controller.selectedTargetPopulation.value
-                  .toLowerCase()
-                  .contains('adult'),
-              onTap: () => controller.setTargetPopulation('Adults'),
-            ),
-          ],
-        ),
-      );
-    });
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Row(
+        children: [
+          _QuickFilterChip(
+            label: 'All',
+            icon: LucideIcons.library,
+            selected:
+                !controller.hasPermanentFilter && !controller.hasActiveFilters,
+            onTap: controller.showAllGuidelines,
+          ),
+          AppSpacing.sm.gap,
+          _QuickFilterChip(
+            label: 'High Priority',
+            icon: LucideIcons.triangleAlert,
+            selected: controller.showHighPriorityOnly,
+            onTap: controller.toggleHighPriorityOnly,
+          ),
+          AppSpacing.sm.gap,
+          _QuickFilterChip(
+            label: 'Emergency',
+            icon: LucideIcons.siren,
+            selected: controller.isEmergencyRoute,
+            onTap: controller.openEmergencyGuidelines,
+          ),
+          AppSpacing.sm.gap,
+          _QuickFilterChip(
+            label: 'Children',
+            icon: LucideIcons.baby,
+            selected: controller.selectedTargetPopulation
+                .toLowerCase()
+                .contains('children'),
+            onTap: () => controller.setTargetPopulation('Children'),
+          ),
+          AppSpacing.sm.gap,
+          _QuickFilterChip(
+            label: 'Adults',
+            icon: LucideIcons.user,
+            selected: controller.selectedTargetPopulation
+                .toLowerCase()
+                .contains('adult'),
+            onTap: () => controller.setTargetPopulation('Adults'),
+          ),
+        ],
+      ),
+    );
   }
 }
 

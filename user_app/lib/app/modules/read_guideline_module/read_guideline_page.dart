@@ -1,118 +1,218 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:get/get.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
-import '../../utils/app_spacing.dart';
-import '../../utils/responsive.dart';
-import '../../utils/loading.dart';
-import '../../widgets/ai_context_button.dart';
-import '../../data/services/ai_context_service.dart';
+import 'package:toastification/toastification.dart';
+
 import '../../data/models/ai_context.dart';
-import 'read_guideline_controller.dart';
+import '../../data/models/models.dart';
+import '../../features/guidelines/read_guideline_controller.dart';
+import '../../providers/core_providers.dart';
+import '../../utils/app_spacing.dart';
+import '../../utils/common.dart';
+import '../../utils/loading.dart';
+import '../../utils/responsive.dart';
+import '../../widgets/ai_context_button.dart';
 import 'widgets/guideline_header.dart';
 import 'widgets/guideline_section.dart';
 
-class ReadGuidelinePage extends GetWidget<ReadGuidelineController> {
+class ReadGuidelinePage extends ConsumerStatefulWidget {
   const ReadGuidelinePage({super.key});
 
   @override
+  ConsumerState<ReadGuidelinePage> createState() => _ReadGuidelinePageState();
+}
+
+class _ReadGuidelinePageState extends ConsumerState<ReadGuidelinePage> {
+  late final ScrollController _scrollController;
+  late final ReadGuidelineRequest _request;
+  final Map<String, GlobalKey> _sectionKeys = {};
+  Timer? _saveDebounce;
+
+  ReadGuidelineRequest _resolveRequest() {
+    final arguments = Get.arguments;
+    if (arguments is Guideline) {
+      return ReadGuidelineRequest(id: arguments.id, guideline: arguments);
+    }
+    if (arguments is Map) {
+      final id =
+          arguments['guidelineId']?.toString() ??
+          arguments['id']?.toString() ??
+          '';
+      return ReadGuidelineRequest(id: id);
+    }
+    return ReadGuidelineRequest(id: arguments?.toString() ?? '');
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _request = _resolveRequest();
+    _scrollController = ScrollController()..addListener(_trackScroll);
+  }
+
+  @override
+  void dispose() {
+    _saveDebounce?.cancel();
+    _scrollController
+      ..removeListener(_trackScroll)
+      ..dispose();
+    super.dispose();
+  }
+
+  void _trackScroll() {
+    if (!_scrollController.hasClients) return;
+    final max = _scrollController.position.maxScrollExtent;
+    if (max <= 0) return;
+    final progress = (_scrollController.position.pixels / max).clamp(0.0, 1.0);
+    final controller = ref.read(
+      readGuidelineControllerProvider(_request).notifier,
+    );
+    controller.setProgress(progress);
+    _saveDebounce?.cancel();
+    _saveDebounce = Timer(const Duration(seconds: 2), controller.saveProgress);
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return Obx(
-      () => controller.guideline.value == null
-          ? const Scaffold(body: CenteredLoading(loading: Loading.large()))
-          : DefaultTabController(
-              length: controller.availableSections.length,
-              child: Scaffold(
-                appBar: AppBar(
-                  title: Text(
-                    controller.guideline.value!.conditionName,
-                    style: context.textTheme.titleMedium,
-                  ),
-                  actions: [
-                    AiContextButton.iconButton(
-                      context: _buildGuidelineContext(),
-                    ),
-                    Obx(
-                      () => IconButton(
-                        onPressed: controller.toggleBookmark,
-                        icon: controller.isLoading.value
-                            ? const SizedBox(
-                                width: 20,
-                                height: 20,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                ),
-                              )
-                            : Icon(
-                                controller.isBookmarked.value
-                                    ? LucideIcons.bookmark
-                                    : LucideIcons.bookmarkPlus,
-                              ),
-                      ),
-                    ),
-                  ],
-                  bottom: TabBar(
-                    isScrollable: true,
-                    tabAlignment: TabAlignment.start,
-                    tabs: controller.availableSections
-                        .map((section) => Tab(text: section.label))
-                        .toList(),
-                    onTap: (index) {
-                      controller.navigateToSection(
-                        controller.availableSections[index],
-                      );
-                    },
-                  ),
-                ),
-                body: SingleChildScrollView(
-                  controller: controller.scrollController,
-                  padding: EdgeInsets.all(
-                    Responsive.horizontalPadding(context),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      GuidelineHeader(guideline: controller.guideline.value!),
-                      AppSpacing.contentGap,
-                      ...controller.availableSections.map(
-                        (section) => GuidelineSectionWidget(
-                          key: controller.getSectionKey(section),
-                          section: section,
-                          content: controller.getSectionContent(section),
-                        ),
-                      ),
-                      AppSpacing.xxl.gap,
-                    ],
-                  ),
-                ),
-              ),
+    final request = _request;
+    final asyncState = ref.watch(readGuidelineControllerProvider(request));
+    return asyncState.when(
+      loading: () =>
+          const Scaffold(body: CenteredLoading(loading: Loading.large())),
+      error: (error, _) => Scaffold(
+        appBar: AppBar(),
+        body: Center(
+          child: Padding(
+            padding: AppSpacing.hPaddingMd,
+            child: Text(
+              request.id.isEmpty
+                  ? 'No guideline was selected.'
+                  : 'Unable to load this guideline. Please try again.',
+              textAlign: TextAlign.center,
             ),
+          ),
+        ),
+      ),
+      data: (state) => _buildReader(context, request, state),
     );
   }
 
-  /// Build AI context from current guideline data
-  AiContext _buildGuidelineContext() {
-    if (controller.guideline.value == null) {
-      return QuickAiContext.guideline(
-        title: 'Medical Guideline',
-        content: 'No guideline content available',
+  Widget _buildReader(
+    BuildContext context,
+    ReadGuidelineRequest request,
+    ReadGuidelineState state,
+  ) {
+    final controller = ref.read(
+      readGuidelineControllerProvider(request).notifier,
+    );
+    return DefaultTabController(
+      length: state.sections.length,
+      child: Scaffold(
+        appBar: AppBar(
+          title: Text(
+            state.guideline.conditionName,
+            style: context.textTheme.titleMedium,
+          ),
+          actions: [
+            AiContextButton.iconButton(context: _guidelineContext(state)),
+            IconButton(
+              onPressed: state.isMutating
+                  ? null
+                  : () => _toggleBookmark(controller, state.isBookmarked),
+              icon: state.isMutating
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : Icon(
+                      state.isBookmarked
+                          ? LucideIcons.bookmark
+                          : LucideIcons.bookmarkPlus,
+                    ),
+            ),
+          ],
+          bottom: state.sections.isEmpty
+              ? null
+              : TabBar(
+                  isScrollable: true,
+                  tabAlignment: TabAlignment.start,
+                  tabs: state.sections
+                      .map((section) => Tab(text: section.label))
+                      .toList(),
+                  onTap: (index) {
+                    final section = state.sections[index];
+                    controller.selectSection(section);
+                    final context = _sectionKey(section).currentContext;
+                    if (context != null) {
+                      Scrollable.ensureVisible(
+                        context,
+                        duration: const Duration(milliseconds: 500),
+                        curve: Curves.easeInOut,
+                      );
+                    }
+                  },
+                ),
+        ),
+        body: SingleChildScrollView(
+          controller: _scrollController,
+          padding: EdgeInsets.all(Responsive.horizontalPadding(context)),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              GuidelineHeader(guideline: state.guideline),
+              AppSpacing.contentGap,
+              ...state.sections.map(
+                (section) => GuidelineSectionWidget(
+                  key: _sectionKey(section),
+                  section: section,
+                  content: guidelineSectionContent(state.guideline, section),
+                ),
+              ),
+              AppSpacing.xxl.gap,
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  GlobalKey _sectionKey(GuidelineSection section) =>
+      _sectionKeys.putIfAbsent(section.fieldName, GlobalKey.new);
+
+  Future<void> _toggleBookmark(
+    ReadGuidelineController controller,
+    bool wasBookmarked,
+  ) async {
+    final success = await controller.toggleBookmark();
+    if (!mounted) return;
+    if (success) {
+      Common.quickToast(
+        title: wasBookmarked ? 'Bookmark removed' : 'Guideline bookmarked',
+      );
+    } else {
+      Common.quickToast(
+        title: 'Failed to update bookmark',
+        type: ToastificationType.error,
       );
     }
+  }
 
-    final guideline = controller.guideline.value!;
-
-    // Build guideline data map from available sections
-    final guidelineData = <String, dynamic>{};
-    for (final section in controller.availableSections) {
-      final content = controller.getSectionContent(section);
-      if (content.isNotEmpty) {
-        guidelineData[section.label] = content;
-      }
-    }
-
-    return AiContextService.to.extractGuidelineContext(
-      conditionName: guideline.conditionName,
-      guidelineData: guidelineData,
-      guidelineId: guideline.id,
-    );
+  AiContext _guidelineContext(ReadGuidelineState state) {
+    final contents = <String, dynamic>{
+      for (final section in state.sections)
+        if (guidelineSectionContent(state.guideline, section).isNotEmpty)
+          section.label: guidelineSectionContent(state.guideline, section),
+    };
+    return ref
+        .read(aiContextServiceProvider)
+        .extractGuidelineContext(
+          conditionName: state.guideline.conditionName,
+          guidelineData: contents,
+          guidelineId: state.guideline.id,
+        );
   }
 }

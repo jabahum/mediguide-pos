@@ -15,7 +15,6 @@ import 'package:user_app/app/modules/guidelines_indexer_module/guidelines_indexe
 import 'package:user_app/app/modules/guidelines_indexer_module/guidelines_indexer_page.dart';
 import 'package:user_app/app/modules/ministry_directory_module/ministry_directory_binding.dart';
 import 'package:user_app/app/modules/ministry_directory_module/ministry_directory_page.dart';
-import 'package:user_app/app/modules/read_guideline_module/read_guideline_binding.dart';
 import 'package:user_app/app/modules/read_guideline_module/read_guideline_page.dart';
 import 'package:user_app/app/modules/use_calculator_module/use_calculator_binding.dart';
 import 'package:user_app/app/modules/use_calculator_module/use_calculator_page.dart';
@@ -37,7 +36,6 @@ import 'package:user_app/app/modules/drug_index_module/drug_index_page.dart';
 import 'package:user_app/app/modules/profile_module/profile_page.dart';
 import 'package:user_app/app/modules/tools_module/tools_binding.dart';
 import 'package:user_app/app/modules/tools_module/tools_page.dart';
-import 'package:user_app/app/modules/guidelines_module/guidelines_binding.dart';
 import 'package:user_app/app/modules/guidelines_module/guidelines_page.dart';
 import 'package:user_app/app/modules/home_module/home_page.dart';
 import 'package:user_app/app/middleware/auth.dart';
@@ -78,11 +76,7 @@ class AppPages {
       middlewares: [AuthMiddleware()],
     ),
     GetPage(name: AppRoutes.home, page: () => const HomePage()),
-    GetPage(
-      name: AppRoutes.guidelines,
-      page: () => const GuidelinesPage(),
-      binding: GuidelinesBinding(),
-    ),
+    GetPage(name: AppRoutes.guidelines, page: () => const GuidelinesPage()),
     GetPage(
       name: AppRoutes.tools,
       page: () => const ToolsPage(),
@@ -136,7 +130,6 @@ class AppPages {
     GetPage(
       name: AppRoutes.readGuideline,
       page: () => const ReadGuidelinePage(),
-      binding: ReadGuidelineBinding(),
     ),
     GetPage(
       name: AppRoutes.aiAssistant,

@@ -1,5 +1,4 @@
 import 'package:flutter/foundation.dart';
-import 'package:get/get.dart';
 import 'package:local_auth/local_auth.dart';
 import 'package:user_app/app/data/models/models.dart';
 import 'package:user_app/app/data/services/backend_api_service.dart';
@@ -7,17 +6,21 @@ import 'package:user_app/app/utils/preference_utils.dart';
 import 'package:user_app/app/utils/constants.dart';
 import 'package:user_app/app/translations/app_translations.dart';
 
-class AuthService extends GetxService {
-  static AuthService get to => Get.find();
+class AuthService {
+  AuthService([BackendApiService? backend]) : _backend = backend;
+
+  final BackendApiService? _backend;
+  BackendApiService get _api =>
+      _backend ?? (throw StateError('BackendApiService was not provided'));
 
   final LocalAuthentication _localAuth = LocalAuthentication();
 
   /// Reactive user state
-  final Rxn<User> currentUser = Rxn<User>();
+  final ValueNotifier<User?> currentUser = ValueNotifier(null);
 
   /// Biometric authentication state
-  final RxBool isBiometricAvailable = false.obs;
-  final RxBool isBiometricEnabled = false.obs;
+  final ValueNotifier<bool> isBiometricAvailable = ValueNotifier(false);
+  final ValueNotifier<bool> isBiometricEnabled = ValueNotifier(false);
 
   /// Computed property for authentication state
   bool get isAuthenticated => currentUser.value != null;
@@ -33,7 +36,7 @@ class AuthService extends GetxService {
   String? get userProfilePicture {
     final user = currentUser.value;
     if (user?.avatar.isNotEmpty == true) {
-      return BackendApiService.to.getFileUrl(filename: user!.avatar);
+      return _api.getFileUrl(filename: user!.avatar);
     }
     return null;
   }
@@ -122,7 +125,7 @@ class AuthService extends GetxService {
   Future<void> logout() async {
     try {
       // Clear all authentication-related shared preferences
-      await BackendApiService.to.logout();
+      await _api.logout();
     } catch (_) {
     } finally {
       await clearUser();

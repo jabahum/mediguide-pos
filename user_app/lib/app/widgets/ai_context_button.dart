@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:get/get.dart';
+import 'package:user_app/app/core/navigation/app_navigator.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../data/models/ai_context.dart';
-import '../routes/app_pages.dart';
+import '../core/navigation/app_router.dart';
 
 /// Enhanced AI button widget that injects context into the AI assistant
 /// Designed specifically for detail pages
@@ -88,7 +88,7 @@ class AiContextButton extends StatelessWidget {
 
   /// Navigate to AI assistant with context
   void _navigateToAI() {
-    Get.toNamed(
+    AppNavigator.pushNamed(
       AppRoutes.aiAssistant,
       arguments: {'aiContext': context.toJson()},
     );

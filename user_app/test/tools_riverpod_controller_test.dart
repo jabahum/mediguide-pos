@@ -6,8 +6,8 @@ import 'package:user_app/app/data/services/backend_api_service.dart';
 import 'package:user_app/app/features/auth/auth_controller.dart';
 import 'package:user_app/app/features/auth/auth_session_store.dart';
 import 'package:user_app/app/features/tools/use_calculator_controller.dart';
-import 'package:user_app/app/modules/tools_module/tools_controller.dart';
-import 'package:user_app/app/providers/core_providers.dart';
+import 'package:user_app/app/features/tools/tools_controller.dart';
+import 'package:user_app/app/core/di/core_providers.dart';
 
 final class EmptyToolSessionStore implements AuthSessionStore {
   @override

@@ -7,7 +7,7 @@ import 'package:path_provider/path_provider.dart';
 
 import '../../data/models/models.dart';
 import '../../data/repositories/calculator_repository.dart';
-import '../../providers/core_providers.dart';
+import '../../core/di/core_providers.dart';
 import '../../utils/constants.dart';
 import '../auth/auth_controller.dart';
 

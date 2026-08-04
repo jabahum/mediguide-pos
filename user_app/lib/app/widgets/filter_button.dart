@@ -7,7 +7,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 /// - Shows filter icon when active, search when inactive
 /// - Optional badge for active filter count
 /// - Optional reset button
-/// - No dependency on GetX Rx types (more reusable)
+/// - No dependency on a feature state implementation (more reusable)
 class FilterButton extends StatelessWidget {
   /// Whether filters are active (reactive via builder or Obx outside)
   final bool hasActiveFilters;

@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:get/get.dart';
+import 'package:user_app/app/core/extensions/app_extensions.dart';
 import '../utils/app_spacing.dart';
 
 /// A reusable section header widget for profile/settings pages

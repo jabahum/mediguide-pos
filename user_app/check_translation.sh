@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Script to search for translation entries in Flutter GetX internationalization files
+# Script to search for entries in the Flutter application translation catalogue
 # Usage: ./check_translation.sh [OPTIONS] "search_term"
 # Supports both .tr and .trParams entries
 

@@ -3,7 +3,7 @@ import '../models/language_model.dart';
 import '../models/ministry_directory.dart';
 import '../services/backend_api_service.dart';
 import '../services/ttl_response_cache.dart';
-import '../../models/generic_page.dart';
+import '../models/generic_page.dart';
 
 final class GenericPageRepository {
   GenericPageRepository(this._api);

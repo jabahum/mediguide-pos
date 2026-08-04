@@ -9,8 +9,8 @@ abstract interface class AuthSessionStore {
   Future<bool> clearUser();
 }
 
-final class LegacyAuthSessionStore implements AuthSessionStore {
-  LegacyAuthSessionStore(this._service);
+final class AuthServiceSessionStore implements AuthSessionStore {
+  AuthServiceSessionStore(this._service);
 
   final AuthService _service;
 

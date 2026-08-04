@@ -2,7 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:user_app/app/data/services/auth_service.dart';
 import 'package:user_app/app/features/auth/biometric_controller.dart';
-import 'package:user_app/app/providers/core_providers.dart';
+import 'package:user_app/app/core/di/core_providers.dart';
 
 final class FakeBiometricAuthService extends AuthService {
   FakeBiometricAuthService({required this.available, required bool enabled}) {
@@ -28,7 +28,7 @@ void main() {
   test('loads and updates biometric preferences through Riverpod', () async {
     final service = FakeBiometricAuthService(available: true, enabled: false);
     final container = ProviderContainer(
-      overrides: [legacyAuthServiceProvider.overrideWithValue(service)],
+      overrides: [authServiceProvider.overrideWithValue(service)],
     );
     addTearDown(container.dispose);
 
@@ -48,7 +48,7 @@ void main() {
   test('does not enable biometrics when unavailable', () async {
     final service = FakeBiometricAuthService(available: false, enabled: false);
     final container = ProviderContainer(
-      overrides: [legacyAuthServiceProvider.overrideWithValue(service)],
+      overrides: [authServiceProvider.overrideWithValue(service)],
     );
     addTearDown(container.dispose);
     await container.read(biometricControllerProvider.future);

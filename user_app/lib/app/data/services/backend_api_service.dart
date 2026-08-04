@@ -1,6 +1,6 @@
 import 'dart:convert';
 
-import 'package:get/get.dart';
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:user_app/app/utils/constants.dart';
@@ -29,13 +29,11 @@ class BackendApiException implements Exception {
   }
 }
 
-class BackendApiService extends GetxService {
-  static BackendApiService get to => Get.find();
-
+class BackendApiService {
   static const _refreshTokenKey = 'backend_refresh_token';
   static const _sessionIdKey = 'backend_session_id';
 
-  final RxBool schemaLoaded = false.obs;
+  final ValueNotifier<bool> schemaLoaded = ValueNotifier(false);
 
   late SharedPreferences _prefs;
   String _accessToken = '';

@@ -3,10 +3,10 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:get/get.dart';
+import 'package:user_app/app/core/extensions/app_extensions.dart';
 
 import '../../data/models/language_model.dart';
-import '../../providers/core_providers.dart';
+import '../../core/di/core_providers.dart';
 import '../../translations/app_translations.dart';
 import '../../utils/constants.dart';
 
@@ -99,7 +99,7 @@ class LanguageController extends AsyncNotifier<LanguageState> {
       AppTranslation.updateTranslations(languageCode, translations);
       await _cacheTranslations(languageCode, translations, current);
     }
-    Get.updateLocale(_localeFor(languageCode));
+    AppTranslation.setLocale(_localeFor(languageCode));
     await HapticFeedback.selectionClick();
   }
 

@@ -2,7 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../data/models/models.dart';
 import '../../features/auth/auth_controller.dart';
-import '../../providers/core_providers.dart';
+import '../../core/di/core_providers.dart';
 
 final class EditProfileState {
   const EditProfileState({

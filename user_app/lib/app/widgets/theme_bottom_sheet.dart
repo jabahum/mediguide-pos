@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:get/get.dart';
+import 'package:user_app/app/core/extensions/app_extensions.dart';
+import 'package:user_app/app/core/navigation/app_navigator.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
-import '../translations/app_translations.dart';
 import '../features/settings/app_settings_controller.dart';
 import '../utils/constants.dart';
 import '../utils/app_spacing.dart';
@@ -112,16 +112,16 @@ class ThemeBottomSheet extends ConsumerWidget {
         await ref
             .read(appSettingsControllerProvider.notifier)
             .setThemeMode(mode);
-        Get.back();
+        AppNavigator.pop();
       },
       contentPadding: AppSpacing.listItemPadding,
     );
   }
 
   static void show() {
-    Get.bottomSheet(
+    AppNavigator.bottomSheet(
       const ThemeBottomSheet(),
-      backgroundColor: Get.theme.colorScheme.surface,
+      backgroundColor: AppNavigator.theme.colorScheme.surface,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),

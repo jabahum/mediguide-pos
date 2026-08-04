@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:get/get.dart';
+import 'package:user_app/app/core/extensions/app_extensions.dart';
+import 'package:user_app/app/core/navigation/app_navigator.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../utils/app_spacing.dart';
 import '../utils/loading.dart';
@@ -24,18 +25,18 @@ class PaginationIndicators {
             Icon(
               icon ?? LucideIcons.wifiOff,
               size: 64,
-              color: Get.theme.colorScheme.error,
+              color: AppNavigator.theme.colorScheme.error,
             ),
             AppSpacing.gapMd,
             Text(
               title ?? 'failedToLoadData'.tr,
-              style: Get.textTheme.headlineSmall,
+              style: AppNavigator.textTheme.headlineSmall,
               textAlign: TextAlign.center,
             ),
             AppSpacing.gapSm,
             Text(
               subtitle ?? 'pleaseCheckConnectionAndTryAgain'.tr,
-              style: Get.textTheme.bodyMedium,
+              style: AppNavigator.textTheme.bodyMedium,
               textAlign: TextAlign.center,
             ),
             AppSpacing.gapLg,
@@ -61,12 +62,12 @@ class PaginationIndicators {
             Icon(
               icon ?? LucideIcons.wifiOff,
               size: 48,
-              color: Get.theme.colorScheme.error,
+              color: AppNavigator.theme.colorScheme.error,
             ),
             AppSpacing.gapSm,
             Text(
               title ?? 'failedToLoadMore'.tr,
-              style: Get.textTheme.titleMedium,
+              style: AppNavigator.textTheme.titleMedium,
               textAlign: TextAlign.center,
             ),
             AppSpacing.gapMd,
@@ -111,18 +112,18 @@ class PaginationIndicators {
             Icon(
               icon ?? LucideIcons.search,
               size: 64,
-              color: Get.theme.colorScheme.outline,
+              color: AppNavigator.theme.colorScheme.outline,
             ),
             AppSpacing.gapMd,
             Text(
               title ?? 'noItemsFound'.tr,
-              style: Get.textTheme.headlineSmall,
+              style: AppNavigator.textTheme.headlineSmall,
               textAlign: TextAlign.center,
             ),
             AppSpacing.gapSm,
             Text(
               subtitle ?? 'tryAdjustingSearchOrFilters'.tr,
-              style: Get.textTheme.bodyMedium,
+              style: AppNavigator.textTheme.bodyMedium,
               textAlign: TextAlign.center,
             ),
             if (action != null) ...[AppSpacing.gapLg, action],
@@ -139,8 +140,10 @@ class PaginationIndicators {
       child: Center(
         child: Text(
           message ?? 'youHaveReachedTheEnd'.tr,
-          style: Get.textTheme.bodySmall?.copyWith(
-            color: Get.theme.colorScheme.onSurface.withValues(alpha: 0.6),
+          style: AppNavigator.textTheme.bodySmall?.copyWith(
+            color: AppNavigator.theme.colorScheme.onSurface.withValues(
+              alpha: 0.6,
+            ),
           ),
           textAlign: TextAlign.center,
         ),

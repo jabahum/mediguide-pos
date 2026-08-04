@@ -1,6 +1,5 @@
 import 'dart:convert';
 
-import 'package:get/get.dart';
 import 'package:http/http.dart' as http;
 
 import '../../utils/common.dart';
@@ -9,12 +8,21 @@ import '../../utils/preference_utils.dart';
 import 'auth_service.dart';
 import 'backend_api_service.dart';
 
-class OpenAiService extends GetxService {
-  static OpenAiService get to => Get.find();
+class OpenAiService {
+  OpenAiService([BackendApiService? backend, AuthService? auth])
+    : _backend = backend,
+      _auth = auth;
+
+  final BackendApiService? _backend;
+  final AuthService? _auth;
+  BackendApiService get _api =>
+      _backend ?? (throw StateError('BackendApiService was not provided'));
+  AuthService get _authService =>
+      _auth ?? (throw StateError('AuthService was not provided'));
 
   String? _sessionId;
 
-  bool get isConfigured => BackendApiService.to.isAuthenticated;
+  bool get isConfigured => _api.isAuthenticated;
   String? get sessionId => _sessionId;
 
   Future<OpenAiService> init() async {
@@ -40,7 +48,7 @@ class OpenAiService extends GetxService {
         headers: <String, String>{
           'Accept': 'application/json',
           'Content-Type': 'application/json',
-          'Authorization': 'Bearer ${BackendApiService.to.accessToken}',
+          'Authorization': 'Bearer ${_api.accessToken}',
         },
         body: jsonEncode({
           'question': _buildQuestion(
@@ -113,7 +121,7 @@ $trimmedMessage
   }
 
   String _resolveCountry() {
-    final userCountry = AuthService.to.currentUser.value?.country.trim() ?? '';
+    final userCountry = _authService.currentUser.value?.country.trim() ?? '';
     return userCountry.isEmpty ? 'UG' : userCountry;
   }
 

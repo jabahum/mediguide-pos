@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
-import 'package:get/get.dart';
+import 'package:user_app/app/core/extensions/app_extensions.dart';
 import '../data/models/filter_models.dart';
 import '../utils/responsive.dart';
 

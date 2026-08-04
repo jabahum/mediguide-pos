@@ -3,8 +3,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:user_app/app/data/repositories/consultant_repository.dart';
 import 'package:user_app/app/data/repositories/facility_repository.dart';
 import 'package:user_app/app/data/services/backend_api_service.dart';
-import 'package:user_app/app/modules/consultants_module/consultants_controller.dart';
-import 'package:user_app/app/modules/health_infrastructure_module/health_infrastructure_controller.dart';
+import 'package:user_app/app/features/consultants/consultants_controller.dart';
+import 'package:user_app/app/features/health_infrastructure/health_infrastructure_controller.dart';
 
 final class DirectoryApi extends BackendApiService {
   String? lastPath;

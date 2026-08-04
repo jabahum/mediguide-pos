@@ -2,12 +2,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../data/models/models.dart';
 import '../../data/services/backend_api_service.dart';
-import '../../providers/core_providers.dart';
+import '../../core/di/core_providers.dart';
 import 'auth_session_store.dart';
 import 'auth_state.dart';
 
 final authSessionStoreProvider = Provider<AuthSessionStore>(
-  (ref) => LegacyAuthSessionStore(ref.watch(legacyAuthServiceProvider)),
+  (ref) => AuthServiceSessionStore(ref.watch(authServiceProvider)),
 );
 
 final authControllerProvider = AsyncNotifierProvider<AuthController, AuthState>(

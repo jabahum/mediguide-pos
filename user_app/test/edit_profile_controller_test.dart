@@ -7,7 +7,7 @@ import 'package:user_app/app/data/services/backend_api_service.dart';
 import 'package:user_app/app/features/auth/auth_controller.dart';
 import 'package:user_app/app/features/auth/auth_session_store.dart';
 import 'package:user_app/app/features/profile/edit_profile_controller.dart';
-import 'package:user_app/app/providers/core_providers.dart';
+import 'package:user_app/app/core/di/core_providers.dart';
 
 final class EditProfileSessionStore implements AuthSessionStore {
   EditProfileSessionStore(this.currentUser);

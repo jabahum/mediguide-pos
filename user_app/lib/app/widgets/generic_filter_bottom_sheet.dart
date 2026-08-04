@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
-import 'package:get/get.dart';
+import 'package:user_app/app/core/extensions/app_extensions.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../data/models/filter_models.dart';
@@ -34,23 +34,26 @@ class GenericFilterBottomSheet {
         builder: (context, scrollController) => Column(
           children: [
             // Header with title and close button
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    title,
-                    style: context.textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w600,
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      title,
+                      style: context.textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                   ),
-                ),
-                IconButton(
-                  icon: const Icon(LucideIcons.x),
-                  onPressed: () => Navigator.of(context).pop(),
-                  tooltip: 'close'.tr,
-                ),
-              ],
-            ).paddingSymmetric(horizontal: AppSpacing.md),
+                  IconButton(
+                    icon: const Icon(LucideIcons.x),
+                    onPressed: () => Navigator.of(context).pop(),
+                    tooltip: 'close'.tr,
+                  ),
+                ],
+              ),
+            ),
             // Content
             Expanded(
               child: _GenericFilterBottomSheetContent(

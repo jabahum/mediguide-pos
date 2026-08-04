@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:universal_image/universal_image.dart';
 import '../utils/app_spacing.dart';
 import '../translations/app_translations.dart';
-import 'package:get/get.dart';
+import 'package:user_app/app/core/extensions/app_extensions.dart';
 
 class AppLogo extends StatelessWidget {
   final double? logoSize;

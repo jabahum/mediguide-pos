@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Script to add translation entries to Flutter GetX internationalization files
+# Script to add entries to the Flutter application translation catalogue
 # Usage: ./add_translation.sh "translationKey" "Translation text"
 # For parameters: ./add_translation.sh "translationKey" "Hello @name, welcome to @app" --params "name,app"
 
@@ -305,7 +305,6 @@ main() {
 if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
     main "$@"
 fi
-
 
 
 

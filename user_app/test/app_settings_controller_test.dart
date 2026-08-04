@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:user_app/app/features/settings/app_settings_controller.dart';
-import 'package:user_app/app/providers/core_providers.dart';
+import 'package:user_app/app/core/di/core_providers.dart';
 import 'package:user_app/app/utils/constants.dart';
 
 void main() {

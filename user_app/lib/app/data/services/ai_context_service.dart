@@ -1,10 +1,7 @@
-import 'package:get/get.dart';
 import '../models/ai_context.dart';
 
 /// Service for formatting contextual assistant input
-class AiContextService extends GetxService {
-  static AiContextService get to => Get.find();
-
+class AiContextService {
   /// Initialize the service with proper async pattern
   Future<AiContextService> init() async {
     return this;

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:get/get.dart';
+import 'package:user_app/app/core/extensions/app_extensions.dart';
+import 'package:user_app/app/core/navigation/app_navigator.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../data/models/ministry_directory.dart';
@@ -14,7 +15,7 @@ class MinistryDirectoryDetailBottomSheet extends StatelessWidget {
   const MinistryDirectoryDetailBottomSheet({super.key, required this.entry});
 
   static void show(BuildContext context, MinistryDirectory entry) {
-    Get.bottomSheet(
+    AppNavigator.bottomSheet(
       MinistryDirectoryDetailBottomSheet(entry: entry),
       backgroundColor: Colors.transparent,
       isScrollControlled: true,

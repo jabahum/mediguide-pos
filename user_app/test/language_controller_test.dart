@@ -3,7 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:user_app/app/data/services/backend_api_service.dart';
 import 'package:user_app/app/features/settings/language_controller.dart';
-import 'package:user_app/app/providers/core_providers.dart';
+import 'package:user_app/app/core/di/core_providers.dart';
 import 'package:user_app/app/utils/constants.dart';
 
 final class OfflineLanguageApi extends BackendApiService {

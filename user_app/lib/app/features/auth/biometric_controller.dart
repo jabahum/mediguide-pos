@@ -1,6 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../providers/core_providers.dart';
+import '../../core/di/core_providers.dart';
 
 final class BiometricState {
   const BiometricState({required this.available, required this.enabled});
@@ -16,7 +16,7 @@ final biometricControllerProvider =
 class BiometricController extends AsyncNotifier<BiometricState> {
   @override
   Future<BiometricState> build() async {
-    final service = ref.watch(legacyAuthServiceProvider);
+    final service = ref.watch(authServiceProvider);
     final available = await service.checkBiometricAvailability();
     return BiometricState(
       available: available,
@@ -28,7 +28,7 @@ class BiometricController extends AsyncNotifier<BiometricState> {
     final current = state.valueOrNull;
     if (current == null || !current.available) return false;
     final success = await ref
-        .read(legacyAuthServiceProvider)
+        .read(authServiceProvider)
         .toggleBiometricSetting(enabled);
     if (success) {
       state = AsyncData(

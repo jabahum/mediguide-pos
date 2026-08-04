@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:get/get.dart';
+import 'package:user_app/app/core/extensions/app_extensions.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../utils/app_spacing.dart';
 

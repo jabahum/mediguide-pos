@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:get/get.dart';
+import 'package:user_app/app/core/extensions/app_extensions.dart';
+import 'package:user_app/app/core/navigation/app_navigator.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../features/settings/language_controller.dart';
-import '../translations/app_translations.dart';
 import '../utils/app_spacing.dart';
 
 class LanguageBottomSheet extends ConsumerWidget {
@@ -91,9 +91,9 @@ class LanguageBottomSheet extends ConsumerWidget {
   }
 
   static void show() {
-    Get.bottomSheet(
+    AppNavigator.bottomSheet(
       const LanguageBottomSheet(),
-      backgroundColor: Get.theme.colorScheme.surface,
+      backgroundColor: AppNavigator.theme.colorScheme.surface,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
@@ -143,7 +143,7 @@ class _LanguageOption extends ConsumerWidget {
       await ref
           .read(languageControllerProvider.notifier)
           .setLanguage(languageCode);
-      Get.back();
+      AppNavigator.pop();
     },
     contentPadding: AppSpacing.listItemPadding,
   );

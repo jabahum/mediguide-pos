@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:get/get.dart';
 import 'package:toastification/toastification.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class Common {
   Common._();
 
-  static void dismissKeyboard() => Get.focusScope!.unfocus();
+  static void dismissKeyboard() =>
+      FocusManager.instance.primaryFocus?.unfocus();
 
   static void quickToast({
     ToastificationType type = ToastificationType.success,

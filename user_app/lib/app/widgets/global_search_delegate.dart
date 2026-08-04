@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:get/get.dart';
+import 'package:user_app/app/core/extensions/app_extensions.dart';
+import 'package:user_app/app/core/navigation/app_navigator.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../data/models/abbreviation.dart';
 import '../data/models/calculator.dart';
@@ -10,8 +11,8 @@ import '../data/models/guideline.dart';
 import '../data/models/health_facility.dart';
 import '../data/models/search_models.dart';
 import '../features/search/global_search_controller.dart';
-import '../modules/drug_index_module/widgets/drug_details_bottom_sheet.dart';
-import '../routes/app_pages.dart';
+import '../features/drug_index/widgets/drug_details_bottom_sheet.dart';
+import '../core/navigation/app_router.dart';
 import '../utils/common.dart';
 import '../utils/loading.dart';
 import '../utils/responsive.dart';
@@ -376,42 +377,51 @@ class GlobalSearchDelegate extends SearchDelegate<String?> {
         await ref
             .read(globalSearchControllerProvider.notifier)
             .recordDrugUsage(drug.id);
-        final appContext = Get.context;
-        if (appContext == null || !appContext.mounted) return;
+        final appContext = AppNavigator.context;
+        if (!appContext.mounted) return;
         await DrugDetailsBottomSheet.show(context: appContext, drug: drug);
       case SearchCategory.guidelines:
         final guideline = result.getItem<Guideline>();
         if (guideline != null) {
-          Get.toNamed(AppRoutes.readGuideline, arguments: guideline);
+          AppNavigator.pushNamed(AppRoutes.readGuideline, arguments: guideline);
         }
       case SearchCategory.consultants:
         final consultant = result.getItem<Consultant>();
         if (consultant != null) {
-          Get.toNamed(AppRoutes.consultants, arguments: consultant);
+          AppNavigator.pushNamed(AppRoutes.consultants, arguments: consultant);
         }
       case SearchCategory.healthFacilities:
         final facility = result.getItem<HealthFacility>();
         if (facility != null) {
-          Get.toNamed(AppRoutes.healthInfrastructure, arguments: facility);
+          AppNavigator.pushNamed(
+            AppRoutes.healthInfrastructure,
+            arguments: facility,
+          );
         }
       case SearchCategory.abbreviations:
         final abbreviation = result.getItem<Abbreviation>();
         if (abbreviation != null) {
-          Get.toNamed(AppRoutes.abbreviations, arguments: abbreviation);
+          AppNavigator.pushNamed(
+            AppRoutes.abbreviations,
+            arguments: abbreviation,
+          );
         }
       case SearchCategory.tools:
         final calculator = result.getItem<Calculator>();
-        Get.toNamed(
+        AppNavigator.pushNamed(
           AppRoutes.useCalculator,
           arguments: calculator ?? {'calculatorId': result.id},
         );
       case SearchCategory.faq:
         if (result.item != null) {
-          Get.toNamed(AppRoutes.faq, arguments: result.item);
+          AppNavigator.pushNamed(AppRoutes.faq, arguments: result.item);
         }
       case SearchCategory.all:
         if (result.route != null) {
-          Get.toNamed(result.route!, arguments: result.routeArguments);
+          AppNavigator.pushNamed(
+            result.route!,
+            arguments: result.routeArguments,
+          );
         }
     }
   }

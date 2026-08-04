@@ -12,8 +12,8 @@ import '../../data/repositories/consultant_repository.dart';
 import '../../data/repositories/facility_repository.dart';
 import '../../data/repositories/guideline_content_repository.dart';
 import '../../data/repositories/help_content_repository.dart';
-import '../../providers/core_providers.dart';
-import '../../routes/app_pages.dart';
+import '../../core/di/core_providers.dart';
+import '../../core/navigation/app_router.dart';
 import '../auth/auth_controller.dart';
 
 final class GlobalSearchState {

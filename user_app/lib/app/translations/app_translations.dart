@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:get/get.dart';
 import 'package:user_app/app/translations/en_us.dart';
 
 class AppTranslationKey {
@@ -483,7 +482,8 @@ class AppTranslationKey {
 class AppTranslation {
   AppTranslation._();
 
-  static final Locale locale = Get.deviceLocale!;
+  static Locale locale = WidgetsBinding.instance.platformDispatcher.locale;
+  static String currentLanguageCode = locale.languageCode;
   static final Map<String, Map<String, String>> translations = {'en': enUS};
 
   /// Update translations dynamically
@@ -494,6 +494,11 @@ class AppTranslation {
     if (newTranslations.isNotEmpty) {
       translations[languageCode] = newTranslations;
     }
+  }
+
+  static void setLocale(Locale value) {
+    locale = value;
+    currentLanguageCode = value.languageCode;
   }
 
   /// Get available translations
@@ -519,5 +524,20 @@ class AppTranslation {
 
     // Return the key if no translation found
     return key;
+  }
+}
+
+extension AppTranslationStringExtension on String {
+  String get tr =>
+      AppTranslation.getTranslation(this, AppTranslation.currentLanguageCode);
+
+  String trParams(Map<String, String> parameters) {
+    var value = tr;
+    for (final entry in parameters.entries) {
+      value = value
+          .replaceAll('@${entry.key}', entry.value)
+          .replaceAll('{${entry.key}}', entry.value);
+    }
+    return value;
   }
 }

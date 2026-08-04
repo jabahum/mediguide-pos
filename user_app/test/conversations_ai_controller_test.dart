@@ -7,9 +7,9 @@ import 'package:user_app/app/data/repositories/progress_usage_repository.dart';
 import 'package:user_app/app/data/services/ai_context_service.dart';
 import 'package:user_app/app/data/services/backend_api_service.dart';
 import 'package:user_app/app/data/services/openai_service.dart';
-import 'package:user_app/app/modules/ai_assistant_module/ai_assistant_controller.dart';
-import 'package:user_app/app/modules/chat_interface_module/chat_interface_controller.dart';
-import 'package:user_app/app/modules/chat_list_module/chat_list_controller.dart';
+import 'package:user_app/app/features/ai_assistant/ai_assistant_controller.dart';
+import 'package:user_app/app/features/chat_interface/chat_interface_controller.dart';
+import 'package:user_app/app/features/chat_list/chat_list_controller.dart';
 
 class ConversationAiApi extends BackendApiService {
   String? lastPath;

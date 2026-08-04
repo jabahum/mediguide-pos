@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:get/get.dart';
 import 'package:responsive_framework/responsive_framework.dart';
 import 'package:toastification/toastification.dart';
 import 'package:user_app/app/data/services/backend_api_service.dart';
@@ -10,8 +9,9 @@ import 'package:user_app/app/data/services/ai_context_service.dart';
 import 'package:user_app/app/features/auth/auth_controller.dart';
 import 'package:user_app/app/features/settings/app_settings_controller.dart';
 import 'package:user_app/app/features/settings/connectivity_provider.dart';
-import 'package:user_app/app/providers/core_providers.dart';
-import 'package:user_app/app/routes/app_pages.dart';
+import 'package:user_app/app/features/settings/language_controller.dart';
+import 'package:user_app/app/core/di/core_providers.dart';
+import 'package:user_app/app/core/navigation/app_router.dart';
 import 'package:user_app/app/themes/app_theme.dart';
 import 'package:user_app/app/translations/app_translations.dart';
 import 'package:user_app/app/utils/common.dart';
@@ -26,30 +26,38 @@ void main() async {
   // Initialize workmanager for background tasks (available for future use)
   // await Workmanager().initialize(callbackDispatcher);
 
-  // Initialize services
-  await _initServices();
+  final services = await _initServices();
 
   runApp(
     ProviderScope(
-      overrides: [sharedPreferencesProvider.overrideWithValue(preferences)],
+      overrides: [
+        sharedPreferencesProvider.overrideWithValue(preferences),
+        backendApiServiceProvider.overrideWithValue(services.backend),
+        authServiceProvider.overrideWithValue(services.auth),
+        openAiServiceProvider.overrideWithValue(services.openAi),
+        aiContextServiceProvider.overrideWithValue(services.aiContext),
+      ],
       child: const MyApp(),
     ),
   );
 }
 
 /// Initialize all required services
-Future<void> _initServices() async {
-  // Initialize core services in order
-  await Get.putAsync(() => AuthService().init());
+Future<_AppServices> _initServices() async {
+  final backend = await BackendApiService().init();
+  final auth = await AuthService(backend).init();
+  final openAi = await OpenAiService(backend, auth).init();
+  final aiContext = await AiContextService().init();
+  return _AppServices(backend, auth, openAi, aiContext);
+}
 
-  // Initialize the Go backend compatibility client.
-  await Get.putAsync(() => BackendApiService().init());
+final class _AppServices {
+  const _AppServices(this.backend, this.auth, this.openAi, this.aiContext);
 
-  // Initialize OpenAI service for AI assistant
-  await Get.putAsync(() => OpenAiService().init());
-
-  // Initialize AI Context service for context-aware AI assistance
-  await Get.putAsync(() => AiContextService().init());
+  final BackendApiService backend;
+  final AuthService auth;
+  final OpenAiService openAi;
+  final AiContextService aiContext;
 }
 
 class MyApp extends ConsumerWidget {
@@ -57,11 +65,12 @@ class MyApp extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // Start session restoration before protected routes make redirect
-    // decisions. GetX remains the temporary router while feature state moves
-    // to Riverpod.
     ref.watch(authControllerProvider);
     ref.watch(backendReconnectProvider);
+    final router = ref.watch(appRouterProvider);
+    final languageCode =
+        ref.watch(languageControllerProvider).valueOrNull?.currentCode ?? 'en';
+    AppTranslation.setLocale(Locale(languageCode));
     final themeMode = ref.watch(
       appSettingsControllerProvider.select(
         (settings) => settings.materialThemeMode,
@@ -70,14 +79,12 @@ class MyApp extends ConsumerWidget {
     return GestureDetector(
       onTap: () => Common.dismissKeyboard(),
       child: ToastificationWrapper(
-        child: GetMaterialApp(
-          initialRoute: AppRoutes.main,
+        child: MaterialApp.router(
+          routerConfig: router,
           theme: AppTheme.light,
           darkTheme: AppTheme.dark,
           themeMode: themeMode,
-          getPages: AppPages.pages,
           locale: AppTranslation.locale,
-          translationsKeys: AppTranslation.translations,
           debugShowCheckedModeBanner: false,
           builder: (context, child) => ResponsiveBreakpoints.builder(
             child: child!,

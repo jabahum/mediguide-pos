@@ -1190,6 +1190,18 @@ const docTemplate = `{
                             "$ref": "#/definitions/handlers.ErrorResponse"
                         }
                     },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    },
+                    "429": {
+                        "description": "Too Many Requests",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
@@ -12483,6 +12495,9 @@ const docTemplate = `{
         "services.FacilityView": {
             "type": "object",
             "properties": {
+                "authority_code": {
+                    "type": "string"
+                },
                 "authority_id": {
                     "type": "string"
                 },
@@ -12502,6 +12517,9 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "district_name": {
+                    "type": "string"
+                },
+                "facility_level_code": {
                     "type": "string"
                 },
                 "facility_level_id": {
@@ -12532,6 +12550,9 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "nhpi_code": {
+                    "type": "string"
+                },
+                "ownership_type_code": {
                     "type": "string"
                 },
                 "ownership_type_id": {

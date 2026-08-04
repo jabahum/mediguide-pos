@@ -1,12 +1,13 @@
 import 'package:flutter_gen_ai_chat_ui/flutter_gen_ai_chat_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:user_app/app/data/models/ai_context.dart';
+import 'package:user_app/app/data/models/rag_answer.dart';
 import 'package:user_app/app/data/models/models.dart';
 import 'package:user_app/app/data/repositories/conversation_repository.dart';
 import 'package:user_app/app/data/repositories/progress_usage_repository.dart';
+import 'package:user_app/app/data/repositories/rag_repository.dart';
 import 'package:user_app/app/data/services/ai_context_service.dart';
 import 'package:user_app/app/data/services/backend_api_service.dart';
-import 'package:user_app/app/data/services/openai_service.dart';
 import 'package:user_app/app/features/ai_assistant/ai_assistant_controller.dart';
 import 'package:user_app/app/features/chat_interface/chat_interface_controller.dart';
 import 'package:user_app/app/features/chat_list/chat_list_controller.dart';
@@ -81,9 +82,12 @@ class ConversationAiApi extends BackendApiService {
   };
 }
 
-class FakeOpenAiService extends OpenAiService {
+class FakeRagAssistant implements RagAssistant {
   String? lastMessage;
   int resetCount = 0;
+
+  @override
+  String? get sessionId => 'session-1';
 
   @override
   void resetSession() {
@@ -91,13 +95,26 @@ class FakeOpenAiService extends OpenAiService {
   }
 
   @override
-  Future<String> createChatCompletion({
-    required String userMessage,
-    List<String>? conversationHistory,
-    String? customInstructions,
+  Future<RagAnswer> ask({
+    required String question,
+    String? country,
+    String? programArea,
   }) async {
-    lastMessage = userMessage;
-    return 'Use the clinical guideline and professional judgment.';
+    lastMessage = question;
+    return const RagAnswer(
+      answer: 'Use the clinical guideline and professional judgment.',
+      sessionId: 'session-1',
+      citations: [
+        RagCitation(
+          chunkId: 'chunk-1',
+          title: 'Uganda Clinical Guidelines',
+          sourceName: 'Ministry of Health',
+          sourceVersion: '2023',
+          pageStart: 42,
+          pageEnd: 43,
+        ),
+      ],
+    );
   }
 }
 
@@ -162,14 +179,14 @@ void main() {
     'assistant applies route context and records owner-safe usage',
     () async {
       final api = ConversationAiApi();
-      final openAi = FakeOpenAiService();
+      final rag = FakeRagAssistant();
       final context = AiContext.guideline(
         title: 'Hypertension',
         content: 'Assess blood pressure and cardiovascular risk.',
         guidelineId: 'guideline-1',
       );
       final controller = AiAssistantController(
-        openAiService: openAi,
+        ragAssistant: rag,
         contextService: AiContextService(),
         usageRepository: UsageRepository(api),
         currentUser: _user('user-1', 'Clinician'),
@@ -186,8 +203,9 @@ void main() {
       );
       await Future<void>.delayed(Duration.zero);
 
-      expect(openAi.lastMessage, contains('Hypertension'));
+      expect(rag.lastMessage, contains('Hypertension'));
       expect(controller.conversationHistory, hasLength(2));
+      expect(controller.latestCitations.single.chunkId, 'chunk-1');
       expect(controller.isLoading, isFalse);
       expect(api.usageWrites, 1);
       expect(api.lastBody?.containsKey('user_id'), isFalse);

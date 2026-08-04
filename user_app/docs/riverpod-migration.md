@@ -13,14 +13,13 @@ lib/
     core/
       di/                   application-wide providers
       extensions/           framework-independent convenience extensions
-      navigation/           navigation boundary and root navigator key
+      navigation/           router, route definitions, and navigator boundary
     data/
       contracts/            generated API contracts
       models/               transport and application models
       repositories/         remote/local data coordination
       services/             HTTP, authentication, caching, and AI services
     features/<feature>/     pages, widgets, and Riverpod controllers/notifiers
-    routes/                 declarative route table and redirects
     themes/                 Material themes
     translations/           translation catalogue and string extension
     utils/                  shared utilities
@@ -30,6 +29,11 @@ lib/
 Feature code may depend on `core` and `data`. Data code must not import feature
 widgets. Shared widgets must remain transport-independent. Route payloads are
 passed explicitly into page constructors through `GoRouterState.extra`.
+
+The clinical assistant uses `RagRepository` and the authenticated
+`POST /api/v2/chat/ask` endpoint. It preserves server conversation sessions,
+maps generated OpenAPI DTOs, and exposes grounded citations. Model credentials
+remain behind the Go API and AI worker and are never shipped in the app.
 
 ## Dependency graph
 

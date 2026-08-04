@@ -4,7 +4,6 @@ import 'package:responsive_framework/responsive_framework.dart';
 import 'package:toastification/toastification.dart';
 import 'package:user_app/app/data/services/backend_api_service.dart';
 import 'package:user_app/app/data/services/auth_service.dart';
-import 'package:user_app/app/data/services/openai_service.dart';
 import 'package:user_app/app/data/services/ai_context_service.dart';
 import 'package:user_app/app/features/auth/auth_controller.dart';
 import 'package:user_app/app/features/settings/app_settings_controller.dart';
@@ -34,7 +33,6 @@ void main() async {
         sharedPreferencesProvider.overrideWithValue(preferences),
         backendApiServiceProvider.overrideWithValue(services.backend),
         authServiceProvider.overrideWithValue(services.auth),
-        openAiServiceProvider.overrideWithValue(services.openAi),
         aiContextServiceProvider.overrideWithValue(services.aiContext),
       ],
       child: const MyApp(),
@@ -46,17 +44,15 @@ void main() async {
 Future<_AppServices> _initServices() async {
   final backend = await BackendApiService().init();
   final auth = await AuthService(backend).init();
-  final openAi = await OpenAiService(backend, auth).init();
   final aiContext = await AiContextService().init();
-  return _AppServices(backend, auth, openAi, aiContext);
+  return _AppServices(backend, auth, aiContext);
 }
 
 final class _AppServices {
-  const _AppServices(this.backend, this.auth, this.openAi, this.aiContext);
+  const _AppServices(this.backend, this.auth, this.aiContext);
 
   final BackendApiService backend;
   final AuthService auth;
-  final OpenAiService openAi;
   final AiContextService aiContext;
 }
 

@@ -11,12 +11,12 @@ import '../../data/repositories/guideline_content_repository.dart';
 import '../../data/repositories/help_content_repository.dart';
 import '../../data/repositories/notification_repository.dart';
 import '../../data/repositories/progress_usage_repository.dart';
+import '../../data/repositories/rag_repository.dart';
 import '../../data/repositories/support_repository.dart';
 import '../../data/repositories/user_repository.dart';
 import '../../data/services/ai_context_service.dart';
 import '../../data/services/auth_service.dart';
 import '../../data/services/backend_api_service.dart';
-import '../../data/services/openai_service.dart';
 import '../../data/services/ttl_response_cache.dart';
 
 /// Core dependency graph. Runtime services are constructed once during
@@ -33,12 +33,15 @@ final authServiceProvider = Provider<AuthService>(
   (ref) => throw StateError('AuthService must be overridden at startup'),
 );
 
-final openAiServiceProvider = Provider<OpenAiService>(
-  (ref) => throw StateError('OpenAiService must be overridden at startup'),
-);
-
 final aiContextServiceProvider = Provider<AiContextService>(
   (ref) => throw StateError('AiContextService must be overridden at startup'),
+);
+
+final ragRepositoryProvider = Provider.autoDispose<RagAssistant>(
+  (ref) => RagRepository(
+    ref.watch(backendApiServiceProvider),
+    ref.watch(sharedPreferencesProvider),
+  ),
 );
 
 final ttlResponseCacheProvider = Provider<TtlResponseCache>(

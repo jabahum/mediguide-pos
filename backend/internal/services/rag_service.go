@@ -64,7 +64,17 @@ type AskResponse struct {
 
 const assistantUserEmail = "assistant@mediguide.local"
 
+var (
+	ErrInvalidRAGQuestion = errors.New("question must be between 2 and 12000 characters")
+	ErrInvalidRAGSession  = errors.New("invalid RAG session id")
+	ErrRAGSessionNotFound = errors.New("RAG session not found")
+)
+
 func (s RAGService) Ask(userID *uuid.UUID, req AskRequest) (*AskResponse, error) {
+	req.Question = strings.TrimSpace(req.Question)
+	if utf8.RuneCountInString(req.Question) < 2 || utf8.RuneCountInString(req.Question) > 12000 {
+		return nil, ErrInvalidRAGQuestion
+	}
 	session, err := s.getOrCreateSession(userID, req)
 	if err != nil {
 		return nil, err
@@ -212,17 +222,30 @@ func (s RAGService) askLocal(req workerAskRequest) (*AskResponse, error) {
 func (s RAGService) getOrCreateSession(userID *uuid.UUID, req AskRequest) (*models.ChatSession, error) {
 	var session models.ChatSession
 	if req.SessionID != "" {
-		sid, _ := uuid.Parse(req.SessionID)
-		s.DB.First(&session, "id = ?", sid)
-	}
-	if session.ID == uuid.Nil {
-		session = models.ChatSession{
-			UserID: s.resolveChatSessionUserID(userID),
-			Title:  truncate(req.Question, 80),
+		sid, err := uuid.Parse(req.SessionID)
+		if err != nil {
+			return nil, ErrInvalidRAGSession
 		}
-		if err := s.DB.Create(&session).Error; err != nil {
+		query := s.DB.Where("id = ?", sid)
+		if userID != nil && *userID != uuid.Nil {
+			query = query.Where("user_id = ?", *userID)
+		} else {
+			query = query.Where("user_id IS NULL")
+		}
+		if err := query.First(&session).Error; err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				return nil, ErrRAGSessionNotFound
+			}
 			return nil, err
 		}
+		return &session, nil
+	}
+	session = models.ChatSession{
+		UserID: s.resolveChatSessionUserID(userID),
+		Title:  truncate(req.Question, 80),
+	}
+	if err := s.DB.Create(&session).Error; err != nil {
+		return nil, err
 	}
 	return &session, nil
 }

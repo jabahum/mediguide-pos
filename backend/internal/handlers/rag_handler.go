@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"errors"
 	"net/http"
 
 	"mediguide/internal/httpx"
@@ -25,6 +26,8 @@ type RAGHandler struct{ Service services.RAGService }
 // @Failure 400 {object} handlers.ErrorResponse
 // @Failure 401 {object} handlers.ErrorResponse
 // @Failure 403 {object} handlers.ErrorResponse
+// @Failure 404 {object} handlers.ErrorResponse
+// @Failure 429 {object} handlers.ErrorResponse
 // @Failure 500 {object} handlers.ErrorResponse
 // @Router /api/v2/chat/ask [post]
 func (h RAGHandler) Ask(c *gin.Context) {
@@ -40,6 +43,14 @@ func (h RAGHandler) Ask(c *gin.Context) {
 	}
 	res, err := h.Service.Ask(uid, req)
 	if err != nil {
+		if errors.Is(err, services.ErrInvalidRAGQuestion) || errors.Is(err, services.ErrInvalidRAGSession) {
+			httpx.Error(c, http.StatusBadRequest, err.Error())
+			return
+		}
+		if errors.Is(err, services.ErrRAGSessionNotFound) {
+			httpx.Error(c, http.StatusNotFound, err.Error())
+			return
+		}
 		httpx.Error(c, 500, "internal server error")
 		return
 	}

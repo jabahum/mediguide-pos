@@ -6,6 +6,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:user_app/app/utils/app_spacing.dart';
 
 import '../../data/models/ai_context.dart';
+import '../../data/models/rag_answer.dart';
 import 'ai_assistant_controller.dart';
 
 class AiAssistantPage extends ConsumerStatefulWidget {
@@ -113,6 +114,14 @@ class _AiAssistantPageState extends ConsumerState<AiAssistantPage> {
                   title: currentContext.title,
                   onClear: controller.clearContext,
                 ),
+              if (controller.errorMessage != null)
+                _AssistantErrorBanner(
+                  message: controller.errorMessage!,
+                  isRetrying: controller.isLoading,
+                  onRetry: controller.retryLastRequest,
+                ),
+              if (controller.latestCitations.isNotEmpty)
+                _SourcesPanel(citations: controller.latestCitations),
 
               Expanded(
                 child: AiChatWidget(
@@ -198,6 +207,102 @@ class _AiAssistantPageState extends ConsumerState<AiAssistantPage> {
         },
       ),
       backgroundColor: cs.surface,
+    );
+  }
+}
+
+class _AssistantErrorBanner extends StatelessWidget {
+  const _AssistantErrorBanner({
+    required this.message,
+    required this.isRetrying,
+    required this.onRetry,
+  });
+
+  final String message;
+  final bool isRetrying;
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = context.theme.colorScheme;
+    return Container(
+      margin: const EdgeInsets.fromLTRB(
+        AppSpacing.md,
+        AppSpacing.xs,
+        AppSpacing.md,
+        0,
+      ),
+      padding: const EdgeInsets.all(AppSpacing.sm),
+      decoration: BoxDecoration(
+        color: cs.errorContainer,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Row(
+        children: [
+          Icon(LucideIcons.triangleAlert, color: cs.onErrorContainer, size: 18),
+          AppSpacing.sm.gap,
+          Expanded(
+            child: Text(
+              message,
+              style: context.textTheme.bodySmall?.copyWith(
+                color: cs.onErrorContainer,
+              ),
+            ),
+          ),
+          TextButton(
+            onPressed: isRetrying ? null : onRetry,
+            child: Text(isRetrying ? 'Retrying…' : 'Retry'),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SourcesPanel extends StatelessWidget {
+  const _SourcesPanel({required this.citations});
+
+  final List<RagCitation> citations;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = context.theme.colorScheme;
+    return Container(
+      margin: const EdgeInsets.fromLTRB(
+        AppSpacing.md,
+        AppSpacing.xs,
+        AppSpacing.md,
+        0,
+      ),
+      decoration: BoxDecoration(
+        color: cs.surfaceContainerLow,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: cs.outlineVariant),
+      ),
+      child: ExpansionTile(
+        dense: true,
+        leading: const Icon(LucideIcons.bookOpenCheck, size: 18),
+        title: Text(
+          '${citations.length} approved source${citations.length == 1 ? '' : 's'}',
+          style: context.textTheme.labelLarge?.copyWith(
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        children: [
+          for (var index = 0; index < citations.length; index++)
+            ListTile(
+              dense: true,
+              leading: CircleAvatar(
+                radius: 12,
+                child: Text(
+                  '${index + 1}',
+                  style: context.textTheme.labelSmall,
+                ),
+              ),
+              title: Text(citations[index].displayLabel),
+            ),
+        ],
+      ),
     );
   }
 }

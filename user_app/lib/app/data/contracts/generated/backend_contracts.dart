@@ -5184,6 +5184,8 @@ final class ServicesFacilityView {
   static const schemaName = 'services.FacilityView';
   final Map<String, dynamic> value;
 
+  String? get authorityCode => value['authority_code']?.toString();
+
   String? get authorityId => value['authority_id']?.toString();
 
   String? get authorityName => value['authority_name']?.toString();
@@ -5197,6 +5199,8 @@ final class ServicesFacilityView {
   String? get districtId => value['district_id']?.toString();
 
   String? get districtName => value['district_name']?.toString();
+
+  String? get facilityLevelCode => value['facility_level_code']?.toString();
 
   String? get facilityLevelId => value['facility_level_id']?.toString();
 
@@ -5220,6 +5224,8 @@ final class ServicesFacilityView {
   String? get name => value['name']?.toString();
 
   String? get nhpiCode => value['nhpi_code']?.toString();
+
+  String? get ownershipTypeCode => value['ownership_type_code']?.toString();
 
   String? get ownershipTypeId => value['ownership_type_id']?.toString();
 

@@ -5,10 +5,12 @@ import 'package:flutter_gen_ai_chat_ui/flutter_gen_ai_chat_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../data/models/ai_context.dart';
+import '../../data/models/rag_answer.dart';
 import '../../data/models/user.dart';
 import '../../data/repositories/progress_usage_repository.dart';
+import '../../data/repositories/rag_repository.dart';
 import '../../data/services/ai_context_service.dart';
-import '../../data/services/openai_service.dart';
+import '../../data/services/backend_api_service.dart';
 import '../../features/auth/auth_controller.dart';
 import '../../core/di/core_providers.dart';
 import '../../utils/common.dart';
@@ -16,7 +18,7 @@ import '../../utils/common.dart';
 final aiAssistantControllerProvider = ChangeNotifierProvider.autoDispose
     .family<AiAssistantController, AiContext?>((ref, initialContext) {
       return AiAssistantController(
-        openAiService: ref.watch(openAiServiceProvider),
+        ragAssistant: ref.watch(ragRepositoryProvider),
         contextService: ref.watch(aiContextServiceProvider),
         usageRepository: ref.watch(usageRepositoryProvider),
         currentUser: ref.watch(authControllerProvider).valueOrNull?.user,
@@ -26,28 +28,30 @@ final aiAssistantControllerProvider = ChangeNotifierProvider.autoDispose
 
 class AiAssistantController extends ChangeNotifier {
   AiAssistantController({
-    required OpenAiService openAiService,
+    required RagAssistant ragAssistant,
     required AiContextService contextService,
     required UsageRepository usageRepository,
     required User? currentUser,
     AiContext? initialContext,
-  }) : _openAiService = openAiService,
+  }) : _ragAssistant = ragAssistant,
        _contextService = contextService,
        _usageRepository = usageRepository,
+       _domainUser = currentUser,
        currentContext = initialContext,
        currentUser = ChatUser(
          id: currentUser?.id ?? 'user',
          firstName: currentUser?.name ?? 'You',
        ),
        aiUser = ChatUser(id: 'ai_assistant', firstName: 'MediGuide AI') {
-    _openAiService.resetSession();
+    _ragAssistant.resetSession();
     chatController = ChatMessagesController();
     _generateContextualContent();
   }
 
-  final OpenAiService _openAiService;
+  final RagAssistant _ragAssistant;
   final AiContextService _contextService;
   final UsageRepository _usageRepository;
+  final User? _domainUser;
   late final ChatMessagesController chatController;
 
   bool isLoading = false;
@@ -58,12 +62,15 @@ class AiAssistantController extends ChangeNotifier {
   AiContext? currentContext;
   String contextualWelcomeMessage = '';
   List<String> contextualExampleQuestions = [];
+  List<RagCitation> latestCitations = const [];
+  String? errorMessage;
+  String? _failedUserMessage;
   bool _disposed = false;
 
   @override
   void dispose() {
     _disposed = true;
-    _openAiService.resetSession();
+    _ragAssistant.resetSession();
     chatController.dispose();
     super.dispose();
   }
@@ -93,19 +100,28 @@ class AiAssistantController extends ChangeNotifier {
 
   Future<void> handleSendMessage(ChatMessage message) async {
     if (isLoading) return;
+    final userMessage = message.text.trim();
+    if (userMessage.isEmpty) return;
     isLoading = true;
     isTyping = true;
+    errorMessage = null;
+    _failedUserMessage = null;
     _notify();
     try {
       chatController.addMessage(message);
-      conversationHistory.add(message.text);
-      await _handleAiResponse(message.text);
+      conversationHistory.add(userMessage);
+      await _handleAiResponse(userMessage);
     } catch (error) {
-      Common.quickToast(
-        title: 'Error',
-        description: 'Failed to send message: $error',
+      _failedUserMessage = userMessage;
+      errorMessage = _messageFor(error);
+      _addAssistantMessage(
+        'I could not reach the approved-guideline assistant. '
+        '${errorMessage!} No clinical answer was generated.',
       );
-      await _handleFallbackResponse(message.text);
+      Common.quickToast(
+        title: 'Assistant unavailable',
+        description: errorMessage,
+      );
     } finally {
       isLoading = false;
       isTyping = false;
@@ -114,57 +130,84 @@ class AiAssistantController extends ChangeNotifier {
   }
 
   Future<void> _handleAiResponse(String userMessage) async {
-    try {
-      var requestMessage = userMessage;
-      final context = currentContext;
-      if (context != null) {
-        requestMessage = _contextService.buildContextQuestion(
-          context,
-          userMessage,
-        );
-      }
-
-      final response = await _openAiService.createChatCompletion(
-        userMessage: requestMessage,
-        conversationHistory: conversationHistory.length > 10
-            ? conversationHistory.sublist(conversationHistory.length - 10)
-            : List<String>.of(conversationHistory),
+    var requestMessage = userMessage;
+    final context = currentContext;
+    if (context != null) {
+      requestMessage = _contextService.buildContextQuestion(
+        context,
+        userMessage,
       );
-      chatController.addMessage(
-        ChatMessage(text: response, user: aiUser, createdAt: DateTime.now()),
-      );
-      conversationHistory.add(response);
-      unawaited(_trackUsage());
-    } catch (_) {
-      await _handleFallbackResponse(userMessage);
     }
-  }
-
-  Future<void> _handleFallbackResponse(String userMessage) async {
-    await Future<void>.delayed(const Duration(milliseconds: 500));
-    final response = _localFallbackResponse(userMessage);
-    chatController.addMessage(
-      ChatMessage(text: response, user: aiUser, createdAt: DateTime.now()),
+    final response = await _ragAssistant.ask(
+      question: requestMessage,
+      country: _country,
+      programArea: _programArea,
     );
-    conversationHistory.add(response);
+    latestCitations = response.citations;
+    _addAssistantMessage(response.answerWithSources);
+    conversationHistory.add(response.answer);
     unawaited(_trackUsage());
   }
 
-  String _localFallbackResponse(String userMessage) {
-    final message = userMessage.toLowerCase();
-    if (message.contains('drug') || message.contains('medicine')) {
-      return '💊 **Drug Information**\n\nBrowse the Drug Index for medication, dosage, interaction, and contraindication information. Always verify drug information with a qualified healthcare professional.';
+  Future<void> retryLastRequest() async {
+    final message = _failedUserMessage;
+    if (message == null || isLoading) return;
+    isLoading = true;
+    isTyping = true;
+    errorMessage = null;
+    _notify();
+    try {
+      await _handleAiResponse(message);
+      _failedUserMessage = null;
+    } catch (error) {
+      errorMessage = _messageFor(error);
+      Common.quickToast(
+        title: 'Assistant unavailable',
+        description: errorMessage,
+      );
+    } finally {
+      isLoading = false;
+      isTyping = false;
+      _notify();
     }
-    if (message.contains('guideline') || message.contains('protocol')) {
-      return '📋 **Clinical Guidelines**\n\nThe Guidelines section contains evidence-based treatment protocols. Use them together with clinical judgment and local policy.';
+  }
+
+  void _addAssistantMessage(String text) {
+    chatController.addMessage(
+      ChatMessage(text: text, user: aiUser, createdAt: DateTime.now()),
+    );
+  }
+
+  String _messageFor(Object error) {
+    if (error is TimeoutException) {
+      return 'The assistant took too long to respond. Please retry.';
     }
-    if (message.contains('calculator') || message.contains('tool')) {
-      return '🧮 **Medical Tools**\n\nThe Tools section includes clinical calculators, decision tools, and checklists. Verify inputs and interpret results in the patient’s clinical context.';
+    if (error is BackendApiException) {
+      if (error.isRateLimited) return error.toString();
+      if (error.statusCode == 401) {
+        return 'Your session expired. Sign in again.';
+      }
+      if (error.statusCode == 403) {
+        return 'Your account does not have permission to use the assistant.';
+      }
+      if (error.statusCode >= 500) {
+        return 'The RAG service is temporarily unavailable. Please retry.';
+      }
+      return error.message;
     }
-    if (message.contains('emergency') || message.contains('urgent')) {
-      return '🚨 **MEDICAL EMERGENCY**\n\nCall emergency services and seek immediate medical attention. MediGuide is not a substitute for emergency medical care.';
-    }
-    return '🤖 **MediGuide AI Assistant**\n\nI can help you find drug information, clinical guidelines, medical tools, and consultants. Always confirm patient-specific decisions with a qualified healthcare professional.';
+    return 'Check your connection and try again.';
+  }
+
+  String get _country {
+    final value = _domainUser?.country.trim() ?? '';
+    return value.isEmpty ? 'UG' : value;
+  }
+
+  String get _programArea {
+    final metadata = currentContext?.metadata;
+    return metadata?['program_area']?.toString().trim() ??
+        metadata?['programArea']?.toString().trim() ??
+        '';
   }
 
   Future<void> _trackUsage() async {

@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:user_app/app/data/repositories/user_repository.dart';
-import 'package:user_app/app/data/services/backend_api_service.dart';
+import 'package:user_app/features/authentication/data/repositories/user_repository.dart';
+import 'package:user_app/core/network/api_client.dart';
 
 class FakeUserApi extends BackendApiService {
   String? requestedPath;

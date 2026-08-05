@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:user_app/app/data/models/api_record.dart';
+import 'package:user_app/shared/models/api_record.dart';
 
 void main() {
   group('ApiRecord', () {

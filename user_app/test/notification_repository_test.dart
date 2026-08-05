@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:user_app/app/data/repositories/notification_repository.dart';
-import 'package:user_app/app/data/services/backend_api_service.dart';
+import 'package:user_app/features/notifications/data/repositories/notification_repository.dart';
+import 'package:user_app/core/network/api_client.dart';
 
 class FakeNotificationApi extends BackendApiService {
   int? requestedPage;

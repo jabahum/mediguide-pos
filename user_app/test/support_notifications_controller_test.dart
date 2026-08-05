@@ -1,10 +1,10 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:user_app/app/data/models/models.dart';
-import 'package:user_app/app/data/repositories/notification_repository.dart';
-import 'package:user_app/app/data/repositories/support_repository.dart';
-import 'package:user_app/app/data/services/backend_api_service.dart';
-import 'package:user_app/app/features/help_center/help_center_controller.dart';
-import 'package:user_app/app/features/notifications/notifications_controller.dart';
+import 'package:user_app/shared/models/models.dart';
+import 'package:user_app/features/notifications/data/repositories/notification_repository.dart';
+import 'package:user_app/features/support/data/repositories/support_repository.dart';
+import 'package:user_app/core/network/api_client.dart';
+import 'package:user_app/features/support/presentation/controllers/help_center_controller.dart';
+import 'package:user_app/features/notifications/presentation/controllers/notifications_controller.dart';
 
 class SupportNotificationsApi extends BackendApiService {
   String? lastPath;

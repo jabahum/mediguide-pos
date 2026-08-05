@@ -1,16 +1,16 @@
 import 'package:flutter_gen_ai_chat_ui/flutter_gen_ai_chat_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:user_app/app/data/models/ai_context.dart';
-import 'package:user_app/app/data/models/rag_answer.dart';
-import 'package:user_app/app/data/models/models.dart';
-import 'package:user_app/app/data/repositories/conversation_repository.dart';
-import 'package:user_app/app/data/repositories/progress_usage_repository.dart';
-import 'package:user_app/app/data/repositories/rag_repository.dart';
-import 'package:user_app/app/data/services/ai_context_service.dart';
-import 'package:user_app/app/data/services/backend_api_service.dart';
-import 'package:user_app/app/features/ai_assistant/ai_assistant_controller.dart';
-import 'package:user_app/app/features/chat_interface/chat_interface_controller.dart';
-import 'package:user_app/app/features/chat_list/chat_list_controller.dart';
+import 'package:user_app/features/ai_assistant/data/models/ai_context.dart';
+import 'package:user_app/features/ai_assistant/data/models/rag_answer.dart';
+import 'package:user_app/shared/models/models.dart';
+import 'package:user_app/features/conversations/data/repositories/conversation_repository.dart';
+import 'package:user_app/features/guidelines/data/repositories/progress_usage_repository.dart';
+import 'package:user_app/features/ai_assistant/data/repositories/rag_repository.dart';
+import 'package:user_app/features/ai_assistant/data/services/ai_context_service.dart';
+import 'package:user_app/core/network/api_client.dart';
+import 'package:user_app/features/ai_assistant/presentation/controllers/ai_assistant_controller.dart';
+import 'package:user_app/features/conversations/presentation/controllers/chat_interface_controller.dart';
+import 'package:user_app/features/conversations/presentation/controllers/chat_list_controller.dart';
 
 class ConversationAiApi extends BackendApiService {
   String? lastPath;

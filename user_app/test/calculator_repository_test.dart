@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:user_app/app/data/repositories/calculator_repository.dart';
-import 'package:user_app/app/data/services/backend_api_service.dart';
+import 'package:user_app/features/calculators/data/repositories/calculator_repository.dart';
+import 'package:user_app/core/network/api_client.dart';
 
 class FakeCalculatorApi extends BackendApiService {
   String? path;

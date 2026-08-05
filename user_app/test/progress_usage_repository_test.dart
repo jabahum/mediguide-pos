@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:user_app/app/data/repositories/progress_usage_repository.dart';
-import 'package:user_app/app/data/services/backend_api_service.dart';
+import 'package:user_app/features/guidelines/data/repositories/progress_usage_repository.dart';
+import 'package:user_app/core/network/api_client.dart';
 
 class FakeProgressApi extends BackendApiService {
   FakeProgressApi({this.offline = false});

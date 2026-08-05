@@ -2,7 +2,7 @@ import 'dart:io';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:user_app/app/features/settings/app_update_controller.dart';
+import 'package:user_app/features/settings/presentation/controllers/app_update_controller.dart';
 
 void main() {
   test('reports update checks as unsupported away from Android', () async {

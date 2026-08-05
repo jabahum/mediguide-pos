@@ -2,12 +2,12 @@ import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:user_app/app/data/models/user.dart';
-import 'package:user_app/app/data/services/backend_api_service.dart';
-import 'package:user_app/app/features/auth/auth_controller.dart';
-import 'package:user_app/app/features/auth/auth_session_store.dart';
-import 'package:user_app/app/features/profile/edit_profile_controller.dart';
-import 'package:user_app/app/core/di/core_providers.dart';
+import 'package:user_app/features/authentication/data/models/user.dart';
+import 'package:user_app/core/network/api_client.dart';
+import 'package:user_app/features/authentication/presentation/controllers/auth_controller.dart';
+import 'package:user_app/features/authentication/data/datasources/auth_local_datasource.dart';
+import 'package:user_app/features/profile/presentation/controllers/edit_profile_controller.dart';
+import 'package:user_app/app/providers/app_providers.dart';
 
 final class EditProfileSessionStore implements AuthSessionStore {
   EditProfileSessionStore(this.currentUser);

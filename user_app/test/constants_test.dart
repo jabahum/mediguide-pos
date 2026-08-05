@@ -1,6 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:user_app/app/utils/constants.dart';
+import 'package:user_app/core/constants/app_constants.dart';
 
 void main() {
   test('maps Android localhost API URL to emulator host', () {

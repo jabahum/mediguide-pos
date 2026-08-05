@@ -1,0 +1,22 @@
+{
+  "@@locale": "sw",
+  "appName": "MediGuide",
+  "welcomeToMediGuide": "Karibu MediGuide",
+  "clinicalGuidelines": "Miongozo ya Kliniki",
+  "worksOffline": "Inafanya Kazi Bila Intaneti",
+  "decisionSupportTools": "Zana za Kusaidia Maamuzi",
+  "signIn": "Ingia",
+  "createAccount": "Fungua Akaunti",
+  "email": "Barua pepe",
+  "password": "Nenosiri",
+  "forgotPassword": "Umesahau nenosiri?",
+  "home": "Nyumbani",
+  "guidelines": "Miongozo",
+  "tools": "Zana",
+  "profile": "Wasifu",
+  "search": "Tafuta",
+  "retry": "Jaribu Tena",
+  "noResults": "Hakuna Matokeo",
+  "offline": "Huna muunganisho wa intaneti",
+  "loading": "Inapakia"
+}

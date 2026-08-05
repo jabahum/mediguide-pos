@@ -2,8 +2,8 @@ import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:user_app/app/data/models/search_models.dart';
-import 'package:user_app/app/features/search/global_search_controller.dart';
+import 'package:user_app/shared/models/search_models.dart';
+import 'package:user_app/features/search/presentation/controllers/global_search_controller.dart';
 
 final class ControlledSearchDataSource implements GlobalSearchDataSource {
   final requests = <String, Completer<List<SearchResult>>>{};

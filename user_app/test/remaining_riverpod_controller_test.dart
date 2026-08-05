@@ -1,20 +1,20 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:user_app/app/data/repositories/content_reference_repository.dart';
-import 'package:user_app/app/data/repositories/facility_repository.dart';
-import 'package:user_app/app/data/repositories/guideline_content_repository.dart';
-import 'package:user_app/app/data/repositories/help_content_repository.dart';
-import 'package:user_app/app/data/repositories/progress_usage_repository.dart';
-import 'package:user_app/app/data/services/backend_api_service.dart';
-import 'package:user_app/app/data/models/generic_page.dart';
-import 'package:user_app/app/features/abbreviations/abbreviations_controller.dart';
-import 'package:user_app/app/features/all_actions/all_actions_controller.dart';
-import 'package:user_app/app/features/faq/faq_controller.dart';
-import 'package:user_app/app/features/generic_viewer/generic_viewer_controller.dart';
-import 'package:user_app/app/features/guidelines_indexer/guidelines_indexer_controller.dart';
-import 'package:user_app/app/features/ministry_directory/ministry_directory_controller.dart';
-import 'package:user_app/app/features/tree_selector/models/tree_selector_models.dart';
-import 'package:user_app/app/features/tree_selector/tree_selector_controller.dart';
+import 'package:user_app/features/content/data/repositories/content_reference_repository.dart';
+import 'package:user_app/features/facilities/data/repositories/facility_repository.dart';
+import 'package:user_app/features/guidelines/data/repositories/guideline_content_repository.dart';
+import 'package:user_app/features/support/data/repositories/help_content_repository.dart';
+import 'package:user_app/features/guidelines/data/repositories/progress_usage_repository.dart';
+import 'package:user_app/core/network/api_client.dart';
+import 'package:user_app/features/content/data/models/generic_page.dart';
+import 'package:user_app/features/abbreviations/presentation/controllers/abbreviations_controller.dart';
+import 'package:user_app/features/all_actions/presentation/controllers/all_actions_controller.dart';
+import 'package:user_app/features/support/presentation/controllers/faq_controller.dart';
+import 'package:user_app/features/content/presentation/controllers/generic_viewer_controller.dart';
+import 'package:user_app/features/guidelines/presentation/controllers/guidelines_indexer_controller.dart';
+import 'package:user_app/features/content/presentation/controllers/ministry_directory_controller.dart';
+import 'package:user_app/features/tree_selector/data/models/tree_selector_models.dart';
+import 'package:user_app/features/tree_selector/presentation/controllers/tree_selector_controller.dart';
 
 class RemainingFeaturesApi extends BackendApiService {
   final List<String> paths = [];

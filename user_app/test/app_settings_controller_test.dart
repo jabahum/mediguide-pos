@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:user_app/app/features/settings/app_settings_controller.dart';
-import 'package:user_app/app/core/di/core_providers.dart';
-import 'package:user_app/app/utils/constants.dart';
+import 'package:user_app/features/settings/presentation/controllers/app_settings_controller.dart';
+import 'package:user_app/app/providers/app_providers.dart';
+import 'package:user_app/core/constants/app_constants.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();

@@ -2,9 +2,9 @@ import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:user_app/app/data/services/backend_api_service.dart';
-import 'package:user_app/app/features/auth/change_password_controller.dart';
-import 'package:user_app/app/core/di/core_providers.dart';
+import 'package:user_app/core/network/api_client.dart';
+import 'package:user_app/features/authentication/presentation/controllers/change_password_controller.dart';
+import 'package:user_app/app/providers/app_providers.dart';
 
 final class FakePasswordApi extends BackendApiService {
   int requests = 0;

@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:user_app/app/data/repositories/content_reference_repository.dart';
-import 'package:user_app/app/data/services/backend_api_service.dart';
+import 'package:user_app/features/content/data/repositories/content_reference_repository.dart';
+import 'package:user_app/core/network/api_client.dart';
 
 class FakeContentReferenceApi extends BackendApiService {
   String? path;

@@ -2,7 +2,7 @@ import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:user_app/app/data/services/ttl_response_cache.dart';
+import 'package:user_app/core/network/ttl_response_cache.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();

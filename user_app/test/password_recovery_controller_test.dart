@@ -2,9 +2,9 @@ import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:user_app/app/data/services/backend_api_service.dart';
-import 'package:user_app/app/features/auth/password_recovery_controller.dart';
-import 'package:user_app/app/core/di/core_providers.dart';
+import 'package:user_app/core/network/api_client.dart';
+import 'package:user_app/features/authentication/presentation/controllers/password_recovery_controller.dart';
+import 'package:user_app/app/providers/app_providers.dart';
 
 final class FakeRecoveryApi extends BackendApiService {
   int requestCount = 0;

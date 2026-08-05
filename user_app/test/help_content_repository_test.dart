@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:user_app/app/data/repositories/help_content_repository.dart';
-import 'package:user_app/app/data/services/backend_api_service.dart';
+import 'package:user_app/features/support/data/repositories/help_content_repository.dart';
+import 'package:user_app/core/network/api_client.dart';
 
 class FakeHelpContentApi extends BackendApiService {
   String? path;

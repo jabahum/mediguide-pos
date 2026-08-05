@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:user_app/app/data/repositories/consultant_repository.dart';
-import 'package:user_app/app/data/services/backend_api_service.dart';
+import 'package:user_app/features/consultants/data/repositories/consultant_repository.dart';
+import 'package:user_app/core/network/api_client.dart';
 
 class FakeConsultantApi extends BackendApiService {
   String? path;

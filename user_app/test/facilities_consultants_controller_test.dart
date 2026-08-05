@@ -1,10 +1,10 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:user_app/app/data/repositories/consultant_repository.dart';
-import 'package:user_app/app/data/repositories/facility_repository.dart';
-import 'package:user_app/app/data/services/backend_api_service.dart';
-import 'package:user_app/app/features/consultants/consultants_controller.dart';
-import 'package:user_app/app/features/health_infrastructure/health_infrastructure_controller.dart';
+import 'package:user_app/features/consultants/data/repositories/consultant_repository.dart';
+import 'package:user_app/features/facilities/data/repositories/facility_repository.dart';
+import 'package:user_app/core/network/api_client.dart';
+import 'package:user_app/features/consultants/presentation/controllers/consultants_controller.dart';
+import 'package:user_app/features/facilities/presentation/controllers/health_infrastructure_controller.dart';
 
 final class DirectoryApi extends BackendApiService {
   String? lastPath;

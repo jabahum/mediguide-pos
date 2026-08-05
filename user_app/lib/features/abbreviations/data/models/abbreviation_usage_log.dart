@@ -1,0 +1,85 @@
+// ignore_for_file: unused_field
+
+import 'package:user_app/shared/models/api_record.dart';
+import 'package:user_app/shared/models/base_model.dart';
+import 'package:user_app/features/authentication/data/models/user.dart';
+import 'package:user_app/features/abbreviations/data/models/abbreviation.dart';
+
+/// Abbreviation usage log model for tracking abbreviation lookups
+class AbbreviationUsageLog extends BaseModel {
+  AbbreviationUsageLog(super.data);
+
+  /// backend resource API collection name
+  static const String collection = 'abbreviation_usage_logs';
+
+  // Self-registration for dynamic model creation
+  static final _registered = (() {
+    BaseModel.registerModel(collection, (data) => AbbreviationUsageLog(data));
+    return true;
+  })();
+
+  /// Create AbbreviationUsageLog from backend resource API record
+  static AbbreviationUsageLog fromRecord(ApiRecord record) =>
+      AbbreviationUsageLog(record.data);
+
+  /// Create JSON for new usage log record
+  static Map<String, dynamic> forCreate({
+    required String userId,
+    required String abbreviationId,
+  }) {
+    return {'user_id': userId, 'abbreviation_id': abbreviationId};
+  }
+
+  // Direct field properties
+  late final String userId = get<String>("user_id", "");
+  late final String abbreviationId = get<String>("abbreviation_id", "");
+
+  // Relationship properties
+  late final User? user = getRelation<User>("user_id");
+  late final Abbreviation? abbreviation = getRelation<Abbreviation>(
+    "abbreviation_id",
+  );
+
+  // Computed properties
+
+  /// Get access date (uses created field)
+  DateTime get accessedAt => createdDate ?? DateTime.now();
+
+  /// Get formatted access time
+  String get accessTimeFormatted {
+    final now = DateTime.now();
+    final difference = now.difference(accessedAt);
+
+    if (difference.inMinutes < 1) {
+      return 'Just now';
+    } else if (difference.inHours < 1) {
+      return '${difference.inMinutes}m ago';
+    } else if (difference.inDays < 1) {
+      return '${difference.inHours}h ago';
+    } else if (difference.inDays < 7) {
+      return '${difference.inDays}d ago';
+    } else {
+      return '${(difference.inDays / 7).floor()}w ago';
+    }
+  }
+
+  /// Get access date formatted
+  String get accessDateFormatted {
+    final now = DateTime.now();
+    final accessDate = DateTime(
+      accessedAt.year,
+      accessedAt.month,
+      accessedAt.day,
+    );
+    final today = DateTime(now.year, now.month, now.day);
+    final yesterday = today.subtract(const Duration(days: 1));
+
+    if (accessDate == today) {
+      return 'Today';
+    } else if (accessDate == yesterday) {
+      return 'Yesterday';
+    } else {
+      return '${accessedAt.day}/${accessedAt.month}/${accessedAt.year}';
+    }
+  }
+}

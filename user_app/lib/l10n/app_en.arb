@@ -1,0 +1,22 @@
+{
+  "@@locale": "en",
+  "appName": "MediGuide",
+  "welcomeToMediGuide": "Welcome to MediGuide",
+  "clinicalGuidelines": "Clinical Guidelines",
+  "worksOffline": "Works Offline",
+  "decisionSupportTools": "Decision Support Tools",
+  "signIn": "Sign In",
+  "createAccount": "Create Account",
+  "email": "Email",
+  "password": "Password",
+  "forgotPassword": "Forgot Password?",
+  "home": "Home",
+  "guidelines": "Guidelines",
+  "tools": "Tools",
+  "profile": "Profile",
+  "search": "Search",
+  "retry": "Try Again",
+  "noResults": "No Results Found",
+  "offline": "You are offline",
+  "loading": "Loading"
+}

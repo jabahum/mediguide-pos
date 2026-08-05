@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:user_app/app/data/repositories/conversation_repository.dart';
-import 'package:user_app/app/data/services/backend_api_service.dart';
+import 'package:user_app/features/conversations/data/repositories/conversation_repository.dart';
+import 'package:user_app/core/network/api_client.dart';
 
 class FakeConversationApi extends BackendApiService {
   String? path;

@@ -116,7 +116,7 @@ final class SupportRepository {
       SupportTicket(_normalize(raw, SupportTicket.collection));
 
   SupportTicketReply _reply(Map<String, dynamic> raw) =>
-      SupportTicketReply(_normalize(raw, SupportTicketReply.collection));
+      SupportTicketReply.fromJson(raw);
 
   Map<String, dynamic> _normalize(Map<String, dynamic> raw, String collection) {
     final data = <String, dynamic>{

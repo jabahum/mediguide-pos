@@ -1,78 +1,73 @@
-// ignore_for_file: unused_field
+import 'package:freezed_annotation/freezed_annotation.dart';
+import 'package:user_app/core/utils/json_converters.dart';
 
-import 'package:user_app/shared/models/api_record.dart';
-import 'package:user_app/shared/models/common_enums.dart';
-import 'package:user_app/shared/models/base_model.dart';
+part 'guideline_category.freezed.dart';
+part 'guideline_category.g.dart';
 
-/// Guideline category model based on backend resource API guideline_categories collection
-class GuidelineCategory extends BaseModel {
-  GuidelineCategory(super.data);
+enum GuidelineCategoryStatus {
+  @JsonValue('active')
+  active,
+  @JsonValue('inactive')
+  inactive,
+  @JsonValue('unknown')
+  unknown,
+}
 
-  /// backend resource API collection name
-  static const String collection = 'guideline_categories';
+@freezed
+abstract class GuidelineCategory with _$GuidelineCategory {
+  const GuidelineCategory._();
 
-  // Self-registration for dynamic model creation
-  static final _registered = (() {
-    BaseModel.registerModel(collection, (data) => GuidelineCategory(data));
-    return true;
-  })();
+  const factory GuidelineCategory({
+    required String id,
+    @Default('') String name,
+    @Default('') String slug,
+    @Default('') String description,
+    @JsonKey(name: 'sort_order') @Default(0) int sortOrder,
+    @Default('') String color,
+    @Default('') String icon,
+    @JsonKey(name: 'parent_category_id') String? parentCategoryId,
+    @JsonKey(name: 'parent_name') String? parentName,
+    @Default(GuidelineCategoryStatus.active) GuidelineCategoryStatus status,
+    @JsonKey(name: 'created_at')
+    @NullableDateTimeConverter()
+    DateTime? createdAt,
+    @JsonKey(name: 'updated_at')
+    @NullableDateTimeConverter()
+    DateTime? updatedAt,
+  }) = _GuidelineCategory;
 
-  /// Create GuidelineCategory from backend resource API record
-  static GuidelineCategory fromRecord(ApiRecord record) =>
-      GuidelineCategory(record.data);
+  factory GuidelineCategory.fromJson(Map<String, dynamic> json) =>
+      _$GuidelineCategoryFromJson(_normalizeCategory(json));
 
-  /// Create JSON for new guideline category record (excludes system fields)
-  static Map<String, dynamic> forCreate({
+  bool get hasParent => parentCategoryId?.isNotEmpty == true;
+  bool get isActive => status == GuidelineCategoryStatus.active;
+  String get displayName => name.isNotEmpty ? name : slug;
+}
+
+Map<String, dynamic> _normalizeCategory(Map<String, dynamic> json) {
+  final status = json['status']?.toString();
+  return {
+    ...json,
+    if (status != null && status != 'active' && status != 'inactive')
+      'status': 'unknown',
+  };
+}
+
+@freezed
+abstract class CreateGuidelineCategoryRequest
+    with _$CreateGuidelineCategoryRequest {
+  @JsonSerializable(includeIfNull: false)
+  const factory CreateGuidelineCategoryRequest({
     required String name,
     String? slug,
     String? description,
-    double? sortOrder,
-    Status? status,
+    @JsonKey(name: 'sort_order') int? sortOrder,
+    GuidelineCategoryStatus? status,
     String? color,
     String? icon,
-    String? parentCategoryId,
-  }) {
-    return {
-      'name': name,
-      'slug': ?slug,
-      'description': ?description,
-      'sort_order': ?sortOrder,
-      'status': (status ?? Status.active).name,
-      'color': ?color,
-      'icon': ?icon,
-      'parent_category': ?parentCategoryId,
-    };
-  }
+    @JsonKey(name: 'parent_category_id') String? parentCategoryId,
+  }) = _CreateGuidelineCategoryRequest;
 
-  // Direct properties - late final for performance
-  late final String name = get<String>("name", "");
-  late final String slug = get<String>("slug", "");
-  late final String description = get<String>("description", "");
-  late final double sortOrder = get<double>("sort_order", 0);
-  late final String color = get<String>("color", "");
-  late final String icon = get<String>("icon", "");
-  late final String parentCategoryId = get<String>("parent_category", "");
-
-  // Enum properties
-  late final Status status =
-      getEnum<Status>("status", Status.values) ?? Status.active;
-
-  // Relationship properties
-  late final GuidelineCategory? parentCategory = _getParentCategory();
-
-  /// Get parent category from expanded data
-  GuidelineCategory? _getParentCategory() {
-    final parentData = get<Map<String, dynamic>>("expand.parent_category");
-    if (parentData.isEmpty) return null;
-    return GuidelineCategory.fromRecord(ApiRecord(parentData));
-  }
-
-  /// Check if this category has a parent
-  bool get hasParent => parentCategoryId.isNotEmpty;
-
-  /// Check if this category is active
-  bool get isActive => status == Status.active;
-
-  /// Get display name (falls back to slug if name is empty)
-  String get displayName => name.isNotEmpty ? name : slug;
+  factory CreateGuidelineCategoryRequest.fromJson(Map<String, dynamic> json) =>
+      _$CreateGuidelineCategoryRequestFromJson(json);
 }

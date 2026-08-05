@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:user_app/features/ai_assistant/data/models/rag_answer.dart';
 import 'package:user_app/features/ai_assistant/data/repositories/rag_repository.dart';
 import 'package:user_app/core/network/api_client.dart';
 
@@ -69,6 +70,12 @@ void main() {
     expect(answer.answer, contains('malaria'));
     expect(answer.citations.single.chunkId, 'chunk-1');
     expect(answer.answerWithSources, contains('pages 120–122'));
+    expect(
+      RagAnswer.fromJson(answer.toJson()),
+      answer,
+      reason: 'Freezed RAG values must survive generated JSON round trips',
+    );
+    expect(answer.copyWith(answer: 'Updated').sessionId, 'session-1');
   });
 
   test('reuses the server-issued session for conversational context', () async {

@@ -43,16 +43,16 @@ final class GuidelineContentRepository {
   Future<ApiRecord> guideline(String id) =>
       _get('/api/v2/medical-guidelines/$id', Guideline.collection);
 
-  Future<PagedResult<ApiRecord>> categories({
+  Future<PagedResult<GuidelineCategory>> categories({
     int page = 1,
     int perPage = 100,
     String? search,
     String? status = 'active',
     String? parentId,
     bool rootOnly = false,
-  }) => _list(
+  }) => _typedList(
     '/api/v2/guideline-categories',
-    GuidelineCategory.collection,
+    GuidelineCategory.fromJson,
     page: page,
     perPage: perPage,
     query: {
@@ -65,13 +65,13 @@ final class GuidelineContentRepository {
     },
   );
 
-  Future<PagedResult<ApiRecord>> tags({
+  Future<PagedResult<GuidelineTag>> tags({
     int page = 1,
     int perPage = 100,
     String? search,
-  }) => _list(
+  }) => _typedList(
     '/api/v2/guideline-tags',
-    GuidelineTag.collection,
+    GuidelineTag.fromJson,
     page: page,
     perPage: perPage,
     query: {
@@ -81,15 +81,15 @@ final class GuidelineContentRepository {
     },
   );
 
-  Future<PagedResult<ApiRecord>> index({
+  Future<PagedResult<GuidelineIndex>> index({
     int page = 1,
     int perPage = 100,
     String? search,
     String? parentId,
     int? level,
-  }) => _list(
+  }) => _typedList(
     '/api/v2/guideline-index',
-    GuidelineIndex.collection,
+    GuidelineIndex.fromJson,
     page: page,
     perPage: perPage,
     query: {
@@ -101,13 +101,13 @@ final class GuidelineContentRepository {
     },
   );
 
-  Future<PagedResult<ApiRecord>> indexChildren(
+  Future<PagedResult<GuidelineIndex>> indexChildren(
     String id, {
     int page = 1,
     int perPage = 100,
-  }) => _list(
+  }) => _typedList(
     '/api/v2/guideline-index/$id/children',
-    GuidelineIndex.collection,
+    GuidelineIndex.fromJson,
     page: page,
     perPage: perPage,
   );
@@ -136,6 +136,32 @@ final class GuidelineContentRepository {
 
   Future<ApiRecord> abbreviation(String id) =>
       _get('/api/v2/abbreviations/$id', Abbreviation.collection);
+
+  Future<PagedResult<T>> _typedList<T>(
+    String path,
+    T Function(Map<String, dynamic>) fromJson, {
+    int page = 1,
+    int perPage = 100,
+    Map<String, String> query = const {},
+  }) async {
+    final response = await _api.requestJson(
+      path,
+      method: 'GET',
+      query: {'page': '$page', 'per_page': '$perPage', ...query},
+    );
+    final data = _data(response);
+    final items = (data['items'] as List? ?? const [])
+        .whereType<Map>()
+        .map((value) => fromJson(Map<String, dynamic>.from(value)))
+        .toList(growable: false);
+    return PagedResult(
+      page: (data['page'] as num?)?.toInt() ?? page,
+      perPage: (data['per_page'] as num?)?.toInt() ?? perPage,
+      totalItems: (data['total_items'] as num?)?.toInt() ?? items.length,
+      totalPages: (data['total_pages'] as num?)?.toInt() ?? 0,
+      items: items,
+    );
+  }
 
   Future<PagedResult<ApiRecord>> _list(
     String path,
@@ -192,14 +218,6 @@ final class GuidelineContentRepository {
       case Guideline.collection:
         value['index_item'] = raw['index_item_id']?.toString() ?? '';
         value['usageCount'] = (raw['usage_count'] as num?)?.toInt() ?? 0;
-        break;
-      case GuidelineCategory.collection:
-        value['parent_category'] = raw['parent_category_id']?.toString() ?? '';
-        break;
-      case GuidelineIndex.collection:
-        value['parent'] = raw['parent_id']?.toString() ?? '';
-        value['order'] = (raw['sort_order'] as num?)?.toInt() ?? 0;
-        value['hasChildren'] = raw['has_children'] == true;
         break;
       case Abbreviation.collection:
         final categories = (raw['categories'] as List? ?? const [])

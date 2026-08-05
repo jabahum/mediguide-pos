@@ -127,9 +127,7 @@ class HomeController extends AutoDisposeAsyncNotifier<HomeState> {
       final result = await ref
           .read(guidelineContentRepositoryProvider)
           .categories(perPage: 30, rootOnly: true);
-      return result.items
-          .map(GuidelineCategory.fromRecord)
-          .toList(growable: false);
+      return result.items;
     } catch (_) {
       return const [];
     }

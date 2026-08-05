@@ -282,9 +282,7 @@ class AbbreviationsController extends ChangeNotifier {
     String? sort,
   }) async {
     final result = await _contentRepository.categories();
-    return result.items
-        .map((record) => GuidelineCategory.fromRecord(record))
-        .toList();
+    return result.items;
   }
 
   /// Get all guideline tags
@@ -293,9 +291,7 @@ class AbbreviationsController extends ChangeNotifier {
     String? sort,
   }) async {
     final result = await _contentRepository.tags();
-    return result.items
-        .map((record) => GuidelineTag.fromRecord(record))
-        .toList();
+    return result.items;
   }
 
   void _notify() {

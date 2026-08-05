@@ -56,28 +56,24 @@ final class RagRepository implements RagAssistant {
       throw const FormatException('RAG response is missing its data object');
     }
 
-    final response = ServicesAskResponse.fromJson(
-      Map<String, dynamic>.from(data),
-    );
-    final answer = response.answer?.trim() ?? '';
+    final response = RagAnswer.fromJson(Map<String, dynamic>.from(data));
+    final answer = response.answer.trim();
     if (answer.isEmpty) {
       throw const FormatException('RAG response contains an empty answer');
     }
 
-    final returnedSession = response.sessionId?.trim() ?? '';
+    final returnedSession = response.sessionId.trim();
     if (returnedSession.isNotEmpty) _sessionId = returnedSession;
-    return RagAnswer(
+    return response.copyWith(
       answer: answer,
       sessionId: returnedSession,
       citations: response.citations
           .map(
-            (citation) => RagCitation(
-              chunkId: citation.chunkId?.trim() ?? '',
-              title: citation.title?.trim() ?? '',
-              sourceName: citation.sourceName?.trim() ?? '',
-              sourceVersion: citation.sourceVersion?.trim() ?? '',
-              pageStart: citation.pageStart,
-              pageEnd: citation.pageEnd,
+            (citation) => citation.copyWith(
+              chunkId: citation.chunkId.trim(),
+              title: citation.title.trim(),
+              sourceName: citation.sourceName.trim(),
+              sourceVersion: citation.sourceVersion.trim(),
             ),
           )
           .toList(growable: false),

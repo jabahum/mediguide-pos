@@ -170,7 +170,11 @@ class Guideline extends BaseModel {
   List<GuidelineCategory> _getCategories() {
     final categoryList = get<List>("expand.categories", []);
     return categoryList
-        .map((data) => GuidelineCategory.fromRecord(ApiRecord(data)))
+        .whereType<Map>()
+        .map(
+          (value) =>
+              GuidelineCategory.fromJson(Map<String, dynamic>.from(value)),
+        )
         .toList();
   }
 
@@ -178,7 +182,8 @@ class Guideline extends BaseModel {
   List<GuidelineTag> _getTags() {
     final tagList = get<List>("expand.tags", []);
     return tagList
-        .map((data) => GuidelineTag.fromRecord(ApiRecord(data)))
+        .whereType<Map>()
+        .map((value) => GuidelineTag.fromJson(Map<String, dynamic>.from(value)))
         .toList();
   }
 
@@ -186,7 +191,7 @@ class Guideline extends BaseModel {
   GuidelineIndex? _getIndexItem() {
     final indexData = get<Map<String, dynamic>?>("expand.index_item", null);
     if (indexData != null) {
-      return GuidelineIndex.fromRecord(ApiRecord(indexData));
+      return GuidelineIndex.fromJson(indexData);
     }
     return null;
   }

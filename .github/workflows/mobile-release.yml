@@ -60,8 +60,14 @@ jobs:
       - name: Verify generated backend contracts
         run: |
           dart run tool/generate_backend_contracts.dart
-          dart format lib/app/data/contracts/generated/backend_contracts.dart
-          git diff --exit-code -- lib/app/data/contracts/generated/backend_contracts.dart
+          dart format lib/core/network/contracts/generated/backend_contracts.dart
+          git diff --exit-code -- lib/core/network/contracts/generated/backend_contracts.dart
+
+      - name: Verify generated Dart models
+        run: |
+          dart run build_runner build --delete-conflicting-outputs
+          dart format lib
+          git diff --exit-code -- lib
 
       - name: Check formatting
         run: dart format --output=none --set-exit-if-changed lib test

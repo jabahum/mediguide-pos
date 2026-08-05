@@ -161,6 +161,7 @@ extension StatusExtension on Status {
   String get displayName => switch (this) {
     Status.active => "Active",
     Status.inactive => "Inactive",
+    Status.unknown => "Unknown",
   };
 
   String get value => name;

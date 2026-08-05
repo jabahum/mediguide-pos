@@ -1,13 +1,21 @@
-final class RagAnswer {
-  const RagAnswer({
-    required this.answer,
-    required this.citations,
-    required this.sessionId,
-  });
+import 'package:freezed_annotation/freezed_annotation.dart';
 
-  final String answer;
-  final List<RagCitation> citations;
-  final String sessionId;
+part 'rag_answer.freezed.dart';
+part 'rag_answer.g.dart';
+
+@freezed
+abstract class RagAnswer with _$RagAnswer {
+  const RagAnswer._();
+
+  @JsonSerializable(explicitToJson: true)
+  const factory RagAnswer({
+    @Default('') String answer,
+    @Default([]) List<RagCitation> citations,
+    @JsonKey(name: 'session_id') @Default('') String sessionId,
+  }) = _RagAnswer;
+
+  factory RagAnswer.fromJson(Map<String, dynamic> json) =>
+      _$RagAnswerFromJson(json);
 
   String get answerWithSources {
     if (citations.isEmpty) return answer;
@@ -20,22 +28,21 @@ final class RagAnswer {
   }
 }
 
-final class RagCitation {
-  const RagCitation({
-    required this.chunkId,
-    required this.title,
-    required this.sourceName,
-    required this.sourceVersion,
-    this.pageStart,
-    this.pageEnd,
-  });
+@freezed
+abstract class RagCitation with _$RagCitation {
+  const RagCitation._();
 
-  final String chunkId;
-  final String title;
-  final String sourceName;
-  final String sourceVersion;
-  final int? pageStart;
-  final int? pageEnd;
+  const factory RagCitation({
+    @JsonKey(name: 'chunk_id') @Default('') String chunkId,
+    @Default('') String title,
+    @JsonKey(name: 'source_name') @Default('') String sourceName,
+    @JsonKey(name: 'source_version') @Default('') String sourceVersion,
+    @JsonKey(name: 'page_start') int? pageStart,
+    @JsonKey(name: 'page_end') int? pageEnd,
+  }) = _RagCitation;
+
+  factory RagCitation.fromJson(Map<String, dynamic> json) =>
+      _$RagCitationFromJson(json);
 
   String get displayLabel {
     final name = title.trim().isNotEmpty

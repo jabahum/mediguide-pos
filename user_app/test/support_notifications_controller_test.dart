@@ -149,14 +149,11 @@ void main() {
     expect(controller.selectedType, 'warning');
     expect(controller.selectedPriority, 'high');
 
-    final notification = MyNotification({
-      'id': 'notice-1',
-      'collectionId': 'notifications',
-      'collectionName': 'notifications',
-      'title': 'Maintenance',
-      'message': 'Tonight',
-      'is_read': false,
-    });
+    const notification = MyNotification(
+      id: 'notice-1',
+      title: 'Maintenance',
+      message: 'Tonight',
+    );
     await controller.markRead(notification);
 
     expect(api.lastPath, '/api/v2/notifications/notice-1/read');

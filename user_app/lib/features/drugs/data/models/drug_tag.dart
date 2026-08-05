@@ -1,52 +1,46 @@
-// ignore_for_file: unused_field
-
-import 'package:user_app/shared/models/api_record.dart';
+import 'package:freezed_annotation/freezed_annotation.dart';
+import 'package:user_app/core/utils/json_converters.dart';
 import 'package:user_app/shared/models/common_enums.dart';
-import 'package:user_app/shared/models/base_model.dart';
 
-/// Drug tag model based on backend resource API drug_tags collection
-class DrugTag extends BaseModel {
-  DrugTag(super.data);
+part 'drug_tag.freezed.dart';
+part 'drug_tag.g.dart';
 
-  /// backend resource API collection name
-  static const String collection = 'drug_tags';
+@freezed
+abstract class DrugTag with _$DrugTag {
+  const factory DrugTag({
+    required String id,
+    @Default('') String name,
+    @Default('') String description,
+    @Default('') String color,
+    @JsonKey(name: 'tag_category') @Default('') String tagCategory,
+    @JsonKey(name: 'sort_order') @Default(0) int sortOrder,
+    @JsonKey(unknownEnumValue: Status.unknown)
+    @Default(Status.active)
+    Status status,
+    @JsonKey(name: 'created_at')
+    @NullableDateTimeConverter()
+    DateTime? createdAt,
+    @JsonKey(name: 'updated_at')
+    @NullableDateTimeConverter()
+    DateTime? updatedAt,
+  }) = _DrugTag;
 
-  // Self-registration for dynamic model creation
-  static final _registered = (() {
-    BaseModel.registerModel(collection, (data) => DrugTag(data));
-    return true;
-  })();
+  factory DrugTag.fromJson(Map<String, dynamic> json) =>
+      _$DrugTagFromJson(json);
+}
 
-  /// Create DrugTag from backend resource API record
-  static DrugTag fromRecord(ApiRecord record) => DrugTag(record.data);
-
-  /// Create JSON for new drug tag record (excludes system fields)
-  static Map<String, dynamic> forCreate({
+@freezed
+abstract class CreateDrugTagRequest with _$CreateDrugTagRequest {
+  @JsonSerializable(includeIfNull: false)
+  const factory CreateDrugTagRequest({
     required String name,
     String? description,
     String? color,
-    String? icon,
-    double? sortOrder,
+    @JsonKey(name: 'tag_category') String? tagCategory,
+    @JsonKey(name: 'sort_order') int? sortOrder,
     Status? status,
-  }) {
-    return {
-      'name': name,
-      'description': ?description,
-      'color': ?color,
-      'icon': ?icon,
-      'sort_order': ?sortOrder,
-      'status': (status ?? Status.active).name,
-    };
-  }
+  }) = _CreateDrugTagRequest;
 
-  // Direct properties - late final for performance
-  late final String name = get<String>("name", "");
-  late final String description = get<String>("description", "");
-  late final String color = get<String>("color", "");
-  late final String icon = get<String>("icon", "");
-  late final double sortOrder = get<double>("sort_order", 0);
-
-  // Enum properties
-  late final Status status =
-      getEnum<Status>("status", Status.values) ?? Status.active;
+  factory CreateDrugTagRequest.fromJson(Map<String, dynamic> json) =>
+      _$CreateDrugTagRequestFromJson(json);
 }

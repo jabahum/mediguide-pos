@@ -1,52 +1,42 @@
-// ignore_for_file: unused_field
-
-import 'package:user_app/shared/models/api_record.dart';
+import 'package:freezed_annotation/freezed_annotation.dart';
+import 'package:user_app/core/utils/json_converters.dart';
 import 'package:user_app/shared/models/common_enums.dart';
-import 'package:user_app/shared/models/base_model.dart';
 
-/// Drug class model based on backend resource API drug_classes collection
-class DrugClass extends BaseModel {
-  DrugClass(super.data);
+part 'drug_class.freezed.dart';
+part 'drug_class.g.dart';
 
-  /// backend resource API collection name
-  static const String collection = 'drug_classes';
+@freezed
+abstract class DrugClass with _$DrugClass {
+  const factory DrugClass({
+    required String id,
+    @Default('') String name,
+    @Default('') String description,
+    @JsonKey(name: 'sort_order') @Default(0) int sortOrder,
+    @JsonKey(unknownEnumValue: Status.unknown)
+    @Default(Status.active)
+    Status status,
+    @JsonKey(name: 'created_at')
+    @NullableDateTimeConverter()
+    DateTime? createdAt,
+    @JsonKey(name: 'updated_at')
+    @NullableDateTimeConverter()
+    DateTime? updatedAt,
+  }) = _DrugClass;
 
-  // Self-registration for dynamic model creation
-  static final _registered = (() {
-    BaseModel.registerModel(collection, (data) => DrugClass(data));
-    return true;
-  })();
+  factory DrugClass.fromJson(Map<String, dynamic> json) =>
+      _$DrugClassFromJson(json);
+}
 
-  /// Create DrugClass from backend resource API record
-  static DrugClass fromRecord(ApiRecord record) => DrugClass(record.data);
-
-  /// Create JSON for new drug class record (excludes system fields)
-  static Map<String, dynamic> forCreate({
+@freezed
+abstract class CreateDrugClassRequest with _$CreateDrugClassRequest {
+  @JsonSerializable(includeIfNull: false)
+  const factory CreateDrugClassRequest({
     required String name,
     String? description,
-    String? color,
-    String? icon,
-    double? sortOrder,
+    @JsonKey(name: 'sort_order') int? sortOrder,
     Status? status,
-  }) {
-    return {
-      'name': name,
-      'description': ?description,
-      'color': ?color,
-      'icon': ?icon,
-      'sort_order': ?sortOrder,
-      'status': (status ?? Status.active).name,
-    };
-  }
+  }) = _CreateDrugClassRequest;
 
-  // Direct properties - late final for performance
-  late final String name = get<String>("name", "");
-  late final String description = get<String>("description", "");
-  late final String color = get<String>("color", "");
-  late final String icon = get<String>("icon", "");
-  late final double sortOrder = get<double>("sort_order", 0);
-
-  // Enum properties
-  late final Status status =
-      getEnum<Status>("status", Status.values) ?? Status.active;
+  factory CreateDrugClassRequest.fromJson(Map<String, dynamic> json) =>
+      _$CreateDrugClassRequestFromJson(json);
 }

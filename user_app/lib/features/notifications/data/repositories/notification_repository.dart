@@ -32,13 +32,7 @@ final class NotificationRepository {
     final items = (data['items'] as List? ?? const [])
         .whereType<Map>()
         .map(
-          (value) => MyNotification({
-            ...Map<String, dynamic>.from(value),
-            'collectionName': 'notifications',
-            'collectionId': 'notifications',
-            'created': value['created_at']?.toString() ?? '',
-            'updated': value['updated_at']?.toString() ?? '',
-          }),
+          (value) => MyNotification.fromJson(Map<String, dynamic>.from(value)),
         )
         .toList();
     return PagedResult<MyNotification>(
@@ -65,13 +59,7 @@ final class NotificationRepository {
       method: 'POST',
     );
     final data = _data(response);
-    return MyNotification({
-      ...data,
-      'collectionName': 'notifications',
-      'collectionId': 'notifications',
-      'created': data['created_at']?.toString() ?? '',
-      'updated': data['updated_at']?.toString() ?? '',
-    });
+    return MyNotification.fromJson(data);
   }
 
   static Map<String, dynamic> _data(Map<String, dynamic> response) {

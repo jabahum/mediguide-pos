@@ -144,14 +144,64 @@ class Drug extends BaseModel {
       getEnum<ReviewStatus>("review_status", ReviewStatus.values) ??
       ReviewStatus.pending;
 
-  // Relationship properties - will be implemented when all models are ready
-  late final List<DrugCategory> categories = getRelationList<DrugCategory>(
-    "categories",
+  // Typed relationship projections. The API currently returns category/tag
+  // display names and explicit class/category IDs instead of expansion maps.
+  late final List<DrugCategory> categories = _categories();
+  late final List<DrugTag> tags = _tags();
+  late final DrugClass? drugClass = _drugClass();
+  late final TherapeuticCategory? therapeuticCategory = _therapeuticCategory();
+
+  List<DrugCategory> _categories() => _relationList(
+    'categories',
+    (json) => DrugCategory.fromJson(json),
+    (name) => DrugCategory(id: '', name: name),
   );
-  late final List<DrugTag> tags = getRelationList<DrugTag>("tags");
-  late final DrugClass? drugClass = getRelation<DrugClass>("drug_class");
-  late final TherapeuticCategory? therapeuticCategory =
-      getRelation<TherapeuticCategory>("therapeutic_category");
+
+  List<DrugTag> _tags() => _relationList(
+    'tags',
+    (json) => DrugTag.fromJson(json),
+    (name) => DrugTag(id: '', name: name),
+  );
+
+  List<T> _relationList<T>(
+    String field,
+    T Function(Map<String, dynamic>) fromJson,
+    T Function(String) fromName,
+  ) {
+    final raw = data[field];
+    if (raw is! List) return const [];
+    return raw
+        .map<T?>((value) {
+          if (value is Map) {
+            return fromJson(Map<String, dynamic>.from(value));
+          }
+          final name = value?.toString().trim() ?? '';
+          return name.isEmpty ? null : fromName(name);
+        })
+        .whereType<T>()
+        .toList(growable: false);
+  }
+
+  DrugClass? _drugClass() {
+    final id = get<String>('drug_class', '');
+    final expanded = get<Map<String, dynamic>?>('expand.drug_class', null);
+    if (expanded != null) return DrugClass.fromJson(expanded);
+    final name = get<String>('drug_class_name', '');
+    return id.isEmpty && name.isEmpty ? null : DrugClass(id: id, name: name);
+  }
+
+  TherapeuticCategory? _therapeuticCategory() {
+    final id = get<String>('therapeutic_category', '');
+    final expanded = get<Map<String, dynamic>?>(
+      'expand.therapeutic_category',
+      null,
+    );
+    if (expanded != null) return TherapeuticCategory.fromJson(expanded);
+    final name = get<String>('therapeutic_category_name', '');
+    return id.isEmpty && name.isEmpty
+        ? null
+        : TherapeuticCategory(id: id, name: name);
+  }
 
   // Helper methods for controlled substance conversion
   static String _controlledSubstanceToString(ControlledSubstance substance) {

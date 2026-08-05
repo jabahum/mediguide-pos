@@ -1,59 +1,52 @@
-// ignore_for_file: unused_field
-
-import 'package:user_app/shared/models/api_record.dart';
+import 'package:freezed_annotation/freezed_annotation.dart';
+import 'package:user_app/core/utils/json_converters.dart';
 import 'package:user_app/shared/models/common_enums.dart';
-import 'package:user_app/shared/models/base_model.dart';
 
-/// Drug category model based on backend resource API drug_categories collection
-class DrugCategory extends BaseModel {
-  DrugCategory(super.data);
+part 'drug_category.freezed.dart';
+part 'drug_category.g.dart';
 
-  /// backend resource API collection name
-  static const String collection = 'drug_categories';
+@freezed
+abstract class DrugCategory with _$DrugCategory {
+  const DrugCategory._();
 
-  // Self-registration for dynamic model creation
-  static final _registered = (() {
-    BaseModel.registerModel(collection, (data) => DrugCategory(data));
-    return true;
-  })();
+  const factory DrugCategory({
+    required String id,
+    @Default('') String name,
+    @Default('') String description,
+    @Default('') String color,
+    @Default('') String icon,
+    @JsonKey(name: 'sort_order') @Default(0) int sortOrder,
+    @JsonKey(unknownEnumValue: Status.unknown)
+    @Default(Status.active)
+    Status status,
+    @JsonKey(name: 'parent_category_id') String? parentCategoryId,
+    @JsonKey(name: 'created_at')
+    @NullableDateTimeConverter()
+    DateTime? createdAt,
+    @JsonKey(name: 'updated_at')
+    @NullableDateTimeConverter()
+    DateTime? updatedAt,
+  }) = _DrugCategory;
 
-  /// Create DrugCategory from backend resource API record
-  static DrugCategory fromRecord(ApiRecord record) => DrugCategory(record.data);
+  factory DrugCategory.fromJson(Map<String, dynamic> json) =>
+      _$DrugCategoryFromJson(json);
 
-  /// Create JSON for new drug category record (excludes system fields)
-  static Map<String, dynamic> forCreate({
+  bool get hasParent => parentCategoryId?.isNotEmpty == true;
+}
+
+@freezed
+abstract class CreateDrugCategoryRequest with _$CreateDrugCategoryRequest {
+  @JsonSerializable(includeIfNull: false)
+  const factory CreateDrugCategoryRequest({
     required String name,
     String? description,
     String? color,
     String? icon,
-    double? sortOrder,
+    @JsonKey(name: 'sort_order') int? sortOrder,
     Status? status,
-    String? parentCategoryId,
-  }) {
-    return {
-      'name': name,
-      'description': ?description,
-      'color': ?color,
-      'icon': ?icon,
-      'sort_order': ?sortOrder,
-      'status': (status ?? Status.active).name,
-      'parent_category': ?parentCategoryId,
-    };
-  }
+    @JsonKey(name: 'parent_category_id') String? parentCategoryId,
+  }) = _CreateDrugCategoryRequest;
 
-  // Direct properties - late final for performance
-  late final String name = get<String>("name", "");
-  late final String description = get<String>("description", "");
-  late final String color = get<String>("color", "");
-  late final String icon = get<String>("icon", "");
-  late final double sortOrder = get<double>("sort_order", 0);
-
-  // Enum properties
-  late final Status status =
-      getEnum<Status>("status", Status.values) ?? Status.active;
-
-  // Self-referencing relationship
-  late final DrugCategory? parentCategory = getRelation<DrugCategory>(
-    "parent_category",
-  );
+  factory CreateDrugCategoryRequest.fromJson(Map<String, dynamic> json) =>
+      _$CreateDrugCategoryRequestFromJson(json);
 }

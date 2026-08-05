@@ -1,91 +1,93 @@
-// ignore_for_file: unused_field
+import 'package:freezed_annotation/freezed_annotation.dart';
+import 'package:user_app/core/utils/json_converters.dart';
 
-import 'package:user_app/shared/models/api_record.dart';
-import 'package:user_app/shared/models/base_model.dart';
-import 'package:user_app/features/authentication/data/models/user.dart';
+part 'support_ticket_reply.freezed.dart';
+part 'support_ticket_reply.g.dart';
 
-/// Support Ticket Reply model for ticket conversations
-class SupportTicketReply extends BaseModel {
-  SupportTicketReply(super.data);
+@freezed
+abstract class SupportReplyAuthor with _$SupportReplyAuthor {
+  const factory SupportReplyAuthor({
+    required String id,
+    @Default('') String name,
+    @Default('') String email,
+  }) = _SupportReplyAuthor;
 
-  /// backend resource API collection name
-  static const String collection = 'support_ticket_replies';
+  factory SupportReplyAuthor.fromJson(Map<String, dynamic> json) =>
+      _$SupportReplyAuthorFromJson(json);
+}
 
-  // Self-registration for dynamic model creation
-  static final _registered = (() {
-    BaseModel.registerModel(collection, (data) => SupportTicketReply(data));
-    return true;
-  })();
+@freezed
+abstract class SupportTicketReply with _$SupportTicketReply {
+  const SupportTicketReply._();
 
-  /// Create SupportTicketReply from backend resource API record
-  factory SupportTicketReply.fromRecord(ApiRecord record) {
-    return SupportTicketReply(record.data);
-  }
+  @JsonSerializable(explicitToJson: true)
+  const factory SupportTicketReply({
+    required String id,
+    @Default('') String message,
+    @JsonKey(name: 'is_internal') @Default(false) bool isInternal,
+    @JsonKey(name: 'ticket_id') @Default('') String ticketId,
+    @JsonKey(name: 'user_id') @Default('') String userId,
+    SupportReplyAuthor? user,
+    @JsonKey(name: 'created_at')
+    @NullableDateTimeConverter()
+    DateTime? createdAt,
+    @JsonKey(name: 'updated_at')
+    @NullableDateTimeConverter()
+    DateTime? updatedAt,
+  }) = _SupportTicketReply;
 
-  // Core fields
-  late final String message = get<String>("message", "");
-  late final bool isInternal = get<bool>("is_internal", false);
+  factory SupportTicketReply.fromJson(Map<String, dynamic> json) =>
+      _$SupportTicketReplyFromJson(_normalizeReply(json));
 
-  // Relations
-  late final String ticketId = get<String>("ticket_id", "");
-  late final String userId = get<String>("user_id", "");
-
-  // Expanded relations
-  User? get user => getRelation<User>("user_id");
-
-  // Display helpers
   bool get isPublic => !isInternal;
-  bool get isFromSupport =>
-      isInternal; // Internal replies are from support staff
+  bool get isFromSupport => isInternal;
 
-  // Check if this reply is from a specific user
-  bool isFromUser(String currentUserId) {
-    return userId == currentUserId;
-  }
+  bool isFromUser(String currentUserId) => userId == currentUserId;
 
-  // Get formatted time ago string
   String get timeAgo {
-    final now = DateTime.now();
-    final createdAt = createdDate;
-    if (createdAt == null) return '';
-
-    final difference = now.difference(createdAt);
-
+    final value = createdAt;
+    if (value == null) return '';
+    final difference = DateTime.now().difference(value);
     if (difference.inDays > 0) {
       return '${difference.inDays} day${difference.inDays == 1 ? '' : 's'} ago';
-    } else if (difference.inHours > 0) {
-      return '${difference.inHours} hour${difference.inHours == 1 ? '' : 's'} ago';
-    } else if (difference.inMinutes > 0) {
-      return '${difference.inMinutes} minute${difference.inMinutes == 1 ? '' : 's'} ago';
-    } else {
-      return 'Just now';
     }
+    if (difference.inHours > 0) {
+      return '${difference.inHours} hour${difference.inHours == 1 ? '' : 's'} ago';
+    }
+    if (difference.inMinutes > 0) {
+      return '${difference.inMinutes} minute${difference.inMinutes == 1 ? '' : 's'} ago';
+    }
+    return 'Just now';
   }
 
-  // Get author display name
   String get authorName {
-    final userModel = user;
-    if (userModel != null) {
-      return userModel.name.isNotEmpty ? userModel.name : userModel.email;
+    final author = user;
+    if (author != null) {
+      if (author.name.isNotEmpty) return author.name;
+      if (author.email.isNotEmpty) return author.email;
     }
     return isInternal ? 'Support Team' : 'User';
   }
 
-  // Get author initials for avatar
   String get authorInitials {
     final name = authorName;
     if (name.length < 2) return name.toUpperCase();
-
     final parts = name.split(' ');
-    if (parts.length > 1) {
-      return '${parts[0][0]}${parts[1][0]}'.toUpperCase();
-    } else {
-      return name.substring(0, 2).toUpperCase();
-    }
+    return parts.length > 1
+        ? '${parts[0][0]}${parts[1][0]}'.toUpperCase()
+        : name.substring(0, 2).toUpperCase();
   }
+}
 
-  @override
-  String toString() {
-    return 'SupportTicketReply(id: $id, ticketId: $ticketId, isInternal: $isInternal, author: $authorName)';
+Map<String, dynamic> _normalizeReply(Map<String, dynamic> json) {
+  final normalized = Map<String, dynamic>.from(json);
+  if (normalized['user'] == null &&
+      normalized['user_id']?.toString().isNotEmpty == true) {
+    normalized['user'] = {
+      'id': normalized['user_id'],
+      'name': normalized['user_name'] ?? '',
+      'email': normalized['user_email'] ?? '',
+    };
   }
+  return normalized;
 }

@@ -1,39 +1,40 @@
-// ignore_for_file: unused_field
+import 'package:freezed_annotation/freezed_annotation.dart';
+import 'package:user_app/core/utils/json_converters.dart';
 
-import 'package:user_app/shared/models/api_record.dart';
-import 'package:user_app/shared/models/base_model.dart';
+part 'guideline_tag.freezed.dart';
+part 'guideline_tag.g.dart';
 
-/// Guideline tag model based on backend resource API guideline_tags collection
-class GuidelineTag extends BaseModel {
-  GuidelineTag(super.data);
+@freezed
+abstract class GuidelineTag with _$GuidelineTag {
+  const GuidelineTag._();
 
-  /// backend resource API collection name
-  static const String collection = 'guideline_tags';
+  const factory GuidelineTag({
+    required String id,
+    @Default('') String name,
+    @Default('') String description,
+    @JsonKey(name: 'created_at')
+    @NullableDateTimeConverter()
+    DateTime? createdAt,
+    @JsonKey(name: 'updated_at')
+    @NullableDateTimeConverter()
+    DateTime? updatedAt,
+  }) = _GuidelineTag;
 
-  // Self-registration for dynamic model creation
-  static final _registered = (() {
-    BaseModel.registerModel(collection, (data) => GuidelineTag(data));
-    return true;
-  })();
+  factory GuidelineTag.fromJson(Map<String, dynamic> json) =>
+      _$GuidelineTagFromJson(json);
 
-  /// Create GuidelineTag from backend resource API record
-  static GuidelineTag fromRecord(ApiRecord record) => GuidelineTag(record.data);
+  String get displayName => name;
+  bool get hasDescription => description.isNotEmpty;
+}
 
-  /// Create JSON for new guideline tag record (excludes system fields)
-  static Map<String, dynamic> forCreate({
+@freezed
+abstract class CreateGuidelineTagRequest with _$CreateGuidelineTagRequest {
+  @JsonSerializable(includeIfNull: false)
+  const factory CreateGuidelineTagRequest({
     required String name,
     String? description,
-  }) {
-    return {'name': name, 'description': ?description};
-  }
+  }) = _CreateGuidelineTagRequest;
 
-  // Direct properties - late final for performance
-  late final String name = get<String>("name", "");
-  late final String description = get<String>("description", "");
-
-  /// Get display name
-  String get displayName => name;
-
-  /// Check if tag has description
-  bool get hasDescription => description.isNotEmpty;
+  factory CreateGuidelineTagRequest.fromJson(Map<String, dynamic> json) =>
+      _$CreateGuidelineTagRequestFromJson(json);
 }

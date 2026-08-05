@@ -56,7 +56,7 @@ class Abbreviation extends BaseModel {
   GuidelineCategory? _getCategory() {
     final categoryData = get<Map<String, dynamic>>("expand.category");
     if (categoryData.isEmpty) return null;
-    return GuidelineCategory.fromRecord(ApiRecord(categoryData));
+    return GuidelineCategory.fromJson(categoryData);
   }
 
   /// Get tags from expanded data
@@ -64,7 +64,7 @@ class Abbreviation extends BaseModel {
     final tagsData = get<List<dynamic>>("expand.tags", <dynamic>[]);
     return tagsData
         .whereType<Map<String, dynamic>>()
-        .map((item) => GuidelineTag.fromRecord(ApiRecord(item)))
+        .map(GuidelineTag.fromJson)
         .toList();
   }
 

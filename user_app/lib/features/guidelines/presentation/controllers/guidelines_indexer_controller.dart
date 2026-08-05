@@ -122,7 +122,7 @@ class GuidelinesIndexerController extends ChangeNotifier {
 
       final result = await _repository.index(perPage: 500);
 
-      final records = result.items.map(GuidelineIndex.fromRecord).toList();
+      final records = result.items;
 
       allRecords = records;
 
@@ -189,7 +189,10 @@ class GuidelinesIndexerController extends ChangeNotifier {
 
     final rootRecords =
         records
-            .where((record) => record.level == 0 || record.parentId.isEmpty)
+            .where(
+              (record) =>
+                  record.level == 0 || record.parentId?.isEmpty != false,
+            )
             .toList()
           ..sort(_sortIndexRecords);
 

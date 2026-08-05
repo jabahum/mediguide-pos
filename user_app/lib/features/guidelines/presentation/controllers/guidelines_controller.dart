@@ -296,15 +296,7 @@ class GuidelinesController extends ChangeNotifier {
 
     routeFilterType = GuidelineRouteFilterType.indexItem;
 
-    selectedIndex = GuidelineIndex({
-      'id': indexItemId,
-      'title': resolvedTitle,
-      'description': '',
-      'parent': '',
-      'level': 0,
-      'order': 0,
-      'hasChildren': false,
-    });
+    selectedIndex = GuidelineIndex(id: indexItemId, title: resolvedTitle);
 
     isInIndexMode = true;
 
@@ -353,7 +345,7 @@ class GuidelinesController extends ChangeNotifier {
       );
 
       final childIds = result.items
-          .map((record) => GuidelineCategory.fromRecord(record).id)
+          .map((category) => category.id)
           .where((id) => id.isNotEmpty)
           .toList();
 
@@ -379,7 +371,7 @@ class GuidelinesController extends ChangeNotifier {
         );
 
         final childIds = result.items
-            .map((record) => GuidelineCategory.fromRecord(record).id)
+            .map((category) => category.id)
             .where((id) => id.isNotEmpty)
             .toList();
 
@@ -730,13 +722,13 @@ class GuidelinesController extends ChangeNotifier {
   Future<List<GuidelineCategory>> getGuidelineCategories() async {
     final result = await _contentRepository.categories();
 
-    return result.items.map((e) => GuidelineCategory.fromRecord(e)).toList();
+    return result.items;
   }
 
   Future<List<GuidelineTag>> getGuidelineTags() async {
     final result = await _contentRepository.tags();
 
-    return result.items.map((e) => GuidelineTag.fromRecord(e)).toList();
+    return result.items;
   }
 
   String? _categoryNameForId(String id) {

@@ -8,7 +8,7 @@ void main(List<String> arguments) {
   final output = File(
     arguments.length > 1
         ? arguments[1]
-        : 'lib/app/data/contracts/generated/backend_contracts.dart',
+        : 'lib/core/network/contracts/generated/backend_contracts.dart',
   );
 
   if (!input.existsSync()) {

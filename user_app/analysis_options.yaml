@@ -9,6 +9,12 @@
 # packages, and plugins designed to encourage good coding practices.
 include: package:flutter_lints/flutter.yaml
 
+analyzer:
+  errors:
+    # Freezed intentionally places json_annotation metadata on factory
+    # parameters before generating concrete fields/getters.
+    invalid_annotation_target: ignore
+
 linter:
   # The lint rules applied to this project can be customized in the
   # section below to disable rules from the `package:flutter_lints/flutter.yaml`
@@ -21,6 +27,9 @@ linter:
   # `// ignore_for_file: name_of_lint` syntax on the line or in the file
   # producing the lint.
   rules:
+    # json_serializable 6.9 emits explicit null checks while the pinned Dart
+    # SDK enables this newer style lint. Generated files are never hand-edited.
+    use_null_aware_elements: false
     # avoid_print: false  # Uncomment to disable the `avoid_print` rule
     # prefer_single_quotes: true  # Uncomment to enable the `prefer_single_quotes` rule
 

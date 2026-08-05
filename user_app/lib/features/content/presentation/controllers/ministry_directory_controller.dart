@@ -116,18 +116,14 @@ class MinistryDirectoryController extends ChangeNotifier {
 
       _districtIds
         ..clear()
-        ..addEntries(
-          districts.items.map((e) => MapEntry(e.data['name'] as String, e.id)),
-        );
+        ..addEntries(districts.items.map((e) => MapEntry(e.name, e.id)));
       availableDistricts = _districtIds.keys.toList();
 
       final regions = await _facilityRepository.regions(perPage: 500);
 
       _regionIds
         ..clear()
-        ..addEntries(
-          regions.items.map((e) => MapEntry(e.data['name'] as String, e.id)),
-        );
+        ..addEntries(regions.items.map((e) => MapEntry(e.name, e.id)));
       availableRegions = _regionIds.keys.toList();
     } catch (e) {
       Common.quickToast(

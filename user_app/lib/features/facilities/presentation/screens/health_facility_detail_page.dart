@@ -81,11 +81,11 @@ class HealthFacilityDetailPage extends StatelessWidget {
               items: [
                 _DetailRow(
                   label: 'Created',
-                  value: _formatDate(facility.created),
+                  value: _formatDate(facility.createdAt),
                 ),
                 _DetailRow(
                   label: 'Updated',
-                  value: _formatDate(facility.updated),
+                  value: _formatDate(facility.updatedAt),
                 ),
               ],
             ),
@@ -108,17 +108,12 @@ class HealthFacilityDetailPage extends StatelessWidget {
         facility.hsdtCode.trim().isNotEmpty;
   }
 
-  static String _formatDate(String value) {
-    if (value.trim().isEmpty) return '—';
-
-    try {
-      final date = DateTime.parse(value).toLocal();
-      final day = date.day.toString().padLeft(2, '0');
-      final month = date.month.toString().padLeft(2, '0');
-      return '$day/$month/${date.year}';
-    } catch (_) {
-      return value;
-    }
+  static String _formatDate(DateTime? value) {
+    if (value == null) return '—';
+    final date = value.toLocal();
+    final day = date.day.toString().padLeft(2, '0');
+    final month = date.month.toString().padLeft(2, '0');
+    return '$day/$month/${date.year}';
   }
 }
 

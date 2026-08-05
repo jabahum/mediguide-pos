@@ -111,9 +111,8 @@ final class MinistryDirectoryRepository {
     final items = (data['items'] as List? ?? const [])
         .whereType<Map>()
         .map(
-          (value) => MinistryDirectory(
-            ApiRecord(_directoryRecord(Map<String, dynamic>.from(value))).data,
-          ),
+          (value) =>
+              MinistryDirectory.fromJson(Map<String, dynamic>.from(value)),
         )
         .toList();
     return PagedResult(
@@ -123,27 +122,6 @@ final class MinistryDirectoryRepository {
       totalPages: (data['total_pages'] as num?)?.toInt() ?? 0,
       items: items,
     );
-  }
-
-  Map<String, dynamic> _directoryRecord(Map<String, dynamic> value) {
-    final districtId = value['district_id']?.toString() ?? '';
-    final regionId = value['region_id']?.toString() ?? '';
-    return {
-      ...value,
-      'collectionId': MinistryDirectory.collection,
-      'collectionName': MinistryDirectory.collection,
-      'created': value['created_at'] ?? value['created'] ?? '',
-      'updated': value['updated_at'] ?? value['updated'] ?? '',
-      'district': districtId,
-      'region': regionId,
-      'alternativePhone': value['alternative_phone'] ?? '',
-      'expand': {
-        if (districtId.isNotEmpty)
-          'district': {'id': districtId, 'name': value['district_name'] ?? ''},
-        if (regionId.isNotEmpty)
-          'region': {'id': regionId, 'name': value['region_name'] ?? ''},
-      },
-    };
   }
 }
 

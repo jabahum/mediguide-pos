@@ -1,131 +1,180 @@
-// ignore_for_file: unused_field
-
-import 'package:user_app/shared/models/api_record.dart';
-import 'package:user_app/shared/models/base_model.dart';
-import 'package:user_app/features/facilities/data/models/region.dart';
-import 'package:user_app/features/facilities/data/models/district.dart';
-import 'package:user_app/features/facilities/data/models/county.dart';
-import 'package:user_app/features/facilities/data/models/subcounty.dart';
-import 'package:user_app/features/facilities/data/models/parish.dart';
-import 'package:user_app/features/facilities/data/models/health_sub_region.dart';
-import 'package:user_app/features/facilities/data/models/health_sub_district.dart';
-import 'package:user_app/features/facilities/data/models/facility_level.dart';
-import 'package:user_app/features/facilities/data/models/ownership_type.dart';
+import 'package:freezed_annotation/freezed_annotation.dart';
+import 'package:user_app/core/utils/json_converters.dart';
 import 'package:user_app/features/facilities/data/models/authority.dart';
+import 'package:user_app/features/facilities/data/models/county.dart';
+import 'package:user_app/features/facilities/data/models/district.dart';
+import 'package:user_app/features/facilities/data/models/facility_level.dart';
+import 'package:user_app/features/facilities/data/models/health_sub_district.dart';
+import 'package:user_app/features/facilities/data/models/health_sub_region.dart';
+import 'package:user_app/features/facilities/data/models/ownership_type.dart';
+import 'package:user_app/features/facilities/data/models/parish.dart';
+import 'package:user_app/features/facilities/data/models/region.dart';
+import 'package:user_app/features/facilities/data/models/subcounty.dart';
 
-/// Health facility model based on backend resource API health_facilities collection
-class HealthFacility extends BaseModel {
-  HealthFacility(super.data);
+part 'health_facility.freezed.dart';
+part 'health_facility.g.dart';
 
-  /// backend resource API collection name
-  static const String collection = 'health_facilities';
+@freezed
+abstract class HealthFacility with _$HealthFacility {
+  const HealthFacility._();
 
-  // Self-registration for dynamic model creation
-  static final _registered = (() {
-    BaseModel.registerModel(collection, (data) => HealthFacility(data));
-    return true;
-  })();
+  const factory HealthFacility({
+    required String id,
+    @Default('') String name,
+    @JsonKey(name: 'nhpi_code') @Default('') String nhpiCode,
+    @JsonKey(name: 'hsdt_code') @Default('') String hsdtCode,
+    @JsonKey(name: 'facility_level_id') String? facilityLevelId,
+    @JsonKey(name: 'facility_level_name') @Default('') String facilityLevelName,
+    @JsonKey(name: 'facility_level_code') @Default('') String facilityLevelCode,
+    @JsonKey(name: 'authority_id') String? authorityId,
+    @JsonKey(name: 'authority_name') @Default('') String authorityName,
+    @JsonKey(name: 'authority_code') @Default('') String authorityCode,
+    @JsonKey(name: 'ownership_type_id') String? ownershipTypeId,
+    @JsonKey(name: 'ownership_type_name') @Default('') String ownershipTypeName,
+    @JsonKey(name: 'ownership_type_code') @Default('') String ownershipTypeCode,
+    @JsonKey(name: 'health_sub_district_id') String? healthSubDistrictId,
+    @JsonKey(name: 'health_sub_district_name')
+    @Default('')
+    String healthSubDistrictName,
+    @JsonKey(name: 'parish_id') String? parishId,
+    @JsonKey(name: 'parish_name') @Default('') String parishName,
+    @JsonKey(name: 'subcounty_id') String? subcountyId,
+    @JsonKey(name: 'subcounty_name') @Default('') String subcountyName,
+    @JsonKey(name: 'county_id') String? countyId,
+    @JsonKey(name: 'county_name') @Default('') String countyName,
+    @JsonKey(name: 'district_id') String? districtId,
+    @JsonKey(name: 'district_name') @Default('') String districtName,
+    @JsonKey(name: 'health_sub_region_id') String? healthSubRegionId,
+    @JsonKey(name: 'health_sub_region_name')
+    @Default('')
+    String healthSubRegionName,
+    @JsonKey(name: 'region_id') String? regionId,
+    @JsonKey(name: 'region_name') @Default('') String regionName,
+    @JsonKey(name: 'usage_count') @Default(0) int usageCount,
+    @JsonKey(name: 'created_at')
+    @NullableDateTimeConverter()
+    DateTime? createdAt,
+    @JsonKey(name: 'updated_at')
+    @NullableDateTimeConverter()
+    DateTime? updatedAt,
+  }) = _HealthFacility;
 
-  /// Create HealthFacility from backend resource API record
-  static HealthFacility fromRecord(ApiRecord record) =>
-      HealthFacility(record.data);
+  factory HealthFacility.fromJson(Map<String, dynamic> json) =>
+      _$HealthFacilityFromJson(json);
 
-  /// Create JSON for new health facility record (excludes system fields)
-  static Map<String, dynamic> forCreate({
-    required String name,
-    required String nhpiCode,
-    required String hsdtCode,
-    required String facilityLevelId,
-    required String authorityId,
-    required String ownershipTypeId,
-    required String healthSubDistrictId,
-    required String parishId,
-    required String subcountyId,
-    required String countyId,
-    required String districtId,
-    required String healthSubRegionId,
-    required String regionId,
-  }) {
-    return {
-      'name': name,
-      'nhpi_code': nhpiCode,
-      'hsdt_code': hsdtCode,
-      'facility_level': facilityLevelId,
-      'authority': authorityId,
-      'ownership_type': ownershipTypeId,
-      'health_sub_district': healthSubDistrictId,
-      'parish': parishId,
-      'subcounty': subcountyId,
-      'county': countyId,
-      'district': districtId,
-      'health_sub_region': healthSubRegionId,
-      'region': regionId,
-    };
-  }
+  FacilityLevel? get facilityLevel => _has(facilityLevelId, facilityLevelName)
+      ? FacilityLevel(
+          id: facilityLevelId ?? '',
+          name: facilityLevelName,
+          code: facilityLevelCode,
+        )
+      : null;
+  Authority? get authority => _has(authorityId, authorityName)
+      ? Authority(
+          id: authorityId ?? '',
+          name: authorityName,
+          code: authorityCode,
+        )
+      : null;
+  OwnershipType? get ownershipType => _has(ownershipTypeId, ownershipTypeName)
+      ? OwnershipType(
+          id: ownershipTypeId ?? '',
+          name: ownershipTypeName,
+          code: ownershipTypeCode,
+        )
+      : null;
+  HealthSubDistrict? get healthSubDistrict =>
+      _has(healthSubDistrictId, healthSubDistrictName)
+      ? HealthSubDistrict(
+          id: healthSubDistrictId ?? '',
+          name: healthSubDistrictName,
+          districtId: districtId,
+          districtName: districtName,
+        )
+      : null;
+  Parish? get parish => _has(parishId, parishName)
+      ? Parish(id: parishId ?? '', name: parishName, subcountyId: subcountyId)
+      : null;
+  Subcounty? get subcounty => _has(subcountyId, subcountyName)
+      ? Subcounty(
+          id: subcountyId ?? '',
+          name: subcountyName,
+          countyId: countyId,
+          countyName: countyName,
+          districtId: districtId,
+          districtName: districtName,
+        )
+      : null;
+  County? get county => _has(countyId, countyName)
+      ? County(
+          id: countyId ?? '',
+          name: countyName,
+          districtId: districtId,
+          districtName: districtName,
+        )
+      : null;
+  District? get district => _has(districtId, districtName)
+      ? District(
+          id: districtId ?? '',
+          name: districtName,
+          regionId: regionId,
+          regionName: regionName,
+          healthSubRegionId: healthSubRegionId,
+          healthSubRegionName: healthSubRegionName,
+        )
+      : null;
+  HealthSubRegion? get healthSubRegion =>
+      _has(healthSubRegionId, healthSubRegionName)
+      ? HealthSubRegion(
+          id: healthSubRegionId ?? '',
+          name: healthSubRegionName,
+          regionId: regionId,
+          regionName: regionName,
+        )
+      : null;
+  Region? get region => _has(regionId, regionName)
+      ? Region(id: regionId ?? '', name: regionName)
+      : null;
 
-  // Direct properties - late final for performance
-  late final String name = get<String>("name", "");
-  late final String nhpiCode = get<String>("nhpi_code", "");
-  late final String hsdtCode = get<String>("hsdt_code", "");
+  String get ownershipDisplay => ownershipTypeName.isNotEmpty
+      ? ownershipTypeName
+      : ownershipTypeCode.isNotEmpty
+      ? 'Type: $ownershipTypeCode'
+      : 'Unknown Ownership';
+  String get fullAddress => [
+    parishName,
+    subcountyName,
+    countyName,
+    districtName,
+    regionName,
+  ].where((value) => value.isNotEmpty).join(', ');
+  String get shortAddress => [
+    subcountyName,
+    districtName,
+  ].where((value) => value.isNotEmpty).join(', ');
+}
 
-  // Geographic and administrative relationships - properly typed
-  late final FacilityLevel? facilityLevel = getRelation<FacilityLevel>(
-    "facility_level",
-  );
-  late final Authority? authority = getRelation<Authority>("authority");
-  late final OwnershipType? ownershipType = getRelation<OwnershipType>(
-    "ownership_type",
-  );
-  late final HealthSubDistrict? healthSubDistrict =
-      getRelation<HealthSubDistrict>("health_sub_district");
-  late final Parish? parish = getRelation<Parish>("parish");
-  late final Subcounty? subcounty = getRelation<Subcounty>("subcounty");
-  late final County? county = getRelation<County>("county");
-  late final District? district = getRelation<District>("district");
-  late final HealthSubRegion? healthSubRegion = getRelation<HealthSubRegion>(
-    "health_sub_region",
-  );
-  late final Region? region = getRelation<Region>("region");
+bool _has(String? id, String name) => id?.isNotEmpty == true || name.isNotEmpty;
 
-  // Convenience methods
-  String get facilityLevelName => facilityLevel?.name ?? '';
-  String get authorityName => authority?.name ?? '';
-  String get ownershipTypeName => ownershipType?.name ?? '';
-  String get districtName => district?.name ?? '';
-  String get countyName => county?.name ?? '';
-  String get subcountyName => subcounty?.name ?? '';
-  String get parishName => parish?.name ?? '';
-  String get regionName => region?.name ?? '';
+@freezed
+abstract class HealthFacilityRequest with _$HealthFacilityRequest {
+  @JsonSerializable(includeIfNull: false)
+  const factory HealthFacilityRequest({
+    String? name,
+    @JsonKey(name: 'nhpi_code') String? nhpiCode,
+    @JsonKey(name: 'hsdt_code') String? hsdtCode,
+    @JsonKey(name: 'facility_level_id') String? facilityLevelId,
+    @JsonKey(name: 'authority_id') String? authorityId,
+    @JsonKey(name: 'ownership_type_id') String? ownershipTypeId,
+    @JsonKey(name: 'health_sub_district_id') String? healthSubDistrictId,
+    @JsonKey(name: 'parish_id') String? parishId,
+    @JsonKey(name: 'subcounty_id') String? subcountyId,
+    @JsonKey(name: 'county_id') String? countyId,
+    @JsonKey(name: 'district_id') String? districtId,
+    @JsonKey(name: 'health_sub_region_id') String? healthSubRegionId,
+    @JsonKey(name: 'region_id') String? regionId,
+  }) = _HealthFacilityRequest;
 
-  /// Get ownership display with fallback to code
-  String get ownershipDisplay {
-    final ownershipName = ownershipTypeName;
-    final ownershipCode = ownershipType?.code ?? '';
-
-    if (ownershipName.isNotEmpty) {
-      return ownershipName;
-    } else if (ownershipCode.isNotEmpty) {
-      return 'Type: $ownershipCode';
-    }
-    return 'Unknown Ownership';
-  }
-
-  /// Get the full address hierarchy as a string
-  String get fullAddress {
-    final parts = <String>[];
-    if (parishName.isNotEmpty) parts.add(parishName);
-    if (subcountyName.isNotEmpty) parts.add(subcountyName);
-    if (countyName.isNotEmpty) parts.add(countyName);
-    if (districtName.isNotEmpty) parts.add(districtName);
-    if (regionName.isNotEmpty) parts.add(regionName);
-    return parts.join(', ');
-  }
-
-  /// Get a shorter address format
-  String get shortAddress {
-    final parts = <String>[];
-    if (subcountyName.isNotEmpty) parts.add(subcountyName);
-    if (districtName.isNotEmpty) parts.add(districtName);
-    return parts.join(', ');
-  }
+  factory HealthFacilityRequest.fromJson(Map<String, dynamic> json) =>
+      _$HealthFacilityRequestFromJson(json);
 }

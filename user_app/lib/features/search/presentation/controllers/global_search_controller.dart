@@ -304,7 +304,7 @@ final class RepositoryGlobalSearchDataSource implements GlobalSearchDataSource {
           query,
         );
       case SearchCategory.healthFacilities:
-        final facility = HealthFacility.fromRecord(record);
+        final facility = HealthFacility.fromJson(record.data);
         return _withRelevance(
           SearchResult(
             id: facility.id,

@@ -87,7 +87,7 @@ class HealthInfrastructureController extends ChangeNotifier {
         ownershipTypeId: _filters.ownershipTypeId,
       );
 
-      return result.items.map((r) => HealthFacility.fromRecord(r)).toList();
+      return result.items;
     } catch (e) {
       Common.quickToast(title: 'errorLoadingFacilities'.tr);
       rethrow;
@@ -185,15 +185,11 @@ class HealthInfrastructureController extends ChangeNotifier {
 
       final levels = await _repository.levels();
 
-      availableFacilityLevels = levels.items
-          .map(FacilityLevel.fromRecord)
-          .toList();
+      availableFacilityLevels = levels.items;
 
       final ownership = await _repository.ownershipTypes();
 
-      availableOwnershipTypes = ownership.items
-          .map(OwnershipType.fromRecord)
-          .toList();
+      availableOwnershipTypes = ownership.items;
 
       if (_filters.regionId.isNotEmpty) {
         await _loadDistricts(_filters.regionId);
@@ -207,15 +203,13 @@ class HealthInfrastructureController extends ChangeNotifier {
   Future<List<Region>> getRegions({String? filter, String? sort}) async {
     final result = await _repository.regions();
 
-    return result.items.map((e) => Region.fromRecord(e)).toList();
+    return result.items;
   }
 
   Future<void> _loadDistricts(String regionId) async {
     final districts = await _repository.districts(regionId: regionId);
 
-    availableDistricts = districts.items
-        .map((e) => District.fromRecord(e))
-        .toList();
+    availableDistricts = districts.items;
     if (!_disposed) notifyListeners();
   }
 

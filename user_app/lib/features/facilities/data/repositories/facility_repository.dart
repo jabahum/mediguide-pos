@@ -11,7 +11,7 @@ final class FacilityRepository {
   final BackendApiService _api;
   final TtlResponseCache _cache;
 
-  Future<PagedResult<ApiRecord>> listFacilities({
+  Future<PagedResult<HealthFacility>> listFacilities({
     required int page,
     required int perPage,
     String? search,
@@ -19,42 +19,169 @@ final class FacilityRepository {
     String? districtId,
     String? facilityLevelId,
     String? ownershipTypeId,
-  }) => _list(
-    '/api/v2/facilities',
-    HealthFacility.collection,
-    page: page,
-    perPage: perPage,
-    query: {
-      if (_present(search)) 'search': search!.trim(),
-      if (_present(regionId)) 'region_id': regionId!,
-      if (_present(districtId)) 'district_id': districtId!,
-      if (_present(facilityLevelId)) 'facility_level_id': facilityLevelId!,
-      if (_present(ownershipTypeId)) 'ownership_type_id': ownershipTypeId!,
-      'sort': 'name',
-      'order': 'asc',
-    },
+  }) async {
+    final response = await _api.requestJson(
+      '/api/v2/facilities',
+      method: 'GET',
+      query: {
+        'page': '$page',
+        'per_page': '$perPage',
+        if (_present(search)) 'search': search!.trim(),
+        if (_present(regionId)) 'region_id': regionId!,
+        if (_present(districtId)) 'district_id': districtId!,
+        if (_present(facilityLevelId)) 'facility_level_id': facilityLevelId!,
+        if (_present(ownershipTypeId)) 'ownership_type_id': ownershipTypeId!,
+        'sort': 'name',
+        'order': 'asc',
+      },
+    );
+    final data = _data(response);
+    final items = (data['items'] as List? ?? const [])
+        .whereType<Map>()
+        .map(
+          (value) => HealthFacility.fromJson(Map<String, dynamic>.from(value)),
+        )
+        .toList(growable: false);
+    return PagedResult(
+      page: (data['page'] as num?)?.toInt() ?? page,
+      perPage: (data['per_page'] as num?)?.toInt() ?? perPage,
+      totalItems: (data['total_items'] as num?)?.toInt() ?? items.length,
+      totalPages: (data['total_pages'] as num?)?.toInt() ?? 0,
+      items: items,
+    );
+  }
+
+  Future<HealthFacility> facility(String id) async => _facilityItem(
+    await _api.requestJson('/api/v2/facilities/$id', method: 'GET'),
   );
 
-  Future<PagedResult<ApiRecord>> regions({int page = 1, int perPage = 100}) =>
-      _list('/api/v2/regions', Region.collection, page: page, perPage: perPage);
+  Future<HealthFacility> createFacility(HealthFacilityRequest request) async =>
+      _facilityItem(
+        await _api.requestJson(
+          '/api/v2/facilities',
+          method: 'POST',
+          body: request.toJson(),
+        ),
+      );
 
-  Future<PagedResult<ApiRecord>> districts({
+  Future<HealthFacility> updateFacility(
+    String id,
+    HealthFacilityRequest request,
+  ) async => _facilityItem(
+    await _api.requestJson(
+      '/api/v2/facilities/$id',
+      method: 'PATCH',
+      body: request.toJson(),
+    ),
+  );
+
+  Future<void> deleteFacility(String id) async {
+    await _api.requestJson('/api/v2/facilities/$id', method: 'DELETE');
+  }
+
+  Future<PagedResult<Region>> regions({int page = 1, int perPage = 100}) =>
+      _referenceList(
+        '/api/v2/regions',
+        Region.fromJson,
+        page: page,
+        perPage: perPage,
+      );
+
+  Future<PagedResult<District>> districts({
     String? regionId,
     int page = 1,
     int perPage = 100,
-  }) => _list(
+  }) => _referenceList(
     '/api/v2/districts',
-    District.collection,
+    District.fromJson,
     page: page,
     perPage: perPage,
     query: {if (_present(regionId)) 'region_id': regionId!},
   );
 
-  Future<PagedResult<ApiRecord>> levels() =>
-      _list('/api/v2/facility-levels', FacilityLevel.collection);
+  Future<PagedResult<HealthSubRegion>> healthSubRegions({
+    String? regionId,
+    int page = 1,
+    int perPage = 100,
+  }) => _referenceList(
+    '/api/v2/health-sub-regions',
+    HealthSubRegion.fromJson,
+    page: page,
+    perPage: perPage,
+    query: {if (_present(regionId)) 'region_id': regionId!},
+  );
 
-  Future<PagedResult<ApiRecord>> ownershipTypes() =>
-      _list('/api/v2/ownership-types', OwnershipType.collection);
+  Future<PagedResult<HealthSubDistrict>> healthSubDistricts({
+    String? districtId,
+    int page = 1,
+    int perPage = 100,
+  }) => _referenceList(
+    '/api/v2/health-sub-districts',
+    HealthSubDistrict.fromJson,
+    page: page,
+    perPage: perPage,
+    query: {if (_present(districtId)) 'district_id': districtId!},
+  );
+
+  Future<PagedResult<County>> counties({
+    String? districtId,
+    int page = 1,
+    int perPage = 100,
+  }) => _referenceList(
+    '/api/v2/counties',
+    County.fromJson,
+    page: page,
+    perPage: perPage,
+    query: {if (_present(districtId)) 'district_id': districtId!},
+  );
+
+  Future<PagedResult<Subcounty>> subcounties({
+    String? districtId,
+    String? countyId,
+    int page = 1,
+    int perPage = 100,
+  }) => _referenceList(
+    '/api/v2/subcounties',
+    Subcounty.fromJson,
+    page: page,
+    perPage: perPage,
+    query: {
+      if (_present(districtId)) 'district_id': districtId!,
+      if (_present(countyId)) 'county_id': countyId!,
+    },
+  );
+
+  Future<PagedResult<Parish>> parishes({
+    String? subcountyId,
+    int page = 1,
+    int perPage = 100,
+  }) => _referenceList(
+    '/api/v2/parishes',
+    Parish.fromJson,
+    page: page,
+    perPage: perPage,
+    query: {if (_present(subcountyId)) 'subcounty_id': subcountyId!},
+  );
+
+  Future<PagedResult<Authority>> authorities({
+    String? ownershipTypeId,
+    int page = 1,
+    int perPage = 100,
+  }) => _referenceList(
+    '/api/v2/authorities',
+    Authority.fromJson,
+    page: page,
+    perPage: perPage,
+    query: {
+      if (_present(ownershipTypeId)) 'ownership_type_id': ownershipTypeId!,
+    },
+  );
+
+  Future<PagedResult<FacilityLevel>> levels() =>
+      _referenceList('/api/v2/facility-levels', FacilityLevel.fromJson);
+
+  Future<PagedResult<OwnershipType>> ownershipTypes() =>
+      _referenceList('/api/v2/ownership-types', OwnershipType.fromJson);
 
   Future<void> recordUsage(String facilityId) async {
     await _api.requestJson(
@@ -63,33 +190,25 @@ final class FacilityRepository {
     );
   }
 
-  Future<PagedResult<ApiRecord>> _list(
+  Future<PagedResult<T>> _referenceList<T>(
     String path,
-    String collectionName, {
+    T Function(Map<String, dynamic>) fromJson, {
     int page = 1,
     int perPage = 100,
     Map<String, String> query = const {},
   }) async {
     final requestQuery = {'page': '$page', 'per_page': '$perPage', ...query};
-    Future<Map<String, dynamic>> load() =>
-        _api.requestJson(path, method: 'GET', query: requestQuery);
-    final response = collectionName == HealthFacility.collection
-        ? await load()
-        : await _cache.getOrLoad(
-            key: 'facility-reference:$path:${jsonEncode(requestQuery)}',
-            ttl: const Duration(minutes: 30),
-            load: load,
-          );
+    final response = await _cache.getOrLoad(
+      key: 'facility-reference:$path:${jsonEncode(requestQuery)}',
+      ttl: const Duration(minutes: 30),
+      load: () => _api.requestJson(path, method: 'GET', query: requestQuery),
+    );
     final data = _data(response);
     final items = (data['items'] as List? ?? const [])
         .whereType<Map>()
-        .map(
-          (value) => ApiRecord(
-            _normalize(Map<String, dynamic>.from(value), collectionName),
-          ),
-        )
-        .toList();
-    return PagedResult<ApiRecord>(
+        .map((value) => fromJson(Map<String, dynamic>.from(value)))
+        .toList(growable: false);
+    return PagedResult<T>(
       page: (data['page'] as num?)?.toInt() ?? page,
       perPage: (data['per_page'] as num?)?.toInt() ?? perPage,
       totalItems: (data['total_items'] as num?)?.toInt() ?? items.length,
@@ -103,46 +222,12 @@ final class FacilityRepository {
     return data is Map ? Map<String, dynamic>.from(data) : response;
   }
 
-  Map<String, dynamic> _normalize(
-    Map<String, dynamic> raw,
-    String collectionName,
-  ) {
-    final result = <String, dynamic>{
-      ...raw,
-      'collectionName': collectionName,
-      'collectionId': collectionName,
-      'created': raw['created_at']?.toString() ?? '',
-      'updated': raw['updated_at']?.toString() ?? '',
-    };
-    if (collectionName == HealthFacility.collection) {
-      const relations = {
-        'facility_level': 'facility_levels',
-        'authority': 'authorities',
-        'ownership_type': 'ownership_types',
-        'health_sub_district': 'health_sub_districts',
-        'parish': 'parishes',
-        'subcounty': 'subcounties',
-        'county': 'counties',
-        'district': 'districts',
-        'health_sub_region': 'health_sub_regions',
-        'region': 'regions',
-      };
-      final expand = <String, dynamic>{};
-      for (final entry in relations.entries) {
-        final id = raw['${entry.key}_id']?.toString() ?? '';
-        result[entry.key] = id;
-        if (id.isNotEmpty) {
-          expand[entry.key] = {
-            'id': id,
-            'name': raw['${entry.key}_name']?.toString() ?? '',
-            'collectionName': entry.value,
-            'collectionId': entry.value,
-          };
-        }
-      }
-      result['expand'] = expand;
-    }
-    return result;
+  HealthFacility _facilityItem(Map<String, dynamic> response) {
+    final data = _data(response);
+    final item = data['item'];
+    return HealthFacility.fromJson(
+      item is Map ? Map<String, dynamic>.from(item) : data,
+    );
   }
 
   static bool _present(String? value) => value?.trim().isNotEmpty == true;

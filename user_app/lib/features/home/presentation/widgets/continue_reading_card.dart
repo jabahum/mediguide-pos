@@ -10,10 +10,10 @@ import 'package:user_app/core/utils/responsive.dart';
 /// A card widget for displaying continue reading progress for guidelines
 final _guidelineTitleProvider = FutureProvider.autoDispose
     .family<String, String>((ref, id) async {
-      final record = await ref
+      final guideline = await ref
           .read(guidelineContentRepositoryProvider)
           .guideline(id);
-      return Guideline.fromRecord(record).conditionName;
+      return guideline.conditionName;
     });
 
 class ContinueReadingCard extends ConsumerWidget {

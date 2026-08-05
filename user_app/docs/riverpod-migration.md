@@ -68,6 +68,21 @@ widget state without a nested imperative navigator.
 - Override dependencies in tests; do not create production containers.
 - Treat connectivity as a hint rather than proof a request will succeed.
 
+## Typed model boundary
+
+Application and request models use `freezed_annotation` and
+`json_annotation`; generated `*.freezed.dart` and `*.g.dart` files are checked
+in and must only be changed through `build_runner`. Repositories deserialize
+each v2 endpoint directly into its domain model and return
+`PaginatedResponse<T>` for paginated data.
+
+The former `ApiRecord`, `BaseModel`, dynamic model registry, relationship
+expansion helpers, and record-based constructors have been removed. New code
+must not recreate a collection-name registry or expose raw response maps to
+controllers. Endpoint-specific normalization belongs in the model's
+`fromJson` boundary, while repositories remain responsible for HTTP and
+offline coordination.
+
 ## Adding a feature
 
 1. Create `app/features/<feature>` for its page, widgets, and notifier.

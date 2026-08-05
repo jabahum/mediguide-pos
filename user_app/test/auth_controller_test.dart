@@ -2,7 +2,6 @@ import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:user_app/shared/models/api_record.dart';
 import 'package:user_app/features/authentication/data/models/user.dart';
 import 'package:user_app/core/network/api_client.dart';
 import 'package:user_app/features/authentication/presentation/controllers/auth_controller.dart';
@@ -37,13 +36,13 @@ final class FakeBackendApiService extends BackendApiService {
   bool authenticated;
   int loginCalls = 0;
   int logoutCalls = 0;
-  Completer<ApiRecord>? pendingLogin;
+  Completer<User>? pendingLogin;
 
   @override
   bool get isAuthenticated => authenticated;
 
   @override
-  Future<ApiRecord> login({
+  Future<User> login({
     required String email,
     required String password,
     String? expand,
@@ -52,7 +51,7 @@ final class FakeBackendApiService extends BackendApiService {
     final pending = pendingLogin;
     if (pending != null) return pending.future;
     authenticated = true;
-    return ApiRecord({'id': 'user-1', 'name': 'Clinician', 'email': email});
+    return User(id: 'user-1', name: 'Clinician', email: email);
   }
 
   @override
@@ -95,7 +94,7 @@ void main() {
   test('restores and refreshes a persisted authenticated session', () async {
     final api = FakeBackendApiService(authenticated: true);
     final store = FakeAuthSessionStore(
-      User({'id': 'user-1', 'name': 'Cached Clinician'}),
+      const User(id: 'user-1', name: 'Cached Clinician'),
     );
     final container = createContainer(api, store);
 
@@ -108,7 +107,7 @@ void main() {
 
   test('removes stale profile data when no token exists', () async {
     final api = FakeBackendApiService();
-    final store = FakeAuthSessionStore(User({'id': 'stale-user'}));
+    final store = FakeAuthSessionStore(const User(id: 'stale-user'));
     final container = createContainer(api, store);
 
     final result = await container.read(authControllerProvider.future);
@@ -119,7 +118,7 @@ void main() {
   });
 
   test('login persists user and rejects a duplicate submission', () async {
-    final api = FakeBackendApiService()..pendingLogin = Completer<ApiRecord>();
+    final api = FakeBackendApiService()..pendingLogin = Completer<User>();
     final store = FakeAuthSessionStore();
     final container = createContainer(api, store);
     await container.read(authControllerProvider.future);
@@ -133,9 +132,7 @@ void main() {
     expect(duplicate, isFalse);
     expect(api.loginCalls, 1);
 
-    api.pendingLogin!.complete(
-      ApiRecord({'id': 'user-1', 'name': 'Clinician'}),
-    );
+    api.pendingLogin!.complete(const User(id: 'user-1', name: 'Clinician'));
     expect(await first, isTrue);
     expect(store.currentUser?.id, 'user-1');
     expect(
@@ -146,7 +143,7 @@ void main() {
 
   test('logout clears the session and exposes unauthenticated state', () async {
     final api = FakeBackendApiService(authenticated: true);
-    final store = FakeAuthSessionStore(User({'id': 'user-1'}));
+    final store = FakeAuthSessionStore(const User(id: 'user-1'));
     final container = createContainer(api, store);
     await container.read(authControllerProvider.future);
 

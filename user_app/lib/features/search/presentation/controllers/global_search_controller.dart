@@ -172,7 +172,7 @@ final class RepositoryGlobalSearchDataSource implements GlobalSearchDataSource {
           status: 'active',
         );
         return response.items
-            .map((item) => _fromRecord(item, category, query))
+            .map((item) => _toSearchResult(item, category, query))
             .toList();
       case SearchCategory.guidelines:
         final response = await _guidelines.guidelines(
@@ -183,7 +183,7 @@ final class RepositoryGlobalSearchDataSource implements GlobalSearchDataSource {
           status: 'published',
         );
         return response.items
-            .map((item) => _fromRecord(item, category, query))
+            .map((item) => _toSearchResult(item, category, query))
             .toList();
       case SearchCategory.abbreviations:
         final response = await _guidelines.abbreviations(
@@ -192,7 +192,7 @@ final class RepositoryGlobalSearchDataSource implements GlobalSearchDataSource {
           search: query,
         );
         return response.items
-            .map((item) => _fromRecord(item, category, query))
+            .map((item) => _toSearchResult(item, category, query))
             .toList();
       case SearchCategory.consultants:
         final response = await _consultants.list(
@@ -201,7 +201,7 @@ final class RepositoryGlobalSearchDataSource implements GlobalSearchDataSource {
           search: query,
         );
         return response.items
-            .map((item) => _fromRecord(item, category, query))
+            .map((item) => _toSearchResult(item, category, query))
             .toList();
       case SearchCategory.healthFacilities:
         final response = await _facilities.listFacilities(
@@ -210,7 +210,7 @@ final class RepositoryGlobalSearchDataSource implements GlobalSearchDataSource {
           search: query,
         );
         return response.items
-            .map((item) => _fromRecord(item, category, query))
+            .map((item) => _toSearchResult(item, category, query))
             .toList();
       case SearchCategory.tools:
         final response = await _calculators.list(
@@ -220,7 +220,7 @@ final class RepositoryGlobalSearchDataSource implements GlobalSearchDataSource {
           statuses: const ['active'],
         );
         return response.items
-            .map((item) => _fromRecord(item, category, query))
+            .map((item) => _toSearchResult(item, category, query))
             .toList();
       case SearchCategory.faq:
         final response = await _helpContent.listFAQs(
@@ -250,14 +250,14 @@ final class RepositoryGlobalSearchDataSource implements GlobalSearchDataSource {
     }
   }
 
-  SearchResult _fromRecord(
+  SearchResult _toSearchResult(
     dynamic record,
     SearchCategory category,
     String query,
   ) {
     switch (category) {
       case SearchCategory.drugs:
-        final drug = Drug.fromRecord(record);
+        final drug = record as Drug;
         return _withRelevance(
           SearchResult(
             id: drug.id,
@@ -272,7 +272,7 @@ final class RepositoryGlobalSearchDataSource implements GlobalSearchDataSource {
           query,
         );
       case SearchCategory.guidelines:
-        final guideline = Guideline.fromRecord(record);
+        final guideline = record as Guideline;
         return _withRelevance(
           SearchResult(
             id: guideline.id,
@@ -287,7 +287,7 @@ final class RepositoryGlobalSearchDataSource implements GlobalSearchDataSource {
           query,
         );
       case SearchCategory.consultants:
-        final consultant = Consultant.fromJson(record.data);
+        final consultant = record as Consultant;
         return _withRelevance(
           SearchResult(
             id: consultant.id,
@@ -304,7 +304,7 @@ final class RepositoryGlobalSearchDataSource implements GlobalSearchDataSource {
           query,
         );
       case SearchCategory.healthFacilities:
-        final facility = HealthFacility.fromJson(record.data);
+        final facility = record as HealthFacility;
         return _withRelevance(
           SearchResult(
             id: facility.id,
@@ -323,7 +323,7 @@ final class RepositoryGlobalSearchDataSource implements GlobalSearchDataSource {
           query,
         );
       case SearchCategory.abbreviations:
-        final abbreviation = Abbreviation.fromRecord(record);
+        final abbreviation = record as Abbreviation;
         return _withRelevance(
           SearchResult(
             id: abbreviation.id,
@@ -338,7 +338,7 @@ final class RepositoryGlobalSearchDataSource implements GlobalSearchDataSource {
           query,
         );
       case SearchCategory.tools:
-        final calculator = Calculator.fromJson(record.data);
+        final calculator = record as Calculator;
         return _withRelevance(
           SearchResult(
             id: calculator.id,

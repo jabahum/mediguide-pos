@@ -1,114 +1,123 @@
-// ignore_for_file: unused_field
-
-import 'package:user_app/shared/models/api_record.dart';
+import 'package:freezed_annotation/freezed_annotation.dart';
+import 'package:user_app/core/utils/json_converters.dart';
 import 'package:user_app/features/authentication/data/models/user_enums.dart';
-import 'package:user_app/shared/models/base_model.dart';
 
-/// User model based on backend resource API users collection
-class User extends BaseModel {
-  User(super.data);
+part 'user.freezed.dart';
+part 'user.g.dart';
 
-  /// backend resource API collection name
-  static const String collection = 'users';
+@freezed
+abstract class User with _$User {
+  const User._();
+  const factory User({
+    required String id,
+    @Default('') String name,
+    @Default('') String email,
+    @JsonKey(name: 'email_visibility') @Default(false) bool emailVisibility,
+    @Default(false) bool verified,
+    @Default('') String phone,
+    @JsonKey(name: 'alternative_phone') @Default('') String alternativePhone,
+    @Default('') String address,
+    @Default('') String city,
+    @Default('') String state,
+    @Default('') String country,
+    @JsonKey(name: 'postal_code') @Default('') String postalCode,
+    @JsonKey(name: 'license_number') @Default('') String licenseNumber,
+    @Default('') String organization,
+    @Default('') String department,
+    @JsonKey(name: 'job_title') @Default('') String jobTitle,
+    @Default('') String timezone,
+    @Default('') String notes,
+    @Default('') String avatar,
+    @JsonKey(fromJson: _roleFromJson, toJson: _roleToJson) UserRole? role,
+    @JsonKey(fromJson: _statusFromJson, toJson: _statusToJson)
+    UserStatus? status,
+    @Default('') String specialization,
+    @JsonKey(
+      name: 'preferred_language',
+      fromJson: _languageFromJson,
+      toJson: _languageToJson,
+    )
+    PreferredLanguage? preferredLanguage,
+    @JsonKey(name: 'created_at')
+    @NullableDateTimeConverter()
+    DateTime? createdAt,
+    @JsonKey(name: 'updated_at')
+    @NullableDateTimeConverter()
+    DateTime? updatedAt,
+  }) = _User;
+  factory User.fromJson(Map<String, dynamic> json) =>
+      _$UserFromJson(_normalizeUser(json));
+}
 
-  // Self-registration for dynamic model creation
-  static final _registered = (() {
-    BaseModel.registerModel(collection, (data) => User(data));
-    return true;
-  })();
+Map<String, dynamic> _normalizeUser(Map<String, dynamic> json) {
+  final roles = json['roles'];
+  final role =
+      json['role'] ??
+      (roles is List && roles.isNotEmpty && roles.first is Map
+          ? ((roles.first as Map)['role_key'] ?? (roles.first as Map)['name'])
+          : null);
+  return {
+    ...json,
+    'role': role,
+    'email_visibility':
+        json['email_visibility'] ?? json['emailVisibility'] ?? false,
+    'alternative_phone':
+        json['alternative_phone'] ?? json['alternativePhone'] ?? '',
+    'postal_code': json['postal_code'] ?? json['postalCode'] ?? '',
+    'license_number': json['license_number'] ?? json['licenseNumber'] ?? '',
+    'job_title': json['job_title'] ?? json['jobTitle'] ?? '',
+    'preferred_language':
+        json['preferred_language'] ?? json['preferredLanguage'],
+    'created_at': json['created_at'] ?? json['created'],
+    'updated_at': json['updated_at'] ?? json['updated'],
+  };
+}
 
-  // Ensure registration is triggered
-  static void ensureRegistration() {
-    // Access _registered to trigger the initialization
-    _registered;
+T? _enumValue<T extends Enum>(List<T> values, Object? raw) {
+  final value = raw?.toString().replaceAll('-', '_').toLowerCase();
+  if (value == null || value.isEmpty) return null;
+  for (final item in values) {
+    final name = item.name.replaceAllMapped(
+      RegExp(r'[A-Z]'),
+      (m) => '_${m[0]!.toLowerCase()}',
+    );
+    if (name == value || item.name.toLowerCase() == value.replaceAll('_', '')) {
+      return item;
+    }
   }
+  return null;
+}
 
-  /// Create User from backend resource API record
-  static User fromRecord(ApiRecord record) => User(record.data);
+UserRole? _roleFromJson(Object? value) => value?.toString() == 'clinician'
+    ? UserRole.healthcareProvider
+    : _enumValue(UserRole.values, value);
+String? _roleToJson(UserRole? value) => value?.name;
+UserStatus? _statusFromJson(Object? value) =>
+    _enumValue(UserStatus.values, value);
+String? _statusToJson(UserStatus? value) => value?.name;
+PreferredLanguage? _languageFromJson(Object? value) => value?.toString() == 'en'
+    ? PreferredLanguage.english
+    : _enumValue(PreferredLanguage.values, value);
+String? _languageToJson(PreferredLanguage? value) => value?.name;
 
-  /// Create JSON for new user record (excludes system fields)
-  static Map<String, dynamic> forCreate({
-    required String email,
-    required String password,
+@freezed
+abstract class UserUpdateRequest with _$UserUpdateRequest {
+  @JsonSerializable(includeIfNull: false)
+  const factory UserUpdateRequest({
     String? name,
     String? phone,
-    String? alternativePhone,
+    @JsonKey(name: 'alternative_phone') String? alternativePhone,
     String? address,
     String? city,
     String? state,
     String? country,
-    String? postalCode,
-    String? licenseNumber,
+    @JsonKey(name: 'postal_code') String? postalCode,
     String? organization,
     String? department,
-    String? jobTitle,
-    UserRole? role,
-    UserStatus? status,
+    @JsonKey(name: 'job_title') String? jobTitle,
     String? specialization,
-    PreferredLanguage? preferredLanguage,
-    String? timezone,
-    String? notes,
-    String? avatar,
-    bool? emailVisibility,
-    bool? verified,
-  }) {
-    return {
-      'email': email,
-      'password': password,
-      'name': ?name,
-      'phone': ?phone,
-      'alternativePhone': ?alternativePhone,
-      'address': ?address,
-      'city': ?city,
-      'state': ?state,
-      'country': ?country,
-      'postalCode': ?postalCode,
-      'licenseNumber': ?licenseNumber,
-      'organization': ?organization,
-      'department': ?department,
-      'jobTitle': ?jobTitle,
-      if (role != null) 'role': role.name,
-      if (status != null) 'status': status.name,
-      'specialization': ?specialization,
-      if (preferredLanguage != null)
-        'preferredLanguage': preferredLanguage.name,
-      'timezone': ?timezone,
-      'notes': ?notes,
-      'avatar': ?avatar,
-      'emailVisibility': ?emailVisibility,
-      'verified': ?verified,
-    };
-  }
-
-  // Direct properties - late final for performance
-  late final String name = get<String>("name", "");
-  late final String email = get<String>("email", "");
-  late final bool emailVisibility = get<bool>("emailVisibility", false);
-  late final bool verified = get<bool>("verified", false);
-  late final String phone = get<String>("phone", "");
-  late final String alternativePhone = get<String>("alternativePhone", "");
-  late final String address = get<String>("address", "");
-  late final String city = get<String>("city", "");
-  late final String state = get<String>("state", "");
-  late final String country = get<String>("country", "");
-  late final String postalCode = get<String>("postalCode", "");
-  late final String licenseNumber = get<String>("licenseNumber", "");
-  late final String organization = get<String>("organization", "");
-  late final String department = get<String>("department", "");
-  late final String jobTitle = get<String>("jobTitle", "");
-  late final String timezone = get<String>("timezone", "");
-  late final String notes = get<String>("notes", "");
-  late final String avatar = get<String>("avatar", "");
-
-  // Enum properties
-  late final UserRole? role = getEnum<UserRole>("role", UserRole.values);
-  late final UserStatus? status = getEnum<UserStatus>(
-    "status",
-    UserStatus.values,
-  );
-  late final String specialization = get<String>("specialization", "");
-  late final PreferredLanguage? preferredLanguage = getEnum<PreferredLanguage>(
-    "preferredLanguage",
-    PreferredLanguage.values,
-  );
+    @JsonKey(name: 'preferred_language') String? preferredLanguage,
+  }) = _UserUpdateRequest;
+  factory UserUpdateRequest.fromJson(Map<String, dynamic> json) =>
+      _$UserUpdateRequestFromJson(json);
 }

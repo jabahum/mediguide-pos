@@ -2,9 +2,9 @@ import 'dart:convert';
 
 import 'package:shared_preferences/shared_preferences.dart';
 
-import 'package:user_app/shared/models/api_record.dart';
 import 'package:user_app/shared/models/paginated_response.dart';
 import 'package:user_app/core/network/api_client.dart';
+import 'package:user_app/features/guidelines/data/models/reading_progress.dart';
 
 final class ReadingProgressRepository {
   ReadingProgressRepository(this._api, {SharedPreferences? preferences})
@@ -14,7 +14,10 @@ final class ReadingProgressRepository {
   final BackendApiService _api;
   SharedPreferences? _preferences;
 
-  Future<ApiRecord?> forGuideline(String userId, String guidelineId) async {
+  Future<ReadingProgress?> forGuideline(
+    String userId,
+    String guidelineId,
+  ) async {
     final local = await _localFor(userId, guidelineId);
     if (local != null && local['pending_sync'] == true) {
       await _trySync(local);
@@ -26,13 +29,13 @@ final class ReadingProgressRepository {
       );
       final record = _normalize(_data(response), userId: userId);
       await _saveRecord(record);
-      return ApiRecord(record);
+      return ReadingProgress.fromJson(record);
     } catch (_) {
-      return local == null ? null : ApiRecord(local);
+      return local == null ? null : ReadingProgress.fromJson(local);
     }
   }
 
-  Future<PaginatedResponse<ApiRecord>> inProgress(
+  Future<PaginatedResponse<ReadingProgress>> inProgress(
     String userId, {
     int page = 1,
     int perPage = 20,
@@ -67,7 +70,7 @@ final class ReadingProgressRepository {
         perPage: (data['per_page'] as num?)?.toInt() ?? perPage,
         totalItems: (data['total_items'] as num?)?.toInt() ?? items.length,
         totalPages: (data['total_pages'] as num?)?.toInt() ?? 0,
-        items: items.map(ApiRecord.new).toList(),
+        items: items.map(ReadingProgress.fromJson).toList(),
       );
     } catch (_) {
       final rows =
@@ -78,7 +81,7 @@ final class ReadingProgressRepository {
           }).toList()..sort(
             (a, b) => '${b['last_read_at']}'.compareTo('${a['last_read_at']}'),
           );
-      final items = rows.take(perPage).map(ApiRecord.new).toList();
+      final items = rows.take(perPage).map(ReadingProgress.fromJson).toList();
       return PaginatedResponse(
         page: 1,
         perPage: perPage,
@@ -89,7 +92,7 @@ final class ReadingProgressRepository {
     }
   }
 
-  Future<ApiRecord> upsert(
+  Future<ReadingProgress> upsert(
     String userId,
     String guidelineId,
     Map<String, dynamic> values,
@@ -103,15 +106,13 @@ final class ReadingProgressRepository {
       'user_id': userId,
       'guideline_id': guidelineId,
       'guideline_document_id': guidelineId,
-      'created': existing?['created'] ?? now,
-      'updated': now,
+      'created_at': existing?['created_at'] ?? now,
+      'updated_at': now,
       'pending_sync': true,
-      'collectionId': 'reading_progress',
-      'collectionName': 'reading_progress',
     };
     await _saveRecord(local);
     final synced = await _trySync(local);
-    return ApiRecord(synced ?? local);
+    return ReadingProgress.fromJson(synced ?? local);
   }
 
   Future<void> syncPending(String userId) async {
@@ -135,11 +136,9 @@ final class ReadingProgressRepository {
             'id',
             'user_id',
             'guideline_id',
-            'created',
-            'updated',
+            'created_at',
+            'updated_at',
             'pending_sync',
-            'collectionId',
-            'collectionName',
           }.contains(key),
         );
       final response = await _api.requestJson(
@@ -180,11 +179,9 @@ final class ReadingProgressRepository {
     'user_id': userId,
     'guideline_id':
         value['guideline_document_id'] ?? value['guideline_id'] ?? '',
-    'created': value['created_at'] ?? value['created'] ?? '',
-    'updated': value['updated_at'] ?? value['updated'] ?? '',
+    'created_at': value['created_at'] ?? value['created'] ?? '',
+    'updated_at': value['updated_at'] ?? value['updated'] ?? '',
     'pending_sync': false,
-    'collectionId': 'reading_progress',
-    'collectionName': 'reading_progress',
   };
 
   Future<SharedPreferences> get _prefs async =>

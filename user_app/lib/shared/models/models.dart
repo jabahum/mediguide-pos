@@ -3,9 +3,7 @@
 library;
 
 // Core models
-export 'package:user_app/shared/models/api_record.dart';
 export 'package:user_app/shared/models/paginated_response.dart';
-export 'package:user_app/shared/models/base_model.dart';
 export 'package:user_app/features/authentication/data/models/user.dart';
 export 'package:user_app/features/authentication/data/models/role.dart';
 
@@ -70,6 +68,7 @@ export 'package:user_app/features/content/data/models/language_model.dart';
 export 'package:user_app/features/support/data/models/support_ticket.dart';
 export 'package:user_app/features/support/data/models/support_ticket_reply.dart';
 export 'package:user_app/features/support/data/models/faq.dart';
+export 'package:user_app/features/support/data/models/documentation.dart';
 
 // Chat models
 export 'package:user_app/features/conversations/data/models/conversation.dart';

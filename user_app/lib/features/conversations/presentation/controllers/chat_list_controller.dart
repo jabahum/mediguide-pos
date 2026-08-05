@@ -23,9 +23,6 @@ final chatListControllerProvider = ChangeNotifierProvider.autoDispose((ref) {
 
 class ChatListController extends ChangeNotifier {
   ChatListController(this._repository, {required this.currentUserId}) {
-    User.ensureRegistration();
-    Conversation.ensureRegistration();
-    Message.ensureRegistration();
     pagingController = PagingController<int, Conversation>(
       getNextPageKey: (state) =>
           state.lastPageIsEmpty ? null : state.nextIntPageKey,
@@ -66,7 +63,6 @@ class ChatListController extends ChangeNotifier {
       );
 
       return result.items
-          .map(Conversation.fromRecord)
           .where((conversation) => _applyLocalFilters(conversation, userId))
           .toList();
     } catch (error) {

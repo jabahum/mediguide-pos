@@ -1,6 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:user_app/shared/models/models.dart';
 import 'package:user_app/features/authentication/presentation/controllers/auth_controller.dart';
 import 'package:user_app/app/providers/app_providers.dart';
 
@@ -74,10 +73,9 @@ class EditProfileController extends AutoDisposeNotifier<EditProfileState> {
 
     state = state.copyWith(isSaving: true, clearError: true);
     try {
-      final record = await ref
+      final updatedUser = await ref
           .read(userRepositoryProvider)
           .updateProfile(user.id, update);
-      final updatedUser = User.fromRecord(record);
       await ref.read(authControllerProvider.notifier).replaceUser(updatedUser);
       state = const EditProfileState();
       return true;

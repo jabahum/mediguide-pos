@@ -118,13 +118,8 @@ class FakeRagAssistant implements RagAssistant {
   }
 }
 
-User _user(String id, String name) => User({
-  'id': id,
-  'name': name,
-  'email': '$id@example.test',
-  'collectionId': 'users',
-  'collectionName': 'users',
-});
+User _user(String id, String name) =>
+    User(id: id, name: name, email: '$id@example.test');
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();

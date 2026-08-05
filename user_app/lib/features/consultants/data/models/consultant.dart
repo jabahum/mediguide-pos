@@ -91,7 +91,7 @@ abstract class Consultant with _$Consultant {
             value.name.toLowerCase() == preferredLanguageValue.toLowerCase(),
       )
       .firstOrNull;
-  User? get userAccount => userData == null ? null : User(userData!);
+  User? get userAccount => userData == null ? null : User.fromJson(userData!);
 }
 
 Map<String, dynamic> _normalizeConsultant(Map<String, dynamic> json) => {

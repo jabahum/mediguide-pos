@@ -1,11 +1,11 @@
-// ignore_for_file: unused_field
-
 import 'package:flutter/material.dart';
-import 'package:user_app/shared/models/api_record.dart';
-import 'package:user_app/shared/models/base_model.dart';
+import 'package:freezed_annotation/freezed_annotation.dart';
+import 'package:user_app/core/utils/json_converters.dart';
 import 'package:user_app/features/authentication/data/models/user.dart';
 
-/// Status options for support tickets
+part 'support_ticket.freezed.dart';
+part 'support_ticket.g.dart';
+
 enum TicketStatus {
   open(label: 'Open', color: Colors.blue),
   inProgress(label: 'In Progress', color: Colors.orange),
@@ -13,12 +13,10 @@ enum TicketStatus {
   closed(label: 'Closed', color: Colors.grey);
 
   const TicketStatus({required this.label, required this.color});
-
   final String label;
   final Color color;
 }
 
-/// Priority levels for support tickets
 enum TicketPriority {
   low(label: 'Low', color: Colors.grey),
   normal(label: 'Normal', color: Colors.blue),
@@ -26,95 +24,95 @@ enum TicketPriority {
   urgent(label: 'Urgent', color: Colors.red);
 
   const TicketPriority({required this.label, required this.color});
-
   final String label;
   final Color color;
 }
 
-/// Support Ticket model for user help requests
-class SupportTicket extends BaseModel {
-  SupportTicket(super.data);
+@freezed
+abstract class SupportTicket with _$SupportTicket {
+  const SupportTicket._();
+  @JsonSerializable(explicitToJson: true)
+  const factory SupportTicket({
+    required String id,
+    @Default('') String subject,
+    @Default('') String description,
+    @Default('') String category,
+    @JsonKey(fromJson: _ticketStatusFromJson, toJson: _ticketStatusToJson)
+    @Default(TicketStatus.open)
+    TicketStatus status,
+    @JsonKey(fromJson: _priorityFromJson, toJson: _priorityToJson)
+    @Default(TicketPriority.normal)
+    TicketPriority priority,
+    @JsonKey(name: 'user_id') @Default('') String userId,
+    @JsonKey(name: 'assigned_to') String? assignedTo,
+    User? user,
+    @JsonKey(name: 'assigned_user') User? assignedUser,
+    @JsonKey(name: 'created_at')
+    @NullableDateTimeConverter()
+    DateTime? createdAt,
+    @JsonKey(name: 'updated_at')
+    @NullableDateTimeConverter()
+    DateTime? updatedAt,
+  }) = _SupportTicket;
+  factory SupportTicket.fromJson(Map<String, dynamic> json) =>
+      _$SupportTicketFromJson(json);
 
-  /// backend resource API collection name
-  static const String collection = 'support_tickets';
-
-  // Self-registration for dynamic model creation
-  static final _registered = (() {
-    BaseModel.registerModel(collection, (data) => SupportTicket(data));
-    return true;
-  })();
-
-  /// Create SupportTicket from backend resource API record
-  factory SupportTicket.fromRecord(ApiRecord record) {
-    return SupportTicket(record.data);
-  }
-
-  // Core fields
-  late final String subject = get<String>("subject", "");
-  late final String description = get<String>("description", "");
-  late final String category = get<String>("category", "");
-
-  // Status and priority
-  late final TicketStatus status =
-      getEnum<TicketStatus>("status", TicketStatus.values) ?? TicketStatus.open;
-  late final TicketPriority priority =
-      getEnum<TicketPriority>("priority", TicketPriority.values) ??
-      TicketPriority.normal;
-
-  // User relations
-  late final String userId = get<String>("user_id", "");
-  late final String? assignedTo = get<String>("assigned_to");
-
-  // Expanded relations
-  User? get user => getRelation<User>("user_id");
-  User? get assignedUser => getRelation<User>("assigned_to");
-
-  // Status helpers
   bool get isOpen => status == TicketStatus.open;
   bool get isInProgress => status == TicketStatus.inProgress;
   bool get isResolved => status == TicketStatus.resolved;
   bool get isClosed => status == TicketStatus.closed;
   bool get isActive => isOpen || isInProgress;
-
-  // Priority helpers
   bool get isUrgent => priority == TicketPriority.urgent;
-  bool get isHighPriority =>
-      priority == TicketPriority.high || priority == TicketPriority.urgent;
+  bool get isHighPriority => priority == TicketPriority.high || isUrgent;
   bool get isLowPriority => priority == TicketPriority.low;
-
-  // Display helpers using extensions
   String get statusDisplay => status.label;
   String get priorityDisplay => priority.label;
-
-  // Get last activity date (just use created date for now)
-  DateTime? get lastActivityDate => createdDate;
-
-  // Check if user is the owner of this ticket
-  bool isOwnedBy(String currentUserId) {
-    return userId == currentUserId;
-  }
-
-  // Get formatted time ago string
+  DateTime? get lastActivityDate => updatedAt ?? createdAt;
+  bool isOwnedBy(String currentUserId) => userId == currentUserId;
   String get timeAgo {
-    final now = DateTime.now();
-    final activity = lastActivityDate ?? createdDate;
+    final activity = lastActivityDate;
     if (activity == null) return '';
-
-    final difference = now.difference(activity);
-
+    final difference = DateTime.now().difference(activity);
     if (difference.inDays > 0) {
       return '${difference.inDays} day${difference.inDays == 1 ? '' : 's'} ago';
-    } else if (difference.inHours > 0) {
-      return '${difference.inHours} hour${difference.inHours == 1 ? '' : 's'} ago';
-    } else if (difference.inMinutes > 0) {
-      return '${difference.inMinutes} minute${difference.inMinutes == 1 ? '' : 's'} ago';
-    } else {
-      return 'Just now';
     }
+    if (difference.inHours > 0) {
+      return '${difference.inHours} hour${difference.inHours == 1 ? '' : 's'} ago';
+    }
+    if (difference.inMinutes > 0) {
+      return '${difference.inMinutes} minute${difference.inMinutes == 1 ? '' : 's'} ago';
+    }
+    return 'Just now';
   }
+}
 
-  @override
-  String toString() {
-    return 'SupportTicket(id: $id, subject: $subject, status: $statusDisplay, priority: $priorityDisplay)';
-  }
+TicketStatus _ticketStatusFromJson(Object? value) =>
+    switch (value?.toString()) {
+      'in_progress' => TicketStatus.inProgress,
+      'resolved' => TicketStatus.resolved,
+      'closed' => TicketStatus.closed,
+      _ => TicketStatus.open,
+    };
+String _ticketStatusToJson(TicketStatus value) =>
+    value == TicketStatus.inProgress ? 'in_progress' : value.name;
+TicketPriority _priorityFromJson(Object? value) =>
+    TicketPriority.values.firstWhere(
+      (item) => item.name == value?.toString(),
+      orElse: () => TicketPriority.normal,
+    );
+String _priorityToJson(TicketPriority value) => value.name;
+
+@freezed
+abstract class SupportTicketRequest with _$SupportTicketRequest {
+  @JsonSerializable(includeIfNull: false)
+  const factory SupportTicketRequest({
+    String? subject,
+    String? description,
+    String? category,
+    String? priority,
+    String? status,
+    @JsonKey(name: 'assigned_to') String? assignedTo,
+  }) = _SupportTicketRequest;
+  factory SupportTicketRequest.fromJson(Map<String, dynamic> json) =>
+      _$SupportTicketRequestFromJson(json);
 }

@@ -113,33 +113,10 @@ final class SupportRepository {
   }
 
   SupportTicket _ticket(Map<String, dynamic> raw) =>
-      SupportTicket(_normalize(raw, SupportTicket.collection));
+      SupportTicket.fromJson(raw);
 
   SupportTicketReply _reply(Map<String, dynamic> raw) =>
       SupportTicketReply.fromJson(raw);
-
-  Map<String, dynamic> _normalize(Map<String, dynamic> raw, String collection) {
-    final data = <String, dynamic>{
-      ...raw,
-      'collectionName': collection,
-      'collectionId': collection,
-      'created': raw['created_at']?.toString() ?? '',
-      'updated': raw['updated_at']?.toString() ?? '',
-    };
-    final userId = raw['user_id']?.toString() ?? '';
-    if (userId.isNotEmpty) {
-      data['expand'] = {
-        'user_id': {
-          'id': userId,
-          'name': raw['user_name']?.toString() ?? '',
-          'email': raw['user_email']?.toString() ?? '',
-          'collectionName': 'users',
-          'collectionId': 'users',
-        },
-      };
-    }
-    return data;
-  }
 
   Map<String, dynamic> _data(Map<String, dynamic> response) {
     final data = response['data'];

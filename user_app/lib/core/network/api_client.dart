@@ -55,7 +55,7 @@ class BackendApiService {
   bool get isAuthenticated => _accessToken.isNotEmpty;
   String get accessToken => _accessToken;
 
-  Future<ApiRecord> register({
+  Future<User> register({
     required String email,
     required String password,
     required String passwordConfirm,
@@ -82,7 +82,7 @@ class BackendApiService {
     return login(email: email, password: password);
   }
 
-  Future<ApiRecord> login({
+  Future<User> login({
     required String email,
     required String password,
     String? expand,
@@ -97,18 +97,17 @@ class BackendApiService {
     final data = _unwrapData(response);
     await _persistSession(data);
 
-    final user = _normalizeUserRecord(_asMap(data['user']));
-    return ApiRecord(user);
+    return User.fromJson(_asMap(data['user']));
   }
 
-  Future<ApiRecord> loginWithOAuth2({
+  Future<User> loginWithOAuth2({
     required String provider,
     required Future<void> Function(Uri url) urlCallback,
   }) async {
     throw Exception('OAuth sign-in is not supported by the backend API');
   }
 
-  Future<ApiRecord> loginWithGoogle() async {
+  Future<User> loginWithGoogle() async {
     throw Exception('Google sign-in is not supported by the backend API');
   }
 
@@ -208,7 +207,6 @@ class BackendApiService {
   }
 
   String getFileUrl({
-    ApiRecord? record,
     String? collectionName,
     String? recordId,
     required String filename,
@@ -233,10 +231,6 @@ class BackendApiService {
 
     if (collectionName != null && recordId != null) {
       return '$mediguideApiBaseUrl/api/files/$collectionName/$recordId/$trimmed';
-    }
-
-    if (record != null) {
-      return '$mediguideApiBaseUrl/api/files/${record.collectionName}/${record.id}/$trimmed';
     }
 
     return '';
@@ -434,37 +428,6 @@ class BackendApiService {
     return normalized;
   }
 
-  Map<String, dynamic> _normalizeUserRecord(Map<String, dynamic> raw) {
-    final data = <String, dynamic>{};
-    raw.forEach((key, value) {
-      data[key] = value;
-      if (key.endsWith('_json')) {
-        final alias = key.substring(0, key.length - 5);
-        data[alias] = value;
-        data[_toCamelCase(alias)] = value;
-      }
-      if (key.contains('_')) {
-        data[_toCamelCase(key)] = value;
-      }
-    });
-
-    data['id'] = raw['id']?.toString() ?? '';
-    data['collectionName'] = User.collection;
-    data['collectionId'] = User.collection;
-    data['created'] =
-        raw['created']?.toString() ?? raw['created_at']?.toString() ?? '';
-    data['updated'] =
-        raw['updated']?.toString() ?? raw['updated_at']?.toString() ?? '';
-
-    final roles = raw['roles'];
-    if (raw['role'] == null && roles is List && roles.isNotEmpty) {
-      final first = _asMap(roles.first);
-      data['role'] =
-          first['role_key']?.toString() ?? first['name']?.toString() ?? '';
-    }
-    return data;
-  }
-
   String _extractErrorMessage(Map<String, dynamic> response) {
     if (response['error'] != null) {
       return response['error'].toString();
@@ -497,21 +460,6 @@ class BackendApiService {
         )
         .replaceAll('-', '_')
         .toLowerCase();
-  }
-
-  String _toCamelCase(String value) {
-    final parts = value.split('_');
-    if (parts.isEmpty) {
-      return value;
-    }
-
-    return parts.first +
-        parts.skip(1).map((part) {
-          if (part.isEmpty) {
-            return '';
-          }
-          return part[0].toUpperCase() + part.substring(1);
-        }).join();
   }
 
   Map<String, dynamic> _asMap(dynamic value) {

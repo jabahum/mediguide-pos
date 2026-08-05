@@ -58,7 +58,7 @@ final class HelpContentRepository {
     return FAQ.fromJson(_normalize(_data(response), 'faqs'));
   }
 
-  Future<PaginatedResponse<ApiRecord>> listDocumentation({
+  Future<PaginatedResponse<Documentation>> listDocumentation({
     int page = 1,
     int perPage = 20,
     String? search,
@@ -82,11 +82,7 @@ final class HelpContentRepository {
     final data = _data(response);
     final items = (data['items'] as List? ?? const [])
         .whereType<Map>()
-        .map(
-          (v) => ApiRecord(
-            _normalize(Map<String, dynamic>.from(v), 'documentation'),
-          ),
-        )
+        .map((v) => Documentation.fromJson(Map<String, dynamic>.from(v)))
         .toList();
     return PaginatedResponse(
       page: (data['page'] as num?)?.toInt() ?? page,

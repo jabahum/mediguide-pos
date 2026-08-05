@@ -1,26 +1,23 @@
-import 'package:user_app/shared/models/api_record.dart';
 import 'package:user_app/core/network/api_client.dart';
+import 'package:user_app/features/authentication/data/models/user.dart';
 
 final class UserRepository {
   UserRepository(this._api);
 
   final BackendApiService _api;
 
-  Future<ApiRecord> updateProfile(
-    String userId,
-    Map<String, dynamic> fields,
-  ) async {
+  Future<User> updateProfile(String userId, Map<String, dynamic> fields) async {
     final response = await _api.requestJson(
       '/api/v2/users/$userId',
       method: 'PATCH',
       body: _normalizeOutgoing(fields),
     );
-    return ApiRecord(_normalizeUser(_data(response)));
+    return User.fromJson(_data(response));
   }
 
-  Future<ApiRecord> refreshProfile() async {
+  Future<User> refreshProfile() async {
     final response = await _api.requestJson('/api/v2/me', method: 'GET');
-    return ApiRecord(_normalizeUser(_data(response)));
+    return User.fromJson(_data(response));
   }
 
   Future<void> changePassword({
@@ -94,38 +91,8 @@ final class UserRepository {
     return fields.map((key, value) => MapEntry(_snakeCase(key), value));
   }
 
-  Map<String, dynamic> _normalizeUser(Map<String, dynamic> raw) {
-    final normalized = <String, dynamic>{...raw};
-    for (final entry in raw.entries) {
-      if (entry.key.contains('_')) {
-        normalized[_camelCase(entry.key)] = entry.value;
-      }
-    }
-    final roles = raw['roles'];
-    if (raw['role'] == null && roles is List && roles.isNotEmpty) {
-      final first = roles.first;
-      if (first is Map) {
-        normalized['role'] = first['role_key'] ?? first['name'] ?? '';
-      }
-    }
-    normalized['collectionName'] = 'users';
-    normalized['collectionId'] = 'users';
-    normalized['created'] = raw['created_at']?.toString() ?? '';
-    normalized['updated'] = raw['updated_at']?.toString() ?? '';
-    return normalized;
-  }
-
   String _snakeCase(String value) => value.replaceAllMapped(
     RegExp(r'([a-z0-9])([A-Z])'),
     (match) => '${match.group(1)}_${match.group(2)!.toLowerCase()}',
   );
-
-  String _camelCase(String value) {
-    final parts = value.split('_');
-    return parts.first +
-        parts.skip(1).map((part) {
-          if (part.isEmpty) return '';
-          return part[0].toUpperCase() + part.substring(1);
-        }).join();
-  }
 }

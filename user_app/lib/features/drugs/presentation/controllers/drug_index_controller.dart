@@ -299,7 +299,7 @@ class DrugIndexController extends ChangeNotifier {
       antimicrobial: antimicrobialOnly ? true : null,
     );
 
-    return result.items.map((e) => Drug.fromRecord(e)).toList();
+    return result.items;
   }
 
   Future<void> navigateToDrugDetail(Drug drug) async {

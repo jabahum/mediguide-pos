@@ -65,7 +65,7 @@ class AuthService {
     try {
       final success = await PreferenceUtils.setJson(
         SharedPreferencesKeys.currentUser,
-        user.data,
+        user.toJson(),
       );
       if (success) {
         currentUser.value = user;
@@ -85,7 +85,7 @@ class AuthService {
           SharedPreferencesKeys.currentUser,
         );
         if (userData != null && userData.isNotEmpty) {
-          currentUser.value = User(userData);
+          currentUser.value = User.fromJson(userData);
         }
       }
     } catch (e) {

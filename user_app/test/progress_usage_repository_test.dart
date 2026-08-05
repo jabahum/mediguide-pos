@@ -46,8 +46,8 @@ void main() {
       'progress_percentage': 0.4,
       'current_section': 'definition',
     });
-    expect(record.getDoubleValue('progress_percentage'), 0.4);
-    expect(record.getBoolValue('pending_sync'), isTrue);
+    expect(record.progressPercentage, 0.4);
+    expect(record.pendingSync, isTrue);
     final cached = await repository.forGuideline('user-1', 'guideline-1');
     expect(cached, isNotNull);
   });

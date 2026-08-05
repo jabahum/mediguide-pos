@@ -84,7 +84,7 @@ class ChatInterfaceController extends ChangeNotifier {
       final loaded = <Message>[];
       for (final record in result.items) {
         try {
-          loaded.add(Message.fromRecord(record));
+          loaded.add(record);
         } catch (error) {
           debugPrint('Error creating Message from record: $error');
         }
@@ -115,7 +115,7 @@ class ChatInterfaceController extends ChangeNotifier {
         content: trimmed,
         messageType: type.name,
       );
-      messages.add(Message.fromRecord(record));
+      messages.add(record);
       _notify();
       return true;
     } catch (error) {
@@ -153,7 +153,7 @@ class ChatInterfaceController extends ChangeNotifier {
         messageId,
         DateTime.now(),
       );
-      messages[index] = Message.fromRecord(record);
+      messages[index] = record;
       _notify();
     } catch (_) {
       // Read receipts are best effort and polling will reconcile their state.
@@ -172,7 +172,7 @@ class ChatInterfaceController extends ChangeNotifier {
         emoji,
         active: true,
       );
-      messages[index] = Message.fromRecord(record);
+      messages[index] = record;
       _notify();
     } catch (error) {
       Common.quickToast(
@@ -193,7 +193,7 @@ class ChatInterfaceController extends ChangeNotifier {
         messageType: MessageType.text.name,
         replyToId: replyToId,
       );
-      messages.add(Message.fromRecord(record));
+      messages.add(record);
       _notify();
       return true;
     } catch (error) {

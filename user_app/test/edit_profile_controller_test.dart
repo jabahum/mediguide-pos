@@ -62,7 +62,7 @@ final class EditProfileApi extends BackendApiService {
 
 Future<ProviderContainer> createEditContainer(EditProfileApi api) async {
   final store = EditProfileSessionStore(
-    User({'id': 'user-1', 'name': 'Original User', 'email': 'u@test'}),
+    const User(id: 'user-1', name: 'Original User', email: 'u@test'),
   );
   final container = ProviderContainer(
     overrides: [

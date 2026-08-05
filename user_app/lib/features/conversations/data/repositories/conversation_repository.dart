@@ -1,17 +1,18 @@
-import 'package:user_app/shared/models/api_record.dart';
 import 'package:user_app/shared/models/paginated_response.dart';
 import 'package:user_app/core/network/api_client.dart';
+import 'package:user_app/features/conversations/data/models/conversation.dart';
+import 'package:user_app/features/conversations/data/models/message.dart';
 
 final class ConversationRepository {
   ConversationRepository(this._api);
   final BackendApiService _api;
 
-  Future<PaginatedResponse<ApiRecord>> list({
+  Future<PaginatedResponse<Conversation>> list({
     int page = 1,
     int perPage = 20,
     String? search,
     DateTime? recentSince,
-  }) => _list('/api/v2/conversations', 'conversations', page, perPage, {
+  }) => _list('/api/v2/conversations', Conversation.fromJson, page, perPage, {
     'search': ?search,
     if (recentSince != null)
       'recent_since': recentSince.toUtc().toIso8601String(),
@@ -19,10 +20,10 @@ final class ConversationRepository {
     'order': 'desc',
   });
 
-  Future<ApiRecord> findOrCreate(String otherParticipantId) => _write(
+  Future<Conversation> findOrCreate(String otherParticipantId) => _write(
     '/api/v2/conversations',
     'POST',
-    'conversations',
+    Conversation.fromJson,
     {'other_participant_id': otherParticipantId},
   );
 
@@ -30,19 +31,19 @@ final class ConversationRepository {
       .requestJson('/api/v2/conversations/$id', method: 'DELETE')
       .then((_) {});
 
-  Future<PaginatedResponse<ApiRecord>> messages(
+  Future<PaginatedResponse<Message>> messages(
     String conversationId, {
     int page = 1,
     int perPage = 100,
   }) => _list(
     '/api/v2/conversations/$conversationId/messages',
-    'messages',
+    Message.fromJson,
     page,
     perPage,
     {'order': 'asc'},
   );
 
-  Future<ApiRecord> send(
+  Future<Message> send(
     String conversationId, {
     required String content,
     required String messageType,
@@ -51,7 +52,7 @@ final class ConversationRepository {
   }) => _write(
     '/api/v2/conversations/$conversationId/messages',
     'POST',
-    'messages',
+    Message.fromJson,
     {
       'content': content,
       'message_type': messageType,
@@ -60,18 +61,18 @@ final class ConversationRepository {
     },
   );
 
-  Future<ApiRecord> markRead(
+  Future<Message> markRead(
     String conversationId,
     String messageId,
     DateTime readAt,
   ) => _write(
     '/api/v2/conversations/$conversationId/messages/$messageId/read',
     'POST',
-    'messages',
+    Message.fromJson,
     {'read_at': readAt.toUtc().toIso8601String()},
   );
 
-  Future<ApiRecord> react(
+  Future<Message> react(
     String conversationId,
     String messageId,
     String emoji, {
@@ -79,13 +80,13 @@ final class ConversationRepository {
   }) => _write(
     '/api/v2/conversations/$conversationId/messages/$messageId/reaction',
     'POST',
-    'messages',
+    Message.fromJson,
     {'emoji': emoji, 'active': active},
   );
 
-  Future<PaginatedResponse<ApiRecord>> _list(
+  Future<PaginatedResponse<T>> _list<T>(
     String path,
-    String collection,
+    T Function(Map<String, dynamic>) fromJson,
     int page,
     int perPage,
     Map<String, String> query,
@@ -99,11 +100,7 @@ final class ConversationRepository {
     );
     final items = (data['items'] as List? ?? const [])
         .whereType<Map>()
-        .map(
-          (value) => ApiRecord(
-            _normalize(Map<String, dynamic>.from(value), collection),
-          ),
-        )
+        .map((value) => fromJson(Map<String, dynamic>.from(value)))
         .toList();
     return PaginatedResponse(
       page: (data['page'] as num?)?.toInt() ?? page,
@@ -114,67 +111,15 @@ final class ConversationRepository {
     );
   }
 
-  Future<ApiRecord> _write(
+  Future<T> _write<T>(
     String path,
     String method,
-    String collection,
+    T Function(Map<String, dynamic>) fromJson,
     Map<String, dynamic> body,
   ) async {
     final response = await _api.requestJson(path, method: method, body: body);
-    return ApiRecord(_normalize(_data(response), collection));
+    return fromJson(_data(response));
   }
-
-  Map<String, dynamic> _normalize(
-    Map<String, dynamic> value,
-    String collection,
-  ) {
-    final data = <String, dynamic>{
-      ...value,
-      'created': value['created_at'] ?? value['created'] ?? '',
-      'updated': value['updated_at'] ?? value['updated'] ?? '',
-      'collectionId': collection,
-      'collectionName': collection,
-    };
-    if (collection == 'conversations') {
-      final p1 = value['participant1_user_id']?.toString() ?? '';
-      final p2 = value['participant2_user_id']?.toString() ?? '';
-      data['participant1'] = p1;
-      data['participant2'] = p2;
-      data['expand'] = {
-        'participant1': _user(value, 'participant1', p1),
-        'participant2': _user(value, 'participant2', p2),
-        if ((value['last_message_id']?.toString() ?? '').isNotEmpty)
-          'last_message': {
-            'id': value['last_message_id'],
-            'content': value['last_message'] ?? '',
-          },
-      };
-    } else {
-      final sender = value['sender_user_id']?.toString() ?? '';
-      data['conversation'] = value['conversation_id']?.toString() ?? '';
-      data['sender'] = sender;
-      data['reply_to'] = value['reply_to_id']?.toString() ?? '';
-      data['attachments'] = value['attachments'] ?? <dynamic>[];
-      data['read_by'] = value['read_by'] ?? <String, dynamic>{};
-      data['reactions'] = value['reactions'] ?? <String, dynamic>{};
-      data['expand'] = {'sender': _user(value, 'sender', sender)};
-    }
-    return data;
-  }
-
-  Map<String, dynamic> _user(
-    Map<String, dynamic> value,
-    String prefix,
-    String id,
-  ) => {
-    'id': id,
-    'name': value['${prefix}_name'] ?? '',
-    'email': value['${prefix}_email'] ?? '',
-    'avatar': value['${prefix}_avatar'] ?? '',
-    'verified': value['${prefix}_verified'] ?? false,
-    'collectionId': 'users',
-    'collectionName': 'users',
-  };
 }
 
 Map<String, dynamic> _data(Map<String, dynamic> response) {

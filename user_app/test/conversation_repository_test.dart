@@ -71,7 +71,7 @@ void main() {
       expect(api.path, '/api/v2/conversations/conversation-1/messages');
       expect(api.query?['order'], 'asc');
       expect(api.query?.containsKey('filter'), isFalse);
-      expect(result.items.single.getStringValue('sender'), 'user-1');
+      expect(result.items.single.sender, 'user-1');
     },
   );
 

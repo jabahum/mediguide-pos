@@ -80,11 +80,9 @@ class ReadGuidelineController
     }
     final guideline =
         request.guideline ??
-        Guideline.fromRecord(
-          await ref
-              .read(guidelineContentRepositoryProvider)
-              .guideline(request.id),
-        );
+        await ref
+            .read(guidelineContentRepositoryProvider)
+            .guideline(request.id);
     final sections = guidelineSections(guideline);
     unawaited(_trackUsage(guideline.id));
 
@@ -99,18 +97,13 @@ class ReadGuidelineController
           .forGuideline(user.id, guideline.id);
       record ??= await ref
           .read(readingProgressRepositoryProvider)
-          .upsert(
-            user.id,
-            guideline.id,
-            ReadingProgress.forCreate(
-              userId: user.id,
-              guidelineId: guideline.id,
-              currentSection: 'definition',
-              totalSections: sections.length,
-              progressPercentage: 0,
-            ),
-          );
-      final progress = ReadingProgress.fromRecord(record);
+          .upsert(user.id, guideline.id, {
+            'current_section': 'definition',
+            'total_sections': sections.length,
+            'progress_percentage': 0.0,
+            'last_read_at': DateTime.now().toUtc().toIso8601String(),
+          });
+      final progress = record;
       return ReadGuidelineState(
         guideline: guideline,
         sections: sections,
@@ -155,9 +148,7 @@ class ReadGuidelineController
           'is_completed': completed,
         });
     if (_disposed) return;
-    state = AsyncData(
-      value.copyWith(readingProgress: ReadingProgress.fromRecord(record)),
-    );
+    state = AsyncData(value.copyWith(readingProgress: record));
   }
 
   Future<bool> toggleBookmark() async {
@@ -175,7 +166,7 @@ class ReadGuidelineController
       if (_disposed) return false;
       state = AsyncData(
         value.copyWith(
-          readingProgress: ReadingProgress.fromRecord(record),
+          readingProgress: record,
           isBookmarked: next,
           isMutating: false,
         ),
@@ -203,7 +194,7 @@ class ReadGuidelineController
       if (_disposed) return false;
       state = AsyncData(
         value.copyWith(
-          readingProgress: ReadingProgress.fromRecord(record),
+          readingProgress: record,
           progressPercentage: 1,
           isMutating: false,
         ),

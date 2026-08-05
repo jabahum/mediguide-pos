@@ -162,12 +162,12 @@ void main() {
   );
 
   test('section content combines structured medication fields', () {
-    final guideline = Guideline({
-      'id': 'guideline-1',
-      'condition_name': 'Asthma',
-      'medication_primary': 'Salbutamol',
-      'dosage_adult': 'Two puffs',
-    });
+    const guideline = Guideline(
+      id: 'guideline-1',
+      conditionName: 'Asthma',
+      medicationPrimary: 'Salbutamol',
+      dosageAdult: 'Two puffs',
+    );
 
     expect(guidelineSections(guideline), contains(GuidelineSection.medication));
     final content = guidelineSectionContent(

@@ -29,8 +29,7 @@ class AuthController extends AsyncNotifier<AuthState> {
     }
 
     try {
-      final record = await ref.read(userRepositoryProvider).refreshProfile();
-      final user = User.fromRecord(record);
+      final user = await ref.read(userRepositoryProvider).refreshProfile();
       await _store.saveUser(user);
       return AuthState.authenticated(user);
     } on BackendApiException catch (error) {
@@ -59,8 +58,7 @@ class AuthController extends AsyncNotifier<AuthState> {
 
     state = AsyncData(AuthState.authenticating(user: previous?.user));
     try {
-      final record = await _api.login(email: email, password: password);
-      final user = User.fromRecord(record);
+      final user = await _api.login(email: email, password: password);
       await _store.saveUser(user);
       state = AsyncData(AuthState.authenticated(user));
       return true;
@@ -81,13 +79,12 @@ class AuthController extends AsyncNotifier<AuthState> {
 
     state = AsyncData(AuthState.authenticating(user: previous?.user));
     try {
-      final record = await _api.register(
+      final user = await _api.register(
         email: email,
         password: password,
         passwordConfirm: passwordConfirm,
         additionalData: additionalData,
       );
-      final user = User.fromRecord(record);
       await _store.saveUser(user);
       state = AsyncData(AuthState.authenticated(user));
       return true;
@@ -103,8 +100,7 @@ class AuthController extends AsyncNotifier<AuthState> {
 
     state = AsyncData(AuthState.refreshing(user));
     try {
-      final record = await ref.read(userRepositoryProvider).refreshProfile();
-      final refreshed = User.fromRecord(record);
+      final refreshed = await ref.read(userRepositoryProvider).refreshProfile();
       await _store.saveUser(refreshed);
       state = AsyncData(AuthState.authenticated(refreshed));
     } catch (error) {

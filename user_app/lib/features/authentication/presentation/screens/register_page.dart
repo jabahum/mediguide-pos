@@ -60,18 +60,16 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
     }
 
     try {
-      final userData = User.forCreate(
-        email: formData['email'] as String,
-        password: formData['password'] as String,
-        name: formData['fullName'] as String,
-        role: UserRole.healthcareProvider,
-        status: UserStatus.pendingActivation,
-        phone: formData['phoneNumber'] as String?,
-        alternativePhone: formData['alternativePhone'] as String?,
-        licenseNumber: formData['licenseNumber'] as String?,
-        specialization: formData['specialization'] as String?,
-        preferredLanguage: PreferredLanguage.english,
-      );
+      final userData = <String, dynamic>{
+        'name': formData['fullName'],
+        'role': UserRole.healthcareProvider.name,
+        'status': UserStatus.pendingActivation.name,
+        'phone': formData['phoneNumber'],
+        'alternative_phone': formData['alternativePhone'],
+        'license_number': formData['licenseNumber'],
+        'specialization': formData['specialization'],
+        'preferred_language': PreferredLanguage.english.name,
+      }..removeWhere((_, value) => value == null);
       final registered = await ref
           .read(authControllerProvider.notifier)
           .register(

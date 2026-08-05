@@ -488,9 +488,7 @@ class GuidelinesController extends ChangeNotifier {
         targetPopulation: selectedTargetPopulation,
       );
 
-      return result.items
-          .map((record) => Guideline.fromRecord(record))
-          .toList();
+      return result.items;
     } catch (e) {
       debugPrint('Failed to load guidelines: $e');
       Common.quickToast(title: 'errorLoadingGuidelines'.tr);

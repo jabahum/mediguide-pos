@@ -44,10 +44,7 @@ class HomeController extends AutoDisposeAsyncNotifier<HomeState> {
   }
 
   Future<Guideline> guideline(String id) async {
-    final record = await ref
-        .read(guidelineContentRepositoryProvider)
-        .guideline(id);
-    return Guideline.fromRecord(record);
+    return ref.read(guidelineContentRepositoryProvider).guideline(id);
   }
 
   Future<HomeState> _load() async {
@@ -114,9 +111,7 @@ class HomeController extends AutoDisposeAsyncNotifier<HomeState> {
       final result = await ref
           .read(readingProgressRepositoryProvider)
           .inProgress(user.id, perPage: 6);
-      return result.items
-          .map(ReadingProgress.fromRecord)
-          .toList(growable: false);
+      return result.items;
     } catch (_) {
       return const [];
     }
@@ -138,7 +133,7 @@ class HomeController extends AutoDisposeAsyncNotifier<HomeState> {
       final result = await ref
           .read(guidelineContentRepositoryProvider)
           .guidelines(perPage: 5, published: true, status: 'published');
-      return result.items.map(Guideline.fromRecord).toList(growable: false);
+      return result.items;
     } catch (_) {
       return const [];
     }

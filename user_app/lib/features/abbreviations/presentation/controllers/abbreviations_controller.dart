@@ -228,7 +228,7 @@ class AbbreviationsController extends ChangeNotifier {
       perPage: perPage,
     );
 
-    return result.items.map(Abbreviation.fromRecord).toList();
+    return result.items;
   }
 
   Future<List<Abbreviation>> getCommonAbbreviations() async {
@@ -237,7 +237,7 @@ class AbbreviationsController extends ChangeNotifier {
       commonUsage: true,
     );
 
-    return result.items.map(Abbreviation.fromRecord).toList();
+    return result.items;
   }
 
   Future<List<Abbreviation>> _searchAbbreviations({
@@ -253,7 +253,7 @@ class AbbreviationsController extends ChangeNotifier {
       tagId: query.tagIds.isEmpty ? null : query.tagIds.join(','),
     );
 
-    return result.items.map(Abbreviation.fromRecord).toList();
+    return result.items;
   }
 
   // ===============================

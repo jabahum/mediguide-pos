@@ -55,10 +55,7 @@ void main() {
       expect(api.query?['tag_id'], 'tag-1');
       expect(api.query?['is_published'], 'true');
       expect(api.query?.containsKey('filter'), isFalse);
-      expect(
-        result.items.single.getStringValue('condition_name'),
-        'Hypertension',
-      );
+      expect(result.items.single.conditionName, 'Hypertension');
     },
   );
 

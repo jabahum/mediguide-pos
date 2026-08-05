@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:user_app/features/authentication/data/repositories/user_repository.dart';
+import 'package:user_app/features/authentication/data/models/user_enums.dart';
 import 'package:user_app/core/network/api_client.dart';
 
 class FakeUserApi extends BackendApiService {
@@ -51,8 +52,8 @@ void main() {
       expect(api.requestedPath, '/api/v2/users/user-1');
       expect(api.requestedMethod, 'PATCH');
       expect(api.requestedBody, {'preferred_language': 'en'});
-      expect(result.getStringValue('preferredLanguage'), 'en');
-      expect(result.getStringValue('role'), 'clinician');
+      expect(result.preferredLanguage, PreferredLanguage.english);
+      expect(result.role, UserRole.healthcareProvider);
     },
   );
 

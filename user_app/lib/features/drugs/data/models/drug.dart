@@ -1,242 +1,139 @@
-// ignore_for_file: unused_field
-
-import 'package:user_app/shared/models/api_record.dart';
+import 'package:freezed_annotation/freezed_annotation.dart';
+import 'package:user_app/core/utils/json_converters.dart';
 import 'package:user_app/features/drugs/data/models/drug_enums.dart';
-import 'package:user_app/shared/models/base_model.dart';
 import 'package:user_app/features/drugs/data/models/drug_category.dart';
 import 'package:user_app/features/drugs/data/models/drug_tag.dart';
 import 'package:user_app/features/drugs/data/models/drug_class.dart';
 import 'package:user_app/features/drugs/data/models/therapeutic_category.dart';
 
-/// Drug model based on backend resource API drugs collection
-class Drug extends BaseModel {
-  Drug(super.data);
+part 'drug.freezed.dart';
+part 'drug.g.dart';
 
-  /// backend resource API collection name
-  static const String collection = 'drugs';
-
-  // Self-registration for dynamic model creation
-  static final _registered = (() {
-    BaseModel.registerModel(collection, (data) => Drug(data));
-    return true;
-  })();
-
-  /// Create Drug from backend resource API record
-  static Drug fromRecord(ApiRecord record) => Drug(record.data);
-
-  /// Create JSON for new drug record (excludes system fields)
-  static Map<String, dynamic> forCreate({
-    required String name,
-    String? brandNames,
-    String? description,
-    String? mechanismOfAction,
-    String? adultDose,
-    String? pediatricDose,
-    String? elderlyDose,
-    String? maxDailyDose,
-    List<RouteOfAdministration>? routeOfAdministration,
-    String? frequency,
-    String? duration,
-    String? indications,
-    String? contraindications,
-    String? sideEffects,
-    String? warnings,
-    String? monitoringParameters,
+@freezed
+abstract class Drug with _$Drug {
+  const Drug._();
+  @JsonSerializable(explicitToJson: true)
+  const factory Drug({
+    required String id,
+    @Default('') String name,
+    @JsonKey(name: 'brand_names') @Default('') String brandNames,
+    @Default('') String description,
+    @JsonKey(name: 'mechanism_of_action') @Default('') String mechanismOfAction,
+    @JsonKey(name: 'adult_dose') @Default('') String adultDose,
+    @JsonKey(name: 'pediatric_dose') @Default('') String pediatricDose,
+    @JsonKey(name: 'elderly_dose') @Default('') String elderlyDose,
+    @JsonKey(name: 'max_daily_dose') @Default('') String maxDailyDose,
+    @Default([]) List<RouteOfAdministration> routeOfAdministration,
+    @Default('') String frequency,
+    @Default('') String duration,
+    @Default('') String indications,
+    @Default('') String contraindications,
+    @JsonKey(name: 'side_effects') @Default('') String sideEffects,
+    @Default('') String warnings,
+    @JsonKey(name: 'monitoring_parameters')
+    @Default('')
+    String monitoringParameters,
     PregnancyCategory? pregnancyCategory,
-    String? clinicalNotes,
-    List<String>? categoryIds,
-    List<String>? tagIds,
-    String? drugClassId,
-    String? therapeuticCategoryId,
-    bool? whoEmlStatus,
-    bool? antimicrobialStatus,
+    @JsonKey(name: 'clinical_notes') @Default('') String clinicalNotes,
+    @Default([]) List<DrugCategory> categories,
+    @Default([]) List<DrugTag> tags,
+    @JsonKey(name: 'drug_class') DrugClass? drugClass,
+    @JsonKey(name: 'therapeutic_category')
+    TherapeuticCategory? therapeuticCategory,
+    @JsonKey(name: 'who_eml_status') @Default(false) bool whoEmlStatus,
+    @JsonKey(name: 'antimicrobial_status')
+    @Default(false)
+    bool antimicrobialStatus,
     ControlledSubstance? controlledSubstance,
-    DrugStatus? status,
-    ReviewStatus? reviewStatus,
-    String? searchKeywords,
-    String? references,
-  }) {
-    return {
-      'name': name,
-      'brand_names': ?brandNames,
-      'description': ?description,
-      'mechanism_of_action': ?mechanismOfAction,
-      'adult_dose': ?adultDose,
-      'pediatric_dose': ?pediatricDose,
-      'elderly_dose': ?elderlyDose,
-      'max_daily_dose': ?maxDailyDose,
-      if (routeOfAdministration != null)
-        'route_of_administration': routeOfAdministration
-            .map((r) => r.name)
-            .toList(),
-      'frequency': ?frequency,
-      'duration': ?duration,
-      'indications': ?indications,
-      'contraindications': ?contraindications,
-      'side_effects': ?sideEffects,
-      'warnings': ?warnings,
-      'monitoring_parameters': ?monitoringParameters,
-      if (pregnancyCategory != null)
-        'pregnancy_category': pregnancyCategory.name.toUpperCase(),
-      'clinical_notes': ?clinicalNotes,
-      'categories': ?categoryIds,
-      'tags': ?tagIds,
-      'drug_class': ?drugClassId,
-      'therapeutic_category': ?therapeuticCategoryId,
-      'who_eml_status': ?whoEmlStatus,
-      'antimicrobial_status': ?antimicrobialStatus,
-      if (controlledSubstance != null)
-        'controlled_substance': _controlledSubstanceToString(
-          controlledSubstance,
-        ),
-      'status': (status ?? DrugStatus.active).name,
-      'review_status': (reviewStatus ?? ReviewStatus.pending).name,
-      'search_keywords': ?searchKeywords,
-      'references': ?references,
-    };
-  }
+    @Default(DrugStatus.active) DrugStatus status,
+    @JsonKey(name: 'review_status')
+    @Default(ReviewStatus.pending)
+    ReviewStatus reviewStatus,
+    @JsonKey(name: 'search_keywords') @Default('') String searchKeywords,
+    @JsonKey(name: 'reference_text') @Default('') String references,
+    @JsonKey(name: 'usage_count') @Default(0) int usageCount,
+    @JsonKey(name: 'created_at')
+    @NullableDateTimeConverter()
+    DateTime? createdAt,
+    @JsonKey(name: 'updated_at')
+    @NullableDateTimeConverter()
+    DateTime? updatedAt,
+  }) = _Drug;
+  factory Drug.fromJson(Map<String, dynamic> json) =>
+      _$DrugFromJson(_normalizeDrug(json));
+}
 
-  // Direct string properties - late final for performance
-  late final String name = get<String>("name", "");
-  late final String brandNames = get<String>("brand_names", "");
-  late final String description = get<String>("description", "");
-  late final String mechanismOfAction = get<String>("mechanism_of_action", "");
-  late final String adultDose = get<String>("adult_dose", "");
-  late final String pediatricDose = get<String>("pediatric_dose", "");
-  late final String elderlyDose = get<String>("elderly_dose", "");
-  late final String maxDailyDose = get<String>("max_daily_dose", "");
-  late final String frequency = get<String>("frequency", "");
-  late final String duration = get<String>("duration", "");
-  late final String indications = get<String>("indications", "");
-  late final String contraindications = get<String>("contraindications", "");
-  late final String sideEffects = get<String>("side_effects", "");
-  late final String warnings = get<String>("warnings", "");
-  late final String monitoringParameters = get<String>(
-    "monitoring_parameters",
-    "",
-  );
-  late final String clinicalNotes = get<String>("clinical_notes", "");
-  late final String searchKeywords = get<String>("search_keywords", "");
-  late final String references = get<String>("references", "");
-
-  // Boolean properties
-  late final bool whoEmlStatus = get<bool>("who_eml_status", false);
-  late final bool antimicrobialStatus = get<bool>(
-    "antimicrobial_status",
-    false,
-  );
-
-  // Enum properties
-  late final List<RouteOfAdministration> routeOfAdministration =
-      getEnumList<RouteOfAdministration>(
-        "route_of_administration",
-        RouteOfAdministration.values,
-      );
-  late final PregnancyCategory? pregnancyCategory = getEnum<PregnancyCategory>(
-    "pregnancy_category",
-    PregnancyCategory.values,
-  );
-  late final ControlledSubstance? controlledSubstance =
-      _parseControlledSubstance(get<String>("controlled_substance", ""));
-  late final DrugStatus status =
-      getEnum<DrugStatus>("status", DrugStatus.values) ?? DrugStatus.active;
-  late final ReviewStatus reviewStatus =
-      getEnum<ReviewStatus>("review_status", ReviewStatus.values) ??
-      ReviewStatus.pending;
-
-  // Typed relationship projections. The API currently returns category/tag
-  // display names and explicit class/category IDs instead of expansion maps.
-  late final List<DrugCategory> categories = _categories();
-  late final List<DrugTag> tags = _tags();
-  late final DrugClass? drugClass = _drugClass();
-  late final TherapeuticCategory? therapeuticCategory = _therapeuticCategory();
-
-  List<DrugCategory> _categories() => _relationList(
-    'categories',
-    (json) => DrugCategory.fromJson(json),
-    (name) => DrugCategory(id: '', name: name),
-  );
-
-  List<DrugTag> _tags() => _relationList(
-    'tags',
-    (json) => DrugTag.fromJson(json),
-    (name) => DrugTag(id: '', name: name),
-  );
-
-  List<T> _relationList<T>(
-    String field,
-    T Function(Map<String, dynamic>) fromJson,
-    T Function(String) fromName,
-  ) {
-    final raw = data[field];
-    if (raw is! List) return const [];
-    return raw
-        .map<T?>((value) {
-          if (value is Map) {
-            return fromJson(Map<String, dynamic>.from(value));
-          }
-          final name = value?.toString().trim() ?? '';
-          return name.isEmpty ? null : fromName(name);
-        })
-        .whereType<T>()
-        .toList(growable: false);
-  }
-
-  DrugClass? _drugClass() {
-    final id = get<String>('drug_class', '');
-    final expanded = get<Map<String, dynamic>?>('expand.drug_class', null);
-    if (expanded != null) return DrugClass.fromJson(expanded);
-    final name = get<String>('drug_class_name', '');
-    return id.isEmpty && name.isEmpty ? null : DrugClass(id: id, name: name);
-  }
-
-  TherapeuticCategory? _therapeuticCategory() {
-    final id = get<String>('therapeutic_category', '');
-    final expanded = get<Map<String, dynamic>?>(
-      'expand.therapeutic_category',
-      null,
-    );
-    if (expanded != null) return TherapeuticCategory.fromJson(expanded);
-    final name = get<String>('therapeutic_category_name', '');
-    return id.isEmpty && name.isEmpty
-        ? null
-        : TherapeuticCategory(id: id, name: name);
-  }
-
-  // Helper methods for controlled substance conversion
-  static String _controlledSubstanceToString(ControlledSubstance substance) {
-    switch (substance) {
-      case ControlledSubstance.none:
-        return 'None';
-      case ControlledSubstance.scheduleI:
-        return 'Schedule I';
-      case ControlledSubstance.scheduleII:
-        return 'Schedule II';
-      case ControlledSubstance.scheduleIII:
-        return 'Schedule III';
-      case ControlledSubstance.scheduleIV:
-        return 'Schedule IV';
-      case ControlledSubstance.scheduleV:
-        return 'Schedule V';
+Map<String, dynamic> _normalizeDrug(Map<String, dynamic> json) {
+  List<String> strings(Object? value) {
+    if (value is List) return value.map((e) => e.toString()).toList();
+    if (value is String) {
+      return value
+          .split(RegExp(r'[,;]'))
+          .map((e) => e.trim())
+          .where((e) => e.isNotEmpty)
+          .toList();
     }
+    return [];
   }
 
-  static ControlledSubstance? _parseControlledSubstance(String value) {
-    switch (value.toLowerCase()) {
-      case 'none':
-        return ControlledSubstance.none;
-      case 'schedule i':
-        return ControlledSubstance.scheduleI;
-      case 'schedule ii':
-        return ControlledSubstance.scheduleII;
-      case 'schedule iii':
-        return ControlledSubstance.scheduleIII;
-      case 'schedule iv':
-        return ControlledSubstance.scheduleIV;
-      case 'schedule v':
-        return ControlledSubstance.scheduleV;
-      default:
-        return null;
-    }
+  List<Map<String, dynamic>> relations(Object? value) => value is List
+      ? value
+            .map(
+              (e) => e is Map
+                  ? Map<String, dynamic>.from(e)
+                  : {'id': '', 'name': e.toString()},
+            )
+            .toList()
+      : [];
+  Map<String, dynamic>? relation(String key, String idKey, String nameKey) {
+    final value = json[key];
+    if (value is Map) return Map<String, dynamic>.from(value);
+    final id = json[idKey]?.toString() ?? '';
+    final name = json[nameKey]?.toString() ?? '';
+    return id.isEmpty && name.isEmpty ? null : {'id': id, 'name': name};
   }
+
+  String? normalizedEnum(Object? value) {
+    final result = value
+        ?.toString()
+        .toLowerCase()
+        .replaceAll(' ', '')
+        .replaceAll('_', '');
+    return result == null || result.isEmpty ? null : result;
+  }
+
+  String status(Object? value) => switch (normalizedEnum(value)) {
+    'underreview' => 'underReview',
+    _ => normalizedEnum(value) ?? 'active',
+  };
+  String review(Object? value) => switch (normalizedEnum(value)) {
+    'needsupdate' => 'needsUpdate',
+    _ => normalizedEnum(value) ?? 'pending',
+  };
+  String? controlled(Object? value) => switch (normalizedEnum(value)) {
+    'schedulei' => 'scheduleI',
+    'scheduleii' => 'scheduleII',
+    'scheduleiii' => 'scheduleIII',
+    'scheduleiv' => 'scheduleIV',
+    'schedulev' => 'scheduleV',
+    _ => normalizedEnum(value),
+  };
+  return {
+    ...json,
+    'routeOfAdministration': strings(
+      json['route_of_administration'],
+    ).map((e) => e.toLowerCase()).toList(),
+    'pregnancyCategory': normalizedEnum(json['pregnancy_category']),
+    'controlledSubstance': controlled(json['controlled_substance']),
+    'status': status(json['status']),
+    'review_status': review(json['review_status']),
+    'categories': relations(json['categories_json'] ?? json['categories']),
+    'tags': relations(json['tags_json'] ?? json['tags']),
+    'drug_class': relation('drug_class', 'drug_class_id', 'drug_class_name'),
+    'therapeutic_category': relation(
+      'therapeutic_category',
+      'therapeutic_category_id',
+      'therapeutic_category_name',
+    ),
+  };
 }

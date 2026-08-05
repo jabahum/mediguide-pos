@@ -69,11 +69,14 @@ class FaqController extends ChangeNotifier {
     }
   }
 
-  Future<PagedResult<FAQ>> _getFAQs({int page = 1, int perPage = 10}) async {
+  Future<PaginatedResponse<FAQ>> _getFAQs({
+    int page = 1,
+    int perPage = 10,
+  }) async {
     return _repository.listFAQs(page: page, perPage: perPage);
   }
 
-  Future<PagedResult<FAQ>> _searchFAQs({
+  Future<PaginatedResponse<FAQ>> _searchFAQs({
     required String query,
     int page = 1,
     int perPage = 10,

@@ -172,9 +172,7 @@ class UseCalculatorController
     if (request.id.isEmpty) {
       throw ArgumentError.value(request.id, 'calculatorId', 'is required');
     }
-    final calculator =
-        request.calculator ??
-        Calculator.fromRecord(await _repository.get(request.id));
+    final calculator = request.calculator ?? await _repository.get(request.id);
     _usageStart = _startUsage(calculator);
     ref.onDispose(() => unawaited(_finishUsage()));
     final content = await ref

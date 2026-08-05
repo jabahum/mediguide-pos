@@ -81,7 +81,7 @@ class ConsultantsController extends ChangeNotifier {
         order: 'desc',
       );
 
-      return result.items.map((r) => Consultant.fromRecord(r)).toList();
+      return result.items;
     } catch (e) {
       Common.quickToast(title: 'errorLoadingConsultants'.tr);
       rethrow;
@@ -262,9 +262,7 @@ class ConsultantsController extends ChangeNotifier {
         order: 'asc',
       );
 
-      final consultants = result.items
-          .map((r) => Consultant.fromRecord(r))
-          .toList();
+      final consultants = result.items.map((r) => r).toList();
 
       availableSpecialties =
           consultants

@@ -56,23 +56,6 @@ class ApiRecord {
   Map<String, dynamic> toJson() => Map<String, dynamic>.from(data);
 }
 
-/// Framework-neutral paginated backend response.
-class PagedResult<T> {
-  const PagedResult({
-    required this.page,
-    required this.perPage,
-    required this.totalItems,
-    required this.totalPages,
-    required this.items,
-  });
-
-  final int page;
-  final int perPage;
-  final int totalItems;
-  final int totalPages;
-  final List<T> items;
-}
-
 /// Event shape retained while realtime collection endpoints are introduced.
 class ApiRecordSubscriptionEvent {
   const ApiRecordSubscriptionEvent({required this.action, this.record});

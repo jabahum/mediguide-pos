@@ -6,7 +6,7 @@ final class ConsultantRepository {
 
   final BackendApiService _api;
 
-  Future<PagedResult<ApiRecord>> list({
+  Future<PaginatedResponse<Consultant>> list({
     int page = 1,
     int perPage = 20,
     String? search,
@@ -43,9 +43,9 @@ final class ConsultantRepository {
     final data = _data(response);
     final items = (data['items'] as List? ?? const [])
         .whereType<Map>()
-        .map((value) => ApiRecord(_normalize(Map<String, dynamic>.from(value))))
+        .map((value) => Consultant.fromJson(Map<String, dynamic>.from(value)))
         .toList();
-    return PagedResult(
+    return PaginatedResponse(
       items: items,
       page: (data['page'] as num?)?.toInt() ?? page,
       perPage: (data['per_page'] as num?)?.toInt() ?? perPage,
@@ -59,43 +59,40 @@ final class ConsultantRepository {
       '/api/v2/consultants/$id',
       method: 'GET',
     );
-    return Consultant.fromRecord(ApiRecord(_normalize(_data(response))));
+    final data = _data(response);
+    final item = data['item'];
+    return Consultant.fromJson(
+      item is Map ? Map<String, dynamic>.from(item) : data,
+    );
   }
+
+  Future<Consultant> create(ConsultantRequest request) async => _item(
+    await _api.requestJson(
+      '/api/v2/consultants',
+      method: 'POST',
+      body: request.toJson(),
+    ),
+  );
+
+  Future<Consultant> update(String id, ConsultantRequest request) async =>
+      _item(
+        await _api.requestJson(
+          '/api/v2/consultants/$id',
+          method: 'PATCH',
+          body: request.toJson(),
+        ),
+      );
 
   Future<void> recordUsage(String id) async {
     await _api.requestJson('/api/v2/consultants/$id/usage', method: 'POST');
   }
 
-  Map<String, dynamic> _normalize(Map<String, dynamic> raw) {
-    final user = raw['user'];
-    return {
-      ...raw,
-      'collectionName': Consultant.collection,
-      'collectionId': Consultant.collection,
-      'created': raw['created_at']?.toString() ?? '',
-      'updated': raw['updated_at']?.toString() ?? '',
-      'user': raw['user_id']?.toString() ?? '',
-      'alternativePhone': raw['alternative_phone'] ?? '',
-      'profilePicture': _assetValue(raw['profile_picture']),
-      'avatar': _assetValue(raw['avatar']),
-      'licenseNumber': raw['license_number'] ?? '',
-      'yearsOfExperience': raw['years_of_experience'] ?? 0,
-      'postalCode': raw['postal_code'] ?? '',
-      'preferredLanguage': raw['preferred_language'] ?? '',
-      'consultationTypes': raw['consultation_types'] ?? const <String>[],
-      'isVerified': raw['is_verified'] ?? false,
-      'totalConsultations': raw['total_consultations'] ?? 0,
-      'availability': raw['availability'] ?? const <String, dynamic>{},
-      'expand': {if (user is Map) 'user': Map<String, dynamic>.from(user)},
-    };
-  }
-
-  dynamic _assetValue(dynamic value) {
-    if (value is String) return value;
-    if (value is Map) {
-      return value['url'] ?? value['path'] ?? value['name'] ?? '';
-    }
-    return '';
+  Consultant _item(Map<String, dynamic> response) {
+    final data = _data(response);
+    final item = data['item'];
+    return Consultant.fromJson(
+      item is Map ? Map<String, dynamic>.from(item) : data,
+    );
   }
 
   Map<String, dynamic> _data(Map<String, dynamic> response) {

@@ -4,6 +4,7 @@ library;
 
 // Core models
 export 'package:user_app/shared/models/api_record.dart';
+export 'package:user_app/shared/models/paginated_response.dart';
 export 'package:user_app/shared/models/base_model.dart';
 export 'package:user_app/features/authentication/data/models/user.dart';
 export 'package:user_app/features/authentication/data/models/role.dart';

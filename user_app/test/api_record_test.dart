@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:user_app/shared/models/api_record.dart';
+import 'package:user_app/shared/models/paginated_response.dart';
 
 void main() {
   group('ApiRecord', () {
@@ -32,8 +33,8 @@ void main() {
     });
   });
 
-  test('PagedResult retains pagination metadata and items', () {
-    final result = PagedResult<ApiRecord>(
+  test('PaginatedResponse retains pagination metadata and items', () {
+    final result = PaginatedResponse<ApiRecord>(
       page: 2,
       perPage: 10,
       totalItems: 21,

@@ -77,7 +77,7 @@ class ToolsController extends ChangeNotifier {
         order: 'desc',
       );
 
-      return result.items.map((r) => Calculator.fromRecord(r)).toList();
+      return result.items;
     } catch (e) {
       Common.quickToast(title: 'Failed to load calculators');
       rethrow;

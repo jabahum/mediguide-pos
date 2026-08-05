@@ -6,7 +6,7 @@ final class SupportRepository {
 
   final BackendApiService _api;
 
-  Future<PagedResult<SupportTicket>> listTickets({
+  Future<PaginatedResponse<SupportTicket>> listTickets({
     int page = 1,
     int perPage = 30,
     String? search,
@@ -58,7 +58,7 @@ final class SupportRepository {
     return _ticket(_data(response));
   }
 
-  Future<PagedResult<SupportTicketReply>> listReplies(
+  Future<PaginatedResponse<SupportTicketReply>> listReplies(
     String ticketId, {
     int page = 1,
     int perPage = 100,
@@ -73,7 +73,7 @@ final class SupportRepository {
         .whereType<Map>()
         .map((item) => _reply(Map<String, dynamic>.from(item)))
         .toList();
-    return PagedResult(
+    return PaginatedResponse(
       page: (data['page'] as num?)?.toInt() ?? page,
       perPage: (data['per_page'] as num?)?.toInt() ?? perPage,
       totalItems: (data['total_items'] as num?)?.toInt() ?? items.length,
@@ -94,7 +94,7 @@ final class SupportRepository {
     return _reply(_data(response));
   }
 
-  PagedResult<SupportTicket> _ticketPage(
+  PaginatedResponse<SupportTicket> _ticketPage(
     Map<String, dynamic> data,
     int page,
     int perPage,
@@ -103,7 +103,7 @@ final class SupportRepository {
         .whereType<Map>()
         .map((item) => _ticket(Map<String, dynamic>.from(item)))
         .toList();
-    return PagedResult(
+    return PaginatedResponse(
       page: (data['page'] as num?)?.toInt() ?? page,
       perPage: (data['per_page'] as num?)?.toInt() ?? perPage,
       totalItems: (data['total_items'] as num?)?.toInt() ?? items.length,

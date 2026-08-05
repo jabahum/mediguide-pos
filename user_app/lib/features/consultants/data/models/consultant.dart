@@ -1,294 +1,156 @@
-// ignore_for_file: unused_field
-
-import 'package:user_app/shared/models/api_record.dart';
-import 'package:user_app/features/consultants/data/models/consultant_enums.dart';
-import 'package:user_app/features/authentication/data/models/user_enums.dart';
-import 'package:user_app/shared/models/base_model.dart';
+import 'package:freezed_annotation/freezed_annotation.dart';
+import 'package:user_app/core/utils/json_converters.dart';
 import 'package:user_app/features/authentication/data/models/user.dart';
+import 'package:user_app/features/authentication/data/models/user_enums.dart';
+import 'package:user_app/features/consultants/data/models/consultant_enums.dart';
 
-/// Consultant model based on backend resource API consultants collection
-class Consultant extends BaseModel {
-  Consultant(super.data);
+part 'consultant.freezed.dart';
+part 'consultant.g.dart';
 
-  /// backend resource API collection name
-  static const String collection = 'consultants';
+@Freezed(makeCollectionsUnmodifiable: true)
+abstract class Consultant with _$Consultant {
+  const Consultant._();
+  @JsonSerializable(explicitToJson: true)
+  const factory Consultant({
+    required String id,
+    @Default('') String name,
+    @Default('') String email,
+    @Default('') String phone,
+    @JsonKey(name: 'alternative_phone') @Default('') String alternativePhone,
+    @JsonKey(name: 'profile_picture') @Default('') String profilePicture,
+    @Default('') String avatar,
+    @JsonKey(name: 'specialty') @Default('') String specialtyValue,
+    @JsonKey(name: 'license_number') @Default('') String licenseNumber,
+    @JsonKey(name: 'years_of_experience') @Default(0) double yearsOfExperience,
+    @Default([]) List<String> qualifications,
+    @Default('') String certifications,
+    @Default('') String address,
+    @Default('') String city,
+    @Default('') String region,
+    @Default('') String country,
+    @JsonKey(name: 'postal_code') @Default('') String postalCode,
+    @Default('') String organization,
+    @Default('') String department,
+    @JsonKey(name: 'preferred_language')
+    @Default('')
+    String preferredLanguageValue,
+    @Default('') String timezone,
+    @Default({}) Map<String, dynamic> availability,
+    @JsonKey(name: 'consultation_types')
+    @Default([])
+    List<String> consultationTypeValues,
+    @JsonKey(name: 'status') @Default('inactive') String statusValue,
+    @JsonKey(name: 'is_verified') @Default(false) bool isVerified,
+    @Default(0) double rating,
+    @JsonKey(name: 'total_consultations') @Default(0) int totalConsultations,
+    @Default('') String notes,
+    @JsonKey(name: 'usage_count') @Default(0) int usageCount,
+    @JsonKey(name: 'user_id') String? userId,
+    @JsonKey(name: 'user') Map<String, dynamic>? userData,
+    @JsonKey(name: 'created_at')
+    @NullableDateTimeConverter()
+    DateTime? createdAt,
+    @JsonKey(name: 'updated_at')
+    @NullableDateTimeConverter()
+    DateTime? updatedAt,
+  }) = _Consultant;
+  factory Consultant.fromJson(Map<String, dynamic> json) =>
+      _$ConsultantFromJson(_normalizeConsultant(json));
+  ConsultantSpecialty? get specialty => _enumByLabel(
+    ConsultantSpecialty.values,
+    specialtyValue,
+    (value) => value.label,
+  );
+  ConsultantStatus get status =>
+      _enumByLabel(
+        ConsultantStatus.values,
+        statusValue,
+        (value) => value.label,
+      ) ??
+      ConsultantStatus.inactive;
+  List<ConsultantQualification> get qualificationEnums => qualifications
+      .map(
+        (value) => _enumByLabel(
+          ConsultantQualification.values,
+          value,
+          (item) => item.label,
+        ),
+      )
+      .whereType<ConsultantQualification>()
+      .toList(growable: false);
+  List<ConsultationType> get consultationTypes => consultationTypeValues
+      .map(
+        (value) =>
+            _enumByLabel(ConsultationType.values, value, (item) => item.label),
+      )
+      .whereType<ConsultationType>()
+      .toList(growable: false);
+  PreferredLanguage? get preferredLanguage => PreferredLanguage.values
+      .where(
+        (value) =>
+            value.name.toLowerCase() == preferredLanguageValue.toLowerCase(),
+      )
+      .firstOrNull;
+  User? get userAccount => userData == null ? null : User(userData!);
+}
 
-  // Self-registration for dynamic model creation
-  static final _registered = (() {
-    BaseModel.registerModel(collection, (data) => Consultant(data));
-    return true;
-  })();
-
-  /// Create Consultant from backend resource API record
-  static Consultant fromRecord(ApiRecord record) => Consultant(record.data);
-
-  /// Create JSON for new consultant record (excludes system fields)
-  static Map<String, dynamic> forCreate({
-    required String name,
-    required String email,
-    required String phone,
-    required String country,
-    required ConsultantSpecialty specialty,
-    required ConsultantStatus status,
-    String? user,
-    String? alternativePhone,
-    String? licenseNumber,
-    double? yearsOfExperience,
-    List<ConsultantQualification>? qualifications,
-    String? certifications,
-    String? address,
-    String? city,
-    String? region,
-    String? postalCode,
-    String? organization,
-    String? department,
-    PreferredLanguage? preferredLanguage,
-    String? timezone,
-    Map<String, dynamic>? availability,
-    List<ConsultationType>? consultationTypes,
-    bool? isVerified,
-    double? rating,
-    double? totalConsultations,
-    String? notes,
-  }) {
-    return {
-      'name': name,
-      'email': email,
-      'phone': phone,
-      'country': country,
-      'specialty': _specialtyToDisplayValue(specialty),
-      'status': status.name,
-      'user': ?user,
-      'alternativePhone': ?alternativePhone,
-      'licenseNumber': ?licenseNumber,
-      'yearsOfExperience': ?yearsOfExperience,
-      if (qualifications != null)
-        'qualifications': qualifications.map(_qualificationToValue).toList(),
-      'certifications': ?certifications,
-      'address': ?address,
-      'city': ?city,
-      'region': ?region,
-      'postalCode': ?postalCode,
-      'organization': ?organization,
-      'department': ?department,
-      if (preferredLanguage != null)
-        'preferredLanguage': preferredLanguage.name,
-      'timezone': ?timezone,
-      'availability': ?availability,
-      if (consultationTypes != null)
-        'consultationTypes': consultationTypes
-            .map(_consultationTypeToValue)
-            .toList(),
-      'isVerified': ?isVerified,
-      'rating': ?rating,
-      'totalConsultations': ?totalConsultations,
-      'notes': ?notes,
-    };
+Map<String, dynamic> _normalizeConsultant(Map<String, dynamic> json) => {
+  ...json,
+  'profile_picture': _asset(json['profile_picture']),
+  'avatar': _asset(json['avatar']),
+};
+String _asset(Object? value) => value is String
+    ? value
+    : value is Map
+    ? (value['url'] ?? value['path'] ?? value['name'] ?? '').toString()
+    : '';
+T? _enumByLabel<T extends Enum>(
+  List<T> values,
+  String raw,
+  String Function(T) label,
+) {
+  final normalized = raw.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '');
+  for (final value in values) {
+    if (value.name.toLowerCase() == raw.toLowerCase() ||
+        label(value).toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '') ==
+            normalized) {
+      return value;
+    }
   }
+  return null;
+}
 
-  /// Create JSON for updating consultant record
-  static Map<String, dynamic> forUpdate({
+@freezed
+abstract class ConsultantRequest with _$ConsultantRequest {
+  @JsonSerializable(includeIfNull: false)
+  const factory ConsultantRequest({
+    @JsonKey(name: 'user_id') String? userId,
     String? name,
     String? email,
     String? phone,
-    String? user,
-    String? alternativePhone,
-    String? licenseNumber,
-    double? yearsOfExperience,
-    List<ConsultantQualification>? qualifications,
+    @JsonKey(name: 'alternative_phone') String? alternativePhone,
+    String? specialty,
+    @JsonKey(name: 'license_number') String? licenseNumber,
+    @JsonKey(name: 'years_of_experience') double? yearsOfExperience,
+    List<String>? qualifications,
     String? certifications,
     String? address,
     String? city,
     String? region,
-    String? postalCode,
+    String? country,
+    @JsonKey(name: 'postal_code') String? postalCode,
     String? organization,
     String? department,
-    PreferredLanguage? preferredLanguage,
+    @JsonKey(name: 'preferred_language') String? preferredLanguage,
     String? timezone,
     Map<String, dynamic>? availability,
-    List<ConsultationType>? consultationTypes,
-    bool? isVerified,
+    @JsonKey(name: 'consultation_types') List<String>? consultationTypes,
+    String? status,
+    @JsonKey(name: 'is_verified') bool? isVerified,
     double? rating,
-    double? totalConsultations,
+    @JsonKey(name: 'total_consultations') int? totalConsultations,
     String? notes,
-    ConsultantSpecialty? specialty,
-    ConsultantStatus? status,
-  }) {
-    return {
-      'name': ?name,
-      'email': ?email,
-      'phone': ?phone,
-      'user': ?user,
-      'alternativePhone': ?alternativePhone,
-      'licenseNumber': ?licenseNumber,
-      'yearsOfExperience': ?yearsOfExperience,
-      if (qualifications != null)
-        'qualifications': qualifications.map(_qualificationToValue).toList(),
-      'certifications': ?certifications,
-      'address': ?address,
-      'city': ?city,
-      'region': ?region,
-      'postalCode': ?postalCode,
-      'organization': ?organization,
-      'department': ?department,
-      if (preferredLanguage != null)
-        'preferredLanguage': preferredLanguage.name,
-      'timezone': ?timezone,
-      'availability': ?availability,
-      if (consultationTypes != null)
-        'consultationTypes': consultationTypes
-            .map(_consultationTypeToValue)
-            .toList(),
-      'isVerified': ?isVerified,
-      'rating': ?rating,
-      'totalConsultations': ?totalConsultations,
-      'notes': ?notes,
-      if (specialty != null) 'specialty': _specialtyToDisplayValue(specialty),
-      if (status != null) 'status': status.name,
-    };
-  }
-
-  // Direct string properties - late final for performance
-  late final String name = get<String>("name", "");
-  late final String email = get<String>("email", "");
-  late final String phone = get<String>("phone", "");
-  late final String alternativePhone = get<String>("alternativePhone", "");
-  late final String licenseNumber = get<String>("licenseNumber", "");
-  late final String certifications = get<String>("certifications", "");
-  late final String address = get<String>("address", "");
-  late final String city = get<String>("city", "");
-  late final String region = get<String>("region", "");
-  late final String country = get<String>("country", "");
-  late final String postalCode = get<String>("postalCode", "");
-  late final String organization = get<String>("organization", "");
-  late final String department = get<String>("department", "");
-  late final String timezone = get<String>("timezone", "");
-  late final String notes = get<String>("notes", "");
-
-  // Relation field
-  late final String user = get<String>("user", "");
-
-  // Numeric properties
-  late final double yearsOfExperience = get<double>("yearsOfExperience", 0);
-  late final double rating = get<double>("rating", 0);
-  late final double totalConsultations = get<double>("totalConsultations", 0);
-
-  // Boolean properties
-  late final bool isVerified = get<bool>("isVerified", false);
-
-  // JSON properties
-  late final Map<String, dynamic> availability = get<Map<String, dynamic>>(
-    "availability",
-    {},
-  );
-
-  // Enum properties - use BaseModel's enhanced enum handling
-  late final ConsultantSpecialty? specialty = getEnum<ConsultantSpecialty>(
-    "specialty",
-    ConsultantSpecialty.values,
-  );
-  late final ConsultantStatus status =
-      getEnum<ConsultantStatus>("status", ConsultantStatus.values) ??
-      ConsultantStatus.inactive;
-  late final List<ConsultantQualification> qualifications =
-      getEnumList<ConsultantQualification>(
-        "qualifications",
-        ConsultantQualification.values,
-      );
-  late final List<ConsultationType> consultationTypes =
-      getEnumList<ConsultationType>(
-        "consultationTypes",
-        ConsultationType.values,
-      );
-  late final PreferredLanguage? preferredLanguage = getEnum<PreferredLanguage>(
-    "preferredLanguage",
-    PreferredLanguage.values,
-  );
-
-  // Related models - using expand functionality
-  User? get userAccount => getRelation<User>("user");
-
-  // Helper methods for enum conversion
-  static String _specialtyToDisplayValue(ConsultantSpecialty specialty) {
-    switch (specialty) {
-      case ConsultantSpecialty.generalPractice:
-        return 'General Practice';
-      case ConsultantSpecialty.internalMedicine:
-        return 'Internal Medicine';
-      case ConsultantSpecialty.emergencyMedicine:
-        return 'Emergency Medicine';
-      case ConsultantSpecialty.infectiousDiseases:
-        return 'Infectious Diseases';
-      case ConsultantSpecialty.publicHealth:
-        return 'Public Health';
-      case ConsultantSpecialty.laboratoryMedicine:
-        return 'Laboratory Medicine';
-      default:
-        // Handle other specialties with Title Case
-        return _enumNameToTitleCase(specialty.name);
-    }
-  }
-
-  /// Convert enum name to Title Case (e.g., 'cardiology' -> 'Cardiology')
-  static String _enumNameToTitleCase(String enumName) {
-    return enumName[0].toUpperCase() + enumName.substring(1);
-  }
-
-  static String _qualificationToValue(ConsultantQualification qualification) {
-    switch (qualification) {
-      case ConsultantQualification.md:
-        return 'MD';
-      case ConsultantQualification.mbbs:
-        return 'MBBS';
-      case ConsultantQualification.dds:
-        return 'DDS';
-      case ConsultantQualification.pharmD:
-        return 'PharmD';
-      case ConsultantQualification.rn:
-        return 'RN';
-      case ConsultantQualification.bsn:
-        return 'BSN';
-      case ConsultantQualification.msn:
-        return 'MSN';
-      case ConsultantQualification.dnp:
-        return 'DNP';
-      case ConsultantQualification.phd:
-        return 'PhD';
-      case ConsultantQualification.mph:
-        return 'MPH';
-      case ConsultantQualification.ms:
-        return 'MS';
-      case ConsultantQualification.ma:
-        return 'MA';
-      case ConsultantQualification.doDegree:
-        return 'DO_DEGREE';
-      default:
-        return _enumNameToTitleCase(qualification.name);
-    }
-  }
-
-  static String _consultationTypeToValue(ConsultationType type) {
-    switch (type) {
-      case ConsultationType.inPerson:
-        return 'In-Person';
-      case ConsultationType.telemedicine:
-        return 'Telemedicine';
-      case ConsultationType.phoneConsultation:
-        return 'Phone Consultation';
-      case ConsultationType.emergencyConsultation:
-        return 'Emergency Consultation';
-      case ConsultationType.secondOpinion:
-        return 'Second Opinion';
-      case ConsultationType.followUp:
-        return 'Follow-up';
-      case ConsultationType.diagnosticReview:
-        return 'Diagnostic Review';
-      case ConsultationType.treatmentPlanning:
-        return 'Treatment Planning';
-      case ConsultationType.medicationReview:
-        return 'Medication Review';
-      case ConsultationType.healthEducation:
-        return 'Health Education';
-    }
-  }
+  }) = _ConsultantRequest;
+  factory ConsultantRequest.fromJson(Map<String, dynamic> json) =>
+      _$ConsultantRequestFromJson(json);
 }

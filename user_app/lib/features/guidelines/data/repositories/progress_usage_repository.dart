@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:user_app/shared/models/api_record.dart';
+import 'package:user_app/shared/models/paginated_response.dart';
 import 'package:user_app/core/network/api_client.dart';
 
 final class ReadingProgressRepository {
@@ -31,7 +32,7 @@ final class ReadingProgressRepository {
     }
   }
 
-  Future<PagedResult<ApiRecord>> inProgress(
+  Future<PaginatedResponse<ApiRecord>> inProgress(
     String userId, {
     int page = 1,
     int perPage = 20,
@@ -61,7 +62,7 @@ final class ReadingProgressRepository {
       for (final item in items) {
         await _saveRecord(item);
       }
-      return PagedResult(
+      return PaginatedResponse(
         page: (data['page'] as num?)?.toInt() ?? page,
         perPage: (data['per_page'] as num?)?.toInt() ?? perPage,
         totalItems: (data['total_items'] as num?)?.toInt() ?? items.length,
@@ -78,7 +79,7 @@ final class ReadingProgressRepository {
             (a, b) => '${b['last_read_at']}'.compareTo('${a['last_read_at']}'),
           );
       final items = rows.take(perPage).map(ApiRecord.new).toList();
-      return PagedResult(
+      return PaginatedResponse(
         page: 1,
         perPage: perPage,
         totalItems: rows.length,

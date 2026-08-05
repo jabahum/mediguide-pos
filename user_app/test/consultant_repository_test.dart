@@ -53,7 +53,7 @@ void main() {
       expect(api.query?['specialty'], 'Cardiology');
       expect(api.query?['verified'], 'true');
       expect(api.query?.containsKey('filter'), isFalse);
-      expect(result.items.single.data['isVerified'], true);
+      expect(result.items.single.isVerified, true);
     },
   );
 }

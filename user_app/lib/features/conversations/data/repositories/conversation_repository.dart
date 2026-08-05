@@ -1,11 +1,12 @@
 import 'package:user_app/shared/models/api_record.dart';
+import 'package:user_app/shared/models/paginated_response.dart';
 import 'package:user_app/core/network/api_client.dart';
 
 final class ConversationRepository {
   ConversationRepository(this._api);
   final BackendApiService _api;
 
-  Future<PagedResult<ApiRecord>> list({
+  Future<PaginatedResponse<ApiRecord>> list({
     int page = 1,
     int perPage = 20,
     String? search,
@@ -29,7 +30,7 @@ final class ConversationRepository {
       .requestJson('/api/v2/conversations/$id', method: 'DELETE')
       .then((_) {});
 
-  Future<PagedResult<ApiRecord>> messages(
+  Future<PaginatedResponse<ApiRecord>> messages(
     String conversationId, {
     int page = 1,
     int perPage = 100,
@@ -82,7 +83,7 @@ final class ConversationRepository {
     {'emoji': emoji, 'active': active},
   );
 
-  Future<PagedResult<ApiRecord>> _list(
+  Future<PaginatedResponse<ApiRecord>> _list(
     String path,
     String collection,
     int page,
@@ -104,7 +105,7 @@ final class ConversationRepository {
           ),
         )
         .toList();
-    return PagedResult(
+    return PaginatedResponse(
       page: (data['page'] as num?)?.toInt() ?? page,
       perPage: (data['per_page'] as num?)?.toInt() ?? perPage,
       totalItems: (data['total_items'] as num?)?.toInt() ?? items.length,

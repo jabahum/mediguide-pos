@@ -83,7 +83,7 @@ class HomeController extends AutoDisposeAsyncNotifier<HomeState> {
         order: 'desc',
       );
       final calculators = featured.items
-          .map(Calculator.fromRecord)
+          .map((calculator) => calculator)
           .toList(growable: true);
       if (calculators.length < 6) {
         final fallback = await repository.list(
@@ -97,7 +97,7 @@ class HomeController extends AutoDisposeAsyncNotifier<HomeState> {
         final existing = calculators.map((item) => item.id).toSet();
         calculators.addAll(
           fallback.items
-              .map(Calculator.fromRecord)
+              .map((calculator) => calculator)
               .where((item) => existing.add(item.id)),
         );
       }

@@ -1,4 +1,4 @@
-import 'package:user_app/shared/models/api_record.dart';
+import 'package:user_app/shared/models/paginated_response.dart';
 import 'package:user_app/features/content/data/models/language_model.dart';
 import 'package:user_app/features/content/data/models/ministry_directory.dart';
 import 'package:user_app/core/network/api_client.dart';
@@ -9,7 +9,7 @@ final class GenericPageRepository {
   GenericPageRepository(this._api);
   final BackendApiService _api;
 
-  Future<PagedResult<GenericPage>> list({
+  Future<PaginatedResponse<GenericPage>> list({
     int page = 1,
     int perPage = 50,
     String? search,
@@ -33,7 +33,7 @@ final class GenericPageRepository {
           ),
         )
         .toList();
-    return PagedResult(
+    return PaginatedResponse(
       page: (data['page'] as num?)?.toInt() ?? page,
       perPage: (data['per_page'] as num?)?.toInt() ?? perPage,
       totalItems: (data['total_items'] as num?)?.toInt() ?? items.length,
@@ -80,7 +80,7 @@ final class MinistryDirectoryRepository {
   MinistryDirectoryRepository(this._api);
   final BackendApiService _api;
 
-  Future<PagedResult<MinistryDirectory>> list({
+  Future<PaginatedResponse<MinistryDirectory>> list({
     int page = 1,
     int perPage = 20,
     String? search,
@@ -115,7 +115,7 @@ final class MinistryDirectoryRepository {
               MinistryDirectory.fromJson(Map<String, dynamic>.from(value)),
         )
         .toList();
-    return PagedResult(
+    return PaginatedResponse(
       page: (data['page'] as num?)?.toInt() ?? page,
       perPage: (data['per_page'] as num?)?.toInt() ?? perPage,
       totalItems: (data['total_items'] as num?)?.toInt() ?? items.length,

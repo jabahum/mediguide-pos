@@ -6,7 +6,7 @@ final class NotificationRepository {
 
   final BackendApiService _api;
 
-  Future<PagedResult<MyNotification>> list({
+  Future<PaginatedResponse<MyNotification>> list({
     required int page,
     required int perPage,
     String? search,
@@ -35,7 +35,7 @@ final class NotificationRepository {
           (value) => MyNotification.fromJson(Map<String, dynamic>.from(value)),
         )
         .toList();
-    return PagedResult<MyNotification>(
+    return PaginatedResponse<MyNotification>(
       page: (data['page'] as num?)?.toInt() ?? page,
       perPage: (data['per_page'] as num?)?.toInt() ?? perPage,
       totalItems: (data['total_items'] as num?)?.toInt() ?? items.length,

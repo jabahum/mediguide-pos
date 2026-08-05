@@ -11,7 +11,7 @@ final class FacilityRepository {
   final BackendApiService _api;
   final TtlResponseCache _cache;
 
-  Future<PagedResult<HealthFacility>> listFacilities({
+  Future<PaginatedResponse<HealthFacility>> listFacilities({
     required int page,
     required int perPage,
     String? search,
@@ -42,7 +42,7 @@ final class FacilityRepository {
           (value) => HealthFacility.fromJson(Map<String, dynamic>.from(value)),
         )
         .toList(growable: false);
-    return PagedResult(
+    return PaginatedResponse(
       page: (data['page'] as num?)?.toInt() ?? page,
       perPage: (data['per_page'] as num?)?.toInt() ?? perPage,
       totalItems: (data['total_items'] as num?)?.toInt() ?? items.length,
@@ -79,15 +79,17 @@ final class FacilityRepository {
     await _api.requestJson('/api/v2/facilities/$id', method: 'DELETE');
   }
 
-  Future<PagedResult<Region>> regions({int page = 1, int perPage = 100}) =>
-      _referenceList(
-        '/api/v2/regions',
-        Region.fromJson,
-        page: page,
-        perPage: perPage,
-      );
+  Future<PaginatedResponse<Region>> regions({
+    int page = 1,
+    int perPage = 100,
+  }) => _referenceList(
+    '/api/v2/regions',
+    Region.fromJson,
+    page: page,
+    perPage: perPage,
+  );
 
-  Future<PagedResult<District>> districts({
+  Future<PaginatedResponse<District>> districts({
     String? regionId,
     int page = 1,
     int perPage = 100,
@@ -99,7 +101,7 @@ final class FacilityRepository {
     query: {if (_present(regionId)) 'region_id': regionId!},
   );
 
-  Future<PagedResult<HealthSubRegion>> healthSubRegions({
+  Future<PaginatedResponse<HealthSubRegion>> healthSubRegions({
     String? regionId,
     int page = 1,
     int perPage = 100,
@@ -111,7 +113,7 @@ final class FacilityRepository {
     query: {if (_present(regionId)) 'region_id': regionId!},
   );
 
-  Future<PagedResult<HealthSubDistrict>> healthSubDistricts({
+  Future<PaginatedResponse<HealthSubDistrict>> healthSubDistricts({
     String? districtId,
     int page = 1,
     int perPage = 100,
@@ -123,7 +125,7 @@ final class FacilityRepository {
     query: {if (_present(districtId)) 'district_id': districtId!},
   );
 
-  Future<PagedResult<County>> counties({
+  Future<PaginatedResponse<County>> counties({
     String? districtId,
     int page = 1,
     int perPage = 100,
@@ -135,7 +137,7 @@ final class FacilityRepository {
     query: {if (_present(districtId)) 'district_id': districtId!},
   );
 
-  Future<PagedResult<Subcounty>> subcounties({
+  Future<PaginatedResponse<Subcounty>> subcounties({
     String? districtId,
     String? countyId,
     int page = 1,
@@ -151,7 +153,7 @@ final class FacilityRepository {
     },
   );
 
-  Future<PagedResult<Parish>> parishes({
+  Future<PaginatedResponse<Parish>> parishes({
     String? subcountyId,
     int page = 1,
     int perPage = 100,
@@ -163,7 +165,7 @@ final class FacilityRepository {
     query: {if (_present(subcountyId)) 'subcounty_id': subcountyId!},
   );
 
-  Future<PagedResult<Authority>> authorities({
+  Future<PaginatedResponse<Authority>> authorities({
     String? ownershipTypeId,
     int page = 1,
     int perPage = 100,
@@ -177,10 +179,10 @@ final class FacilityRepository {
     },
   );
 
-  Future<PagedResult<FacilityLevel>> levels() =>
+  Future<PaginatedResponse<FacilityLevel>> levels() =>
       _referenceList('/api/v2/facility-levels', FacilityLevel.fromJson);
 
-  Future<PagedResult<OwnershipType>> ownershipTypes() =>
+  Future<PaginatedResponse<OwnershipType>> ownershipTypes() =>
       _referenceList('/api/v2/ownership-types', OwnershipType.fromJson);
 
   Future<void> recordUsage(String facilityId) async {
@@ -190,7 +192,7 @@ final class FacilityRepository {
     );
   }
 
-  Future<PagedResult<T>> _referenceList<T>(
+  Future<PaginatedResponse<T>> _referenceList<T>(
     String path,
     T Function(Map<String, dynamic>) fromJson, {
     int page = 1,
@@ -208,7 +210,7 @@ final class FacilityRepository {
         .whereType<Map>()
         .map((value) => fromJson(Map<String, dynamic>.from(value)))
         .toList(growable: false);
-    return PagedResult<T>(
+    return PaginatedResponse<T>(
       page: (data['page'] as num?)?.toInt() ?? page,
       perPage: (data['per_page'] as num?)?.toInt() ?? perPage,
       totalItems: (data['total_items'] as num?)?.toInt() ?? items.length,

@@ -287,7 +287,7 @@ final class RepositoryGlobalSearchDataSource implements GlobalSearchDataSource {
           query,
         );
       case SearchCategory.consultants:
-        final consultant = Consultant.fromRecord(record);
+        final consultant = Consultant.fromJson(record.data);
         return _withRelevance(
           SearchResult(
             id: consultant.id,
@@ -338,7 +338,7 @@ final class RepositoryGlobalSearchDataSource implements GlobalSearchDataSource {
           query,
         );
       case SearchCategory.tools:
-        final calculator = Calculator.fromRecord(record);
+        final calculator = Calculator.fromJson(record.data);
         return _withRelevance(
           SearchResult(
             id: calculator.id,

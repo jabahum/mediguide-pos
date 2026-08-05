@@ -6,7 +6,7 @@ final class GuidelineContentRepository {
 
   final BackendApiService _api;
 
-  Future<PagedResult<ApiRecord>> guidelines({
+  Future<PaginatedResponse<ApiRecord>> guidelines({
     int page = 1,
     int perPage = 30,
     String? search,
@@ -43,7 +43,7 @@ final class GuidelineContentRepository {
   Future<ApiRecord> guideline(String id) =>
       _get('/api/v2/medical-guidelines/$id', Guideline.collection);
 
-  Future<PagedResult<GuidelineCategory>> categories({
+  Future<PaginatedResponse<GuidelineCategory>> categories({
     int page = 1,
     int perPage = 100,
     String? search,
@@ -65,7 +65,7 @@ final class GuidelineContentRepository {
     },
   );
 
-  Future<PagedResult<GuidelineTag>> tags({
+  Future<PaginatedResponse<GuidelineTag>> tags({
     int page = 1,
     int perPage = 100,
     String? search,
@@ -81,7 +81,7 @@ final class GuidelineContentRepository {
     },
   );
 
-  Future<PagedResult<GuidelineIndex>> index({
+  Future<PaginatedResponse<GuidelineIndex>> index({
     int page = 1,
     int perPage = 100,
     String? search,
@@ -101,7 +101,7 @@ final class GuidelineContentRepository {
     },
   );
 
-  Future<PagedResult<GuidelineIndex>> indexChildren(
+  Future<PaginatedResponse<GuidelineIndex>> indexChildren(
     String id, {
     int page = 1,
     int perPage = 100,
@@ -112,7 +112,7 @@ final class GuidelineContentRepository {
     perPage: perPage,
   );
 
-  Future<PagedResult<ApiRecord>> abbreviations({
+  Future<PaginatedResponse<ApiRecord>> abbreviations({
     int page = 1,
     int perPage = 30,
     String? search,
@@ -137,7 +137,7 @@ final class GuidelineContentRepository {
   Future<ApiRecord> abbreviation(String id) =>
       _get('/api/v2/abbreviations/$id', Abbreviation.collection);
 
-  Future<PagedResult<T>> _typedList<T>(
+  Future<PaginatedResponse<T>> _typedList<T>(
     String path,
     T Function(Map<String, dynamic>) fromJson, {
     int page = 1,
@@ -154,7 +154,7 @@ final class GuidelineContentRepository {
         .whereType<Map>()
         .map((value) => fromJson(Map<String, dynamic>.from(value)))
         .toList(growable: false);
-    return PagedResult(
+    return PaginatedResponse(
       page: (data['page'] as num?)?.toInt() ?? page,
       perPage: (data['per_page'] as num?)?.toInt() ?? perPage,
       totalItems: (data['total_items'] as num?)?.toInt() ?? items.length,
@@ -163,7 +163,7 @@ final class GuidelineContentRepository {
     );
   }
 
-  Future<PagedResult<ApiRecord>> _list(
+  Future<PaginatedResponse<ApiRecord>> _list(
     String path,
     String collectionName, {
     int page = 1,
@@ -184,7 +184,7 @@ final class GuidelineContentRepository {
           ),
         )
         .toList();
-    return PagedResult(
+    return PaginatedResponse(
       page: (data['page'] as num?)?.toInt() ?? page,
       perPage: (data['per_page'] as num?)?.toInt() ?? perPage,
       totalItems: (data['total_items'] as num?)?.toInt() ?? items.length,

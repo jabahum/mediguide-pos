@@ -18,6 +18,7 @@ import 'package:user_app/features/ai_assistant/data/services/ai_context_service.
 import 'package:user_app/features/authentication/data/datasources/auth_remote_datasource.dart';
 import 'package:user_app/core/network/api_client.dart';
 import 'package:user_app/core/network/ttl_response_cache.dart';
+import 'package:user_app/core/storage/database/database_provider.dart';
 
 /// Core dependency graph. Runtime services are constructed once during
 /// bootstrap and injected through ProviderScope overrides.
@@ -45,7 +46,7 @@ final ragRepositoryProvider = Provider.autoDispose<RagAssistant>(
 );
 
 final ttlResponseCacheProvider = Provider<TtlResponseCache>(
-  (ref) => TtlResponseCache(preferences: ref.watch(sharedPreferencesProvider)),
+  (ref) => TtlResponseCache(database: ref.watch(appDatabaseProvider)),
 );
 
 final userRepositoryProvider = Provider<UserRepository>(

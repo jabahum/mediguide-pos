@@ -38,7 +38,6 @@ dependencies:
   introduction_screen: ^4.0.0
   lucide_icons_flutter: ^3.1.9
   path_provider: ^2.1.5
-  http: ^1.1.0
   intl: ^0.20.2
   flutter_form_builder: ^10.1.0
   form_builder_validators: ^11.2.0
@@ -64,6 +63,14 @@ dependencies:
   expansion_tile_group: ^2.3.0
   bubble: ^1.2.1
   openai_dart: ^7.0.1
+  dio: ^5.11.0
+  freezed_annotation: ^3.1.0
+  json_annotation: 4.9.0
+  flutter_secure_storage: ^10.3.1
+  drift: 2.27.0
+  sqlite3_flutter_libs: ^0.6.0+eol
+  path: ^1.9.1
+  internet_connection_checker_plus: ^3.1.1
 
 dev_dependencies:
   flutter_test:
@@ -78,6 +85,11 @@ dev_dependencies:
   # rules and activating additional ones.
   flutter_lints: ^6.0.0
   package_rename: ^1.10.1
+  riverpod_lint: 2.6.5
+  custom_lint: 0.7.5
+  freezed: 3.0.6
+  json_serializable: 6.9.5
+  drift_dev: 2.27.0
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec

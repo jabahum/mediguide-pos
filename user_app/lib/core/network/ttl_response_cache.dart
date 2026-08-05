@@ -2,13 +2,16 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:user_app/core/storage/database/app_database.dart';
 
 final class TtlResponseCache {
-  TtlResponseCache({SharedPreferences? preferences})
-    : _preferences = preferences;
+  TtlResponseCache({SharedPreferences? preferences, AppDatabase? database})
+    : _preferences = preferences,
+      _database = database;
 
   static const _prefix = 'mediguide.reference-cache.v1.';
   SharedPreferences? _preferences;
+  final AppDatabase? _database;
 
   Future<Map<String, dynamic>> getOrLoad({
     required String key,
@@ -41,6 +44,15 @@ final class TtlResponseCache {
 
   Future<_CacheEntry?> _read(String key) async {
     try {
+      final database = _database;
+      if (database != null) {
+        final entry = await database.cacheEntry(key);
+        if (entry == null) return null;
+        final decoded = jsonDecode(entry.payload);
+        if (decoded is! Map) return null;
+        return _CacheEntry(entry.cachedAt, Map<String, dynamic>.from(decoded));
+      }
+
       final raw = (await _prefs).getString(_storageKey(key));
       if (raw == null) return null;
       final decoded = jsonDecode(raw);
@@ -57,6 +69,16 @@ final class TtlResponseCache {
 
   Future<void> _write(String key, Map<String, dynamic> data) async {
     try {
+      final database = _database;
+      if (database != null) {
+        await database.putCacheEntry(
+          key: key,
+          payload: jsonEncode(data),
+          cachedAt: DateTime.now().toUtc(),
+        );
+        return;
+      }
+
       await (await _prefs).setString(
         _storageKey(key),
         jsonEncode({

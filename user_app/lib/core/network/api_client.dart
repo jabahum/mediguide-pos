@@ -1,18 +1,36 @@
-import 'dart:convert';
-
+import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
-import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:user_app/core/constants/app_constants.dart';
 import 'package:user_app/core/network/api_exception.dart';
+import 'package:user_app/core/network/auth_interceptor.dart';
+import 'package:user_app/core/storage/secure_storage_service.dart';
 
 import 'package:user_app/shared/models/models.dart';
 
 export 'api_exception.dart';
 
 class BackendApiService {
+  BackendApiService({Dio? dio, SecureStorageService? secureStorage})
+    : _dio =
+          dio ??
+          Dio(
+            BaseOptions(
+              baseUrl: mediguideApiBaseUrl,
+              connectTimeout: const Duration(seconds: 20),
+              receiveTimeout: const Duration(seconds: 45),
+              validateStatus: (_) => true,
+            ),
+          ),
+      _secureStorage = secureStorage ?? SecureStorageService() {
+    _dio.interceptors.add(AuthInterceptor(accessToken: () => _accessToken));
+  }
+
   static const _refreshTokenKey = 'backend_refresh_token';
   static const _sessionIdKey = 'backend_session_id';
+
+  final Dio _dio;
+  final SecureStorageService _secureStorage;
 
   final ValueNotifier<bool> schemaLoaded = ValueNotifier(false);
 
@@ -24,9 +42,11 @@ class BackendApiService {
 
   Future<BackendApiService> init() async {
     _prefs = await SharedPreferences.getInstance();
-    _accessToken = _prefs.getString(SharedPreferencesKeys.userToken) ?? '';
-    _refreshToken = _prefs.getString(_refreshTokenKey) ?? '';
-    _sessionId = _prefs.getString(_sessionIdKey) ?? '';
+    _accessToken = await _readAndMigrateCredential(
+      SharedPreferencesKeys.userToken,
+    );
+    _refreshToken = await _readAndMigrateCredential(_refreshTokenKey);
+    _sessionId = await _readAndMigrateCredential(_sessionIdKey);
 
     schemaLoaded.value = true;
     return this;
@@ -131,9 +151,11 @@ class BackendApiService {
       _accessToken = '';
       _refreshToken = '';
       _sessionId = '';
-      await _prefs.remove(SharedPreferencesKeys.userToken);
-      await _prefs.remove(_refreshTokenKey);
-      await _prefs.remove(_sessionIdKey);
+      await Future.wait([
+        _secureStorage.delete(SharedPreferencesKeys.userToken),
+        _secureStorage.delete(_refreshTokenKey),
+        _secureStorage.delete(_sessionIdKey),
+      ]);
       await _prefs.remove(SharedPreferencesKeys.userId);
     }
   }
@@ -242,52 +264,46 @@ class BackendApiService {
     bool includeAuth = true,
     bool retryAfterRefresh = true,
   }) async {
-    final uri = Uri.parse(mediguideApiBaseUrl).replace(
-      path: _joinPath(Uri.parse(mediguideApiBaseUrl).path, path),
-      queryParameters: query == null || query.isEmpty ? null : query,
-    );
-
     final headers = <String, String>{
       'Accept': 'application/json',
       if (body != null) 'Content-Type': 'application/json',
-      if (includeAuth && _accessToken.isNotEmpty)
-        'Authorization': 'Bearer $_accessToken',
       ...?extraHeaders,
     };
 
-    http.Response response;
-    final encodedBody = body == null ? null : jsonEncode(body);
-
-    switch (method.toUpperCase()) {
-      case 'GET':
-        response = await http.get(uri, headers: headers);
-        break;
-      case 'POST':
-        response = await http.post(uri, headers: headers, body: encodedBody);
-        break;
-      case 'PATCH':
-        response = await http.patch(uri, headers: headers, body: encodedBody);
-        break;
-      case 'DELETE':
-        response = await http.delete(uri, headers: headers);
-        break;
-      default:
-        throw Exception('Unsupported HTTP method: $method');
+    final Response<dynamic> response;
+    try {
+      response = await _dio.request<dynamic>(
+        path,
+        data: body,
+        queryParameters: query,
+        options: Options(
+          method: method.toUpperCase(),
+          headers: headers,
+          extra: {'includeAuth': includeAuth},
+        ),
+      );
+    } on DioException catch (error) {
+      throw BackendApiException(
+        error.message ?? 'Unable to reach the MediGuide API.',
+        statusCode: error.response?.statusCode ?? 0,
+        cause: error,
+      );
     }
 
-    if (response.statusCode == 204) {
+    final statusCode = response.statusCode ?? 0;
+    if (statusCode == 204) {
       return const <String, dynamic>{'success': true};
     }
 
-    final decoded = response.body.isEmpty
-        ? const <String, dynamic>{}
-        : jsonDecode(utf8.decode(response.bodyBytes));
+    final decoded = response.data;
 
     final map = decoded is Map<String, dynamic>
         ? decoded
+        : decoded is Map
+        ? Map<String, dynamic>.from(decoded)
         : <String, dynamic>{'data': decoded};
 
-    if (response.statusCode == 401 &&
+    if (statusCode == 401 &&
         includeAuth &&
         retryAfterRefresh &&
         _refreshToken.isNotEmpty) {
@@ -303,11 +319,11 @@ class BackendApiService {
       );
     }
 
-    if (response.statusCode >= 400 || map['success'] == false) {
+    if (statusCode >= 400 || map['success'] == false) {
       throw BackendApiException(
         _extractErrorMessage(map),
-        statusCode: response.statusCode,
-        retryAfter: _parseRetryAfter(response.headers['retry-after']),
+        statusCode: statusCode,
+        retryAfter: _parseRetryAfter(response.headers.value('retry-after')),
       );
     }
 
@@ -331,23 +347,22 @@ class BackendApiService {
   }
 
   Future<String> requestText(String path) async {
-    final base = Uri.parse(mediguideApiBaseUrl);
-    final uri = base.replace(path: _joinPath(base.path, path));
-    final response = await http.get(
-      uri,
-      headers: {
-        'Accept': 'text/html,application/json',
-        if (_accessToken.isNotEmpty) 'Authorization': 'Bearer $_accessToken',
-      },
+    final response = await _dio.get<String>(
+      path,
+      options: Options(
+        responseType: ResponseType.plain,
+        headers: {'Accept': 'text/html,application/json'},
+      ),
     );
-    if (response.statusCode >= 400) {
+    final statusCode = response.statusCode ?? 0;
+    if (statusCode >= 400) {
       throw BackendApiException(
-        'Failed to load calculator content (${response.statusCode})',
-        statusCode: response.statusCode,
-        retryAfter: _parseRetryAfter(response.headers['retry-after']),
+        'Failed to load calculator content ($statusCode)',
+        statusCode: statusCode,
+        retryAfter: _parseRetryAfter(response.headers.value('retry-after')),
       );
     }
-    return utf8.decode(response.bodyBytes);
+    return response.data ?? '';
   }
 
   Future<void> _persistSession(Map<String, dynamic> data) async {
@@ -355,15 +370,28 @@ class BackendApiService {
     _refreshToken = data['refresh_token']?.toString() ?? '';
     _sessionId = data['session_id']?.toString() ?? '';
 
-    await _prefs.setString(SharedPreferencesKeys.userToken, _accessToken);
-    await _prefs.setString(_refreshTokenKey, _refreshToken);
-    await _prefs.setString(_sessionIdKey, _sessionId);
+    await Future.wait([
+      _secureStorage.write(SharedPreferencesKeys.userToken, _accessToken),
+      _secureStorage.write(_refreshTokenKey, _refreshToken),
+      _secureStorage.write(_sessionIdKey, _sessionId),
+    ]);
 
     final user = _asMap(data['user']);
     final userId = user['id']?.toString();
     if (userId != null && userId.isNotEmpty) {
       await _prefs.setString(SharedPreferencesKeys.userId, userId);
     }
+  }
+
+  Future<String> _readAndMigrateCredential(String key) async {
+    final secured = await _secureStorage.read(key);
+    if (secured != null && secured.isNotEmpty) return secured;
+
+    final legacy = _prefs.getString(key) ?? '';
+    if (legacy.isEmpty) return '';
+    await _secureStorage.write(key, legacy);
+    await _prefs.remove(key);
+    return legacy;
   }
 
   Map<String, dynamic> _unwrapData(Map<String, dynamic> response) {
@@ -459,14 +487,6 @@ class BackendApiService {
       '/api/overview' => '/api/v1/overview',
       _ => path,
     };
-  }
-
-  String _joinPath(String basePath, String nextPath) {
-    final left = basePath.endsWith('/')
-        ? basePath.substring(0, basePath.length - 1)
-        : basePath;
-    final right = nextPath.startsWith('/') ? nextPath : '/$nextPath';
-    return '$left$right';
   }
 
   String _toSnakeCase(String value) {

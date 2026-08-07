@@ -1,205 +1,183 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:user_app/core/config/app_keys.dart';
-import 'package:user_app/core/utils/app_extensions.dart';
 import 'package:infinite_scroll_pagination/infinite_scroll_pagination.dart';
-import 'package:user_app/core/utils/app_message.dart';
-import 'package:user_app/shared/models/filter_models.dart';
+import 'package:riverpod_annotation/riverpod_annotation.dart';
 
-import 'package:user_app/shared/models/models.dart';
-import 'package:user_app/features/guidelines/data/repositories/guideline_content_repository.dart';
 import 'package:user_app/app/providers/app_providers.dart';
-import 'package:user_app/core/utils/common.dart';
+import 'package:user_app/core/config/app_keys.dart';
 import 'package:user_app/core/constants/app_constants.dart';
+import 'package:user_app/core/utils/app_extensions.dart';
+import 'package:user_app/core/utils/app_message.dart';
+
+import 'package:user_app/features/guidelines/data/repositories/guideline_content_repository.dart';
+import 'package:user_app/features/guidelines/presentation/controllers/guidelines_query.dart';
+import 'package:user_app/features/guidelines/presentation/controllers/guidelines_route_state.dart';
+import 'package:user_app/features/guidelines/presentation/controllers/guidelines_state.dart';
+
+import 'package:user_app/shared/models/filter_models.dart';
+import 'package:user_app/shared/models/models.dart';
 import 'package:user_app/shared/widgets/generic_filter_bottom_sheet.dart';
 
-enum GuidelineRouteFilterType { all, category, categoryTree, indexItem, tag }
+part 'guidelines_controller.g.dart';
 
-final guidelinesControllerProvider = ChangeNotifierProvider.autoDispose
-    .family<GuidelinesController, Object?>((ref, arguments) {
-      return GuidelinesController(
-        ref.watch(guidelineContentRepositoryProvider),
-        arguments,
-      );
-    });
-
-class GuidelinesController extends ChangeNotifier {
-  GuidelinesController(this._contentRepository, Object? arguments) {
-    pagingController = PagingController<int, Guideline>(
-      getNextPageKey: (state) {
-        if (state.lastPageIsEmpty) return null;
-        return state.nextIntPageKey;
-      },
-      fetchPage: _loadPage,
-    );
-    _readRouteArguments(arguments);
-    unawaited(_loadFilterOptions());
-    _updateFilterState();
-  }
-
-  final GuidelineContentRepository _contentRepository;
-  // ==================== CONSTANTS ====================
+@riverpod
+class GuidelinesController extends _$GuidelinesController {
   static const Set<String> emergencyCategoryNames = {
     'emergencies and trauma',
     'common medical emergencies',
   };
 
-  // ==================== PAGINATION ====================
-  late final PagingController<int, Guideline> pagingController;
-
-  // ==================== PAGE STATE ====================
-  String pageTitle = 'All Guidelines';
-  GuidelineRouteFilterType routeFilterType = GuidelineRouteFilterType.all;
-
-  // ==================== INDEX MODE / ROUTE FILTERS ====================
-  GuidelineIndex? selectedIndex;
-  bool isInIndexMode = false;
-
-  String routeCategoryId = '';
-  List<String> routeCategoryIds = [];
-  bool isInCategoryMode = false;
-
-  String selectedTagId = '';
-  bool isInTagMode = false;
-
-  // ==================== USER FILTER STATE ====================
-  String searchQuery = '';
-  String selectedCategoryId = '';
-  List<String> selectedTagIds = [];
-  String selectedPriority = '';
-  String selectedHealthcareLevel = '';
-  String selectedTargetPopulation = '';
-  bool showHighPriorityOnly = false;
-
-  bool hasActiveFilters = false;
-
-  // ==================== DATA ====================
-  List<GuidelineCategory> availableCategories = [];
-  List<GuidelineTag> availableTags = [];
-  bool isLoadingFilters = false;
-
   Timer? _searchDebounce;
 
+  late final PagingController<int, Guideline> pagingController;
+
+  GuidelineContentRepository get _contentRepository =>
+      ref.read(guidelineContentRepositoryProvider);
+
   @override
-  void dispose() {
-    _searchDebounce?.cancel();
-    pagingController.dispose();
-    super.dispose();
+  GuidelinesState build(Object? arguments) {
+    final route = _routeFromArguments(arguments);
+
+    pagingController = PagingController<int, Guideline>(
+      getNextPageKey: (pagingState) {
+        if (pagingState.lastPageIsEmpty) {
+          return null;
+        }
+
+        return pagingState.nextIntPageKey;
+      },
+      fetchPage: _loadPage,
+    );
+
+    ref.onDispose(() {
+      _searchDebounce?.cancel();
+      pagingController.dispose();
+    });
+
+    Future.microtask(() async {
+      await _loadFilterOptions();
+
+      if (route.filterType == GuidelineRouteFilterType.categoryTree &&
+          route.routeCategoryId.isNotEmpty) {
+        await _loadChildCategoryIds(route.routeCategoryId);
+      }
+    });
+
+    return GuidelinesState(route: route);
   }
 
-  // ==================== COMPUTED STATE ====================
-  String get effectivePageTitle {
-    if (isInIndexMode) {
-      return selectedIndex?.title ?? pageTitle;
+  // ======================================================
+  // ROUTE PARSING
+  // ======================================================
+
+  GuidelinesRouteState _routeFromArguments(Object? arguments) {
+    if (arguments == null) {
+      return const GuidelinesRouteState();
     }
 
-    return pageTitle;
-  }
-
-  bool get hasPermanentFilter {
-    return isInIndexMode || isInCategoryMode || isInTagMode;
-  }
-
-  bool get isEmergencyRoute {
-    return isInCategoryMode && pageTitle == 'Emergency Guidelines';
-  }
-
-  bool get _hasFilters {
-    return searchQuery.trim().isNotEmpty ||
-        selectedCategoryId.isNotEmpty ||
-        selectedTagIds.isNotEmpty ||
-        selectedPriority.isNotEmpty ||
-        selectedHealthcareLevel.isNotEmpty ||
-        selectedTargetPopulation.isNotEmpty ||
-        showHighPriorityOnly;
-  }
-
-  // ==================== ROUTE ARGUMENTS ====================
-  void _readRouteArguments(Object? args) {
-    if (args == null) {
-      _applyAllRoute(title: 'All Guidelines');
-      return;
+    if (arguments is GuidelineIndex) {
+      return GuidelinesRouteState(
+        pageTitle: arguments.title,
+        filterType: GuidelineRouteFilterType.indexItem,
+        selectedIndex: arguments,
+      );
     }
 
-    if (args is GuidelineIndex) {
-      _applyIndexRoute(index: args, title: args.title);
-      return;
+    if (arguments is! Map) {
+      return const GuidelinesRouteState();
     }
 
-    if (args is! Map) {
-      _applyAllRoute(title: 'All Guidelines');
-      return;
-    }
+    final filterType = _parseFilterType(arguments['filterType']?.toString());
 
-    final filterType = _parseFilterType(args['filterType']?.toString());
-    final title = args['title']?.toString().trim();
+    final title = arguments['title']?.toString().trim();
 
     switch (filterType) {
-      case GuidelineRouteFilterType.all:
-        _applyAllRoute(title: title);
-        break;
-
       case GuidelineRouteFilterType.category:
         final categoryId = _firstNonEmpty([
-          args['categoryId'],
-          args['category'],
+          arguments['categoryId'],
+          arguments['category'],
         ]);
 
-        _applyCategoryRoute(
-          categoryId: categoryId,
-          title: title,
-          includeChildren: false,
+        if (categoryId.isEmpty) {
+          return GuidelinesRouteState(
+            pageTitle: _safeTitle(title, fallback: 'All Guidelines'),
+          );
+        }
+
+        return GuidelinesRouteState(
+          pageTitle: _safeTitle(title, fallback: 'Guidelines'),
+          filterType: GuidelineRouteFilterType.category,
+          routeCategoryId: categoryId,
+          routeCategoryIds: [categoryId],
         );
-        break;
 
       case GuidelineRouteFilterType.categoryTree:
         final categoryId = _firstNonEmpty([
-          args['categoryId'],
-          args['category'],
+          arguments['categoryId'],
+          arguments['category'],
         ]);
 
-        _applyCategoryRoute(
-          categoryId: categoryId,
-          title: title,
-          includeChildren: true,
+        if (categoryId.isEmpty) {
+          return GuidelinesRouteState(
+            pageTitle: _safeTitle(title, fallback: 'All Guidelines'),
+          );
+        }
+
+        return GuidelinesRouteState(
+          pageTitle: _safeTitle(title, fallback: 'Guideline Category'),
+          filterType: GuidelineRouteFilterType.categoryTree,
+          routeCategoryId: categoryId,
+          routeCategoryIds: [categoryId],
         );
-        break;
 
       case GuidelineRouteFilterType.indexItem:
         final indexItemId = _firstNonEmpty([
-          args['indexItemId'],
-          args['index_item'],
-          args['indexItem'],
+          arguments['indexItemId'],
+          arguments['index_item'],
+          arguments['indexItem'],
         ]);
 
-        _applyIndexIdRoute(indexItemId: indexItemId, title: title);
-        break;
+        if (indexItemId.isEmpty) {
+          return const GuidelinesRouteState();
+        }
+
+        final resolvedTitle = _safeTitle(title, fallback: 'Guidelines');
+
+        return GuidelinesRouteState(
+          pageTitle: resolvedTitle,
+          filterType: GuidelineRouteFilterType.indexItem,
+          selectedIndex: GuidelineIndex(id: indexItemId, title: resolvedTitle),
+        );
 
       case GuidelineRouteFilterType.tag:
-        final tagId = _firstNonEmpty([args['tagId'], args['tag']]);
+        final tagId = _firstNonEmpty([arguments['tagId'], arguments['tag']]);
 
-        _applyTagRoute(tagId: tagId, title: title);
-        break;
+        if (tagId.isEmpty) {
+          return const GuidelinesRouteState();
+        }
+
+        return GuidelinesRouteState(
+          pageTitle: _safeTitle(title, fallback: 'Tagged Guidelines'),
+          filterType: GuidelineRouteFilterType.tag,
+          selectedTagId: tagId,
+        );
+
+      case GuidelineRouteFilterType.all:
+        return GuidelinesRouteState(
+          pageTitle: _safeTitle(title, fallback: 'All Guidelines'),
+        );
     }
   }
 
   GuidelineRouteFilterType _parseFilterType(String? value) {
-    switch (value?.trim()) {
-      case 'category':
-        return GuidelineRouteFilterType.category;
-      case 'categoryTree':
-        return GuidelineRouteFilterType.categoryTree;
-      case 'index':
-      case 'indexItem':
-        return GuidelineRouteFilterType.indexItem;
-      case 'tag':
-        return GuidelineRouteFilterType.tag;
-      case 'all':
-      default:
-        return GuidelineRouteFilterType.all;
-    }
+    return switch (value?.trim()) {
+      'category' => GuidelineRouteFilterType.category,
+      'categoryTree' => GuidelineRouteFilterType.categoryTree,
+      'index' || 'indexItem' => GuidelineRouteFilterType.indexItem,
+      'tag' => GuidelineRouteFilterType.tag,
+      _ => GuidelineRouteFilterType.all,
+    };
   }
 
   String _firstNonEmpty(List<dynamic> values) {
@@ -214,131 +192,60 @@ class GuidelinesController extends ChangeNotifier {
     return '';
   }
 
-  void _applyAllRoute({String? title}) {
-    routeFilterType = GuidelineRouteFilterType.all;
-    pageTitle = _safeTitle(title, fallback: 'All Guidelines');
-
-    selectedIndex = null;
-    isInIndexMode = false;
-
-    routeCategoryId = '';
-    routeCategoryIds.clear();
-    isInCategoryMode = false;
-
-    selectedTagId = '';
-    isInTagMode = false;
-  }
-
-  void _applyCategoryRoute({
-    required String categoryId,
-    required String? title,
-    required bool includeChildren,
-  }) {
-    if (categoryId.isEmpty) {
-      _applyAllRoute(title: title);
-      return;
-    }
-
-    routeFilterType = includeChildren
-        ? GuidelineRouteFilterType.categoryTree
-        : GuidelineRouteFilterType.category;
-
-    routeCategoryId = categoryId;
-    routeCategoryIds = [categoryId];
-    isInCategoryMode = true;
-
-    selectedCategoryId = '';
-
-    selectedIndex = null;
-    isInIndexMode = false;
-
-    selectedTagId = '';
-    isInTagMode = false;
-
-    pageTitle = _safeTitle(
-      title,
-      fallback: includeChildren ? 'Guideline Category' : 'Guidelines',
-    );
-
-    if (includeChildren) {
-      _loadChildCategoryIds(categoryId);
-    }
-  }
-
-  void _applyIndexRoute({
-    required GuidelineIndex index,
-    required String? title,
-  }) {
-    routeFilterType = GuidelineRouteFilterType.indexItem;
-
-    selectedIndex = index;
-    isInIndexMode = true;
-
-    routeCategoryId = '';
-    routeCategoryIds.clear();
-    isInCategoryMode = false;
-    selectedCategoryId = '';
-
-    selectedTagId = '';
-    isInTagMode = false;
-
-    pageTitle = _safeTitle(title, fallback: index.title);
-  }
-
-  void _applyIndexIdRoute({
-    required String indexItemId,
-    required String? title,
-  }) {
-    if (indexItemId.isEmpty) {
-      _applyAllRoute(title: title);
-      return;
-    }
-
-    final resolvedTitle = _safeTitle(title, fallback: 'Guidelines');
-
-    routeFilterType = GuidelineRouteFilterType.indexItem;
-
-    selectedIndex = GuidelineIndex(id: indexItemId, title: resolvedTitle);
-
-    isInIndexMode = true;
-
-    routeCategoryId = '';
-    routeCategoryIds.clear();
-    isInCategoryMode = false;
-    selectedCategoryId = '';
-
-    selectedTagId = '';
-    isInTagMode = false;
-
-    pageTitle = resolvedTitle;
-  }
-
-  void _applyTagRoute({required String tagId, required String? title}) {
-    if (tagId.isEmpty) {
-      _applyAllRoute(title: title);
-      return;
-    }
-
-    routeFilterType = GuidelineRouteFilterType.tag;
-
-    selectedTagId = tagId;
-    isInTagMode = true;
-
-    selectedIndex = null;
-    isInIndexMode = false;
-
-    routeCategoryId = '';
-    routeCategoryIds.clear();
-    isInCategoryMode = false;
-    selectedCategoryId = '';
-
-    pageTitle = _safeTitle(title, fallback: 'Tagged Guidelines');
-  }
-
   String _safeTitle(String? value, {required String fallback}) {
     final title = value?.trim() ?? '';
+
     return title.isEmpty ? fallback : title;
   }
+
+  // ======================================================
+  // PAGINATION
+  // ======================================================
+
+  Future<List<Guideline>> _loadPage(int pageKey) async {
+    try {
+      final query = state.query;
+      final route = state.route;
+
+      final categoryIds = <String>{
+        ...route.routeCategoryIds,
+        if (query.selectedCategoryId.isNotEmpty) query.selectedCategoryId,
+      };
+
+      final tagIds = <String>{
+        if (route.selectedTagId.isNotEmpty) route.selectedTagId,
+        ...query.selectedTagIds,
+      };
+
+      final result = await _contentRepository.guidelines(
+        page: pageKey,
+        perPage: AppConstants.pageSize,
+        search: query.search,
+        published: true,
+        status: 'published',
+        indexId: route.isInIndexMode ? route.selectedIndex?.id : null,
+        categoryId: categoryIds.isEmpty ? null : categoryIds.join(','),
+        tagId: tagIds.isEmpty ? null : tagIds.join(','),
+        priority: query.selectedPriority.isNotEmpty
+            ? query.selectedPriority
+            : query.showHighPriorityOnly
+            ? 'high'
+            : null,
+        healthcareLevel: query.selectedHealthcareLevel,
+        targetPopulation: query.selectedTargetPopulation,
+      );
+
+      return result.items;
+    } catch (error) {
+      _showError('Failed to load guidelines: $error');
+
+      rethrow;
+    }
+  }
+
+  // ======================================================
+  // CHILD CATEGORIES
+  // ======================================================
 
   Future<void> _loadChildCategoryIds(String parentCategoryId) async {
     try {
@@ -346,18 +253,24 @@ class GuidelinesController extends ChangeNotifier {
         parentId: parentCategoryId,
       );
 
-      final childIds = result.items
-          .map((category) => category.id)
-          .where((id) => id.isNotEmpty)
-          .toList();
+      final ids = <String>{
+        parentCategoryId,
+        ...result.items
+            .map((category) => category.id)
+            .where((id) => id.isNotEmpty),
+      };
 
-      routeCategoryIds = <String>{parentCategoryId, ...childIds}.toList();
-      notifyListeners();
+      state = state.copyWith(
+        route: state.route.copyWith(
+          routeCategoryIds: List<String>.unmodifiable(ids),
+        ),
+      );
 
       pagingController.refresh();
     } catch (_) {
-      routeCategoryIds = [parentCategoryId];
-      notifyListeners();
+      state = state.copyWith(
+        route: state.route.copyWith(routeCategoryIds: [parentCategoryId]),
+      );
     }
   }
 
@@ -372,229 +285,189 @@ class GuidelinesController extends ChangeNotifier {
           parentId: parentCategoryId,
         );
 
-        final childIds = result.items
-            .map((category) => category.id)
-            .where((id) => id.isNotEmpty)
-            .toList();
-
-        allIds.addAll(childIds);
+        allIds.addAll(
+          result.items
+              .map((category) => category.id)
+              .where((id) => id.isNotEmpty),
+        );
       } catch (_) {
         allIds.add(parentCategoryId);
       }
     }
 
-    routeCategoryIds = allIds.toList();
-    notifyListeners();
+    state = state.copyWith(
+      route: state.route.copyWith(
+        routeCategoryIds: List<String>.unmodifiable(allIds),
+      ),
+    );
+
     pagingController.refresh();
   }
 
-  // ==================== QUICK FILTER ACTIONS ====================
+  // ======================================================
+  // SEARCH
+  // ======================================================
+
   void setSearchQuery(String value) {
-    searchQuery = value;
-    _updateFilterState();
+    state = state.copyWith(query: state.query.copyWith(search: value));
 
     _searchDebounce?.cancel();
-    _searchDebounce = Timer(const Duration(milliseconds: 450), () {
-      pagingController.refresh();
-    });
+
+    _searchDebounce = Timer(
+      AppConstants.searchDebounce,
+      pagingController.refresh,
+    );
   }
 
   void submitSearchQuery(String value) {
     _searchDebounce?.cancel();
-    searchQuery = value;
-    _updateFilterState();
+
+    state = state.copyWith(query: state.query.copyWith(search: value.trim()));
+
     pagingController.refresh();
   }
 
+  // ======================================================
+  // QUICK FILTERS
+  // ======================================================
+
   void toggleHighPriorityOnly() {
-    showHighPriorityOnly = !showHighPriorityOnly;
-    _updateFilterState();
+    state = state.copyWith(
+      query: state.query.copyWith(
+        showHighPriorityOnly: !state.query.showHighPriorityOnly,
+      ),
+    );
+
     pagingController.refresh();
   }
 
   void setTargetPopulation(String value) {
-    final current = selectedTargetPopulation.toLowerCase();
     final next = value.trim();
 
-    if (current == next.toLowerCase()) {
-      selectedTargetPopulation = '';
-    } else {
-      selectedTargetPopulation = next;
-    }
+    final current = state.query.selectedTargetPopulation;
 
-    _updateFilterState();
+    state = state.copyWith(
+      query: state.query.copyWith(
+        selectedTargetPopulation: current.toLowerCase() == next.toLowerCase()
+            ? ''
+            : next,
+      ),
+    );
+
     pagingController.refresh();
   }
 
-  void openEmergencyGuidelines() {
-    if (availableCategories.isEmpty) {
-      unawaited(
-        _loadFilterOptions().then((_) {
-          openEmergencyGuidelines();
-        }),
-      );
-      return;
+  // ======================================================
+  // EMERGENCY ROUTE
+  // ======================================================
+
+  Future<void> openEmergencyGuidelines() async {
+    if (state.availableCategories.isEmpty) {
+      await _loadFilterOptions();
     }
 
     final emergencyIds = _resolveEmergencyCategoryIds();
+
     if (emergencyIds.isEmpty) {
-      AppMessage.error(
-        AppKeys.navigatorKey.currentContext!,
-        'Emergency guidelines category not found',
-      );
+      _showError('Emergency guidelines category not found');
       return;
     }
 
-    routeFilterType = GuidelineRouteFilterType.categoryTree;
+    state = state.copyWith(
+      query: state.query.copyWith(selectedCategoryId: ''),
+      route: GuidelinesRouteState(
+        pageTitle: 'Emergency Guidelines',
+        filterType: GuidelineRouteFilterType.categoryTree,
+        routeCategoryId: emergencyIds.first,
+        routeCategoryIds: List<String>.unmodifiable(emergencyIds),
+      ),
+    );
 
-    routeCategoryId = emergencyIds.first;
-    routeCategoryIds = List.of(emergencyIds);
-    isInCategoryMode = true;
-
-    selectedIndex = null;
-    isInIndexMode = false;
-
-    selectedTagId = '';
-    isInTagMode = false;
-
-    selectedCategoryId = '';
-    pageTitle = 'Emergency Guidelines';
-
-    unawaited(_loadChildCategoryIdsForParents(emergencyIds));
-
-    _updateFilterState();
     pagingController.refresh();
+
+    await _loadChildCategoryIdsForParents(emergencyIds);
   }
 
-  // ==================== PAGE LOADING ====================
-  Future<List<Guideline>> _loadPage(int pageKey) async {
-    try {
-      final categoryIds = <String>{
-        ...routeCategoryIds,
-        if (selectedCategoryId.isNotEmpty) selectedCategoryId,
-      };
-      final tagIds = <String>{
-        if (selectedTagId.isNotEmpty) selectedTagId,
-        ...selectedTagIds,
-      };
-      final result = await _contentRepository.guidelines(
-        page: pageKey,
-        perPage: AppConstants.pageSize,
-        search: searchQuery,
-        published: true,
-        status: 'published',
-        indexId: isInIndexMode ? selectedIndex?.id : null,
-        categoryId: categoryIds.isEmpty ? null : categoryIds.join(','),
-        tagId: tagIds.isEmpty ? null : tagIds.join(','),
-        priority: selectedPriority.isNotEmpty
-            ? selectedPriority
-            : (showHighPriorityOnly ? 'high' : null),
-        healthcareLevel: selectedHealthcareLevel,
-        targetPopulation: selectedTargetPopulation,
-      );
+  // ======================================================
+  // CLEAR / ROUTE RESET
+  // ======================================================
 
-      return result.items;
-    } catch (e) {
-      AppMessage.error(
-        AppKeys.navigatorKey.currentContext!,
-        'Failed to load guidelines: $e',
-      );
-      rethrow;
-    }
-  }
-
-  void _updateFilterState() {
-    hasActiveFilters = _hasFilters;
-    notifyListeners();
-  }
-
-  // ==================== CLEAR ====================
   void clearAllFilters() {
-    searchQuery = '';
-    selectedCategoryId = '';
-    selectedTagIds.clear();
-    selectedPriority = '';
-    selectedHealthcareLevel = '';
-    selectedTargetPopulation = '';
-    showHighPriorityOnly = false;
+    state = state.copyWith(query: GuidelinesQuery.empty);
 
-    _updateFilterState();
     pagingController.refresh();
   }
 
   void clearIndexFilter() {
-    selectedIndex = null;
-    isInIndexMode = false;
+    var route = state.route.copyWith(clearSelectedIndex: true);
 
-    if (!hasPermanentFilter) {
-      pageTitle = 'All Guidelines';
-      routeFilterType = GuidelineRouteFilterType.all;
+    if (!route.isInCategoryMode && !route.isInTagMode) {
+      route = const GuidelinesRouteState();
+    } else {
+      route = route.copyWith(
+        filterType: route.isInCategoryMode
+            ? GuidelineRouteFilterType.category
+            : GuidelineRouteFilterType.tag,
+      );
     }
 
-    notifyListeners();
+    state = state.copyWith(route: route);
+
     pagingController.refresh();
   }
 
   void clearRouteCategoryFilter() {
-    routeCategoryId = '';
-    routeCategoryIds.clear();
-    selectedCategoryId = '';
-    isInCategoryMode = false;
+    var route = state.route.copyWith(
+      routeCategoryId: '',
+      routeCategoryIds: const [],
+    );
 
-    if (!hasPermanentFilter) {
-      pageTitle = 'All Guidelines';
-      routeFilterType = GuidelineRouteFilterType.all;
+    if (!route.isInIndexMode && !route.isInTagMode) {
+      route = const GuidelinesRouteState();
     }
 
-    _updateFilterState();
+    state = state.copyWith(
+      query: state.query.copyWith(selectedCategoryId: ''),
+      route: route,
+    );
+
     pagingController.refresh();
   }
 
   void clearTagFilter() {
-    selectedTagId = '';
-    isInTagMode = false;
+    var route = state.route.copyWith(selectedTagId: '');
 
-    if (!hasPermanentFilter) {
-      pageTitle = 'All Guidelines';
-      routeFilterType = GuidelineRouteFilterType.all;
+    if (!route.isInIndexMode && !route.isInCategoryMode) {
+      route = const GuidelinesRouteState();
     }
 
-    notifyListeners();
+    state = state.copyWith(route: route);
+
     pagingController.refresh();
   }
 
   void showAllGuidelines() {
-    routeFilterType = GuidelineRouteFilterType.all;
+    _searchDebounce?.cancel();
 
-    selectedIndex = null;
-    isInIndexMode = false;
+    state = const GuidelinesState();
 
-    routeCategoryId = '';
-    routeCategoryIds.clear();
-    selectedCategoryId = '';
-    isInCategoryMode = false;
-
-    selectedTagId = '';
-    isInTagMode = false;
-
-    searchQuery = '';
-    selectedTagIds.clear();
-    selectedPriority = '';
-    selectedHealthcareLevel = '';
-    selectedTargetPopulation = '';
-    showHighPriorityOnly = false;
-
-    pageTitle = 'All Guidelines';
-
-    _updateFilterState();
     pagingController.refresh();
   }
 
-  // ==================== FILTER MODAL ====================
+  // ======================================================
+  // FILTER MODAL
+  // ======================================================
+
   Future<void> showFilterModal(BuildContext context) async {
-    if (availableCategories.isEmpty || availableTags.isEmpty) {
+    if (state.availableCategories.isEmpty || state.availableTags.isEmpty) {
       await _loadFilterOptions();
     }
+
+    if (!context.mounted) {
+      return;
+    }
+
+    final query = state.query;
 
     final fields = <FilterField>[
       FilterField.text(
@@ -605,12 +478,16 @@ class GuidelinesController extends ChangeNotifier {
       FilterField.dropdown(
         'category',
         'Category',
-        availableCategories.map((category) => category.displayName).toList(),
+        state.availableCategories
+            .map((category) => category.displayName)
+            .toList(growable: false),
       ),
       FilterField.multiSelect(
         'tags',
         'Tags',
-        availableTags.map((tag) => tag.displayName).toList(),
+        state.availableTags
+            .map((tag) => tag.displayName)
+            .toList(growable: false),
       ),
       FilterField.dropdown('priority', 'Priority', const [
         'critical',
@@ -632,19 +509,18 @@ class GuidelinesController extends ChangeNotifier {
     ];
 
     final values = <String, dynamic>{
-      if (searchQuery.trim().isNotEmpty) 'search': searchQuery.trim(),
-      if (selectedCategoryId.isNotEmpty)
-        'category': _categoryNameForId(selectedCategoryId),
-      if (selectedTagIds.isNotEmpty) 'tags': _tagNamesForIds(selectedTagIds),
-      if (selectedPriority.isNotEmpty) 'priority': selectedPriority,
-      if (selectedHealthcareLevel.isNotEmpty)
-        'healthcareLevel': selectedHealthcareLevel,
-      if (selectedTargetPopulation.isNotEmpty)
-        'targetPopulation': selectedTargetPopulation,
-      if (showHighPriorityOnly) 'showHighPriorityOnly': true,
+      if (query.search.trim().isNotEmpty) 'search': query.search.trim(),
+      if (query.selectedCategoryId.isNotEmpty)
+        'category': _categoryNameForId(query.selectedCategoryId),
+      if (query.selectedTagIds.isNotEmpty)
+        'tags': _tagNamesForIds(query.selectedTagIds),
+      if (query.selectedPriority.isNotEmpty) 'priority': query.selectedPriority,
+      if (query.selectedHealthcareLevel.isNotEmpty)
+        'healthcareLevel': query.selectedHealthcareLevel,
+      if (query.selectedTargetPopulation.isNotEmpty)
+        'targetPopulation': query.selectedTargetPopulation,
+      if (query.showHighPriorityOnly) 'showHighPriorityOnly': true,
     };
-
-    if (!context.mounted) return;
 
     final result = await GenericFilterBottomSheet.show(
       context: context,
@@ -659,69 +535,67 @@ class GuidelinesController extends ChangeNotifier {
   }
 
   void _applyFilters(FilterResult result) {
-    searchQuery = '';
-    selectedCategoryId = '';
-    selectedTagIds.clear();
-    selectedPriority = '';
-    selectedHealthcareLevel = '';
-    selectedTargetPopulation = '';
-    showHighPriorityOnly = false;
+    var selectedCategoryId = '';
 
-    final search = result.getValue<String>('search');
-    if (search != null && search.trim().isNotEmpty) {
-      searchQuery = search.trim();
-    }
+    final categoryName = result.getValue<String>('category')?.trim() ?? '';
 
-    final categoryName = result.getValue<String>('category');
-    if (categoryName != null && categoryName.trim().isNotEmpty) {
-      final category = availableCategories.firstWhereOrNull(
-        (item) => item.displayName == categoryName.trim(),
-      );
-      if (category != null) {
-        selectedCategoryId = category.id;
+    if (categoryName.isNotEmpty) {
+      for (final category in state.availableCategories) {
+        if (category.displayName == categoryName) {
+          selectedCategoryId = category.id;
+          break;
+        }
       }
     }
 
-    selectedTagIds = _tagIdsFromFilterResult(result);
+    state = state.copyWith(
+      query: GuidelinesQuery(
+        search: result.getValue<String>('search')?.trim() ?? '',
+        selectedCategoryId: selectedCategoryId,
+        selectedTagIds: _tagIdsFromFilterResult(result),
+        selectedPriority: result.getValue<String>('priority')?.trim() ?? '',
+        selectedHealthcareLevel:
+            result.getValue<String>('healthcareLevel')?.trim() ?? '',
+        selectedTargetPopulation:
+            result.getValue<String>('targetPopulation')?.trim() ?? '',
+        showHighPriorityOnly:
+            result.getValue<bool>('showHighPriorityOnly') ?? false,
+      ),
+    );
 
-    final priority = result.getValue<String>('priority');
-    if (priority != null && priority.trim().isNotEmpty) {
-      selectedPriority = priority.trim();
-    }
-
-    final healthcareLevel = result.getValue<String>('healthcareLevel');
-    if (healthcareLevel != null && healthcareLevel.trim().isNotEmpty) {
-      selectedHealthcareLevel = healthcareLevel.trim();
-    }
-
-    final targetPopulation = result.getValue<String>('targetPopulation');
-    if (targetPopulation != null && targetPopulation.trim().isNotEmpty) {
-      selectedTargetPopulation = targetPopulation.trim();
-    }
-
-    final high = result.getValue<bool>('showHighPriorityOnly');
-    if (high == true) {
-      showHighPriorityOnly = true;
-    }
-
-    _updateFilterState();
     pagingController.refresh();
   }
 
-  // ==================== FILTER OPTIONS ====================
+  // ======================================================
+  // FILTER OPTIONS
+  // ======================================================
+
   Future<void> _loadFilterOptions() async {
+    state = state.copyWith(isLoadingFilters: true, clearFilterError: true);
+
     try {
-      isLoadingFilters = true;
+      final results = await Future.wait([
+        getGuidelineCategories(),
+        getGuidelineTags(),
+      ]);
 
-      final categories = await getGuidelineCategories();
-      final tags = await getGuidelineTags();
-
-      availableCategories = categories;
-      availableTags = tags;
+      state = state.copyWith(
+        availableCategories: List<GuidelineCategory>.unmodifiable(
+          results[0] as List<GuidelineCategory>,
+        ),
+        availableTags: List<GuidelineTag>.unmodifiable(
+          results[1] as List<GuidelineTag>,
+        ),
+      );
+    } catch (error) {
+      state = state.copyWith(filterError: error.toString());
     } finally {
-      isLoadingFilters = false;
-      notifyListeners();
+      state = state.copyWith(isLoadingFilters: false);
     }
+  }
+
+  Future<void> reloadFilterOptions() {
+    return _loadFilterOptions();
   }
 
   Future<List<GuidelineCategory>> getGuidelineCategories() async {
@@ -736,36 +610,46 @@ class GuidelinesController extends ChangeNotifier {
     return result.items;
   }
 
+  // ======================================================
+  // FILTER HELPERS
+  // ======================================================
+
   String? _categoryNameForId(String id) {
-    final category = availableCategories.firstWhereOrNull(
-      (item) => item.id == id,
-    );
-    return category?.displayName;
+    for (final category in state.availableCategories) {
+      if (category.id == id) {
+        return category.displayName;
+      }
+    }
+
+    return null;
   }
 
   List<String> _tagNamesForIds(List<String> ids) {
     final selected = ids.toSet();
-    return availableTags
-        .where((item) => selected.contains(item.id))
-        .map((item) => item.displayName)
-        .toList();
+
+    return state.availableTags
+        .where((tag) => selected.contains(tag.id))
+        .map((tag) => tag.displayName)
+        .toList(growable: false);
   }
 
   List<String> _tagIdsFromFilterResult(FilterResult result) {
-    final selectedNames = (result.getValue<List>('tags') ?? []).cast<String>();
+    final values = result.getValue<List>('tags') ?? const [];
+
+    final selectedNames = values.map((value) => value.toString()).toSet();
+
     if (selectedNames.isEmpty) {
-      return const <String>[];
+      return const [];
     }
 
-    final selected = selectedNames.toSet();
-    return availableTags
-        .where((item) => selected.contains(item.displayName))
-        .map((item) => item.id)
-        .toList();
+    return state.availableTags
+        .where((tag) => selectedNames.contains(tag.displayName))
+        .map((tag) => tag.id)
+        .toList(growable: false);
   }
 
   List<String> _resolveEmergencyCategoryIds() {
-    return availableCategories
+    return state.availableCategories
         .where(
           (category) => emergencyCategoryNames.contains(
             category.displayName.trim().toLowerCase(),
@@ -773,6 +657,28 @@ class GuidelinesController extends ChangeNotifier {
         )
         .map((category) => category.id)
         .where((id) => id.isNotEmpty)
-        .toList();
+        .toList(growable: false);
+  }
+
+  // ======================================================
+  // REFRESH
+  // ======================================================
+
+  void refreshData() {
+    pagingController.refresh();
+  }
+
+  // ======================================================
+  // ERROR
+  // ======================================================
+
+  void _showError(String message) {
+    final context = AppKeys.navigatorKey.currentContext;
+
+    if (context == null) {
+      return;
+    }
+
+    AppMessage.error(context, message);
   }
 }

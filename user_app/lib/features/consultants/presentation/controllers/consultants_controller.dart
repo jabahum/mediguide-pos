@@ -1,246 +1,270 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:user_app/core/config/app_keys.dart';
-import 'package:user_app/core/utils/app_extensions.dart';
 import 'package:infinite_scroll_pagination/infinite_scroll_pagination.dart';
-import 'package:user_app/core/utils/app_message.dart';
-import 'package:user_app/shared/models/filter_models.dart';
+import 'package:riverpod_annotation/riverpod_annotation.dart';
 
-import 'package:user_app/shared/models/models.dart';
-import 'package:user_app/features/consultants/data/repositories/consultant_repository.dart';
 import 'package:user_app/app/providers/app_providers.dart';
+import 'package:user_app/core/config/app_keys.dart';
 import 'package:user_app/core/constants/app_constants.dart';
-import 'package:user_app/core/utils/common.dart';
-import 'package:user_app/shared/widgets/generic_filter_bottom_sheet.dart';
+import 'package:user_app/core/utils/app_extensions.dart';
+import 'package:user_app/core/utils/app_message.dart';
+
+import 'package:user_app/features/consultants/data/repositories/consultant_repository.dart';
+import 'package:user_app/features/consultants/presentation/controllers/consultants_query.dart';
+import 'package:user_app/features/consultants/presentation/controllers/consultants_state.dart';
 import 'package:user_app/features/consultants/presentation/widgets/consultant_detail_modal.dart';
 
-final consultantsControllerProvider = ChangeNotifierProvider.autoDispose
-    .family<ConsultantsController, Object?>((ref, arguments) {
-      return ConsultantsController(
-        ref.watch(consultantRepositoryProvider),
-        arguments,
-      );
-    });
+import 'package:user_app/shared/models/filter_models.dart';
+import 'package:user_app/shared/models/models.dart';
+import 'package:user_app/shared/widgets/generic_filter_bottom_sheet.dart';
 
-class ConsultantsController extends ChangeNotifier {
-  ConsultantsController(this._repository, Object? arguments) {
-    _applyTreeFiltersFromArguments(arguments);
-    pagingController = PagingController<int, Consultant>(
-      getNextPageKey: (state) =>
-          state.lastPageIsEmpty ? null : state.nextIntPageKey,
-      fetchPage: _loadPage,
-    );
-    unawaited(_loadFilterOptions());
-  }
+part 'consultants_controller.g.dart';
 
-  final ConsultantRepository _repository;
+@riverpod
+class ConsultantsController extends _$ConsultantsController {
   late final PagingController<int, Consultant> pagingController;
 
-  // ================= FILTER STATE =================
-  String searchQuery = '';
-  bool hasActiveFilters = false;
-
-  String selectedSpecialty = '';
-  String selectedLocation = '';
-
-  String selectedRegion = '';
-  String selectedCity = '';
-
-  bool showOnlineOnly = false;
-  bool showVerifiedOnly = false;
-
-  Map<String, dynamic> treeFilters = {};
-
-  // options
-  List<String> availableSpecialties = [];
-  List<String> availableLocations = [];
-  bool isLoadingFilters = false;
-  bool _disposed = false;
+  ConsultantRepository get _repository =>
+      ref.read(consultantRepositoryProvider);
 
   @override
-  void dispose() {
-    _disposed = true;
-    pagingController.dispose();
-    super.dispose();
+  ConsultantsState build(Object? arguments) {
+    final initialQuery = ConsultantsQuery.fromArguments(arguments);
+
+    pagingController = PagingController<int, Consultant>(
+      getNextPageKey: (pagingState) {
+        if (pagingState.lastPageIsEmpty) {
+          return null;
+        }
+
+        return pagingState.nextIntPageKey;
+      },
+      fetchPage: _loadPage,
+    );
+
+    ref.onDispose(() {
+      pagingController.dispose();
+    });
+
+    Future.microtask(_loadFilterOptions);
+
+    return ConsultantsState(query: initialQuery);
   }
 
-  // ================= DATA LOADING =================
+  // ======================================================
+  // DATA LOADING
+  // ======================================================
 
   Future<List<Consultant>> _loadPage(int pageKey) async {
     try {
+      final query = state.query;
+
       final result = await _repository.list(
         page: pageKey,
         perPage: AppConstants.pageSize,
-        search: searchQuery,
-        status: showOnlineOnly ? 'active' : null,
-        specialty: selectedSpecialty,
-        region: selectedRegion,
-        city: selectedCity,
-        verified: showVerifiedOnly ? true : null,
+        search: query.search,
+        status: query.showOnlineOnly ? 'active' : null,
+        specialty: query.selectedSpecialty,
+        region: query.selectedRegion,
+        city: query.selectedCity,
+        verified: query.showVerifiedOnly ? true : null,
         sort: 'rating',
         order: 'desc',
       );
 
       return result.items;
-    } catch (e) {
-      AppMessage.error(AppKeys.navigatorKey.currentContext!, '$e');
+    } catch (error) {
+      _showError(error.toString());
 
       rethrow;
     }
   }
 
-  // ================= FILTER STATE HELPERS =================
+  // ======================================================
+  // REFRESH
+  // ======================================================
 
-  void _updateHasActiveFilters() {
-    hasActiveFilters =
-        searchQuery.isNotEmpty ||
-        selectedSpecialty.isNotEmpty ||
-        selectedLocation.isNotEmpty ||
-        selectedRegion.isNotEmpty ||
-        selectedCity.isNotEmpty ||
-        showOnlineOnly ||
-        showVerifiedOnly;
-    if (!_disposed) notifyListeners();
+  void refreshData() {
+    pagingController.refresh();
   }
+
+  // ======================================================
+  // SEARCH
+  // ======================================================
+
+  void searchConsultants(String value) {
+    state = state.copyWith(query: state.query.copyWith(search: value.trim()));
+
+    pagingController.refresh();
+  }
+
+  // ======================================================
+  // FILTERS
+  // ======================================================
 
   void clearAllFilters() {
-    searchQuery = '';
-    selectedSpecialty = '';
-    selectedLocation = '';
-    selectedRegion = '';
-    selectedCity = '';
-    showOnlineOnly = false;
-    showVerifiedOnly = false;
-    treeFilters.clear();
+    state = state.copyWith(query: ConsultantsQuery.empty);
 
-    _updateHasActiveFilters();
     pagingController.refresh();
   }
 
-  void searchConsultants(String query) {
-    searchQuery = query.trim();
-    _updateHasActiveFilters();
+  void setOnlineOnly(bool value) {
+    state = state.copyWith(query: state.query.copyWith(showOnlineOnly: value));
+
     pagingController.refresh();
   }
 
-  // ================= FILTER MODAL =================
+  void setVerifiedOnly(bool value) {
+    state = state.copyWith(
+      query: state.query.copyWith(showVerifiedOnly: value),
+    );
+
+    pagingController.refresh();
+  }
+
+  void setSpecialty(String value) {
+    state = state.copyWith(
+      query: state.query.copyWith(selectedSpecialty: value.trim()),
+    );
+
+    pagingController.refresh();
+  }
+
+  void setLocation(String value) {
+    final location = value.trim();
+
+    state = state.copyWith(
+      query: state.query.copyWith(
+        selectedLocation: location,
+        selectedCity: location,
+      ),
+    );
+
+    pagingController.refresh();
+  }
+
+  // ======================================================
+  // FILTER MODAL
+  // ======================================================
 
   Future<void> showFilterModal(BuildContext context) async {
+    if (!context.mounted) {
+      return;
+    }
+
+    final query = state.query;
+
     final fields = <FilterField>[
       FilterField.text('search', 'search'.tr),
       FilterField.boolean('showOnlineOnly', 'showOnlineOnly'.tr),
       FilterField.boolean('showVerifiedOnly', 'showVerifiedOnly'.tr),
     ];
 
-    if (availableSpecialties.isNotEmpty) {
+    if (state.availableSpecialties.isNotEmpty) {
       fields.add(
-        FilterField.dropdown(
-          'specialty',
-          'specialty'.tr,
-          [''] + availableSpecialties,
-        ),
+        FilterField.dropdown('specialty', 'specialty'.tr, [
+          '',
+          ...state.availableSpecialties,
+        ]),
       );
     }
 
-    if (availableLocations.isNotEmpty) {
+    if (state.availableLocations.isNotEmpty) {
       fields.add(
-        FilterField.dropdown(
-          'location',
-          'location'.tr,
-          [''] + availableLocations,
-        ),
+        FilterField.dropdown('location', 'location'.tr, [
+          '',
+          ...state.availableLocations,
+        ]),
       );
     }
 
-    final values = <String, dynamic>{
-      if (searchQuery.isNotEmpty) 'search': searchQuery,
-      if (showOnlineOnly) 'showOnlineOnly': true,
-      if (showVerifiedOnly) 'showVerifiedOnly': true,
-      if (selectedSpecialty.isNotEmpty) 'specialty': selectedSpecialty,
-      if (selectedLocation.isNotEmpty) 'location': selectedLocation,
+    final initialValues = <String, dynamic>{
+      if (query.search.isNotEmpty) 'search': query.search,
+
+      if (query.showOnlineOnly) 'showOnlineOnly': true,
+
+      if (query.showVerifiedOnly) 'showVerifiedOnly': true,
+
+      if (query.selectedSpecialty.isNotEmpty)
+        'specialty': query.selectedSpecialty,
+
+      if (query.selectedLocation.isNotEmpty) 'location': query.selectedLocation,
     };
 
     final result = await GenericFilterBottomSheet.show(
       context: context,
       title: 'filterConsultants'.tr,
       fields: fields,
-      initialValues: values,
+      initialValues: initialValues,
     );
 
-    if (result != null && result.isNotEmpty) {
-      _applyFilters(result);
+    if (result == null) {
+      return;
     }
+
+    _applyFilters(result);
   }
 
   void _applyFilters(FilterResult result) {
-    searchQuery = '';
-    selectedSpecialty = '';
-    selectedLocation = '';
-    selectedRegion = '';
-    selectedCity = '';
-    showOnlineOnly = false;
-    showVerifiedOnly = false;
+    state = state.copyWith(query: state.query.applyFilterResult(result));
 
-    final search = result.getValue<String>('search');
-    if (search != null && search.isNotEmpty) {
-      searchQuery = search;
-    }
-
-    if (result.getValue<bool>('showOnlineOnly') == true) {
-      showOnlineOnly = true;
-    }
-
-    if (result.getValue<bool>('showVerifiedOnly') == true) {
-      showVerifiedOnly = true;
-    }
-
-    final specialty = result.getValue<String>('specialty');
-    if (specialty != null && specialty.isNotEmpty) {
-      selectedSpecialty = specialty;
-    }
-
-    final location = result.getValue<String>('location');
-    if (location != null && location.isNotEmpty) {
-      selectedLocation = location;
-      selectedCity = location;
-    }
-
-    _updateHasActiveFilters();
     pagingController.refresh();
   }
 
-  // ================= TREE FILTERS =================
+  // ======================================================
+  // TREE FILTERS
+  // ======================================================
 
-  void _applyTreeFiltersFromArguments(Object? args) {
-    if (args is! Map) return;
+  void applyTreeFilters(Map<String, dynamic> filters) {
+    final region = _read(filters, 'region');
 
-    final raw = args['treeFilters'];
-    if (raw is! Map) return;
+    final city = _read(filters, 'city');
 
-    treeFilters = Map<String, dynamic>.from(raw);
+    final specialty = _read(filters, 'specialty');
 
-    final region = _read(raw, 'region');
-    final city = _read(raw, 'city');
-    final specialty = _read(raw, 'specialty');
+    state = state.copyWith(
+      query: state.query.copyWith(
+        selectedRegion: region,
+        selectedCity: city,
+        selectedSpecialty: specialty,
+        treeFilters: Map<String, dynamic>.from(filters),
+      ),
+    );
 
-    selectedRegion = region;
-    selectedCity = city;
-    selectedSpecialty = specialty;
-
-    _updateHasActiveFilters();
+    pagingController.refresh();
   }
 
-  String _read(Map map, String key) => (map[key]?.toString().trim()) ?? '';
+  void clearTreeFilters() {
+    state = state.copyWith(
+      query: state.query.copyWith(
+        selectedRegion: '',
+        selectedCity: '',
+        treeFilters: const {},
+      ),
+    );
 
-  // ================= DETAIL =================
+    pagingController.refresh();
+  }
+
+  String _read(Map<String, dynamic> map, String key) {
+    return map[key]?.toString().trim() ?? '';
+  }
+
+  // ======================================================
+  // CONSULTANT DETAILS
+  // ======================================================
 
   Future<void> showConsultantDetail(
     BuildContext context,
     Consultant consultant,
   ) async {
+    if (!context.mounted) {
+      return;
+    }
+
     unawaited(_recordUsage(consultant.id));
+
     await ConsultantDetailModal.show(context, consultant);
   }
 
@@ -248,49 +272,73 @@ class ConsultantsController extends ChangeNotifier {
     try {
       await _repository.recordUsage(id);
     } catch (_) {
-      // Analytics must not block consultant details.
+      // Analytics must never block consultant details.
     }
   }
 
-  // ================= FILTER OPTIONS =================
+  // ======================================================
+  // FILTER OPTIONS
+  // ======================================================
 
   Future<void> _loadFilterOptions() async {
-    try {
-      isLoadingFilters = true;
+    state = state.copyWith(isLoadingFilters: true, clearFilterError: true);
 
+    try {
       final result = await _repository.list(
-        perPage: AppConstants.pageSize,
+        perPage: 100,
         status: 'active',
         sort: 'name',
         order: 'asc',
       );
 
-      final consultants = result.items.map((r) => r).toList();
+      final consultants = result.items;
 
-      availableSpecialties =
+      final specialties =
           consultants
-              .map((c) => c.specialty?.name ?? '')
-              .where((s) => s.isNotEmpty)
+              .map((consultant) => consultant.specialty?.name.trim() ?? '')
+              .where((value) => value.isNotEmpty)
               .toSet()
               .toList()
             ..sort();
 
-      availableLocations =
+      final locations =
           consultants
-              .map((c) => c.city)
-              .where((c) => c.isNotEmpty)
+              .map((consultant) => consultant.city.trim())
+              .where((value) => value.isNotEmpty)
               .toSet()
               .toList()
             ..sort();
-    } catch (e) {
-      if (!_disposed)
-        AppMessage.error(
-          AppKeys.navigatorKey.currentContext!,
-          'errorLoadingFilters'.tr,
-        );
+
+      state = state.copyWith(
+        availableSpecialties: List<String>.unmodifiable(specialties),
+        availableLocations: List<String>.unmodifiable(locations),
+      );
+    } catch (_) {
+      final message = 'errorLoadingFilters'.tr;
+
+      state = state.copyWith(filterError: message);
+
+      _showError(message);
     } finally {
-      isLoadingFilters = false;
-      if (!_disposed) notifyListeners();
+      state = state.copyWith(isLoadingFilters: false);
     }
+  }
+
+  Future<void> reloadFilterOptions() {
+    return _loadFilterOptions();
+  }
+
+  // ======================================================
+  // ERROR
+  // ======================================================
+
+  void _showError(String message) {
+    final context = AppKeys.navigatorKey.currentContext;
+
+    if (context == null) {
+      return;
+    }
+
+    AppMessage.error(context, message);
   }
 }

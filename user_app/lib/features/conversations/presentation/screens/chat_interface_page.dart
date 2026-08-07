@@ -1,14 +1,19 @@
+import 'package:bubble/bubble.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:user_app/core/utils/app_extensions.dart';
-import 'package:bubble/bubble.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
-import 'package:user_app/core/constants/app_spacing.dart';
 
-import 'package:user_app/features/conversations/presentation/controllers/chat_interface_controller.dart';
-import 'package:user_app/features/conversations/data/models/message.dart';
+import 'package:user_app/core/constants/app_spacing.dart';
+import 'package:user_app/core/utils/app_extensions.dart';
+import 'package:user_app/core/widgets/app_error_view.dart';
+import 'package:user_app/core/widgets/app_loading_view.dart';
+import 'package:user_app/core/widgets/empty_state.dart';
+
 import 'package:user_app/features/authentication/data/models/user.dart';
-import 'package:user_app/core/utils/loading.dart';
+import 'package:user_app/features/conversations/data/models/message.dart';
+import 'package:user_app/features/conversations/presentation/controllers/chat_interface_controller.dart';
+import 'package:user_app/features/conversations/presentation/controllers/chat_interface_state.dart';
+
 import 'package:user_app/shared/widgets/user_avatar.dart';
 
 class ChatInterfacePage extends ConsumerStatefulWidget {
@@ -21,140 +26,201 @@ class ChatInterfacePage extends ConsumerStatefulWidget {
 }
 
 class _ChatInterfacePageState extends ConsumerState<ChatInterfacePage> {
-  final TextEditingController textController = TextEditingController();
-  final FocusNode inputFocusNode = FocusNode();
-  final ScrollController scrollController = ScrollController();
+  final TextEditingController _textController = TextEditingController();
 
-  bool canSend = false;
+  final FocusNode _inputFocusNode = FocusNode();
+
+  final ScrollController _scrollController = ScrollController();
+
+  bool _canSend = false;
 
   @override
   void initState() {
     super.initState();
 
-    textController.addListener(() {
-      final nextCanSend = textController.text.trim().isNotEmpty;
+    _textController.addListener(_handleTextChanged);
+  }
 
-      if (nextCanSend != canSend) {
-        setState(() {
-          canSend = nextCanSend;
-        });
-      }
+  void _handleTextChanged() {
+    final next = _textController.text.trim().isNotEmpty;
+
+    if (next == _canSend) {
+      return;
+    }
+
+    setState(() {
+      _canSend = next;
     });
   }
 
   @override
   void dispose() {
-    textController.dispose();
-    inputFocusNode.dispose();
-    scrollController.dispose();
+    _textController
+      ..removeListener(_handleTextChanged)
+      ..dispose();
+
+    _inputFocusNode.dispose();
+    _scrollController.dispose();
+
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     final otherUser = widget.otherUser;
+
     if (otherUser == null) {
-      return const Scaffold(
-        body: Center(child: Text('Conversation unavailable')),
+      return Scaffold(
+        body: EmptyState.noData(
+          title: 'Conversation unavailable',
+          description: 'The person for this conversation could not be found.',
+        ),
       );
     }
+
     final provider = chatInterfaceControllerProvider(otherUser);
-    final controller = ref.watch(provider);
+
+    final state = ref.watch(provider);
+
+    final controller = ref.read(provider.notifier);
+
     ref.listen<int>(provider.select((value) => value.messages.length), (
       previous,
       next,
     ) {
-      if (next != previous) _scrollToBottom();
+      if (previous != next) {
+        _scrollToBottom();
+      }
     });
+
     final cs = context.theme.colorScheme;
 
     return Scaffold(
+      backgroundColor: cs.surface,
       appBar: AppBar(
         titleSpacing: AppSpacing.sm,
-        title: _ChatAppBarTitle(otherUser: controller.otherUser),
+        title: _ChatAppBarTitle(otherUser: state.otherUser),
       ),
       body: Column(
         children: [
           Expanded(
-            child: Builder(
-              builder: (context) {
-                if (controller.isLoading) {
-                  return const CenteredLoading.medium();
-                }
-
-                if (controller.messages.isEmpty) {
-                  return _EmptyChatState(
-                    onFocusInput: () => inputFocusNode.requestFocus(),
-                  );
-                }
-
-                return ListView.builder(
-                  controller: scrollController,
-                  padding: const EdgeInsets.fromLTRB(
-                    AppSpacing.md,
-                    AppSpacing.md,
-                    AppSpacing.md,
-                    AppSpacing.lg,
-                  ),
-                  itemCount: controller.messages.length,
-                  itemBuilder: (context, index) {
-                    final message = controller.messages[index];
-                    final previous = index > 0
-                        ? controller.messages[index - 1]
-                        : null;
-
-                    final showDateSeparator = _shouldShowDateSeparator(
-                      previous?.createdDate,
-                      message.createdDate,
-                    );
-
-                    return Column(
-                      children: [
-                        if (showDateSeparator)
-                          _DateSeparator(
-                            label: _formatMessageDate(message.createdDate),
-                          ),
-                        _MessageBubble(
-                          message: message,
-                          currentUserId: controller.currentUserId,
-                        ),
-                      ],
-                    );
-                  },
-                );
-              },
+            child: _buildConversationBody(
+              context: context,
+              state: state,
+              controller: controller,
             ),
           ),
 
           _MessageInputBar(
-            controller: textController,
-            focusNode: inputFocusNode,
-            canSend: canSend,
-            onSend: () => _sendMessage(controller),
+            controller: _textController,
+            focusNode: _inputFocusNode,
+            canSend: _canSend && !state.isLoading,
+            onSend: () {
+              _sendMessage(controller);
+            },
           ),
         ],
       ),
-      backgroundColor: cs.surface,
     );
   }
 
-  void _sendMessage(ChatInterfaceController controller) {
-    final text = textController.text.trim();
+  Widget _buildConversationBody({
+    required BuildContext context,
+    required ChatInterfaceState state,
+    required ChatInterfaceController controller,
+  }) {
+    if (state.isLoading && state.messages.isEmpty) {
+      return const AppLoadingView(message: 'Loading conversation...');
+    }
+
+    if (state.errorMessage != null && state.messages.isEmpty) {
+      return AppErrorView(
+        error: state.errorMessage!,
+        title: 'Unable to load conversation',
+        message: 'The conversation could not be loaded.',
+        onRetry: () {
+          controller.initialize();
+        },
+      );
+    }
+
+    if (state.messages.isEmpty) {
+      return EmptyState.noData(
+        title: 'Start a conversation',
+        description: 'Send a message to get started.',
+        actionLabel: 'Send Message',
+        onAction: () {
+          _inputFocusNode.requestFocus();
+        },
+      );
+    }
+
+    return RefreshIndicator(
+      onRefresh: () {
+        return controller.loadMessages();
+      },
+      child: ListView.builder(
+        controller: _scrollController,
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.fromLTRB(
+          AppSpacing.md,
+          AppSpacing.md,
+          AppSpacing.md,
+          AppSpacing.lg,
+        ),
+        itemCount: state.messages.length,
+        itemBuilder: (context, index) {
+          final message = state.messages[index];
+
+          final previous = index > 0 ? state.messages[index - 1] : null;
+
+          final showDateSeparator = _shouldShowDateSeparator(
+            previous?.createdDate,
+            message.createdDate,
+          );
+
+          return Column(
+            children: [
+              if (showDateSeparator)
+                _DateSeparator(label: _formatMessageDate(message.createdDate)),
+
+              _MessageBubble(
+                message: message,
+                currentUserId: state.currentUserId,
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  Future<void> _sendMessage(ChatInterfaceController controller) async {
+    final text = _textController.text.trim();
 
     if (text.isEmpty) {
       return;
     }
 
-    controller.sendTextMessage(text).then((sent) {
-      if (sent && mounted) textController.clear();
-    });
+    final sent = await controller.sendTextMessage(text);
+
+    if (!mounted || !sent) {
+      return;
+    }
+
+    _textController.clear();
+
+    _scrollToBottom();
   }
 
   void _scrollToBottom() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted || !scrollController.hasClients) return;
-      scrollController.animateTo(
-        scrollController.position.maxScrollExtent,
+      if (!mounted || !_scrollController.hasClients) {
+        return;
+      }
+
+      _scrollController.animateTo(
+        _scrollController.position.maxScrollExtent,
         duration: const Duration(milliseconds: 300),
         curve: Curves.easeOut,
       );
@@ -176,10 +242,14 @@ class _ChatInterfacePageState extends ConsumerState<ChatInterfacePage> {
   }
 
   String _formatMessageDate(DateTime? dateTime) {
-    if (dateTime == null) return '';
+    if (dateTime == null) {
+      return '';
+    }
 
     final now = DateTime.now();
+
     final today = DateTime(now.year, now.month, now.day);
+
     final date = DateTime(dateTime.year, dateTime.month, dateTime.day);
 
     if (date == today) {
@@ -190,14 +260,16 @@ class _ChatInterfacePageState extends ConsumerState<ChatInterfacePage> {
       return 'Yesterday';
     }
 
-    return '${dateTime.day}/${dateTime.month}/${dateTime.year}';
+    return '${dateTime.day}/'
+        '${dateTime.month}/'
+        '${dateTime.year}';
   }
 }
 
 class _ChatAppBarTitle extends StatelessWidget {
-  final User otherUser;
-
   const _ChatAppBarTitle({required this.otherUser});
+
+  final User otherUser;
 
   @override
   Widget build(BuildContext context) {
@@ -207,13 +279,9 @@ class _ChatAppBarTitle extends StatelessWidget {
         ? otherUser.name
         : otherUser.email;
 
-    final subtitle = otherUser.email;
-
     return Row(
       children: [
-        UserAvatar.small(
-          name: otherUser.name.isNotEmpty ? otherUser.name : otherUser.email,
-        ),
+        UserAvatar.small(name: displayName),
 
         AppSpacing.md.gap,
 
@@ -230,9 +298,11 @@ class _ChatAppBarTitle extends StatelessWidget {
                   fontWeight: FontWeight.w800,
                 ),
               ),
+
               const SizedBox(height: 2),
+
               Text(
-                subtitle,
+                otherUser.email,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: context.textTheme.bodySmall?.copyWith(
@@ -247,73 +317,10 @@ class _ChatAppBarTitle extends StatelessWidget {
   }
 }
 
-class _EmptyChatState extends StatelessWidget {
-  final VoidCallback onFocusInput;
-
-  const _EmptyChatState({required this.onFocusInput});
-
-  @override
-  Widget build(BuildContext context) {
-    final cs = context.theme.colorScheme;
-
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(AppSpacing.xl),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              width: 78,
-              height: 78,
-              decoration: BoxDecoration(
-                color: cs.primary.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(26),
-              ),
-              child: Icon(
-                LucideIcons.messageCircle,
-                size: 36,
-                color: cs.primary,
-              ),
-            ),
-
-            AppSpacing.md.gap,
-
-            Text(
-              'Start a conversation',
-              style: context.textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.w900,
-              ),
-              textAlign: TextAlign.center,
-            ),
-
-            const SizedBox(height: 6),
-
-            Text(
-              'Send a message to get started.',
-              style: context.textTheme.bodyMedium?.copyWith(
-                color: cs.onSurfaceVariant,
-              ),
-              textAlign: TextAlign.center,
-            ),
-
-            AppSpacing.lg.gap,
-
-            FilledButton.icon(
-              onPressed: onFocusInput,
-              icon: const Icon(LucideIcons.send),
-              label: const Text('Send Message'),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
 class _DateSeparator extends StatelessWidget {
-  final String label;
-
   const _DateSeparator({required this.label});
+
+  final String label;
 
   @override
   Widget build(BuildContext context) {
@@ -344,10 +351,10 @@ class _DateSeparator extends StatelessWidget {
 }
 
 class _MessageBubble extends StatelessWidget {
+  const _MessageBubble({required this.message, required this.currentUserId});
+
   final Message message;
   final String? currentUserId;
-
-  const _MessageBubble({required this.message, required this.currentUserId});
 
   @override
   Widget build(BuildContext context) {
@@ -431,21 +438,25 @@ class _MessageBubble extends StatelessWidget {
   }
 
   String _formatMessageTime(DateTime? dateTime) {
-    if (dateTime == null) return '';
+    if (dateTime == null) {
+      return '';
+    }
 
-    return '${dateTime.hour.toString().padLeft(2, '0')}:${dateTime.minute.toString().padLeft(2, '0')}';
+    return '${dateTime.hour.toString().padLeft(2, '0')}:'
+        '${dateTime.minute.toString().padLeft(2, '0')}';
   }
 }
 
 class _ReplyPreview extends StatelessWidget {
+  const _ReplyPreview({required this.message, required this.isMe});
+
   final Message message;
   final bool isMe;
-
-  const _ReplyPreview({required this.message, required this.isMe});
 
   @override
   Widget build(BuildContext context) {
     final cs = context.theme.colorScheme;
+
     final replyToMessage = message.replyToMessage;
 
     if (replyToMessage == null) {
@@ -488,15 +499,15 @@ class _ReplyPreview extends StatelessWidget {
 }
 
 class _MessageStatusIcon extends StatelessWidget {
-  final Message message;
-  final String? currentUserId;
-  final Color color;
-
   const _MessageStatusIcon({
     required this.message,
     required this.currentUserId,
     required this.color,
   });
+
+  final Message message;
+  final String? currentUserId;
+  final Color color;
 
   @override
   Widget build(BuildContext context) {
@@ -513,17 +524,17 @@ class _MessageStatusIcon extends StatelessWidget {
 }
 
 class _MessageInputBar extends StatelessWidget {
-  final TextEditingController controller;
-  final FocusNode focusNode;
-  final bool canSend;
-  final VoidCallback onSend;
-
   const _MessageInputBar({
     required this.controller,
     required this.focusNode,
     required this.canSend,
     required this.onSend,
   });
+
+  final TextEditingController controller;
+  final FocusNode focusNode;
+  final bool canSend;
+  final VoidCallback onSend;
 
   @override
   Widget build(BuildContext context) {

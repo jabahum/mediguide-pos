@@ -1,204 +1,235 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:user_app/core/config/app_keys.dart';
-import 'package:user_app/core/utils/app_extensions.dart';
-import 'package:user_app/app/router/app_navigator.dart';
 import 'package:infinite_scroll_pagination/infinite_scroll_pagination.dart';
+import 'package:riverpod_annotation/riverpod_annotation.dart';
+
+import 'package:user_app/app/providers/app_providers.dart';
+import 'package:user_app/app/router/app_navigator.dart';
+import 'package:user_app/app/router/app_router.dart';
+import 'package:user_app/core/config/app_keys.dart';
+import 'package:user_app/core/constants/app_constants.dart';
+import 'package:user_app/core/utils/app_extensions.dart';
 import 'package:user_app/core/utils/app_message.dart';
+
+import 'package:user_app/features/facilities/data/repositories/facility_repository.dart';
+import 'package:user_app/features/facilities/presentation/controllers/health_infrastructure_query.dart';
+import 'package:user_app/features/facilities/presentation/controllers/health_infrastructure_state.dart';
+
 import 'package:user_app/shared/models/filter_models.dart';
+import 'package:user_app/shared/models/models.dart';
 import 'package:user_app/shared/widgets/generic_filter_bottom_sheet.dart';
 
-import 'package:user_app/shared/models/models.dart';
-import 'package:user_app/features/facilities/data/repositories/facility_repository.dart';
-import 'package:user_app/app/providers/app_providers.dart';
-import 'package:user_app/app/router/app_router.dart';
-import 'package:user_app/core/constants/app_constants.dart';
+part 'health_infrastructure_controller.g.dart';
 
-final healthInfrastructureControllerProvider = ChangeNotifierProvider
-    .autoDispose
-    .family<HealthInfrastructureController, Object?>((ref, arguments) {
-      return HealthInfrastructureController(
-        ref.watch(facilityRepositoryProvider),
-        arguments,
-      );
-    });
-
-class HealthInfrastructureController extends ChangeNotifier {
-  HealthInfrastructureController(this._repository, Object? arguments) {
-    _initFromArguments(arguments);
-    pagingController = PagingController<int, HealthFacility>(
-      getNextPageKey: (state) =>
-          state.lastPageIsEmpty ? null : state.nextIntPageKey,
-      fetchPage: _loadPage,
-    );
-    unawaited(_loadFilterOptions());
-    _updateActiveFilters();
-  }
-
-  final FacilityRepository _repository;
+@riverpod
+class HealthInfrastructureController extends _$HealthInfrastructureController {
   late final PagingController<int, HealthFacility> pagingController;
 
-  // ==================== FILTER STATE ====================
-  final _filters = _Filters();
-  Map<String, dynamic> treeFilters = {};
-
-  // ==================== DATA STATE ====================
-  List<Region> availableRegions = [];
-  List<District> availableDistricts = [];
-  List<FacilityLevel> availableFacilityLevels = [];
-  List<OwnershipType> availableOwnershipTypes = [];
-
-  bool isLoadingFilters = false;
-  bool hasActiveFilters = false;
-  bool _disposed = false;
-
-  bool get isFiltering => _filters.isActive;
+  FacilityRepository get _repository => ref.read(facilityRepositoryProvider);
 
   @override
-  void dispose() {
-    _disposed = true;
-    pagingController.dispose();
-    super.dispose();
+  HealthInfrastructureState build(Object? arguments) {
+    final initialQuery = HealthInfrastructureQuery.fromArguments(arguments);
+
+    pagingController = PagingController<int, HealthFacility>(
+      getNextPageKey: (pagingState) {
+        if (pagingState.lastPageIsEmpty) {
+          return null;
+        }
+
+        return pagingState.nextIntPageKey;
+      },
+      fetchPage: _loadPage,
+    );
+
+    ref.onDispose(() {
+      pagingController.dispose();
+    });
+
+    Future.microtask(_loadFilterOptions);
+
+    return HealthInfrastructureState(query: initialQuery);
   }
 
-  // ==================== INIT ====================
-
-  void _initFromArguments(Object? args) {
-    if (args is Map && args['treeFilters'] is Map) {
-      treeFilters = Map<String, dynamic>.from(args['treeFilters']);
-      _updateFromTreeFilters(treeFilters);
-    }
-
-    _updateActiveFilters();
-  }
-
-  // ==================== PAGINATION ====================
+  // ======================================================
+  // PAGINATION
+  // ======================================================
 
   Future<List<HealthFacility>> _loadPage(int pageKey) async {
     try {
+      final query = state.query;
+
       final result = await _repository.listFacilities(
         page: pageKey,
         perPage: AppConstants.pageSize,
-        search: _filters.query,
-        regionId: _filters.regionId,
-        districtId: _filters.districtId,
-        facilityLevelId: _filters.facilityLevelId,
-        ownershipTypeId: _filters.ownershipTypeId,
+        search: query.search,
+        regionId: query.regionId,
+        districtId: query.districtId,
+        facilityLevelId: query.facilityLevelId,
+        ownershipTypeId: query.ownershipTypeId,
       );
 
       return result.items;
-    } catch (e) {
-      AppMessage.error(AppKeys.navigatorKey.currentContext!, '$e');
+    } catch (error) {
+      _showError(error.toString());
+
       rethrow;
     }
   }
 
-  // ==================== ACTIONS ====================
+  // ======================================================
+  // SEARCH
+  // ======================================================
 
   void search(String value) {
-    _filters.query = value.trim();
-    _updateActiveFilters();
+    state = state.copyWith(query: state.query.copyWith(search: value.trim()));
+
     _refresh();
   }
+
+  // ======================================================
+  // CLEAR FILTERS
+  // ======================================================
 
   void clearAllFilters() {
-    _filters.reset();
-    treeFilters.clear();
-    availableDistricts.clear();
-    _updateActiveFilters();
+    state = state.copyWith(
+      query: HealthInfrastructureQuery.empty,
+      availableDistricts: const [],
+    );
+
     _refresh();
   }
 
-  void _refresh() {
-    pagingController.refresh();
-  }
-
-  // ==================== FILTER MODAL ====================
+  // ======================================================
+  // FILTER MODAL
+  // ======================================================
 
   Future<void> showFilterModal(BuildContext context) async {
+    if (!context.mounted) {
+      return;
+    }
+
     final fields = <FilterField>[
       FilterField.text('search', 'search'.tr),
-      FilterField.dropdown(
-        'region',
-        'region'.tr,
-        [''] + availableRegions.map((e) => e.name).toList(),
-      ),
-      FilterField.dropdown(
-        'district',
-        'district'.tr,
-        [''] + availableDistricts.map((e) => e.name).toList(),
-      ),
-      FilterField.dropdown(
-        'facilityLevel',
-        'facilityLevel'.tr,
-        [''] + availableFacilityLevels.map((e) => e.name).toList(),
-      ),
-      FilterField.dropdown(
-        'ownershipType',
-        'ownershipType'.tr,
-        [''] + availableOwnershipTypes.map((e) => e.name).toList(),
-      ),
+      FilterField.dropdown('region', 'region'.tr, [
+        '',
+        ...state.availableRegions.map((region) => region.name),
+      ]),
+      FilterField.dropdown('district', 'district'.tr, [
+        '',
+        ...state.availableDistricts.map((district) => district.name),
+      ]),
+      FilterField.dropdown('facilityLevel', 'facilityLevel'.tr, [
+        '',
+        ...state.availableFacilityLevels.map((level) => level.name),
+      ]),
+      FilterField.dropdown('ownershipType', 'ownershipType'.tr, [
+        '',
+        ...state.availableOwnershipTypes.map((ownership) => ownership.name),
+      ]),
     ];
 
     final result = await GenericFilterBottomSheet.show(
       context: context,
       title: 'filterFacilities'.tr,
       fields: fields,
-      initialValues: _filters.toMap(),
+      initialValues: _initialFilterValues(),
     );
 
-    if (result != null) _applyFilters(result);
-  }
-
-  void _applyFilters(FilterResult result) {
-    _filters
-      ..query = result.getValue<String>('search') ?? ''
-      ..regionId = _resolveRegion(result.getValue<String>('region'))
-      ..districtId = _resolveDistrict(result.getValue<String>('district'))
-      ..facilityLevelId = _resolveFacilityLevel(
-        result.getValue<String>('facilityLevel'),
-      )
-      ..ownershipTypeId = _resolveOwnership(
-        result.getValue<String>('ownershipType'),
-      );
-
-    if (_filters.regionId.isNotEmpty) {
-      _loadDistricts(_filters.regionId);
-    } else {
-      availableDistricts.clear();
+    if (result == null) {
+      return;
     }
 
-    _updateActiveFilters();
+    await _applyFilters(result);
+  }
+
+  Map<String, dynamic> _initialFilterValues() {
+    final query = state.query;
+
+    return <String, dynamic>{
+      if (query.search.isNotEmpty) 'search': query.search,
+      if (query.regionId.isNotEmpty) 'region': _regionName(query.regionId),
+      if (query.districtId.isNotEmpty)
+        'district': _districtName(query.districtId),
+      if (query.facilityLevelId.isNotEmpty)
+        'facilityLevel': _facilityLevelName(query.facilityLevelId),
+      if (query.ownershipTypeId.isNotEmpty)
+        'ownershipType': _ownershipName(query.ownershipTypeId),
+    };
+  }
+
+  Future<void> _applyFilters(FilterResult result) async {
+    final regionId = _resolveRegion(result.getValue<String>('region'));
+
+    final districtId = _resolveDistrict(result.getValue<String>('district'));
+
+    state = state.copyWith(
+      query: state.query.copyWith(
+        search: result.getValue<String>('search')?.trim() ?? '',
+        regionId: regionId,
+        districtId: districtId,
+        facilityLevelId: _resolveFacilityLevel(
+          result.getValue<String>('facilityLevel'),
+        ),
+        ownershipTypeId: _resolveOwnership(
+          result.getValue<String>('ownershipType'),
+        ),
+        treeFilters: const {},
+      ),
+    );
+
+    if (regionId.isNotEmpty) {
+      await _loadDistricts(regionId);
+    } else {
+      state = state.copyWith(availableDistricts: const []);
+    }
+
     _refresh();
   }
 
-  // ==================== HELPERS ====================
+  // ======================================================
+  // FILTER OPTIONS
+  // ======================================================
 
   Future<void> _loadFilterOptions() async {
+    state = state.copyWith(isLoadingFilters: true, clearFilterError: true);
+
     try {
-      isLoadingFilters = true;
+      final results = await Future.wait([
+        _repository.regions(),
+        _repository.levels(),
+        _repository.ownershipTypes(),
+      ]);
 
-      final regions = await getRegions();
+      final regions = results[0];
+      final levels = results[1];
+      final ownership = results[2];
 
-      availableRegions = regions;
+      state = state.copyWith(
+        availableRegions: List<Region>.unmodifiable(regions.items),
+        availableFacilityLevels: List<FacilityLevel>.unmodifiable(levels.items),
+        availableOwnershipTypes: List<OwnershipType>.unmodifiable(
+          ownership.items,
+        ),
+      );
 
-      final levels = await _repository.levels();
-
-      availableFacilityLevels = levels.items;
-
-      final ownership = await _repository.ownershipTypes();
-
-      availableOwnershipTypes = ownership.items;
-
-      if (_filters.regionId.isNotEmpty) {
-        await _loadDistricts(_filters.regionId);
+      if (state.query.regionId.isNotEmpty) {
+        await _loadDistricts(state.query.regionId);
       }
+    } catch (error) {
+      final message = error.toString();
+
+      state = state.copyWith(filterError: message);
+
+      _showError(message);
     } finally {
-      isLoadingFilters = false;
-      if (!_disposed) notifyListeners();
+      state = state.copyWith(isLoadingFilters: false);
     }
+  }
+
+  Future<void> reloadFilterOptions() {
+    return _loadFilterOptions();
   }
 
   Future<List<Region>> getRegions({String? filter, String? sort}) async {
@@ -208,78 +239,192 @@ class HealthInfrastructureController extends ChangeNotifier {
   }
 
   Future<void> _loadDistricts(String regionId) async {
-    final districts = await _repository.districts(regionId: regionId);
+    try {
+      final districts = await _repository.districts(regionId: regionId);
 
-    availableDistricts = districts.items;
-    if (!_disposed) notifyListeners();
+      state = state.copyWith(
+        availableDistricts: List<District>.unmodifiable(districts.items),
+      );
+    } catch (error) {
+      _showError(error.toString());
+    }
   }
 
-  String _resolveRegion(String? name) =>
-      availableRegions.firstWhereOrNull((e) => e.name == name)?.id ?? '';
+  // ======================================================
+  // RESOLVE IDS
+  // ======================================================
 
-  String _resolveDistrict(String? name) =>
-      availableDistricts.firstWhereOrNull((e) => e.name == name)?.id ?? '';
+  String _resolveRegion(String? name) {
+    final value = name?.trim() ?? '';
 
-  String _resolveFacilityLevel(String? name) =>
-      availableFacilityLevels.firstWhereOrNull((e) => e.name == name)?.id ?? '';
+    if (value.isEmpty) {
+      return '';
+    }
 
-  String _resolveOwnership(String? name) =>
-      availableOwnershipTypes.firstWhereOrNull((e) => e.name == name)?.id ?? '';
+    for (final region in state.availableRegions) {
+      if (region.name == value) {
+        return region.id;
+      }
+    }
+
+    return '';
+  }
+
+  String _resolveDistrict(String? name) {
+    final value = name?.trim() ?? '';
+
+    if (value.isEmpty) {
+      return '';
+    }
+
+    for (final district in state.availableDistricts) {
+      if (district.name == value) {
+        return district.id;
+      }
+    }
+
+    return '';
+  }
+
+  String _resolveFacilityLevel(String? name) {
+    final value = name?.trim() ?? '';
+
+    if (value.isEmpty) {
+      return '';
+    }
+
+    for (final level in state.availableFacilityLevels) {
+      if (level.name == value) {
+        return level.id;
+      }
+    }
+
+    return '';
+  }
+
+  String _resolveOwnership(String? name) {
+    final value = name?.trim() ?? '';
+
+    if (value.isEmpty) {
+      return '';
+    }
+
+    for (final ownership in state.availableOwnershipTypes) {
+      if (ownership.name == value) {
+        return ownership.id;
+      }
+    }
+
+    return '';
+  }
+
+  // ======================================================
+  // RESOLVE NAMES
+  // ======================================================
+
+  String _regionName(String id) {
+    for (final region in state.availableRegions) {
+      if (region.id == id) {
+        return region.name;
+      }
+    }
+
+    return '';
+  }
+
+  String _districtName(String id) {
+    for (final district in state.availableDistricts) {
+      if (district.id == id) {
+        return district.name;
+      }
+    }
+
+    return '';
+  }
+
+  String _facilityLevelName(String id) {
+    for (final level in state.availableFacilityLevels) {
+      if (level.id == id) {
+        return level.name;
+      }
+    }
+
+    return '';
+  }
+
+  String _ownershipName(String id) {
+    for (final ownership in state.availableOwnershipTypes) {
+      if (ownership.id == id) {
+        return ownership.name;
+      }
+    }
+
+    return '';
+  }
+
+  // ======================================================
+  // TREE FILTERS
+  // ======================================================
+
+  Future<void> applyTreeFilters(Map<String, dynamic> filters) async {
+    final query = HealthInfrastructureQuery(
+      regionId: filters['region']?.toString().trim() ?? '',
+      districtId: filters['district']?.toString().trim() ?? '',
+      facilityLevelId: filters['facility_level']?.toString().trim() ?? '',
+      ownershipTypeId: filters['ownership_type']?.toString().trim() ?? '',
+      treeFilters: Map<String, dynamic>.from(filters),
+    );
+
+    state = state.copyWith(query: query);
+
+    if (query.regionId.isNotEmpty) {
+      await _loadDistricts(query.regionId);
+    }
+
+    _refresh();
+  }
+
+  // ======================================================
+  // DETAILS
+  // ======================================================
 
   void goToFacilityDetail(HealthFacility facility) {
     unawaited(_recordUsage(facility.id));
-    AppNavigator.pushNamed(AppRoutes.healthFacilities, extra: facility);
+
+    AppNavigator.push(AppRoutes.healthFacility(facility.id), extra: facility);
   }
 
   Future<void> _recordUsage(String id) async {
     try {
       await _repository.recordUsage(id);
     } catch (_) {
-      // Analytics must not block facility details.
+      // Analytics must never block facility details.
     }
   }
 
-  // ==================== TREE FILTERS ====================
+  // ======================================================
+  // REFRESH
+  // ======================================================
 
-  void _updateFromTreeFilters(Map<String, dynamic> filters) {
-    _filters
-      ..regionId = filters['region']?.toString() ?? ''
-      ..districtId = filters['district']?.toString() ?? ''
-      ..facilityLevelId = filters['facility_level']?.toString() ?? ''
-      ..ownershipTypeId = filters['ownership_type']?.toString() ?? '';
-
-    _updateActiveFilters();
+  void refreshData() {
+    _refresh();
   }
 
-  void _updateActiveFilters() {
-    hasActiveFilters = _filters.isActive;
-    if (!_disposed) notifyListeners();
-  }
-}
-
-// ==================== FILTER MODEL ====================
-
-class _Filters {
-  String query = '';
-  String regionId = '';
-  String districtId = '';
-  String facilityLevelId = '';
-  String ownershipTypeId = '';
-
-  bool get isActive =>
-      query.isNotEmpty ||
-      regionId.isNotEmpty ||
-      districtId.isNotEmpty ||
-      facilityLevelId.isNotEmpty ||
-      ownershipTypeId.isNotEmpty;
-
-  void reset() {
-    query = '';
-    regionId = '';
-    districtId = '';
-    facilityLevelId = '';
-    ownershipTypeId = '';
+  void _refresh() {
+    pagingController.refresh();
   }
 
-  Map<String, dynamic> toMap() => {'search': query};
+  // ======================================================
+  // ERROR
+  // ======================================================
+
+  void _showError(String message) {
+    final context = AppKeys.navigatorKey.currentContext;
+
+    if (context == null) {
+      return;
+    }
+
+    AppMessage.error(context, message);
+  }
 }

@@ -1,78 +1,97 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:infinite_scroll_pagination/infinite_scroll_pagination.dart';
+import 'package:riverpod_annotation/riverpod_annotation.dart';
+
+import 'package:user_app/app/providers/app_providers.dart';
 import 'package:user_app/core/config/app_keys.dart';
+import 'package:user_app/core/constants/app_constants.dart';
 import 'package:user_app/core/utils/app_message.dart';
 
-import 'package:user_app/shared/models/models.dart';
-import 'package:user_app/shared/models/filter_models.dart';
 import 'package:user_app/features/calculators/data/repositories/calculator_repository.dart';
-import 'package:user_app/app/providers/app_providers.dart';
-import 'package:user_app/core/utils/common.dart';
-import 'package:user_app/core/constants/app_constants.dart';
+import 'package:user_app/features/calculators/presentation/controllers/tools_query.dart';
+import 'package:user_app/features/calculators/presentation/controllers/tools_state.dart';
+
+import 'package:user_app/shared/models/filter_models.dart';
+import 'package:user_app/shared/models/models.dart';
 import 'package:user_app/shared/widgets/generic_filter_bottom_sheet.dart';
 
-final toolsControllerProvider = ChangeNotifierProvider.autoDispose
-    .family<ToolsController, Object?>((ref, arguments) {
-      return ToolsController(
-        ref.watch(calculatorRepositoryProvider),
-        arguments,
-      );
-    });
+part 'tools_controller.g.dart';
 
-class ToolsController extends ChangeNotifier {
-  ToolsController(this._repository, Object? arguments) {
-    _initPaging();
-    _handleArgs(arguments);
-  }
+/// ======================================================
+/// CONTROLLER
+/// ======================================================
 
-  final CalculatorRepository _repository;
-
+@riverpod
+class ToolsController extends _$ToolsController {
   late final PagingController<int, Calculator> pagingController;
 
-  bool hasActiveFilters = false;
+  CalculatorRepository get _repository =>
+      ref.read(calculatorRepositoryProvider);
 
-  String searchQuery = '';
-  List<CalculatorType> selectedTypes = [];
-  List<CalculatorStatus> selectedStatuses = [];
-  int selectedTabIndex = 0;
+  @override
+  ToolsState build(Object? arguments) {
+    final initialQuery = _queryFromArguments(arguments);
 
-  void _handleArgs(Object? args) {
-    if (args is Map<String, dynamic>) {
-      final tab = args['initialTab'];
-      if (tab is int && tab >= 0 && tab <= 3) {
-        selectedTabIndex = tab;
-        _updateFilterState();
-      }
-    }
-  }
-
-  void _initPaging() {
     pagingController = PagingController<int, Calculator>(
-      getNextPageKey: (state) =>
-          state.lastPageIsEmpty ? null : state.nextIntPageKey,
+      getNextPageKey: (pagingState) {
+        if (pagingState.lastPageIsEmpty) {
+          return null;
+        }
+
+        return pagingState.nextIntPageKey;
+      },
       fetchPage: _fetchPage,
     );
+
+    ref.onDispose(() {
+      pagingController.dispose();
+    });
+
+    return ToolsState(query: initialQuery);
   }
 
-  // ================================
-  // FETCH
-  // ================================
+  /// ======================================================
+  /// ARGUMENTS
+  /// ======================================================
+
+  ToolsQuery _queryFromArguments(Object? arguments) {
+    if (arguments is! Map) {
+      return ToolsQuery.empty;
+    }
+
+    final tab = arguments['initialTab'];
+
+    if (tab is int && tab >= 0 && tab <= 3) {
+      return ToolsQuery(selectedTabIndex: tab);
+    }
+
+    return ToolsQuery.empty;
+  }
+
+  /// ======================================================
+  /// FETCH
+  /// ======================================================
+
   Future<List<Calculator>> _fetchPage(int page) async {
     try {
-      final tabType = _getTabType(selectedTabIndex);
-      final types = selectedTypes.isNotEmpty
-          ? selectedTypes.map(_typeToString).toList()
+      final query = state.query;
+
+      final tabType = _getTabType(query.selectedTabIndex);
+
+      final types = query.selectedTypes.isNotEmpty
+          ? query.selectedTypes.map(_typeToString).toList(growable: false)
           : tabType == null
           ? <String>[]
-          : [_typeToString(tabType)];
-      final statuses = selectedStatuses.isNotEmpty
-          ? selectedStatuses.map(_statusToString).toList()
-          : const ['active'];
+          : <String>[_typeToString(tabType)];
+
+      final statuses = query.selectedStatuses.isNotEmpty
+          ? query.selectedStatuses.map(_statusToString).toList(growable: false)
+          : const <String>['active'];
+
       final result = await _repository.list(
         page: page,
         perPage: AppConstants.pageSize,
-        search: searchQuery,
+        search: query.search,
         types: types,
         statuses: statuses,
         sort: 'created_at',
@@ -81,37 +100,70 @@ class ToolsController extends ChangeNotifier {
 
       return result.items;
     } catch (error) {
-      AppMessage.error(AppKeys.navigatorKey.currentContext!, '$error');
+      _showError(error.toString());
+
       rethrow;
     }
   }
 
-  // ================================
-  // EVENTS
-  // ================================
-  void refreshData() => pagingController.refresh();
+  /// ======================================================
+  /// REFRESH
+  /// ======================================================
 
-  void onTabChanged(int index) {
-    selectedTabIndex = index;
-    _updateFilterState();
+  void refreshData() {
     pagingController.refresh();
   }
 
-  // ================================
-  // FILTER MODAL
-  // ================================
+  /// ======================================================
+  /// SEARCH
+  /// ======================================================
+
+  void updateSearch(String value) {
+    state = state.copyWith(query: state.query.copyWith(search: value.trim()));
+
+    pagingController.refresh();
+  }
+
+  /// ======================================================
+  /// TAB
+  /// ======================================================
+
+  void onTabChanged(int index) {
+    if (index < 0 || index > 3) {
+      return;
+    }
+
+    state = state.copyWith(
+      query: state.query.copyWith(selectedTabIndex: index),
+    );
+
+    pagingController.refresh();
+  }
+
+  /// ======================================================
+  /// FILTER MODAL
+  /// ======================================================
+
   Future<void> showFilterModal(BuildContext context) async {
+    if (!context.mounted) {
+      return;
+    }
+
+    final query = state.query;
+
     final fields = <FilterField>[
       FilterField.text('search', 'Search'),
       FilterField.multiSelect(
         'types',
         'Calculator Type',
-        CalculatorType.values.map((e) => e.name).toList(),
+        CalculatorType.values.map((type) => type.name).toList(growable: false),
       ),
       FilterField.multiSelect(
         'statuses',
         'Status',
-        CalculatorStatus.values.map((e) => e.name).toList(),
+        CalculatorStatus.values
+            .map((status) => status.name)
+            .toList(growable: false),
       ),
     ];
 
@@ -120,99 +172,129 @@ class ToolsController extends ChangeNotifier {
       title: 'Filter Calculators',
       fields: fields,
       initialValues: {
-        'search': searchQuery,
-        'types': selectedTypes.map((e) => e.name).toList(),
-        'statuses': selectedStatuses.map((e) => e.name).toList(),
+        if (query.search.isNotEmpty) 'search': query.search,
+        if (query.selectedTypes.isNotEmpty)
+          'types': query.selectedTypes
+              .map((type) => type.name)
+              .toList(growable: false),
+        if (query.selectedStatuses.isNotEmpty)
+          'statuses': query.selectedStatuses
+              .map((status) => status.name)
+              .toList(growable: false),
       },
     );
 
-    if (result != null && result.isNotEmpty) {
-      _applyFilters(result);
+    if (result == null) {
+      return;
     }
+
+    _applyFilters(result);
   }
 
   void _applyFilters(FilterResult result) {
-    searchQuery = '';
+    final search = result.getValue<String>('search')?.trim() ?? '';
 
-    selectedTypes.clear();
-    selectedStatuses.clear();
+    final typeValues = result.getValue<List>('types') ?? const [];
 
-    final search = result.getValue<String>('search');
-    if (search != null) searchQuery = search;
+    final statusValues = result.getValue<List>('statuses') ?? const [];
 
-    final types = result.getValue<List>('types');
-    if (types != null) {
-      selectedTypes.addAll(
-        types.map((e) => CalculatorType.values.firstWhere((t) => t.name == e)),
-      );
-    }
+    final types = typeValues
+        .map(
+          (value) => CalculatorType.values.firstWhere(
+            (type) => type.name == value.toString(),
+          ),
+        )
+        .toList(growable: false);
 
-    final statuses = result.getValue<List>('statuses');
-    if (statuses != null) {
-      selectedStatuses.addAll(
-        statuses.map(
-          (e) => CalculatorStatus.values.firstWhere((s) => s.name == e),
-        ),
-      );
-    }
+    final statuses = statusValues
+        .map(
+          (value) => CalculatorStatus.values.firstWhere(
+            (status) => status.name == value.toString(),
+          ),
+        )
+        .toList(growable: false);
 
-    _updateFilterState();
+    state = state.copyWith(
+      query: state.query.copyWith(
+        search: search,
+        selectedTypes: types,
+        selectedStatuses: statuses,
+      ),
+    );
+
+    pagingController.refresh();
+  }
+
+  /// ======================================================
+  /// FILTER HELPERS
+  /// ======================================================
+
+  void setTypes(List<CalculatorType> types) {
+    state = state.copyWith(
+      query: state.query.copyWith(
+        selectedTypes: List<CalculatorType>.unmodifiable(types),
+      ),
+    );
+
+    pagingController.refresh();
+  }
+
+  void setStatuses(List<CalculatorStatus> statuses) {
+    state = state.copyWith(
+      query: state.query.copyWith(
+        selectedStatuses: List<CalculatorStatus>.unmodifiable(statuses),
+      ),
+    );
+
     pagingController.refresh();
   }
 
   void clearAllFilters() {
-    searchQuery = '';
-    selectedTypes.clear();
-    selectedStatuses.clear();
-    selectedTabIndex = 0;
+    state = const ToolsState(query: ToolsQuery.empty);
 
-    _updateFilterState();
     pagingController.refresh();
   }
 
-  // ================================
-  // STATE
-  // ================================
-  void _updateFilterState() {
-    hasActiveFilters =
-        searchQuery.isNotEmpty ||
-        selectedTypes.isNotEmpty ||
-        selectedStatuses.isNotEmpty ||
-        selectedTabIndex > 0;
-    notifyListeners();
-  }
+  /// ======================================================
+  /// TAB MAPPING
+  /// ======================================================
 
-  @override
-  void dispose() {
-    pagingController.dispose();
-    super.dispose();
-  }
-
-  // ================================
-  // TAB MAPPING
-  // ================================
   CalculatorType? _getTabType(int tab) {
-    switch (tab) {
-      case 1:
-        return CalculatorType.calculator;
-      case 2:
-        return CalculatorType.decisionTool;
-      case 3:
-        return CalculatorType.checklist;
-      default:
-        return null;
-    }
+    return switch (tab) {
+      1 => CalculatorType.calculator,
+      2 => CalculatorType.decisionTool,
+      3 => CalculatorType.checklist,
+      _ => null,
+    };
   }
 
-  String _typeToString(CalculatorType t) => switch (t) {
-    CalculatorType.calculator => 'calculator',
-    CalculatorType.decisionTool => 'decision_tool',
-    CalculatorType.checklist => 'checklist',
-  };
+  String _typeToString(CalculatorType type) {
+    return switch (type) {
+      CalculatorType.calculator => 'calculator',
+      CalculatorType.decisionTool => 'decision_tool',
+      CalculatorType.checklist => 'checklist',
+    };
+  }
 
-  String _statusToString(CalculatorStatus s) => switch (s) {
-    CalculatorStatus.active => 'active',
-    CalculatorStatus.draft => 'draft',
-    CalculatorStatus.archived => 'archived',
-  };
+  String _statusToString(CalculatorStatus status) {
+    return switch (status) {
+      CalculatorStatus.active => 'active',
+      CalculatorStatus.draft => 'draft',
+      CalculatorStatus.archived => 'archived',
+    };
+  }
+
+  /// ======================================================
+  /// ERRORS
+  /// ======================================================
+
+  void _showError(String message) {
+    final context = AppKeys.navigatorKey.currentContext;
+
+    if (context == null) {
+      return;
+    }
+
+    AppMessage.error(context, message);
+  }
 }

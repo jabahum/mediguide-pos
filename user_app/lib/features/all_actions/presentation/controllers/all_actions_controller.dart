@@ -1,16 +1,20 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'package:riverpod_annotation/riverpod_annotation.dart';
+
+import 'package:user_app/app/providers/app_providers.dart';
+import 'package:user_app/app/router/app_navigator.dart';
+import 'package:user_app/app/router/app_router.dart';
 import 'package:user_app/core/config/app_keys.dart';
 import 'package:user_app/core/utils/app_extensions.dart';
-import 'package:user_app/app/router/app_navigator.dart';
-import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:user_app/core/utils/app_message.dart';
 
-import 'package:user_app/features/content/data/repositories/content_reference_repository.dart';
-import 'package:user_app/app/providers/app_providers.dart';
 import 'package:user_app/features/content/data/models/generic_page.dart';
-import 'package:user_app/app/router/app_router.dart';
+import 'package:user_app/features/content/data/repositories/content_reference_repository.dart';
+
 import 'package:user_app/l10n/app_translations.dart';
+
+part 'all_actions_controller.g.dart';
 
 enum ActionCategory {
   clinicalTools,
@@ -20,15 +24,6 @@ enum ActionCategory {
 }
 
 class AppAction {
-  final String id;
-  final String title;
-  final String subtitle;
-  final IconData icon;
-  final Color color;
-  final VoidCallback onTap;
-  final ActionCategory category;
-  final bool enabled;
-
   const AppAction({
     required this.id,
     required this.title,
@@ -39,36 +34,68 @@ class AppAction {
     required this.category,
     this.enabled = true,
   });
+
+  final String id;
+  final String title;
+  final String subtitle;
+  final IconData icon;
+  final Color color;
+  final VoidCallback onTap;
+  final ActionCategory category;
+  final bool enabled;
 }
 
-final allActionsControllerProvider = ChangeNotifierProvider.autoDispose(
-  (ref) => AllActionsController(ref.watch(genericPageRepositoryProvider)),
-);
+class AllActionsState {
+  const AllActionsState({
+    this.actions = const [],
+    this.genericPages = const [],
+    this.isLoadingPages = false,
+    this.errorMessage,
+  });
 
-class AllActionsController extends ChangeNotifier {
-  AllActionsController(this._repository) {
-    _loadStaticActions();
-    loadGenericPages();
+  final List<AppAction> actions;
+  final List<GenericPage> genericPages;
+  final bool isLoadingPages;
+  final String? errorMessage;
+
+  AllActionsState copyWith({
+    List<AppAction>? actions,
+    List<GenericPage>? genericPages,
+    bool? isLoadingPages,
+    String? errorMessage,
+    bool clearErrorMessage = false,
+  }) {
+    return AllActionsState(
+      actions: actions ?? this.actions,
+      genericPages: genericPages ?? this.genericPages,
+      isLoadingPages: isLoadingPages ?? this.isLoadingPages,
+      errorMessage: clearErrorMessage
+          ? null
+          : errorMessage ?? this.errorMessage,
+    );
   }
+}
 
-  final GenericPageRepository _repository;
-  List<AppAction> actions = [];
-  List<GenericPage> genericPages = [];
-  bool isLoadingPages = false;
-  bool _disposed = false;
+@riverpod
+class AllActionsController extends _$AllActionsController {
+  GenericPageRepository get _repository =>
+      ref.read(genericPageRepositoryProvider);
 
   @override
-  void dispose() {
-    _disposed = true;
-    super.dispose();
+  AllActionsState build() {
+    final initialState = AllActionsState(actions: _buildStaticActions());
+
+    Future.microtask(loadGenericPages);
+
+    return initialState;
   }
 
   // =========================
   // STATIC ACTIONS
   // =========================
 
-  void _loadStaticActions() {
-    actions = [
+  List<AppAction> _buildStaticActions() {
+    return [
       AppAction(
         id: 'essential_medicines',
         title: 'Essential Medicines',
@@ -76,9 +103,10 @@ class AllActionsController extends ChangeNotifier {
         icon: LucideIcons.pill,
         color: Colors.blue,
         category: ActionCategory.clinicalTools,
-        onTap: () => AppNavigator.pushNamed(AppRoutes.drugIndex),
+        onTap: () {
+          AppNavigator.push(AppRoutes.drugIndex);
+        },
       ),
-
       AppAction(
         id: 'clinical_algorithms',
         title: 'Clinical Care Algorithms',
@@ -87,10 +115,9 @@ class AllActionsController extends ChangeNotifier {
         color: Colors.teal,
         category: ActionCategory.clinicalTools,
         onTap: () {
-          AppNavigator.pushNamed(AppRoutes.tools, extra: {'initialTab': 2});
+          AppNavigator.push(AppRoutes.tools, extra: {'initialTab': 2});
         },
       ),
-
       AppAction(
         id: 'ai_assistant',
         title: AppTranslationKey.aiChatAssistant,
@@ -98,9 +125,10 @@ class AllActionsController extends ChangeNotifier {
         icon: LucideIcons.bot,
         color: Colors.deepPurple,
         category: ActionCategory.aiAndReference,
-        onTap: () => AppNavigator.pushNamed(AppRoutes.aiAssistant),
+        onTap: () {
+          AppNavigator.push(AppRoutes.aiAssistant);
+        },
       ),
-
       AppAction(
         id: 'abbreviations',
         title: AppTranslationKey.medicalAbbreviations,
@@ -108,9 +136,10 @@ class AllActionsController extends ChangeNotifier {
         icon: LucideIcons.bookText,
         color: Colors.indigo,
         category: ActionCategory.aiAndReference,
-        onTap: () => AppNavigator.pushNamed(AppRoutes.abbreviations),
+        onTap: () {
+          AppNavigator.push(AppRoutes.abbreviations);
+        },
       ),
-
       AppAction(
         id: 'guidelines',
         title: 'Clinical Guidelines',
@@ -118,7 +147,9 @@ class AllActionsController extends ChangeNotifier {
         icon: LucideIcons.bookOpen,
         color: Colors.green,
         category: ActionCategory.clinicalTools,
-        onTap: () => AppNavigator.pushNamed(AppRoutes.guidelines),
+        onTap: () {
+          AppNavigator.push(AppRoutes.guidelines);
+        },
       ),
     ];
   }
@@ -128,20 +159,24 @@ class AllActionsController extends ChangeNotifier {
   // =========================
 
   Future<void> loadGenericPages() async {
-    try {
-      isLoadingPages = true;
-      _notify();
+    state = state.copyWith(isLoadingPages: true, clearErrorMessage: true);
 
+    try {
       final result = await _repository.list(perPage: 50);
-      genericPages = result.items;
-    } catch (e) {
-      AppMessage.error(
-        AppKeys.navigatorKey.currentContext!,
-        'errorLoadingPages'.tr,
-      );
+
+      state = state.copyWith(genericPages: result.items);
+    } catch (error) {
+      final message = 'errorLoadingPages'.tr;
+
+      state = state.copyWith(errorMessage: message);
+
+      final context = AppKeys.navigatorKey.currentContext;
+
+      if (context != null) {
+        AppMessage.error(context, message);
+      }
     } finally {
-      isLoadingPages = false;
-      _notify();
+      state = state.copyWith(isLoadingPages: false);
     }
   }
 
@@ -150,20 +185,16 @@ class AllActionsController extends ChangeNotifier {
   // =========================
 
   List<AppAction> actionsByCategory(ActionCategory category) {
-    return actions
+    return state.actions
         .where((action) => action.category == category && action.enabled)
-        .toList();
+        .toList(growable: false);
   }
 
   void openGenericPage(GenericPage page) {
-    AppNavigator.pushNamed(AppRoutes.genericViewer, extra: page);
+    AppNavigator.push(AppRoutes.genericViewer, extra: page);
   }
 
   Future<void> reloadData() async {
     await loadGenericPages();
-  }
-
-  void _notify() {
-    if (!_disposed) notifyListeners();
   }
 }

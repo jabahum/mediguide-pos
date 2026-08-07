@@ -1,113 +1,141 @@
-import 'dart:convert';
+// tree_selector_controller.dart
+
 import 'dart:async';
+import 'dart:convert';
+
 import 'package:animated_tree_view/tree_view/tree_node.dart';
-import 'package:flutter/foundation.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:user_app/core/config/app_keys.dart';
-import 'package:user_app/core/constants/app_constants.dart';
-import 'package:user_app/core/utils/app_extensions.dart';
+import 'package:riverpod_annotation/riverpod_annotation.dart';
 
-import 'package:user_app/core/network/api_client.dart';
 import 'package:user_app/app/providers/app_providers.dart';
+import 'package:user_app/core/config/app_keys.dart';
+import 'package:user_app/core/network/api_client.dart';
 import 'package:user_app/core/utils/app_message.dart';
-import 'package:user_app/l10n/app_translations.dart';
-import 'package:user_app/core/utils/common.dart';
+
 import 'package:user_app/features/tree_selector/data/models/tree_selector_models.dart';
+import 'package:user_app/features/tree_selector/presentation/controllers/tree_selector_state.dart';
 
-final treeSelectorControllerProvider = ChangeNotifierProvider.autoDispose
-    .family<TreeSelectorController, TreeSelectorConfig>(
-      (ref, config) =>
-          TreeSelectorController(config, ref.watch(backendApiServiceProvider)),
-    );
+part 'tree_selector_controller.g.dart';
 
-class TreeSelectorController extends ChangeNotifier {
-  final TreeSelectorConfig config;
-  final BackendApiService _api;
-
-  TreeSelectorController(this.config, this._api) {
-    unawaited(loadRootNodes());
-  }
-
-  final rootTreeNode = TreeNode<TreeSelectorNodeModel>.root();
-
-  bool isLoading = true;
-  bool hasLoadError = false;
-
-  /// Faster than `Map<String, bool>` for reactive checks
-  final Set<String> loadingNodes = {};
-
-  /// Cache prevents re-fetching same node twice
+@riverpod
+class TreeSelectorController extends _$TreeSelectorController {
+  /// Cache prevents repeated fetches for the same node.
   final Map<String, List<TreeSelectorNodeModel>> _nodeCache = {};
 
-  /// Prevent duplicate API calls for same request
+  /// Deduplicates concurrent requests for the same node.
   final Map<String, Future<List<TreeSelectorNodeModel>>> _pendingRequests = {};
-  bool _disposed = false;
+
+  BackendApiService get _api => ref.read(backendApiServiceProvider);
 
   @override
-  void dispose() {
-    _disposed = true;
-    super.dispose();
+  TreeSelectorState build(TreeSelectorConfig config) {
+    final root = TreeNode<TreeSelectorNodeModel>.root();
+
+    Future.microtask(loadRootNodes);
+
+    ref.onDispose(() {
+      _nodeCache.clear();
+      _pendingRequests.clear();
+    });
+
+    return TreeSelectorState(rootTreeNode: root);
   }
 
+  // ======================================================
+  // ROOT
+  // ======================================================
+
   Future<void> loadRootNodes() async {
-    isLoading = true;
-    hasLoadError = false;
-    _notify();
+    state = state.copyWith(
+      isLoading: true,
+      hasLoadError: false,
+      clearErrorMessage: true,
+    );
 
     try {
-      rootTreeNode.clear();
-
       final nodes = await _fetchNodes(
         level: 0,
         filters: const {},
         cacheKey: 'root',
       );
 
-      _addChildrenBatch(rootTreeNode, nodes);
-    } catch (e) {
-      hasLoadError = true;
+      final root = TreeNode<TreeSelectorNodeModel>.root();
 
-      AppMessage.error(
-        AppKeys.navigatorKey.currentContext!,
-        'Failed to load data: $e',
+      _addChildrenBatch(root, nodes);
+
+      state = state.copyWith(rootTreeNode: root, hasLoadError: false);
+    } catch (error) {
+      final message = 'Failed to load data: $error';
+
+      state = state.copyWith(
+        rootTreeNode: TreeNode<TreeSelectorNodeModel>.root(),
+        hasLoadError: true,
+        errorMessage: message,
       );
+
+      _showError(message);
     } finally {
-      isLoading = false;
-      _notify();
+      state = state.copyWith(isLoading: false);
     }
   }
+
+  Future<void> refresh() async {
+    _nodeCache.clear();
+    _pendingRequests.clear();
+
+    await loadRootNodes();
+  }
+
+  // ======================================================
+  // NODE TAP
+  // ======================================================
 
   Future<TreeSelectionResult?> onNodeTap(
     TreeNode<TreeSelectorNodeModel> node,
   ) async {
     final data = node.data;
-    if (data == null) return null;
+
+    if (data == null) {
+      return null;
+    }
 
     if (!data.hasChildren) {
       return _selectionFor(node);
     }
 
     await loadChildren(node);
+
     return null;
   }
 
+  // ======================================================
+  // CHILDREN
+  // ======================================================
+
   Future<void> loadChildren(TreeNode<TreeSelectorNodeModel> node) async {
     final data = node.data;
-    if (data == null || !data.hasChildren) return;
 
-    // already loaded
-    if (node.childrenAsList.isNotEmpty) return;
-
-    final cacheKey = _cacheKey(data);
-
-    // use cache if available
-    if (_nodeCache.containsKey(cacheKey)) {
-      _addChildrenBatch(node, _nodeCache[cacheKey]!);
+    if (data == null || !data.hasChildren) {
       return;
     }
 
-    loadingNodes.add(node.key);
-    _notify();
+    // Already loaded.
+    if (node.childrenAsList.isNotEmpty) {
+      return;
+    }
+
+    final cacheKey = _cacheKey(data);
+
+    final cached = _nodeCache[cacheKey];
+
+    if (cached != null) {
+      _addChildrenBatch(node, cached);
+
+      _publishTreeChange();
+
+      return;
+    }
+
+    _setNodeLoading(node.key, true);
 
     try {
       final children = await _fetchNodes(
@@ -117,29 +145,49 @@ class TreeSelectorController extends ChangeNotifier {
       );
 
       _addChildrenBatch(node, children);
-    } catch (e) {
-      AppMessage.error(
-        AppKeys.navigatorKey.currentContext!,
-        'Failed to load more data: $e',
-      );
+
+      _publishTreeChange();
+    } catch (error) {
+      _showError('Failed to load more data: $error');
     } finally {
-      loadingNodes.remove(node.key);
-      _notify();
+      _setNodeLoading(node.key, false);
     }
   }
 
   bool isNodeLoading(TreeNode<TreeSelectorNodeModel> node) {
-    return loadingNodes.contains(node.key);
+    return state.loadingNodes.contains(node.key);
   }
 
+  void _setNodeLoading(String key, bool loading) {
+    final updated = <String>{...state.loadingNodes};
+
+    if (loading) {
+      updated.add(key);
+    } else {
+      updated.remove(key);
+    }
+
+    state = state.copyWith(loadingNodes: Set<String>.unmodifiable(updated));
+  }
+
+  // ======================================================
+  // SELECTION
+  // ======================================================
+
   TreeSelectionResult? selectParentNode(TreeNode<TreeSelectorNodeModel> node) {
-    if (!config.allowParentSelection) return null;
+    if (!config.allowParentSelection) {
+      return null;
+    }
+
     return _selectionFor(node);
   }
 
   TreeSelectionResult? _selectionFor(TreeNode<TreeSelectorNodeModel> node) {
     final data = node.data;
-    if (data == null) return null;
+
+    if (data == null) {
+      return null;
+    }
 
     return TreeSelectionResult(
       selectedNode: data,
@@ -147,7 +195,10 @@ class TreeSelectorController extends ChangeNotifier {
     );
   }
 
-  /// 🔥 Batch insert = 1 reactive update instead of N updates
+  // ======================================================
+  // TREE
+  // ======================================================
+
   void _addChildrenBatch(
     TreeNode<TreeSelectorNodeModel> parent,
     List<TreeSelectorNodeModel> models,
@@ -155,7 +206,6 @@ class TreeSelectorController extends ChangeNotifier {
     for (final model in models) {
       parent.add(_toTreeNode(model));
     }
-    _notify();
   }
 
   TreeNode<TreeSelectorNodeModel> _toTreeNode(TreeSelectorNodeModel model) {
@@ -165,26 +215,53 @@ class TreeSelectorController extends ChangeNotifier {
     );
   }
 
-  String _cacheKey(TreeSelectorNodeModel model) {
-    return '${model.level}-${jsonEncode(model.filters)}';
+  /// TreeNode is mutable. Assigning the same root object would not
+  /// necessarily trigger consumers, so publish a new state instance
+  /// after mutating child nodes.
+  void _publishTreeChange() {
+    state = state.copyWith(rootTreeNode: state.rootTreeNode);
   }
+
+  // ======================================================
+  // CACHE
+  // ======================================================
+
+  String _cacheKey(TreeSelectorNodeModel model) {
+    return '${model.level}-'
+        '${_stableJson(model.filters)}';
+  }
+
+  String _stableJson(Map<String, dynamic> value) {
+    final sorted = Map<String, dynamic>.fromEntries(
+      value.entries.toList()..sort((a, b) => a.key.compareTo(b.key)),
+    );
+
+    return jsonEncode(sorted);
+  }
+
+  // ======================================================
+  // FETCH
+  // ======================================================
 
   Future<List<TreeSelectorNodeModel>> _fetchNodes({
     required int level,
     required Map<String, dynamic> filters,
     required String cacheKey,
   }) {
-    // return cache immediately if available
-    if (_nodeCache.containsKey(cacheKey)) {
-      return Future.value(_nodeCache[cacheKey]);
+    final cached = _nodeCache[cacheKey];
+
+    if (cached != null) {
+      return Future.value(cached);
     }
 
-    // deduplicate requests
-    if (_pendingRequests.containsKey(cacheKey)) {
-      return _pendingRequests[cacheKey]!;
+    final pending = _pendingRequests[cacheKey];
+
+    if (pending != null) {
+      return pending;
     }
 
     final future = _executeFetch(level, filters, cacheKey);
+
     _pendingRequests[cacheKey] = future;
 
     return future.whenComplete(() {
@@ -199,7 +276,9 @@ class TreeSelectorController extends ChangeNotifier {
   ) async {
     final query = <String, dynamic>{
       'level': level.toString(),
+
       if (filters.isNotEmpty) 'filters': jsonEncode(filters),
+
       if (config.context.isNotEmpty) 'context': jsonEncode(config.context),
     };
 
@@ -209,27 +288,41 @@ class TreeSelectorController extends ChangeNotifier {
     );
 
     if (response['success'] == false) {
-      throw Exception(response['error'] ?? 'Unknown error');
+      throw StateError(response['error']?.toString() ?? 'Unknown error');
     }
 
     final raw = response['data'] ?? response['nodes'] ?? response['items'];
 
-    final List<TreeSelectorNodeModel> result = (raw is List)
-        ? raw
-              .whereType<Map>()
-              .map(
-                (e) => TreeSelectorNodeModel.fromJson(
-                  Map<String, dynamic>.from(e),
-                ),
-              )
-              .toList()
-        : const [];
+    if (raw is! List) {
+      _nodeCache[cacheKey] = const [];
+
+      return const [];
+    }
+
+    final result = raw
+        .whereType<Map>()
+        .map(
+          (item) =>
+              TreeSelectorNodeModel.fromJson(Map<String, dynamic>.from(item)),
+        )
+        .toList(growable: false);
 
     _nodeCache[cacheKey] = result;
+
     return result;
   }
 
-  void _notify() {
-    if (!_disposed) notifyListeners();
+  // ======================================================
+  // ERROR
+  // ======================================================
+
+  void _showError(String message) {
+    final context = AppKeys.navigatorKey.currentContext;
+
+    if (context == null) {
+      return;
+    }
+
+    AppMessage.error(context, message);
   }
 }

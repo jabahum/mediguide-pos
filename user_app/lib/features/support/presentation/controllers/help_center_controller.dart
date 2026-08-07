@@ -1,55 +1,35 @@
+// help_center_controller.dart
+
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:toastification/toastification.dart';
 import 'package:infinite_scroll_pagination/infinite_scroll_pagination.dart';
-import 'package:user_app/core/config/app_keys.dart';
-import 'package:user_app/core/utils/app_message.dart';
-import 'package:user_app/shared/models/models.dart';
-import 'package:user_app/features/support/data/repositories/support_repository.dart';
+import 'package:riverpod_annotation/riverpod_annotation.dart';
+
 import 'package:user_app/app/providers/app_providers.dart';
-import 'package:user_app/core/utils/common.dart';
+import 'package:user_app/core/config/app_keys.dart';
 import 'package:user_app/core/constants/app_constants.dart';
-import 'package:user_app/shared/widgets/generic_filter_bottom_sheet.dart';
+import 'package:user_app/core/utils/app_message.dart';
+
+import 'package:user_app/features/support/data/repositories/support_repository.dart';
+import 'package:user_app/features/support/presentation/controllers/help_center_query.dart';
+import 'package:user_app/features/support/presentation/controllers/help_center_state.dart';
+
 import 'package:user_app/shared/models/filter_models.dart';
+import 'package:user_app/shared/models/models.dart';
+import 'package:user_app/shared/widgets/generic_filter_bottom_sheet.dart';
 
-/// Enhanced Help Center Controller with user-specific support ticket management
-final helpCenterControllerProvider = ChangeNotifierProvider.autoDispose((ref) {
-  return HelpCenterController(ref.watch(supportRepositoryProvider));
-});
+part 'help_center_controller.g.dart';
 
-class HelpCenterController extends ChangeNotifier {
-  HelpCenterController(this._repository) {
-    initializePagination();
-  }
-
-  final SupportRepository _repository;
-
-  // Reactive state
-  bool isLoading = false;
-  bool isCreatingTicket = false;
-  bool isAddingReply = false;
-  String searchQuery = '';
-  String selectedStatus = 'all';
-  String selectedPriority = 'all';
-  String selectedCategory = 'all';
-
-  // Ticket data
-  final tickets = <SupportTicket>[];
-  SupportTicket? selectedTicket;
-  List<SupportTicketReply> currentTicketReplies = [];
-
-  // Infinite scroll pagination
-  late PagingController<int, SupportTicket> pagingController;
-
-  // Filter helpers
-  bool hasActiveFilters = false;
+@riverpod
+class HelpCenterController extends _$HelpCenterController {
   Timer? _searchDebounce;
-  bool _disposed = false;
 
-  // Available categories for tickets
-  final List<String> availableCategories = [
+  late final PagingController<int, SupportTicket> pagingController;
+
+  SupportRepository get _repository => ref.read(supportRepositoryProvider);
+
+  static const List<String> availableCategories = [
     'Technical Issue',
     'Account Problem',
     'Feature Request',
@@ -59,224 +39,229 @@ class HelpCenterController extends ChangeNotifier {
   ];
 
   @override
-  void dispose() {
-    _disposed = true;
-    _searchDebounce?.cancel();
-    pagingController.dispose();
-    super.dispose();
-  }
-
-  /// Initialize pagination controller
-  void initializePagination() {
+  HelpCenterState build() {
     pagingController = PagingController<int, SupportTicket>(
-      getNextPageKey: (state) =>
-          state.lastPageIsEmpty ? null : (state.keys?.last ?? 0) + 1,
-      fetchPage: (pageKey) => loadTicketsPage(pageKey),
+      getNextPageKey: (pagingState) {
+        if (pagingState.lastPageIsEmpty) {
+          return null;
+        }
+
+        return pagingState.nextIntPageKey;
+      },
+      fetchPage: loadTicketsPage,
     );
+
+    ref.onDispose(() {
+      _searchDebounce?.cancel();
+      pagingController.dispose();
+    });
+
+    return const HelpCenterState();
   }
 
-  /// Update active filters indicator
-  void updateActiveFilters() {
-    hasActiveFilters =
-        searchQuery.isNotEmpty ||
-        selectedStatus != 'all' ||
-        selectedPriority != 'all' ||
-        selectedCategory != 'all';
-    if (!_disposed) notifyListeners();
-  }
+  // ======================================================
+  // TICKETS
+  // ======================================================
 
-  /// Load tickets page for infinite scroll pagination
-  Future<List<SupportTicket>> loadTicketsPage(int pageKey) async {
-    return await searchMyTickets(
-      query: searchQuery,
+  Future<List<SupportTicket>> loadTicketsPage(int pageKey) {
+    final query = state.query;
+
+    return searchMyTickets(
+      query: query.search,
       page: pageKey,
       perPage: AppConstants.pageSize,
-      statusFilter: getStatusFilter(),
-      priorityFilter: getPriorityFilter(),
-      categoryFilter: selectedCategory == 'all' ? null : selectedCategory,
+      statusFilter: query.statusFilter,
+      priorityFilter: query.priorityFilter,
+      categoryFilter: query.categoryFilter,
     );
   }
 
-  /// Get status filter enum
-  TicketStatus? getStatusFilter() {
-    if (selectedStatus == 'all') return null;
-
-    switch (selectedStatus) {
-      case 'open':
-        return TicketStatus.open;
-      case 'inProgress':
-        return TicketStatus.inProgress;
-      case 'resolved':
-        return TicketStatus.resolved;
-      case 'closed':
-        return TicketStatus.closed;
-      default:
-        return null;
-    }
-  }
-
-  /// Get priority filter enum
-  TicketPriority? getPriorityFilter() {
-    if (selectedPriority == 'all') return null;
-
-    switch (selectedPriority) {
-      case 'low':
-        return TicketPriority.low;
-      case 'normal':
-        return TicketPriority.normal;
-      case 'high':
-        return TicketPriority.high;
-      case 'urgent':
-        return TicketPriority.urgent;
-      default:
-        return null;
-    }
-  }
-
-  /// Refresh tickets list
   void refreshTickets() {
     pagingController.refresh();
   }
 
-  /// Create a new support ticket
+  // ======================================================
+  // CREATE TICKET
+  // ======================================================
+
   Future<bool> createTicket({
     required String subject,
     required String description,
     required String category,
     required TicketPriority priority,
   }) async {
-    try {
-      isCreatingTicket = true;
-      notifyListeners();
+    if (state.isCreatingTicket) {
+      return false;
+    }
 
-      final ticket = await createMyTicket(
+    state = state.copyWith(isCreatingTicket: true, clearErrorMessage: true);
+
+    try {
+      await createMyTicket(
         subject: subject,
         description: description,
         category: category,
         priority: priority,
       );
 
-      tickets.insert(0, ticket);
       refreshTickets();
 
-      AppMessage.success(
-        AppKeys.navigatorKey.currentContext!,
-        'Support ticket created successfully',
-      );
+      _showSuccess('Support ticket created successfully');
+
       return true;
-    } catch (e) {
-      AppMessage.error(
-        AppKeys.navigatorKey.currentContext!,
-        'Failed to create ticket: $e',
-      );
+    } catch (error) {
+      final message = 'Failed to create ticket: $error';
+
+      state = state.copyWith(errorMessage: message);
+
+      _showError(message);
+
       return false;
     } finally {
-      isCreatingTicket = false;
-      if (!_disposed) notifyListeners();
+      state = state.copyWith(isCreatingTicket: false);
     }
   }
 
-  /// Load ticket details with replies
-  Future<void> loadTicketDetails(String ticketId) async {
-    try {
-      isLoading = true;
-      selectedTicket = null;
-      currentTicketReplies = [];
-      notifyListeners();
+  // ======================================================
+  // DETAILS
+  // ======================================================
 
+  Future<void> loadTicketDetails(String ticketId) async {
+    state = state.copyWith(
+      isLoading: true,
+      clearSelectedTicket: true,
+      currentTicketReplies: const [],
+      clearErrorMessage: true,
+    );
+
+    try {
       final ticket = await getMyTicketById(ticketId);
-      selectedTicket = ticket;
 
       final replies = await getMyTicketReplies(ticketId: ticketId);
-      currentTicketReplies = replies;
-    } catch (e) {
-      AppMessage.error(
-        AppKeys.navigatorKey.currentContext!,
-        'Failed to load ticket details: $e',
+
+      state = state.copyWith(
+        selectedTicket: ticket,
+        currentTicketReplies: List<SupportTicketReply>.unmodifiable(replies),
       );
+    } catch (error) {
+      final message = 'Failed to load ticket details: $error';
+
+      state = state.copyWith(errorMessage: message);
+
+      _showError(message);
     } finally {
-      isLoading = false;
-      if (!_disposed) notifyListeners();
+      state = state.copyWith(isLoading: false);
     }
   }
 
-  /// Add reply to current ticket
+  // ======================================================
+  // REPLY
+  // ======================================================
+
   Future<bool> addReplyToCurrentTicket(String message) async {
-    final ticket = selectedTicket;
-    if (ticket == null) return false;
+    final ticket = state.selectedTicket;
+
+    final trimmed = message.trim();
+
+    if (ticket == null || trimmed.isEmpty || state.isAddingReply) {
+      return false;
+    }
+
+    state = state.copyWith(isAddingReply: true, clearErrorMessage: true);
 
     try {
-      isAddingReply = true;
-      notifyListeners();
-
       final reply = await addReplyToMyTicket(
         ticketId: ticket.id,
-        message: message,
+        message: trimmed,
       );
 
-      currentTicketReplies.add(reply);
-
-      AppMessage.success(
-        AppKeys.navigatorKey.currentContext!,
-        'Reply added successfully',
+      state = state.copyWith(
+        currentTicketReplies: List<SupportTicketReply>.unmodifiable([
+          ...state.currentTicketReplies,
+          reply,
+        ]),
       );
+
+      _showSuccess('Reply added successfully');
+
       return true;
-    } catch (e) {
-      AppMessage.error(
-        AppKeys.navigatorKey.currentContext!,
-        'Failed to add reply: $e',
-      );
+    } catch (error) {
+      final errorMessage = 'Failed to add reply: $error';
+
+      state = state.copyWith(errorMessage: errorMessage);
+
+      _showError(errorMessage);
 
       return false;
     } finally {
-      isAddingReply = false;
-      if (!_disposed) notifyListeners();
+      state = state.copyWith(isAddingReply: false);
     }
   }
 
-  /// Update search query and refresh
-  void updateSearchQuery(String query) {
-    searchQuery = query;
-    updateActiveFilters();
+  // ======================================================
+  // SEARCH
+  // ======================================================
+
+  void updateSearchQuery(String value) {
+    state = state.copyWith(query: state.query.copyWith(search: value.trim()));
+
+    _scheduleSearchRefresh();
+  }
+
+  void _scheduleSearchRefresh() {
     _searchDebounce?.cancel();
+
     _searchDebounce = Timer(
-      const Duration(milliseconds: 500),
+      AppConstants.searchDebounce,
       pagingController.refresh,
     );
   }
 
-  /// Update status filter and refresh
+  // ======================================================
+  // FILTERS
+  // ======================================================
+
   void updateStatusFilter(String status) {
-    selectedStatus = status;
-    updateActiveFilters();
+    state = state.copyWith(query: state.query.copyWith(selectedStatus: status));
+
     refreshTickets();
   }
 
-  /// Update priority filter and refresh
   void updatePriorityFilter(String priority) {
-    selectedPriority = priority;
-    updateActiveFilters();
+    state = state.copyWith(
+      query: state.query.copyWith(selectedPriority: priority),
+    );
+
     refreshTickets();
   }
 
   void updateCategoryFilter(String category) {
-    selectedCategory = category;
-    updateActiveFilters();
+    state = state.copyWith(
+      query: state.query.copyWith(selectedCategory: category),
+    );
+
     refreshTickets();
   }
 
-  /// Clear all filters
   void clearFilters() {
-    searchQuery = '';
-    selectedStatus = 'all';
-    selectedPriority = 'all';
-    selectedCategory = 'all';
-    updateActiveFilters();
+    _searchDebounce?.cancel();
+
+    state = state.copyWith(query: HelpCenterQuery.empty);
+
     refreshTickets();
   }
 
-  /// Show filter bottom sheet for support tickets
+  // ======================================================
+  // FILTER SHEET
+  // ======================================================
+
   Future<void> showFilterBottomSheet(BuildContext context) async {
+    if (!context.mounted) {
+      return;
+    }
+
+    final query = state.query;
+
     final result = await GenericFilterBottomSheet.show(
       context: context,
       title: 'Filter Support Tickets',
@@ -286,58 +271,53 @@ class HelpCenterController extends ChangeNotifier {
           'Search Tickets',
           hint: 'Search subject or description...',
         ),
-        FilterField.dropdown('status', 'Status', [
+        FilterField.dropdown('status', 'Status', const [
           'all',
           'open',
           'inProgress',
           'resolved',
           'closed',
         ]),
-        FilterField.dropdown('priority', 'Priority', [
+        FilterField.dropdown('priority', 'Priority', const [
           'all',
           'low',
           'normal',
           'high',
           'urgent',
         ]),
-        FilterField.dropdown('category', 'Category', [
+        FilterField.dropdown('category', 'Category', const [
           'all',
           ...availableCategories,
         ]),
       ],
       initialValues: {
-        'search': searchQuery,
-        'status': selectedStatus,
-        'priority': selectedPriority,
-        'category': selectedCategory,
+        if (query.search.isNotEmpty) 'search': query.search,
+        'status': query.selectedStatus,
+        'priority': query.selectedPriority,
+        'category': query.selectedCategory,
       },
     );
 
-    if (result != null && result.hasValues) {
-      final filters = result.toJson();
-
-      // Apply search query
-      if (filters['search'] != null) {
-        updateSearchQuery(filters['search'] as String);
-      }
-
-      // Apply status filter
-      if (filters['status'] != null) {
-        updateStatusFilter(filters['status'] as String);
-      }
-
-      // Apply priority filter
-      if (filters['priority'] != null) {
-        updatePriorityFilter(filters['priority'] as String);
-      }
-
-      if (filters['category'] != null) {
-        updateCategoryFilter(filters['category'] as String);
-      }
+    if (result == null) {
+      return;
     }
+
+    state = state.copyWith(
+      query: HelpCenterQuery(
+        search: result.getValue<String>('search')?.trim() ?? '',
+        selectedStatus: result.getValue<String>('status')?.trim() ?? 'all',
+        selectedPriority: result.getValue<String>('priority')?.trim() ?? 'all',
+        selectedCategory: result.getValue<String>('category')?.trim() ?? 'all',
+      ),
+    );
+
+    refreshTickets();
   }
 
-  // Ownership is enforced by the typed backend using JWT claims.
+  // ======================================================
+  // REPOSITORY WRAPPERS
+  // ======================================================
+
   Future<List<SupportTicket>> getMyTickets({
     int page = 1,
     int perPage = 30,
@@ -346,23 +326,27 @@ class HelpCenterController extends ChangeNotifier {
     String? expand,
   }) async {
     final result = await _repository.listTickets(page: page, perPage: perPage);
+
     return result.items;
   }
 
-  Future<SupportTicket?> getMyTicketById(String ticketId, {String? expand}) =>
-      _repository.getTicket(ticketId);
+  Future<SupportTicket?> getMyTicketById(String ticketId, {String? expand}) {
+    return _repository.getTicket(ticketId);
+  }
 
   Future<SupportTicket> createMyTicket({
     required String subject,
     required String description,
     String? category,
     TicketPriority priority = TicketPriority.normal,
-  }) => _repository.createTicket(
-    subject: subject,
-    description: description,
-    category: category,
-    priority: priority,
-  );
+  }) {
+    return _repository.createTicket(
+      subject: subject,
+      description: description,
+      category: category,
+      priority: priority,
+    );
+  }
 
   Future<List<SupportTicketReply>> getMyTicketReplies({
     required String ticketId,
@@ -375,13 +359,16 @@ class HelpCenterController extends ChangeNotifier {
       page: page,
       perPage: perPage,
     );
+
     return result.items;
   }
 
   Future<SupportTicketReply> addReplyToMyTicket({
     required String ticketId,
     required String message,
-  }) => _repository.createReply(ticketId: ticketId, message: message);
+  }) {
+    return _repository.createReply(ticketId: ticketId, message: message);
+  }
 
   Future<List<SupportTicket>> searchMyTickets({
     required String query,
@@ -394,11 +381,36 @@ class HelpCenterController extends ChangeNotifier {
     final result = await _repository.listTickets(
       page: page,
       perPage: perPage,
-      search: query,
+      search: query.trim().isEmpty ? null : query.trim(),
       status: statusFilter,
       priority: priorityFilter,
       category: categoryFilter,
     );
+
     return result.items;
+  }
+
+  // ======================================================
+  // MESSAGE HELPERS
+  // ======================================================
+
+  void _showSuccess(String message) {
+    final context = AppKeys.navigatorKey.currentContext;
+
+    if (context == null) {
+      return;
+    }
+
+    AppMessage.success(context, message);
+  }
+
+  void _showError(String message) {
+    final context = AppKeys.navigatorKey.currentContext;
+
+    if (context == null) {
+      return;
+    }
+
+    AppMessage.error(context, message);
   }
 }

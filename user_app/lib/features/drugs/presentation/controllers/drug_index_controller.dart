@@ -1,110 +1,94 @@
+// drug_index_controller.dart
+
+import 'dart:async';
+
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:user_app/core/config/app_keys.dart';
-import 'package:user_app/core/utils/app_extensions.dart';
-import 'package:user_app/app/router/app_navigator.dart';
 import 'package:infinite_scroll_pagination/infinite_scroll_pagination.dart';
+import 'package:riverpod_annotation/riverpod_annotation.dart';
+
+import 'package:user_app/app/providers/app_providers.dart';
+import 'package:user_app/app/router/app_navigator.dart';
+import 'package:user_app/core/config/app_keys.dart';
+import 'package:user_app/core/constants/app_constants.dart';
+import 'package:user_app/core/utils/app_extensions.dart';
 import 'package:user_app/core/utils/app_message.dart';
 
-import 'package:user_app/shared/models/models.dart';
-import 'package:user_app/shared/models/filter_models.dart';
-import 'package:user_app/features/drugs/data/repositories/drug_reference_repository.dart';
 import 'package:user_app/features/calculators/data/repositories/calculator_repository.dart';
-import 'package:user_app/app/providers/app_providers.dart';
-import 'package:user_app/l10n/app_translations.dart';
-import 'package:user_app/core/utils/common.dart';
-import 'package:user_app/core/constants/app_constants.dart';
-import 'package:user_app/shared/widgets/generic_filter_bottom_sheet.dart';
+import 'package:user_app/features/drugs/data/repositories/drug_reference_repository.dart';
+import 'package:user_app/features/drugs/presentation/controllers/drug_index_query.dart';
+import 'package:user_app/features/drugs/presentation/controllers/drug_index_state.dart';
 import 'package:user_app/features/drugs/presentation/widgets/drug_details_bottom_sheet.dart';
 
-final drugIndexControllerProvider = ChangeNotifierProvider.autoDispose((ref) {
-  return DrugIndexController(
-    ref.watch(drugReferenceRepositoryProvider),
-    ref.watch(drugRepositoryProvider),
-  );
-});
+import 'package:user_app/l10n/app_translations.dart';
+import 'package:user_app/shared/models/filter_models.dart';
+import 'package:user_app/shared/models/models.dart';
+import 'package:user_app/shared/widgets/generic_filter_bottom_sheet.dart';
 
-class DrugIndexController extends ChangeNotifier {
-  DrugIndexController(this._references, this._drugs) {
-    _initPaging();
-    _loadFilterOptions();
-  }
+part 'drug_index_controller.g.dart';
 
-  final DrugReferenceRepository _references;
-  final DrugRepository _drugs;
-
+@riverpod
+class DrugIndexController extends _$DrugIndexController {
   late final PagingController<int, Drug> pagingController;
 
-  // =========================
-  // FILTER STATE
-  // =========================
-  String searchQuery = '';
-  bool hasActiveFilters = false;
+  DrugReferenceRepository get _references =>
+      ref.read(drugReferenceRepositoryProvider);
 
-  List<String> selectedCategories = [];
-  List<String> selectedTags = [];
-  List<String> selectedRoutes = [];
-  List<String> selectedPregnancyCategories = [];
-
-  bool whoEmlOnly = false;
-  bool antimicrobialOnly = false;
-
-  // =========================
-  // FILTER OPTIONS
-  // =========================
-  List<String> categories = [];
-  List<String> tags = [];
-  List<String> routes = [];
-  List<String> pregnancyCategories = [];
-  bool isLoadingFilters = false;
-  bool _disposed = false;
+  DrugRepository get _drugs => ref.read(drugRepositoryProvider);
 
   @override
-  void dispose() {
-    _disposed = true;
-    pagingController.dispose();
-    super.dispose();
-  }
-
-  // =========================
-  // PAGINATION
-  // =========================
-  void _initPaging() {
+  DrugIndexState build() {
     pagingController = PagingController<int, Drug>(
-      getNextPageKey: (state) =>
-          state.lastPageIsEmpty ? null : state.nextIntPageKey,
+      getNextPageKey: (pagingState) {
+        if (pagingState.lastPageIsEmpty) {
+          return null;
+        }
+
+        return pagingState.nextIntPageKey;
+      },
       fetchPage: _fetchDrugsPage,
     );
+
+    ref.onDispose(() {
+      pagingController.dispose();
+    });
+
+    Future.microtask(_loadFilterOptions);
+
+    return const DrugIndexState();
   }
+
+  // ======================================================
+  // PAGINATION
+  // ======================================================
 
   Future<List<Drug>> _fetchDrugsPage(int pageKey) async {
     try {
-      final drugs = await getDrugs(
-        page: pageKey,
-        perPage: AppConstants.pageSize,
-      );
+      return getDrugs(page: pageKey, perPage: AppConstants.pageSize);
+    } catch (_) {
+      _showError('failedToLoadDrugs'.tr);
 
-      return drugs;
-    } catch (e) {
-      AppMessage.error(
-        AppKeys.navigatorKey.currentContext!,
-        'failedToLoadDrugs'.tr,
-      );
       rethrow;
     }
   }
 
-  // =========================
+  // ======================================================
   // FILTER OPTIONS
-  // =========================
+  // ======================================================
+
   Future<void> _loadFilterOptions() async {
+    state = state.copyWith(isLoadingFilters: true, clearFilterError: true);
+
     try {
-      isLoadingFilters = true;
+      final results = await Future.wait([
+        _references.categoryNames(),
+        _references.tagNames(),
+      ]);
 
-      categories = await _references.categoryNames();
-      tags = await _references.tagNames();
+      final categories = results[0] as List<String>;
 
-      routes = [
+      final tags = results[1] as List<String>;
+
+      const routes = <String>[
         'oral',
         'IV',
         'IM',
@@ -117,112 +101,199 @@ class DrugIndexController extends ChangeNotifier {
         'subcutaneous',
       ];
 
-      pregnancyCategories = ['A', 'B', 'C', 'D', 'X', 'Unknown'];
-    } catch (e) {
-      AppMessage.error(AppKeys.navigatorKey.currentContext!, '$e');
+      const pregnancyCategories = <String>['A', 'B', 'C', 'D', 'X', 'Unknown'];
+
+      state = state.copyWith(
+        categories: List<String>.unmodifiable(categories),
+        tags: List<String>.unmodifiable(tags),
+        routes: routes,
+        pregnancyCategories: pregnancyCategories,
+      );
+    } catch (error) {
+      final message = error.toString();
+
+      state = state.copyWith(filterError: message);
+
+      _showError(message);
     } finally {
-      isLoadingFilters = false;
-      if (!_disposed) notifyListeners();
+      state = state.copyWith(isLoadingFilters: false);
     }
   }
 
-  // =========================
-  // FILTER STATE
-  // =========================
-  void _updateActiveFilters() {
-    hasActiveFilters =
-        searchQuery.isNotEmpty ||
-        selectedCategories.isNotEmpty ||
-        selectedTags.isNotEmpty ||
-        selectedRoutes.isNotEmpty ||
-        selectedPregnancyCategories.isNotEmpty ||
-        whoEmlOnly ||
-        antimicrobialOnly;
-    if (!_disposed) notifyListeners();
+  Future<void> reloadFilterOptions() {
+    return _loadFilterOptions();
   }
 
-  // =========================
-  // ACTIONS
-  // =========================
+  // ======================================================
+  // REFRESH
+  // ======================================================
+
   Future<void> refreshData() async {
     pagingController.refresh();
   }
 
-  void clearAllFilters() {
-    searchQuery = '';
+  // ======================================================
+  // SEARCH
+  // ======================================================
 
-    selectedCategories.clear();
-    selectedTags.clear();
-    selectedRoutes.clear();
-    selectedPregnancyCategories.clear();
+  void setSearchQuery(String value) {
+    state = state.copyWith(query: state.query.copyWith(search: value.trim()));
 
-    whoEmlOnly = false;
-    antimicrobialOnly = false;
-
-    hasActiveFilters = false;
-    if (!_disposed) notifyListeners();
     pagingController.refresh();
   }
+
+  // ======================================================
+  // CLEAR FILTERS
+  // ======================================================
+
+  void clearAllFilters() {
+    state = state.copyWith(query: DrugIndexQuery.empty);
+
+    pagingController.refresh();
+  }
+
+  // ======================================================
+  // CATEGORY
+  // ======================================================
 
   void toggleCategory(String value) {
-    selectedCategories.contains(value)
-        ? selectedCategories.remove(value)
-        : selectedCategories.add(value);
+    final values = [...state.query.selectedCategories];
 
-    _updateActiveFilters();
+    if (values.contains(value)) {
+      values.remove(value);
+    } else {
+      values.add(value);
+    }
+
+    state = state.copyWith(
+      query: state.query.copyWith(
+        selectedCategories: List<String>.unmodifiable(values),
+      ),
+    );
+
     pagingController.refresh();
   }
+
+  // ======================================================
+  // TAG
+  // ======================================================
 
   void toggleTag(String value) {
-    selectedTags.contains(value)
-        ? selectedTags.remove(value)
-        : selectedTags.add(value);
+    final values = [...state.query.selectedTags];
 
-    _updateActiveFilters();
+    if (values.contains(value)) {
+      values.remove(value);
+    } else {
+      values.add(value);
+    }
+
+    state = state.copyWith(
+      query: state.query.copyWith(
+        selectedTags: List<String>.unmodifiable(values),
+      ),
+    );
+
     pagingController.refresh();
   }
+
+  // ======================================================
+  // ROUTE
+  // ======================================================
 
   void toggleRoute(String value) {
-    selectedRoutes.contains(value)
-        ? selectedRoutes.remove(value)
-        : selectedRoutes.add(value);
+    final values = [...state.query.selectedRoutes];
 
-    _updateActiveFilters();
+    if (values.contains(value)) {
+      values.remove(value);
+    } else {
+      values.add(value);
+    }
+
+    state = state.copyWith(
+      query: state.query.copyWith(
+        selectedRoutes: List<String>.unmodifiable(values),
+      ),
+    );
+
     pagingController.refresh();
   }
+
+  // ======================================================
+  // PREGNANCY CATEGORY
+  // ======================================================
 
   void togglePregnancyCategory(String value) {
-    selectedPregnancyCategories.contains(value)
-        ? selectedPregnancyCategories.remove(value)
-        : selectedPregnancyCategories.add(value);
+    final values = [...state.query.selectedPregnancyCategories];
 
-    _updateActiveFilters();
+    if (values.contains(value)) {
+      values.remove(value);
+    } else {
+      values.add(value);
+    }
+
+    state = state.copyWith(
+      query: state.query.copyWith(
+        selectedPregnancyCategories: List<String>.unmodifiable(values),
+      ),
+    );
+
     pagingController.refresh();
   }
+
+  // ======================================================
+  // WHO EML
+  // ======================================================
 
   void toggleWhoEml() {
-    whoEmlOnly = !whoEmlOnly;
-    _updateActiveFilters();
+    state = state.copyWith(
+      query: state.query.copyWith(whoEmlOnly: !state.query.whoEmlOnly),
+    );
+
     pagingController.refresh();
   }
+
+  void setWhoEmlOnly(bool value) {
+    state = state.copyWith(query: state.query.copyWith(whoEmlOnly: value));
+
+    pagingController.refresh();
+  }
+
+  // ======================================================
+  // ANTIMICROBIAL
+  // ======================================================
 
   void toggleAntimicrobial() {
-    antimicrobialOnly = !antimicrobialOnly;
-    _updateActiveFilters();
+    state = state.copyWith(
+      query: state.query.copyWith(
+        antimicrobialOnly: !state.query.antimicrobialOnly,
+      ),
+    );
+
     pagingController.refresh();
   }
 
-  // =========================
+  void setAntimicrobialOnly(bool value) {
+    state = state.copyWith(
+      query: state.query.copyWith(antimicrobialOnly: value),
+    );
+
+    pagingController.refresh();
+  }
+
+  // ======================================================
   // FILTER MODAL
-  // =========================
+  // ======================================================
+
   Future<void> showFilterModal(BuildContext context) async {
-    if (categories.isEmpty || tags.isEmpty) {
+    if (state.categories.isEmpty || state.tags.isEmpty) {
       await _loadFilterOptions();
     }
 
     if (!context.mounted) {
       return;
     }
+
+    final query = state.query;
 
     final fields = <FilterField>[
       FilterField.text('search', 'search'.tr),
@@ -231,84 +302,145 @@ class DrugIndexController extends ChangeNotifier {
         'antimicrobialOnly',
         AppTranslationKey.antimicrobialOnly,
       ),
-      FilterField.multiSelect('categories', 'categories'.tr, categories),
-      FilterField.multiSelect('tags', 'tags'.tr, tags),
-      FilterField.multiSelect('routes', 'routes'.tr, routes),
+      FilterField.multiSelect('categories', 'categories'.tr, state.categories),
+      FilterField.multiSelect('tags', 'tags'.tr, state.tags),
+      FilterField.multiSelect('routes', 'routes'.tr, state.routes),
       FilterField.multiSelect(
         'pregnancyCategories',
         'pregnancyCategories'.tr,
-        pregnancyCategories,
+        state.pregnancyCategories,
       ),
     ];
 
-    final initial = <String, dynamic>{
-      if (searchQuery.isNotEmpty) 'search': searchQuery,
-      if (whoEmlOnly) 'whoEmlOnly': true,
-      if (antimicrobialOnly) 'antimicrobialOnly': true,
-      if (selectedCategories.isNotEmpty) 'categories': selectedCategories,
-      if (selectedTags.isNotEmpty) 'tags': selectedTags,
-      if (selectedRoutes.isNotEmpty) 'routes': selectedRoutes,
-      if (selectedPregnancyCategories.isNotEmpty)
-        'pregnancyCategories': selectedPregnancyCategories,
+    final initialValues = <String, dynamic>{
+      if (query.search.isNotEmpty) 'search': query.search,
+
+      if (query.whoEmlOnly) 'whoEmlOnly': true,
+
+      if (query.antimicrobialOnly) 'antimicrobialOnly': true,
+
+      if (query.selectedCategories.isNotEmpty)
+        'categories': query.selectedCategories,
+
+      if (query.selectedTags.isNotEmpty) 'tags': query.selectedTags,
+
+      if (query.selectedRoutes.isNotEmpty) 'routes': query.selectedRoutes,
+
+      if (query.selectedPregnancyCategories.isNotEmpty)
+        'pregnancyCategories': query.selectedPregnancyCategories,
     };
 
     final result = await GenericFilterBottomSheet.show(
       context: context,
       title: AppTranslationKey.filterDrugs,
       fields: fields,
-      initialValues: initial,
+      initialValues: initialValues,
     );
 
-    if (result != null && result.isNotEmpty) {
-      _applyFilters(result);
+    if (result == null) {
+      return;
     }
+
+    _applyFilters(result);
   }
 
   void _applyFilters(FilterResult result) {
-    clearAllFilters();
+    final search = result.getValue<String>('search')?.trim() ?? '';
 
-    searchQuery = result.getValue<String>('search') ?? '';
+    final categories = _stringList(result.getValue<List>('categories'));
 
-    whoEmlOnly = result.getValue<bool>('whoEmlOnly') ?? false;
-    antimicrobialOnly = result.getValue<bool>('antimicrobialOnly') ?? false;
+    final tags = _stringList(result.getValue<List>('tags'));
 
-    selectedCategories.addAll(
-      (result.getValue<List>('categories') ?? []).cast<String>(),
+    final routes = _stringList(result.getValue<List>('routes'));
+
+    final pregnancyCategories = _stringList(
+      result.getValue<List>('pregnancyCategories'),
     );
 
-    selectedTags.addAll((result.getValue<List>('tags') ?? []).cast<String>());
-
-    selectedRoutes.addAll(
-      (result.getValue<List>('routes') ?? []).cast<String>(),
+    state = state.copyWith(
+      query: DrugIndexQuery(
+        search: search,
+        whoEmlOnly: result.getValue<bool>('whoEmlOnly') ?? false,
+        antimicrobialOnly: result.getValue<bool>('antimicrobialOnly') ?? false,
+        selectedCategories: categories,
+        selectedTags: tags,
+        selectedRoutes: routes,
+        selectedPregnancyCategories: pregnancyCategories,
+      ),
     );
 
-    selectedPregnancyCategories.addAll(
-      (result.getValue<List>('pregnancyCategories') ?? []).cast<String>(),
-    );
-
-    _updateActiveFilters();
     pagingController.refresh();
   }
 
-  // =========================
+  List<String> _stringList(List<dynamic>? values) {
+    if (values == null) {
+      return const [];
+    }
+
+    return List<String>.unmodifiable(
+      values
+          .map((value) => value.toString())
+          .where((value) => value.isNotEmpty),
+    );
+  }
+
+  // ======================================================
   // API
-  // =========================
+  // ======================================================
+
   Future<List<Drug>> getDrugs({int page = 1, int perPage = 30}) async {
+    final query = state.query;
+
     final result = await _drugs.list(
       page: page,
       perPage: perPage,
-      search: searchQuery,
+      search: query.search,
       status: 'active',
-      route: selectedRoutes.length == 1 ? selectedRoutes.single : null,
-      pregnancyCategory: selectedPregnancyCategories.length == 1
-          ? selectedPregnancyCategories.single
+      route: query.selectedRoutes.length == 1
+          ? query.selectedRoutes.single
           : null,
-      whoEml: whoEmlOnly ? true : null,
-      antimicrobial: antimicrobialOnly ? true : null,
+      pregnancyCategory: query.selectedPregnancyCategories.length == 1
+          ? query.selectedPregnancyCategories.single
+          : null,
+      whoEml: query.whoEmlOnly ? true : null,
+      antimicrobial: query.antimicrobialOnly ? true : null,
     );
 
-    return result.items;
+    var items = result.items;
+
+    // The existing DrugRepository API only accepts one
+    // route/pregnancy category. Preserve multi-select
+    // behavior locally when multiple values are selected.
+    if (query.selectedRoutes.length > 1) {
+      final selected = query.selectedRoutes.toSet();
+
+      items = items
+          .where((drug) {
+            final route = drug.route;
+
+            return route != null && selected.contains(route);
+          })
+          .toList(growable: false);
+    }
+
+    if (query.selectedPregnancyCategories.length > 1) {
+      final selected = query.selectedPregnancyCategories.toSet();
+
+      items = items
+          .where((drug) {
+            final category = drug.pregnancyCategory;
+
+            return category != null && selected.contains(category);
+          })
+          .toList(growable: false);
+    }
+
+    return items;
   }
+
+  // ======================================================
+  // DETAILS
+  // ======================================================
 
   Future<void> navigateToDrugDetail(Drug drug) async {
     final context = AppNavigator.context;
@@ -316,10 +448,34 @@ class DrugIndexController extends ChangeNotifier {
     await DrugDetailsBottomSheet.show(context: context, drug: drug);
   }
 
+  // ======================================================
+  // BOOKMARK
+  // ======================================================
+
   void toggleBookmark(Drug drug) {
-    AppMessage.success(
-      AppKeys.navigatorKey.currentContext!,
-      'Bookmark toggled for ${drug.name}',
-    );
+    final context = AppKeys.navigatorKey.currentContext;
+
+    if (context == null) {
+      return;
+    }
+
+    AppMessage.success(context, 'Bookmark toggled for ${drug.name}');
+
+    // TODO:
+    // Replace with a bookmark repository/controller.
+  }
+
+  // ======================================================
+  // ERROR
+  // ======================================================
+
+  void _showError(String message) {
+    final context = AppKeys.navigatorKey.currentContext;
+
+    if (context == null) {
+      return;
+    }
+
+    AppMessage.error(context, message);
   }
 }

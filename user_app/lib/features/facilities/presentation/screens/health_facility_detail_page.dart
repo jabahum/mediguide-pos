@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:user_app/core/utils/app_extensions.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
-import 'package:user_app/shared/models/models.dart';
 import 'package:user_app/core/constants/app_spacing.dart';
+import 'package:user_app/core/utils/app_extensions.dart';
+import 'package:user_app/core/widgets/empty_state.dart';
+
+import 'package:user_app/shared/models/models.dart';
 import 'package:user_app/shared/widgets/section_group.dart';
 
 class HealthFacilityDetailPage extends StatelessWidget {
@@ -13,13 +15,22 @@ class HealthFacilityDetailPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final facility = this.facility;
-    if (facility == null) {
-      return const _InvalidFacilityState();
+    final value = facility;
+
+    if (value == null) {
+      return Scaffold(
+        appBar: AppBar(),
+        body: EmptyState.noData(
+          title: 'Facility unavailable',
+          description: 'The facility details could not be found.',
+        ),
+      );
     }
 
     return Scaffold(
-      appBar: AppBar(title: Text(facility.name)),
+      appBar: AppBar(
+        title: Text(value.name, maxLines: 1, overflow: TextOverflow.ellipsis),
+      ),
       body: SafeArea(
         child: ListView(
           padding: const EdgeInsets.fromLTRB(
@@ -29,46 +40,43 @@ class HealthFacilityDetailPage extends StatelessWidget {
             AppSpacing.xl,
           ),
           children: [
-            _FacilityHeader(facility: facility),
+            _FacilityHeader(facility: value),
 
             AppSpacing.gapLg,
 
-            if (_hasLocationData(facility)) ...[
+            if (_hasLocationData(value)) ...[
               SectionGroup(
                 title: 'Location',
                 items: [
-                  if (facility.regionName.trim().isNotEmpty)
-                    _DetailRow(label: 'Region', value: facility.regionName),
-                  if (facility.districtName.trim().isNotEmpty)
-                    _DetailRow(label: 'District', value: facility.districtName),
-                  if (facility.countyName.trim().isNotEmpty)
-                    _DetailRow(label: 'County', value: facility.countyName),
-                  if (facility.subcountyName.trim().isNotEmpty)
-                    _DetailRow(
-                      label: 'Sub-county',
-                      value: facility.subcountyName,
-                    ),
-                  if (facility.parishName.trim().isNotEmpty)
-                    _DetailRow(label: 'Parish', value: facility.parishName),
+                  if (_hasText(value.regionName))
+                    _DetailRow(label: 'Region', value: value.regionName),
+                  if (_hasText(value.districtName))
+                    _DetailRow(label: 'District', value: value.districtName),
+                  if (_hasText(value.countyName))
+                    _DetailRow(label: 'County', value: value.countyName),
+                  if (_hasText(value.subcountyName))
+                    _DetailRow(label: 'Sub-county', value: value.subcountyName),
+                  if (_hasText(value.parishName))
+                    _DetailRow(label: 'Parish', value: value.parishName),
                 ],
               ),
               AppSpacing.gapMd,
             ],
 
-            if (_hasFacilityCodes(facility)) ...[
+            if (_hasFacilityCodes(value)) ...[
               SectionGroup(
                 title: 'Facility Codes',
                 items: [
-                  if (facility.nhpiCode.trim().isNotEmpty)
+                  if (_hasText(value.nhpiCode))
                     _DetailRow(
                       label: 'NHPI Code',
-                      value: facility.nhpiCode,
+                      value: value.nhpiCode,
                       mono: true,
                     ),
-                  if (facility.hsdtCode.trim().isNotEmpty)
+                  if (_hasText(value.hsdtCode))
                     _DetailRow(
                       label: 'HSDT Code',
-                      value: facility.hsdtCode,
+                      value: value.hsdtCode,
                       mono: true,
                     ),
                 ],
@@ -81,104 +89,171 @@ class HealthFacilityDetailPage extends StatelessWidget {
               items: [
                 _DetailRow(
                   label: 'Created',
-                  value: _formatDate(facility.createdAt),
+                  value: _formatDate(value.createdAt),
                 ),
                 _DetailRow(
                   label: 'Updated',
-                  value: _formatDate(facility.updatedAt),
+                  value: _formatDate(value.updatedAt),
                 ),
               ],
             ),
+
+            AppSpacing.gapXl,
           ],
         ),
       ),
     );
   }
 
+  static bool _hasText(String? value) {
+    return value?.trim().isNotEmpty == true;
+  }
+
   static bool _hasLocationData(HealthFacility facility) {
-    return facility.regionName.trim().isNotEmpty ||
-        facility.districtName.trim().isNotEmpty ||
-        facility.countyName.trim().isNotEmpty ||
-        facility.subcountyName.trim().isNotEmpty ||
-        facility.parishName.trim().isNotEmpty;
+    return _hasText(facility.regionName) ||
+        _hasText(facility.districtName) ||
+        _hasText(facility.countyName) ||
+        _hasText(facility.subcountyName) ||
+        _hasText(facility.parishName);
   }
 
   static bool _hasFacilityCodes(HealthFacility facility) {
-    return facility.nhpiCode.trim().isNotEmpty ||
-        facility.hsdtCode.trim().isNotEmpty;
+    return _hasText(facility.nhpiCode) || _hasText(facility.hsdtCode);
   }
 
   static String _formatDate(DateTime? value) {
-    if (value == null) return '—';
+    if (value == null) {
+      return '—';
+    }
+
     final date = value.toLocal();
+
     final day = date.day.toString().padLeft(2, '0');
+
     final month = date.month.toString().padLeft(2, '0');
+
     return '$day/$month/${date.year}';
   }
 }
 
 class _FacilityHeader extends StatelessWidget {
-  final HealthFacility facility;
-
   const _FacilityHeader({required this.facility});
+
+  final HealthFacility facility;
 
   @override
   Widget build(BuildContext context) {
     final cs = context.theme.colorScheme;
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          facility.name,
-          style: context.textTheme.headlineSmall?.copyWith(
-            fontWeight: FontWeight.w800,
-            height: 1.2,
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.lg),
+      decoration: BoxDecoration(
+        color: cs.primaryContainer.withValues(alpha: 0.30),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: cs.primary.withValues(alpha: 0.08)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: 54,
+                height: 54,
+                decoration: BoxDecoration(
+                  color: cs.primary.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(18),
+                ),
+                child: Icon(LucideIcons.building2, color: cs.primary, size: 28),
+              ),
+
+              AppSpacing.md.gap,
+
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      facility.name,
+                      style: context.textTheme.headlineSmall?.copyWith(
+                        fontWeight: FontWeight.w800,
+                        height: 1.2,
+                      ),
+                    ),
+
+                    if (facility.districtName.trim().isNotEmpty) ...[
+                      const SizedBox(height: 5),
+                      Row(
+                        children: [
+                          Icon(
+                            LucideIcons.mapPin,
+                            size: 15,
+                            color: cs.onSurfaceVariant,
+                          ),
+                          const SizedBox(width: 5),
+                          Expanded(
+                            child: Text(
+                              facility.districtName,
+                              style: context.textTheme.bodySmall?.copyWith(
+                                color: cs.onSurfaceVariant,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ],
           ),
-        ),
 
-        AppSpacing.gapMd,
+          AppSpacing.gapMd,
 
-        Wrap(
-          spacing: AppSpacing.sm,
-          runSpacing: AppSpacing.sm,
-          children: [
-            _InfoChip(
-              icon: LucideIcons.building2,
-              label: facility.facilityLevelName.trim().isEmpty
-                  ? 'Unknown Level'
-                  : facility.facilityLevelName,
-              color: cs.primary,
-            ),
-            if (facility.ownershipDisplay.trim().isNotEmpty)
+          Wrap(
+            spacing: AppSpacing.sm,
+            runSpacing: AppSpacing.sm,
+            children: [
               _InfoChip(
-                icon: LucideIcons.users,
-                label: facility.ownershipDisplay,
-                color: cs.secondary,
+                icon: LucideIcons.building2,
+                label: facility.facilityLevelName.trim().isEmpty
+                    ? 'Unknown Level'
+                    : facility.facilityLevelName,
+                color: cs.primary,
               ),
-            if (facility.authorityName.trim().isNotEmpty)
-              _InfoChip(
-                icon: LucideIcons.shield,
-                label: facility.authorityName,
-                color: cs.tertiary,
-              ),
-          ],
-        ),
-      ],
+
+              if (facility.ownershipDisplay.trim().isNotEmpty)
+                _InfoChip(
+                  icon: LucideIcons.users,
+                  label: facility.ownershipDisplay,
+                  color: cs.secondary,
+                ),
+
+              if (facility.authorityName.trim().isNotEmpty)
+                _InfoChip(
+                  icon: LucideIcons.shield,
+                  label: facility.authorityName,
+                  color: cs.tertiary,
+                ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 }
 
 class _InfoChip extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final Color color;
-
   const _InfoChip({
     required this.icon,
     required this.label,
     required this.color,
   });
+
+  final IconData icon;
+  final String label;
+  final Color color;
 
   @override
   Widget build(BuildContext context) {
@@ -211,19 +286,21 @@ class _InfoChip extends StatelessWidget {
 }
 
 class _DetailRow extends StatelessWidget {
-  final String label;
-  final String value;
-  final bool mono;
-
   const _DetailRow({
     required this.label,
     required this.value,
     this.mono = false,
   });
 
+  final String label;
+  final String value;
+  final bool mono;
+
   @override
   Widget build(BuildContext context) {
     final cs = context.theme.colorScheme;
+
+    final displayValue = value.trim().isEmpty ? '—' : value.trim();
 
     return Padding(
       padding: const EdgeInsets.symmetric(
@@ -243,10 +320,12 @@ class _DetailRow extends StatelessWidget {
               ),
             ),
           ),
+
           AppSpacing.hGapSm,
+
           Expanded(
             child: SelectableText(
-              value.trim().isEmpty ? '—' : value,
+              displayValue,
               style: context.textTheme.bodyMedium?.copyWith(
                 fontWeight: FontWeight.w600,
                 height: 1.35,
@@ -255,23 +334,6 @@ class _DetailRow extends StatelessWidget {
             ),
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _InvalidFacilityState extends StatelessWidget {
-  const _InvalidFacilityState();
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(),
-      body: Center(
-        child: Text(
-          'Invalid facility details.',
-          style: context.textTheme.bodyMedium,
-        ),
       ),
     );
   }

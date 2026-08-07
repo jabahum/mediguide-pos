@@ -1,32 +1,43 @@
 import 'dart:io';
 
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:in_app_update/in_app_update.dart';
+import 'package:riverpod_annotation/riverpod_annotation.dart';
+
+part 'app_update_controller.g.dart';
 
 enum AppUpdateResult { unsupported, upToDate, downloading }
 
-final appUpdateControllerProvider =
-    AutoDisposeAsyncNotifierProvider<AppUpdateController, AppUpdateResult?>(
-      AppUpdateController.new,
-    );
-
-class AppUpdateController extends AutoDisposeAsyncNotifier<AppUpdateResult?> {
+@riverpod
+class AppUpdateController extends _$AppUpdateController {
   @override
-  Future<AppUpdateResult?> build() async => null;
+  Future<AppUpdateResult?> build() async {
+    return null;
+  }
 
   Future<AppUpdateResult?> check() async {
-    if (state.isLoading) return null;
+    if (state.isLoading) {
+      return null;
+    }
+
     state = const AsyncLoading();
+
     try {
       if (!Platform.isAndroid) {
-        state = const AsyncData(AppUpdateResult.unsupported);
-        return AppUpdateResult.unsupported;
+        const result = AppUpdateResult.unsupported;
+
+        state = const AsyncData(result);
+
+        return result;
       }
 
       final info = await InAppUpdate.checkForUpdate();
+
       if (info.updateAvailability != UpdateAvailability.updateAvailable) {
-        state = const AsyncData(AppUpdateResult.upToDate);
-        return AppUpdateResult.upToDate;
+        const result = AppUpdateResult.upToDate;
+
+        state = const AsyncData(result);
+
+        return result;
       }
 
       try {
@@ -34,11 +45,20 @@ class AppUpdateController extends AutoDisposeAsyncNotifier<AppUpdateResult?> {
       } catch (_) {
         await InAppUpdate.performImmediateUpdate();
       }
-      state = const AsyncData(AppUpdateResult.downloading);
-      return AppUpdateResult.downloading;
+
+      const result = AppUpdateResult.downloading;
+
+      state = const AsyncData(result);
+
+      return result;
     } catch (error, stackTrace) {
       state = AsyncError(error, stackTrace);
+
       Error.throwWithStackTrace(error, stackTrace);
     }
+  }
+
+  void reset() {
+    state = const AsyncData(null);
   }
 }

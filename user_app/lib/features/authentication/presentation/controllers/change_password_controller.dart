@@ -1,13 +1,11 @@
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import 'package:user_app/app/providers/app_providers.dart';
 
-final changePasswordControllerProvider =
-    AutoDisposeAsyncNotifierProvider<ChangePasswordController, void>(
-      ChangePasswordController.new,
-    );
+part 'change_password_controller.g.dart';
 
-class ChangePasswordController extends AutoDisposeAsyncNotifier<void> {
+@riverpod
+class ChangePasswordController extends _$ChangePasswordController {
   @override
   Future<void> build() async {}
 
@@ -16,8 +14,12 @@ class ChangePasswordController extends AutoDisposeAsyncNotifier<void> {
     required String newPassword,
     required String newPasswordConfirm,
   }) async {
-    if (state.isLoading) return false;
+    if (state.isLoading) {
+      return false;
+    }
+
     state = const AsyncLoading();
+
     try {
       await ref
           .read(userRepositoryProvider)
@@ -26,10 +28,13 @@ class ChangePasswordController extends AutoDisposeAsyncNotifier<void> {
             newPassword: newPassword,
             newPasswordConfirm: newPasswordConfirm,
           );
+
       state = const AsyncData(null);
+
       return true;
     } catch (error, stackTrace) {
       state = AsyncError(error, stackTrace);
+
       Error.throwWithStackTrace(error, stackTrace);
     }
   }

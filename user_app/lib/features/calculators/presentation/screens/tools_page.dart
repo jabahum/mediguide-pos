@@ -1,17 +1,22 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:user_app/core/utils/app_extensions.dart';
-import 'package:user_app/app/router/app_navigator.dart';
 import 'package:infinite_scroll_pagination/infinite_scroll_pagination.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
-import 'package:user_app/shared/models/models.dart';
+import 'package:user_app/app/router/app_navigator.dart';
 import 'package:user_app/app/router/app_router.dart';
 import 'package:user_app/core/constants/app_spacing.dart';
-import 'package:user_app/shared/widgets/filter_button.dart';
-import 'package:user_app/shared/widgets/pagination_indicators.dart';
+import 'package:user_app/core/utils/app_extensions.dart';
+import 'package:user_app/core/widgets/app_error_view.dart';
+import 'package:user_app/core/widgets/app_loading_view.dart';
+import 'package:user_app/core/widgets/empty_state.dart';
+
 import 'package:user_app/features/calculators/presentation/controllers/tools_controller.dart';
 import 'package:user_app/features/calculators/presentation/widgets/calculator_card.dart';
+
+import 'package:user_app/shared/models/models.dart';
+import 'package:user_app/shared/widgets/filter_button.dart';
+import 'package:user_app/shared/widgets/pagination_indicators.dart';
 
 class ToolsPage extends ConsumerStatefulWidget {
   const ToolsPage({super.key, this.arguments});
@@ -52,7 +57,12 @@ class _ToolsPageState extends ConsumerState<ToolsPage> {
 
   @override
   Widget build(BuildContext context) {
-    final controller = ref.watch(toolsControllerProvider(_routeArguments));
+    final state = ref.watch(toolsControllerProvider(_routeArguments));
+
+    final controller = ref.read(
+      toolsControllerProvider(_routeArguments).notifier,
+    );
+
     return Scaffold(
       appBar: AppBar(
         automaticallyImplyLeading: false,
@@ -65,15 +75,19 @@ class _ToolsPageState extends ConsumerState<ToolsPage> {
         ),
         actions: [
           FilterButton(
-            hasActiveFilters: controller.hasActiveFilters,
-            onPressed: () => controller.showFilterModal(context),
-            onReset: controller.clearAllFilters,
+            hasActiveFilters: state.hasActiveFilters,
+            onPressed: () {
+              controller.showFilterModal(context);
+            },
+            onReset: state.hasActiveFilters ? controller.clearAllFilters : null,
           ),
           AppSpacing.xs.gap,
         ],
       ),
       body: RefreshIndicator(
-        onRefresh: () => Future.sync(controller.refreshData),
+        onRefresh: () async {
+          controller.refreshData();
+        },
         child: CustomScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
           slivers: [
@@ -86,7 +100,9 @@ class _ToolsPageState extends ConsumerState<ToolsPage> {
               ),
               sliver: SliverToBoxAdapter(
                 child: _ToolsHeaderCard(
-                  onOpenFilters: () => controller.showFilterModal(context),
+                  onOpenFilters: () {
+                    controller.showFilterModal(context);
+                  },
                 ),
               ),
             ),
@@ -101,7 +117,7 @@ class _ToolsPageState extends ConsumerState<ToolsPage> {
               sliver: SliverToBoxAdapter(
                 child: _ToolTypeFilterBar(
                   filters: _toolFilters,
-                  selectedIndex: controller.selectedTabIndex,
+                  selectedIndex: state.selectedTabIndex,
                   onChanged: controller.onTabChanged,
                 ),
               ),
@@ -116,9 +132,9 @@ class _ToolsPageState extends ConsumerState<ToolsPage> {
               ),
               sliver: PagingListener<int, Calculator>(
                 controller: controller.pagingController,
-                builder: (context, state, fetchNextPage) {
+                builder: (context, pagingState, fetchNextPage) {
                   return PagedSliverList<int, Calculator>.separated(
-                    state: state,
+                    state: pagingState,
                     fetchNextPage: fetchNextPage,
                     separatorBuilder: (context, index) => AppSpacing.sm.gap,
                     builderDelegate: PagedChildBuilderDelegate<Calculator>(
@@ -126,42 +142,83 @@ class _ToolsPageState extends ConsumerState<ToolsPage> {
                         return _ToolCardShell(
                           child: CalculatorTile(
                             calculator: calculator,
-                            onTap: () => AppNavigator.pushNamed(
-                              AppRoutes.calculators,
-                              extra: calculator,
-                            ),
+                            onTap: () {
+                              AppNavigator.push(
+                                AppRoutes.calculator(calculator.id),
+                                extra: calculator,
+                              );
+                            },
                             showDivider: false,
                           ),
                         );
                       },
-                      firstPageErrorIndicatorBuilder: (context) =>
-                          PaginationIndicators.firstPageError(
-                            onRetry: fetchNextPage,
-                            title: 'Failed to load tools',
-                            subtitle:
-                                'Please check your connection and try again',
-                            icon: LucideIcons.calculator,
-                          ),
-                      newPageErrorIndicatorBuilder: (context) =>
-                          PaginationIndicators.newPageError(
-                            onRetry: fetchNextPage,
-                            title: 'Failed to load more tools',
-                            icon: LucideIcons.calculator,
-                          ),
-                      firstPageProgressIndicatorBuilder: (context) =>
-                          PaginationIndicators.firstPageProgress(),
-                      newPageProgressIndicatorBuilder: (context) =>
-                          PaginationIndicators.newPageProgress(),
-                      noItemsFoundIndicatorBuilder: (context) {
-                        final hasFilters = controller.hasActiveFilters;
 
-                        return _EmptyToolsState(
-                          hasFilters: hasFilters,
-                          onClearFilters: controller.clearAllFilters,
+                      // =====================
+                      // FIRST PAGE LOADING
+                      // =====================
+                      firstPageProgressIndicatorBuilder: (_) {
+                        return const AppLoadingView(
+                          message: 'Loading clinical tools...',
                         );
                       },
-                      noMoreItemsIndicatorBuilder: (context) =>
-                          PaginationIndicators.noMoreItems(),
+
+                      // =====================
+                      // NEXT PAGE LOADING
+                      // =====================
+                      newPageProgressIndicatorBuilder: (_) {
+                        return PaginationIndicators.newPageProgress();
+                      },
+
+                      // =====================
+                      // FIRST PAGE ERROR
+                      // =====================
+                      firstPageErrorIndicatorBuilder: (_) {
+                        return AppErrorView(
+                          error: pagingState.error ?? 'Unable to load tools',
+                          title: 'Failed to load tools',
+                          message:
+                              'Please check your connection and try again.',
+                          onRetry: fetchNextPage,
+                        );
+                      },
+
+                      // =====================
+                      // NEXT PAGE ERROR
+                      // =====================
+                      newPageErrorIndicatorBuilder: (_) {
+                        return PaginationIndicators.newPageError(
+                          onRetry: fetchNextPage,
+                          title: 'Failed to load more tools',
+                          icon: LucideIcons.calculator,
+                        );
+                      },
+
+                      // =====================
+                      // EMPTY
+                      // =====================
+                      noItemsFoundIndicatorBuilder: (_) {
+                        if (state.hasActiveFilters) {
+                          return EmptyState.noResults(
+                            title: 'No tools match filters',
+                            description:
+                                'Try adjusting your search or filters.',
+                            actionLabel: 'Clear Filters',
+                            onAction: controller.clearAllFilters,
+                          );
+                        }
+
+                        return EmptyState.noData(
+                          title: 'No tools found',
+                          description: 'Tools will appear here when available.',
+                        );
+                      },
+
+                      // =====================
+                      // END
+                      // =====================
+                      noMoreItemsIndicatorBuilder: (_) {
+                        return PaginationIndicators.noMoreItems();
+                      },
                     ),
                   );
                 },
@@ -175,9 +232,9 @@ class _ToolsPageState extends ConsumerState<ToolsPage> {
 }
 
 class _ToolsHeaderCard extends StatelessWidget {
-  final VoidCallback onOpenFilters;
-
   const _ToolsHeaderCard({required this.onOpenFilters});
+
+  final VoidCallback onOpenFilters;
 
   @override
   Widget build(BuildContext context) {
@@ -236,15 +293,15 @@ class _ToolsHeaderCard extends StatelessWidget {
 }
 
 class _ToolTypeFilterBar extends StatelessWidget {
-  final List<_ToolTypeFilter> filters;
-  final int selectedIndex;
-  final ValueChanged<int> onChanged;
-
   const _ToolTypeFilterBar({
     required this.filters,
     required this.selectedIndex,
     required this.onChanged,
   });
+
+  final List<_ToolTypeFilter> filters;
+  final int selectedIndex;
+  final ValueChanged<int> onChanged;
 
   @override
   Widget build(BuildContext context) {
@@ -256,6 +313,7 @@ class _ToolTypeFilterBar extends StatelessWidget {
         separatorBuilder: (_, _) => AppSpacing.sm.gap,
         itemBuilder: (context, index) {
           final filter = filters[index];
+
           final selected = selectedIndex == filter.tabIndex;
 
           return _ToolTypeChip(
@@ -263,7 +321,10 @@ class _ToolTypeFilterBar extends StatelessWidget {
             icon: filter.icon,
             selected: selected,
             onTap: () {
-              if (selected) return;
+              if (selected) {
+                return;
+              }
+
               onChanged(filter.tabIndex);
             },
           );
@@ -274,17 +335,17 @@ class _ToolTypeFilterBar extends StatelessWidget {
 }
 
 class _ToolTypeChip extends StatelessWidget {
-  final String label;
-  final IconData icon;
-  final bool selected;
-  final VoidCallback onTap;
-
   const _ToolTypeChip({
     required this.label,
     required this.icon,
     required this.selected,
     required this.onTap,
   });
+
+  final String label;
+  final IconData icon;
+  final bool selected;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -312,9 +373,9 @@ class _ToolTypeChip extends StatelessWidget {
 }
 
 class _ToolCardShell extends StatelessWidget {
-  final Widget child;
-
   const _ToolCardShell({required this.child});
+
+  final Widget child;
 
   @override
   Widget build(BuildContext context) {
@@ -332,75 +393,14 @@ class _ToolCardShell extends StatelessWidget {
   }
 }
 
-class _EmptyToolsState extends StatelessWidget {
-  final bool hasFilters;
-  final VoidCallback onClearFilters;
-
-  const _EmptyToolsState({
-    required this.hasFilters,
-    required this.onClearFilters,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final cs = context.theme.colorScheme;
-
-    return Padding(
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.md,
-        vertical: AppSpacing.xl,
-      ),
-      child: Column(
-        children: [
-          Container(
-            width: 72,
-            height: 72,
-            decoration: BoxDecoration(
-              color: cs.primary.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(24),
-            ),
-            child: Icon(LucideIcons.calculator, color: cs.primary, size: 34),
-          ),
-          AppSpacing.md.gap,
-          Text(
-            hasFilters ? 'No tools match filters' : 'No tools found',
-            style: context.textTheme.titleMedium?.copyWith(
-              fontWeight: FontWeight.w800,
-            ),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 6),
-          Text(
-            hasFilters
-                ? 'Try adjusting your search or filters.'
-                : 'Tools will appear here when available.',
-            style: context.textTheme.bodyMedium?.copyWith(
-              color: cs.onSurfaceVariant,
-            ),
-            textAlign: TextAlign.center,
-          ),
-          if (hasFilters) ...[
-            AppSpacing.lg.gap,
-            FilledButton.icon(
-              onPressed: onClearFilters,
-              icon: const Icon(LucideIcons.x),
-              label: const Text('Clear Filters'),
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-}
-
 class _ToolTypeFilter {
-  final String label;
-  final IconData icon;
-  final int tabIndex;
-
   const _ToolTypeFilter({
     required this.label,
     required this.icon,
     required this.tabIndex,
   });
+
+  final String label;
+  final IconData icon;
+  final int tabIndex;
 }

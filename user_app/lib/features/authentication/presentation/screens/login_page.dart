@@ -4,21 +4,21 @@ import 'package:flutter/services.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:form_builder_validators/form_builder_validators.dart';
-import 'package:user_app/core/config/app_keys.dart';
-import 'package:user_app/core/constants/app_constants.dart';
-import 'package:user_app/core/utils/app_extensions.dart';
-import 'package:user_app/app/router/app_navigator.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
-import 'package:toastification/toastification.dart';
 
+import 'package:user_app/app/router/app_navigator.dart';
 import 'package:user_app/app/router/app_router.dart';
-import 'package:user_app/core/utils/app_message.dart';
-import 'package:user_app/features/authentication/presentation/controllers/auth_controller.dart';
-import 'package:user_app/features/authentication/presentation/controllers/auth_state.dart';
+import 'package:user_app/core/config/app_keys.dart';
 import 'package:user_app/core/constants/app_spacing.dart';
-import 'package:user_app/core/utils/common.dart';
+import 'package:user_app/core/utils/app_extensions.dart';
+import 'package:user_app/core/utils/app_message.dart';
 import 'package:user_app/core/utils/responsive.dart';
 import 'package:user_app/core/widgets/app_button.dart';
+
+import 'package:user_app/features/authentication/presentation/controllers/auth_controller.dart';
+import 'package:user_app/features/authentication/presentation/controllers/auth_state.dart';
+
+import 'package:user_app/l10n/app_translations.dart';
 import 'package:user_app/shared/widgets/app_logo.dart';
 import 'package:user_app/shared/widgets/copyright_terms_widget.dart';
 import 'package:user_app/shared/widgets/glass_card.dart';
@@ -35,38 +35,71 @@ class LoginPage extends ConsumerStatefulWidget {
 }
 
 class _LoginPageState extends ConsumerState<LoginPage> {
-  static const _emailField = 'email';
-  static const _passwordField = 'password';
-  final _formKey = GlobalKey<FormBuilderState>();
+  static const String _emailField = 'email';
+  static const String _passwordField = 'password';
+
+  final GlobalKey<FormBuilderState> _formKey = GlobalKey<FormBuilderState>();
 
   Future<void> _submit() async {
-    if (!(_formKey.currentState?.saveAndValidate() ?? false)) return;
+    final form = _formKey.currentState;
 
-    final formData = _formKey.currentState!.value;
+    if (form == null) {
+      return;
+    }
+
+    if (!(form.saveAndValidate())) {
+      return;
+    }
+
+    final email = form.value[_emailField]?.toString().trim();
+
+    final password = form.value[_passwordField]?.toString() ?? '';
+
+    if (email == null || email.isEmpty || password.isEmpty) {
+      return;
+    }
+
+    FocusScope.of(context).unfocus();
+
     try {
       final loggedIn = await ref
           .read(authControllerProvider.notifier)
-          .login(
-            email: formData[_emailField] as String,
-            password: formData[_passwordField] as String,
-          );
-      if (loggedIn && mounted) {
-        AppNavigator.go(AppRoutes.main);
+          .login(email: email, password: password);
+
+      if (!mounted || !loggedIn) {
+        return;
       }
+
+      AppNavigator.go(AppRoutes.main);
     } catch (error) {
-      if (!mounted) return;
-      AppMessage.error(
-        AppKeys.navigatorKey.currentContext!,
-        'loginFailed : $error'.tr,
-      );
+      if (!mounted) {
+        return;
+      }
+
+      _showLoginError(error);
     }
+  }
+
+  void _showLoginError(Object error) {
+    final navigatorContext = AppKeys.navigatorKey.currentContext;
+
+    if (navigatorContext == null) {
+      return;
+    }
+
+    AppMessage.error(navigatorContext, '${'loginFailed'.tr}: $error');
   }
 
   @override
   Widget build(BuildContext context) {
-    final auth = ref.watch(authControllerProvider).valueOrNull;
+    final authState = ref.watch(authControllerProvider);
+
+    final auth = authState.valueOrNull;
+
     final isLoading = auth?.phase == AuthPhase.authenticating;
+
     final isPasswordVisible = ref.watch(_passwordVisibleProvider);
+
     final theme = context.theme;
     final cs = theme.colorScheme;
     final size = MediaQuery.sizeOf(context);
@@ -80,7 +113,10 @@ class _LoginPageState extends ConsumerState<LoginPage> {
       child: Scaffold(
         resizeToAvoidBottomInset: true,
         body: GestureDetector(
-          onTap: FocusScope.of(context).unfocus,
+          behavior: HitTestBehavior.opaque,
+          onTap: () {
+            FocusScope.of(context).unfocus();
+          },
           child: DecoratedBox(
             decoration: BoxDecoration(
               gradient: LinearGradient(
@@ -118,13 +154,14 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          // ───────────────── Logo & Branding ─────────────────
                           const AppLogo(logoSize: 180),
 
-                          // ───────────────── Login Card ─────────────────
+                          AppSpacing.gapLg,
+
                           GlassCard.auth(
                             child: FormBuilder(
                               key: _formKey,
+                              enabled: !isLoading,
                               autovalidateMode:
                                   AutovalidateMode.onUserInteraction,
                               child: Column(
@@ -147,7 +184,6 @@ class _LoginPageState extends ConsumerState<LoginPage> {
 
                                   AppSpacing.contentGap,
 
-                                  // ───────────────── Email ─────────────────
                                   FormBuilderTextField(
                                     name: _emailField,
                                     keyboardType: TextInputType.emailAddress,
@@ -156,6 +192,8 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                                       AutofillHints.username,
                                       AutofillHints.email,
                                     ],
+                                    autocorrect: false,
+                                    enableSuggestions: false,
                                     decoration: _inputDecoration(
                                       context,
                                       label: AppTranslationKey.email.tr,
@@ -169,7 +207,6 @@ class _LoginPageState extends ConsumerState<LoginPage> {
 
                                   AppSpacing.fieldGap,
 
-                                  // ───────────────── Password ─────────────────
                                   FormBuilderTextField(
                                     name: _passwordField,
                                     obscureText: !isPasswordVisible,
@@ -177,7 +214,11 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                                     autofillHints: const [
                                       AutofillHints.password,
                                     ],
-                                    onSubmitted: (_) => _submit(),
+                                    onSubmitted: (_) {
+                                      if (!isLoading) {
+                                        _submit();
+                                      }
+                                    },
                                     decoration: _inputDecoration(
                                       context,
                                       label: AppTranslationKey.password.tr,
@@ -192,14 +233,17 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                                               : LucideIcons.eye,
                                           color: cs.primary,
                                         ),
-                                        onPressed: () =>
-                                            ref
-                                                    .read(
-                                                      _passwordVisibleProvider
-                                                          .notifier,
-                                                    )
-                                                    .state =
-                                                !isPasswordVisible,
+                                        onPressed: isLoading
+                                            ? null
+                                            : () {
+                                                final notifier = ref.read(
+                                                  _passwordVisibleProvider
+                                                      .notifier,
+                                                );
+
+                                                notifier.state =
+                                                    !isPasswordVisible;
+                                              },
                                       ),
                                     ),
                                     validator: FormBuilderValidators.compose([
@@ -210,13 +254,16 @@ class _LoginPageState extends ConsumerState<LoginPage> {
 
                                   AppSpacing.gapSm,
 
-                                  // ───────────────── Forgot Password ─────────────────
                                   Align(
                                     alignment: Alignment.centerRight,
                                     child: TextButton(
-                                      onPressed: () => AppNavigator.pushNamed(
-                                        AppRoutes.forgotPassword,
-                                      ),
+                                      onPressed: isLoading
+                                          ? null
+                                          : () {
+                                              AppNavigator.push(
+                                                AppRoutes.forgotPassword,
+                                              );
+                                            },
                                       child: Text(
                                         AppTranslationKey.forgotPassword.tr,
                                         style: TextStyle(
@@ -235,7 +282,6 @@ class _LoginPageState extends ConsumerState<LoginPage> {
 
                                   AppSpacing.elementGap,
 
-                                  // ───────────────── Sign In ─────────────────
                                   AppButton.large(
                                     text: AppTranslationKey.signIn.tr,
                                     onPressed: isLoading ? null : _submit,
@@ -246,12 +292,15 @@ class _LoginPageState extends ConsumerState<LoginPage> {
 
                                   AppSpacing.fieldGap,
 
-                                  // ───────────────── Register ─────────────────
                                   AppButtonVariants.outlined(
                                     text: AppTranslationKey.createAccount.tr,
-                                    onPressed: () => AppNavigator.pushNamed(
-                                      AppRoutes.register,
-                                    ),
+                                    onPressed: isLoading
+                                        ? null
+                                        : () {
+                                            AppNavigator.push(
+                                              AppRoutes.register,
+                                            );
+                                          },
                                     width: double.infinity,
                                     height: Responsive.doubleValue(
                                       context,
@@ -267,7 +316,6 @@ class _LoginPageState extends ConsumerState<LoginPage> {
 
                           AppSpacing.gapXl,
 
-                          // ───────────────── Copyright ─────────────────
                           const CopyrightTermsWidget(),
                         ],
                       ),
@@ -288,29 +336,22 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     required IconData icon,
     Widget? suffixIcon,
   }) {
-    final theme = context.theme;
-    final cs = theme.colorScheme;
+    final cs = context.theme.colorScheme;
 
     return InputDecoration(
       labelText: label,
       filled: true,
       fillColor: cs.surface.withValues(alpha: 0.72),
-
       prefixIcon: Icon(
         icon,
         color: cs.primary,
         size: Responsive.iconSize(context, mobile: 20, tablet: 22, desktop: 24),
       ),
-
       suffixIcon: suffixIcon,
-
       border: _border(context),
       enabledBorder: _border(context),
-
       focusedBorder: _border(context, color: cs.primary, width: 2),
-
       errorBorder: _border(context, color: cs.error),
-
       focusedErrorBorder: _border(context, color: cs.error, width: 2),
     );
   }

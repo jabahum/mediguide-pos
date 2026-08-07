@@ -1,40 +1,48 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:user_app/core/config/app_keys.dart';
-import 'package:user_app/core/utils/app_extensions.dart';
 import 'package:infinite_scroll_pagination/infinite_scroll_pagination.dart';
+import 'package:riverpod_annotation/riverpod_annotation.dart';
+
+import 'package:user_app/app/providers/app_providers.dart';
+import 'package:user_app/core/config/app_keys.dart';
+import 'package:user_app/core/constants/app_constants.dart';
+import 'package:user_app/core/utils/app_extensions.dart';
 import 'package:user_app/core/utils/app_message.dart';
-import 'package:user_app/features/guidelines/data/models/guideline_category.dart';
-import 'package:user_app/features/guidelines/data/models/guideline_tag.dart';
 
 import 'package:user_app/features/abbreviations/data/models/abbreviation.dart';
-import 'package:user_app/shared/models/filter_models.dart';
-import 'package:user_app/features/guidelines/data/repositories/guideline_content_repository.dart';
-import 'package:user_app/features/guidelines/data/repositories/progress_usage_repository.dart';
-import 'package:user_app/features/authentication/presentation/controllers/auth_controller.dart';
-import 'package:user_app/app/providers/app_providers.dart';
-import 'package:user_app/core/constants/app_constants.dart';
-import 'package:user_app/core/utils/common.dart';
-import 'package:user_app/shared/widgets/generic_filter_bottom_sheet.dart';
 import 'package:user_app/features/abbreviations/presentation/widgets/abbreviation_detail_modal.dart';
 
-/// ===============================
-/// QUERY MODEL (CLEAN STATE)
-/// ===============================
-class AbbreviationQuery {
-  final String search;
-  final String? categoryId;
-  final List<String> tagIds;
-  final bool showCommonOnly;
+import 'package:user_app/features/authentication/presentation/controllers/auth_controller.dart';
 
+import 'package:user_app/features/guidelines/data/models/guideline_category.dart';
+import 'package:user_app/features/guidelines/data/models/guideline_tag.dart';
+import 'package:user_app/features/guidelines/data/repositories/guideline_content_repository.dart';
+import 'package:user_app/features/guidelines/data/repositories/progress_usage_repository.dart';
+
+import 'package:user_app/shared/models/filter_models.dart';
+import 'package:user_app/shared/widgets/generic_filter_bottom_sheet.dart';
+
+part 'abbreviations_controller.g.dart';
+
+/// ======================================================
+/// QUERY
+/// ======================================================
+
+class AbbreviationQuery {
   const AbbreviationQuery({
     this.search = '',
     this.categoryId,
     this.tagIds = const [],
     this.showCommonOnly = false,
   });
+
+  final String search;
+  final String? categoryId;
+  final List<String> tagIds;
+  final bool showCommonOnly;
+
+  static const empty = AbbreviationQuery();
 
   bool get hasFilters =>
       search.isNotEmpty ||
@@ -45,86 +53,116 @@ class AbbreviationQuery {
   AbbreviationQuery copyWith({
     String? search,
     String? categoryId,
+    bool clearCategory = false,
     List<String>? tagIds,
     bool? showCommonOnly,
   }) {
     return AbbreviationQuery(
       search: search ?? this.search,
-      categoryId: categoryId ?? this.categoryId,
+      categoryId: clearCategory ? null : categoryId ?? this.categoryId,
       tagIds: tagIds ?? this.tagIds,
       showCommonOnly: showCommonOnly ?? this.showCommonOnly,
     );
   }
-
-  static const empty = AbbreviationQuery();
 }
 
-/// ===============================
-/// CONTROLLER
-/// ===============================
-final abbreviationsControllerProvider = ChangeNotifierProvider.autoDispose(
-  (ref) => AbbreviationsController(
-    ref.watch(usageRepositoryProvider),
-    ref.watch(guidelineContentRepositoryProvider),
-    canTrackUsage: ref.watch(authControllerProvider).valueOrNull?.user != null,
-  ),
-);
+/// ======================================================
+/// STATE
+/// ======================================================
 
-class AbbreviationsController extends ChangeNotifier {
-  AbbreviationsController(
-    this._usageRepository,
-    this._contentRepository, {
-    required this.canTrackUsage,
+class AbbreviationsState {
+  const AbbreviationsState({
+    this.query = AbbreviationQuery.empty,
+    this.availableCategories = const [],
+    this.availableTags = const [],
+    this.isLoadingFilters = false,
+  });
+
+  final AbbreviationQuery query;
+
+  final List<GuidelineCategory> availableCategories;
+
+  final List<GuidelineTag> availableTags;
+
+  final bool isLoadingFilters;
+
+  AbbreviationsState copyWith({
+    AbbreviationQuery? query,
+    List<GuidelineCategory>? availableCategories,
+    List<GuidelineTag>? availableTags,
+    bool? isLoadingFilters,
   }) {
-    pagingController = PagingController(
-      getNextPageKey: (state) =>
-          state.lastPageIsEmpty ? null : state.nextIntPageKey,
-      fetchPage: _loadPage,
+    return AbbreviationsState(
+      query: query ?? this.query,
+      availableCategories: availableCategories ?? this.availableCategories,
+      availableTags: availableTags ?? this.availableTags,
+      isLoadingFilters: isLoadingFilters ?? this.isLoadingFilters,
     );
-    unawaited(_loadFilterOptions());
   }
+}
 
-  final UsageRepository _usageRepository;
-  final GuidelineContentRepository _contentRepository;
-  final bool canTrackUsage;
+/// ======================================================
+/// CONTROLLER
+/// ======================================================
+
+@riverpod
+class AbbreviationsController extends _$AbbreviationsController {
+  Timer? _debounce;
+
   late final PagingController<int, Abbreviation> pagingController;
 
-  AbbreviationQuery query = AbbreviationQuery.empty;
+  GuidelineContentRepository get _contentRepository =>
+      ref.read(guidelineContentRepositoryProvider);
 
-  List<GuidelineCategory> availableCategories = [];
+  UsageRepository get _usageRepository => ref.read(usageRepositoryProvider);
 
-  List<GuidelineTag> availableTags = [];
-
-  bool isLoadingFilters = false;
-
-  Timer? _debounce;
-  bool _disposed = false;
+  bool get _canTrackUsage =>
+      ref.read(authControllerProvider).valueOrNull?.user != null;
 
   @override
-  void dispose() {
-    _disposed = true;
-    _debounce?.cancel();
-    pagingController.dispose();
-    super.dispose();
+  AbbreviationsState build() {
+    pagingController = PagingController<int, Abbreviation>(
+      getNextPageKey: (pagingState) {
+        if (pagingState.lastPageIsEmpty) {
+          return null;
+        }
+
+        return pagingState.nextIntPageKey;
+      },
+      fetchPage: _loadPage,
+    );
+
+    ref.onDispose(() {
+      _debounce?.cancel();
+      pagingController.dispose();
+    });
+
+    Future.microtask(_loadFilterOptions);
+
+    return const AbbreviationsState();
   }
 
-  // ===============================
+  // ======================================================
   // PAGINATION
-  // ===============================
+  // ======================================================
+
   Future<List<Abbreviation>> _loadPage(int pageKey) async {
     try {
-      final q = query;
+      final query = state.query;
 
-      if (q.showCommonOnly) {
+      if (query.showCommonOnly) {
         if (pageKey == 1) {
           return getCommonAbbreviations();
         }
+
         return [];
       }
 
-      if (q.search.isNotEmpty || q.categoryId != null || q.tagIds.isNotEmpty) {
+      if (query.search.isNotEmpty ||
+          query.categoryId != null ||
+          query.tagIds.isNotEmpty) {
         return _searchAbbreviations(
-          query: q,
+          query: query,
           page: pageKey,
           perPage: AppConstants.pageSize,
         );
@@ -132,70 +170,112 @@ class AbbreviationsController extends ChangeNotifier {
 
       return getAbbreviations(page: pageKey, perPage: AppConstants.pageSize);
     } catch (error) {
-      AppMessage.error(AppKeys.navigatorKey.currentContext!, ' $error');
+      final context = AppKeys.navigatorKey.currentContext;
+
+      if (context != null) {
+        AppMessage.error(context, error.toString());
+      }
+
       rethrow;
     }
   }
 
-  // ===============================
-  // FILTER UPDATE (CENTRALIZED)
-  // ===============================
-  void updateQuery(AbbreviationQuery newQuery) {
-    query = newQuery;
-    _notify();
-    _refresh();
+  // ======================================================
+  // QUERY / FILTER STATE
+  // ======================================================
+
+  void updateQuery(AbbreviationQuery query) {
+    state = state.copyWith(query: query);
+
+    refresh();
   }
 
   void clearAllFilters() {
-    query = AbbreviationQuery.empty;
-    _notify();
-    _refresh();
+    state = state.copyWith(query: AbbreviationQuery.empty);
+
+    refresh();
   }
 
   void search(String value) {
-    query = query.copyWith(search: value.trim());
-    _notify();
+    final updatedQuery = state.query.copyWith(search: value.trim());
+
+    state = state.copyWith(query: updatedQuery);
 
     _debouncedRefresh();
+  }
+
+  void setCategory(String? categoryId) {
+    final updatedQuery = categoryId == null
+        ? state.query.copyWith(clearCategory: true)
+        : state.query.copyWith(categoryId: categoryId);
+
+    state = state.copyWith(query: updatedQuery);
+
+    refresh();
+  }
+
+  void setTags(List<String> tagIds) {
+    state = state.copyWith(query: state.query.copyWith(tagIds: tagIds));
+
+    refresh();
+  }
+
+  void setCommonOnly(bool value) {
+    state = state.copyWith(query: state.query.copyWith(showCommonOnly: value));
+
+    refresh();
   }
 
   void _debouncedRefresh() {
     _debounce?.cancel();
 
-    _debounce = Timer(const Duration(milliseconds: 300), _refresh);
+    _debounce = Timer(AppConstants.searchDebounce, refresh);
   }
 
-  void _refresh() {
+  void refresh() {
     pagingController.refresh();
   }
 
-  // ===============================
+  // ======================================================
   // FILTER OPTIONS
-  // ===============================
+  // ======================================================
+
   Future<void> _loadFilterOptions() async {
+    state = state.copyWith(isLoadingFilters: true);
+
     try {
-      isLoadingFilters = true;
-      _notify();
+      final results = await Future.wait([
+        getGuidelineCategories(),
+        getGuidelineTags(),
+      ]);
 
-      final categories = await getGuidelineCategories();
+      state = state.copyWith(
+        availableCategories: results[0] as List<GuidelineCategory>,
+        availableTags: results[1] as List<GuidelineTag>,
+      );
+    } catch (error) {
+      final context = AppKeys.navigatorKey.currentContext;
 
-      final tags = await getGuidelineTags();
-
-      availableCategories = categories;
-      availableTags = tags;
+      if (context != null) {
+        AppMessage.error(context, 'Unable to load filter options: $error');
+      }
     } finally {
-      isLoadingFilters = false;
-      _notify();
+      state = state.copyWith(isLoadingFilters: false);
     }
   }
 
-  // ===============================
+  Future<void> reloadFilterOptions() async {
+    await _loadFilterOptions();
+  }
+
+  // ======================================================
   // FILTER UI
-  // ===============================
+  // ======================================================
+
   Future<void> showFilterModal(BuildContext context) async {
     if (!context.mounted) return;
 
-    final q = query;
+    final query = state.query;
 
     final result = await GenericFilterBottomSheet.show(
       context: context,
@@ -205,8 +285,8 @@ class AbbreviationsController extends ChangeNotifier {
         FilterField.boolean('commonOnly', 'showCommonOnly'.tr),
       ],
       initialValues: {
-        if (q.search.isNotEmpty) 'search': q.search,
-        if (q.showCommonOnly) 'commonOnly': true,
+        if (query.search.isNotEmpty) 'search': query.search,
+        if (query.showCommonOnly) 'commonOnly': true,
       },
     );
 
@@ -214,17 +294,18 @@ class AbbreviationsController extends ChangeNotifier {
 
     updateQuery(
       AbbreviationQuery(
-        search: result.getValue<String>('search') ?? '',
+        search: result.getValue<String>('search')?.trim() ?? '',
         showCommonOnly: result.getValue<bool>('commonOnly') ?? false,
-        categoryId: q.categoryId,
-        tagIds: q.tagIds,
+        categoryId: query.categoryId,
+        tagIds: query.tagIds,
       ),
     );
   }
 
-  // ===============================
-  // DATA LAYER
-  // ===============================
+  // ======================================================
+  // ABBREVIATIONS
+  // ======================================================
+
   Future<List<Abbreviation>> getAbbreviations({
     int page = 1,
     int perPage = 30,
@@ -239,6 +320,7 @@ class AbbreviationsController extends ChangeNotifier {
 
   Future<List<Abbreviation>> getCommonAbbreviations() async {
     final result = await _contentRepository.abbreviations(
+      page: 1,
       perPage: 50,
       commonUsage: true,
     );
@@ -254,7 +336,7 @@ class AbbreviationsController extends ChangeNotifier {
     final result = await _contentRepository.abbreviations(
       page: page,
       perPage: perPage,
-      search: query.search,
+      search: query.search.isEmpty ? null : query.search,
       categoryId: query.categoryId,
       tagId: query.tagIds.isEmpty ? null : query.tagIds.join(','),
     );
@@ -262,45 +344,47 @@ class AbbreviationsController extends ChangeNotifier {
     return result.items;
   }
 
-  // ===============================
-  // DETAIL + TRACKING
-  // ===============================
+  // ======================================================
+  // DETAIL
+  // ======================================================
+
   Future<void> showAbbreviationDetail(
     BuildContext context,
     Abbreviation abbreviation,
   ) async {
-    _trackUsage(abbreviation.id);
+    unawaited(_trackUsage(abbreviation.id));
 
     await AbbreviationDetailModal.show(context, abbreviation);
   }
 
+  // ======================================================
+  // USAGE TRACKING
+  // ======================================================
+
   Future<void> _trackUsage(String id) async {
+    if (!_canTrackUsage) return;
+
     try {
-      if (!canTrackUsage) return;
-
       await _usageRepository.abbreviation(id);
-    } catch (_) {}
+    } catch (_) {
+      // Usage tracking should never interrupt
+      // the user's clinical workflow.
+    }
   }
 
-  /// Get all guideline categories
-  Future<List<GuidelineCategory>> getGuidelineCategories({
-    String? filter,
-    String? sort,
-  }) async {
+  // ======================================================
+  // FILTER DATA
+  // ======================================================
+
+  Future<List<GuidelineCategory>> getGuidelineCategories() async {
     final result = await _contentRepository.categories();
+
     return result.items;
   }
 
-  /// Get all guideline tags
-  Future<List<GuidelineTag>> getGuidelineTags({
-    String? filter,
-    String? sort,
-  }) async {
+  Future<List<GuidelineTag>> getGuidelineTags() async {
     final result = await _contentRepository.tags();
-    return result.items;
-  }
 
-  void _notify() {
-    if (!_disposed) notifyListeners();
+    return result.items;
   }
 }

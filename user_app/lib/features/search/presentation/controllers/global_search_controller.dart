@@ -1,20 +1,28 @@
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:riverpod_annotation/riverpod_annotation.dart';
 
-import 'package:user_app/features/abbreviations/data/models/abbreviation.dart';
-import 'package:user_app/features/calculators/data/models/calculator.dart';
-import 'package:user_app/features/consultants/data/models/consultant.dart';
-import 'package:user_app/features/drugs/data/models/drug.dart';
-import 'package:user_app/features/guidelines/data/models/guideline.dart';
-import 'package:user_app/features/facilities/data/models/health_facility.dart';
-import 'package:user_app/shared/models/search_models.dart';
-import 'package:user_app/features/calculators/data/repositories/calculator_repository.dart';
-import 'package:user_app/features/consultants/data/repositories/consultant_repository.dart';
-import 'package:user_app/features/facilities/data/repositories/facility_repository.dart';
-import 'package:user_app/features/guidelines/data/repositories/guideline_content_repository.dart';
-import 'package:user_app/features/support/data/repositories/help_content_repository.dart';
 import 'package:user_app/app/providers/app_providers.dart';
 import 'package:user_app/app/router/app_router.dart';
+
+import 'package:user_app/features/abbreviations/data/models/abbreviation.dart';
 import 'package:user_app/features/authentication/presentation/controllers/auth_controller.dart';
+import 'package:user_app/features/calculators/data/models/calculator.dart';
+import 'package:user_app/features/calculators/data/repositories/calculator_repository.dart';
+import 'package:user_app/features/consultants/data/models/consultant.dart';
+import 'package:user_app/features/consultants/data/repositories/consultant_repository.dart';
+import 'package:user_app/features/drugs/data/models/drug.dart';
+import 'package:user_app/features/facilities/data/models/health_facility.dart';
+import 'package:user_app/features/facilities/data/repositories/facility_repository.dart';
+import 'package:user_app/features/guidelines/data/models/guideline.dart';
+import 'package:user_app/features/guidelines/data/repositories/guideline_content_repository.dart';
+import 'package:user_app/features/support/data/repositories/help_content_repository.dart';
+
+import 'package:user_app/shared/models/search_models.dart';
+
+part 'global_search_controller.g.dart';
+
+/// ======================================================
+/// STATE
+/// ======================================================
 
 final class GlobalSearchState {
   const GlobalSearchState({
@@ -31,18 +39,56 @@ final class GlobalSearchState {
   final bool isLoading;
   final Object? error;
 
+  bool get hasQuery => query.isNotEmpty;
+
+  bool get hasResults => results.isNotEmpty;
+
+  bool get hasError => error != null;
+
   String get resultCountText {
-    if (results.isEmpty) return 'No results found';
-    if (results.length == 1) return '1 result';
+    if (results.isEmpty) {
+      return 'No results found';
+    }
+
+    if (results.length == 1) {
+      return '1 result';
+    }
+
     return '${results.length} results';
   }
+
+  GlobalSearchState copyWith({
+    String? query,
+    List<SearchResult>? results,
+    String? validationMessage,
+    bool? isLoading,
+    Object? error,
+    bool clearError = false,
+  }) {
+    return GlobalSearchState(
+      query: query ?? this.query,
+      results: results ?? this.results,
+      validationMessage: validationMessage ?? this.validationMessage,
+      isLoading: isLoading ?? this.isLoading,
+      error: clearError ? null : error ?? this.error,
+    );
+  }
 }
+
+/// ======================================================
+/// DATA SOURCE CONTRACT
+/// ======================================================
 
 abstract interface class GlobalSearchDataSource {
   Future<List<SearchResult>> search(String query);
 }
 
-final globalSearchDataSourceProvider = Provider<GlobalSearchDataSource>((ref) {
+/// ======================================================
+/// GENERATED DATA SOURCE PROVIDER
+/// ======================================================
+
+@riverpod
+GlobalSearchDataSource globalSearchDataSource(Ref ref) {
   return RepositoryGlobalSearchDataSource(
     drugs: ref.watch(drugRepositoryProvider),
     guidelines: ref.watch(guidelineContentRepositoryProvider),
@@ -51,63 +97,103 @@ final globalSearchDataSourceProvider = Provider<GlobalSearchDataSource>((ref) {
     helpContent: ref.watch(helpContentRepositoryProvider),
     calculators: ref.watch(calculatorRepositoryProvider),
   );
-});
+}
 
-final globalSearchControllerProvider =
-    AutoDisposeNotifierProvider<GlobalSearchController, GlobalSearchState>(
-      GlobalSearchController.new,
-    );
+/// ======================================================
+/// CONTROLLER
+/// ======================================================
 
-class GlobalSearchController extends AutoDisposeNotifier<GlobalSearchState> {
-  static const minSearchLength = 2;
+@riverpod
+class GlobalSearchController extends _$GlobalSearchController {
+  static const int minSearchLength = 2;
+
   int _searchGeneration = 0;
 
   @override
-  GlobalSearchState build() => const GlobalSearchState();
+  GlobalSearchState build() {
+    return const GlobalSearchState();
+  }
+
+  // ======================================================
+  // SEARCH
+  // ======================================================
 
   Future<void> search(String query) async {
     final trimmed = query.trim();
+
     final generation = ++_searchGeneration;
 
     if (trimmed.isEmpty) {
       state = const GlobalSearchState();
       return;
     }
+
     if (trimmed.length < minSearchLength) {
       state = GlobalSearchState(
         query: trimmed,
         validationMessage: 'Enter at least $minSearchLength characters',
       );
+
       return;
     }
 
     state = GlobalSearchState(query: trimmed, isLoading: true);
+
     try {
       final results = await ref
           .read(globalSearchDataSourceProvider)
           .search(trimmed);
-      if (generation != _searchGeneration) return;
-      state = GlobalSearchState(query: trimmed, results: results);
+
+      if (generation != _searchGeneration) {
+        return;
+      }
+
+      state = GlobalSearchState(
+        query: trimmed,
+        results: List<SearchResult>.unmodifiable(results),
+      );
     } catch (error) {
-      if (generation != _searchGeneration) return;
+      if (generation != _searchGeneration) {
+        return;
+      }
+
       state = GlobalSearchState(query: trimmed, error: error);
     }
   }
 
+  // ======================================================
+  // CLEAR
+  // ======================================================
+
   void clear() {
     _searchGeneration++;
+
     state = const GlobalSearchState();
   }
 
+  // ======================================================
+  // DRUG USAGE
+  // ======================================================
+
   Future<void> recordDrugUsage(String drugId) async {
-    if (ref.read(authControllerProvider).valueOrNull?.user == null) return;
+    final user = ref.read(authControllerProvider).valueOrNull?.user;
+
+    if (user == null) {
+      return;
+    }
+
     try {
       await ref.read(drugRepositoryProvider).recordUsage(drugId);
     } catch (_) {
-      // Usage telemetry must never prevent the user from opening a result.
+      // Usage telemetry must never prevent
+      // opening a search result.
     }
   }
 }
+
+/// ======================================================
+/// REPOSITORY DATA SOURCE
+/// ======================================================
 
 final class RepositoryGlobalSearchDataSource implements GlobalSearchDataSource {
   RepositoryGlobalSearchDataSource({
@@ -138,13 +224,18 @@ final class RepositoryGlobalSearchDataSource implements GlobalSearchDataSource {
           .where((category) => category != SearchCategory.all)
           .map((category) => _searchSafely(category, query)),
     );
+
     final results = batches.expand((items) => items).toList()
       ..sort((a, b) {
         final relevance = b.relevanceScore.compareTo(a.relevanceScore);
-        return relevance != 0
-            ? relevance
-            : a.title.toLowerCase().compareTo(b.title.toLowerCase());
+
+        if (relevance != 0) {
+          return relevance;
+        }
+
+        return a.title.toLowerCase().compareTo(b.title.toLowerCase());
       });
+
     return results.take(20).toList(growable: false);
   }
 
@@ -171,9 +262,11 @@ final class RepositoryGlobalSearchDataSource implements GlobalSearchDataSource {
           search: query,
           status: 'active',
         );
+
         return response.items
             .map((item) => _toSearchResult(item, category, query))
-            .toList();
+            .toList(growable: false);
+
       case SearchCategory.guidelines:
         final response = await _guidelines.guidelines(
           page: 1,
@@ -182,36 +275,44 @@ final class RepositoryGlobalSearchDataSource implements GlobalSearchDataSource {
           published: true,
           status: 'published',
         );
+
         return response.items
             .map((item) => _toSearchResult(item, category, query))
-            .toList();
+            .toList(growable: false);
+
       case SearchCategory.abbreviations:
         final response = await _guidelines.abbreviations(
           page: 1,
           perPage: 10,
           search: query,
         );
+
         return response.items
             .map((item) => _toSearchResult(item, category, query))
-            .toList();
+            .toList(growable: false);
+
       case SearchCategory.consultants:
         final response = await _consultants.list(
           page: 1,
           perPage: 10,
           search: query,
         );
+
         return response.items
             .map((item) => _toSearchResult(item, category, query))
-            .toList();
+            .toList(growable: false);
+
       case SearchCategory.healthFacilities:
         final response = await _facilities.listFacilities(
           page: 1,
           perPage: 10,
           search: query,
         );
+
         return response.items
             .map((item) => _toSearchResult(item, category, query))
-            .toList();
+            .toList(growable: false);
+
       case SearchCategory.tools:
         final response = await _calculators.list(
           page: 1,
@@ -219,36 +320,47 @@ final class RepositoryGlobalSearchDataSource implements GlobalSearchDataSource {
           search: query,
           statuses: const ['active'],
         );
+
         return response.items
             .map((item) => _toSearchResult(item, category, query))
-            .toList();
+            .toList(growable: false);
+
       case SearchCategory.faq:
         final response = await _helpContent.listFAQs(
           page: 1,
           perPage: 10,
           search: query,
         );
-        return response.items.map((faq) {
-          final answer = _stripHtml(faq.answer);
-          return _withRelevance(
-            SearchResult(
-              id: faq.id,
-              title: _stripHtml(faq.question),
-              description: answer.length > 100
-                  ? '${answer.substring(0, 100)}...'
-                  : answer,
-              category: category,
-              route: AppRoutes.faq,
-              routeArguments: {'faqId': faq.id},
-              item: faq,
-            ),
-            query,
-          );
-        }).toList();
+
+        return response.items
+            .map((faq) {
+              final answer = _stripHtml(faq.answer);
+
+              return _withRelevance(
+                SearchResult(
+                  id: faq.id,
+                  title: _stripHtml(faq.question),
+                  description: answer.length > 100
+                      ? '${answer.substring(0, 100)}...'
+                      : answer,
+                  category: category,
+                  route: AppRoutes.faq,
+                  routeArguments: {'faqId': faq.id},
+                  item: faq,
+                ),
+                query,
+              );
+            })
+            .toList(growable: false);
+
       case SearchCategory.all:
         return const [];
     }
   }
+
+  // ======================================================
+  // RESULT MAPPING
+  // ======================================================
 
   SearchResult _toSearchResult(
     dynamic record,
@@ -258,6 +370,7 @@ final class RepositoryGlobalSearchDataSource implements GlobalSearchDataSource {
     switch (category) {
       case SearchCategory.drugs:
         final drug = record as Drug;
+
         return _withRelevance(
           SearchResult(
             id: drug.id,
@@ -267,12 +380,16 @@ final class RepositoryGlobalSearchDataSource implements GlobalSearchDataSource {
                 : _stripHtml(drug.brandNames),
             description: _nullableHtml(drug.description),
             category: category,
+            route: AppRoutes.drugIndex,
+            routeArguments: {'drugId': drug.id},
             item: drug,
           ),
           query,
         );
+
       case SearchCategory.guidelines:
         final guideline = record as Guideline;
+
         return _withRelevance(
           SearchResult(
             id: guideline.id,
@@ -280,14 +397,18 @@ final class RepositoryGlobalSearchDataSource implements GlobalSearchDataSource {
             subtitle: guideline.icd10Code.isEmpty ? null : guideline.icd10Code,
             description: _nullableHtml(guideline.definition),
             category: category,
-            route: AppRoutes.readGuideline,
+
+            // Use the parameterized route.
+            route: AppRoutes.guideline(guideline.id),
             routeArguments: {'guidelineId': guideline.id},
             item: guideline,
           ),
           query,
         );
+
       case SearchCategory.consultants:
         final consultant = record as Consultant;
+
         return _withRelevance(
           SearchResult(
             id: consultant.id,
@@ -297,14 +418,16 @@ final class RepositoryGlobalSearchDataSource implements GlobalSearchDataSource {
                 ? null
                 : consultant.department,
             category: category,
-            route: AppRoutes.consultants,
+            route: AppRoutes.consultant(consultant.id),
             routeArguments: {'consultantId': consultant.id},
             item: consultant,
           ),
           query,
         );
+
       case SearchCategory.healthFacilities:
         final facility = record as HealthFacility;
+
         return _withRelevance(
           SearchResult(
             id: facility.id,
@@ -316,14 +439,16 @@ final class RepositoryGlobalSearchDataSource implements GlobalSearchDataSource {
                 ? null
                 : facility.parishName,
             category: category,
-            route: AppRoutes.healthInfrastructure,
+            route: AppRoutes.healthFacility(facility.id),
             routeArguments: {'facilityId': facility.id},
             item: facility,
           ),
           query,
         );
+
       case SearchCategory.abbreviations:
         final abbreviation = record as Abbreviation;
+
         return _withRelevance(
           SearchResult(
             id: abbreviation.id,
@@ -337,8 +462,10 @@ final class RepositoryGlobalSearchDataSource implements GlobalSearchDataSource {
           ),
           query,
         );
+
       case SearchCategory.tools:
         final calculator = record as Calculator;
+
         return _withRelevance(
           SearchResult(
             id: calculator.id,
@@ -346,37 +473,68 @@ final class RepositoryGlobalSearchDataSource implements GlobalSearchDataSource {
             subtitle: calculator.type.name,
             description: _nullableHtml(calculator.description),
             category: category,
-            route: AppRoutes.calculators,
+            route: AppRoutes.calculator(calculator.id),
             routeArguments: {'calculatorId': calculator.id},
             item: calculator,
           ),
           query,
         );
+
       case SearchCategory.all:
       case SearchCategory.faq:
         throw UnsupportedError('Unsupported search category: $category');
     }
   }
 
-  String _stripHtml(String value) =>
-      value.replaceAll(RegExp(r'<[^>]*>'), '').trim();
+  // ======================================================
+  // TEXT NORMALIZATION
+  // ======================================================
+
+  String _stripHtml(String value) {
+    return value.replaceAll(RegExp(r'<[^>]*>'), '').trim();
+  }
 
   String? _nullableHtml(String value) {
     final plainText = _stripHtml(value);
+
     return plainText.isEmpty ? null : plainText;
   }
 
+  // ======================================================
+  // RELEVANCE
+  // ======================================================
+
   SearchResult _withRelevance(SearchResult result, String query) {
     final normalizedQuery = query.toLowerCase();
+
     final title = result.title.toLowerCase();
+
     final subtitle = result.subtitle?.toLowerCase() ?? '';
+
     final description = result.description?.toLowerCase() ?? '';
+
     var score = 0.0;
-    if (title == normalizedQuery) score += 100;
-    if (title.startsWith(normalizedQuery)) score += 50;
-    if (title.contains(normalizedQuery)) score += 25;
-    if (subtitle.contains(normalizedQuery)) score += 10;
-    if (description.contains(normalizedQuery)) score += 5;
+
+    if (title == normalizedQuery) {
+      score += 100;
+    }
+
+    if (title.startsWith(normalizedQuery)) {
+      score += 50;
+    }
+
+    if (title.contains(normalizedQuery)) {
+      score += 25;
+    }
+
+    if (subtitle.contains(normalizedQuery)) {
+      score += 10;
+    }
+
+    if (description.contains(normalizedQuery)) {
+      score += 5;
+    }
+
     return result.copyWith(relevanceScore: score);
   }
 }

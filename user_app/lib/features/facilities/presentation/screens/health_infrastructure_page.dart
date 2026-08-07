@@ -1,15 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:user_app/core/utils/app_extensions.dart';
 import 'package:infinite_scroll_pagination/infinite_scroll_pagination.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
-import 'package:user_app/features/facilities/data/models/health_facility.dart';
 import 'package:user_app/core/constants/app_spacing.dart';
-import 'package:user_app/shared/widgets/filter_button.dart';
-import 'package:user_app/shared/widgets/pagination_indicators.dart';
+import 'package:user_app/core/utils/app_extensions.dart';
+import 'package:user_app/core/widgets/app_error_view.dart';
+import 'package:user_app/core/widgets/app_loading_view.dart';
+import 'package:user_app/core/widgets/empty_state.dart';
+
+import 'package:user_app/features/facilities/data/models/health_facility.dart';
 import 'package:user_app/features/facilities/presentation/controllers/health_infrastructure_controller.dart';
 import 'package:user_app/features/facilities/presentation/widgets/health_facility_card.dart';
+
+import 'package:user_app/shared/widgets/filter_button.dart';
+import 'package:user_app/shared/widgets/pagination_indicators.dart';
 
 class HealthInfrastructurePage extends ConsumerStatefulWidget {
   const HealthInfrastructurePage({super.key, this.arguments});
@@ -33,12 +38,16 @@ class _HealthInfrastructurePageState
 
   @override
   Widget build(BuildContext context) {
-    final controller = ref.watch(
-      healthInfrastructureControllerProvider(_routeArguments),
-    );
+    final provider = healthInfrastructureControllerProvider(_routeArguments);
+
+    final state = ref.watch(provider);
+
+    final controller = ref.read(provider.notifier);
+
     final cs = context.theme.colorScheme;
 
     return Scaffold(
+      backgroundColor: cs.surface,
       appBar: AppBar(
         titleSpacing: AppSpacing.md,
         title: Text(
@@ -49,18 +58,18 @@ class _HealthInfrastructurePageState
         ),
         actions: [
           FilterButton(
-            hasActiveFilters: controller.hasActiveFilters,
-            onPressed: () => controller.showFilterModal(context),
-            onReset: controller.hasActiveFilters
-                ? controller.clearAllFilters
-                : null,
+            hasActiveFilters: state.hasActiveFilters,
+            onPressed: () {
+              controller.showFilterModal(context);
+            },
+            onReset: state.hasActiveFilters ? controller.clearAllFilters : null,
           ),
           AppSpacing.xs.gap,
         ],
       ),
       body: RefreshIndicator(
         onRefresh: () async {
-          controller.pagingController.refresh();
+          controller.refresh();
         },
         child: CustomScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
@@ -74,7 +83,9 @@ class _HealthInfrastructurePageState
               ),
               sliver: SliverToBoxAdapter(
                 child: _HealthInfrastructureHeaderCard(
-                  onOpenFilters: () => controller.showFilterModal(context),
+                  onOpenFilters: () {
+                    controller.showFilterModal(context);
+                  },
                 ),
               ),
             ),
@@ -88,9 +99,9 @@ class _HealthInfrastructurePageState
               ),
               sliver: PagingListener<int, HealthFacility>(
                 controller: controller.pagingController,
-                builder: (context, state, fetchNextPage) {
+                builder: (context, pagingState, fetchNextPage) {
                   return PagedSliverList<int, HealthFacility>.separated(
-                    state: state,
+                    state: pagingState,
                     fetchNextPage: fetchNextPage,
                     separatorBuilder: (context, index) => AppSpacing.sm.gap,
                     builderDelegate: PagedChildBuilderDelegate<HealthFacility>(
@@ -98,50 +109,87 @@ class _HealthInfrastructurePageState
                         return _HealthFacilityCardShell(
                           child: HealthFacilityCard(
                             facility: facility,
-                            onTap: () =>
-                                controller.goToFacilityDetail(facility),
+                            onTap: () {
+                              controller.goToFacilityDetail(facility);
+                            },
                             showDivider: false,
                           ),
                         );
                       },
 
-                      // ================= ERROR STATES =================
-                      firstPageErrorIndicatorBuilder: (context) =>
-                          PaginationIndicators.firstPageError(
-                            onRetry: fetchNextPage,
-                            title: AppTranslationKey.failedToLoadFacilities.tr,
-                            subtitle: AppTranslationKey
-                                .pleaseCheckConnectionAndTryAgain
-                                .tr,
-                            icon: LucideIcons.building2,
-                          ),
-
-                      newPageErrorIndicatorBuilder: (context) =>
-                          PaginationIndicators.newPageError(
-                            onRetry: fetchNextPage,
-                            title:
-                                AppTranslationKey.failedToLoadMoreFacilities.tr,
-                            icon: LucideIcons.building2,
-                          ),
-
-                      // ================= LOADING STATES =================
-                      firstPageProgressIndicatorBuilder: (context) =>
-                          PaginationIndicators.firstPageProgress(),
-
-                      newPageProgressIndicatorBuilder: (context) =>
-                          PaginationIndicators.newPageProgress(),
-
-                      // ================= EMPTY STATE =================
-                      noItemsFoundIndicatorBuilder: (context) {
-                        return _EmptyFacilitiesState(
-                          hasFilters: controller.hasActiveFilters,
-                          onClearFilters: controller.clearAllFilters,
+                      // =========================
+                      // FIRST PAGE LOADING
+                      // =========================
+                      firstPageProgressIndicatorBuilder: (_) {
+                        return const AppLoadingView(
+                          message: 'Loading health facilities...',
                         );
                       },
 
-                      // ================= END STATE =================
-                      noMoreItemsIndicatorBuilder: (context) =>
-                          PaginationIndicators.noMoreItems(),
+                      // =========================
+                      // NEXT PAGE LOADING
+                      // =========================
+                      newPageProgressIndicatorBuilder: (_) {
+                        return PaginationIndicators.newPageProgress();
+                      },
+
+                      // =========================
+                      // FIRST PAGE ERROR
+                      // =========================
+                      firstPageErrorIndicatorBuilder: (_) {
+                        return AppErrorView(
+                          error:
+                              pagingState.error ??
+                              'Unable to load health facilities',
+                          title: AppTranslationKey.failedToLoadFacilities.tr,
+                          message: AppTranslationKey
+                              .pleaseCheckConnectionAndTryAgain
+                              .tr,
+                          onRetry: fetchNextPage,
+                        );
+                      },
+
+                      // =========================
+                      // NEXT PAGE ERROR
+                      // =========================
+                      newPageErrorIndicatorBuilder: (_) {
+                        return PaginationIndicators.newPageError(
+                          onRetry: fetchNextPage,
+                          title:
+                              AppTranslationKey.failedToLoadMoreFacilities.tr,
+                          icon: LucideIcons.building2,
+                        );
+                      },
+
+                      // =========================
+                      // EMPTY
+                      // =========================
+                      noItemsFoundIndicatorBuilder: (_) {
+                        if (state.hasActiveFilters) {
+                          return EmptyState.noResults(
+                            title:
+                                AppTranslationKey.noFacilitiesMatchFilters.tr,
+                            description: AppTranslationKey
+                                .tryAdjustingSearchOrFilters
+                                .tr,
+                            actionLabel: AppTranslationKey.clearFilters.tr,
+                            onAction: controller.clearAllFilters,
+                          );
+                        }
+
+                        return EmptyState.noData(
+                          title: AppTranslationKey.noFacilitiesFound.tr,
+                          description:
+                              AppTranslationKey.facilitiesWillAppearHere.tr,
+                        );
+                      },
+
+                      // =========================
+                      // END
+                      // =========================
+                      noMoreItemsIndicatorBuilder: (_) {
+                        return PaginationIndicators.noMoreItems();
+                      },
                     ),
                   );
                 },
@@ -150,15 +198,14 @@ class _HealthInfrastructurePageState
           ],
         ),
       ),
-      backgroundColor: cs.surface,
     );
   }
 }
 
 class _HealthInfrastructureHeaderCard extends StatelessWidget {
-  final VoidCallback onOpenFilters;
-
   const _HealthInfrastructureHeaderCard({required this.onOpenFilters});
+
+  final VoidCallback onOpenFilters;
 
   @override
   Widget build(BuildContext context) {
@@ -195,7 +242,9 @@ class _HealthInfrastructureHeaderCard extends StatelessWidget {
                     fontWeight: FontWeight.w800,
                   ),
                 ),
+
                 const SizedBox(height: 4),
+
                 Text(
                   'Find health facilities, services and care locations near you.',
                   style: context.textTheme.bodySmall?.copyWith(
@@ -221,9 +270,9 @@ class _HealthInfrastructureHeaderCard extends StatelessWidget {
 }
 
 class _HealthFacilityCardShell extends StatelessWidget {
-  final Widget child;
-
   const _HealthFacilityCardShell({required this.child});
+
+  final Widget child;
 
   @override
   Widget build(BuildContext context) {
@@ -237,82 +286,6 @@ class _HealthFacilityCardShell extends StatelessWidget {
       ),
       clipBehavior: Clip.antiAlias,
       child: child,
-    );
-  }
-}
-
-class _EmptyFacilitiesState extends StatelessWidget {
-  final bool hasFilters;
-  final VoidCallback onClearFilters;
-
-  const _EmptyFacilitiesState({
-    required this.hasFilters,
-    required this.onClearFilters,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final cs = context.theme.colorScheme;
-
-    final title = hasFilters
-        ? AppTranslationKey.noFacilitiesMatchFilters.tr
-        : AppTranslationKey.noFacilitiesFound.tr;
-
-    final subtitle = hasFilters
-        ? AppTranslationKey.tryAdjustingSearchOrFilters.tr
-        : AppTranslationKey.facilitiesWillAppearHere.tr;
-
-    return Padding(
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.md,
-        vertical: AppSpacing.xl,
-      ),
-      child: Column(
-        children: [
-          Container(
-            width: 76,
-            height: 76,
-            decoration: BoxDecoration(
-              color: cs.primary.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(24),
-            ),
-            child: Icon(
-              hasFilters ? LucideIcons.searchX : LucideIcons.building2,
-              color: cs.primary,
-              size: 36,
-            ),
-          ),
-
-          AppSpacing.md.gap,
-
-          Text(
-            title,
-            style: context.textTheme.titleMedium?.copyWith(
-              fontWeight: FontWeight.w800,
-            ),
-            textAlign: TextAlign.center,
-          ),
-
-          const SizedBox(height: 6),
-
-          Text(
-            subtitle,
-            style: context.textTheme.bodyMedium?.copyWith(
-              color: cs.onSurfaceVariant,
-            ),
-            textAlign: TextAlign.center,
-          ),
-
-          if (hasFilters) ...[
-            AppSpacing.lg.gap,
-            FilledButton.icon(
-              onPressed: onClearFilters,
-              icon: const Icon(LucideIcons.x),
-              label: Text(AppTranslationKey.clearFilters.tr),
-            ),
-          ],
-        ],
-      ),
     );
   }
 }

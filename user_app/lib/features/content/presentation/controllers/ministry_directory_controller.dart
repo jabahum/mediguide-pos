@@ -1,238 +1,339 @@
-import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:infinite_scroll_pagination/infinite_scroll_pagination.dart';
-import 'package:user_app/core/config/app_keys.dart';
-import 'package:user_app/core/utils/app_message.dart';
-import 'package:user_app/shared/models/filter_models.dart';
+import 'dart:async';
 
-import 'package:user_app/shared/models/models.dart';
-import 'package:user_app/features/facilities/data/repositories/facility_repository.dart';
-import 'package:user_app/features/content/data/repositories/content_reference_repository.dart';
+import 'package:flutter/material.dart';
+import 'package:infinite_scroll_pagination/infinite_scroll_pagination.dart';
+import 'package:riverpod_annotation/riverpod_annotation.dart';
+
 import 'package:user_app/app/providers/app_providers.dart';
+import 'package:user_app/core/config/app_keys.dart';
 import 'package:user_app/core/constants/app_constants.dart';
-import 'package:user_app/core/utils/common.dart';
+import 'package:user_app/core/utils/app_message.dart';
+
+import 'package:user_app/features/content/data/repositories/content_reference_repository.dart';
+import 'package:user_app/features/content/presentation/controllers/ministry_directory_query.dart';
+import 'package:user_app/features/content/presentation/controllers/ministry_directory_state.dart';
+
+import 'package:user_app/features/facilities/data/repositories/facility_repository.dart';
+
+import 'package:user_app/shared/models/filter_models.dart';
+import 'package:user_app/shared/models/models.dart';
 import 'package:user_app/shared/widgets/generic_filter_bottom_sheet.dart';
 
-final ministryDirectoryControllerProvider = ChangeNotifierProvider.autoDispose(
-  (ref) => MinistryDirectoryController(
-    ref.watch(facilityRepositoryProvider),
-    ref.watch(ministryDirectoryRepositoryProvider),
-  ),
-);
+part 'ministry_directory_controller.g.dart';
 
-class MinistryDirectoryController extends ChangeNotifier {
-  MinistryDirectoryController(
-    this._facilityRepository,
-    this._directoryRepository,
-  ) {
-    pagingController = PagingController<int, MinistryDirectory>(
-      getNextPageKey: (state) =>
-          state.lastPageIsEmpty ? null : state.nextIntPageKey,
-      fetchPage: _loadPage,
-    );
-    _loadFilterOptions();
-  }
+@riverpod
+class MinistryDirectoryController extends _$MinistryDirectoryController {
+  late final PagingController<int, MinistryDirectory> pagingController;
 
-  final FacilityRepository _facilityRepository;
-  final MinistryDirectoryRepository _directoryRepository;
   final Map<String, String> _districtIds = {};
   final Map<String, String> _regionIds = {};
 
-  // ================= PAGINATION =================
-  late final PagingController<int, MinistryDirectory> pagingController;
+  FacilityRepository get _facilityRepository =>
+      ref.read(facilityRepositoryProvider);
 
-  // ================= FILTER STATE =================
-  final Map<String, dynamic> treeFilters = {};
-
-  String searchQuery = '';
-  String selectedMinistry = '';
-  String selectedDistrict = '';
-  String selectedRegion = '';
-  String selectedDepartment = '';
-  String selectedStatus = '';
-
-  bool showEmergencyOnly = false;
-  bool showActiveOnly = true;
-
-  bool hasActiveFilters = false;
-
-  // ================= OPTIONS =================
-  List<String> availableMinistries = [];
-  List<String> availableDistricts = [];
-  List<String> availableRegions = [];
-
-  bool isLoadingFilters = false;
-  bool _disposed = false;
+  MinistryDirectoryRepository get _directoryRepository =>
+      ref.read(ministryDirectoryRepositoryProvider);
 
   @override
-  void dispose() {
-    _disposed = true;
-    pagingController.dispose();
-    super.dispose();
+  MinistryDirectoryState build() {
+    pagingController = PagingController<int, MinistryDirectory>(
+      getNextPageKey: (pagingState) {
+        if (pagingState.lastPageIsEmpty) {
+          return null;
+        }
+
+        return pagingState.nextIntPageKey;
+      },
+      fetchPage: _loadPage,
+    );
+
+    ref.onDispose(() {
+      pagingController.dispose();
+    });
+
+    Future.microtask(_loadFilterOptions);
+
+    return const MinistryDirectoryState();
   }
 
-  // ================= DATA LOADING =================
+  // ======================================================
+  // DATA LOADING
+  // ======================================================
 
   Future<List<MinistryDirectory>> _loadPage(int pageKey) async {
     try {
+      final query = state.query;
+
       final result = await _directoryRepository.list(
         page: pageKey,
         perPage: AppConstants.pageSize,
-        search: searchQuery,
-        ministry: selectedMinistry,
-        department: selectedDepartment,
-        districtId: _districtIds[selectedDistrict] ?? selectedDistrict,
-        regionId: _regionIds[selectedRegion] ?? selectedRegion,
-        status: selectedStatus.isNotEmpty
-            ? selectedStatus
-            : showActiveOnly
+        search: query.search,
+        ministry: query.selectedMinistry,
+        department: query.selectedDepartment,
+        districtId:
+            _districtIds[query.selectedDistrict] ?? query.selectedDistrict,
+        regionId: _regionIds[query.selectedRegion] ?? query.selectedRegion,
+        status: query.selectedStatus.isNotEmpty
+            ? query.selectedStatus
+            : query.showActiveOnly
             ? 'active'
             : null,
       );
-      var items = result.items;
-      if (showEmergencyOnly) {
-        items = items.where((entry) => entry.isEmergencyContact).toList();
-      }
-      return items;
-    } catch (e) {
-      AppMessage.error(AppKeys.navigatorKey.currentContext!, '$e');
 
+      var items = result.items;
+
+      if (query.showEmergencyOnly) {
+        items = items
+            .where((entry) => entry.isEmergencyContact)
+            .toList(growable: false);
+      }
+
+      return items;
+    } catch (error) {
+      _showError(error.toString());
       rethrow;
     }
   }
 
-  // ================= FILTER BUILDING =================
-
-  // ================= FILTER OPTIONS =================
+  // ======================================================
+  // FILTER OPTIONS
+  // ======================================================
 
   Future<void> _loadFilterOptions() async {
+    state = state.copyWith(isLoadingFilters: true, clearFilterError: true);
+
     try {
-      isLoadingFilters = true;
-      _notify();
+      final ministries = Ministry.values
+          .map((value) => value.label)
+          .toList(growable: false);
 
-      availableMinistries = Ministry.values.map((e) => e.label).toList();
+      final results = await Future.wait([
+        _facilityRepository.districts(perPage: 500),
+        _facilityRepository.regions(perPage: 500),
+      ]);
 
-      final districts = await _facilityRepository.districts(perPage: 500);
+      final districts = results[0];
+      final regions = results[1];
 
       _districtIds
         ..clear()
-        ..addEntries(districts.items.map((e) => MapEntry(e.name, e.id)));
-      availableDistricts = _districtIds.keys.toList();
-
-      final regions = await _facilityRepository.regions(perPage: 500);
+        ..addEntries(
+          districts.items.map((item) => MapEntry(item.name, item.id)),
+        );
 
       _regionIds
         ..clear()
-        ..addEntries(regions.items.map((e) => MapEntry(e.name, e.id)));
-      availableRegions = _regionIds.keys.toList();
-    } catch (e) {
-      AppMessage.error(AppKeys.navigatorKey.currentContext!, '$e');
+        ..addEntries(regions.items.map((item) => MapEntry(item.name, item.id)));
+
+      final districtNames = _districtIds.keys.toList()..sort();
+
+      final regionNames = _regionIds.keys.toList()..sort();
+
+      state = state.copyWith(
+        availableMinistries: List<String>.unmodifiable(ministries),
+        availableDistricts: List<String>.unmodifiable(districtNames),
+        availableRegions: List<String>.unmodifiable(regionNames),
+      );
+    } catch (error) {
+      final message = error.toString();
+
+      state = state.copyWith(filterError: message);
+
+      _showError(message);
     } finally {
-      isLoadingFilters = false;
-      _notify();
+      state = state.copyWith(isLoadingFilters: false);
     }
   }
 
-  // ================= ACTIONS =================
+  Future<void> reloadFilterOptions() {
+    return _loadFilterOptions();
+  }
 
-  void onSearchQueryChanged(String query) {
-    searchQuery = query.trim();
-    _updateActiveFilters();
+  // ======================================================
+  // SEARCH
+  // ======================================================
+
+  void onSearchQueryChanged(String value) {
+    state = state.copyWith(query: state.query.copyWith(search: value.trim()));
+
     _refresh();
   }
+
+  // ======================================================
+  // RESET
+  // ======================================================
 
   void resetFilters() {
-    searchQuery = '';
-    selectedMinistry = '';
-    selectedDistrict = '';
-    selectedRegion = '';
-    selectedDepartment = '';
-    selectedStatus = '';
-    showEmergencyOnly = false;
-    showActiveOnly = true;
-    treeFilters.clear();
+    state = state.copyWith(query: MinistryDirectoryQuery.empty);
 
-    _updateActiveFilters();
     _refresh();
   }
 
+  // ======================================================
+  // ADVANCED FILTER
+  // ======================================================
+
   Future<void> showAdvancedFilter(BuildContext context) async {
+    if (!context.mounted) {
+      return;
+    }
+
+    final query = state.query;
+
     final result = await GenericFilterBottomSheet.show(
       context: context,
       title: 'Filter Directory',
       fields: [
         FilterField.text('search', 'Search'),
-        FilterField.dropdown('ministry', 'Ministry', availableMinistries),
-        FilterField.dropdown('district', 'District', availableDistricts),
-        FilterField.dropdown('region', 'Region', availableRegions),
+        FilterField.dropdown('ministry', 'Ministry', state.availableMinistries),
+        FilterField.dropdown('district', 'District', state.availableDistricts),
+        FilterField.dropdown('region', 'Region', state.availableRegions),
         FilterField.boolean('emergency_only', 'Emergency Only'),
         FilterField.boolean('active_only', 'Active Only'),
       ],
       initialValues: {
-        'search': searchQuery,
-        'ministry': selectedMinistry,
-        'district': selectedDistrict,
-        'region': selectedRegion,
-        'emergency_only': showEmergencyOnly,
-        'active_only': showActiveOnly,
+        if (query.search.isNotEmpty) 'search': query.search,
+        if (query.selectedMinistry.isNotEmpty)
+          'ministry': query.selectedMinistry,
+        if (query.selectedDistrict.isNotEmpty)
+          'district': query.selectedDistrict,
+        if (query.selectedRegion.isNotEmpty) 'region': query.selectedRegion,
+        'emergency_only': query.showEmergencyOnly,
+        'active_only': query.showActiveOnly,
       },
     );
 
-    if (result == null || !result.hasValues) return;
+    if (result == null || !result.hasValues) {
+      return;
+    }
 
-    final v = result.values;
+    final values = result.values;
 
-    searchQuery = v['search'] ?? '';
-    selectedMinistry = v['ministry'] ?? '';
-    selectedDistrict = v['district'] ?? '';
-    selectedRegion = v['region'] ?? '';
-    showEmergencyOnly = v['emergency_only'] ?? false;
-    showActiveOnly = v['active_only'] ?? true;
+    state = state.copyWith(
+      query: state.query.copyWith(
+        search: values['search']?.toString().trim() ?? '',
+        selectedMinistry: values['ministry']?.toString().trim() ?? '',
+        selectedDistrict: values['district']?.toString().trim() ?? '',
+        selectedRegion: values['region']?.toString().trim() ?? '',
+        showEmergencyOnly: values['emergency_only'] == true,
+        showActiveOnly: values['active_only'] is bool
+            ? values['active_only'] as bool
+            : true,
+      ),
+    );
 
-    _updateActiveFilters();
     _refresh();
   }
 
-  // ================= HELPERS =================
-
-  void _refresh() => pagingController.refresh();
-
-  void _updateActiveFilters() {
-    hasActiveFilters =
-        searchQuery.isNotEmpty ||
-        selectedMinistry.isNotEmpty ||
-        selectedDistrict.isNotEmpty ||
-        selectedRegion.isNotEmpty ||
-        selectedDepartment.isNotEmpty ||
-        selectedStatus.isNotEmpty ||
-        showEmergencyOnly ||
-        !showActiveOnly;
-    _notify();
-  }
+  // ======================================================
+  // TREE FILTERS
+  // ======================================================
 
   void applyTreeFilters(Map<String, dynamic> filters) {
-    treeFilters
-      ..clear()
-      ..addAll(filters);
+    state = state.copyWith(
+      query: MinistryDirectoryQuery.fromTreeFilters(filters),
+    );
 
-    selectedMinistry = _s(filters, 'ministry');
-    selectedDistrict = _s(filters, 'district');
-    selectedRegion = _s(filters, 'region');
-    selectedDepartment = _s(filters, 'department');
-    selectedStatus = _s(filters, 'status');
-
-    showEmergencyOnly =
-        filters['emergency_only'] == true ||
-        filters['priority_level']?.toString() == '1';
-
-    _updateActiveFilters();
     _refresh();
   }
 
-  String _s(Map<String, dynamic> map, String key) =>
-      (map[key] ?? '').toString().trim();
+  void clearTreeFilters() {
+    state = state.copyWith(
+      query: state.query.copyWith(
+        selectedMinistry: '',
+        selectedDistrict: '',
+        selectedRegion: '',
+        selectedDepartment: '',
+        selectedStatus: '',
+        showEmergencyOnly: false,
+        treeFilters: const {},
+      ),
+    );
 
-  void _notify() {
-    if (!_disposed) notifyListeners();
+    _refresh();
+  }
+
+  // ======================================================
+  // MANUAL FILTER SETTERS
+  // ======================================================
+
+  void setMinistry(String value) {
+    state = state.copyWith(
+      query: state.query.copyWith(selectedMinistry: value.trim()),
+    );
+
+    _refresh();
+  }
+
+  void setDistrict(String value) {
+    state = state.copyWith(
+      query: state.query.copyWith(selectedDistrict: value.trim()),
+    );
+
+    _refresh();
+  }
+
+  void setRegion(String value) {
+    state = state.copyWith(
+      query: state.query.copyWith(selectedRegion: value.trim()),
+    );
+
+    _refresh();
+  }
+
+  void setDepartment(String value) {
+    state = state.copyWith(
+      query: state.query.copyWith(selectedDepartment: value.trim()),
+    );
+
+    _refresh();
+  }
+
+  void setStatus(String value) {
+    state = state.copyWith(
+      query: state.query.copyWith(selectedStatus: value.trim()),
+    );
+
+    _refresh();
+  }
+
+  void setEmergencyOnly(bool value) {
+    state = state.copyWith(
+      query: state.query.copyWith(showEmergencyOnly: value),
+    );
+
+    _refresh();
+  }
+
+  void setActiveOnly(bool value) {
+    state = state.copyWith(query: state.query.copyWith(showActiveOnly: value));
+
+    _refresh();
+  }
+
+  // ======================================================
+  // REFRESH
+  // ======================================================
+
+  void refreshData() {
+    _refresh();
+  }
+
+  void _refresh() {
+    pagingController.refresh();
+  }
+
+  // ======================================================
+  // ERROR
+  // ======================================================
+
+  void _showError(String message) {
+    final context = AppKeys.navigatorKey.currentContext;
+
+    if (context == null) {
+      return;
+    }
+
+    AppMessage.error(context, message);
   }
 }

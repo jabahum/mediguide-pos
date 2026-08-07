@@ -1,15 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:user_app/core/utils/app_extensions.dart';
-import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:infinite_scroll_pagination/infinite_scroll_pagination.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import 'package:user_app/core/constants/app_spacing.dart';
-import 'package:user_app/shared/models/models.dart';
-import 'package:user_app/shared/widgets/pagination_indicators.dart';
+import 'package:user_app/core/utils/app_extensions.dart';
+import 'package:user_app/core/widgets/app_error_view.dart';
+import 'package:user_app/core/widgets/app_loading_view.dart';
+import 'package:user_app/core/widgets/empty_state.dart';
+
 import 'package:user_app/features/support/presentation/controllers/help_center_controller.dart';
 import 'package:user_app/features/support/presentation/widgets/create_ticket_dialog.dart';
 import 'package:user_app/features/support/presentation/widgets/support_ticket_card.dart';
+
+import 'package:user_app/shared/models/models.dart';
+import 'package:user_app/shared/widgets/pagination_indicators.dart';
 
 class HelpCenterPage extends ConsumerWidget {
   const HelpCenterPage({super.key});
@@ -36,8 +41,18 @@ class HelpCenterPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final controller = ref.watch(helpCenterControllerProvider);
+    final state = ref.watch(helpCenterControllerProvider);
+
+    final controller = ref.read(helpCenterControllerProvider.notifier);
+
+    final cs = context.theme.colorScheme;
+
     return Scaffold(
+      backgroundColor: cs.surface,
+
+      // =====================================================
+      // APP BAR
+      // =====================================================
       appBar: AppBar(
         titleSpacing: AppSpacing.md,
         title: Text(
@@ -49,22 +64,39 @@ class HelpCenterPage extends ConsumerWidget {
         actions: [
           IconButton(
             icon: const Icon(LucideIcons.slidersHorizontal),
-            onPressed: () => controller.showFilterBottomSheet(context),
+            onPressed: () {
+              controller.showFilterBottomSheet(context);
+            },
             tooltip: 'Filter tickets',
           ),
           AppSpacing.xs.gap,
         ],
       ),
+
+      // =====================================================
+      // CREATE TICKET
+      // =====================================================
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => CreateTicketDialog.show(context),
+        onPressed: () {
+          CreateTicketDialog.show(context);
+        },
         icon: const Icon(LucideIcons.plus),
         label: const Text('New Ticket'),
       ),
+
+      // =====================================================
+      // BODY
+      // =====================================================
       body: RefreshIndicator(
-        onRefresh: () async => controller.refreshTickets(),
+        onRefresh: () async {
+          controller.refreshTickets();
+        },
         child: CustomScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
           slivers: [
+            // =================================================
+            // HEADER
+            // =================================================
             SliverPadding(
               padding: const EdgeInsets.fromLTRB(
                 AppSpacing.md,
@@ -74,11 +106,20 @@ class HelpCenterPage extends ConsumerWidget {
               ),
               sliver: SliverToBoxAdapter(
                 child: _SupportHeaderCard(
-                  onCreateTicket: () => CreateTicketDialog.show(context),
+                  hasFilters: state.hasActiveFilters,
+                  onCreateTicket: () {
+                    CreateTicketDialog.show(context);
+                  },
+                  onOpenFilters: () {
+                    controller.showFilterBottomSheet(context);
+                  },
                 ),
               ),
             ),
 
+            // =================================================
+            // STATUS FILTER
+            // =================================================
             SliverPadding(
               padding: const EdgeInsets.fromLTRB(
                 AppSpacing.md,
@@ -89,12 +130,15 @@ class HelpCenterPage extends ConsumerWidget {
               sliver: SliverToBoxAdapter(
                 child: _StatusFilterBar(
                   filters: _filters,
-                  selectedValue: controller.selectedStatus,
+                  selectedValue: state.selectedStatus,
                   onChanged: controller.updateStatusFilter,
                 ),
               ),
             ),
 
+            // =================================================
+            // TICKET LIST
+            // =================================================
             SliverPadding(
               padding: const EdgeInsets.fromLTRB(
                 AppSpacing.md,
@@ -102,44 +146,93 @@ class HelpCenterPage extends ConsumerWidget {
                 AppSpacing.md,
                 AppSpacing.xxxl,
               ),
-              sliver: PagingListener(
+              sliver: PagingListener<int, SupportTicket>(
                 controller: controller.pagingController,
-                builder: (context, state, fetchNextPage) =>
-                    PagedSliverList<int, SupportTicket>.separated(
-                      state: state,
-                      fetchNextPage: fetchNextPage,
-                      separatorBuilder: (context, index) => AppSpacing.sm.gap,
-                      builderDelegate: PagedChildBuilderDelegate<SupportTicket>(
-                        itemBuilder: (context, ticket, index) {
-                          return SupportTicketCard(ticket: ticket);
-                        },
-                        firstPageErrorIndicatorBuilder: (context) =>
-                            PaginationIndicators.firstPageError(
-                              onRetry: fetchNextPage,
-                              title: 'Failed to load tickets',
-                              subtitle:
-                                  'Please check your connection and try again',
-                              icon: LucideIcons.messageCircle,
-                            ),
-                        newPageErrorIndicatorBuilder: (context) =>
-                            PaginationIndicators.newPageError(
-                              onRetry: fetchNextPage,
-                              title: 'Error loading more tickets',
-                              icon: LucideIcons.messageCircle,
-                            ),
-                        firstPageProgressIndicatorBuilder: (context) =>
-                            PaginationIndicators.firstPageProgress(),
-                        newPageProgressIndicatorBuilder: (context) =>
-                            PaginationIndicators.newPageProgress(),
-                        noItemsFoundIndicatorBuilder: (context) =>
-                            _EmptySupportState(
-                              onCreateTicket: () =>
-                                  CreateTicketDialog.show(context),
-                            ),
-                        noMoreItemsIndicatorBuilder: (context) =>
-                            PaginationIndicators.noMoreItems(),
-                      ),
+                builder: (context, pagingState, fetchNextPage) {
+                  return PagedSliverList<int, SupportTicket>.separated(
+                    state: pagingState,
+                    fetchNextPage: fetchNextPage,
+                    separatorBuilder: (context, index) => AppSpacing.sm.gap,
+                    builderDelegate: PagedChildBuilderDelegate<SupportTicket>(
+                      itemBuilder: (context, ticket, index) {
+                        return _SupportTicketShell(
+                          child: SupportTicketCard(ticket: ticket),
+                        );
+                      },
+
+                      // =========================
+                      // FIRST PAGE LOADING
+                      // =========================
+                      firstPageProgressIndicatorBuilder: (_) {
+                        return const AppLoadingView(
+                          message: 'Loading support tickets...',
+                        );
+                      },
+
+                      // =========================
+                      // NEXT PAGE LOADING
+                      // =========================
+                      newPageProgressIndicatorBuilder: (_) {
+                        return PaginationIndicators.newPageProgress();
+                      },
+
+                      // =========================
+                      // FIRST PAGE ERROR
+                      // =========================
+                      firstPageErrorIndicatorBuilder: (_) {
+                        return AppErrorView(
+                          error:
+                              pagingState.error ??
+                              'Unable to load support tickets',
+                          onRetry: fetchNextPage,
+                        );
+                      },
+
+                      // =========================
+                      // NEXT PAGE ERROR
+                      // =========================
+                      newPageErrorIndicatorBuilder: (_) {
+                        return PaginationIndicators.newPageError(
+                          onRetry: fetchNextPage,
+                          title: 'Error loading more tickets',
+                          icon: LucideIcons.messageCircle,
+                        );
+                      },
+
+                      // =========================
+                      // EMPTY
+                      // =========================
+                      noItemsFoundIndicatorBuilder: (_) {
+                        if (state.hasActiveFilters) {
+                          return EmptyState.noResults(
+                            title: 'No tickets match your filters',
+                            description:
+                                'Try adjusting your search, status, priority or category.',
+                            actionLabel: 'Clear Filters',
+                            onAction: controller.clearFilters,
+                          );
+                        }
+
+                        return EmptyState.noData(
+                          title: AppTranslationKey.noSupportTicketsYet.tr,
+                          description:
+                              AppTranslationKey.createYourFirstSupportTicket.tr,
+                          actionLabel: 'Create Ticket',
+                          onAction: () {
+                            CreateTicketDialog.show(context);
+                          },
+                        );
+                      },
+
+                      // =========================
+                      // END
+                      // =========================
+                      noMoreItemsIndicatorBuilder: (_) {
+                        return PaginationIndicators.noMoreItems();
+                      },
                     ),
+                  );
+                },
               ),
             ),
           ],
@@ -149,10 +242,20 @@ class HelpCenterPage extends ConsumerWidget {
   }
 }
 
-class _SupportHeaderCard extends StatelessWidget {
-  final VoidCallback onCreateTicket;
+// =========================================================
+// HEADER
+// =========================================================
 
-  const _SupportHeaderCard({required this.onCreateTicket});
+class _SupportHeaderCard extends StatelessWidget {
+  const _SupportHeaderCard({
+    required this.hasFilters,
+    required this.onCreateTicket,
+    required this.onOpenFilters,
+  });
+
+  final bool hasFilters;
+  final VoidCallback onCreateTicket;
+  final VoidCallback onOpenFilters;
 
   @override
   Widget build(BuildContext context) {
@@ -166,6 +269,7 @@ class _SupportHeaderCard extends StatelessWidget {
         border: Border.all(color: cs.primary.withValues(alpha: 0.08)),
       ),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Container(
             width: 54,
@@ -189,7 +293,9 @@ class _SupportHeaderCard extends StatelessWidget {
                     fontWeight: FontWeight.w800,
                   ),
                 ),
+
                 const SizedBox(height: 4),
+
                 Text(
                   'Track your support requests and create a new ticket when you need help.',
                   style: context.textTheme.bodySmall?.copyWith(
@@ -197,6 +303,25 @@ class _SupportHeaderCard extends StatelessWidget {
                     height: 1.4,
                   ),
                 ),
+
+                if (hasFilters) ...[
+                  const SizedBox(height: 10),
+                  InputChip(
+                    avatar: Icon(
+                      LucideIcons.filter,
+                      size: 14,
+                      color: cs.primary,
+                    ),
+                    label: const Text('Filters active'),
+                    onPressed: onOpenFilters,
+                    backgroundColor: cs.primary.withValues(alpha: 0.08),
+                    side: BorderSide.none,
+                    labelStyle: context.textTheme.labelSmall?.copyWith(
+                      color: cs.primary,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ],
               ],
             ),
           ),
@@ -214,16 +339,20 @@ class _SupportHeaderCard extends StatelessWidget {
   }
 }
 
-class _StatusFilterBar extends StatelessWidget {
-  final List<_TicketStatusFilter> filters;
-  final String selectedValue;
-  final ValueChanged<String> onChanged;
+// =========================================================
+// STATUS FILTER BAR
+// =========================================================
 
+class _StatusFilterBar extends StatelessWidget {
   const _StatusFilterBar({
     required this.filters,
     required this.selectedValue,
     required this.onChanged,
   });
+
+  final List<_TicketStatusFilter> filters;
+  final String selectedValue;
+  final ValueChanged<String> onChanged;
 
   @override
   Widget build(BuildContext context) {
@@ -235,6 +364,7 @@ class _StatusFilterBar extends StatelessWidget {
         separatorBuilder: (_, _) => AppSpacing.sm.gap,
         itemBuilder: (context, index) {
           final filter = filters[index];
+
           final selected = selectedValue == filter.value;
 
           return _StatusFilterChip(
@@ -242,7 +372,10 @@ class _StatusFilterBar extends StatelessWidget {
             icon: filter.icon,
             selected: selected,
             onTap: () {
-              if (selectedValue == filter.value) return;
+              if (selected) {
+                return;
+              }
+
               onChanged(filter.value);
             },
           );
@@ -252,12 +385,11 @@ class _StatusFilterBar extends StatelessWidget {
   }
 }
 
-class _StatusFilterChip extends StatelessWidget {
-  final String label;
-  final IconData icon;
-  final bool selected;
-  final VoidCallback onTap;
+// =========================================================
+// STATUS FILTER CHIP
+// =========================================================
 
+class _StatusFilterChip extends StatelessWidget {
   const _StatusFilterChip({
     required this.label,
     required this.icon,
@@ -265,13 +397,20 @@ class _StatusFilterChip extends StatelessWidget {
     required this.onTap,
   });
 
+  final String label;
+  final IconData icon;
+  final bool selected;
+  final VoidCallback onTap;
+
   @override
   Widget build(BuildContext context) {
     final cs = context.theme.colorScheme;
 
     return ChoiceChip(
       selected: selected,
-      onSelected: (_) => onTap(),
+      onSelected: (_) {
+        onTap();
+      },
       avatar: Icon(icon, size: 16, color: selected ? cs.onPrimary : cs.primary),
       label: Text(label),
       labelStyle: context.textTheme.labelMedium?.copyWith(
@@ -290,73 +429,43 @@ class _StatusFilterChip extends StatelessWidget {
   }
 }
 
-class _EmptySupportState extends StatelessWidget {
-  final VoidCallback onCreateTicket;
+// =========================================================
+// TICKET SHELL
+// =========================================================
 
-  const _EmptySupportState({required this.onCreateTicket});
+class _SupportTicketShell extends StatelessWidget {
+  const _SupportTicketShell({required this.child});
+
+  final Widget child;
 
   @override
   Widget build(BuildContext context) {
     final cs = context.theme.colorScheme;
 
-    return Padding(
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.md,
-        vertical: AppSpacing.xl,
+    return Container(
+      decoration: BoxDecoration(
+        color: cs.surfaceContainerLowest,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: cs.outlineVariant.withValues(alpha: 0.35)),
       ),
-      child: Column(
-        children: [
-          Container(
-            width: 72,
-            height: 72,
-            decoration: BoxDecoration(
-              color: cs.primary.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(24),
-            ),
-            child: Icon(LucideIcons.messageCircle, color: cs.primary, size: 34),
-          ),
-
-          AppSpacing.md.gap,
-
-          Text(
-            AppTranslationKey.noSupportTicketsYet.tr,
-            style: context.textTheme.titleMedium?.copyWith(
-              fontWeight: FontWeight.w800,
-            ),
-            textAlign: TextAlign.center,
-          ),
-
-          const SizedBox(height: 6),
-
-          Text(
-            AppTranslationKey.createYourFirstSupportTicket.tr,
-            style: context.textTheme.bodyMedium?.copyWith(
-              color: cs.onSurfaceVariant,
-            ),
-            textAlign: TextAlign.center,
-          ),
-
-          AppSpacing.lg.gap,
-
-          FilledButton.icon(
-            onPressed: onCreateTicket,
-            icon: const Icon(LucideIcons.plus),
-            label: const Text('Create Ticket'),
-          ),
-        ],
-      ),
+      clipBehavior: Clip.antiAlias,
+      child: child,
     );
   }
 }
 
-class _TicketStatusFilter {
-  final String label;
-  final String value;
-  final IconData icon;
+// =========================================================
+// FILTER MODEL
+// =========================================================
 
+class _TicketStatusFilter {
   const _TicketStatusFilter({
     required this.label,
     required this.value,
     required this.icon,
   });
+
+  final String label;
+  final String value;
+  final IconData icon;
 }

@@ -1,26 +1,28 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:user_app/core/utils/app_extensions.dart';
-import 'package:user_app/app/router/app_navigator.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
-import 'package:user_app/app/router/app_router.dart';
-import 'package:user_app/core/utils/date_utils.dart';
 
-import 'package:user_app/shared/models/models.dart';
+import 'package:user_app/app/router/app_navigator.dart';
+import 'package:user_app/app/router/app_router.dart';
+import 'package:user_app/core/constants/app_spacing.dart';
+import 'package:user_app/core/utils/app_extensions.dart';
+import 'package:user_app/core/utils/date_utils.dart';
+import 'package:user_app/core/widgets/app_error_view.dart';
+import 'package:user_app/core/widgets/app_loading_view.dart';
+import 'package:user_app/core/widgets/empty_state.dart';
+
 import 'package:user_app/features/authentication/presentation/controllers/auth_controller.dart';
 import 'package:user_app/features/home/presentation/controllers/home_controller.dart';
-import 'package:user_app/core/constants/app_spacing.dart';
-import 'package:user_app/core/utils/loading.dart';
-import 'package:user_app/core/utils/responsive.dart';
-
-import 'package:user_app/shared/widgets/global_search_delegate.dart';
-import 'package:user_app/shared/widgets/glass_card.dart';
-import 'package:user_app/shared/widgets/section_header.dart';
-
+import 'package:user_app/features/home/presentation/controllers/home_state.dart';
 import 'package:user_app/features/home/presentation/widgets/continue_reading_card.dart';
 
 import 'package:user_app/features/tree_selector/data/models/tree_selector_models.dart';
 import 'package:user_app/features/tree_selector/presentation/screens/tree_selector_page.dart';
+
+import 'package:user_app/shared/models/models.dart';
+import 'package:user_app/shared/widgets/global_search_delegate.dart';
+import 'package:user_app/shared/widgets/glass_card.dart';
+import 'package:user_app/shared/widgets/section_header.dart';
 
 class HomePage extends ConsumerWidget {
   const HomePage({super.key});
@@ -28,18 +30,30 @@ class HomePage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final cs = context.theme.colorScheme;
+
     final home = ref.watch(homeControllerProvider);
+
     final data = home.valueOrNull ?? const HomeState();
+
+    final controller = ref.read(homeControllerProvider.notifier);
+
     final userName = ref.watch(
-      authControllerProvider.select(
-        (value) => value.valueOrNull?.user?.name ?? 'Healthcare Professional',
-      ),
+      authControllerProvider.select((value) {
+        final name = value.valueOrNull?.user?.name.trim() ?? '';
+
+        return name.isEmpty ? 'Healthcare Professional' : name;
+      }),
     );
 
     return Scaffold(
+      backgroundColor: cs.surface,
+
+      // =====================================================
+      // APP BAR
+      // =====================================================
       appBar: AppBar(
         automaticallyImplyLeading: false,
-        titleSpacing: 16,
+        titleSpacing: AppSpacing.md,
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -52,6 +66,8 @@ class HomePage extends ConsumerWidget {
             ),
             Text(
               userName,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
               style: context.textTheme.headlineSmall?.copyWith(
                 fontWeight: FontWeight.w700,
               ),
@@ -60,211 +76,268 @@ class HomePage extends ConsumerWidget {
         ),
         actions: [
           IconButton(
-            onPressed: () => _showQuickActionsMenu(context),
+            onPressed: () {
+              _showQuickActionsMenu(context);
+            },
             tooltip: AppTranslationKey.quickActions,
             icon: const Icon(LucideIcons.layoutGrid),
           ),
           IconButton(
-            onPressed: () =>
-                showSearch(context: context, delegate: GlobalSearchDelegate()),
+            onPressed: () {
+              showSearch(context: context, delegate: GlobalSearchDelegate());
+            },
             tooltip: 'Search',
             icon: const Icon(LucideIcons.search),
           ),
           IconButton(
-            onPressed: () => AppNavigator.pushNamed(AppRoutes.notifications),
+            onPressed: () {
+              AppNavigator.push(AppRoutes.notifications);
+            },
             tooltip: AppTranslationKey.notifications,
             icon: const Icon(LucideIcons.bell),
           ),
         ],
       ),
 
-      floatingActionButton: Builder(
-        builder: (context) {
-          final unread = data.unreadMessagesCount.clamp(0, 9999);
-
-          return FloatingActionButton.small(
-            onPressed: () => AppNavigator.pushNamed(AppRoutes.chatList),
-            backgroundColor: cs.primary,
-            child: Badge(
-              isLabelVisible: unread > 0,
-              label: Text(unread > 99 ? '99+' : '$unread'),
-              child: Icon(LucideIcons.messageCircle, color: cs.onPrimary),
-            ),
-          );
+      // =====================================================
+      // CHAT FAB
+      // =====================================================
+      floatingActionButton: _ChatFloatingButton(
+        unreadCount: data.unreadMessagesCount,
+        onPressed: () {
+          AppNavigator.push(AppRoutes.chatList);
         },
       ),
 
-      body: Builder(
-        builder: (context) {
-          final loading = home.isLoading;
+      // =====================================================
+      // BODY
+      // =====================================================
+      body: _buildBody(
+        context: context,
+        ref: ref,
+        home: home,
+        data: data,
+        controller: controller,
+      ),
+    );
+  }
 
-          if (loading && !data.hasContent) {
-            return const Center(child: Loading.large());
-          }
+  Widget _buildBody({
+    required BuildContext context,
+    required WidgetRef ref,
+    required AsyncValue<HomeState> home,
+    required HomeState data,
+    required HomeController controller,
+  }) {
+    // =====================================================
+    // INITIAL LOADING
+    //
+    // Only block the whole page if we have no usable
+    // cached/previous content.
+    // =====================================================
 
-          return RefreshIndicator(
-            onRefresh: ref.read(homeControllerProvider.notifier).refresh,
-            child: ListView(
-              physics: const AlwaysScrollableScrollPhysics(),
-              padding: EdgeInsets.symmetric(
-                horizontal: context.responsiveHorizontalPadding,
-                vertical: AppSpacing.md,
+    if (home.isLoading && !data.hasContent) {
+      return const AppLoadingView(message: 'Loading MediGuide...');
+    }
+
+    // =====================================================
+    // INITIAL ERROR
+    //
+    // If we already have old/cached content, keep showing it
+    // rather than replacing the whole home screen.
+    // =====================================================
+
+    if (home.hasError && !data.hasContent) {
+      return AppErrorView(
+        error: home.error ?? 'Unable to load home content',
+        onRetry: controller.refresh,
+      );
+    }
+
+    // =====================================================
+    // CONTENT
+    // =====================================================
+
+    return RefreshIndicator(
+      onRefresh: controller.refresh,
+      child: ListView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: EdgeInsets.symmetric(
+          horizontal: context.responsiveHorizontalPadding,
+          vertical: AppSpacing.md,
+        ),
+        children: [
+          // =================================================
+          // REFRESH / STALE CONTENT INDICATOR
+          // =================================================
+          if (home.isLoading && data.hasContent) ...[
+            const LinearProgressIndicator(),
+            AppSpacing.md.gap,
+          ],
+
+          // =================================================
+          // GUIDELINES
+          // =================================================
+          SectionHeader(
+            title: AppTranslationKey.guidelines,
+            subtitle: 'Recently added and updated clinical guidance',
+            icon: LucideIcons.bookOpenText,
+            onSeeAll: _openAllGuidelines,
+          ),
+
+          AppSpacing.md.gap,
+
+          if (data.recentlyUpdatedGuidelines.isNotEmpty) ...[
+            _GuidelinesPreviewList(
+              guidelines: data.recentlyUpdatedGuidelines,
+              onOpenGuideline: _openGuideline,
+            ),
+          ] else ...[
+            _NoRecentGuidelinesCard(onBrowse: _openAllGuidelines),
+          ],
+
+          AppSpacing.lg.gap,
+
+          // =================================================
+          // CONTINUE READING
+          // =================================================
+          if (data.continueReadingItems.isNotEmpty) ...[
+            SectionHeader(
+              title: AppTranslationKey.continueReading,
+              subtitle: AppTranslationKey.resumeWhereYouLeftOff,
+              icon: LucideIcons.bookOpen,
+            ),
+
+            AppSpacing.md.gap,
+
+            SizedBox(
+              height: 220,
+              child: ListView.separated(
+                scrollDirection: Axis.horizontal,
+                itemCount: data.continueReadingItems.length,
+                separatorBuilder: (_, _) => AppSpacing.md.gap,
+                itemBuilder: (context, index) {
+                  final progress = data.continueReadingItems[index];
+
+                  return ContinueReadingCard(
+                    progress: progress,
+                    onTap: () {
+                      _continueReading(ref, progress);
+                    },
+                  );
+                },
               ),
-              children: [
-                // =====================================================
-                // GUIDELINES
-                // =====================================================
-                SectionHeader(
-                  title: AppTranslationKey.guidelines,
-                  subtitle: 'Recently added and updated clinical guidance',
-                  icon: LucideIcons.bookOpenText,
-                  onSeeAll: _openAllGuidelines,
-                ),
-
-                AppSpacing.md.gap,
-
-                if (data.recentlyUpdatedGuidelines.isNotEmpty) ...[
-                  _GuidelinesPreviewList(
-                    guidelines: data.recentlyUpdatedGuidelines,
-                    onOpenGuideline: _openGuideline,
-                  ),
-                  AppSpacing.lg.gap,
-                ] else ...[
-                  _NoRecentGuidelinesCard(onBrowse: _openAllGuidelines),
-                  AppSpacing.lg.gap,
-                ],
-
-                // =====================================================
-                // PINNED GUIDELINES
-                // =====================================================
-                // if (controller.pinnedGuidelines.isNotEmpty) ...[
-                //   SectionHeader(
-                //     title: 'Pinned Guidelines',
-                //     subtitle: 'Frequently used references',
-                //     icon: LucideIcons.pin,
-                //   ),
-
-                //   AppSpacing.md.gap,
-
-                //   SizedBox(
-                //     height: 140,
-                //     child: ListView.separated(
-                //       scrollDirection: Axis.horizontal,
-                //       itemCount: controller.pinnedGuidelines.length,
-                //       separatorBuilder: (_, _) => AppSpacing.sm.gap,
-                //       itemBuilder: (context, index) {
-                //         final guideline = controller.pinnedGuidelines[index];
-
-                //         return _PinnedGuidelineCard(
-                //           title: guideline.displayName,
-                //           category: guideline.categories.firstOrNull?.name ?? '',
-                //           onTap: () => controller.openGuideline(guideline),
-                //         );
-                //       },
-                //     ),
-                //   ),
-
-                //   AppSpacing.lg.gap,
-                // ],
-
-                // =====================================================
-                // CONTINUE READING
-                // =====================================================
-                if (data.continueReadingItems.isNotEmpty) ...[
-                  SectionHeader(
-                    title: AppTranslationKey.continueReading,
-                    subtitle: AppTranslationKey.resumeWhereYouLeftOff,
-                    icon: LucideIcons.bookOpen,
-                  ),
-
-                  AppSpacing.md.gap,
-
-                  SizedBox(
-                    height: 220,
-                    child: ListView.separated(
-                      scrollDirection: Axis.horizontal,
-                      itemCount: data.continueReadingItems.length,
-                      separatorBuilder: (_, _) => AppSpacing.md.gap,
-                      itemBuilder: (context, index) {
-                        final progress = data.continueReadingItems[index];
-
-                        return ContinueReadingCard(
-                          progress: progress,
-                          onTap: () => _continueReading(ref, progress),
-                        );
-                      },
-                    ),
-                  ),
-
-                  AppSpacing.lg.gap,
-                ],
-
-                // =====================================================
-                // FEATURED TOOLS
-                // =====================================================
-                // if (controller.featuredCalculators.isNotEmpty && !loading) ...[
-                //   SectionHeader(
-                //     title: AppTranslationKey.featuredTools,
-                //     subtitle: AppTranslationKey.essentialCalculatorsAndTools,
-                //     icon: LucideIcons.calculator,
-                //     onSeeAll: () => AppNavigator.pushNamed(AppRoutes.tools),
-                //   ),
-
-                //   AppSpacing.md.gap,
-
-                //   SizedBox(
-                //     height: 140,
-                //     child: ListView.separated(
-                //       scrollDirection: Axis.horizontal,
-                //       itemCount: controller.featuredCalculators.length,
-                //       separatorBuilder: (_, _) => AppSpacing.sm.gap,
-                //       itemBuilder: (context, index) {
-                //         final calculator = controller.featuredCalculators[index];
-
-                //         return FeaturedCalculatorChip(
-                //           calculator: calculator,
-                //           onTap: () => AppNavigator.pushNamed(
-                //             AppRoutes.useCalculator,
-                //             arguments: calculator,
-                //           ),
-                //         );
-                //       },
-                //     ),
-                //   ),
-                // ],
-                AppSpacing.xxxl.gap,
-              ],
             ),
-          );
-        },
+
+            AppSpacing.lg.gap,
+          ],
+
+          // =================================================
+          // OPTIONAL FEATURED TOOLS
+          // =================================================
+          //
+          // Your controller already loads featured calculators.
+          // This can be re-enabled when you want it visible.
+          //
+          // if (data.featuredCalculators.isNotEmpty) ...[
+          //   SectionHeader(
+          //     title: AppTranslationKey.featuredTools,
+          //     subtitle:
+          //         AppTranslationKey.essentialCalculatorsAndTools,
+          //     icon: LucideIcons.calculator,
+          //     onSeeAll: () {
+          //       AppNavigator.push(AppRoutes.tools);
+          //     },
+          //   ),
+          //
+          //   AppSpacing.md.gap,
+          //
+          //   SizedBox(
+          //     height: 140,
+          //     child: ListView.separated(
+          //       scrollDirection: Axis.horizontal,
+          //       itemCount: data.featuredCalculators.length,
+          //       separatorBuilder:
+          //           (_, _) => AppSpacing.sm.gap,
+          //       itemBuilder: (context, index) {
+          //         final calculator =
+          //             data.featuredCalculators[index];
+          //
+          //         return FeaturedCalculatorChip(
+          //           calculator: calculator,
+          //           onTap: () {
+          //             AppNavigator.push(
+          //               AppRoutes.calculator(
+          //                 calculator.id,
+          //               ),
+          //               extra: calculator,
+          //             );
+          //           },
+          //         );
+          //       },
+          //     ),
+          //   ),
+          //
+          //   AppSpacing.lg.gap,
+          // ],
+
+          // =================================================
+          // COMPLETELY EMPTY HOME
+          // =================================================
+          if (!data.hasContent && data.recentlyUpdatedGuidelines.isEmpty)
+            EmptyState.noData(
+              title: 'No content available',
+              description:
+                  'Clinical guidelines and tools will appear here when available.',
+              actionLabel: 'Refresh',
+              onAction: () {
+                controller.refresh();
+              },
+            ),
+
+          AppSpacing.xxxl.gap,
+        ],
       ),
     );
   }
 
-  void _openAllGuidelines() {
-    AppNavigator.pushNamed(
+  // =======================================================
+  // NAVIGATION
+  // =======================================================
+
+  static void _openAllGuidelines() {
+    AppNavigator.push(
       AppRoutes.guidelines,
-      extra: {'filterType': 'all', 'title': 'All Guidelines'},
+      extra: const {'filterType': 'all', 'title': 'All Guidelines'},
     );
   }
 
-  void _openGuideline(Guideline guideline) {
+  static void _openGuideline(Guideline guideline) {
     AppNavigator.push(AppRoutes.guideline(guideline.id), extra: guideline);
   }
 
-  Future<void> _continueReading(WidgetRef ref, ReadingProgress progress) async {
+  static Future<void> _continueReading(
+    WidgetRef ref,
+    ReadingProgress progress,
+  ) async {
     try {
       final guideline = await ref
           .read(homeControllerProvider.notifier)
           .guideline(progress.guidelineId);
+
       _openGuideline(guideline);
     } catch (_) {
-      // The existing card remains visible and can be retried while offline.
+      // The existing progress card remains available.
+      // Offline/network errors should not remove it.
     }
   }
 
-  Future<void> _showQuickActionsMenu(BuildContext context) async {
-    final actions = [
+  // =======================================================
+  // QUICK ACTIONS
+  // =======================================================
+
+  static Future<void> _showQuickActionsMenu(BuildContext context) async {
+    final actions = <_HomeQuickAction>[
       _HomeQuickAction(
         icon: LucideIcons.pill,
         title: AppTranslationKey.drugIndex,
@@ -296,7 +369,9 @@ class HomePage extends ConsumerWidget {
             ),
           );
 
-          if (result == null) return;
+          if (result == null) {
+            return;
+          }
 
           await AppNavigator.push(
             AppRoutes.consultants,
@@ -317,7 +392,9 @@ class HomePage extends ConsumerWidget {
             ),
           );
 
-          if (result == null) return;
+          if (result == null) {
+            return;
+          }
 
           await AppNavigator.push(
             AppRoutes.healthInfrastructure,
@@ -331,18 +408,50 @@ class HomePage extends ConsumerWidget {
       context: context,
       showDragHandle: true,
       useSafeArea: true,
-      builder: (_) => _QuickActionsSheet(actions: actions),
+      builder: (_) {
+        return _QuickActionsSheet(actions: actions);
+      },
     );
   }
 }
 
-class _HomeQuickAction {
-  final IconData icon;
-  final String title;
-  final String subtitle;
-  final Color color;
-  final Future<void> Function() onTap;
+// =========================================================
+// CHAT FLOATING BUTTON
+// =========================================================
 
+class _ChatFloatingButton extends StatelessWidget {
+  const _ChatFloatingButton({
+    required this.unreadCount,
+    required this.onPressed,
+  });
+
+  final int unreadCount;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = context.theme.colorScheme;
+
+    final unread = unreadCount.clamp(0, 9999);
+
+    return FloatingActionButton.small(
+      onPressed: onPressed,
+      backgroundColor: cs.primary,
+      tooltip: 'Conversations',
+      child: Badge(
+        isLabelVisible: unread > 0,
+        label: Text(unread > 99 ? '99+' : '$unread'),
+        child: Icon(LucideIcons.messageCircle, color: cs.onPrimary),
+      ),
+    );
+  }
+}
+
+// =========================================================
+// QUICK ACTION MODEL
+// =========================================================
+
+class _HomeQuickAction {
   const _HomeQuickAction({
     required this.icon,
     required this.title,
@@ -350,12 +459,22 @@ class _HomeQuickAction {
     required this.color,
     required this.onTap,
   });
+
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final Color color;
+  final Future<void> Function() onTap;
 }
 
-class _QuickActionsSheet extends StatelessWidget {
-  final List<_HomeQuickAction> actions;
+// =========================================================
+// QUICK ACTION SHEET
+// =========================================================
 
+class _QuickActionsSheet extends StatelessWidget {
   const _QuickActionsSheet({required this.actions});
+
+  final List<_HomeQuickAction> actions;
 
   @override
   Widget build(BuildContext context) {
@@ -380,8 +499,11 @@ class _QuickActionsSheet extends StatelessWidget {
                   fontWeight: FontWeight.w800,
                 ),
               ),
+
               AppSpacing.sm.gap,
-              ...actions.map((action) => _QuickActionMenuTile(action: action)),
+
+              for (final action in actions)
+                _QuickActionMenuTile(action: action),
             ],
           ),
         ),
@@ -391,9 +513,9 @@ class _QuickActionsSheet extends StatelessWidget {
 }
 
 class _QuickActionMenuTile extends StatelessWidget {
-  final _HomeQuickAction action;
-
   const _QuickActionMenuTile({required this.action});
+
+  final _HomeQuickAction action;
 
   @override
   Widget build(BuildContext context) {
@@ -428,6 +550,7 @@ class _QuickActionMenuTile extends StatelessWidget {
         trailing: Icon(LucideIcons.chevronRight, color: cs.onSurfaceVariant),
         onTap: () async {
           Navigator.of(context).pop();
+
           await action.onTap();
         },
       ),
@@ -435,48 +558,67 @@ class _QuickActionMenuTile extends StatelessWidget {
   }
 }
 
-class _GuidelinesPreviewList extends StatelessWidget {
-  final List<Guideline> guidelines;
-  final void Function(Guideline guideline) onOpenGuideline;
+// =========================================================
+// GUIDELINE PREVIEW
+// =========================================================
 
+class _GuidelinesPreviewList extends StatelessWidget {
   const _GuidelinesPreviewList({
     required this.guidelines,
     required this.onOpenGuideline,
   });
 
+  final List<Guideline> guidelines;
+  final void Function(Guideline guideline) onOpenGuideline;
+
   @override
   Widget build(BuildContext context) {
-    final visibleGuidelines = guidelines.take(4).toList();
+    final visibleGuidelines = guidelines.take(4).toList(growable: false);
 
     return Column(
-      children: visibleGuidelines.map((guideline) {
-        final category = guideline.categories.firstOrNull?.name ?? '';
-        final updatedAt = guideline.updatedDate != null
-            ? 'Updated on ${AppDateUtils.formatDate(guideline.updatedDate!)}'
-            : 'Recently added';
-
-        return Padding(
-          padding: const EdgeInsets.only(bottom: AppSpacing.sm),
-          child: _HomeGuidelineTile(
-            title: guideline.displayName,
-            category: category,
-            priority: guideline.priority,
-            updatedAt: updatedAt,
-            onTap: () => onOpenGuideline(guideline),
+      children: [
+        for (var index = 0; index < visibleGuidelines.length; index++)
+          Padding(
+            padding: EdgeInsets.only(
+              bottom: index == visibleGuidelines.length - 1 ? 0 : AppSpacing.sm,
+            ),
+            child: _GuidelinePreview(
+              guideline: visibleGuidelines[index],
+              onTap: () {
+                onOpenGuideline(visibleGuidelines[index]);
+              },
+            ),
           ),
-        );
-      }).toList(),
+      ],
+    );
+  }
+}
+
+class _GuidelinePreview extends StatelessWidget {
+  const _GuidelinePreview({required this.guideline, required this.onTap});
+
+  final Guideline guideline;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final category = guideline.categories.firstOrNull?.name ?? '';
+
+    final updatedAt = guideline.updatedDate != null
+        ? 'Updated on ${AppDateUtils.formatDate(guideline.updatedDate!)}'
+        : 'Recently added';
+
+    return _HomeGuidelineTile(
+      title: guideline.displayName,
+      category: category,
+      priority: guideline.priority,
+      updatedAt: updatedAt,
+      onTap: onTap,
     );
   }
 }
 
 class _HomeGuidelineTile extends StatelessWidget {
-  final String title;
-  final String category;
-  final String priority;
-  final String updatedAt;
-  final VoidCallback onTap;
-
   const _HomeGuidelineTile({
     required this.title,
     required this.category,
@@ -485,10 +627,18 @@ class _HomeGuidelineTile extends StatelessWidget {
     required this.onTap,
   });
 
+  final String title;
+  final String category;
+  final String priority;
+  final String updatedAt;
+  final VoidCallback onTap;
+
   @override
   Widget build(BuildContext context) {
     final cs = context.theme.colorScheme;
+
     final priorityColor = _priorityColor(priority);
+
     final priorityLabel = _formatPriority(priority);
 
     return Material(
@@ -543,6 +693,7 @@ class _HomeGuidelineTile extends StatelessWidget {
                             label: category,
                             icon: LucideIcons.folder,
                           ),
+
                         if (priorityLabel.isNotEmpty)
                           _MiniMetaChip(
                             label: priorityLabel,
@@ -585,7 +736,7 @@ class _HomeGuidelineTile extends StatelessWidget {
 
     final lower = value.toLowerCase();
 
-    return lower[0].toUpperCase() + lower.substring(1);
+    return '${lower[0].toUpperCase()}${lower.substring(1)}';
   }
 
   Color _priorityColor(String priority) {
@@ -604,15 +755,16 @@ class _HomeGuidelineTile extends StatelessWidget {
 }
 
 class _MiniMetaChip extends StatelessWidget {
+  const _MiniMetaChip({required this.label, required this.icon, this.color});
+
   final String label;
   final IconData icon;
   final Color? color;
 
-  const _MiniMetaChip({required this.label, required this.icon, this.color});
-
   @override
   Widget build(BuildContext context) {
     final cs = context.theme.colorScheme;
+
     final effectiveColor = color ?? cs.primary;
 
     return Container(
@@ -639,10 +791,14 @@ class _MiniMetaChip extends StatelessWidget {
   }
 }
 
-class _NoRecentGuidelinesCard extends StatelessWidget {
-  final VoidCallback onBrowse;
+// =========================================================
+// NO RECENT GUIDELINES
+// =========================================================
 
+class _NoRecentGuidelinesCard extends StatelessWidget {
   const _NoRecentGuidelinesCard({required this.onBrowse});
+
+  final VoidCallback onBrowse;
 
   @override
   Widget build(BuildContext context) {
@@ -677,7 +833,9 @@ class _NoRecentGuidelinesCard extends StatelessWidget {
                   size: 22,
                 ),
               ),
+
               AppSpacing.md.gap,
+
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -688,7 +846,9 @@ class _NoRecentGuidelinesCard extends StatelessWidget {
                         fontWeight: FontWeight.w800,
                       ),
                     ),
+
                     const SizedBox(height: 4),
+
                     Text(
                       'Open all available clinical guidance.',
                       style: context.textTheme.bodySmall?.copyWith(
@@ -698,6 +858,7 @@ class _NoRecentGuidelinesCard extends StatelessWidget {
                   ],
                 ),
               ),
+
               Icon(LucideIcons.chevronRight, color: cs.onSurfaceVariant),
             ],
           ),
@@ -707,18 +868,24 @@ class _NoRecentGuidelinesCard extends StatelessWidget {
   }
 }
 
-// Retained for the pinned-guidelines section that is currently feature-gated.
+// =========================================================
+// PINNED GUIDELINE
+//
+// Kept because your controller already exposes pinned
+// guidelines even though the section is currently hidden.
+// =========================================================
+
 // ignore: unused_element
 class _PinnedGuidelineCard extends StatelessWidget {
-  final String title;
-  final String category;
-  final VoidCallback onTap;
-
   const _PinnedGuidelineCard({
     required this.title,
     required this.category,
     required this.onTap,
   });
+
+  final String title;
+  final String category;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -736,7 +903,9 @@ class _PinnedGuidelineCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const Icon(LucideIcons.pin),
+
                 const Spacer(),
+
                 Text(
                   category,
                   style: context.textTheme.labelSmall?.copyWith(
@@ -744,7 +913,9 @@ class _PinnedGuidelineCard extends StatelessWidget {
                     fontWeight: FontWeight.w700,
                   ),
                 ),
+
                 const SizedBox(height: 6),
+
                 Text(
                   title,
                   maxLines: 2,

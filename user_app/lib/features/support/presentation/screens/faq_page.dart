@@ -1,23 +1,34 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:user_app/core/utils/app_extensions.dart';
 import 'package:infinite_scroll_pagination/infinite_scroll_pagination.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
-import 'package:user_app/shared/models/models.dart';
 import 'package:user_app/core/constants/app_spacing.dart';
-import 'package:user_app/shared/widgets/filter_button.dart';
-import 'package:user_app/shared/widgets/pagination_indicators.dart';
+import 'package:user_app/core/utils/app_extensions.dart';
+import 'package:user_app/core/widgets/app_error_view.dart';
+import 'package:user_app/core/widgets/app_loading_view.dart';
+import 'package:user_app/core/widgets/empty_state.dart';
+
 import 'package:user_app/features/support/presentation/controllers/faq_controller.dart';
 import 'package:user_app/features/support/presentation/widgets/faq_expansion_item.dart';
+
+import 'package:user_app/shared/models/models.dart';
+import 'package:user_app/shared/widgets/filter_button.dart';
+import 'package:user_app/shared/widgets/pagination_indicators.dart';
 
 class FaqPage extends ConsumerWidget {
   const FaqPage({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final controller = ref.watch(faqControllerProvider);
+    final state = ref.watch(faqControllerProvider);
+
+    final controller = ref.read(faqControllerProvider.notifier);
+
+    final cs = context.theme.colorScheme;
+
     return Scaffold(
+      backgroundColor: cs.surface,
       appBar: AppBar(
         titleSpacing: AppSpacing.md,
         title: Text(
@@ -28,20 +39,29 @@ class FaqPage extends ConsumerWidget {
         ),
         actions: [
           FilterButton(
-            hasActiveFilters: controller.hasActiveFilters,
-            onPressed: () => controller.showFilterModal(context),
-            onReset: controller.hasActiveFilters
-                ? controller.clearAllFilters
-                : null,
+            hasActiveFilters: state.hasActiveFilters,
+            onPressed: () {
+              controller.showFilterModal(context);
+            },
+            onReset: state.hasActiveFilters ? controller.clearAllFilters : null,
           ),
           AppSpacing.xs.gap,
         ],
       ),
+
+      // =====================================================
+      // BODY
+      // =====================================================
       body: RefreshIndicator(
-        onRefresh: () async => controller.refreshFAQs(),
+        onRefresh: () async {
+          controller.refreshFAQs();
+        },
         child: CustomScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
           slivers: [
+            // =================================================
+            // HEADER
+            // =================================================
             SliverPadding(
               padding: const EdgeInsets.fromLTRB(
                 AppSpacing.md,
@@ -51,11 +71,19 @@ class FaqPage extends ConsumerWidget {
               ),
               sliver: SliverToBoxAdapter(
                 child: _FaqHeaderCard(
-                  onOpenFilters: () => controller.showFilterModal(context),
+                  searchQuery: state.searchQuery,
+                  hasFilters: state.hasActiveFilters,
+                  onOpenFilters: () {
+                    controller.showFilterModal(context);
+                  },
+                  onClearFilters: controller.clearAllFilters,
                 ),
               ),
             ),
 
+            // =================================================
+            // FAQ LIST
+            // =================================================
             SliverPadding(
               padding: const EdgeInsets.fromLTRB(
                 AppSpacing.md,
@@ -65,48 +93,83 @@ class FaqPage extends ConsumerWidget {
               ),
               sliver: PagingListener<int, FAQ>(
                 controller: controller.pagingController,
-                builder: (context, state, fetchNextPage) {
+                builder: (context, pagingState, fetchNextPage) {
                   return PagedSliverList<int, FAQ>.separated(
-                    state: state,
+                    state: pagingState,
                     fetchNextPage: fetchNextPage,
                     separatorBuilder: (context, index) => AppSpacing.sm.gap,
                     builderDelegate: PagedChildBuilderDelegate<FAQ>(
                       itemBuilder: (context, faq, index) {
                         return _FaqItemShell(child: FaqExpansionItem(faq: faq));
                       },
-                      firstPageErrorIndicatorBuilder: (context) =>
-                          PaginationIndicators.firstPageError(
-                            onRetry: fetchNextPage,
-                            title: AppTranslationKey.failedToLoadFAQs.tr,
-                            subtitle:
-                                AppTranslationKey.checkInternetAndRetry.tr,
-                            icon: LucideIcons.messageCircle,
-                          ),
-                      firstPageProgressIndicatorBuilder: (context) =>
-                          PaginationIndicators.firstPageProgress(),
-                      newPageProgressIndicatorBuilder: (context) =>
-                          PaginationIndicators.newPageProgress(),
-                      newPageErrorIndicatorBuilder: (context) =>
-                          PaginationIndicators.newPageError(
-                            onRetry: fetchNextPage,
-                            title: AppTranslationKey.errorLoadingMore.tr,
-                            icon: LucideIcons.messageCircle,
-                          ),
-                      noItemsFoundIndicatorBuilder: (context) {
-                        final hasSearchQuery = controller.searchQuery
-                            .trim()
-                            .isNotEmpty;
-                        final hasFilters = controller.hasActiveFilters;
 
-                        return _EmptyFaqState(
-                          hasSearchQuery: hasSearchQuery,
-                          hasFilters: hasFilters,
-                          onClearSearch: controller.clearSearch,
-                          onClearFilters: controller.clearAllFilters,
+                      // =========================
+                      // FIRST PAGE LOADING
+                      // =========================
+                      firstPageProgressIndicatorBuilder: (_) {
+                        return const AppLoadingView(message: 'Loading FAQs...');
+                      },
+
+                      // =========================
+                      // NEXT PAGE LOADING
+                      // =========================
+                      newPageProgressIndicatorBuilder: (_) {
+                        return PaginationIndicators.newPageProgress();
+                      },
+
+                      // =========================
+                      // FIRST PAGE ERROR
+                      // =========================
+                      firstPageErrorIndicatorBuilder: (_) {
+                        return AppErrorView(
+                          error: pagingState.error ?? 'Failed to load FAQs',
+                          onRetry: fetchNextPage,
                         );
                       },
-                      noMoreItemsIndicatorBuilder: (context) =>
-                          PaginationIndicators.noMoreItems(),
+
+                      // =========================
+                      // NEXT PAGE ERROR
+                      // =========================
+                      newPageErrorIndicatorBuilder: (_) {
+                        return PaginationIndicators.newPageError(
+                          onRetry: fetchNextPage,
+                          title: AppTranslationKey.errorLoadingMore.tr,
+                          icon: LucideIcons.messageCircleQuestion,
+                        );
+                      },
+
+                      // =========================
+                      // EMPTY
+                      // =========================
+                      noItemsFoundIndicatorBuilder: (_) {
+                        final hasSearch = state.searchQuery.trim().isNotEmpty;
+
+                        if (hasSearch || state.hasActiveFilters) {
+                          return EmptyState.noResults(
+                            title: AppTranslationKey.noFAQsFound.tr,
+                            description:
+                                AppTranslationKey.tryDifferentSearchTerm.tr,
+                            actionLabel: hasSearch
+                                ? AppTranslationKey.clearSearch.tr
+                                : 'Clear Filters',
+                            onAction: hasSearch
+                                ? controller.clearSearch
+                                : controller.clearAllFilters,
+                          );
+                        }
+
+                        return EmptyState.noData(
+                          title: AppTranslationKey.noFAQsAvailable.tr,
+                          description: AppTranslationKey.faqsWillAppearHere.tr,
+                        );
+                      },
+
+                      // =========================
+                      // END
+                      // =========================
+                      noMoreItemsIndicatorBuilder: (_) {
+                        return PaginationIndicators.noMoreItems();
+                      },
                     ),
                   );
                 },
@@ -119,14 +182,28 @@ class FaqPage extends ConsumerWidget {
   }
 }
 
-class _FaqHeaderCard extends StatelessWidget {
-  final VoidCallback onOpenFilters;
+// =========================================================
+// HEADER
+// =========================================================
 
-  const _FaqHeaderCard({required this.onOpenFilters});
+class _FaqHeaderCard extends StatelessWidget {
+  const _FaqHeaderCard({
+    required this.searchQuery,
+    required this.hasFilters,
+    required this.onOpenFilters,
+    required this.onClearFilters,
+  });
+
+  final String searchQuery;
+  final bool hasFilters;
+  final VoidCallback onOpenFilters;
+  final VoidCallback onClearFilters;
 
   @override
   Widget build(BuildContext context) {
     final cs = context.theme.colorScheme;
+
+    final hasSearch = searchQuery.trim().isNotEmpty;
 
     return Container(
       padding: const EdgeInsets.all(AppSpacing.lg),
@@ -136,6 +213,7 @@ class _FaqHeaderCard extends StatelessWidget {
         border: Border.all(color: cs.primary.withValues(alpha: 0.08)),
       ),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Container(
             width: 54,
@@ -163,14 +241,29 @@ class _FaqHeaderCard extends StatelessWidget {
                     fontWeight: FontWeight.w800,
                   ),
                 ),
+
                 const SizedBox(height: 4),
+
                 Text(
-                  'Find quick answers about MediGuide, guidelines, tools and support.',
+                  hasSearch
+                      ? 'Showing answers matching "$searchQuery".'
+                      : 'Find quick answers about MediGuide, guidelines, tools and support.',
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
                   style: context.textTheme.bodySmall?.copyWith(
                     color: cs.onSurfaceVariant,
                     height: 1.4,
                   ),
                 ),
+
+                if (hasFilters) ...[
+                  const SizedBox(height: 10),
+
+                  _FaqActiveFilterChip(
+                    label: hasSearch ? searchQuery : 'Filters active',
+                    onClear: onClearFilters,
+                  ),
+                ],
               ],
             ),
           ),
@@ -188,10 +281,46 @@ class _FaqHeaderCard extends StatelessWidget {
   }
 }
 
-class _FaqItemShell extends StatelessWidget {
-  final Widget child;
+// =========================================================
+// ACTIVE FILTER CHIP
+// =========================================================
 
+class _FaqActiveFilterChip extends StatelessWidget {
+  const _FaqActiveFilterChip({required this.label, required this.onClear});
+
+  final String label;
+  final VoidCallback onClear;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = context.theme.colorScheme;
+
+    return InputChip(
+      avatar: Icon(LucideIcons.search, size: 14, color: cs.primary),
+      label: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 180),
+        child: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis),
+      ),
+      onDeleted: onClear,
+      deleteIcon: const Icon(LucideIcons.x, size: 14),
+      backgroundColor: cs.primary.withValues(alpha: 0.08),
+      side: BorderSide.none,
+      labelStyle: context.textTheme.labelSmall?.copyWith(
+        color: cs.primary,
+        fontWeight: FontWeight.w700,
+      ),
+    );
+  }
+}
+
+// =========================================================
+// FAQ ITEM SHELL
+// =========================================================
+
+class _FaqItemShell extends StatelessWidget {
   const _FaqItemShell({required this.child});
+
+  final Widget child;
 
   @override
   Widget build(BuildContext context) {
@@ -205,97 +334,6 @@ class _FaqItemShell extends StatelessWidget {
       ),
       clipBehavior: Clip.antiAlias,
       child: child,
-    );
-  }
-}
-
-class _EmptyFaqState extends StatelessWidget {
-  final bool hasSearchQuery;
-  final bool hasFilters;
-  final VoidCallback onClearSearch;
-  final VoidCallback onClearFilters;
-
-  const _EmptyFaqState({
-    required this.hasSearchQuery,
-    required this.hasFilters,
-    required this.onClearSearch,
-    required this.onClearFilters,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final cs = context.theme.colorScheme;
-    final hasAnyFilter = hasSearchQuery || hasFilters;
-
-    return Padding(
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.md,
-        vertical: AppSpacing.xl,
-      ),
-      child: Column(
-        children: [
-          Container(
-            width: 72,
-            height: 72,
-            decoration: BoxDecoration(
-              color: cs.primary.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(24),
-            ),
-            child: Icon(
-              hasAnyFilter ? LucideIcons.searchX : LucideIcons.messageCircle,
-              color: cs.primary,
-              size: 34,
-            ),
-          ),
-
-          AppSpacing.md.gap,
-
-          Text(
-            hasAnyFilter
-                ? AppTranslationKey.noFAQsFound.tr
-                : AppTranslationKey.noFAQsAvailable.tr,
-            style: context.textTheme.titleMedium?.copyWith(
-              fontWeight: FontWeight.w800,
-            ),
-            textAlign: TextAlign.center,
-          ),
-
-          const SizedBox(height: 6),
-
-          Text(
-            hasAnyFilter
-                ? AppTranslationKey.tryDifferentSearchTerm.tr
-                : AppTranslationKey.faqsWillAppearHere.tr,
-            style: context.textTheme.bodyMedium?.copyWith(
-              color: cs.onSurfaceVariant,
-            ),
-            textAlign: TextAlign.center,
-          ),
-
-          if (hasAnyFilter) ...[
-            AppSpacing.lg.gap,
-            Wrap(
-              spacing: AppSpacing.sm,
-              runSpacing: AppSpacing.sm,
-              alignment: WrapAlignment.center,
-              children: [
-                if (hasSearchQuery)
-                  FilledButton.icon(
-                    onPressed: onClearSearch,
-                    icon: const Icon(LucideIcons.x),
-                    label: Text(AppTranslationKey.clearSearch.tr),
-                  ),
-                if (hasFilters)
-                  OutlinedButton.icon(
-                    onPressed: onClearFilters,
-                    icon: const Icon(LucideIcons.slidersHorizontal),
-                    label: const Text('Clear Filters'),
-                  ),
-              ],
-            ),
-          ],
-        ],
-      ),
     );
   }
 }

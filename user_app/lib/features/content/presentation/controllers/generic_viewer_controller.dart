@@ -1,130 +1,188 @@
+// generic_viewer_controller.dart
+
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:riverpod_annotation/riverpod_annotation.dart';
+
+import 'package:user_app/app/providers/app_providers.dart';
 import 'package:user_app/core/config/app_keys.dart';
 import 'package:user_app/core/utils/app_message.dart';
-import 'package:user_app/features/content/data/repositories/content_reference_repository.dart';
-import 'package:user_app/app/providers/app_providers.dart';
+
 import 'package:user_app/features/content/data/models/generic_page.dart';
+import 'package:user_app/features/content/data/repositories/content_reference_repository.dart';
+import 'package:user_app/features/content/presentation/controllers/generic_viewer_state.dart';
 
-final genericViewerControllerProvider = ChangeNotifierProvider.autoDispose(
-  (ref) => GenericViewerController(ref.watch(genericPageRepositoryProvider)),
-);
+part 'generic_viewer_controller.g.dart';
 
-class GenericViewerController extends ChangeNotifier {
-  GenericViewerController(this._repository);
-  final GenericPageRepository _repository;
-  GenericPage? page;
-  bool isLoading = true;
-  String currentSection = '';
-  List<GenericPageSection> availableSections = [];
-  bool _disposed = false;
+@riverpod
+class GenericViewerController extends _$GenericViewerController {
+  late final ScrollController scrollController;
 
-  // Scroll controller for section navigation
-  final ScrollController scrollController = ScrollController();
-
-  // Section keys for scroll-to functionality
   final Map<String, GlobalKey> sectionKeys = {};
+
+  GenericPageRepository get _repository =>
+      ref.read(genericPageRepositoryProvider);
+
+  @override
+  GenericViewerState build() {
+    scrollController = ScrollController();
+
+    ref.onDispose(() {
+      scrollController.dispose();
+      sectionKeys.clear();
+    });
+
+    return const GenericViewerState();
+  }
+
+  // ======================================================
+  // INITIALIZATION
+  // ======================================================
 
   Future<void> initialize({Object? pageArgument, String? pageKey}) async {
     if (pageArgument is GenericPage) {
-      page = pageArgument;
-      _setupSections();
-      isLoading = false;
-      _notify();
+      _setPage(pageArgument);
       return;
     }
-    final key = pageKey ?? pageArgument?.toString();
+
+    final key = pageKey ?? pageArgument?.toString().trim();
+
     if (key != null && key.isNotEmpty) {
       await loadPage(key);
-    } else {
-      isLoading = false;
-      _notify();
+      return;
     }
+
+    state = state.copyWith(isLoading: false);
   }
 
-  @override
-  void dispose() {
-    _disposed = true;
-    scrollController.dispose();
-    super.dispose();
-  }
+  // ======================================================
+  // LOAD PAGE
+  // ======================================================
 
-  /// Load page data from backend resource API using page key
   Future<void> loadPage(String pageKey) async {
+    final key = pageKey.trim();
+
+    if (key.isEmpty) {
+      state = state.copyWith(isLoading: false);
+      return;
+    }
+
+    state = state.copyWith(isLoading: true, clearErrorMessage: true);
+
     try {
-      isLoading = true;
-      _notify();
+      final page = await _repository.byKey(key);
 
-      page = await _repository.byKey(pageKey);
-      _setupSections();
+      _setPage(page);
     } catch (error) {
-      AppMessage.error(AppKeys.navigatorKey.currentContext!, '$error');
-    } finally {
-      isLoading = false;
-      _notify();
+      final message = error.toString();
+
+      state = state.copyWith(isLoading: false, errorMessage: message);
+
+      _showError(message);
     }
   }
 
-  /// Setup sections for key-value content
-  void _setupSections() {
-    if (page?.isKeyValueContent == true) {
-      availableSections = page!.sections;
-      if (availableSections.isNotEmpty) {
-        currentSection = availableSections.first.key;
-      }
-    }
+  // ======================================================
+  // PAGE / SECTION SETUP
+  // ======================================================
+
+  void _setPage(GenericPage page) {
+    final sections = page.isKeyValueContent
+        ? List<GenericPageSection>.unmodifiable(page.sections)
+        : const <GenericPageSection>[];
+
+    final currentSection = sections.isNotEmpty ? sections.first.key : '';
+
+    sectionKeys.clear();
+
+    state = state.copyWith(
+      page: page,
+      isLoading: false,
+      availableSections: sections,
+      currentSection: currentSection,
+      clearErrorMessage: true,
+    );
   }
 
-  /// Navigate to a specific section (scroll to it)
-  void navigateToSection(GenericPageSection section) {
-    currentSection = section.key;
-    _notify();
+  // ======================================================
+  // SECTION NAVIGATION
+  // ======================================================
+
+  Future<void> navigateToSection(GenericPageSection section) async {
+    state = state.copyWith(currentSection: section.key);
 
     final key = sectionKeys[section.key];
-    if (key?.currentContext != null) {
-      Scrollable.ensureVisible(
-        key!.currentContext!,
-        duration: const Duration(milliseconds: 500),
-        curve: Curves.easeInOut,
-      );
+    final context = key?.currentContext;
+
+    if (context == null) {
+      return;
     }
-  }
 
-  /// Get or create section key for scroll-to functionality
-  GlobalKey getSectionKey(GenericPageSection section) {
-    if (!sectionKeys.containsKey(section.key)) {
-      sectionKeys[section.key] = GlobalKey();
-    }
-    return sectionKeys[section.key]!;
-  }
-
-  /// Check if page has content to display
-  bool get hasContent => page?.hasContent == true;
-
-  /// Get page title for app bar
-  String get pageTitle => page?.title ?? 'Page';
-
-  /// Check if content is string type
-  bool get isStringContent => page?.isStringContent == true;
-
-  /// Check if content is key-value type
-  bool get isKeyValueContent => page?.isKeyValueContent == true;
-
-  /// Get string content for HTML display
-  String get stringContent => page?.stringContent ?? '';
-
-  /// Share the current page
-  void sharePage() {
-    if (page == null) return;
-
-    AppMessage.info(
-      AppKeys.navigatorKey.currentContext!,
-      'Sharing page: ${page!.title}',
+    await Scrollable.ensureVisible(
+      context,
+      duration: const Duration(milliseconds: 500),
+      curve: Curves.easeInOut,
     );
-    // TODO: Implement actual share functionality
   }
 
-  void _notify() {
-    if (!_disposed) notifyListeners();
+  GlobalKey getSectionKey(GenericPageSection section) {
+    return sectionKeys.putIfAbsent(section.key, GlobalKey.new);
+  }
+
+  // ======================================================
+  // REFRESH
+  // ======================================================
+
+  Future<void> reload() async {
+    final page = state.page;
+
+    if (page == null) {
+      return;
+    }
+
+    final key = page.key;
+
+    if (key.isEmpty) {
+      return;
+    }
+
+    await loadPage(key);
+  }
+
+  // ======================================================
+  // SHARE
+  // ======================================================
+
+  void sharePage() {
+    final page = state.page;
+
+    if (page == null) {
+      return;
+    }
+
+    final context = AppKeys.navigatorKey.currentContext;
+
+    if (context == null) {
+      return;
+    }
+
+    AppMessage.info(context, 'Sharing page: ${page.title}');
+
+    // TODO:
+    // Replace this with share_plus when actual
+    // sharing is implemented.
+  }
+
+  // ======================================================
+  // ERROR
+  // ======================================================
+
+  void _showError(String message) {
+    final context = AppKeys.navigatorKey.currentContext;
+
+    if (context == null) {
+      return;
+    }
+
+    AppMessage.error(context, message);
   }
 }

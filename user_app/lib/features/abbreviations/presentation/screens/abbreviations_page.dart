@@ -1,25 +1,36 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:user_app/core/utils/app_extensions.dart';
 import 'package:infinite_scroll_pagination/infinite_scroll_pagination.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
-import 'package:user_app/features/abbreviations/data/models/abbreviation.dart';
 import 'package:user_app/core/constants/app_spacing.dart';
-import 'package:user_app/shared/widgets/filter_button.dart';
-import 'package:user_app/shared/widgets/pagination_indicators.dart';
+import 'package:user_app/core/utils/app_extensions.dart';
+import 'package:user_app/core/widgets/app_error_view.dart';
+import 'package:user_app/core/widgets/app_loading_view.dart';
+import 'package:user_app/core/widgets/empty_state.dart';
+
+import 'package:user_app/features/abbreviations/data/models/abbreviation.dart';
 import 'package:user_app/features/abbreviations/presentation/controllers/abbreviations_controller.dart';
 import 'package:user_app/features/abbreviations/presentation/widgets/abbreviation_card.dart';
+
+import 'package:user_app/l10n/app_translations.dart';
+import 'package:user_app/shared/widgets/filter_button.dart';
+import 'package:user_app/shared/widgets/pagination_indicators.dart';
 
 class AbbreviationsPage extends ConsumerWidget {
   const AbbreviationsPage({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final controller = ref.watch(abbreviationsControllerProvider);
+    final state = ref.watch(abbreviationsControllerProvider);
+
+    final controller = ref.read(abbreviationsControllerProvider.notifier);
+
     final cs = context.theme.colorScheme;
+    final query = state.query;
 
     return Scaffold(
+      backgroundColor: cs.surface,
       appBar: AppBar(
         titleSpacing: AppSpacing.md,
         title: Text(
@@ -30,11 +41,11 @@ class AbbreviationsPage extends ConsumerWidget {
         ),
         actions: [
           FilterButton(
-            hasActiveFilters: controller.query.hasFilters,
-            onPressed: () => controller.showFilterModal(context),
-            onReset: controller.query.hasFilters
-                ? controller.clearAllFilters
-                : null,
+            hasActiveFilters: query.hasFilters,
+            onPressed: () {
+              controller.showFilterModal(context);
+            },
+            onReset: query.hasFilters ? controller.clearAllFilters : null,
             tooltip: 'Filter abbreviations',
           ),
           AppSpacing.xs.gap,
@@ -42,7 +53,7 @@ class AbbreviationsPage extends ConsumerWidget {
       ),
       body: RefreshIndicator(
         onRefresh: () async {
-          controller.pagingController.refresh();
+          controller.refresh();
         },
         child: CustomScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
@@ -55,21 +66,16 @@ class AbbreviationsPage extends ConsumerWidget {
                 0,
               ),
               sliver: SliverToBoxAdapter(
-                child: Builder(
-                  builder: (context) {
-                    final query = controller.query;
-
-                    return _AbbreviationsHeaderCard(
-                      searchQuery: query.search,
-                      hasFilters: query.hasFilters,
-                      onOpenFilters: () => controller.showFilterModal(context),
-                      onClearFilters: controller.clearAllFilters,
-                    );
+                child: _AbbreviationsHeaderCard(
+                  searchQuery: query.search,
+                  hasFilters: query.hasFilters,
+                  onOpenFilters: () {
+                    controller.showFilterModal(context);
                   },
+                  onClearFilters: controller.clearAllFilters,
                 ),
               ),
             ),
-
             SliverPadding(
               padding: const EdgeInsets.fromLTRB(
                 AppSpacing.md,
@@ -79,9 +85,9 @@ class AbbreviationsPage extends ConsumerWidget {
               ),
               sliver: PagingListener<int, Abbreviation>(
                 controller: controller.pagingController,
-                builder: (context, state, fetchNextPage) {
+                builder: (context, pagingState, fetchNextPage) {
                   return PagedSliverList<int, Abbreviation>.separated(
-                    state: state,
+                    state: pagingState,
                     fetchNextPage: fetchNextPage,
                     separatorBuilder: (context, index) => AppSpacing.sm.gap,
                     builderDelegate: PagedChildBuilderDelegate<Abbreviation>(
@@ -89,61 +95,84 @@ class AbbreviationsPage extends ConsumerWidget {
                         return _AbbreviationCardShell(
                           child: AbbreviationCard(
                             abbreviation: item,
-                            onTap: () => controller.showAbbreviationDetail(
-                              context,
-                              item,
-                            ),
+                            onTap: () {
+                              controller.showAbbreviationDetail(context, item);
+                            },
                           ),
                         );
                       },
 
                       // =========================
-                      // LOADING STATES
+                      // FIRST PAGE LOADING
                       // =========================
-                      firstPageProgressIndicatorBuilder: (context) =>
-                          PaginationIndicators.firstPageProgress(),
-
-                      newPageProgressIndicatorBuilder: (context) =>
-                          PaginationIndicators.newPageProgress(),
+                      firstPageProgressIndicatorBuilder: (_) {
+                        return const AppLoadingView(
+                          message: 'Loading medical abbreviations...',
+                        );
+                      },
 
                       // =========================
-                      // ERROR STATES
+                      // NEXT PAGE LOADING
                       // =========================
-                      firstPageErrorIndicatorBuilder: (context) =>
-                          PaginationIndicators.firstPageError(
-                            onRetry: fetchNextPage,
-                            title: AppTranslationKey.failedToLoadAbbreviations,
-                            subtitle: AppTranslationKey
-                                .pleaseCheckConnectionAndTryAgain,
-                            icon: LucideIcons.bookOpen,
-                          ),
+                      newPageProgressIndicatorBuilder: (_) {
+                        return PaginationIndicators.newPageProgress();
+                      },
 
-                      newPageErrorIndicatorBuilder: (context) =>
-                          PaginationIndicators.newPageError(
-                            onRetry: fetchNextPage,
+                      // =========================
+                      // FIRST PAGE ERROR
+                      // =========================
+                      firstPageErrorIndicatorBuilder: (_) {
+                        return AppErrorView(
+                          error:
+                              pagingState.error ??
+                              'Unable to load abbreviations',
+                          title: AppTranslationKey.failedToLoadAbbreviations,
+                          message: AppTranslationKey
+                              .pleaseCheckConnectionAndTryAgain,
+                          onRetry: fetchNextPage,
+                        );
+                      },
+
+                      // =========================
+                      // NEXT PAGE ERROR
+                      // =========================
+                      newPageErrorIndicatorBuilder: (_) {
+                        return PaginationIndicators.newPageError(
+                          onRetry: fetchNextPage,
+                          title:
+                              AppTranslationKey.failedToLoadMoreAbbreviations,
+                          icon: LucideIcons.bookOpen,
+                        );
+                      },
+
+                      // =========================
+                      // EMPTY
+                      // =========================
+                      noItemsFoundIndicatorBuilder: (_) {
+                        if (state.query.hasFilters) {
+                          return EmptyState.noResults(
                             title:
-                                AppTranslationKey.failedToLoadMoreAbbreviations,
-                            icon: LucideIcons.bookOpen,
-                          ),
+                                AppTranslationKey.noAbbreviationsMatchFilters,
+                            description:
+                                AppTranslationKey.tryAdjustingSearchOrFilters,
+                            actionLabel: AppTranslationKey.clearFilters,
+                            onAction: controller.clearAllFilters,
+                          );
+                        }
 
-                      // =========================
-                      // EMPTY STATE
-                      // =========================
-                      noItemsFoundIndicatorBuilder: (context) {
-                        final query = controller.query;
-                        final isFiltered = query.hasFilters;
-
-                        return _EmptyAbbreviationsState(
-                          isFiltered: isFiltered,
-                          onClearFilters: controller.clearAllFilters,
+                        return EmptyState.noData(
+                          title: AppTranslationKey.noAbbreviationsFound,
+                          description:
+                              AppTranslationKey.abbreviationsWillAppearHere,
                         );
                       },
 
                       // =========================
-                      // END STATE
+                      // END
                       // =========================
-                      noMoreItemsIndicatorBuilder: (context) =>
-                          PaginationIndicators.noMoreItems(),
+                      noMoreItemsIndicatorBuilder: (_) {
+                        return PaginationIndicators.noMoreItems();
+                      },
                     ),
                   );
                 },
@@ -152,17 +181,11 @@ class AbbreviationsPage extends ConsumerWidget {
           ],
         ),
       ),
-      backgroundColor: cs.surface,
     );
   }
 }
 
 class _AbbreviationsHeaderCard extends StatelessWidget {
-  final String searchQuery;
-  final bool hasFilters;
-  final VoidCallback onOpenFilters;
-  final VoidCallback onClearFilters;
-
   const _AbbreviationsHeaderCard({
     required this.searchQuery,
     required this.hasFilters,
@@ -170,9 +193,15 @@ class _AbbreviationsHeaderCard extends StatelessWidget {
     required this.onClearFilters,
   });
 
+  final String searchQuery;
+  final bool hasFilters;
+  final VoidCallback onOpenFilters;
+  final VoidCallback onClearFilters;
+
   @override
   Widget build(BuildContext context) {
     final cs = context.theme.colorScheme;
+
     final hasSearch = searchQuery.trim().isNotEmpty;
 
     return Container(
@@ -193,9 +222,7 @@ class _AbbreviationsHeaderCard extends StatelessWidget {
             ),
             child: Icon(LucideIcons.bookOpen, color: cs.primary, size: 28),
           ),
-
           AppSpacing.md.gap,
-
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -206,9 +233,7 @@ class _AbbreviationsHeaderCard extends StatelessWidget {
                     fontWeight: FontWeight.w800,
                   ),
                 ),
-
                 const SizedBox(height: 4),
-
                 Text(
                   hasSearch
                       ? 'Showing results for "$searchQuery"'
@@ -220,7 +245,6 @@ class _AbbreviationsHeaderCard extends StatelessWidget {
                     height: 1.4,
                   ),
                 ),
-
                 if (hasFilters) ...[
                   const SizedBox(height: 10),
                   Wrap(
@@ -237,9 +261,7 @@ class _AbbreviationsHeaderCard extends StatelessWidget {
               ],
             ),
           ),
-
           AppSpacing.sm.gap,
-
           IconButton.filledTonal(
             onPressed: onOpenFilters,
             icon: const Icon(LucideIcons.slidersHorizontal),
@@ -252,10 +274,10 @@ class _AbbreviationsHeaderCard extends StatelessWidget {
 }
 
 class _ActiveFilterChip extends StatelessWidget {
+  const _ActiveFilterChip({required this.label, required this.onClear});
+
   final String label;
   final VoidCallback onClear;
-
-  const _ActiveFilterChip({required this.label, required this.onClear});
 
   @override
   Widget build(BuildContext context) {
@@ -297,9 +319,9 @@ class _ActiveFilterChip extends StatelessWidget {
 }
 
 class _AbbreviationCardShell extends StatelessWidget {
-  final Widget child;
-
   const _AbbreviationCardShell({required this.child});
+
+  final Widget child;
 
   @override
   Widget build(BuildContext context) {
@@ -313,82 +335,6 @@ class _AbbreviationCardShell extends StatelessWidget {
       ),
       clipBehavior: Clip.antiAlias,
       child: child,
-    );
-  }
-}
-
-class _EmptyAbbreviationsState extends StatelessWidget {
-  final bool isFiltered;
-  final VoidCallback onClearFilters;
-
-  const _EmptyAbbreviationsState({
-    required this.isFiltered,
-    required this.onClearFilters,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final cs = context.theme.colorScheme;
-
-    final title = isFiltered
-        ? AppTranslationKey.noAbbreviationsMatchFilters
-        : AppTranslationKey.noAbbreviationsFound;
-
-    final subtitle = isFiltered
-        ? AppTranslationKey.tryAdjustingSearchOrFilters
-        : AppTranslationKey.abbreviationsWillAppearHere;
-
-    return Padding(
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.md,
-        vertical: AppSpacing.xl,
-      ),
-      child: Column(
-        children: [
-          Container(
-            width: 76,
-            height: 76,
-            decoration: BoxDecoration(
-              color: cs.primary.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(24),
-            ),
-            child: Icon(
-              isFiltered ? LucideIcons.searchX : LucideIcons.bookOpen,
-              color: cs.primary,
-              size: 36,
-            ),
-          ),
-
-          AppSpacing.md.gap,
-
-          Text(
-            title,
-            style: context.textTheme.titleMedium?.copyWith(
-              fontWeight: FontWeight.w800,
-            ),
-            textAlign: TextAlign.center,
-          ),
-
-          const SizedBox(height: 6),
-
-          Text(
-            subtitle,
-            style: context.textTheme.bodyMedium?.copyWith(
-              color: cs.onSurfaceVariant,
-            ),
-            textAlign: TextAlign.center,
-          ),
-
-          if (isFiltered) ...[
-            AppSpacing.lg.gap,
-            FilledButton.icon(
-              onPressed: onClearFilters,
-              icon: const Icon(LucideIcons.x),
-              label: Text(AppTranslationKey.clearFilters),
-            ),
-          ],
-        ],
-      ),
     );
   }
 }

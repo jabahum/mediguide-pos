@@ -1,179 +1,152 @@
+// guidelines_indexer_controller.dart
+
 import 'dart:async';
 
 import 'package:animated_tree_view/tree_view/tree_node.dart';
 import 'package:animated_tree_view/tree_view/tree_view.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:user_app/core/utils/app_extensions.dart';
-import 'package:user_app/app/router/app_navigator.dart';
+import 'package:riverpod_annotation/riverpod_annotation.dart';
 
-import 'package:user_app/shared/models/filter_models.dart';
+import 'package:user_app/app/providers/app_providers.dart';
+import 'package:user_app/app/router/app_navigator.dart';
+import 'package:user_app/app/router/app_router.dart';
+import 'package:user_app/core/constants/app_constants.dart';
+import 'package:user_app/core/utils/app_extensions.dart';
+
 import 'package:user_app/features/guidelines/data/models/guideline_index.dart';
 import 'package:user_app/features/guidelines/data/repositories/guideline_content_repository.dart';
-import 'package:user_app/app/providers/app_providers.dart';
+import 'package:user_app/features/guidelines/presentation/controllers/guidelines_indexer_state.dart';
+import 'package:user_app/features/guidelines/presentation/controllers/guidelines_tree_filter.dart';
+
 import 'package:user_app/l10n/app_translations.dart';
+import 'package:user_app/shared/models/filter_models.dart';
 import 'package:user_app/shared/widgets/generic_filter_bottom_sheet.dart';
 
-class GuidelinesTreeFilter {
-  final String search;
-  final int? level;
-  final bool showOnlyParents;
+part 'guidelines_indexer_controller.g.dart';
 
-  const GuidelinesTreeFilter({
-    this.search = '',
-    this.level,
-    this.showOnlyParents = false,
-  });
+@riverpod
+class GuidelinesIndexerController extends _$GuidelinesIndexerController {
+  Timer? _searchDebounce;
 
-  bool get hasFilters {
-    return search.trim().isNotEmpty || level != null || showOnlyParents;
-  }
+  TreeViewController<GuidelineIndex, TreeNode<GuidelineIndex>>? _treeController;
 
-  GuidelinesTreeFilter copyWith({
-    String? search,
-    int? level,
-    bool? showOnlyParents,
-    bool clearLevel = false,
-  }) {
-    return GuidelinesTreeFilter(
-      search: search ?? this.search,
-      level: clearLevel ? null : level ?? this.level,
-      showOnlyParents: showOnlyParents ?? this.showOnlyParents,
+  GuidelineContentRepository get _repository =>
+      ref.read(guidelineContentRepositoryProvider);
+
+  @override
+  GuidelinesIndexerState build() {
+    ref.onDispose(() {
+      _searchDebounce?.cancel();
+    });
+
+    return GuidelinesIndexerState(
+      rootTree: TreeNode<GuidelineIndex>.root(),
+      visibleTree: TreeNode<GuidelineIndex>.root(),
     );
   }
 
-  static const empty = GuidelinesTreeFilter();
-}
+  // ======================================================
+  // INITIALIZATION
+  // ======================================================
 
-final guidelinesIndexerControllerProvider = ChangeNotifierProvider.autoDispose(
-  (ref) => GuidelinesIndexerController(
-    ref.watch(guidelineContentRepositoryProvider),
-  ),
-);
-
-class GuidelinesIndexerController extends ChangeNotifier {
-  GuidelinesIndexerController(this._repository) {
-    rootTree = TreeNode<GuidelineIndex>.root();
-    visibleTree = TreeNode<GuidelineIndex>.root();
-  }
-
-  final GuidelineContentRepository _repository;
-  // =========================
-  // TREE
-  // =========================
-  late TreeViewController<GuidelineIndex, TreeNode<GuidelineIndex>>
-  treeController;
-
-  late TreeNode<GuidelineIndex> rootTree;
-
-  late TreeNode<GuidelineIndex> visibleTree;
-
-  // =========================
-  // STATE
-  // =========================
-  bool isLoading = true;
-  bool hasLoadError = false;
-
-  GuidelinesTreeFilter filters = GuidelinesTreeFilter.empty;
-  List<GuidelineIndex> allRecords = [];
-
-  String? channel;
-  Timer? _searchDebounce;
-  bool _disposed = false;
-  bool _initialized = false;
-
-  // =========================
-  // INIT
-  // =========================
   Future<void> initialize({String? channel}) async {
-    if (_initialized) return;
-    _initialized = true;
-    this.channel = channel;
-    await loadAllData();
-  }
+    if (state.allRecords.isNotEmpty || state.isLoading == false) {
+      if (state.channel == channel) {
+        return;
+      }
+    }
 
-  @override
-  void dispose() {
-    _disposed = true;
-    _searchDebounce?.cancel();
-    super.dispose();
+    state = state.copyWith(channel: channel);
+
+    await loadAllData();
   }
 
   void initializeTreeController(
     TreeViewController<GuidelineIndex, TreeNode<GuidelineIndex>> controller,
   ) {
-    treeController = controller;
+    _treeController = controller;
 
-    Future.delayed(const Duration(milliseconds: 150), () {
-      if (!_disposed) {
-        _expandTopLevel();
-      }
-    });
+    Future.delayed(const Duration(milliseconds: 150), _expandTopLevel);
   }
 
-  // =========================
+  // ======================================================
   // DATA LOADING
-  // =========================
-  Future<void> loadAllData() async {
-    try {
-      isLoading = true;
-      hasLoadError = false;
-      _notify();
+  // ======================================================
 
+  Future<void> loadAllData() async {
+    state = state.copyWith(
+      isLoading: true,
+      hasLoadError: false,
+      clearErrorMessage: true,
+    );
+
+    try {
       final result = await _repository.index(perPage: 500);
 
-      final records = result.items;
-
-      allRecords = records;
+      final records = List<GuidelineIndex>.unmodifiable(result.items);
 
       if (records.isEmpty) {
-        rootTree = TreeNode<GuidelineIndex>.root();
-        visibleTree = TreeNode<GuidelineIndex>.root();
+        final emptyRoot = TreeNode<GuidelineIndex>.root();
+
+        state = state.copyWith(
+          rootTree: emptyRoot,
+          visibleTree: TreeNode<GuidelineIndex>.root(),
+          allRecords: const [],
+          isLoading: false,
+        );
+
         return;
       }
 
       final rootRecord = _resolveRootRecord(records);
 
-      if (rootRecord == null) {
-        rootTree = _buildTreeFromAllRootRecords(records);
-      } else {
-        rootTree = _buildTreeFromRoot(rootRecord);
-      }
+      final rootTree = rootRecord == null
+          ? _buildTreeFromAllRootRecords(records)
+          : _buildTreeFromRoot(rootRecord, records);
+
+      state = state.copyWith(rootTree: rootTree, allRecords: records);
 
       _applyFilters();
-    } catch (e) {
-      debugPrint('Error loading guideline index: $e');
-      hasLoadError = true;
-      rootTree = TreeNode<GuidelineIndex>.root();
-      visibleTree = TreeNode<GuidelineIndex>.root();
+    } catch (error) {
+      debugPrint('Error loading guideline index: $error');
+
+      state = state.copyWith(
+        rootTree: TreeNode<GuidelineIndex>.root(),
+        visibleTree: TreeNode<GuidelineIndex>.root(),
+        allRecords: const [],
+        hasLoadError: true,
+        errorMessage: error.toString(),
+      );
     } finally {
-      isLoading = false;
-      _notify();
+      state = state.copyWith(isLoading: false);
     }
   }
 
-  Future<void> refreshData() async {
-    await loadAllData();
+  Future<void> refreshData() {
+    return loadAllData();
   }
 
+  // ======================================================
+  // ROOT RESOLUTION
+  // ======================================================
+
   GuidelineIndex? _resolveRootRecord(List<GuidelineIndex> records) {
-    if ((channel ?? '').trim().isNotEmpty) {
-      final channelQuery = channel!.toLowerCase();
+    final channel = state.channel?.trim() ?? '';
 
-      final matched = records
-          .where(
-            (record) =>
-                record.level == 0 &&
-                record.title.toLowerCase().contains(channelQuery),
-          )
-          .firstOrNull;
+    if (channel.isNotEmpty) {
+      final channelQuery = channel.toLowerCase();
 
-      if (matched != null) {
-        return matched;
+      for (final record in records) {
+        if (record.level == 0 &&
+            record.title.toLowerCase().contains(channelQuery)) {
+          return record;
+        }
       }
     }
 
-    final rootItems = records.where((record) => record.level == 0).toList();
+    final rootItems = records
+        .where((record) => record.level == 0)
+        .toList(growable: false);
 
     if (rootItems.length == 1) {
       return rootItems.first;
@@ -181,6 +154,10 @@ class GuidelinesIndexerController extends ChangeNotifier {
 
     return null;
   }
+
+  // ======================================================
+  // TREE BUILDING
+  // ======================================================
 
   TreeNode<GuidelineIndex> _buildTreeFromAllRootRecords(
     List<GuidelineIndex> records,
@@ -203,10 +180,13 @@ class GuidelinesIndexerController extends ChangeNotifier {
     return root;
   }
 
-  TreeNode<GuidelineIndex> _buildTreeFromRoot(GuidelineIndex rootRecord) {
+  TreeNode<GuidelineIndex> _buildTreeFromRoot(
+    GuidelineIndex rootRecord,
+    List<GuidelineIndex> records,
+  ) {
     final root = TreeNode<GuidelineIndex>.root();
 
-    final hierarchy = _collectHierarchy(rootRecord.id);
+    final hierarchy = _collectHierarchy(rootRecord.id, records);
 
     final children =
         hierarchy.where((record) => record.parentId == rootRecord.id).toList()
@@ -219,20 +199,24 @@ class GuidelinesIndexerController extends ChangeNotifier {
     return root;
   }
 
-  List<GuidelineIndex> _collectHierarchy(String rootId) {
+  List<GuidelineIndex> _collectHierarchy(
+    String rootId,
+    List<GuidelineIndex> records,
+  ) {
     final results = <GuidelineIndex>[];
+
     var parentIds = <String>[rootId];
 
     while (parentIds.isNotEmpty) {
       final children =
-          allRecords
+          records
               .where((record) => parentIds.contains(record.parentId))
               .toList()
             ..sort(_sortIndexRecords);
 
       results.addAll(children);
 
-      parentIds = children.map((record) => record.id).toList();
+      parentIds = children.map((record) => record.id).toList(growable: false);
     }
 
     return results;
@@ -271,13 +255,16 @@ class GuidelinesIndexerController extends ChangeNotifier {
     return a.title.toLowerCase().compareTo(b.title.toLowerCase());
   }
 
-  // =========================
-  // FILTERS
-  // =========================
-  Future<void> showFilterBottomSheet(BuildContext context) async {
-    if (!context.mounted) return;
+  // ======================================================
+  // FILTER SHEET
+  // ======================================================
 
-    final current = filters;
+  Future<void> showFilterBottomSheet(BuildContext context) async {
+    if (!context.mounted) {
+      return;
+    }
+
+    final current = state.filters;
 
     final result = await GenericFilterBottomSheet.show(
       context: context,
@@ -288,7 +275,7 @@ class GuidelinesIndexerController extends ChangeNotifier {
           AppTranslationKey.searchGuidelines,
           hint: AppTranslationKey.searchGuidelinesHint,
         ),
-        FilterField.dropdown('level', AppTranslationKey.level, [
+        FilterField.dropdown('level', AppTranslationKey.level, const [
           '1',
           '2',
           '3',
@@ -304,79 +291,104 @@ class GuidelinesIndexerController extends ChangeNotifier {
       },
     );
 
-    if (result == null) return;
+    if (result == null) {
+      return;
+    }
 
     applyFilterResult(result);
   }
 
   void applyFilterResult(FilterResult result) {
-    final levelString = result.getValue<String>('level');
+    final levelValue = result.getValue<String>('level');
 
-    filters = GuidelinesTreeFilter(
-      search: result.getValue<String>('search')?.trim() ?? '',
-      level: int.tryParse(levelString ?? ''),
-      showOnlyParents: result.getValue<bool>('parentsOnly') ?? false,
+    state = state.copyWith(
+      filters: GuidelinesTreeFilter(
+        search: result.getValue<String>('search')?.trim() ?? '',
+        level: int.tryParse(levelValue ?? ''),
+        showOnlyParents: result.getValue<bool>('parentsOnly') ?? false,
+      ),
     );
 
     _debouncedApplyFilters();
   }
 
+  // ======================================================
+  // FILTER ACTIONS
+  // ======================================================
+
   void updateSearch(String value) {
-    filters = filters.copyWith(search: value.trim());
-    _notify();
+    state = state.copyWith(
+      filters: state.filters.copyWith(search: value.trim()),
+    );
+
     _debouncedApplyFilters();
   }
 
   void clearSearch() {
-    filters = filters.copyWith(search: '');
+    state = state.copyWith(filters: state.filters.copyWith(search: ''));
+
     _applyFilters();
   }
 
   void setLevelFilter(int? level) {
-    filters = filters.copyWith(level: level, clearLevel: level == null);
+    state = state.copyWith(
+      filters: state.filters.copyWith(level: level, clearLevel: level == null),
+    );
 
     _applyFilters();
   }
 
   void toggleParentsOnly() {
-    filters = filters.copyWith(showOnlyParents: !filters.showOnlyParents);
+    state = state.copyWith(
+      filters: state.filters.copyWith(
+        showOnlyParents: !state.filters.showOnlyParents,
+      ),
+    );
 
     _applyFilters();
   }
 
   void resetFilters() {
-    filters = GuidelinesTreeFilter.empty;
+    state = state.copyWith(filters: GuidelinesTreeFilter.empty);
+
     _applyFilters();
   }
 
   void _debouncedApplyFilters() {
     _searchDebounce?.cancel();
-    _searchDebounce = Timer(const Duration(milliseconds: 300), _applyFilters);
+
+    _searchDebounce = Timer(AppConstants.searchDebounce, _applyFilters);
   }
 
-  void _applyFilters() {
-    final currentFilters = filters;
+  // ======================================================
+  // APPLY FILTERS
+  // ======================================================
 
-    if (!currentFilters.hasFilters) {
-      visibleTree = _deepCopy(rootTree);
-      _notify();
+  void _applyFilters() {
+    final filters = state.filters;
+
+    if (!filters.hasFilters) {
+      state = state.copyWith(visibleTree: _deepCopy(state.rootTree));
+
       _expandTopLevel();
+
       return;
     }
 
     final filtered = TreeNode<GuidelineIndex>.root();
 
-    for (final child in rootTree.childrenAsList) {
+    for (final child in state.rootTree.childrenAsList) {
       final typedChild = child as TreeNode<GuidelineIndex>;
-      final filteredChild = _filterNode(typedChild, currentFilters);
+
+      final filteredChild = _filterNode(typedChild, filters);
 
       if (filteredChild != null) {
         filtered.add(filteredChild);
       }
     }
 
-    visibleTree = filtered;
-    _notify();
+    state = state.copyWith(visibleTree: filtered);
+
     _expandAll();
   }
 
@@ -386,9 +398,11 @@ class GuidelinesIndexerController extends ChangeNotifier {
   ) {
     final data = node.data;
 
-    if (data == null) return null;
+    if (data == null) {
+      return null;
+    }
 
-    bool matches = true;
+    var matches = true;
 
     if (filters.search.trim().isNotEmpty) {
       final query = filters.search.toLowerCase();
@@ -409,30 +423,30 @@ class GuidelinesIndexerController extends ChangeNotifier {
     final matchingChildren = <TreeNode<GuidelineIndex>>[];
 
     for (final child in node.childrenAsList) {
-      final typedChild = child as TreeNode<GuidelineIndex>;
-      final result = _filterNode(typedChild, filters);
+      final result = _filterNode(child as TreeNode<GuidelineIndex>, filters);
 
       if (result != null) {
         matchingChildren.add(result);
       }
     }
 
-    if (matches || matchingChildren.isNotEmpty) {
-      final copied = TreeNode<GuidelineIndex>(key: node.key, data: data);
-
-      for (final child in matchingChildren) {
-        copied.add(child);
-      }
-
-      return copied;
+    if (!matches && matchingChildren.isEmpty) {
+      return null;
     }
 
-    return null;
+    final copied = TreeNode<GuidelineIndex>(key: node.key, data: data);
+
+    for (final child in matchingChildren) {
+      copied.add(child);
+    }
+
+    return copied;
   }
 
-  // =========================
+  // ======================================================
   // TREE HELPERS
-  // =========================
+  // ======================================================
+
   TreeNode<GuidelineIndex> _deepCopy(TreeNode<GuidelineIndex> node) {
     final copied = TreeNode<GuidelineIndex>(key: node.key, data: node.data);
 
@@ -449,85 +463,70 @@ class GuidelinesIndexerController extends ChangeNotifier {
 
   void collapseAll() {
     try {
-      if (!filters.hasFilters) {
-        visibleTree = _deepCopy(rootTree);
-        _notify();
-        return;
+      final visible = state.filters.hasFilters
+          ? _buildFilteredTree(state.filters)
+          : _deepCopy(state.rootTree);
+
+      state = state.copyWith(visibleTree: visible);
+    } catch (_) {
+      // Tree collapse is best effort.
+    }
+  }
+
+  TreeNode<GuidelineIndex> _buildFilteredTree(GuidelinesTreeFilter filters) {
+    final filtered = TreeNode<GuidelineIndex>.root();
+
+    for (final child in state.rootTree.childrenAsList) {
+      final result = _filterNode(child as TreeNode<GuidelineIndex>, filters);
+
+      if (result != null) {
+        filtered.add(result);
       }
+    }
 
-      final currentFilters = filters;
-      final filtered = TreeNode<GuidelineIndex>.root();
-
-      for (final child in rootTree.childrenAsList) {
-        final typedChild = child as TreeNode<GuidelineIndex>;
-        final filteredChild = _filterNode(typedChild, currentFilters);
-
-        if (filteredChild != null) {
-          filtered.add(filteredChild);
-        }
-      }
-
-      visibleTree = filtered;
-      _notify();
-    } catch (_) {}
+    return filtered;
   }
 
   void _expandTopLevel() {
+    final controller = _treeController;
+
+    if (controller == null) {
+      return;
+    }
+
     try {
-      treeController.expandAllChildren(visibleTree);
-    } catch (_) {}
+      controller.expandAllChildren(state.visibleTree);
+    } catch (_) {
+      // Tree UI operation is best effort.
+    }
   }
 
   void _expandAll() {
+    final controller = _treeController;
+
+    if (controller == null) {
+      return;
+    }
+
     try {
-      treeController.expandAllChildren(visibleTree);
-    } catch (_) {}
+      controller.expandAllChildren(state.visibleTree);
+    } catch (_) {
+      // Tree UI operation is best effort.
+    }
   }
 
-  // =========================
+  // ======================================================
   // NAVIGATION
-  // =========================
+  // ======================================================
+
   void openIndex(GuidelineIndex index) {
-    AppNavigator.pushNamed(
-      '/guidelines',
+    AppNavigator.push(
+      AppRoutes.guidelines,
       extra: {
         'filterType': 'index',
         'indexItemId': index.id,
         'title': index.title,
       },
     );
-  }
-
-  // =========================
-  // COMPUTED
-  // =========================
-  bool get hasActiveFilters => filters.hasFilters;
-
-  int get totalSections => allRecords.length;
-
-  String get channelTitle {
-    final value = channel?.toLowerCase() ?? '';
-
-    if (value.contains('red')) {
-      return 'Red Channel';
-    }
-
-    if (value.contains('blue')) {
-      return 'Blue Channel';
-    }
-
-    return 'Browse Guidelines';
-  }
-
-  String get pageSubtitle {
-    if (hasActiveFilters) {
-      return 'Showing matching guideline sections';
-    }
-
-    return 'Choose a section to view related guidelines';
-  }
-
-  void _notify() {
-    if (!_disposed) notifyListeners();
   }
 }

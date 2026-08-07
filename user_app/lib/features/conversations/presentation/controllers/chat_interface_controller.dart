@@ -1,83 +1,96 @@
+// chat_interface_controller.dart
+
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:riverpod_annotation/riverpod_annotation.dart';
+
+import 'package:user_app/app/providers/app_providers.dart';
 import 'package:user_app/core/config/app_keys.dart';
 import 'package:user_app/core/utils/app_message.dart';
 
-import 'package:user_app/features/conversations/data/models/message.dart';
 import 'package:user_app/features/authentication/data/models/user.dart';
-import 'package:user_app/features/conversations/data/repositories/conversation_repository.dart';
 import 'package:user_app/features/authentication/presentation/controllers/auth_controller.dart';
-import 'package:user_app/app/providers/app_providers.dart';
+import 'package:user_app/features/conversations/data/models/message.dart';
+import 'package:user_app/features/conversations/data/repositories/conversation_repository.dart';
+import 'package:user_app/features/conversations/presentation/controllers/chat_interface_state.dart';
 
-final chatInterfaceControllerProvider = ChangeNotifierProvider.autoDispose
-    .family<ChatInterfaceController, User>((ref, otherUser) {
-      final controller = ChatInterfaceController(
-        ref.watch(conversationRepositoryProvider),
-        otherUser: otherUser,
-        currentUserId: ref.watch(authControllerProvider).valueOrNull?.user?.id,
-      );
-      unawaited(controller.initialize());
-      return controller;
-    });
+part 'chat_interface_controller.g.dart';
 
-class ChatInterfaceController extends ChangeNotifier {
-  ChatInterfaceController(
-    this._repository, {
-    required this.otherUser,
-    required this.currentUserId,
-  });
-
-  final ConversationRepository _repository;
-  final User otherUser;
-  final String? currentUserId;
-  final List<Message> messages = [];
-
+@riverpod
+class ChatInterfaceController extends _$ChatInterfaceController {
   Timer? _pollTimer;
-  bool _disposed = false;
   bool _refreshing = false;
-  bool isLoading = false;
-  bool isConnected = false;
-  bool isTyping = false;
-  String conversationId = '';
 
-  Future<void> initialize() => findOrCreateConversation();
+  ConversationRepository get _repository =>
+      ref.read(conversationRepositoryProvider);
+
+  String? get _currentUserId =>
+      ref.read(authControllerProvider).valueOrNull?.user?.id;
+
+  late final User otherUser;
 
   @override
-  void dispose() {
-    _disposed = true;
-    _pollTimer?.cancel();
-    super.dispose();
+  ChatInterfaceState build(User otherUser) {
+    this.otherUser = otherUser;
+
+    ref.onDispose(() {
+      _pollTimer?.cancel();
+    });
+
+    Future.microtask(findOrCreateConversation);
+
+    return const ChatInterfaceState();
   }
+
+  // ======================================================
+  // INITIALIZE
+  // ======================================================
 
   Future<void> findOrCreateConversation() async {
-    if (isLoading || conversationId.isNotEmpty) return;
-    isLoading = true;
-    _notify();
+    if (state.isLoading || state.conversationId.isNotEmpty) {
+      return;
+    }
+
+    state = state.copyWith(isLoading: true, clearErrorMessage: true);
+
     try {
       final conversation = await _repository.findOrCreate(otherUser.id);
-      conversationId = conversation.id;
+
+      state = state.copyWith(conversationId: conversation.id);
+
       await loadMessages(showLoading: false);
+
       startPolling();
     } catch (error) {
-      AppMessage.error(AppKeys.navigatorKey.currentContext!, '$error');
+      _handleError(error);
     } finally {
-      isLoading = false;
-      _notify();
+      state = state.copyWith(isLoading: false);
     }
   }
 
+  // ======================================================
+  // MESSAGES
+  // ======================================================
+
   Future<void> loadMessages({bool showLoading = true}) async {
-    if (conversationId.isEmpty || _refreshing) return;
-    _refreshing = true;
-    if (showLoading && messages.isEmpty) {
-      isLoading = true;
-      _notify();
+    final conversationId = state.conversationId;
+
+    if (conversationId.isEmpty || _refreshing) {
+      return;
     }
+
+    _refreshing = true;
+
+    if (showLoading && state.messages.isEmpty) {
+      state = state.copyWith(isLoading: true);
+    }
+
     try {
       final result = await _repository.messages(conversationId);
+
       final loaded = <Message>[];
+
       for (final record in result.items) {
         try {
           loaded.add(record);
@@ -85,92 +98,60 @@ class ChatInterfaceController extends ChangeNotifier {
           debugPrint('Error creating Message from record: $error');
         }
       }
-      messages
-        ..clear()
-        ..addAll(loaded);
-      _notify();
+
+      state = state.copyWith(
+        messages: List<Message>.unmodifiable(loaded),
+        clearErrorMessage: true,
+      );
     } catch (error) {
-      AppMessage.error(AppKeys.navigatorKey.currentContext!, '$error');
+      _handleError(error);
     } finally {
       _refreshing = false;
-      if (showLoading) isLoading = false;
-      _notify();
+
+      if (showLoading) {
+        state = state.copyWith(isLoading: false);
+      }
     }
   }
 
   Future<bool> sendMessage(String content, MessageType type) async {
     final trimmed = content.trim();
-    if (conversationId.isEmpty || trimmed.isEmpty) return false;
+    final conversationId = state.conversationId;
+
+    if (conversationId.isEmpty || trimmed.isEmpty) {
+      return false;
+    }
+
     try {
       final record = await _repository.send(
         conversationId,
         content: trimmed,
         messageType: type.name,
       );
-      messages.add(record);
-      _notify();
+
+      state = state.copyWith(
+        messages: List<Message>.unmodifiable([...state.messages, record]),
+      );
+
       return true;
     } catch (error) {
-      AppMessage.error(AppKeys.navigatorKey.currentContext!, '$error');
-
+      _handleError(error);
       return false;
     }
   }
 
-  Future<bool> sendTextMessage(String content) =>
-      sendMessage(content, MessageType.text);
-
-  /// The backend has no realtime transport, so this feature explicitly polls.
-  void startPolling() {
-    if (conversationId.isEmpty || _disposed) return;
-    isConnected = true;
-    _notify();
-    _pollTimer?.cancel();
-    _pollTimer = Timer.periodic(
-      const Duration(seconds: 5),
-      (_) => unawaited(loadMessages(showLoading: false)),
-    );
-  }
-
-  Future<void> markAsRead(String messageId) async {
-    if (currentUserId == null || conversationId.isEmpty) return;
-    final index = messages.indexWhere((message) => message.id == messageId);
-    if (index < 0) return;
-    try {
-      final record = await _repository.markRead(
-        conversationId,
-        messageId,
-        DateTime.now(),
-      );
-      messages[index] = record;
-      _notify();
-    } catch (_) {
-      // Read receipts are best effort and polling will reconcile their state.
-    }
-  }
-
-  Future<void> addReaction(String messageId, String emoji) async {
-    final userId = currentUserId;
-    if (userId == null || conversationId.isEmpty) return;
-    final index = messages.indexWhere((message) => message.id == messageId);
-    if (index < 0 || messages[index].hasUserReacted(userId, emoji)) return;
-    try {
-      final record = await _repository.react(
-        conversationId,
-        messageId,
-        emoji,
-        active: true,
-      );
-      messages[index] = record;
-      _notify();
-    } catch (error) {
-      AppMessage.error(AppKeys.navigatorKey.currentContext!, '$error');
-    }
+  Future<bool> sendTextMessage(String content) {
+    return sendMessage(content, MessageType.text);
   }
 
   Future<bool> replyToMessage(String replyToId, String content) async {
     final trimmed = content.trim();
-    if (conversationId.isEmpty || trimmed.isEmpty) return false;
+    final conversationId = state.conversationId;
+
+    if (conversationId.isEmpty || trimmed.isEmpty) {
+      return false;
+    }
+
     try {
       final record = await _repository.send(
         conversationId,
@@ -178,16 +159,158 @@ class ChatInterfaceController extends ChangeNotifier {
         messageType: MessageType.text.name,
         replyToId: replyToId,
       );
-      messages.add(record);
-      _notify();
+
+      state = state.copyWith(
+        messages: List<Message>.unmodifiable([...state.messages, record]),
+      );
+
       return true;
     } catch (error) {
-      AppMessage.error(AppKeys.navigatorKey.currentContext!, '$error');
+      _handleError(error);
       return false;
     }
   }
 
-  void _notify() {
-    if (!_disposed) notifyListeners();
+  // ======================================================
+  // POLLING
+  // ======================================================
+
+  void startPolling() {
+    if (state.conversationId.isEmpty) {
+      return;
+    }
+
+    _pollTimer?.cancel();
+
+    state = state.copyWith(isConnected: true);
+
+    _pollTimer = Timer.periodic(const Duration(seconds: 5), (_) {
+      unawaited(loadMessages(showLoading: false));
+    });
+  }
+
+  void stopPolling() {
+    _pollTimer?.cancel();
+    _pollTimer = null;
+
+    state = state.copyWith(isConnected: false);
+  }
+
+  // ======================================================
+  // READ RECEIPTS
+  // ======================================================
+
+  Future<void> markAsRead(String messageId) async {
+    final userId = _currentUserId;
+
+    final conversationId = state.conversationId;
+
+    if (userId == null || conversationId.isEmpty) {
+      return;
+    }
+
+    final index = state.messages.indexWhere(
+      (message) => message.id == messageId,
+    );
+
+    if (index < 0) {
+      return;
+    }
+
+    try {
+      final record = await _repository.markRead(
+        conversationId,
+        messageId,
+        DateTime.now(),
+      );
+
+      final updated = [...state.messages];
+
+      updated[index] = record;
+
+      state = state.copyWith(messages: List<Message>.unmodifiable(updated));
+    } catch (_) {
+      // Read receipts are best effort.
+      // Polling will reconcile the server state.
+    }
+  }
+
+  // ======================================================
+  // REACTIONS
+  // ======================================================
+
+  Future<void> addReaction(String messageId, String emoji) async {
+    final userId = _currentUserId;
+
+    final conversationId = state.conversationId;
+
+    if (userId == null || conversationId.isEmpty) {
+      return;
+    }
+
+    final index = state.messages.indexWhere(
+      (message) => message.id == messageId,
+    );
+
+    if (index < 0) {
+      return;
+    }
+
+    final message = state.messages[index];
+
+    if (message.hasUserReacted(userId, emoji)) {
+      return;
+    }
+
+    try {
+      final record = await _repository.react(
+        conversationId,
+        messageId,
+        emoji,
+        active: true,
+      );
+
+      final updated = [...state.messages];
+
+      updated[index] = record;
+
+      state = state.copyWith(messages: List<Message>.unmodifiable(updated));
+    } catch (error) {
+      _handleError(error);
+    }
+  }
+
+  // ======================================================
+  // TYPING STATE
+  // ======================================================
+
+  void setTyping(bool value) {
+    state = state.copyWith(isTyping: value);
+  }
+
+  // ======================================================
+  // REFRESH
+  // ======================================================
+
+  Future<void> refresh() {
+    return loadMessages(showLoading: false);
+  }
+
+  // ======================================================
+  // ERROR
+  // ======================================================
+
+  void _handleError(Object error) {
+    final message = error.toString();
+
+    state = state.copyWith(errorMessage: message);
+
+    final context = AppKeys.navigatorKey.currentContext;
+
+    if (context == null) {
+      return;
+    }
+
+    AppMessage.error(context, message);
   }
 }

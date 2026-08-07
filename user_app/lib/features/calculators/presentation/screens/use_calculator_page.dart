@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:user_app/core/utils/app_extensions.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
-import 'package:user_app/shared/models/models.dart';
+import 'package:user_app/core/widgets/app_error_view.dart';
+import 'package:user_app/core/widgets/app_loading_view.dart';
+
 import 'package:user_app/features/calculators/presentation/controllers/use_calculator_controller.dart';
-import 'package:user_app/core/utils/loading.dart';
-import 'package:user_app/core/widgets/app_button.dart';
+import 'package:user_app/shared/models/models.dart';
 
 class UseCalculatorPage extends ConsumerStatefulWidget {
   const UseCalculatorPage({super.key, this.arguments});
@@ -20,87 +20,146 @@ class UseCalculatorPage extends ConsumerStatefulWidget {
 
 class _UseCalculatorPageState extends ConsumerState<UseCalculatorPage> {
   late final UseCalculatorRequest _request;
+
   InAppWebViewController? _webViewController;
 
   @override
   void initState() {
     super.initState();
-    final arguments = widget.arguments;
+
+    _request = _requestFromArguments(widget.arguments);
+  }
+
+  UseCalculatorRequest _requestFromArguments(Object? arguments) {
     if (arguments is Calculator) {
-      _request = UseCalculatorRequest(id: arguments.id, calculator: arguments);
-    } else if (arguments is Map) {
-      _request = UseCalculatorRequest(
+      return UseCalculatorRequest(id: arguments.id, calculator: arguments);
+    }
+
+    if (arguments is Map) {
+      return UseCalculatorRequest(
         id:
-            arguments['calculatorId']?.toString() ??
-            arguments['id']?.toString() ??
+            arguments['calculatorId']?.toString().trim() ??
+            arguments['id']?.toString().trim() ??
             '',
       );
-    } else {
-      _request = UseCalculatorRequest(id: arguments?.toString() ?? '');
     }
+
+    return UseCalculatorRequest(id: arguments?.toString().trim() ?? '');
   }
 
   @override
   Widget build(BuildContext context) {
     final provider = useCalculatorControllerProvider(_request);
-    final content = ref.watch(provider);
+
+    final asyncState = ref.watch(provider);
+
+    final controller = ref.read(provider.notifier);
+
     return Scaffold(
       appBar: AppBar(
-        title: Text(content.valueOrNull?.calculator.name ?? 'Calculator'),
+        title: Text(asyncState.valueOrNull?.calculator.name ?? 'Calculator'),
         actions: [
           IconButton(
+            tooltip: 'Reload calculator',
             icon: const Icon(LucideIcons.refreshCw),
-            onPressed: content.hasValue
-                ? () => _webViewController?.reload()
-                : null,
+            onPressed: asyncState.hasValue ? _reloadWebView : null,
           ),
         ],
       ),
-      body: content.when(
-        loading: () => const _CalculatorLoading(label: 'Loading calculator...'),
-        error: (error, _) => _CalculatorError(
-          message: error.toString(),
-          onRetry: () => ref.invalidate(provider),
-        ),
+      body: asyncState.when(
+        // ==================================================
+        // INITIAL LOADING
+        // ==================================================
+        loading: () {
+          return const AppLoadingView(message: 'Loading calculator...');
+        },
+
+        // ==================================================
+        // CONTROLLER / CONTENT ERROR
+        // ==================================================
+        error: (error, stackTrace) {
+          return AppErrorView(
+            error: error,
+            title: 'Failed to Load Calculator',
+            message: 'The calculator could not be loaded.',
+            onRetry: () {
+              ref.invalidate(provider);
+            },
+          );
+        },
+
+        // ==================================================
+        // CALCULATOR CONTENT
+        // ==================================================
         data: (state) {
           if (state.webViewError != null) {
-            return _CalculatorError(
+            return AppErrorView(
+              error: state.webViewError!,
+              title: 'Failed to Load Calculator',
               message: state.webViewError!,
-              onRetry: () => ref.invalidate(provider),
+              onRetry: () {
+                _retryWebView(controller);
+              },
             );
           }
+
           return Stack(
             children: [
               InAppWebView(
                 initialSettings: InAppWebViewSettings(
                   javaScriptEnabled: true,
+
+                  // Consider disabling this for release
+                  // builds unless WebView inspection is
+                  // intentionally required.
                   isInspectable: true,
                 ),
-                onWebViewCreated: (controller) async {
-                  _webViewController = controller;
-                  await controller.loadData(
-                    data: state.html,
-                    baseUrl: WebUri(state.baseUrl),
+
+                onWebViewCreated: (webViewController) async {
+                  _webViewController = webViewController;
+
+                  await _loadCalculatorHtml(webViewController, state);
+                },
+
+                onLoadStart: (_, __) {
+                  controller.webViewLoading();
+                },
+
+                onLoadStop: (_, __) {
+                  controller.webViewReady();
+                },
+
+                onReceivedError: (_, request, error) {
+                  // Ignore failures from non-main-frame
+                  // resources such as images or fonts.
+                  // if (!request.isForMainFrame) {
+                  //   return;
+                  // }
+
+                  controller.webViewFailed(error.description);
+                },
+
+                onConsoleMessage: (_, message) {
+                  debugPrint(
+                    'WebView Console '
+                    '[${message.messageLevel}]: '
+                    '${message.message}',
                   );
                 },
-                onLoadStart: (_, _) =>
-                    ref.read(provider.notifier).webViewLoading(),
-                onLoadStop: (_, _) =>
-                    ref.read(provider.notifier).webViewReady(),
-                onReceivedError: (_, request, error) => ref
-                    .read(provider.notifier)
-                    .webViewFailed(error.description),
-                onConsoleMessage: (_, message) => debugPrint(
-                  'WebView Console [${message.messageLevel}]: ${message.message}',
-                ),
               ),
+
+              // ============================================
+              // WEBVIEW LOADING OVERLAY
+              // ============================================
               if (!state.isWebViewReady)
-                Container(
-                  color: Theme.of(
-                    context,
-                  ).scaffoldBackgroundColor.withValues(alpha: 0.8),
-                  child: const _CalculatorLoading(
-                    label: 'Loading calculator page...',
+                Positioned.fill(
+                  child: ColoredBox(
+                    color: Theme.of(
+                      context,
+                    ).scaffoldBackgroundColor.withValues(alpha: 0.88),
+                    child: const AppLoadingView(
+                      message: 'Loading calculator page...',
+                    ),
                   ),
                 ),
             ],
@@ -109,60 +168,72 @@ class _UseCalculatorPageState extends ConsumerState<UseCalculatorPage> {
       ),
     );
   }
-}
 
-class _CalculatorLoading extends StatelessWidget {
-  const _CalculatorLoading({required this.label});
-  final String label;
+  Future<void> _loadCalculatorHtml(
+    InAppWebViewController controller,
+    UseCalculatorState state,
+  ) async {
+    try {
+      await controller.loadData(
+        data: state.html,
+        baseUrl: WebUri(state.baseUrl),
+      );
+    } catch (error) {
+      if (!mounted) {
+        return;
+      }
 
-  @override
-  Widget build(BuildContext context) => Center(
-    child: Column(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        const Loading.large(),
-        const SizedBox(height: 16),
-        Text(label),
-      ],
-    ),
-  );
-}
+      ref
+          .read(useCalculatorControllerProvider(_request).notifier)
+          .webViewFailed(error.toString());
+    }
+  }
 
-class _CalculatorError extends StatelessWidget {
-  const _CalculatorError({required this.message, required this.onRetry});
-  final String message;
-  final VoidCallback onRetry;
+  Future<void> _reloadWebView() async {
+    final controller = _webViewController;
 
-  @override
-  Widget build(BuildContext context) => Center(
-    child: Padding(
-      padding: const EdgeInsets.all(24),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            LucideIcons.triangleAlert,
-            size: 64,
-            color: context.theme.colorScheme.error,
-          ),
-          const SizedBox(height: 16),
-          Text(
-            'Failed to Load Calculator',
-            style: context.textTheme.headlineSmall?.copyWith(
-              color: context.theme.colorScheme.error,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(message, textAlign: TextAlign.center),
-          const SizedBox(height: 24),
-          AppButton(
-            text: 'Retry',
-            icon: LucideIcons.refreshCw,
-            onPressed: onRetry,
-            width: 200,
-          ),
-        ],
-      ),
-    ),
-  );
+    if (controller == null) {
+      return;
+    }
+
+    try {
+      await controller.reload();
+    } catch (error) {
+      if (!mounted) {
+        return;
+      }
+
+      ref
+          .read(useCalculatorControllerProvider(_request).notifier)
+          .webViewFailed(error.toString());
+    }
+  }
+
+  Future<void> _retryWebView(UseCalculatorController controller) async {
+    final current = ref
+        .read(useCalculatorControllerProvider(_request))
+        .valueOrNull;
+
+    if (current == null) {
+      ref.invalidate(useCalculatorControllerProvider(_request));
+
+      return;
+    }
+
+    final webViewController = _webViewController;
+
+    if (webViewController == null) {
+      ref.invalidate(useCalculatorControllerProvider(_request));
+
+      return;
+    }
+
+    controller.webViewLoading();
+
+    try {
+      await _loadCalculatorHtml(webViewController, current);
+    } catch (error) {
+      controller.webViewFailed(error.toString());
+    }
+  }
 }

@@ -1,28 +1,36 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:user_app/core/utils/app_extensions.dart';
-import 'package:user_app/app/router/app_navigator.dart';
 import 'package:infinite_scroll_pagination/infinite_scroll_pagination.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
+
+import 'package:user_app/app/router/app_navigator.dart';
+import 'package:user_app/app/router/app_router.dart';
+import 'package:user_app/core/constants/app_spacing.dart';
+import 'package:user_app/core/utils/app_extensions.dart';
+import 'package:user_app/core/widgets/app_error_view.dart';
+import 'package:user_app/core/widgets/app_loading_view.dart';
+import 'package:user_app/core/widgets/empty_state.dart';
+
 import 'package:user_app/features/conversations/presentation/controllers/chat_list_controller.dart';
 
 import 'package:user_app/shared/models/models.dart';
-import 'package:user_app/app/router/app_router.dart';
-import 'package:user_app/core/constants/app_spacing.dart';
-import 'package:user_app/core/utils/loading.dart';
 import 'package:user_app/shared/widgets/conversation_card.dart';
-import 'package:user_app/core/widgets/empty_state.dart';
 import 'package:user_app/shared/widgets/filter_button.dart';
+import 'package:user_app/shared/widgets/pagination_indicators.dart';
 
 class ChatListPage extends ConsumerWidget {
   const ChatListPage({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final controller = ref.watch(chatListControllerProvider);
+    final state = ref.watch(chatListControllerProvider);
+
+    final controller = ref.read(chatListControllerProvider.notifier);
+
     final cs = context.theme.colorScheme;
 
     return Scaffold(
+      backgroundColor: cs.surface,
       appBar: AppBar(
         titleSpacing: AppSpacing.md,
         title: Text(
@@ -33,17 +41,19 @@ class ChatListPage extends ConsumerWidget {
         ),
         actions: [
           FilterButton(
-            hasActiveFilters: controller.hasActiveFilters,
-            onPressed: () => controller.showFilterModal(context),
-            onReset: controller.hasActiveFilters
-                ? controller.clearAllFilters
-                : null,
+            hasActiveFilters: state.hasActiveFilters,
+            onPressed: () {
+              controller.showFilterModal(context);
+            },
+            onReset: state.hasActiveFilters ? controller.clearAllFilters : null,
           ),
           AppSpacing.xs.gap,
         ],
       ),
       body: RefreshIndicator(
-        onRefresh: () => Future.sync(controller.refreshConversations),
+        onRefresh: () async {
+          controller.refreshConversations();
+        },
         child: CustomScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
           slivers: [
@@ -56,7 +66,9 @@ class ChatListPage extends ConsumerWidget {
               ),
               sliver: SliverToBoxAdapter(
                 child: _ConversationsHeaderCard(
-                  onOpenFilters: () => controller.showFilterModal(context),
+                  onOpenFilters: () {
+                    controller.showFilterModal(context);
+                  },
                 ),
               ),
             ),
@@ -70,9 +82,9 @@ class ChatListPage extends ConsumerWidget {
               ),
               sliver: PagingListener<int, Conversation>(
                 controller: controller.pagingController,
-                builder: (context, state, fetchNextPage) {
+                builder: (context, pagingState, fetchNextPage) {
                   return PagedSliverList<int, Conversation>.separated(
-                    state: state,
+                    state: pagingState,
                     fetchNextPage: fetchNextPage,
                     separatorBuilder: (context, index) => AppSpacing.sm.gap,
                     builderDelegate: PagedChildBuilderDelegate<Conversation>(
@@ -80,8 +92,9 @@ class ChatListPage extends ConsumerWidget {
                         return _ConversationCardShell(
                           child: ConversationCard(
                             conversation: conversation,
-                            onTap: () =>
-                                _openConversation(conversation, controller),
+                            onTap: () {
+                              _openConversation(conversation, controller);
+                            },
                             getOtherParticipant: controller.getOtherParticipant,
                             getConversationName: controller.getConversationName,
                             getRelativeTime: controller.getRelativeTime,
@@ -90,55 +103,72 @@ class ChatListPage extends ConsumerWidget {
                       },
 
                       // =========================
-                      // ERROR STATE
+                      // FIRST PAGE LOADING
                       // =========================
-                      firstPageErrorIndicatorBuilder: (context) {
-                        return _ConversationErrorState(
-                          onRetry: controller.refreshConversations,
-                        );
-                      },
-
-                      newPageErrorIndicatorBuilder: (context) {
-                        return Padding(
-                          padding: const EdgeInsets.symmetric(
-                            vertical: AppSpacing.md,
-                          ),
-                          child: EmptyState(
-                            icon: LucideIcons.messageCircle,
-                            title: 'Failed to load more',
-                            description: 'Please try again',
-                            onAction: fetchNextPage,
-                          ),
+                      firstPageProgressIndicatorBuilder: (_) {
+                        return const AppLoadingView(
+                          message: 'Loading conversations...',
                         );
                       },
 
                       // =========================
-                      // EMPTY STATE
+                      // NEXT PAGE LOADING
                       // =========================
-                      noItemsFoundIndicatorBuilder: (context) {
-                        return _EmptyConversationState(
-                          isFiltered: controller.hasActiveFilters,
-                          onClearFilters: controller.clearAllFilters,
+                      newPageProgressIndicatorBuilder: (_) {
+                        return PaginationIndicators.newPageProgress();
+                      },
+
+                      // =========================
+                      // FIRST PAGE ERROR
+                      // =========================
+                      firstPageErrorIndicatorBuilder: (_) {
+                        return AppErrorView(
+                          error:
+                              pagingState.error ??
+                              'Unable to load conversations',
+                          title: AppTranslationKey.error.tr,
+                          message: AppTranslationKey.checkInternetAndRetry.tr,
+                          onRetry: fetchNextPage,
                         );
                       },
 
                       // =========================
-                      // LOADING STATES
+                      // NEXT PAGE ERROR
                       // =========================
-                      firstPageProgressIndicatorBuilder: (context) =>
-                          const Padding(
-                            padding: EdgeInsets.only(top: AppSpacing.xl),
-                            child: CenteredLoading.large(),
-                          ),
+                      newPageErrorIndicatorBuilder: (_) {
+                        return PaginationIndicators.newPageError(
+                          onRetry: fetchNextPage,
+                          title: 'Failed to load more conversations',
+                          icon: LucideIcons.messageCircle,
+                        );
+                      },
 
-                      newPageProgressIndicatorBuilder: (context) =>
-                          const Padding(
-                            padding: EdgeInsets.all(AppSpacing.md),
-                            child: CenteredLoading.medium(),
-                          ),
+                      // =========================
+                      // EMPTY
+                      // =========================
+                      noItemsFoundIndicatorBuilder: (_) {
+                        if (state.hasActiveFilters) {
+                          return EmptyState.noResults(
+                            title: 'No matching conversations',
+                            description: 'Try adjusting your filters.',
+                            actionLabel: 'Clear Filters',
+                            onAction: controller.clearAllFilters,
+                          );
+                        }
 
-                      noMoreItemsIndicatorBuilder: (context) =>
-                          const SizedBox(height: AppSpacing.lg),
+                        return EmptyState.noData(
+                          title: AppTranslationKey.noConversationsFound.tr,
+                          description:
+                              AppTranslationKey.startNewConversation.tr,
+                        );
+                      },
+
+                      // =========================
+                      // END
+                      // =========================
+                      noMoreItemsIndicatorBuilder: (_) {
+                        return PaginationIndicators.noMoreItems();
+                      },
                     ),
                   );
                 },
@@ -147,7 +177,6 @@ class ChatListPage extends ConsumerWidget {
           ],
         ),
       ),
-      backgroundColor: cs.surface,
     );
   }
 
@@ -157,16 +186,18 @@ class ChatListPage extends ConsumerWidget {
   ) {
     final otherUser = controller.getOtherParticipant(conversation);
 
-    if (otherUser == null) return;
+    if (otherUser == null) {
+      return;
+    }
 
     AppNavigator.push(AppRoutes.chat(conversation.id), extra: otherUser);
   }
 }
 
 class _ConversationsHeaderCard extends StatelessWidget {
-  final VoidCallback onOpenFilters;
-
   const _ConversationsHeaderCard({required this.onOpenFilters});
+
+  final VoidCallback onOpenFilters;
 
   @override
   Widget build(BuildContext context) {
@@ -207,7 +238,9 @@ class _ConversationsHeaderCard extends StatelessWidget {
                     fontWeight: FontWeight.w800,
                   ),
                 ),
+
                 const SizedBox(height: 4),
+
                 Text(
                   'View your conversations and continue consultations.',
                   style: context.textTheme.bodySmall?.copyWith(
@@ -233,9 +266,9 @@ class _ConversationsHeaderCard extends StatelessWidget {
 }
 
 class _ConversationCardShell extends StatelessWidget {
-  final Widget child;
-
   const _ConversationCardShell({required this.child});
+
+  final Widget child;
 
   @override
   Widget build(BuildContext context) {
@@ -249,100 +282,6 @@ class _ConversationCardShell extends StatelessWidget {
       ),
       clipBehavior: Clip.antiAlias,
       child: child,
-    );
-  }
-}
-
-class _EmptyConversationState extends StatelessWidget {
-  final bool isFiltered;
-  final VoidCallback onClearFilters;
-
-  const _EmptyConversationState({
-    required this.isFiltered,
-    required this.onClearFilters,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final cs = context.theme.colorScheme;
-
-    return Padding(
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.md,
-        vertical: AppSpacing.xl,
-      ),
-      child: Column(
-        children: [
-          Container(
-            width: 76,
-            height: 76,
-            decoration: BoxDecoration(
-              color: cs.primary.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(24),
-            ),
-            child: Icon(
-              isFiltered ? LucideIcons.searchX : LucideIcons.messageCircle,
-              color: cs.primary,
-              size: 36,
-            ),
-          ),
-
-          AppSpacing.md.gap,
-
-          Text(
-            isFiltered
-                ? 'No matching conversations'
-                : AppTranslationKey.noConversationsFound.tr,
-            style: context.textTheme.titleMedium?.copyWith(
-              fontWeight: FontWeight.w800,
-            ),
-            textAlign: TextAlign.center,
-          ),
-
-          const SizedBox(height: 6),
-
-          Text(
-            isFiltered
-                ? 'Try adjusting your filters.'
-                : AppTranslationKey.startNewConversation.tr,
-            style: context.textTheme.bodyMedium?.copyWith(
-              color: cs.onSurfaceVariant,
-            ),
-            textAlign: TextAlign.center,
-          ),
-
-          if (isFiltered) ...[
-            AppSpacing.lg.gap,
-            FilledButton.icon(
-              onPressed: onClearFilters,
-              icon: const Icon(LucideIcons.x),
-              label: const Text('Clear Filters'),
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-}
-
-class _ConversationErrorState extends StatelessWidget {
-  final VoidCallback onRetry;
-
-  const _ConversationErrorState({required this.onRetry});
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.md,
-        vertical: AppSpacing.xl,
-      ),
-      child: EmptyState(
-        icon: LucideIcons.messageCircle,
-        title: AppTranslationKey.error.tr,
-        description: AppTranslationKey.checkInternetAndRetry.tr,
-        onAction: onRetry,
-      ),
     );
   }
 }

@@ -1,24 +1,24 @@
+import 'package:flex_color_scheme/flex_color_scheme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:form_builder_validators/form_builder_validators.dart';
-import 'package:user_app/core/config/app_keys.dart';
-import 'package:user_app/core/constants/app_constants.dart';
-import 'package:user_app/core/utils/app_extensions.dart';
-import 'package:user_app/app/router/app_navigator.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
-import 'package:flex_color_scheme/flex_color_scheme.dart';
-import 'package:toastification/toastification.dart';
-import 'package:user_app/core/utils/app_message.dart';
-import 'package:user_app/features/authentication/presentation/controllers/password_recovery_controller.dart';
-import 'package:user_app/l10n/app_translations.dart';
+
+import 'package:user_app/app/router/app_navigator.dart';
+import 'package:user_app/core/config/app_keys.dart';
 import 'package:user_app/core/constants/app_spacing.dart';
+import 'package:user_app/core/utils/app_extensions.dart';
+import 'package:user_app/core/utils/app_message.dart';
 import 'package:user_app/core/utils/responsive.dart';
-import 'package:user_app/core/utils/common.dart';
-import 'package:user_app/shared/widgets/copyright_terms_widget.dart';
-import 'package:user_app/shared/widgets/app_logo.dart';
 import 'package:user_app/core/widgets/app_button.dart';
+
+import 'package:user_app/features/authentication/presentation/controllers/password_recovery_controller.dart';
+
+import 'package:user_app/l10n/app_translations.dart';
+import 'package:user_app/shared/widgets/app_logo.dart';
+import 'package:user_app/shared/widgets/copyright_terms_widget.dart';
 import 'package:user_app/shared/widgets/glass_card.dart';
 
 class ForgotPasswordPage extends ConsumerStatefulWidget {
@@ -29,38 +29,83 @@ class ForgotPasswordPage extends ConsumerStatefulWidget {
 }
 
 class _ForgotPasswordPageState extends ConsumerState<ForgotPasswordPage> {
-  static const _emailField = 'email';
-  final _formKey = GlobalKey<FormBuilderState>();
+  static const String _emailField = 'email';
+
+  final GlobalKey<FormBuilderState> _formKey = GlobalKey<FormBuilderState>();
 
   Future<void> _submit() async {
-    if (!(_formKey.currentState?.saveAndValidate() ?? false)) return;
-    final email = _formKey.currentState!.value[_emailField] as String;
+    final form = _formKey.currentState;
+
+    if (form == null) {
+      return;
+    }
+
+    final isValid = form.saveAndValidate();
+
+    if (!isValid) {
+      return;
+    }
+
+    final email = form.value[_emailField]?.toString().trim();
+
+    if (email == null || email.isEmpty) {
+      return;
+    }
+
     try {
       final result = await ref
           .read(passwordRecoveryControllerProvider.notifier)
           .requestReset(email);
-      if (result == null || !result.accepted || !mounted) return;
 
-      AppMessage.success(
-        AppKeys.navigatorKey.currentContext!,
-        'checkEmailForReset'.tr,
-      );
+      if (!mounted) {
+        return;
+      }
+
+      if (result == null || !result.accepted) {
+        return;
+      }
+
+      _showSuccess('checkEmailForReset'.tr);
 
       AppNavigator.pop();
-    } catch (error) {
-      if (!mounted) return;
-      AppMessage.error(
-        AppKeys.navigatorKey.currentContext!,
-        'errorSendingResetLink'.tr,
-      );
+    } catch (_) {
+      if (!mounted) {
+        return;
+      }
+
+      _showError('errorSendingResetLink'.tr);
     }
+  }
+
+  void _showSuccess(String message) {
+    final context = AppKeys.navigatorKey.currentContext;
+
+    if (context == null) {
+      return;
+    }
+
+    AppMessage.success(context, message);
+  }
+
+  void _showError(String message) {
+    final context = AppKeys.navigatorKey.currentContext;
+
+    if (context == null) {
+      return;
+    }
+
+    AppMessage.error(context, message);
   }
 
   @override
   Widget build(BuildContext context) {
-    final isLoading = ref.watch(passwordRecoveryControllerProvider).isLoading;
-    final theme = Theme.of(context);
-    final size = MediaQuery.of(context).size;
+    final recoveryState = ref.watch(passwordRecoveryControllerProvider);
+
+    final isLoading = recoveryState.isLoading;
+
+    final theme = context.theme;
+    final colorScheme = theme.colorScheme;
+    final size = MediaQuery.sizeOf(context);
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: FlexColorScheme.themedSystemNavigationBar(
@@ -81,9 +126,9 @@ class _ForgotPasswordPageState extends ConsumerState<ForgotPasswordPage> {
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
               colors: [
-                theme.colorScheme.primary.withValues(alpha: 0.1),
-                theme.colorScheme.secondary.withValues(alpha: 0.05),
-                theme.colorScheme.surface,
+                colorScheme.primary.withValues(alpha: 0.1),
+                colorScheme.secondary.withValues(alpha: 0.05),
+                colorScheme.surface,
               ],
               stops: const [0.0, 0.5, 1.0],
             ),
@@ -94,13 +139,11 @@ class _ForgotPasswordPageState extends ConsumerState<ForgotPasswordPage> {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    // App Logo
                     const AppLogo(logoSize: 200),
+
                     AppSpacing.gapXl,
 
-                    // Forgot Password Form Card
-                    Container(
-                      width: double.infinity,
+                    ConstrainedBox(
                       constraints: BoxConstraints(
                         maxWidth: Responsive.value<double>(
                           context,
@@ -109,100 +152,120 @@ class _ForgotPasswordPageState extends ConsumerState<ForgotPasswordPage> {
                           desktop: 450,
                         ),
                       ),
-                      child: GlassCard.auth(
-                        child: FormBuilder(
-                          key: _formKey,
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.stretch,
-                            children: [
-                              // Form Title
-                              Text(
-                                AppTranslationKey.resetPassword.tr,
-                                style: theme.textTheme.headlineSmall?.copyWith(
-                                  fontWeight: FontWeight.w600,
-                                  color: theme.colorScheme.onSurface,
-                                  fontSize: Responsive.fontSize(
-                                    context,
-                                    mobile: 24.0,
-                                    tablet: 28.0,
-                                    desktop: 32.0,
-                                  ),
+                      child: SizedBox(
+                        width: double.infinity,
+                        child: GlassCard.auth(
+                          child: FormBuilder(
+                            key: _formKey,
+                            enabled: !isLoading,
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                Text(
+                                  AppTranslationKey.resetPassword.tr,
+                                  textAlign: TextAlign.center,
+                                  style: theme.textTheme.headlineSmall
+                                      ?.copyWith(
+                                        fontWeight: FontWeight.w700,
+                                        color: colorScheme.onSurface,
+                                        fontSize: Responsive.fontSize(
+                                          context,
+                                          mobile: 24,
+                                          tablet: 28,
+                                          desktop: 32,
+                                        ),
+                                      ),
                                 ),
-                              ),
 
-                              AppSpacing.contentGap,
+                                AppSpacing.contentGap,
 
-                              // Description
-                              Text(
-                                AppTranslationKey.resetPasswordDescription.tr,
-                                style: theme.textTheme.bodyMedium?.copyWith(
-                                  color: theme.colorScheme.onSurfaceVariant,
-                                  fontSize: Responsive.fontSize(
-                                    context,
-                                    mobile: 14.0,
-                                    tablet: 15.0,
-                                    desktop: 16.0,
-                                  ),
-                                ),
-                                textAlign: TextAlign.center,
-                              ),
-
-                              AppSpacing.contentGap,
-
-                              // Email Field
-                              FormBuilderTextField(
-                                name: _emailField,
-                                decoration: InputDecoration(
-                                  labelText: AppTranslationKey.email.tr,
-                                  hintText: AppTranslationKey.email.tr,
-                                  prefixIcon: Icon(
-                                    LucideIcons.mail,
-                                    color: theme.colorScheme.primary,
-                                    size: Responsive.iconSize(
+                                Text(
+                                  AppTranslationKey.resetPasswordDescription.tr,
+                                  textAlign: TextAlign.center,
+                                  style: theme.textTheme.bodyMedium?.copyWith(
+                                    color: colorScheme.onSurfaceVariant,
+                                    height: 1.5,
+                                    fontSize: Responsive.fontSize(
                                       context,
-                                      mobile: 20,
-                                      tablet: 22,
-                                      desktop: 24,
-                                    ),
-                                  ),
-                                  border: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                  focusedBorder: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(12),
-                                    borderSide: BorderSide(
-                                      color: theme.colorScheme.primary,
-                                      width: 2,
+                                      mobile: 14,
+                                      tablet: 15,
+                                      desktop: 16,
                                     ),
                                   ),
                                 ),
-                                validator: FormBuilderValidators.compose([
-                                  FormBuilderValidators.required(),
-                                  FormBuilderValidators.email(),
-                                ]),
-                              ),
 
-                              AppSpacing.elementGap,
+                                AppSpacing.contentGap,
 
-                              // Send Reset Button
-                              AppButton.large(
-                                text: AppTranslationKey.sendResetLink.tr,
-                                onPressed: isLoading ? null : _submit,
-                                isLoading: isLoading,
-                                loadingText:
-                                    AppTranslationKey.sendingResetLink.tr,
-                                width: double.infinity,
-                              ),
+                                FormBuilderTextField(
+                                  name: _emailField,
+                                  keyboardType: TextInputType.emailAddress,
+                                  textInputAction: TextInputAction.done,
+                                  autofillHints: const [AutofillHints.email],
+                                  autocorrect: false,
+                                  enableSuggestions: false,
+                                  onSubmitted: (_) {
+                                    if (!isLoading) {
+                                      _submit();
+                                    }
+                                  },
+                                  decoration: InputDecoration(
+                                    labelText: AppTranslationKey.email.tr,
+                                    hintText: AppTranslationKey.email.tr,
+                                    prefixIcon: Icon(
+                                      LucideIcons.mail,
+                                      color: colorScheme.primary,
+                                      size: Responsive.iconSize(
+                                        context,
+                                        mobile: 20,
+                                        tablet: 22,
+                                        desktop: 24,
+                                      ),
+                                    ),
+                                    border: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    enabledBorder: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                      borderSide: BorderSide(
+                                        color: colorScheme.outlineVariant,
+                                      ),
+                                    ),
+                                    focusedBorder: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                      borderSide: BorderSide(
+                                        color: colorScheme.primary,
+                                        width: 2,
+                                      ),
+                                    ),
+                                  ),
+                                  validator: FormBuilderValidators.compose([
+                                    FormBuilderValidators.required(),
+                                    FormBuilderValidators.email(),
+                                  ]),
+                                ),
 
-                              AppSpacing.fieldGap,
+                                AppSpacing.elementGap,
 
-                              // Back to Login Button
-                              AppButtonVariants.textButton(
-                                text: AppTranslationKey.backToLogin.tr,
-                                onPressed: AppNavigator.pop,
-                                width: double.infinity,
-                              ),
-                            ],
+                                AppButton.large(
+                                  text: AppTranslationKey.sendResetLink.tr,
+                                  onPressed: isLoading ? null : _submit,
+                                  isLoading: isLoading,
+                                  loadingText:
+                                      AppTranslationKey.sendingResetLink.tr,
+                                  width: double.infinity,
+                                ),
+
+                                AppSpacing.fieldGap,
+
+                                AppButtonVariants.textButton(
+                                  text: AppTranslationKey.backToLogin.tr,
+                                  onPressed: isLoading
+                                      ? null
+                                      : AppNavigator.pop,
+                                  width: double.infinity,
+                                ),
+                              ],
+                            ),
                           ),
                         ),
                       ),
@@ -210,7 +273,6 @@ class _ForgotPasswordPageState extends ConsumerState<ForgotPasswordPage> {
 
                     AppSpacing.gapXl,
 
-                    // Copyright and Terms
                     const CopyrightTermsWidget(),
                   ],
                 ),

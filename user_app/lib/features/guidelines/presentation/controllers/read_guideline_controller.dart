@@ -1,10 +1,12 @@
 import 'dart:async';
 
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:riverpod_annotation/riverpod_annotation.dart';
 
-import 'package:user_app/shared/models/models.dart';
 import 'package:user_app/app/providers/app_providers.dart';
 import 'package:user_app/features/authentication/presentation/controllers/auth_controller.dart';
+import 'package:user_app/shared/models/models.dart';
+
+part 'read_guideline_controller.g.dart';
 
 final class ReadGuidelineRequest {
   const ReadGuidelineRequest({required this.id, this.guideline});
@@ -13,8 +15,9 @@ final class ReadGuidelineRequest {
   final Guideline? guideline;
 
   @override
-  bool operator ==(Object other) =>
-      other is ReadGuidelineRequest && other.id == id;
+  bool operator ==(Object other) {
+    return other is ReadGuidelineRequest && other.id == id;
+  }
 
   @override
   int get hashCode => id.hashCode;
@@ -33,77 +36,77 @@ final class ReadGuidelineState {
 
   final Guideline guideline;
   final List<GuidelineSection> sections;
+
   final ReadingProgress? readingProgress;
+
   final String currentSection;
   final double progressPercentage;
+
   final bool isBookmarked;
   final bool isMutating;
 
   ReadGuidelineState copyWith({
     ReadingProgress? readingProgress,
+    bool clearReadingProgress = false,
     String? currentSection,
     double? progressPercentage,
     bool? isBookmarked,
     bool? isMutating,
-  }) => ReadGuidelineState(
-    guideline: guideline,
-    sections: sections,
-    readingProgress: readingProgress ?? this.readingProgress,
-    currentSection: currentSection ?? this.currentSection,
-    progressPercentage: progressPercentage ?? this.progressPercentage,
-    isBookmarked: isBookmarked ?? this.isBookmarked,
-    isMutating: isMutating ?? this.isMutating,
-  );
+  }) {
+    return ReadGuidelineState(
+      guideline: guideline,
+      sections: sections,
+      readingProgress: clearReadingProgress
+          ? null
+          : readingProgress ?? this.readingProgress,
+      currentSection: currentSection ?? this.currentSection,
+      progressPercentage: progressPercentage ?? this.progressPercentage,
+      isBookmarked: isBookmarked ?? this.isBookmarked,
+      isMutating: isMutating ?? this.isMutating,
+    );
+  }
 }
 
-final readGuidelineControllerProvider =
-    AutoDisposeAsyncNotifierProviderFamily<
-      ReadGuidelineController,
-      ReadGuidelineState,
-      ReadGuidelineRequest
-    >(ReadGuidelineController.new);
-
-class ReadGuidelineController
-    extends
-        AutoDisposeFamilyAsyncNotifier<
-          ReadGuidelineState,
-          ReadGuidelineRequest
-        > {
-  bool _disposed = false;
-
+@riverpod
+class ReadGuidelineController extends _$ReadGuidelineController {
   @override
   Future<ReadGuidelineState> build(ReadGuidelineRequest request) async {
-    _disposed = false;
-    ref.onDispose(() => _disposed = true);
-    if (request.id.isEmpty) {
+    final guidelineId = request.id.trim();
+
+    if (guidelineId.isEmpty) {
       throw ArgumentError.value(request.id, 'guidelineId', 'is required');
     }
+
     final guideline =
         request.guideline ??
         await ref
             .read(guidelineContentRepositoryProvider)
-            .guideline(request.id);
-    final sections = guidelineSections(guideline);
+            .guideline(guidelineId);
+
+    final sections = List<GuidelineSection>.unmodifiable(
+      guidelineSections(guideline),
+    );
+
     unawaited(_trackUsage(guideline.id));
 
     final user = ref.read(authControllerProvider).valueOrNull?.user;
+
     if (user == null) {
       return ReadGuidelineState(guideline: guideline, sections: sections);
     }
 
     try {
-      var record = await ref
-          .read(readingProgressRepositoryProvider)
-          .forGuideline(user.id, guideline.id);
-      record ??= await ref
-          .read(readingProgressRepositoryProvider)
-          .upsert(user.id, guideline.id, {
-            'current_section': 'definition',
-            'total_sections': sections.length,
-            'progress_percentage': 0.0,
-            'last_read_at': DateTime.now().toUtc().toIso8601String(),
-          });
-      final progress = record;
+      final repository = ref.read(readingProgressRepositoryProvider);
+
+      var progress = await repository.forGuideline(user.id, guideline.id);
+
+      progress ??= await repository.upsert(user.id, guideline.id, {
+        'current_section': 'definition',
+        'total_sections': sections.length,
+        'progress_percentage': 0.0,
+        'last_read_at': DateTime.now().toUtc().toIso8601String(),
+      });
+
       return ReadGuidelineState(
         guideline: guideline,
         sections: sections,
@@ -115,182 +118,332 @@ class ReadGuidelineController
         isBookmarked: progress.isBookmarked,
       );
     } catch (_) {
+      // A guideline must remain readable even when reading
+      // progress cannot be loaded.
       return ReadGuidelineState(guideline: guideline, sections: sections);
     }
   }
 
+  // ======================================================
+  // SECTION
+  // ======================================================
+
   void selectSection(GuidelineSection section) {
-    final value = state.valueOrNull;
-    if (value == null) return;
-    state = AsyncData(value.copyWith(currentSection: section.fieldName));
+    final current = state.valueOrNull;
+
+    if (current == null) {
+      return;
+    }
+
+    state = AsyncData(current.copyWith(currentSection: section.fieldName));
   }
 
+  // ======================================================
+  // PROGRESS
+  // ======================================================
+
   void setProgress(double progress) {
-    final value = state.valueOrNull;
-    if (value == null) return;
+    final current = state.valueOrNull;
+
+    if (current == null) {
+      return;
+    }
+
     state = AsyncData(
-      value.copyWith(progressPercentage: progress.clamp(0.0, 1.0)),
+      current.copyWith(progressPercentage: progress.clamp(0.0, 1.0)),
     );
   }
 
   Future<void> saveProgress() async {
-    final value = state.valueOrNull;
+    final current = state.valueOrNull;
+
     final user = ref.read(authControllerProvider).valueOrNull?.user;
-    if (value == null || user == null) return;
-    final now = DateTime.now().toUtc().toIso8601String();
-    final completed = value.progressPercentage >= 0.95;
-    final record = await ref
-        .read(readingProgressRepositoryProvider)
-        .upsert(user.id, value.guideline.id, {
-          'current_section': value.currentSection,
-          'progress_percentage': value.progressPercentage,
-          'last_read_at': now,
-          'is_completed': completed,
-        });
-    if (_disposed) return;
-    state = AsyncData(value.copyWith(readingProgress: record));
+
+    if (current == null || user == null) {
+      return;
+    }
+
+    final completed = current.progressPercentage >= 0.95;
+
+    try {
+      final record = await ref
+          .read(readingProgressRepositoryProvider)
+          .upsert(user.id, current.guideline.id, {
+            'current_section': current.currentSection,
+            'progress_percentage': current.progressPercentage,
+            'last_read_at': DateTime.now().toUtc().toIso8601String(),
+            'is_completed': completed,
+          });
+
+      if (!ref.mounted) {
+        return;
+      }
+
+      final latest = state.valueOrNull;
+
+      if (latest == null) {
+        return;
+      }
+
+      state = AsyncData(latest.copyWith(readingProgress: record));
+    } catch (_) {
+      // Saving reading progress is best effort.
+      // It should never interrupt guideline reading.
+    }
   }
 
+  // ======================================================
+  // BOOKMARK
+  // ======================================================
+
   Future<bool> toggleBookmark() async {
-    final value = state.valueOrNull;
+    final current = state.valueOrNull;
+
     final user = ref.read(authControllerProvider).valueOrNull?.user;
-    if (value == null || user == null || value.isMutating) return false;
-    final next = !value.isBookmarked;
-    state = AsyncData(value.copyWith(isMutating: true));
+
+    if (current == null || user == null || current.isMutating) {
+      return false;
+    }
+
+    final next = !current.isBookmarked;
+
+    state = AsyncData(current.copyWith(isMutating: true));
+
     try {
       final record = await ref.read(readingProgressRepositoryProvider).upsert(
         user.id,
-        value.guideline.id,
+        current.guideline.id,
         {'is_bookmarked': next},
       );
-      if (_disposed) return false;
+
+      if (!ref.mounted) {
+        return false;
+      }
+
+      final latest = state.valueOrNull;
+
+      if (latest == null) {
+        return false;
+      }
+
       state = AsyncData(
-        value.copyWith(
+        latest.copyWith(
           readingProgress: record,
           isBookmarked: next,
           isMutating: false,
         ),
       );
+
       return true;
     } catch (_) {
-      if (!_disposed) state = AsyncData(value.copyWith(isMutating: false));
+      if (ref.mounted) {
+        final latest = state.valueOrNull;
+
+        if (latest != null) {
+          state = AsyncData(latest.copyWith(isMutating: false));
+        }
+      }
+
       return false;
     }
   }
 
+  // ======================================================
+  // COMPLETE
+  // ======================================================
+
   Future<bool> markCompleted() async {
-    final value = state.valueOrNull;
+    final current = state.valueOrNull;
+
     final user = ref.read(authControllerProvider).valueOrNull?.user;
-    if (value == null || user == null || value.isMutating) return false;
-    state = AsyncData(value.copyWith(isMutating: true));
+
+    if (current == null || user == null || current.isMutating) {
+      return false;
+    }
+
+    state = AsyncData(current.copyWith(isMutating: true));
+
     try {
       final record = await ref
           .read(readingProgressRepositoryProvider)
-          .upsert(user.id, value.guideline.id, {
+          .upsert(user.id, current.guideline.id, {
             'progress_percentage': 1.0,
             'is_completed': true,
             'last_read_at': DateTime.now().toUtc().toIso8601String(),
           });
-      if (_disposed) return false;
+
+      if (!ref.mounted) {
+        return false;
+      }
+
+      final latest = state.valueOrNull;
+
+      if (latest == null) {
+        return false;
+      }
+
       state = AsyncData(
-        value.copyWith(
+        latest.copyWith(
           readingProgress: record,
-          progressPercentage: 1,
+          progressPercentage: 1.0,
           isMutating: false,
         ),
       );
+
       return true;
     } catch (_) {
-      if (!_disposed) state = AsyncData(value.copyWith(isMutating: false));
+      if (ref.mounted) {
+        final latest = state.valueOrNull;
+
+        if (latest != null) {
+          state = AsyncData(latest.copyWith(isMutating: false));
+        }
+      }
+
       return false;
     }
   }
 
-  Future<void> _trackUsage(String id) async {
-    if (ref.read(authControllerProvider).valueOrNull?.user == null) return;
+  // ======================================================
+  // REFRESH
+  // ======================================================
+
+  Future<void> reload() async {
+    ref.invalidateSelf();
+
+    await future;
+  }
+
+  // ======================================================
+  // USAGE
+  // ======================================================
+
+  Future<void> _trackUsage(String guidelineId) async {
+    final user = ref.read(authControllerProvider).valueOrNull?.user;
+
+    if (user == null) {
+      return;
+    }
+
     try {
-      await ref.read(usageRepositoryProvider).guideline(id);
+      await ref.read(usageRepositoryProvider).guideline(guidelineId);
     } catch (_) {
-      // Analytics must not block guideline reading.
+      // Analytics must never block guideline reading.
     }
   }
 }
 
-List<GuidelineSection> guidelineSections(Guideline guideline) => [
-  if (guideline.hasDefinition) GuidelineSection.definition,
-  if (guideline.hasCauses) GuidelineSection.causes,
-  if (guideline.hasClinicalFeatures) GuidelineSection.clinicalFeatures,
-  if (guideline.differentialDiagnosis.isNotEmpty)
-    GuidelineSection.differentialDiagnosis,
-  if (guideline.hasClassifications) GuidelineSection.classification,
-  if (guideline.generalManagement.isNotEmpty)
-    GuidelineSection.generalManagement,
-  if (guideline.hasPrimaryMedication || guideline.hasSecondaryMedication)
-    GuidelineSection.medication,
-  if (guideline.monitoringRequirements.isNotEmpty) GuidelineSection.monitoring,
-  if (guideline.preventionMeasures.isNotEmpty) GuidelineSection.prevention,
-  if (guideline.specialNotes.isNotEmpty) GuidelineSection.specialNotes,
-];
+// ======================================================
+// SECTIONS
+// ======================================================
+
+List<GuidelineSection> guidelineSections(Guideline guideline) {
+  return [
+    if (guideline.hasDefinition) GuidelineSection.definition,
+
+    if (guideline.hasCauses) GuidelineSection.causes,
+
+    if (guideline.hasClinicalFeatures) GuidelineSection.clinicalFeatures,
+
+    if (guideline.differentialDiagnosis.isNotEmpty)
+      GuidelineSection.differentialDiagnosis,
+
+    if (guideline.hasClassifications) GuidelineSection.classification,
+
+    if (guideline.generalManagement.isNotEmpty)
+      GuidelineSection.generalManagement,
+
+    if (guideline.hasPrimaryMedication || guideline.hasSecondaryMedication)
+      GuidelineSection.medication,
+
+    if (guideline.monitoringRequirements.isNotEmpty)
+      GuidelineSection.monitoring,
+
+    if (guideline.preventionMeasures.isNotEmpty) GuidelineSection.prevention,
+
+    if (guideline.specialNotes.isNotEmpty) GuidelineSection.specialNotes,
+  ];
+}
 
 String guidelineSectionContent(Guideline guideline, GuidelineSection section) {
-  switch (section) {
-    case GuidelineSection.definition:
-      return guideline.definition;
-    case GuidelineSection.causes:
-      return guideline.causes;
-    case GuidelineSection.clinicalFeatures:
-      return guideline.clinicalFeatures;
-    case GuidelineSection.differentialDiagnosis:
-      return guideline.differentialDiagnosis;
-    case GuidelineSection.classification:
-      return _classificationContent(guideline);
-    case GuidelineSection.generalManagement:
-      return guideline.generalManagement;
-    case GuidelineSection.medication:
-      return _medicationContent(guideline);
-    case GuidelineSection.monitoring:
-      return guideline.monitoringRequirements;
-    case GuidelineSection.prevention:
-      return guideline.preventionMeasures;
-    case GuidelineSection.specialNotes:
-      return guideline.specialNotes;
-  }
+  return switch (section) {
+    GuidelineSection.definition => guideline.definition,
+
+    GuidelineSection.causes => guideline.causes,
+
+    GuidelineSection.clinicalFeatures => guideline.clinicalFeatures,
+
+    GuidelineSection.differentialDiagnosis => guideline.differentialDiagnosis,
+
+    GuidelineSection.classification => _classificationContent(guideline),
+
+    GuidelineSection.generalManagement => guideline.generalManagement,
+
+    GuidelineSection.medication => _medicationContent(guideline),
+
+    GuidelineSection.monitoring => guideline.monitoringRequirements,
+
+    GuidelineSection.prevention => guideline.preventionMeasures,
+
+    GuidelineSection.specialNotes => guideline.specialNotes,
+  };
 }
 
 String _classificationContent(Guideline guideline) {
   final content = StringBuffer();
-  for (final entry in {
+
+  final classifications = <String, String>{
     'Mild': guideline.classificationMild,
     'Moderate': guideline.classificationModerate,
     'Severe': guideline.classificationSevere,
     'Critical': guideline.classificationCritical,
-  }.entries) {
-    if (entry.value.isNotEmpty) {
-      content
-        ..writeln('<h4>${entry.key}</h4>')
-        ..writeln(entry.value);
+  };
+
+  for (final entry in classifications.entries) {
+    if (entry.value.isEmpty) {
+      continue;
     }
+
+    content
+      ..writeln('<h4>${entry.key}</h4>')
+      ..writeln(entry.value);
   }
+
   return content.toString();
 }
 
 String _medicationContent(Guideline guideline) {
   final content = StringBuffer();
-  void section(String heading, String value, {int level = 4}) {
-    if (value.isNotEmpty) {
-      content
-        ..writeln('<h$level>$heading</h$level>')
-        ..writeln(value);
+
+  void appendSection(String heading, String value, {int level = 4}) {
+    if (value.isEmpty) {
+      return;
     }
+
+    content
+      ..writeln('<h$level>$heading</h$level>')
+      ..writeln(value);
   }
 
-  section('Primary Medication', guideline.medicationPrimary);
-  section('Adult Dosage', guideline.dosageAdult, level: 5);
-  section('Pediatric Dosage', guideline.dosagePediatric, level: 5);
-  section('Secondary Medication', guideline.medicationSecondary);
-  section('Adult Dosage', guideline.dosageSecondaryAdult, level: 5);
-  section('Pediatric Dosage', guideline.dosageSecondaryPediatric, level: 5);
-  section('Route of Administration', guideline.routeAdministration);
-  section('Contraindications', guideline.contraindications);
+  appendSection('Primary Medication', guideline.medicationPrimary);
+
+  appendSection('Adult Dosage', guideline.dosageAdult, level: 5);
+
+  appendSection('Pediatric Dosage', guideline.dosagePediatric, level: 5);
+
+  appendSection('Secondary Medication', guideline.medicationSecondary);
+
+  appendSection('Adult Dosage', guideline.dosageSecondaryAdult, level: 5);
+
+  appendSection(
+    'Pediatric Dosage',
+    guideline.dosageSecondaryPediatric,
+    level: 5,
+  );
+
+  appendSection('Route of Administration', guideline.routeAdministration);
+
+  appendSection('Contraindications', guideline.contraindications);
+
   return content.toString();
 }

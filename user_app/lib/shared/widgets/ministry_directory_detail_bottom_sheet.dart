@@ -16,7 +16,7 @@ class MinistryDirectoryDetailBottomSheet extends StatelessWidget {
 
   static void show(BuildContext context, MinistryDirectory entry) {
     AppNavigator.bottomSheet(
-      MinistryDirectoryDetailBottomSheet(entry: entry),
+      child: MinistryDirectoryDetailBottomSheet(entry: entry),
       backgroundColor: Colors.transparent,
       isScrollControlled: true,
       enableDrag: true,

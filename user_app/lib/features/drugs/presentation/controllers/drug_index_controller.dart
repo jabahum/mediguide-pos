@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:user_app/core/config/app_keys.dart';
 import 'package:user_app/core/utils/app_extensions.dart';
 import 'package:user_app/app/router/app_navigator.dart';
 import 'package:infinite_scroll_pagination/infinite_scroll_pagination.dart';
+import 'package:user_app/core/utils/app_message.dart';
 
 import 'package:user_app/shared/models/models.dart';
 import 'package:user_app/shared/models/filter_models.dart';
@@ -77,11 +79,17 @@ class DrugIndexController extends ChangeNotifier {
 
   Future<List<Drug>> _fetchDrugsPage(int pageKey) async {
     try {
-      final drugs = await getDrugs(page: pageKey, perPage: pageSize);
+      final drugs = await getDrugs(
+        page: pageKey,
+        perPage: AppConstants.pageSize,
+      );
 
       return drugs;
     } catch (e) {
-      Common.quickToast(title: 'failedToLoadDrugs'.tr);
+      AppMessage.error(
+        AppKeys.navigatorKey.currentContext!,
+        'failedToLoadDrugs'.tr,
+      );
       rethrow;
     }
   }
@@ -111,7 +119,7 @@ class DrugIndexController extends ChangeNotifier {
 
       pregnancyCategories = ['A', 'B', 'C', 'D', 'X', 'Unknown'];
     } catch (e) {
-      Common.quickToast(title: 'errorLoadingFilters'.tr);
+      AppMessage.error(AppKeys.navigatorKey.currentContext!, '$e');
     } finally {
       isLoadingFilters = false;
       if (!_disposed) notifyListeners();
@@ -309,6 +317,9 @@ class DrugIndexController extends ChangeNotifier {
   }
 
   void toggleBookmark(Drug drug) {
-    Common.quickToast(title: 'Bookmark toggled for ${drug.name}');
+    AppMessage.success(
+      AppKeys.navigatorKey.currentContext!,
+      'Bookmark toggled for ${drug.name}',
+    );
   }
 }

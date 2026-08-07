@@ -127,8 +127,8 @@ class _ToolsPageState extends ConsumerState<ToolsPage> {
                           child: CalculatorTile(
                             calculator: calculator,
                             onTap: () => AppNavigator.pushNamed(
-                              AppRoutes.useCalculator,
-                              arguments: calculator,
+                              AppRoutes.calculators,
+                              extra: calculator,
                             ),
                             showDivider: false,
                           ),

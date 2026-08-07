@@ -3,6 +3,8 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_gen_ai_chat_ui/flutter_gen_ai_chat_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:user_app/core/config/app_keys.dart';
+import 'package:user_app/core/utils/app_message.dart';
 
 import 'package:user_app/features/ai_assistant/data/models/ai_context.dart';
 import 'package:user_app/features/ai_assistant/data/models/rag_answer.dart';
@@ -13,7 +15,6 @@ import 'package:user_app/features/ai_assistant/data/services/ai_context_service.
 import 'package:user_app/core/network/api_client.dart';
 import 'package:user_app/features/authentication/presentation/controllers/auth_controller.dart';
 import 'package:user_app/app/providers/app_providers.dart';
-import 'package:user_app/core/utils/common.dart';
 
 final aiAssistantControllerProvider = ChangeNotifierProvider.autoDispose
     .family<AiAssistantController, AiContext?>((ref, initialContext) {
@@ -118,10 +119,7 @@ class AiAssistantController extends ChangeNotifier {
         'I could not reach the approved-guideline assistant. '
         '${errorMessage!} No clinical answer was generated.',
       );
-      Common.quickToast(
-        title: 'Assistant unavailable',
-        description: errorMessage,
-      );
+      AppMessage.error(AppKeys.navigatorKey.currentContext!, '  $errorMessage');
     } finally {
       isLoading = false;
       isTyping = false;
@@ -161,9 +159,9 @@ class AiAssistantController extends ChangeNotifier {
       _failedUserMessage = null;
     } catch (error) {
       errorMessage = _messageFor(error);
-      Common.quickToast(
-        title: 'Assistant unavailable',
-        description: errorMessage,
+      AppMessage.error(
+        AppKeys.navigatorKey.currentContext!,
+        '   $errorMessage',
       );
     } finally {
       isLoading = false;

@@ -5,11 +5,14 @@ import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:form_builder_validators/form_builder_validators.dart';
 import 'package:form_builder_phone_field/form_builder_phone_field.dart';
+import 'package:user_app/core/config/app_keys.dart';
+import 'package:user_app/core/constants/app_constants.dart';
 import 'package:user_app/core/utils/app_extensions.dart';
 import 'package:user_app/app/router/app_navigator.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:flex_color_scheme/flex_color_scheme.dart';
 import 'package:toastification/toastification.dart';
+import 'package:user_app/core/utils/app_message.dart';
 import 'package:user_app/shared/models/models.dart';
 import 'package:user_app/features/authentication/presentation/controllers/auth_controller.dart';
 import 'package:user_app/features/authentication/presentation/controllers/auth_state.dart';
@@ -51,10 +54,9 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
     if (!(_formKey.currentState?.saveAndValidate() ?? false)) return;
     final formData = _formKey.currentState!.value;
     if (formData['agreeToTerms'] != true) {
-      Common.quickToast(
-        type: ToastificationType.error,
-        title: AppTranslationKey.registrationError,
-        description: AppTranslationKey.pleaseAgreeToTerms,
+      AppMessage.error(
+        AppKeys.navigatorKey.currentContext!,
+        'agreeToTermsError'.tr,
       );
       return;
     }
@@ -81,10 +83,10 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
       if (registered && mounted) AppNavigator.go(AppRoutes.main);
     } catch (error) {
       if (!mounted) return;
-      Common.quickToast(
-        type: ToastificationType.error,
-        title: AppTranslationKey.registrationError,
-        description: Common.parseApiError(error),
+
+      AppMessage.error(
+        AppKeys.navigatorKey.currentContext!,
+        'registrationFailed'.tr,
       );
     }
   }

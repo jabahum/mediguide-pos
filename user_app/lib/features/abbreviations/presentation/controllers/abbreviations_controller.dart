@@ -2,8 +2,10 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:user_app/core/config/app_keys.dart';
 import 'package:user_app/core/utils/app_extensions.dart';
 import 'package:infinite_scroll_pagination/infinite_scroll_pagination.dart';
+import 'package:user_app/core/utils/app_message.dart';
 import 'package:user_app/features/guidelines/data/models/guideline_category.dart';
 import 'package:user_app/features/guidelines/data/models/guideline_tag.dart';
 
@@ -121,12 +123,16 @@ class AbbreviationsController extends ChangeNotifier {
       }
 
       if (q.search.isNotEmpty || q.categoryId != null || q.tagIds.isNotEmpty) {
-        return _searchAbbreviations(query: q, page: pageKey, perPage: pageSize);
+        return _searchAbbreviations(
+          query: q,
+          page: pageKey,
+          perPage: AppConstants.pageSize,
+        );
       }
 
-      return getAbbreviations(page: pageKey, perPage: pageSize);
-    } catch (e) {
-      Common.quickToast(title: 'errorLoadingAbbreviations'.tr);
+      return getAbbreviations(page: pageKey, perPage: AppConstants.pageSize);
+    } catch (error) {
+      AppMessage.error(AppKeys.navigatorKey.currentContext!, ' $error');
       rethrow;
     }
   }

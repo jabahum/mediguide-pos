@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:user_app/core/config/app_keys.dart';
 import 'package:user_app/core/utils/app_extensions.dart';
 import 'package:user_app/app/router/app_navigator.dart';
 import 'package:in_app_review/in_app_review.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
-import 'package:toastification/toastification.dart';
+import 'package:user_app/core/utils/app_message.dart';
 
 import 'package:user_app/features/authentication/presentation/controllers/auth_controller.dart';
 import 'package:user_app/features/authentication/presentation/controllers/auth_state.dart';
@@ -14,7 +15,6 @@ import 'package:user_app/features/settings/presentation/controllers/app_update_c
 import 'package:user_app/app/providers/app_providers.dart';
 import 'package:user_app/app/router/app_router.dart';
 import 'package:user_app/core/constants/app_spacing.dart';
-import 'package:user_app/core/utils/common.dart';
 import 'package:user_app/core/constants/app_constants.dart';
 import 'package:user_app/core/storage/local_storage_service.dart';
 import 'package:user_app/core/utils/responsive.dart';
@@ -232,8 +232,8 @@ class ProfilePage extends ConsumerWidget {
   }
 
   Future<void> _showEditProfileDialog(WidgetRef ref) async {
-    final result = await AppNavigator.dialog(
-      const EditProfileDialog(),
+    final result = await AppNavigator.dialog<bool>(
+      child: const EditProfileDialog(),
       barrierDismissible: false,
     );
 
@@ -248,18 +248,16 @@ class ProfilePage extends ConsumerWidget {
         .setEnabled(value);
 
     if (success) {
-      Common.quickToast(
-        type: ToastificationType.success,
-        title: AppTranslationKey.biometricAuthentication.tr,
-        description: value
+      AppMessage.success(
+        AppKeys.navigatorKey.currentContext!,
+        value
             ? AppTranslationKey.biometricEnabled.tr
             : AppTranslationKey.biometricDisabled.tr,
       );
     } else {
-      Common.quickToast(
-        type: ToastificationType.error,
-        title: AppTranslationKey.biometricAuthentication.tr,
-        description: AppTranslationKey.failedToUpdateBiometricSettings.tr,
+      AppMessage.error(
+        AppKeys.navigatorKey.currentContext!,
+        AppTranslationKey.failedToUpdateBiometricSettings.tr,
       );
     }
   }
@@ -269,29 +267,30 @@ class ProfilePage extends ConsumerWidget {
       await ref.read(authControllerProvider.notifier).logout();
       AppNavigator.go(AppRoutes.login);
     } catch (error) {
-      Common.quickToast(
-        type: ToastificationType.error,
-        title: AppTranslationKey.error.tr,
-        description: Common.parseApiError(error),
+      AppMessage.error(
+        AppKeys.navigatorKey.currentContext!,
+        AppTranslationKey.error.tr,
       );
     }
   }
 
   Future<void> _deleteAccount(WidgetRef ref) async {
     final confirmed = await AppNavigator.dialog<bool>(
-      AlertDialog(
+      child: AlertDialog(
         title: Text(AppTranslationKey.deleteAccount.tr),
         content: const Text(
           'Account deletion is not available in this version. Contact support for assistance.',
         ),
         actions: [
           TextButton(
-            onPressed: () => AppNavigator.pop(result: false),
+            onPressed: () => AppNavigator.pop(false),
             child: Text(AppTranslationKey.cancel.tr),
           ),
         ],
       ),
     );
+
+    if (confirmed == true) return;
     if (confirmed == true) return;
   }
 
@@ -304,10 +303,9 @@ class ProfilePage extends ConsumerWidget {
         await review.openStoreListing();
       }
     } catch (_) {
-      Common.quickToast(
-        type: ToastificationType.error,
-        title: AppTranslationKey.error.tr,
-        description: AppTranslationKey.ratingFailed.tr,
+      AppMessage.error(
+        AppKeys.navigatorKey.currentContext!,
+        AppTranslationKey.ratingFailed.tr,
       );
     }
   }
@@ -325,20 +323,12 @@ class ProfilePage extends ConsumerWidget {
           AppTranslationKey.updateDownloadingInBackground.tr,
         AppUpdateResult.upToDate => AppTranslationKey.appIsUpToDate.tr,
       };
-      Common.quickToast(
-        type: result == AppUpdateResult.downloading
-            ? ToastificationType.success
-            : ToastificationType.info,
-        title: result == AppUpdateResult.downloading
-            ? AppTranslationKey.downloadingUpdate.tr
-            : AppTranslationKey.update.tr,
-        description: description,
-      );
+
+      AppMessage.info(AppKeys.navigatorKey.currentContext!, description);
     } catch (_) {
-      Common.quickToast(
-        type: ToastificationType.error,
-        title: AppTranslationKey.error.tr,
-        description: AppTranslationKey.failedToCheckForUpdates.tr,
+      AppMessage.error(
+        AppKeys.navigatorKey.currentContext!,
+        AppTranslationKey.failedToCheckForUpdates.tr,
       );
     }
   }
@@ -362,7 +352,7 @@ class ProfilePage extends ConsumerWidget {
 
   void _showChangePasswordBottomSheet() {
     AppNavigator.bottomSheet(
-      const ChangePasswordBottomSheet(),
+      child: const ChangePasswordBottomSheet(),
       backgroundColor: AppNavigator.theme.colorScheme.surface,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),

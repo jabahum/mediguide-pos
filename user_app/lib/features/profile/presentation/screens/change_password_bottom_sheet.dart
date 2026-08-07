@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:user_app/core/config/app_keys.dart';
 import 'package:user_app/core/utils/app_extensions.dart';
 import 'package:user_app/app/router/app_navigator.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'package:form_builder_validators/form_builder_validators.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
-import 'package:toastification/toastification.dart';
 import 'package:user_app/core/constants/app_spacing.dart';
-import 'package:user_app/core/utils/common.dart';
+import 'package:user_app/core/utils/app_message.dart';
 import 'package:user_app/core/utils/responsive.dart';
 import 'package:user_app/core/widgets/app_button.dart';
 import 'package:user_app/features/authentication/presentation/controllers/change_password_controller.dart';
@@ -57,12 +57,12 @@ class _ChangePasswordBottomSheetState
             newPasswordConfirm: values['confirmPassword']?.toString() ?? '',
           );
       if (!changed || !mounted) return;
-      Common.quickToast(
-        type: ToastificationType.success,
-        title: AppTranslationKey.success.tr,
-        description: AppTranslationKey.passwordChangedSuccessfully.tr,
+
+      AppMessage.success(
+        AppKeys.navigatorKey.currentContext!,
+        AppTranslationKey.passwordChangedSuccessfully.tr,
       );
-      AppNavigator.pop(result: true);
+      AppNavigator.pop(true);
     } catch (error) {
       if (!mounted) return;
       var message = AppTranslationKey.passwordChangeError.tr;
@@ -74,11 +74,8 @@ class _ChangePasswordBottomSheetState
       } else if (detail.contains('network') || detail.contains('connection')) {
         message = AppTranslationKey.networkError.tr;
       }
-      Common.quickToast(
-        type: ToastificationType.error,
-        title: AppTranslationKey.error.tr,
-        description: message,
-      );
+
+      AppMessage.error(AppKeys.navigatorKey.currentContext!, message);
     }
   }
 

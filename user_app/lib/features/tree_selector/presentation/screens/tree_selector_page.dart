@@ -22,7 +22,7 @@ class TreeSelectorPage extends ConsumerWidget {
     required TreeSelectorConfig config,
   }) async {
     return AppNavigator.dialog<TreeSelectionResult>(
-      Dialog.fullscreen(child: TreeSelectorPage(config: config)),
+      child: Dialog.fullscreen(child: TreeSelectorPage(config: config)),
       barrierDismissible: config.barrierDismissible,
     );
   }

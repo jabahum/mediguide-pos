@@ -490,7 +490,7 @@ class GuidelinesIndexerController extends ChangeNotifier {
   void openIndex(GuidelineIndex index) {
     AppNavigator.pushNamed(
       '/guidelines',
-      arguments: {
+      extra: {
         'filterType': 'index',
         'indexItemId': index.id,
         'title': index.title,

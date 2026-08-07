@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:infinite_scroll_pagination/infinite_scroll_pagination.dart';
+import 'package:user_app/core/config/app_keys.dart';
+import 'package:user_app/core/utils/app_message.dart';
 
 import 'package:user_app/shared/models/models.dart';
 import 'package:user_app/shared/models/filter_models.dart';
@@ -69,7 +71,7 @@ class ToolsController extends ChangeNotifier {
           : const ['active'];
       final result = await _repository.list(
         page: page,
-        perPage: pageSize,
+        perPage: AppConstants.pageSize,
         search: searchQuery,
         types: types,
         statuses: statuses,
@@ -78,8 +80,8 @@ class ToolsController extends ChangeNotifier {
       );
 
       return result.items;
-    } catch (e) {
-      Common.quickToast(title: 'Failed to load calculators');
+    } catch (error) {
+      AppMessage.error(AppKeys.navigatorKey.currentContext!, '$error');
       rethrow;
     }
   }

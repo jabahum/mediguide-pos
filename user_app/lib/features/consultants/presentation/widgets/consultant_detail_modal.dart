@@ -1,13 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:user_app/core/config/app_keys.dart';
 import 'package:user_app/core/utils/app_extensions.dart';
 import 'package:user_app/app/router/app_navigator.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'package:user_app/core/utils/app_message.dart';
 
 import 'package:user_app/shared/models/enum_extensions.dart';
 import 'package:user_app/features/consultants/data/models/consultant.dart';
 import 'package:user_app/app/router/app_router.dart';
 import 'package:user_app/core/constants/app_spacing.dart';
-import 'package:user_app/core/utils/common.dart';
 import 'package:user_app/core/widgets/app_button.dart';
 import 'package:user_app/shared/widgets/section_group.dart';
 import 'package:user_app/shared/widgets/user_avatar.dart';
@@ -175,15 +176,17 @@ class ConsultantDetailModal extends StatelessWidget {
     final userAccount = consultant.userAccount;
 
     if (userAccount == null) {
-      Common.quickToast(
-        title: 'chatUnavailable'.tr,
-        description: 'consultantChatUnavailable'.tr,
+      AppMessage.error(
+        AppKeys.navigatorKey.currentContext!,
+        'consultantChatUnavailable'.tr,
       );
+
       return;
     }
 
     AppNavigator.pop();
-    AppNavigator.pushNamed(AppRoutes.chatInterface, arguments: userAccount);
+
+    AppNavigator.push(AppRoutes.chat(userAccount.id), extra: userAccount);
   }
 }
 

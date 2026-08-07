@@ -157,7 +157,7 @@ class _GuidelinesPageState extends ConsumerState<GuidelinesPage> {
   }
 
   void _openGuideline(Guideline guideline) {
-    AppNavigator.pushNamed(AppRoutes.readGuideline, arguments: guideline);
+    AppNavigator.push(AppRoutes.guideline(guideline.id), extra: guideline);
   }
 
   IconData _getEmptyIcon(GuidelinesController controller) {

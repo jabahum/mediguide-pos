@@ -2,9 +2,12 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:user_app/core/config/app_keys.dart';
+import 'package:user_app/core/constants/app_constants.dart';
 import 'package:user_app/core/utils/app_extensions.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:toastification/toastification.dart';
+import 'package:user_app/core/utils/app_message.dart';
 
 import 'package:user_app/features/ai_assistant/data/models/ai_context.dart';
 import 'package:user_app/shared/models/models.dart';
@@ -192,13 +195,14 @@ class _ReadGuidelinePageState extends ConsumerState<ReadGuidelinePage> {
     final success = await controller.toggleBookmark();
     if (!mounted) return;
     if (success) {
-      Common.quickToast(
-        title: wasBookmarked ? 'Bookmark removed' : 'Guideline bookmarked',
+      AppMessage.success(
+        AppKeys.navigatorKey.currentContext!,
+        wasBookmarked ? 'Bookmark removed' : 'Guideline bookmarked',
       );
     } else {
-      Common.quickToast(
-        title: 'Failed to update bookmark',
-        type: ToastificationType.error,
+      AppMessage.error(
+        AppKeys.navigatorKey.currentContext!,
+        'Failed to update bookmark',
       );
     }
   }

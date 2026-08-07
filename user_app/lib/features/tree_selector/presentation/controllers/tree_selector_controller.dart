@@ -3,10 +3,13 @@ import 'dart:async';
 import 'package:animated_tree_view/tree_view/tree_node.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:user_app/core/config/app_keys.dart';
+import 'package:user_app/core/constants/app_constants.dart';
 import 'package:user_app/core/utils/app_extensions.dart';
 
 import 'package:user_app/core/network/api_client.dart';
 import 'package:user_app/app/providers/app_providers.dart';
+import 'package:user_app/core/utils/app_message.dart';
 import 'package:user_app/l10n/app_translations.dart';
 import 'package:user_app/core/utils/common.dart';
 import 'package:user_app/features/tree_selector/data/models/tree_selector_models.dart';
@@ -63,9 +66,10 @@ class TreeSelectorController extends ChangeNotifier {
       _addChildrenBatch(rootTreeNode, nodes);
     } catch (e) {
       hasLoadError = true;
-      Common.quickToast(
-        title: AppTranslationKey.error,
-        description: 'failedToLoadData'.tr,
+
+      AppMessage.error(
+        AppKeys.navigatorKey.currentContext!,
+        'Failed to load data: $e',
       );
     } finally {
       isLoading = false;
@@ -114,9 +118,9 @@ class TreeSelectorController extends ChangeNotifier {
 
       _addChildrenBatch(node, children);
     } catch (e) {
-      Common.quickToast(
-        title: AppTranslationKey.error,
-        description: 'errorLoadingMore'.tr,
+      AppMessage.error(
+        AppKeys.navigatorKey.currentContext!,
+        'Failed to load more data: $e',
       );
     } finally {
       loadingNodes.remove(node.key);

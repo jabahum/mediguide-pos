@@ -92,7 +92,7 @@ class LanguageBottomSheet extends ConsumerWidget {
 
   static void show() {
     AppNavigator.bottomSheet(
-      const LanguageBottomSheet(),
+      child: const LanguageBottomSheet(),
       backgroundColor: AppNavigator.theme.colorScheme.surface,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),

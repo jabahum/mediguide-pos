@@ -2,9 +2,11 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:user_app/core/config/app_keys.dart';
 import 'package:user_app/core/utils/app_extensions.dart';
 import 'package:user_app/app/router/app_navigator.dart';
 import 'package:infinite_scroll_pagination/infinite_scroll_pagination.dart';
+import 'package:user_app/core/utils/app_message.dart';
 import 'package:user_app/shared/models/filter_models.dart';
 import 'package:user_app/shared/widgets/generic_filter_bottom_sheet.dart';
 
@@ -13,7 +15,6 @@ import 'package:user_app/features/facilities/data/repositories/facility_reposito
 import 'package:user_app/app/providers/app_providers.dart';
 import 'package:user_app/app/router/app_router.dart';
 import 'package:user_app/core/constants/app_constants.dart';
-import 'package:user_app/core/utils/common.dart';
 
 final healthInfrastructureControllerProvider = ChangeNotifierProvider
     .autoDispose
@@ -79,7 +80,7 @@ class HealthInfrastructureController extends ChangeNotifier {
     try {
       final result = await _repository.listFacilities(
         page: pageKey,
-        perPage: pageSize,
+        perPage: AppConstants.pageSize,
         search: _filters.query,
         regionId: _filters.regionId,
         districtId: _filters.districtId,
@@ -89,7 +90,7 @@ class HealthInfrastructureController extends ChangeNotifier {
 
       return result.items;
     } catch (e) {
-      Common.quickToast(title: 'errorLoadingFacilities'.tr);
+      AppMessage.error(AppKeys.navigatorKey.currentContext!, '$e');
       rethrow;
     }
   }
@@ -227,7 +228,7 @@ class HealthInfrastructureController extends ChangeNotifier {
 
   void goToFacilityDetail(HealthFacility facility) {
     unawaited(_recordUsage(facility.id));
-    AppNavigator.pushNamed(AppRoutes.healthFacility, arguments: facility);
+    AppNavigator.pushNamed(AppRoutes.healthFacilities, extra: facility);
   }
 
   Future<void> _recordUsage(String id) async {

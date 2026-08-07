@@ -244,12 +244,12 @@ class HomePage extends ConsumerWidget {
   void _openAllGuidelines() {
     AppNavigator.pushNamed(
       AppRoutes.guidelines,
-      arguments: {'filterType': 'all', 'title': 'All Guidelines'},
+      extra: {'filterType': 'all', 'title': 'All Guidelines'},
     );
   }
 
   void _openGuideline(Guideline guideline) {
-    AppNavigator.pushNamed(AppRoutes.readGuideline, arguments: guideline);
+    AppNavigator.push(AppRoutes.guideline(guideline.id), extra: guideline);
   }
 
   Future<void> _continueReading(WidgetRef ref, ReadingProgress progress) async {
@@ -271,7 +271,7 @@ class HomePage extends ConsumerWidget {
         subtitle: 'Drug references',
         color: Colors.blue,
         onTap: () async {
-          AppNavigator.pushNamed(AppRoutes.drugIndex);
+          await AppNavigator.push(AppRoutes.drugIndex);
         },
       ),
       _HomeQuickAction(
@@ -280,7 +280,7 @@ class HomePage extends ConsumerWidget {
         subtitle: 'Decision support',
         color: Colors.purple,
         onTap: () async {
-          AppNavigator.pushNamed(AppRoutes.tools);
+          await AppNavigator.push(AppRoutes.tools);
         },
       ),
       _HomeQuickAction(
@@ -296,12 +296,12 @@ class HomePage extends ConsumerWidget {
             ),
           );
 
-          if (result != null) {
-            AppNavigator.pushNamed(
-              AppRoutes.consultants,
-              arguments: {'treeFilters': result.filters},
-            );
-          }
+          if (result == null) return;
+
+          await AppNavigator.push(
+            AppRoutes.consultants,
+            extra: {'treeFilters': result.filters},
+          );
         },
       ),
       _HomeQuickAction(
@@ -317,12 +317,12 @@ class HomePage extends ConsumerWidget {
             ),
           );
 
-          if (result != null) {
-            AppNavigator.pushNamed(
-              AppRoutes.healthInfrastructure,
-              arguments: {'treeFilters': result.filters},
-            );
-          }
+          if (result == null) return;
+
+          await AppNavigator.push(
+            AppRoutes.healthInfrastructure,
+            extra: {'treeFilters': result.filters},
+          );
         },
       ),
     ];
@@ -331,7 +331,7 @@ class HomePage extends ConsumerWidget {
       context: context,
       showDragHandle: true,
       useSafeArea: true,
-      builder: (context) => _QuickActionsSheet(actions: actions),
+      builder: (_) => _QuickActionsSheet(actions: actions),
     );
   }
 }

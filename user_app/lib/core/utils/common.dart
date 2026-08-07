@@ -1,36 +1,14 @@
 import 'package:flutter/material.dart';
-import 'package:toastification/toastification.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:user_app/core/config/app_keys.dart';
+import 'package:user_app/core/constants/app_constants.dart';
+import 'package:user_app/core/utils/app_message.dart';
 
 class Common {
   Common._();
 
   static void dismissKeyboard() =>
       FocusManager.instance.primaryFocus?.unfocus();
-
-  static void quickToast({
-    ToastificationType type = ToastificationType.success,
-    ToastificationStyle style = ToastificationStyle.flat,
-    required String title,
-    String? description,
-    Icon? icon,
-    Color? primaryColor,
-    Color? backgroundColor,
-    Color? foregroundColor,
-  }) {
-    toastification.show(
-      type: type,
-      style: style,
-      autoCloseDuration: const Duration(seconds: 5),
-      title: Text(title),
-      description: description != null ? Text(description) : null,
-      alignment: Alignment.topRight,
-      animationDuration: const Duration(milliseconds: 300),
-      animationBuilder: (context, animation, alignment, child) {
-        return FadeTransition(opacity: animation, child: child);
-      },
-    );
-  }
 
   static String parseApiError(Object error) {
     final message = error.toString().trim();
@@ -54,17 +32,15 @@ class Common {
       if (await canLaunchUrl(phoneUri)) {
         await launchUrl(phoneUri);
       } else {
-        quickToast(
-          type: ToastificationType.error,
-          title: 'Unable to make call',
-          description: 'Phone app is not available on this device',
+        AppMessage.error(
+          AppKeys.navigatorKey.currentContext!,
+          'Phone app is not available on this device',
         );
       }
     } catch (e) {
-      quickToast(
-        type: ToastificationType.error,
-        title: 'Call failed',
-        description: 'Failed to initiate call: $e',
+      AppMessage.error(
+        AppKeys.navigatorKey.currentContext!,
+        'Failed to initiate call: $e',
       );
     }
   }
@@ -94,17 +70,15 @@ class Common {
       if (await canLaunchUrl(emailUri)) {
         await launchUrl(emailUri);
       } else {
-        quickToast(
-          type: ToastificationType.error,
-          title: 'Unable to send email',
-          description: 'Email app is not available on this device',
+        AppMessage.error(
+          AppKeys.navigatorKey.currentContext!,
+          'Email app is not available on this device',
         );
       }
     } catch (e) {
-      quickToast(
-        type: ToastificationType.error,
-        title: 'Email failed',
-        description: 'Failed to open email app: $e',
+      AppMessage.error(
+        AppKeys.navigatorKey.currentContext!,
+        'Failed to open email app: $e',
       );
     }
   }

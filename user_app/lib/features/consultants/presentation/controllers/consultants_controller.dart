@@ -2,8 +2,10 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:user_app/core/config/app_keys.dart';
 import 'package:user_app/core/utils/app_extensions.dart';
 import 'package:infinite_scroll_pagination/infinite_scroll_pagination.dart';
+import 'package:user_app/core/utils/app_message.dart';
 import 'package:user_app/shared/models/filter_models.dart';
 
 import 'package:user_app/shared/models/models.dart';
@@ -70,7 +72,7 @@ class ConsultantsController extends ChangeNotifier {
     try {
       final result = await _repository.list(
         page: pageKey,
-        perPage: pageSize,
+        perPage: AppConstants.pageSize,
         search: searchQuery,
         status: showOnlineOnly ? 'active' : null,
         specialty: selectedSpecialty,
@@ -83,7 +85,8 @@ class ConsultantsController extends ChangeNotifier {
 
       return result.items;
     } catch (e) {
-      Common.quickToast(title: 'errorLoadingConsultants'.tr);
+      AppMessage.error(AppKeys.navigatorKey.currentContext!, '$e');
+
       rethrow;
     }
   }
@@ -256,7 +259,7 @@ class ConsultantsController extends ChangeNotifier {
       isLoadingFilters = true;
 
       final result = await _repository.list(
-        perPage: 100,
+        perPage: AppConstants.pageSize,
         status: 'active',
         sort: 'name',
         order: 'asc',
@@ -280,7 +283,11 @@ class ConsultantsController extends ChangeNotifier {
               .toList()
             ..sort();
     } catch (e) {
-      if (!_disposed) Common.quickToast(title: 'errorLoadingFilters'.tr);
+      if (!_disposed)
+        AppMessage.error(
+          AppKeys.navigatorKey.currentContext!,
+          'errorLoadingFilters'.tr,
+        );
     } finally {
       isLoadingFilters = false;
       if (!_disposed) notifyListeners();

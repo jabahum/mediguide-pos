@@ -2,8 +2,10 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:user_app/core/config/app_keys.dart';
 import 'package:user_app/core/utils/app_extensions.dart';
 import 'package:infinite_scroll_pagination/infinite_scroll_pagination.dart';
+import 'package:user_app/core/utils/app_message.dart';
 import 'package:user_app/shared/models/filter_models.dart';
 
 import 'package:user_app/shared/models/models.dart';
@@ -436,7 +438,10 @@ class GuidelinesController extends ChangeNotifier {
 
     final emergencyIds = _resolveEmergencyCategoryIds();
     if (emergencyIds.isEmpty) {
-      Common.quickToast(title: 'Emergency guidelines category not found');
+      AppMessage.error(
+        AppKeys.navigatorKey.currentContext!,
+        'Emergency guidelines category not found',
+      );
       return;
     }
 
@@ -474,7 +479,7 @@ class GuidelinesController extends ChangeNotifier {
       };
       final result = await _contentRepository.guidelines(
         page: pageKey,
-        perPage: pageSize,
+        perPage: AppConstants.pageSize,
         search: searchQuery,
         published: true,
         status: 'published',
@@ -490,8 +495,10 @@ class GuidelinesController extends ChangeNotifier {
 
       return result.items;
     } catch (e) {
-      debugPrint('Failed to load guidelines: $e');
-      Common.quickToast(title: 'errorLoadingGuidelines'.tr);
+      AppMessage.error(
+        AppKeys.navigatorKey.currentContext!,
+        'Failed to load guidelines: $e',
+      );
       rethrow;
     }
   }

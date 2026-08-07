@@ -346,7 +346,7 @@ final class RepositoryGlobalSearchDataSource implements GlobalSearchDataSource {
             subtitle: calculator.type.name,
             description: _nullableHtml(calculator.description),
             category: category,
-            route: AppRoutes.useCalculator,
+            route: AppRoutes.calculators,
             routeArguments: {'calculatorId': calculator.id},
             item: calculator,
           ),

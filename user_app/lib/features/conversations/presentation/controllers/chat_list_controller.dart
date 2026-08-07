@@ -2,8 +2,11 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:user_app/core/config/app_keys.dart';
+import 'package:user_app/core/constants/app_constants.dart';
 import 'package:user_app/core/utils/app_extensions.dart';
 import 'package:infinite_scroll_pagination/infinite_scroll_pagination.dart';
+import 'package:user_app/core/utils/app_message.dart';
 
 import 'package:user_app/shared/models/filter_models.dart';
 import 'package:user_app/shared/models/models.dart';
@@ -66,10 +69,11 @@ class ChatListController extends ChangeNotifier {
           .where((conversation) => _applyLocalFilters(conversation, userId))
           .toList();
     } catch (error) {
-      Common.quickToast(
-        title: 'Failed to load conversations',
-        description: error.toString(),
+      AppMessage.error(
+        AppKeys.navigatorKey.currentContext!,
+        'errorLoadingConversations'.tr,
       );
+
       rethrow;
     }
   }

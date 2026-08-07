@@ -2,14 +2,14 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:toastification/toastification.dart';
+import 'package:user_app/core/config/app_keys.dart';
+import 'package:user_app/core/utils/app_message.dart';
 
 import 'package:user_app/features/conversations/data/models/message.dart';
 import 'package:user_app/features/authentication/data/models/user.dart';
 import 'package:user_app/features/conversations/data/repositories/conversation_repository.dart';
 import 'package:user_app/features/authentication/presentation/controllers/auth_controller.dart';
 import 'package:user_app/app/providers/app_providers.dart';
-import 'package:user_app/core/utils/common.dart';
 
 final chatInterfaceControllerProvider = ChangeNotifierProvider.autoDispose
     .family<ChatInterfaceController, User>((ref, otherUser) {
@@ -61,11 +61,7 @@ class ChatInterfaceController extends ChangeNotifier {
       await loadMessages(showLoading: false);
       startPolling();
     } catch (error) {
-      Common.quickToast(
-        type: ToastificationType.error,
-        title: 'Failed to load conversation',
-        description: error.toString(),
-      );
+      AppMessage.error(AppKeys.navigatorKey.currentContext!, '$error');
     } finally {
       isLoading = false;
       _notify();
@@ -94,11 +90,7 @@ class ChatInterfaceController extends ChangeNotifier {
         ..addAll(loaded);
       _notify();
     } catch (error) {
-      Common.quickToast(
-        type: ToastificationType.error,
-        title: 'Failed to load messages',
-        description: error.toString(),
-      );
+      AppMessage.error(AppKeys.navigatorKey.currentContext!, '$error');
     } finally {
       _refreshing = false;
       if (showLoading) isLoading = false;
@@ -119,11 +111,8 @@ class ChatInterfaceController extends ChangeNotifier {
       _notify();
       return true;
     } catch (error) {
-      Common.quickToast(
-        type: ToastificationType.error,
-        title: 'Failed to send message',
-        description: error.toString(),
-      );
+      AppMessage.error(AppKeys.navigatorKey.currentContext!, '$error');
+
       return false;
     }
   }
@@ -175,11 +164,7 @@ class ChatInterfaceController extends ChangeNotifier {
       messages[index] = record;
       _notify();
     } catch (error) {
-      Common.quickToast(
-        type: ToastificationType.error,
-        title: 'Failed to add reaction',
-        description: error.toString(),
-      );
+      AppMessage.error(AppKeys.navigatorKey.currentContext!, '$error');
     }
   }
 
@@ -197,11 +182,7 @@ class ChatInterfaceController extends ChangeNotifier {
       _notify();
       return true;
     } catch (error) {
-      Common.quickToast(
-        type: ToastificationType.error,
-        title: 'Failed to send reply',
-        description: error.toString(),
-      );
+      AppMessage.error(AppKeys.navigatorKey.currentContext!, '$error');
       return false;
     }
   }

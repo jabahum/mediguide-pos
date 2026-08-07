@@ -157,9 +157,9 @@ class ChatListPage extends ConsumerWidget {
   ) {
     final otherUser = controller.getOtherParticipant(conversation);
 
-    if (otherUser != null) {
-      AppNavigator.pushNamed(AppRoutes.chatInterface, arguments: otherUser);
-    }
+    if (otherUser == null) return;
+
+    AppNavigator.push(AppRoutes.chat(conversation.id), extra: otherUser);
   }
 }
 

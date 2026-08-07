@@ -1,26 +1,27 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:user_app/core/config/app_keys.dart';
 import 'package:user_app/core/utils/app_extensions.dart';
 import 'package:user_app/app/router/app_navigator.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'package:form_builder_validators/form_builder_validators.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
-import 'package:toastification/toastification.dart';
+import 'package:user_app/core/utils/app_message.dart';
 import 'package:user_app/features/authentication/presentation/controllers/auth_controller.dart';
 import 'package:user_app/features/profile/presentation/controllers/edit_profile_controller.dart';
 import 'package:user_app/app/providers/app_providers.dart';
 import 'package:user_app/core/constants/app_spacing.dart';
 import 'package:user_app/core/utils/loading.dart';
 import 'package:user_app/core/utils/responsive.dart';
-import 'package:user_app/core/utils/common.dart';
 import 'package:user_app/shared/widgets/user_avatar.dart';
 
 class EditProfileDialog extends ConsumerStatefulWidget {
   const EditProfileDialog({super.key});
 
   static Future<bool?> show() async {
-    return await AppNavigator.dialog<bool>(
-      EditProfileDialog(),
+    return AppNavigator.dialog<bool>(
+      child: EditProfileDialog(),
+
       barrierDismissible: false,
     );
   }
@@ -34,27 +35,38 @@ class _EditProfileDialogState extends ConsumerState<EditProfileDialog> {
 
   Future<void> _close() async {
     final hasChanges = ref.read(editProfileControllerProvider).hasChanges;
+
     if (!hasChanges) {
       AppNavigator.pop();
+
       return;
     }
+
     final discard = await AppNavigator.dialog<bool>(
-      AlertDialog(
+      child: AlertDialog(
         title: Text(AppTranslationKey.discardChanges.tr),
+
         content: Text(AppTranslationKey.discardChangesConfirmation.tr),
+
         actions: [
           TextButton(
-            onPressed: () => AppNavigator.pop(result: false),
+            onPressed: () => AppNavigator.pop(false),
+
             child: Text(AppTranslationKey.cancel.tr),
           ),
+
           TextButton(
-            onPressed: () => AppNavigator.pop(result: true),
+            onPressed: () => AppNavigator.pop(true),
+
             child: Text(AppTranslationKey.discard.tr),
           ),
         ],
       ),
     );
-    if (discard == true) AppNavigator.pop();
+
+    if (discard == true) {
+      AppNavigator.pop();
+    }
   }
 
   Future<void> _saveProfile() async {
@@ -68,18 +80,18 @@ class _EditProfileDialogState extends ConsumerState<EditProfileDialog> {
           .read(editProfileControllerProvider.notifier)
           .save(_formKey.currentState!.value);
       if (!saved || !mounted) return;
-      Common.quickToast(
-        type: ToastificationType.success,
-        title: AppTranslationKey.profileUpdated.tr,
-        description: AppTranslationKey.profileUpdatedSuccessfully.tr,
+
+      AppMessage.success(
+        AppKeys.navigatorKey.currentContext!,
+        AppTranslationKey.profileUpdatedSuccessfully.tr,
       );
-      AppNavigator.pop(result: true);
+      AppNavigator.pop(true);
     } catch (_) {
       if (!mounted) return;
-      Common.quickToast(
-        type: ToastificationType.error,
-        title: AppTranslationKey.error.tr,
-        description: AppTranslationKey.failedToUpdateProfile.tr,
+
+      AppMessage.error(
+        AppKeys.navigatorKey.currentContext!,
+        AppTranslationKey.failedToUpdateProfile.tr,
       );
     }
   }
@@ -536,10 +548,9 @@ class _EditProfileDialogState extends ConsumerState<EditProfileDialog> {
   }
 
   void _showAvatarUnsupported() {
-    Common.quickToast(
-      type: ToastificationType.info,
-      title: 'Avatar upload unavailable',
-      description: 'A typed profile-photo upload endpoint is required.',
+    AppMessage.info(
+      AppKeys.navigatorKey.currentContext!,
+      'A typed profile-photo upload endpoint is required.',
     );
   }
 }

@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:toastification/toastification.dart';
+import 'package:user_app/core/config/app_keys.dart';
+import 'package:user_app/core/utils/app_message.dart';
 import 'package:user_app/features/content/data/repositories/content_reference_repository.dart';
 import 'package:user_app/app/providers/app_providers.dart';
 import 'package:user_app/features/content/data/models/generic_page.dart';
-import 'package:user_app/core/utils/common.dart';
 
 final genericViewerControllerProvider = ChangeNotifierProvider.autoDispose(
   (ref) => GenericViewerController(ref.watch(genericPageRepositoryProvider)),
@@ -57,12 +57,8 @@ class GenericViewerController extends ChangeNotifier {
 
       page = await _repository.byKey(pageKey);
       _setupSections();
-    } catch (e) {
-      Common.quickToast(
-        title: 'Failed to load page',
-        description: 'Please check your connection and try again.',
-        type: ToastificationType.error,
-      );
+    } catch (error) {
+      AppMessage.error(AppKeys.navigatorKey.currentContext!, '$error');
     } finally {
       isLoading = false;
       _notify();
@@ -121,9 +117,9 @@ class GenericViewerController extends ChangeNotifier {
   void sharePage() {
     if (page == null) return;
 
-    Common.quickToast(
-      title: 'Share feature',
-      description: 'Sharing ${page!.title}...',
+    AppMessage.info(
+      AppKeys.navigatorKey.currentContext!,
+      'Sharing page: ${page!.title}',
     );
     // TODO: Implement actual share functionality
   }

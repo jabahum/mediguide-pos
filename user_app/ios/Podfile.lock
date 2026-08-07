@@ -45,6 +45,9 @@ PODS:
     - OrderedSet (~> 6.0.3)
   - flutter_keyboard_visibility_temp_fork (0.0.1):
     - Flutter
+  - flutter_secure_storage_darwin (10.0.0):
+    - Flutter
+    - FlutterMacOS
   - in_app_review (2.0.0):
     - Flutter
   - local_auth_darwin (0.0.1):
@@ -69,6 +72,7 @@ DEPENDENCIES:
   - Flutter (from `Flutter`)
   - flutter_inappwebview_ios (from `.symlinks/plugins/flutter_inappwebview_ios/ios`)
   - flutter_keyboard_visibility_temp_fork (from `.symlinks/plugins/flutter_keyboard_visibility_temp_fork/ios`)
+  - flutter_secure_storage_darwin (from `.symlinks/plugins/flutter_secure_storage_darwin/darwin`)
   - in_app_review (from `.symlinks/plugins/in_app_review/ios`)
   - local_auth_darwin (from `.symlinks/plugins/local_auth_darwin/darwin`)
   - shared_preferences_foundation (from `.symlinks/plugins/shared_preferences_foundation/darwin`)
@@ -94,6 +98,8 @@ EXTERNAL SOURCES:
     :path: ".symlinks/plugins/flutter_inappwebview_ios/ios"
   flutter_keyboard_visibility_temp_fork:
     :path: ".symlinks/plugins/flutter_keyboard_visibility_temp_fork/ios"
+  flutter_secure_storage_darwin:
+    :path: ".symlinks/plugins/flutter_secure_storage_darwin/darwin"
   in_app_review:
     :path: ".symlinks/plugins/in_app_review/ios"
   local_auth_darwin:
@@ -113,6 +119,7 @@ SPEC CHECKSUMS:
   Flutter: cabc95a1d2626b1b06e7179b784ebcf0c0cde467
   flutter_inappwebview_ios: 6f63631e2c62a7c350263b13fa5427aedefe81d4
   flutter_keyboard_visibility_temp_fork: 8a8809c4129e31d25fca77446e0f3fd548122ced
+  flutter_secure_storage_darwin: 557817588b80e60213cbecb573c45c76b788018d
   in_app_review: 436034b18594851a7328d7f1c2ed5ec235b79cfc
   local_auth_darwin: 63c73d6d28cc3e239be2b6aa460ea6e317cd5100
   OrderedSet: e539b66b644ff081c73a262d24ad552a69be3a94

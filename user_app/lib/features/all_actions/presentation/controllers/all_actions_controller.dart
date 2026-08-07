@@ -1,16 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:user_app/core/config/app_keys.dart';
 import 'package:user_app/core/utils/app_extensions.dart';
 import 'package:user_app/app/router/app_navigator.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
-import 'package:toastification/toastification.dart';
+import 'package:user_app/core/utils/app_message.dart';
 
 import 'package:user_app/features/content/data/repositories/content_reference_repository.dart';
 import 'package:user_app/app/providers/app_providers.dart';
 import 'package:user_app/features/content/data/models/generic_page.dart';
 import 'package:user_app/app/router/app_router.dart';
 import 'package:user_app/l10n/app_translations.dart';
-import 'package:user_app/core/utils/common.dart';
 
 enum ActionCategory {
   clinicalTools,
@@ -87,7 +87,7 @@ class AllActionsController extends ChangeNotifier {
         color: Colors.teal,
         category: ActionCategory.clinicalTools,
         onTap: () {
-          AppNavigator.pushNamed(AppRoutes.tools, arguments: {'initialTab': 2});
+          AppNavigator.pushNamed(AppRoutes.tools, extra: {'initialTab': 2});
         },
       ),
 
@@ -135,10 +135,9 @@ class AllActionsController extends ChangeNotifier {
       final result = await _repository.list(perPage: 50);
       genericPages = result.items;
     } catch (e) {
-      Common.quickToast(
-        title: 'Failed to load pages',
-        description: 'Could not fetch additional pages.',
-        type: ToastificationType.error,
+      AppMessage.error(
+        AppKeys.navigatorKey.currentContext!,
+        'errorLoadingPages'.tr,
       );
     } finally {
       isLoadingPages = false;
@@ -157,7 +156,7 @@ class AllActionsController extends ChangeNotifier {
   }
 
   void openGenericPage(GenericPage page) {
-    AppNavigator.pushNamed(AppRoutes.genericViewer, arguments: page);
+    AppNavigator.pushNamed(AppRoutes.genericViewer, extra: page);
   }
 
   Future<void> reloadData() async {

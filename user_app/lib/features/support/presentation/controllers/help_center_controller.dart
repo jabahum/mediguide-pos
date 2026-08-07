@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:toastification/toastification.dart';
 import 'package:infinite_scroll_pagination/infinite_scroll_pagination.dart';
+import 'package:user_app/core/config/app_keys.dart';
+import 'package:user_app/core/utils/app_message.dart';
 import 'package:user_app/shared/models/models.dart';
 import 'package:user_app/features/support/data/repositories/support_repository.dart';
 import 'package:user_app/app/providers/app_providers.dart';
@@ -88,7 +90,7 @@ class HelpCenterController extends ChangeNotifier {
     return await searchMyTickets(
       query: searchQuery,
       page: pageKey,
-      perPage: pageSize,
+      perPage: AppConstants.pageSize,
       statusFilter: getStatusFilter(),
       priorityFilter: getPriorityFilter(),
       categoryFilter: selectedCategory == 'all' ? null : selectedCategory,
@@ -157,17 +159,15 @@ class HelpCenterController extends ChangeNotifier {
       tickets.insert(0, ticket);
       refreshTickets();
 
-      Common.quickToast(
-        type: ToastificationType.success,
-        title: 'Success',
-        description: 'Support ticket created successfully',
+      AppMessage.success(
+        AppKeys.navigatorKey.currentContext!,
+        'Support ticket created successfully',
       );
       return true;
     } catch (e) {
-      Common.quickToast(
-        type: ToastificationType.error,
-        title: 'Error',
-        description: 'Failed to create ticket: $e',
+      AppMessage.error(
+        AppKeys.navigatorKey.currentContext!,
+        'Failed to create ticket: $e',
       );
       return false;
     } finally {
@@ -190,10 +190,9 @@ class HelpCenterController extends ChangeNotifier {
       final replies = await getMyTicketReplies(ticketId: ticketId);
       currentTicketReplies = replies;
     } catch (e) {
-      Common.quickToast(
-        type: ToastificationType.error,
-        title: 'Error',
-        description: 'Failed to load ticket details: $e',
+      AppMessage.error(
+        AppKeys.navigatorKey.currentContext!,
+        'Failed to load ticket details: $e',
       );
     } finally {
       isLoading = false;
@@ -217,18 +216,17 @@ class HelpCenterController extends ChangeNotifier {
 
       currentTicketReplies.add(reply);
 
-      Common.quickToast(
-        type: ToastificationType.success,
-        title: 'Success',
-        description: 'Reply added successfully',
+      AppMessage.success(
+        AppKeys.navigatorKey.currentContext!,
+        'Reply added successfully',
       );
       return true;
     } catch (e) {
-      Common.quickToast(
-        type: ToastificationType.error,
-        title: 'Error',
-        description: 'Failed to add reply: $e',
+      AppMessage.error(
+        AppKeys.navigatorKey.currentContext!,
+        'Failed to add reply: $e',
       );
+
       return false;
     } finally {
       isAddingReply = false;

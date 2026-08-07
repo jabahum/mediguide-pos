@@ -90,7 +90,7 @@ class AiContextButton extends StatelessWidget {
   void _navigateToAI() {
     AppNavigator.pushNamed(
       AppRoutes.aiAssistant,
-      arguments: {'aiContext': context.toJson()},
+      extra: {'aiContext': context.toJson()},
     );
   }
 

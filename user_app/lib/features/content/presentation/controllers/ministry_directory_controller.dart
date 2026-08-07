@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:infinite_scroll_pagination/infinite_scroll_pagination.dart';
+import 'package:user_app/core/config/app_keys.dart';
+import 'package:user_app/core/utils/app_message.dart';
 import 'package:user_app/shared/models/filter_models.dart';
 
 import 'package:user_app/shared/models/models.dart';
@@ -75,7 +77,7 @@ class MinistryDirectoryController extends ChangeNotifier {
     try {
       final result = await _directoryRepository.list(
         page: pageKey,
-        perPage: pageSize,
+        perPage: AppConstants.pageSize,
         search: searchQuery,
         ministry: selectedMinistry,
         department: selectedDepartment,
@@ -93,10 +95,8 @@ class MinistryDirectoryController extends ChangeNotifier {
       }
       return items;
     } catch (e) {
-      Common.quickToast(
-        title: 'Error loading directory',
-        description: e.toString(),
-      );
+      AppMessage.error(AppKeys.navigatorKey.currentContext!, '$e');
+
       rethrow;
     }
   }
@@ -126,10 +126,7 @@ class MinistryDirectoryController extends ChangeNotifier {
         ..addEntries(regions.items.map((e) => MapEntry(e.name, e.id)));
       availableRegions = _regionIds.keys.toList();
     } catch (e) {
-      Common.quickToast(
-        title: 'Error loading filters',
-        description: e.toString(),
-      );
+      AppMessage.error(AppKeys.navigatorKey.currentContext!, '$e');
     } finally {
       isLoadingFilters = false;
       _notify();

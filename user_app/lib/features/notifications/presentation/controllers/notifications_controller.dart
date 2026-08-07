@@ -2,6 +2,8 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:infinite_scroll_pagination/infinite_scroll_pagination.dart';
+import 'package:user_app/core/config/app_keys.dart';
+import 'package:user_app/core/utils/app_message.dart';
 
 import 'package:user_app/shared/models/models.dart';
 import 'package:user_app/features/notifications/data/repositories/notification_repository.dart';
@@ -47,17 +49,18 @@ class NotificationsController extends ChangeNotifier {
     try {
       final result = await _repository.list(
         page: pageKey,
-        perPage: pageSize,
+        perPage: AppConstants.pageSize,
         search: searchQuery.isEmpty ? null : searchQuery,
         type: selectedType.isEmpty ? null : selectedType,
         priority: selectedPriority.isEmpty ? null : selectedPriority,
       );
       return result.items;
     } catch (e) {
-      Common.quickToast(
-        title: 'Error loading notifications',
-        description: e.toString(),
+      AppMessage.error(
+        AppKeys.navigatorKey.currentContext!,
+        'Error loading notifications $e',
       );
+
       rethrow;
     }
   }

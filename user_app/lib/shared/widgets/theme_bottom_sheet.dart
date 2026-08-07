@@ -120,7 +120,7 @@ class ThemeBottomSheet extends ConsumerWidget {
 
   static void show() {
     AppNavigator.bottomSheet(
-      const ThemeBottomSheet(),
+      child: const ThemeBottomSheet(),
       backgroundColor: AppNavigator.theme.colorScheme.surface,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),

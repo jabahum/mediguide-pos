@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:user_app/core/config/app_keys.dart';
 import 'package:user_app/core/utils/app_extensions.dart';
 import 'package:user_app/app/router/app_navigator.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'package:user_app/core/utils/app_message.dart';
 import 'package:user_app/features/abbreviations/data/models/abbreviation.dart';
 import 'package:user_app/features/calculators/data/models/calculator.dart';
 import 'package:user_app/features/consultants/data/models/consultant.dart';
@@ -13,7 +15,6 @@ import 'package:user_app/shared/models/search_models.dart';
 import 'package:user_app/features/search/presentation/controllers/global_search_controller.dart';
 import 'package:user_app/features/drugs/presentation/widgets/drug_details_bottom_sheet.dart';
 import 'package:user_app/app/router/app_router.dart';
-import 'package:user_app/core/utils/common.dart';
 import 'package:user_app/core/utils/loading.dart';
 import 'package:user_app/core/utils/responsive.dart';
 import 'package:user_app/core/constants/app_spacing.dart';
@@ -371,7 +372,10 @@ class GlobalSearchDelegate extends SearchDelegate<String?> {
       case SearchCategory.drugs:
         final drug = result.getItem<Drug>();
         if (drug == null) {
-          Common.quickToast(title: 'drugNotFound'.tr);
+          AppMessage.error(
+            AppKeys.navigatorKey.currentContext!,
+            'Drug not found',
+          );
           return;
         }
         await ref
@@ -383,45 +387,39 @@ class GlobalSearchDelegate extends SearchDelegate<String?> {
       case SearchCategory.guidelines:
         final guideline = result.getItem<Guideline>();
         if (guideline != null) {
-          AppNavigator.pushNamed(AppRoutes.readGuideline, arguments: guideline);
+          AppNavigator.pushNamed(AppRoutes.readGuideline, extra: guideline);
         }
       case SearchCategory.consultants:
         final consultant = result.getItem<Consultant>();
         if (consultant != null) {
-          AppNavigator.pushNamed(AppRoutes.consultants, arguments: consultant);
+          AppNavigator.pushNamed(AppRoutes.consultants, extra: consultant);
         }
       case SearchCategory.healthFacilities:
         final facility = result.getItem<HealthFacility>();
         if (facility != null) {
           AppNavigator.pushNamed(
             AppRoutes.healthInfrastructure,
-            arguments: facility,
+            extra: facility,
           );
         }
       case SearchCategory.abbreviations:
         final abbreviation = result.getItem<Abbreviation>();
         if (abbreviation != null) {
-          AppNavigator.pushNamed(
-            AppRoutes.abbreviations,
-            arguments: abbreviation,
-          );
+          AppNavigator.pushNamed(AppRoutes.abbreviations, extra: abbreviation);
         }
       case SearchCategory.tools:
         final calculator = result.getItem<Calculator>();
         AppNavigator.pushNamed(
-          AppRoutes.useCalculator,
-          arguments: calculator ?? {'calculatorId': result.id},
+          AppRoutes.calculators,
+          extra: calculator ?? {'calculatorId': result.id},
         );
       case SearchCategory.faq:
         if (result.item != null) {
-          AppNavigator.pushNamed(AppRoutes.faq, arguments: result.item);
+          AppNavigator.pushNamed(AppRoutes.faq, extra: result.item);
         }
       case SearchCategory.all:
         if (result.route != null) {
-          AppNavigator.pushNamed(
-            result.route!,
-            arguments: result.routeArguments,
-          );
+          AppNavigator.pushNamed(result.route!, extra: result.routeArguments);
         }
     }
   }

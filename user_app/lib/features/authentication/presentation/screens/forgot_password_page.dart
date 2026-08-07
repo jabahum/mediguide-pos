@@ -3,11 +3,14 @@ import 'package:flutter/services.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:form_builder_validators/form_builder_validators.dart';
+import 'package:user_app/core/config/app_keys.dart';
+import 'package:user_app/core/constants/app_constants.dart';
 import 'package:user_app/core/utils/app_extensions.dart';
 import 'package:user_app/app/router/app_navigator.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:flex_color_scheme/flex_color_scheme.dart';
 import 'package:toastification/toastification.dart';
+import 'package:user_app/core/utils/app_message.dart';
 import 'package:user_app/features/authentication/presentation/controllers/password_recovery_controller.dart';
 import 'package:user_app/l10n/app_translations.dart';
 import 'package:user_app/core/constants/app_spacing.dart';
@@ -37,22 +40,18 @@ class _ForgotPasswordPageState extends ConsumerState<ForgotPasswordPage> {
           .read(passwordRecoveryControllerProvider.notifier)
           .requestReset(email);
       if (result == null || !result.accepted || !mounted) return;
-      Common.quickToast(
-        type: ToastificationType.success,
-        title: AppTranslationKey.passwordResetSent,
-        description: result.deliveryAccepted
-            ? AppTranslationKey.checkEmailForReset
-            : result.hasDevelopmentToken
-            ? 'Request accepted in development mode. Email delivery is not configured.'
-            : 'If the account exists, the request was accepted. Email delivery is not currently confirmed.',
+
+      AppMessage.success(
+        AppKeys.navigatorKey.currentContext!,
+        'checkEmailForReset'.tr,
       );
+
       AppNavigator.pop();
     } catch (error) {
       if (!mounted) return;
-      Common.quickToast(
-        type: ToastificationType.error,
-        title: AppTranslationKey.passwordResetError,
-        description: Common.parseApiError(error),
+      AppMessage.error(
+        AppKeys.navigatorKey.currentContext!,
+        'errorSendingResetLink'.tr,
       );
     }
   }

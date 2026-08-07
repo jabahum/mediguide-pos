@@ -2,8 +2,10 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:user_app/core/config/app_keys.dart';
 import 'package:user_app/core/utils/app_extensions.dart';
 import 'package:infinite_scroll_pagination/infinite_scroll_pagination.dart';
+import 'package:user_app/core/utils/app_message.dart';
 
 import 'package:user_app/shared/models/models.dart';
 import 'package:user_app/shared/models/filter_models.dart';
@@ -55,16 +57,17 @@ class FaqController extends ChangeNotifier {
           ? await _searchFAQs(
               query: searchQuery,
               page: pageKey,
-              perPage: pageSize,
+              perPage: AppConstants.pageSize,
             )
-          : await _getFAQs(page: pageKey, perPage: pageSize);
+          : await _getFAQs(page: pageKey, perPage: AppConstants.pageSize);
 
       return result.items;
     } catch (error) {
-      Common.quickToast(
-        title: AppTranslationKey.error.tr,
-        description: 'Failed to load FAQs: $error',
+      AppMessage.error(
+        AppKeys.navigatorKey.currentContext!,
+        'Failed to load FAQs: $error',
       );
+
       rethrow;
     }
   }

@@ -10002,6 +10002,12 @@ const docTemplate = `{
                         "type": "string"
                     }
                 },
+                "category_details": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.DrugCategory"
+                    }
+                },
                 "clinical_notes": {
                     "type": "string"
                 },
@@ -10073,6 +10079,12 @@ const docTemplate = `{
                 },
                 "status": {
                     "type": "string"
+                },
+                "tag_details": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.DrugTag"
+                    }
                 },
                 "tags_json": {
                     "type": "array",
@@ -10808,6 +10820,12 @@ const docTemplate = `{
                         "type": "string"
                     }
                 },
+                "category_details": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.GuidelineCategory"
+                    }
+                },
                 "causes": {
                     "type": "string"
                 },
@@ -10897,6 +10915,12 @@ const docTemplate = `{
                 },
                 "status": {
                     "type": "string"
+                },
+                "tag_details": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.GuidelineTag"
+                    }
                 },
                 "tags": {
                     "type": "array",

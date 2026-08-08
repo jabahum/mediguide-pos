@@ -1305,6 +1305,10 @@ definitions:
         items:
           type: string
         type: array
+      category_details:
+        items:
+          $ref: '#/definitions/models.DrugCategory'
+        type: array
       clinical_notes:
         type: string
       contraindications:
@@ -1353,6 +1357,10 @@ definitions:
         type: string
       status:
         type: string
+      tag_details:
+        items:
+          $ref: '#/definitions/models.DrugTag'
+        type: array
       tags_json:
         items:
           type: string
@@ -1836,6 +1844,10 @@ definitions:
         items:
           type: string
         type: array
+      category_details:
+        items:
+          $ref: '#/definitions/models.GuidelineCategory'
+        type: array
       causes:
         type: string
       classification_critical:
@@ -1896,6 +1908,10 @@ definitions:
         type: string
       status:
         type: string
+      tag_details:
+        items:
+          $ref: '#/definitions/models.GuidelineTag'
+        type: array
       tags:
         items:
           type: string

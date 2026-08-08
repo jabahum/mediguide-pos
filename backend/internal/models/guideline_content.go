@@ -53,39 +53,41 @@ func (GuidelineIndexEntry) TableName() string { return "guideline_index" }
 
 type MedicalGuideline struct {
 	Base
-	IndexItemID              *uuid.UUID `json:"index_item_id,omitempty"`
-	ConditionName            string     `json:"condition_name"`
-	ICD10Code                *string    `json:"icd10_code,omitempty"`
-	TargetPopulation         *string    `json:"target_population,omitempty"`
-	Definition               *string    `json:"definition,omitempty"`
-	Causes                   *string    `json:"causes,omitempty"`
-	ClinicalFeatures         *string    `json:"clinical_features,omitempty"`
-	DifferentialDiagnosis    *string    `json:"differential_diagnosis,omitempty"`
-	ClassificationMild       *string    `json:"classification_mild,omitempty"`
-	ClassificationModerate   *string    `json:"classification_moderate,omitempty"`
-	ClassificationSevere     *string    `json:"classification_severe,omitempty"`
-	ClassificationCritical   *string    `json:"classification_critical,omitempty"`
-	GeneralManagement        *string    `json:"general_management,omitempty"`
-	MedicationPrimary        *string    `json:"medication_primary,omitempty"`
-	DosageAdult              *string    `json:"dosage_adult,omitempty"`
-	DosagePediatric          *string    `json:"dosage_pediatric,omitempty"`
-	MedicationSecondary      *string    `json:"medication_secondary,omitempty"`
-	DosageSecondaryAdult     *string    `json:"dosage_secondary_adult,omitempty"`
-	DosageSecondaryPediatric *string    `json:"dosage_secondary_pediatric,omitempty"`
-	HealthcareLevelRequired  *string    `json:"healthcare_level_required,omitempty"`
-	RouteAdministration      *string    `json:"route_administration,omitempty"`
-	MonitoringRequirements   *string    `json:"monitoring_requirements,omitempty"`
-	Contraindications        *string    `json:"contraindications,omitempty"`
-	PreventionMeasures       *string    `json:"prevention_measures,omitempty"`
-	SpecialNotes             *string    `json:"special_notes,omitempty"`
-	Status                   string     `json:"status"`
-	IsPublished              bool       `json:"is_published"`
-	Priority                 *string    `json:"priority,omitempty"`
-	Version                  *string    `json:"version,omitempty"`
-	Categories               StringList `gorm:"column:categories_json;type:jsonb" json:"categories" swaggertype:"array,string"`
-	Tags                     StringList `gorm:"column:tags_json;type:jsonb" json:"tags" swaggertype:"array,string"`
-	UsageCount               int64      `json:"usage_count"`
-	IndexItemTitle           string     `gorm:"->" json:"index_item_title,omitempty"`
+	IndexItemID              *uuid.UUID          `json:"index_item_id,omitempty"`
+	ConditionName            string              `json:"condition_name"`
+	ICD10Code                *string             `json:"icd10_code,omitempty"`
+	TargetPopulation         *string             `json:"target_population,omitempty"`
+	Definition               *string             `json:"definition,omitempty"`
+	Causes                   *string             `json:"causes,omitempty"`
+	ClinicalFeatures         *string             `json:"clinical_features,omitempty"`
+	DifferentialDiagnosis    *string             `json:"differential_diagnosis,omitempty"`
+	ClassificationMild       *string             `json:"classification_mild,omitempty"`
+	ClassificationModerate   *string             `json:"classification_moderate,omitempty"`
+	ClassificationSevere     *string             `json:"classification_severe,omitempty"`
+	ClassificationCritical   *string             `json:"classification_critical,omitempty"`
+	GeneralManagement        *string             `json:"general_management,omitempty"`
+	MedicationPrimary        *string             `json:"medication_primary,omitempty"`
+	DosageAdult              *string             `json:"dosage_adult,omitempty"`
+	DosagePediatric          *string             `json:"dosage_pediatric,omitempty"`
+	MedicationSecondary      *string             `json:"medication_secondary,omitempty"`
+	DosageSecondaryAdult     *string             `json:"dosage_secondary_adult,omitempty"`
+	DosageSecondaryPediatric *string             `json:"dosage_secondary_pediatric,omitempty"`
+	HealthcareLevelRequired  *string             `json:"healthcare_level_required,omitempty"`
+	RouteAdministration      *string             `json:"route_administration,omitempty"`
+	MonitoringRequirements   *string             `json:"monitoring_requirements,omitempty"`
+	Contraindications        *string             `json:"contraindications,omitempty"`
+	PreventionMeasures       *string             `json:"prevention_measures,omitempty"`
+	SpecialNotes             *string             `json:"special_notes,omitempty"`
+	Status                   string              `json:"status"`
+	IsPublished              bool                `json:"is_published"`
+	Priority                 *string             `json:"priority,omitempty"`
+	Version                  *string             `json:"version,omitempty"`
+	Categories               StringList          `gorm:"column:categories_json;type:jsonb" json:"categories" swaggertype:"array,string"`
+	Tags                     StringList          `gorm:"column:tags_json;type:jsonb" json:"tags" swaggertype:"array,string"`
+	CategoryDetails          []GuidelineCategory `gorm:"-" json:"category_details,omitempty"`
+	TagDetails               []GuidelineTag      `gorm:"-" json:"tag_details,omitempty"`
+	UsageCount               int64               `json:"usage_count"`
+	IndexItemTitle           string              `gorm:"->" json:"index_item_title,omitempty"`
 }
 
 func (MedicalGuideline) TableName() string { return "medical_guidelines" }

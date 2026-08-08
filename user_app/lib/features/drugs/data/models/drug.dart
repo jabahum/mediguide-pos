@@ -76,15 +76,15 @@ Map<String, dynamic> _normalizeDrug(Map<String, dynamic> json) {
     return [];
   }
 
-  List<Map<String, dynamic>> relations(Object? value) => value is List
-      ? value
-            .map(
-              (e) => e is Map
-                  ? Map<String, dynamic>.from(e)
-                  : {'id': '', 'name': e.toString()},
-            )
-            .toList()
-      : [];
+  List<Map<String, dynamic>> relations(Object? expanded, Object? raw) {
+    final source = expanded is List && expanded.isNotEmpty ? expanded : raw;
+    if (source is! List) return [];
+    return source
+        .map(_namedDrugRelation)
+        .whereType<Map<String, dynamic>>()
+        .toList();
+  }
+
   Map<String, dynamic>? relation(String key, String idKey, String nameKey) {
     final value = json[key];
     if (value is Map) return Map<String, dynamic>.from(value);
@@ -127,8 +127,11 @@ Map<String, dynamic> _normalizeDrug(Map<String, dynamic> json) {
     'controlledSubstance': controlled(json['controlled_substance']),
     'status': status(json['status']),
     'review_status': review(json['review_status']),
-    'categories': relations(json['categories_json'] ?? json['categories']),
-    'tags': relations(json['tags_json'] ?? json['tags']),
+    'categories': relations(
+      json['category_details'],
+      json['categories_json'] ?? json['categories'],
+    ),
+    'tags': relations(json['tag_details'], json['tags_json'] ?? json['tags']),
     'drug_class': relation('drug_class', 'drug_class_id', 'drug_class_name'),
     'therapeutic_category': relation(
       'therapeutic_category',
@@ -137,3 +140,19 @@ Map<String, dynamic> _normalizeDrug(Map<String, dynamic> json) {
     ),
   };
 }
+
+Map<String, dynamic>? _namedDrugRelation(Object? value) {
+  if (value is Map) {
+    final relation = Map<String, dynamic>.from(value);
+    final name = (relation['name'] ?? '').toString().trim();
+    if (name.isEmpty || _looksLikeDrugUuid(name)) return null;
+    return relation;
+  }
+  final name = value?.toString().trim() ?? '';
+  if (name.isEmpty || _looksLikeDrugUuid(name)) return null;
+  return {'id': '', 'name': name};
+}
+
+bool _looksLikeDrugUuid(String value) => RegExp(
+  r'^[0-9a-fA-F]{8}(?:-[0-9a-fA-F]{4}){3}-[0-9a-fA-F]{12}$',
+).hasMatch(value.trim());

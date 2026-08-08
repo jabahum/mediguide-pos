@@ -101,4 +101,40 @@ func TestGuidelineContentRejectsUnknownTaxonomyRelations(t *testing.T) {
 	}
 }
 
+func TestMedicalGuidelinesReturnTaxonomyDisplayValues(t *testing.T) {
+	service := guidelineContentTestService(t)
+	category, err := service.SaveCategory(nil, GuidelineCategoryInput{Name: stringPtr("Infectious diseases")})
+	if err != nil {
+		t.Fatal(err)
+	}
+	tag, err := service.SaveTag(nil, GuidelineTagInput{Name: stringPtr("Emergency")})
+	if err != nil {
+		t.Fatal(err)
+	}
+	categoryIDs := []string{category.ID.String()}
+	tagIDs := []string{tag.ID.String()}
+	published := "published"
+	created, err := service.SaveMedicalGuideline(nil, MedicalGuidelineInput{
+		ConditionName: stringPtr("Ebola"), Status: &published,
+		Categories: &categoryIDs, Tags: &tagIDs,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(created.CategoryDetails) != 1 || created.CategoryDetails[0].Name != "Infectious diseases" {
+		t.Fatalf("unexpected category projection: %#v", created.CategoryDetails)
+	}
+	if len(created.TagDetails) != 1 || created.TagDetails[0].Name != "Emergency" {
+		t.Fatalf("unexpected tag projection: %#v", created.TagDetails)
+	}
+
+	listed, err := service.ListMedicalGuidelines(false, GuidelineContentQuery{Page: PageInput{Page: 1, PerPage: 20}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(listed.Items) != 1 || listed.Items[0].CategoryDetails[0].Name != "Infectious diseases" {
+		t.Fatalf("unexpected list projection: %#v", listed.Items)
+	}
+}
+
 func stringPtr(value string) *string { return &value }

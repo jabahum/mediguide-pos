@@ -69,6 +69,31 @@ func TestDrugServiceRejectsInvalidEnumsAndUUIDs(t *testing.T) {
 	}
 }
 
+func TestDrugServiceReturnsTaxonomyDisplayValues(t *testing.T) {
+	service := testDrugService(t)
+	category := models.DrugCategory{Name: "Antibiotics", Status: "active"}
+	tag := models.DrugTag{Name: "Essential medicine", Status: "active"}
+	if err := service.DB.Create(&category).Error; err != nil {
+		t.Fatal(err)
+	}
+	if err := service.DB.Create(&tag).Error; err != nil {
+		t.Fatal(err)
+	}
+	name := "Amoxicillin"
+	categories, _ := json.Marshal([]string{category.ID.String()})
+	tags, _ := json.Marshal([]string{tag.ID.String()})
+	created, err := service.Create(DrugInput{Name: &name, Categories: categories, Tags: tags})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(created.CategoryDetails) != 1 || created.CategoryDetails[0].Name != "Antibiotics" {
+		t.Fatalf("unexpected category projection: %#v", created.CategoryDetails)
+	}
+	if len(created.TagDetails) != 1 || created.TagDetails[0].Name != "Essential medicine" {
+		t.Fatalf("unexpected tag projection: %#v", created.TagDetails)
+	}
+}
+
 func testDrugService(t *testing.T) DrugService {
 	t.Helper()
 	database, err := gorm.Open(sqlite.Open("file:"+uuid.NewString()+"?mode=memory&cache=shared"), &gorm.Config{})

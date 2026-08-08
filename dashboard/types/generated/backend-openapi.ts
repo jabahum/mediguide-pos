@@ -871,6 +871,7 @@ export interface ModelsDrug {
   antimicrobial_status?: boolean;
   brand_names?: string;
   categories_json?: string[];
+  category_details?: ModelsDrugCategory[];
   clinical_notes?: string;
   contraindications?: string;
   controlled_substance?: string;
@@ -895,6 +896,7 @@ export interface ModelsDrug {
   search_keywords?: string;
   side_effects?: string;
   status?: string;
+  tag_details?: ModelsDrugTag[];
   tags_json?: string[];
   therapeutic_category_id?: string;
   therapeutic_category_name?: string;
@@ -1159,6 +1161,7 @@ export interface ModelsLanguage {
 export interface ModelsMedicalGuideline {
   icd10_code?: string;
   categories?: string[];
+  category_details?: ModelsGuidelineCategory[];
   causes?: string;
   classification_critical?: string;
   classification_mild?: string;
@@ -1188,6 +1191,7 @@ export interface ModelsMedicalGuideline {
   route_administration?: string;
   special_notes?: string;
   status?: string;
+  tag_details?: ModelsGuidelineTag[];
   tags?: string[];
   target_population?: string;
   updated_at?: string;
@@ -1758,6 +1762,7 @@ export interface ServicesFacilityReferenceView {
 }
 
 export interface ServicesFacilityView {
+  authority_code?: string;
   authority_id?: string;
   authority_name?: string;
   county_id?: string;
@@ -1765,6 +1770,7 @@ export interface ServicesFacilityView {
   created_at?: string;
   district_id?: string;
   district_name?: string;
+  facility_level_code?: string;
   facility_level_id?: string;
   facility_level_name?: string;
   health_sub_district_id?: string;
@@ -1775,6 +1781,7 @@ export interface ServicesFacilityView {
   id?: string;
   name?: string;
   nhpi_code?: string;
+  ownership_type_code?: string;
   ownership_type_id?: string;
   ownership_type_name?: string;
   parish_id?: string;

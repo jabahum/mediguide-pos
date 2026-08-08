@@ -29,6 +29,8 @@ type Drug struct {
 	ClinicalNotes           *string        `json:"clinical_notes,omitempty"`
 	CategoriesJSON          datatypes.JSON `gorm:"column:categories_json" json:"categories_json,omitempty" swaggertype:"array,string"`
 	TagsJSON                datatypes.JSON `gorm:"column:tags_json" json:"tags_json,omitempty" swaggertype:"array,string"`
+	CategoryDetails         []DrugCategory `gorm:"-" json:"category_details,omitempty"`
+	TagDetails              []DrugTag      `gorm:"-" json:"tag_details,omitempty"`
 	WHOEMLStatus            bool           `gorm:"column:who_eml_status" json:"who_eml_status"`
 	AntimicrobialStatus     bool           `json:"antimicrobial_status"`
 	ControlledSubstance     *string        `json:"controlled_substance,omitempty"`

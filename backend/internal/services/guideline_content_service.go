@@ -510,7 +510,14 @@ func (s GuidelineContentService) ListMedicalGuidelines(editor bool, in Guideline
 		like := "%" + search + "%"
 		q = q.Where("LOWER(mg.condition_name) LIKE LOWER(?) OR LOWER(COALESCE(mg.icd10_code,'')) LIKE LOWER(?) OR LOWER(COALESCE(mg.target_population,'')) LIKE LOWER(?)", like, like, like)
 	}
-	return pageHelp[models.MedicalGuideline](q, p, map[string]string{"condition_name": "mg.condition_name", "priority": "mg.priority", "usage_count": "mg.usage_count", "created_at": "mg.created_at", "updated_at": "mg.updated_at"}, in.Sort, in.Order, "mg.updated_at DESC")
+	result, err := pageHelp[models.MedicalGuideline](q, p, map[string]string{"condition_name": "mg.condition_name", "priority": "mg.priority", "usage_count": "mg.usage_count", "created_at": "mg.created_at", "updated_at": "mg.updated_at"}, in.Sort, in.Order, "mg.updated_at DESC")
+	if err != nil {
+		return nil, err
+	}
+	if err := s.populateMedicalGuidelineTaxonomy(result.Items); err != nil {
+		return nil, err
+	}
+	return result, nil
 }
 
 func (s GuidelineContentService) GetMedicalGuideline(id uuid.UUID, editor bool) (*models.MedicalGuideline, error) {
@@ -520,6 +527,11 @@ func (s GuidelineContentService) GetMedicalGuideline(id uuid.UUID, editor bool) 
 	}
 	var item models.MedicalGuideline
 	err := q.First(&item).Error
+	if err == nil {
+		items := []models.MedicalGuideline{item}
+		err = s.populateMedicalGuidelineTaxonomy(items)
+		item = items[0]
+	}
 	return &item, err
 }
 
@@ -592,6 +604,80 @@ func (s GuidelineContentService) DeleteMedicalGuideline(id uuid.UUID) error {
 
 func (s GuidelineContentService) medicalQuery() *gorm.DB {
 	return s.DB.Table("medical_guidelines mg").Select("mg.*, gi.title AS index_item_title").Joins("LEFT JOIN guideline_index gi ON gi.id=mg.index_item_id").Where("mg.deleted_at IS NULL")
+}
+
+func (s GuidelineContentService) populateMedicalGuidelineTaxonomy(items []models.MedicalGuideline) error {
+	categoryIDs := make(map[uuid.UUID]struct{})
+	tagIDs := make(map[uuid.UUID]struct{})
+	for _, item := range items {
+		collectUUIDStrings(item.Categories, categoryIDs)
+		collectUUIDStrings(item.Tags, tagIDs)
+	}
+
+	categories := make([]models.GuidelineCategory, 0, len(categoryIDs))
+	if len(categoryIDs) > 0 {
+		ids := uuidSetValues(categoryIDs)
+		if err := s.DB.Where("id IN ? AND deleted_at IS NULL", ids).Find(&categories).Error; err != nil {
+			return err
+		}
+	}
+	tags := make([]models.GuidelineTag, 0, len(tagIDs))
+	if len(tagIDs) > 0 {
+		ids := uuidSetValues(tagIDs)
+		if err := s.DB.Where("id IN ? AND deleted_at IS NULL", ids).Find(&tags).Error; err != nil {
+			return err
+		}
+	}
+
+	categoryByID := make(map[string]models.GuidelineCategory, len(categories))
+	for _, category := range categories {
+		categoryByID[category.ID.String()] = category
+	}
+	tagByID := make(map[string]models.GuidelineTag, len(tags))
+	for _, tag := range tags {
+		tagByID[tag.ID.String()] = tag
+	}
+	for index := range items {
+		items[index].CategoryDetails = orderedGuidelineCategories(items[index].Categories, categoryByID)
+		items[index].TagDetails = orderedGuidelineTags(items[index].Tags, tagByID)
+	}
+	return nil
+}
+
+func collectUUIDStrings(values []string, target map[uuid.UUID]struct{}) {
+	for _, raw := range values {
+		if id, err := uuid.Parse(strings.TrimSpace(raw)); err == nil {
+			target[id] = struct{}{}
+		}
+	}
+}
+
+func uuidSetValues(values map[uuid.UUID]struct{}) []uuid.UUID {
+	result := make([]uuid.UUID, 0, len(values))
+	for id := range values {
+		result = append(result, id)
+	}
+	return result
+}
+
+func orderedGuidelineCategories(ids []string, values map[string]models.GuidelineCategory) []models.GuidelineCategory {
+	result := make([]models.GuidelineCategory, 0, len(ids))
+	for _, id := range ids {
+		if value, ok := values[strings.TrimSpace(id)]; ok {
+			result = append(result, value)
+		}
+	}
+	return result
+}
+
+func orderedGuidelineTags(ids []string, values map[string]models.GuidelineTag) []models.GuidelineTag {
+	result := make([]models.GuidelineTag, 0, len(ids))
+	for _, id := range ids {
+		if value, ok := values[strings.TrimSpace(id)]; ok {
+			result = append(result, value)
+		}
+	}
+	return result
 }
 
 func (s GuidelineContentService) validateCategoryParent(parent uuid.UUID, itemID *uuid.UUID) error {

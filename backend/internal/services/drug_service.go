@@ -102,6 +102,9 @@ func (s DrugService) List(in DrugListInput) (*PageResult[models.Drug], error) {
 		Order(drugSort(in.Sort, in.Order)).Limit(page.PerPage).Offset(page.Offset()).Find(&items).Error; err != nil {
 		return nil, err
 	}
+	if err := s.populateDrugTaxonomy(items); err != nil {
+		return nil, err
+	}
 	return NewPageResult(items, page, total), nil
 }
 
@@ -109,6 +112,11 @@ func (s DrugService) Get(id uuid.UUID) (*models.Drug, error) {
 	var item models.Drug
 	err := s.drugQuery().Select("d.*, dc.name AS drug_class_name, tc.name AS therapeutic_category_name").
 		Where("d.id = ?", id).Take(&item).Error
+	if err == nil {
+		items := []models.Drug{item}
+		err = s.populateDrugTaxonomy(items)
+		item = items[0]
+	}
 	return &item, err
 }
 
@@ -174,6 +182,91 @@ func (s DrugService) drugQuery() *gorm.DB {
 		Joins("LEFT JOIN drug_classes dc ON dc.id = d.drug_class_id").
 		Joins("LEFT JOIN therapeutic_categories tc ON tc.id = d.therapeutic_category_id").
 		Where("d.deleted_at IS NULL")
+}
+
+func (s DrugService) populateDrugTaxonomy(items []models.Drug) error {
+	categoryIDs := make(map[uuid.UUID]struct{})
+	tagIDs := make(map[uuid.UUID]struct{})
+	categoryValues := make([][]string, len(items))
+	tagValues := make([][]string, len(items))
+	for index, item := range items {
+		categoryValues[index] = drugTaxonomyValues(item.CategoriesJSON)
+		tagValues[index] = drugTaxonomyValues(item.TagsJSON)
+		collectUUIDStrings(categoryValues[index], categoryIDs)
+		collectUUIDStrings(tagValues[index], tagIDs)
+	}
+
+	categories := make([]models.DrugCategory, 0, len(categoryIDs))
+	if len(categoryIDs) > 0 {
+		if err := s.DB.Where("id IN ? AND deleted_at IS NULL", uuidSetValues(categoryIDs)).Find(&categories).Error; err != nil {
+			return err
+		}
+	}
+	tags := make([]models.DrugTag, 0, len(tagIDs))
+	if len(tagIDs) > 0 {
+		if err := s.DB.Where("id IN ? AND deleted_at IS NULL", uuidSetValues(tagIDs)).Find(&tags).Error; err != nil {
+			return err
+		}
+	}
+
+	categoryByID := make(map[string]models.DrugCategory, len(categories))
+	for _, category := range categories {
+		categoryByID[category.ID.String()] = category
+	}
+	tagByID := make(map[string]models.DrugTag, len(tags))
+	for _, tag := range tags {
+		tagByID[tag.ID.String()] = tag
+	}
+	for index := range items {
+		items[index].CategoryDetails = orderedDrugCategories(categoryValues[index], categoryByID)
+		items[index].TagDetails = orderedDrugTags(tagValues[index], tagByID)
+	}
+	return nil
+}
+
+func drugTaxonomyValues(raw []byte) []string {
+	if len(raw) == 0 {
+		return nil
+	}
+	var values []string
+	if err := json.Unmarshal(raw, &values); err != nil {
+		return nil
+	}
+	return values
+}
+
+func orderedDrugCategories(values []string, byID map[string]models.DrugCategory) []models.DrugCategory {
+	result := make([]models.DrugCategory, 0, len(values))
+	for _, raw := range values {
+		value := strings.TrimSpace(raw)
+		if _, err := uuid.Parse(value); err != nil {
+			if value != "" {
+				result = append(result, models.DrugCategory{Name: value})
+			}
+			continue
+		}
+		if category, ok := byID[value]; ok {
+			result = append(result, category)
+		}
+	}
+	return result
+}
+
+func orderedDrugTags(values []string, byID map[string]models.DrugTag) []models.DrugTag {
+	result := make([]models.DrugTag, 0, len(values))
+	for _, raw := range values {
+		value := strings.TrimSpace(raw)
+		if _, err := uuid.Parse(value); err != nil {
+			if value != "" {
+				result = append(result, models.DrugTag{Name: value})
+			}
+			continue
+		}
+		if tag, ok := byID[value]; ok {
+			result = append(result, tag)
+		}
+	}
+	return result
 }
 
 func applyDrugInput(drug *models.Drug, in DrugInput) error {

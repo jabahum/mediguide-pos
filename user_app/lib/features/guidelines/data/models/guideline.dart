@@ -121,21 +121,21 @@ abstract class Guideline with _$Guideline {
 }
 
 Map<String, dynamic> _normalizeGuideline(Map<String, dynamic> json) {
-  List<Map<String, dynamic>> relations(Object? raw) => raw is List
-      ? raw
-            .map(
-              (v) => v is Map
-                  ? Map<String, dynamic>.from(v)
-                  : {'id': '', 'name': v.toString()},
-            )
-            .toList()
-      : [];
+  List<Map<String, dynamic>> relations(Object? expanded, Object? raw) {
+    final source = expanded is List && expanded.isNotEmpty ? expanded : raw;
+    if (source is! List) return [];
+    return source
+        .map(_namedRelation)
+        .whereType<Map<String, dynamic>>()
+        .toList();
+  }
+
   final index = json['index_item'];
   final indexId = json['index_item_id']?.toString() ?? '';
   return {
     ...json,
-    'categories': relations(json['categories']),
-    'tags': relations(json['tags']),
+    'categories': relations(json['category_details'], json['categories']),
+    'tags': relations(json['tag_details'], json['tags']),
     'index_item': index is Map
         ? index
         : (indexId.isEmpty
@@ -143,6 +143,24 @@ Map<String, dynamic> _normalizeGuideline(Map<String, dynamic> json) {
               : {'id': indexId, 'title': json['index_item_title'] ?? ''}),
   };
 }
+
+Map<String, dynamic>? _namedRelation(Object? value) {
+  if (value is Map) {
+    final relation = Map<String, dynamic>.from(value);
+    final name = (relation['name'] ?? relation['title'] ?? '')
+        .toString()
+        .trim();
+    if (name.isEmpty || _looksLikeUuid(name)) return null;
+    return relation;
+  }
+  final name = value?.toString().trim() ?? '';
+  if (name.isEmpty || _looksLikeUuid(name)) return null;
+  return {'id': '', 'name': name};
+}
+
+bool _looksLikeUuid(String value) => RegExp(
+  r'^[0-9a-fA-F]{8}(?:-[0-9a-fA-F]{4}){3}-[0-9a-fA-F]{12}$',
+).hasMatch(value.trim());
 
 enum GuidelinePriority {
   critical(label: 'Critical'),

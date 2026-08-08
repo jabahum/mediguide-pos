@@ -2801,6 +2801,15 @@ final class ModelsDrug {
     return raw.whereType<String>().toList(growable: false);
   }
 
+  List<ModelsDrugCategory> get categoryDetails {
+    final raw = value['category_details'];
+    if (raw is! List) return const [];
+    return raw
+        .whereType<Map>()
+        .map((item) => ModelsDrugCategory.fromJson(_jsonMap(item)))
+        .toList(growable: false);
+  }
+
   String? get clinicalNotes => value['clinical_notes']?.toString();
 
   String? get contraindications => value['contraindications']?.toString();
@@ -2850,6 +2859,15 @@ final class ModelsDrug {
   String? get sideEffects => value['side_effects']?.toString();
 
   String? get status => value['status']?.toString();
+
+  List<ModelsDrugTag> get tagDetails {
+    final raw = value['tag_details'];
+    if (raw is! List) return const [];
+    return raw
+        .whereType<Map>()
+        .map((item) => ModelsDrugTag.fromJson(_jsonMap(item)))
+        .toList(growable: false);
+  }
 
   List<String> get tagsJson {
     final raw = value['tags_json'];
@@ -3548,6 +3566,15 @@ final class ModelsMedicalGuideline {
     return raw.whereType<String>().toList(growable: false);
   }
 
+  List<ModelsGuidelineCategory> get categoryDetails {
+    final raw = value['category_details'];
+    if (raw is! List) return const [];
+    return raw
+        .whereType<Map>()
+        .map((item) => ModelsGuidelineCategory.fromJson(_jsonMap(item)))
+        .toList(growable: false);
+  }
+
   String? get causes => value['causes']?.toString();
 
   String? get classificationCritical =>
@@ -3615,6 +3642,15 @@ final class ModelsMedicalGuideline {
   String? get specialNotes => value['special_notes']?.toString();
 
   String? get status => value['status']?.toString();
+
+  List<ModelsGuidelineTag> get tagDetails {
+    final raw = value['tag_details'];
+    if (raw is! List) return const [];
+    return raw
+        .whereType<Map>()
+        .map((item) => ModelsGuidelineTag.fromJson(_jsonMap(item)))
+        .toList(growable: false);
+  }
 
   List<String> get tags {
     final raw = value['tags'];

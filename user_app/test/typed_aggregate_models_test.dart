@@ -78,4 +78,49 @@ void main() {
     expect(progress.pendingSync, isTrue);
     expect(progress.status, ReadingStatus.inProgress);
   });
+
+  test('clinical taxonomy projections display names instead of UUIDs', () {
+    const categoryId = '5cbdbadc-852e-5cd4-8e41-689f7aef1234';
+    const tagId = '7c23aa4f-ec73-5f15-b84a-123456789abc';
+
+    final drug = Drug.fromJson({
+      'id': 'drug-1',
+      'name': 'Amoxicillin',
+      'categories_json': [categoryId],
+      'category_details': [
+        {'id': categoryId, 'name': 'Antibiotics'},
+      ],
+    });
+    final guideline = Guideline.fromJson({
+      'id': 'guideline-1',
+      'condition_name': 'Ebola',
+      'categories': [categoryId],
+      'tags': [tagId],
+      'category_details': [
+        {'id': categoryId, 'name': 'Infectious diseases'},
+      ],
+      'tag_details': [
+        {'id': tagId, 'name': 'Emergency'},
+      ],
+    });
+
+    expect(drug.categories.single.name, 'Antibiotics');
+    expect(guideline.categories.single.name, 'Infectious diseases');
+    expect(guideline.tags.single.name, 'Emergency');
+
+    expect(
+      Drug.fromJson({
+        'id': 'drug-2',
+        'categories_json': [categoryId],
+      }).categories,
+      isEmpty,
+    );
+    expect(
+      Guideline.fromJson({
+        'id': 'guideline-2',
+        'categories': [categoryId],
+      }).categories,
+      isEmpty,
+    );
+  });
 }

@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:user_app/features/content/data/repositories/content_reference_repository.dart';
 import 'package:user_app/features/facilities/data/repositories/facility_repository.dart';
+import 'package:user_app/features/facilities/data/repositories/facility_local_repository.dart';
 import 'package:user_app/features/guidelines/data/repositories/guideline_content_repository.dart';
 import 'package:user_app/features/support/data/repositories/help_content_repository.dart';
 import 'package:user_app/features/guidelines/data/repositories/progress_usage_repository.dart';
@@ -176,7 +177,9 @@ void main() {
       addTearDown(store.close);
       final container = ProviderContainer(
         overrides: [
-          facilityRepositoryProvider.overrideWithValue(FacilityRepository(api)),
+          facilityRepositoryProvider.overrideWithValue(
+            FacilityRepository(api, FacilityLocalRepository(store.cache)),
+          ),
           ministryDirectoryRepositoryProvider.overrideWithValue(
             MinistryDirectoryRepository(
               api,

@@ -4,13 +4,16 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:user_app/features/calculators/data/repositories/calculator_repository.dart';
 import 'package:user_app/features/calculators/data/repositories/calculator_local_repository.dart';
 import 'package:user_app/features/consultants/data/repositories/consultant_repository.dart';
+import 'package:user_app/features/consultants/data/repositories/consultant_local_repository.dart';
 import 'package:user_app/features/content/data/repositories/content_reference_repository.dart';
 import 'package:user_app/features/conversations/data/repositories/conversation_repository.dart';
+import 'package:user_app/features/conversations/data/repositories/conversation_local_repository.dart';
 import 'package:user_app/features/drugs/data/repositories/drug_reference_repository.dart';
 import 'package:user_app/features/drugs/data/repositories/drug_reference_local_repository.dart';
 import 'package:user_app/features/drugs/data/repositories/drug_repository.dart';
 import 'package:user_app/features/drugs/data/repositories/drug_local_repository.dart';
 import 'package:user_app/features/facilities/data/repositories/facility_repository.dart';
+import 'package:user_app/features/facilities/data/repositories/facility_local_repository.dart';
 import 'package:user_app/features/guidelines/data/repositories/guideline_content_repository.dart';
 import 'package:user_app/features/guidelines/data/repositories/guildline_content_local_repository.dart';
 import 'package:user_app/features/abbreviations/data/repositories/abbreviation_local_repository.dart';
@@ -98,12 +101,16 @@ final guidelineContentRepositoryProvider = Provider<GuidelineContentRepository>(
 final facilityRepositoryProvider = Provider<FacilityRepository>(
   (ref) => FacilityRepository(
     ref.watch(backendApiServiceProvider),
+    ref.watch(facilityLocalRepositoryProvider),
     cache: ref.watch(ttlResponseCacheProvider),
   ),
 );
 
 final consultantRepositoryProvider = Provider<ConsultantRepository>(
-  (ref) => ConsultantRepository(ref.watch(backendApiServiceProvider)),
+  (ref) => ConsultantRepository(
+    ref.watch(backendApiServiceProvider),
+    ref.watch(consultantLocalRepositoryProvider),
+  ),
 );
 
 final supportRepositoryProvider = Provider<SupportRepository>(
@@ -164,5 +171,9 @@ final usageRepositoryProvider = Provider<UsageRepository>(
 );
 
 final conversationRepositoryProvider = Provider<ConversationRepository>(
-  (ref) => ConversationRepository(ref.watch(backendApiServiceProvider)),
+  (ref) => ConversationRepository(
+    ref.watch(backendApiServiceProvider),
+    ref.watch(conversationLocalRepositoryProvider),
+    userId: ref.watch(authServiceProvider).currentUser.value?.id ?? '',
+  ),
 );

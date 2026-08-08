@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:user_app/core/storage/local_cache_service.dart';
+import 'package:user_app/core/storage/local_page.dart';
 
 import 'package:user_app/features/consultants/data/models/consultant.dart';
 
@@ -96,6 +97,47 @@ class ConsultantLocalRepository {
     String city = '',
     bool? verified,
     bool activeOnly = false,
+    String status = '',
+    String qualification = '',
+    String language = '',
+    String consultationType = '',
+    String sort = 'rating',
+    String order = 'desc',
+  }) async {
+    final result = await listConsultants(
+      page: page,
+      perPage: perPage,
+      search: search,
+      specialty: specialty,
+      region: region,
+      city: city,
+      verified: verified,
+      activeOnly: activeOnly,
+      status: status,
+      qualification: qualification,
+      language: language,
+      consultationType: consultationType,
+      sort: sort,
+      order: order,
+    );
+    return result.items;
+  }
+
+  Future<LocalPage<Consultant>> listConsultants({
+    int page = 1,
+    int perPage = 30,
+    String search = '',
+    String specialty = '',
+    String region = '',
+    String city = '',
+    bool? verified,
+    bool activeOnly = false,
+    String status = '',
+    String qualification = '',
+    String language = '',
+    String consultationType = '',
+    String sort = 'rating',
+    String order = 'desc',
   }) async {
     final safePage = page < 1 ? 1 : page;
     final safePerPage = perPage < 1 ? 30 : perPage;
@@ -104,8 +146,8 @@ class ConsultantLocalRepository {
       type: _entityType,
       scope: _scope,
       search: search.trim(),
-      limit: safePerPage,
-      offset: (safePage - 1) * safePerPage,
+      limit: 10000,
+      offset: 0,
     );
 
     final consultants = <Consultant>[];
@@ -121,6 +163,10 @@ class ConsultantLocalRepository {
           city: city,
           verified: verified,
           activeOnly: activeOnly,
+          status: status,
+          qualification: qualification,
+          language: language,
+          consultationType: consultationType,
         )) {
           continue;
         }
@@ -133,7 +179,22 @@ class ConsultantLocalRepository {
       }
     }
 
-    return consultants;
+    _sortConsultants(consultants, sort: sort, order: order);
+
+    final start = (safePage - 1) * safePerPage;
+    final items = start >= consultants.length
+        ? <Consultant>[]
+        : consultants.sublist(
+            start,
+            (start + safePerPage).clamp(0, consultants.length),
+          );
+
+    return LocalPage<Consultant>(
+      items: items,
+      totalItems: consultants.length,
+      page: safePage,
+      perPage: safePerPage,
+    );
   }
 
   // =========================================================
@@ -228,7 +289,7 @@ class ConsultantLocalRepository {
     final consultants = await getConsultants(page: 1, perPage: 500);
 
     final values = consultants
-        .map((consultant) => consultant.specialty?.name.trim() ?? '')
+        .map((consultant) => consultant.specialtyValue.trim())
         .where((value) => value.isNotEmpty)
         .toSet()
         .toList();
@@ -294,6 +355,9 @@ class ConsultantLocalRepository {
         }
       }
 
+      consultants.sort(
+        (a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()),
+      );
       return List<Consultant>.unmodifiable(consultants);
     });
   }
@@ -309,11 +373,15 @@ class ConsultantLocalRepository {
     required String city,
     required bool? verified,
     required bool activeOnly,
+    required String status,
+    required String qualification,
+    required String language,
+    required String consultationType,
   }) {
     final specialtyFilter = specialty.trim().toLowerCase();
 
     if (specialtyFilter.isNotEmpty) {
-      final value = consultant.specialty?.name.trim().toLowerCase() ?? '';
+      final value = consultant.specialtyValue.trim().toLowerCase();
 
       if (value != specialtyFilter) {
         return false;
@@ -345,7 +413,49 @@ class ConsultantLocalRepository {
       return false;
     }
 
+    if (!_matchesValue(consultant.statusValue, status)) return false;
+    if (!_matchesAny(consultant.qualifications, qualification)) return false;
+    if (!_matchesValue(consultant.preferredLanguageValue, language)) {
+      return false;
+    }
+    if (!_matchesAny(consultant.consultationTypeValues, consultationType)) {
+      return false;
+    }
+
     return true;
+  }
+
+  bool _matchesValue(String value, String filter) {
+    final expected = filter.trim().toLowerCase();
+    return expected.isEmpty || value.trim().toLowerCase() == expected;
+  }
+
+  bool _matchesAny(Iterable<String> values, String filter) {
+    final expected = filter.trim().toLowerCase();
+    return expected.isEmpty ||
+        values.any((value) => value.trim().toLowerCase() == expected);
+  }
+
+  void _sortConsultants(
+    List<Consultant> consultants, {
+    required String sort,
+    required String order,
+  }) {
+    int compare(Consultant a, Consultant b) => switch (sort) {
+      'name' => a.name.toLowerCase().compareTo(b.name.toLowerCase()),
+      'experience' || 'years_of_experience' => a.yearsOfExperience.compareTo(
+        b.yearsOfExperience,
+      ),
+      'updated_at' =>
+        (a.updatedAt ?? DateTime.fromMillisecondsSinceEpoch(0)).compareTo(
+          b.updatedAt ?? DateTime.fromMillisecondsSinceEpoch(0),
+        ),
+      _ => a.rating.compareTo(b.rating),
+    };
+
+    consultants.sort(
+      order.trim().toLowerCase() == 'asc' ? compare : (a, b) => compare(b, a),
+    );
   }
 
   // =========================================================
@@ -356,7 +466,10 @@ class ConsultantLocalRepository {
     return [
       consultant.name,
       consultant.email,
-      consultant.specialty?.name ?? '',
+      consultant.specialtyValue,
+      ...consultant.qualifications,
+      consultant.preferredLanguageValue,
+      ...consultant.consultationTypeValues,
       consultant.department,
       consultant.city,
       _consultantRegion(consultant),
@@ -369,7 +482,7 @@ class ConsultantLocalRepository {
 
   Map<String, dynamic> _metadata(Consultant consultant) {
     return {
-      'specialty': consultant.specialty?.name ?? '',
+      'specialty': consultant.specialtyValue,
       'department': consultant.department,
       'city': consultant.city,
       'region': _consultantRegion(consultant),
@@ -393,7 +506,7 @@ class ConsultantLocalRepository {
     //
     // return consultant.status.toLowerCase() == 'active';
 
-    return true;
+    return consultant.statusValue.trim().toLowerCase() == 'active';
   }
 
   // =========================================================
@@ -410,6 +523,6 @@ class ConsultantLocalRepository {
     //
     // return consultant.region?.name ?? '';
 
-    return '';
+    return consultant.region.trim();
   }
 }

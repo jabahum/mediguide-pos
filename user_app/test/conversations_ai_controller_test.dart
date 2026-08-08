@@ -6,6 +6,7 @@ import 'package:user_app/features/ai_assistant/data/models/ai_context.dart';
 import 'package:user_app/features/ai_assistant/data/models/rag_answer.dart';
 import 'package:user_app/shared/models/models.dart';
 import 'package:user_app/features/conversations/data/repositories/conversation_repository.dart';
+import 'package:user_app/features/conversations/data/repositories/conversation_local_repository.dart';
 import 'package:user_app/features/guidelines/data/repositories/progress_usage_repository.dart';
 import 'package:user_app/features/ai_assistant/data/repositories/rag_repository.dart';
 import 'package:user_app/features/ai_assistant/data/services/ai_context_service.dart';
@@ -16,6 +17,7 @@ import 'package:user_app/features/conversations/presentation/controllers/chat_li
 import 'package:user_app/app/providers/app_providers.dart';
 import 'package:user_app/features/authentication/data/datasources/auth_local_datasource.dart';
 import 'package:user_app/features/authentication/presentation/controllers/auth_controller.dart';
+import 'helpers/test_local_store.dart';
 
 final class ConversationSessionStore implements AuthSessionStore {
   @override
@@ -157,6 +159,8 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   Future<ProviderContainer> containerFor(ConversationAiApi api) async {
+    final store = TestLocalStore();
+    addTearDown(store.close);
     SharedPreferences.setMockInitialValues({});
     final preferences = await SharedPreferences.getInstance();
     final container = ProviderContainer(
@@ -165,7 +169,11 @@ void main() {
         authSessionStoreProvider.overrideWithValue(ConversationSessionStore()),
         sharedPreferencesProvider.overrideWithValue(preferences),
         conversationRepositoryProvider.overrideWithValue(
-          ConversationRepository(api),
+          ConversationRepository(
+            api,
+            ConversationLocalRepository(store.cache),
+            userId: 'user-1',
+          ),
         ),
       ],
     );

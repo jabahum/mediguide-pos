@@ -1,6 +1,8 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:user_app/features/consultants/data/repositories/consultant_repository.dart';
 import 'package:user_app/core/network/api_client.dart';
+import 'package:user_app/features/consultants/data/repositories/consultant_local_repository.dart';
+import 'helpers/test_local_store.dart';
 
 class FakeConsultantApi extends BackendApiService {
   String? path;
@@ -45,8 +47,11 @@ void main() {
     'consultant list sends typed query parameters and normalizes fields',
     () async {
       final api = FakeConsultantApi();
+      final store = TestLocalStore();
+      addTearDown(store.close);
       final result = await ConsultantRepository(
         api,
+        ConsultantLocalRepository(store.cache),
       ).list(search: 'amina', specialty: 'Cardiology', verified: true);
       expect(api.path, '/api/v2/consultants');
       expect(api.query?['search'], 'amina');

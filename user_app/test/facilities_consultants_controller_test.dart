@@ -1,11 +1,14 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:user_app/features/consultants/data/repositories/consultant_repository.dart';
+import 'package:user_app/features/consultants/data/repositories/consultant_local_repository.dart';
 import 'package:user_app/features/facilities/data/repositories/facility_repository.dart';
+import 'package:user_app/features/facilities/data/repositories/facility_local_repository.dart';
 import 'package:user_app/core/network/api_client.dart';
 import 'package:user_app/features/consultants/presentation/controllers/consultants_controller.dart';
 import 'package:user_app/features/facilities/presentation/controllers/health_infrastructure_controller.dart';
 import 'package:user_app/app/providers/app_providers.dart';
+import 'helpers/test_local_store.dart';
 
 final class DirectoryApi extends BackendApiService {
   String? lastPath;
@@ -90,7 +93,12 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   test('facility catalogue restores typed tree filters', () async {
-    final repository = FacilityRepository(DirectoryApi());
+    final store = TestLocalStore();
+    addTearDown(store.close);
+    final repository = FacilityRepository(
+      DirectoryApi(),
+      FacilityLocalRepository(store.cache),
+    );
     const arguments = {
       'treeFilters': {'region': 'region-1', 'district': 'district-1'},
     };
@@ -109,7 +117,12 @@ void main() {
   });
 
   test('consultant catalogue restores region and specialty filters', () async {
-    final repository = ConsultantRepository(DirectoryApi());
+    final store = TestLocalStore();
+    addTearDown(store.close);
+    final repository = ConsultantRepository(
+      DirectoryApi(),
+      ConsultantLocalRepository(store.cache),
+    );
     const arguments = {
       'treeFilters': {
         'region': 'Central',
@@ -135,7 +148,12 @@ void main() {
 
   test('facility list and usage use dedicated typed endpoints', () async {
     final api = DirectoryApi();
-    final repository = FacilityRepository(api);
+    final store = TestLocalStore();
+    addTearDown(store.close);
+    final repository = FacilityRepository(
+      api,
+      FacilityLocalRepository(store.cache),
+    );
     await repository.listFacilities(
       page: 1,
       perPage: 20,
@@ -153,7 +171,12 @@ void main() {
 
   test('consultant usage uses its dedicated endpoint', () async {
     final api = DirectoryApi();
-    await ConsultantRepository(api).recordUsage('consultant-1');
+    final store = TestLocalStore();
+    addTearDown(store.close);
+    await ConsultantRepository(
+      api,
+      ConsultantLocalRepository(store.cache),
+    ).recordUsage('consultant-1');
     expect(api.lastPath, '/api/v2/consultants/consultant-1/usage');
   });
 }

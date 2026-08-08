@@ -1,6 +1,8 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:user_app/features/conversations/data/repositories/conversation_repository.dart';
 import 'package:user_app/core/network/api_client.dart';
+import 'package:user_app/features/conversations/data/repositories/conversation_local_repository.dart';
+import 'helpers/test_local_store.dart';
 
 class FakeConversationApi extends BackendApiService {
   String? path;
@@ -65,8 +67,12 @@ void main() {
     'messages use nested participant-protected routes and explicit order',
     () async {
       final api = FakeConversationApi();
+      final store = TestLocalStore();
+      addTearDown(store.close);
       final result = await ConversationRepository(
         api,
+        ConversationLocalRepository(store.cache),
+        userId: 'user-1',
       ).messages('conversation-1');
       expect(api.path, '/api/v2/conversations/conversation-1/messages');
       expect(api.query?['order'], 'asc');
@@ -77,8 +83,12 @@ void main() {
 
   test('message creation does not send a client sender id', () async {
     final api = FakeConversationApi();
+    final store = TestLocalStore();
+    addTearDown(store.close);
     await ConversationRepository(
       api,
+      ConversationLocalRepository(store.cache),
+      userId: 'user-1',
     ).send('conversation-1', content: 'Hello', messageType: 'text');
     expect(api.body?['content'], 'Hello');
     expect(api.body?.containsKey('sender_user_id'), isFalse);

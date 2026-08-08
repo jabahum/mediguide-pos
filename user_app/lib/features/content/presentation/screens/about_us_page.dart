@@ -118,8 +118,7 @@ class AboutUsPage extends StatelessWidget {
                         icon: LucideIcons.messageSquare,
                         title: AppTranslationKey.feedback.tr,
                         subtitle: AppTranslationKey.shareYourFeedback.tr,
-                        onTap: () =>
-                            AppNavigator.push(AppRoutes.helpCenter),
+                        onTap: () => AppNavigator.push(AppRoutes.helpCenter),
                       ),
                     ],
                   ),

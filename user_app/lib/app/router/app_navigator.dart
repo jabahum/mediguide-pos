@@ -40,45 +40,9 @@ abstract final class AppNavigator {
     return context.push<T>(location, extra: extra);
   }
 
-  /// Pushes a route using its configured GoRoute name.
-  ///
-  /// Example:
-  /// AppNavigator.pushNamed(
-  ///   'guideline-details',
-  ///   pathParameters: {'guidelineId': '123'},
-  /// );
-  static Future<T?> pushNamed<T extends Object?>(
-    String name, {
-    Map<String, String> pathParameters = const {},
-    Map<String, dynamic> queryParameters = const {},
-    Object? extra,
-  }) {
-    return context.pushNamed<T>(
-      name,
-      pathParameters: pathParameters,
-      queryParameters: queryParameters,
-      extra: extra,
-    );
-  }
-
   /// Navigates to a URL location and replaces the current route stack.
   static void go(String location, {Object? extra}) {
     context.go(location, extra: extra);
-  }
-
-  /// Navigates using a configured GoRoute name.
-  static void goNamed(
-    String name, {
-    Map<String, String> pathParameters = const {},
-    Map<String, dynamic> queryParameters = const {},
-    Object? extra,
-  }) {
-    context.goNamed(
-      name,
-      pathParameters: pathParameters,
-      queryParameters: queryParameters,
-      extra: extra,
-    );
   }
 
   static bool canPop() => context.canPop();

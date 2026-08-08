@@ -387,7 +387,10 @@ class GlobalSearchDelegate extends SearchDelegate<String?> {
       case SearchCategory.guidelines:
         final guideline = result.getItem<Guideline>();
         if (guideline != null) {
-          AppNavigator.push(AppRoutes.guideline(guideline.id), extra: guideline);
+          AppNavigator.push(
+            AppRoutes.guideline(guideline.id),
+            extra: guideline,
+          );
         }
       case SearchCategory.consultants:
         final consultant = result.getItem<Consultant>();

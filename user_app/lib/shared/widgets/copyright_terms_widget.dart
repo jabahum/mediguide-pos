@@ -22,12 +22,12 @@ class CopyrightTermsWidget extends StatelessWidget {
           textAlign: TextAlign.center,
         ),
         AppSpacing.gapSm,
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
+        Wrap(
+          alignment: WrapAlignment.center,
+          crossAxisAlignment: WrapCrossAlignment.center,
           children: [
             TextButton(
-              onPressed: () =>
-                  AppNavigator.push(AppRoutes.termsAndConditions),
+              onPressed: () => AppNavigator.push(AppRoutes.termsAndConditions),
               style: TextButton.styleFrom(
                 padding: AppSpacing.hPaddingSm,
                 minimumSize: const Size(0, 0),
@@ -47,8 +47,7 @@ class CopyrightTermsWidget extends StatelessWidget {
               ),
             ),
             TextButton(
-              onPressed: () =>
-                  AppNavigator.push(AppRoutes.termsAndConditions),
+              onPressed: () => AppNavigator.push(AppRoutes.termsAndConditions),
               style: TextButton.styleFrom(
                 padding: AppSpacing.hPaddingSm,
                 minimumSize: const Size(0, 0),

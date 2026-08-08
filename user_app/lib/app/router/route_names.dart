@@ -22,7 +22,6 @@ abstract final class AppRoutes {
   static const String abbreviations = '/abbreviations';
   static const String guidelinesIndexer = '/guidelines-indexer';
   static const String genericViewer = '/generic-viewer';
-  static const String readGuideline = '/read-guideline';
 
   // Health directory
   static const String healthInfrastructure = '/health-infrastructure';

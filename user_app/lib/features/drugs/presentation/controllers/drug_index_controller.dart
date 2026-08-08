@@ -13,8 +13,8 @@ import 'package:user_app/core/constants/app_constants.dart';
 import 'package:user_app/core/utils/app_extensions.dart';
 import 'package:user_app/core/utils/app_message.dart';
 
-import 'package:user_app/features/calculators/data/repositories/calculator_repository.dart';
 import 'package:user_app/features/drugs/data/repositories/drug_reference_repository.dart';
+import 'package:user_app/features/drugs/data/repositories/drug_repository.dart';
 import 'package:user_app/features/drugs/presentation/controllers/drug_index_query.dart';
 import 'package:user_app/features/drugs/presentation/controllers/drug_index_state.dart';
 import 'package:user_app/features/drugs/presentation/widgets/drug_details_bottom_sheet.dart';
@@ -84,9 +84,9 @@ class DrugIndexController extends _$DrugIndexController {
         _references.tagNames(),
       ]);
 
-      final categories = results[0] as List<String>;
+      final categories = results[0];
 
-      final tags = results[1] as List<String>;
+      final tags = results[1];
 
       const routes = <String>[
         'oral',

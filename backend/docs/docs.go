@@ -6334,7 +6334,7 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "Guideline document UUID",
+                        "description": "Medical guideline UUID",
                         "name": "guideline_id",
                         "in": "query"
                     },
@@ -6381,7 +6381,7 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "Guideline document UUID",
+                        "description": "Medical guideline UUID",
                         "name": "guidelineId",
                         "in": "path",
                         "required": true
@@ -6409,7 +6409,7 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "Guideline document UUID",
+                        "description": "Medical guideline UUID",
                         "name": "guidelineId",
                         "in": "path",
                         "required": true
@@ -6446,7 +6446,7 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "Guideline document UUID",
+                        "description": "Medical guideline UUID",
                         "name": "guidelineId",
                         "in": "path",
                         "required": true

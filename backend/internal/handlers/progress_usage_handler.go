@@ -18,7 +18,7 @@ type ProgressUsageHandler struct{ Service services.ProgressUsageService }
 // @Summary List the authenticated user's reading progress
 // @Tags progress-usage
 // @Security BearerAuth
-// @Param guideline_id query string false "Guideline document UUID"
+// @Param guideline_id query string false "Medical guideline UUID"
 // @Param is_bookmarked query boolean false "Bookmark state"
 // @Param progress_min query number false "Minimum progress from 0 to 1"
 // @Param progress_max query number false "Maximum progress from 0 to 1"
@@ -41,7 +41,7 @@ func (h ProgressUsageHandler) ListProgress(c *gin.Context) {
 // @Summary Get reading progress for one guideline
 // @Tags progress-usage
 // @Security BearerAuth
-// @Param guidelineId path string true "Guideline document UUID"
+// @Param guidelineId path string true "Medical guideline UUID"
 // @Success 200 {object} handlers.ReadingProgressEnvelope
 // @Router /api/v2/reading-progress/{guidelineId} [get]
 func (h ProgressUsageHandler) GetProgress(c *gin.Context) {
@@ -61,7 +61,7 @@ func (h ProgressUsageHandler) GetProgress(c *gin.Context) {
 // @Summary Create or update owned reading progress
 // @Tags progress-usage
 // @Security BearerAuth
-// @Param guidelineId path string true "Guideline document UUID"
+// @Param guidelineId path string true "Medical guideline UUID"
 // @Param payload body services.ReadingProgressInput true "Progress"
 // @Success 200 {object} handlers.ReadingProgressEnvelope
 // @Router /api/v2/reading-progress/{guidelineId} [put]
@@ -87,7 +87,7 @@ func (h ProgressUsageHandler) UpsertProgress(c *gin.Context) {
 // @Summary Delete owned reading progress
 // @Tags progress-usage
 // @Security BearerAuth
-// @Param guidelineId path string true "Guideline document UUID"
+// @Param guidelineId path string true "Medical guideline UUID"
 // @Success 204
 // @Router /api/v2/reading-progress/{guidelineId} [delete]
 func (h ProgressUsageHandler) DeleteProgress(c *gin.Context) {

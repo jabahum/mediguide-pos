@@ -7932,7 +7932,7 @@ paths:
   /api/v2/reading-progress:
     get:
       parameters:
-      - description: Guideline document UUID
+      - description: Medical guideline UUID
         in: query
         name: guideline_id
         type: string
@@ -7961,7 +7961,7 @@ paths:
   /api/v2/reading-progress/{guidelineId}:
     delete:
       parameters:
-      - description: Guideline document UUID
+      - description: Medical guideline UUID
         in: path
         name: guidelineId
         required: true
@@ -7976,7 +7976,7 @@ paths:
       - progress-usage
     get:
       parameters:
-      - description: Guideline document UUID
+      - description: Medical guideline UUID
         in: path
         name: guidelineId
         required: true
@@ -7993,7 +7993,7 @@ paths:
       - progress-usage
     put:
       parameters:
-      - description: Guideline document UUID
+      - description: Medical guideline UUID
         in: path
         name: guidelineId
         required: true

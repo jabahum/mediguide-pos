@@ -70,6 +70,9 @@ func (s ProgressUsageService) GetProgress(userID, guidelineID uuid.UUID) (*model
 }
 
 func (s ProgressUsageService) UpsertProgress(userID, guidelineID uuid.UUID, in ReadingProgressInput) (*models.ReadingProgress, error) {
+	if err := s.requireMedicalGuideline(guidelineID); err != nil {
+		return nil, err
+	}
 	var value models.ReadingProgress
 	err := s.DB.Where("user_id=? AND guideline_document_id=?", userID, guidelineID).First(&value).Error
 	if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -150,6 +153,9 @@ func (s ProgressUsageService) RecordUsage(userID uuid.UUID, eventType string, in
 	}
 	switch eventType {
 	case "guideline":
+		if err := s.requireMedicalGuideline(resourceID); err != nil {
+			return nil, err
+		}
 		return createUsage(s.DB, &models.GuidelineUsageLog{}, models.GuidelineUsageLog{UserID: userID, GuidelineDocumentID: resourceID, IdempotencyKey: &key}, userID, key)
 	case "abbreviation":
 		return createUsage(s.DB, &models.AbbreviationUsageLog{}, models.AbbreviationUsageLog{UserID: userID, AbbreviationID: resourceID, IdempotencyKey: &key}, userID, key)
@@ -164,15 +170,30 @@ func (s ProgressUsageService) RecordUsage(userID uuid.UUID, eventType string, in
 
 func createUsage[T any](db *gorm.DB, model *T, value T, userID uuid.UUID, key string) (*T, error) {
 	var existing T
-	if err := db.Where("user_id=? AND idempotency_key=?", userID, key).First(&existing).Error; err == nil {
+	lookup := db.Where("user_id=? AND idempotency_key=?", userID, key).Limit(1).Find(&existing)
+	if lookup.Error != nil {
+		return nil, lookup.Error
+	}
+	if lookup.RowsAffected > 0 {
 		return &existing, nil
-	} else if !errors.Is(err, gorm.ErrRecordNotFound) {
-		return nil, err
 	}
 	if err := db.Create(&value).Error; err != nil {
 		return nil, err
 	}
 	return &value, nil
+}
+
+func (s ProgressUsageService) requireMedicalGuideline(id uuid.UUID) error {
+	var count int64
+	if err := s.DB.Model(&models.MedicalGuideline{}).
+		Where("id = ? AND deleted_at IS NULL", id).
+		Count(&count).Error; err != nil {
+		return err
+	}
+	if count == 0 {
+		return gorm.ErrRecordNotFound
+	}
+	return nil
 }
 
 func (s ProgressUsageService) UsageAggregates(since *time.Time) ([]UsageAggregate, error) {

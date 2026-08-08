@@ -6331,7 +6331,7 @@
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "Guideline document UUID",
+                        "description": "Medical guideline UUID",
                         "name": "guideline_id",
                         "in": "query"
                     },
@@ -6378,7 +6378,7 @@
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "Guideline document UUID",
+                        "description": "Medical guideline UUID",
                         "name": "guidelineId",
                         "in": "path",
                         "required": true
@@ -6406,7 +6406,7 @@
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "Guideline document UUID",
+                        "description": "Medical guideline UUID",
                         "name": "guidelineId",
                         "in": "path",
                         "required": true
@@ -6443,7 +6443,7 @@
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "Guideline document UUID",
+                        "description": "Medical guideline UUID",
                         "name": "guidelineId",
                         "in": "path",
                         "required": true

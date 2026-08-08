@@ -7,7 +7,7 @@ part of 'read_guideline_controller.dart';
 // **************************************************************************
 
 String _$readGuidelineControllerHash() =>
-    r'cc532099ec9a537dc98cf88eb954dca833f47511';
+    r'bce1a4a6ffaf7ebe36ba68a630643979831dbbcb';
 
 /// Copied from Dart SDK
 class _SystemHash {

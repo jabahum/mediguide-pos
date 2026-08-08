@@ -13,7 +13,6 @@ import 'package:user_app/features/abbreviations/data/models/abbreviation.dart';
 import 'package:user_app/features/abbreviations/presentation/controllers/abbreviations_controller.dart';
 import 'package:user_app/features/abbreviations/presentation/widgets/abbreviation_card.dart';
 
-import 'package:user_app/l10n/app_translations.dart';
 import 'package:user_app/shared/widgets/filter_button.dart';
 import 'package:user_app/shared/widgets/pagination_indicators.dart';
 

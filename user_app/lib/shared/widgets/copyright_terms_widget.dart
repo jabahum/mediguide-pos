@@ -27,7 +27,7 @@ class CopyrightTermsWidget extends StatelessWidget {
           children: [
             TextButton(
               onPressed: () =>
-                  AppNavigator.pushNamed(AppRoutes.termsAndConditions),
+                  AppNavigator.push(AppRoutes.termsAndConditions),
               style: TextButton.styleFrom(
                 padding: AppSpacing.hPaddingSm,
                 minimumSize: const Size(0, 0),
@@ -48,7 +48,7 @@ class CopyrightTermsWidget extends StatelessWidget {
             ),
             TextButton(
               onPressed: () =>
-                  AppNavigator.pushNamed(AppRoutes.termsAndConditions),
+                  AppNavigator.push(AppRoutes.termsAndConditions),
               style: TextButton.styleFrom(
                 padding: AppSpacing.hPaddingSm,
                 minimumSize: const Size(0, 0),

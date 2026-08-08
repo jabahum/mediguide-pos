@@ -1,4 +1,4 @@
-/// Consultant specialty enum based on backend resource API consultants collection schema
+/// Consultant specialties exposed by the typed consultant API.
 enum ConsultantSpecialty {
   generalPractice(label: 'General Practice'),
   internalMedicine(label: 'Internal Medicine'),
@@ -32,7 +32,7 @@ enum ConsultantSpecialty {
   final String label;
 }
 
-/// Consultant qualifications enum based on backend resource API consultants collection schema
+/// Consultant qualifications exposed by the typed consultant API.
 enum ConsultantQualification {
   md(label: 'MD'),
   mbbs(label: 'MBBS'),
@@ -58,7 +58,7 @@ enum ConsultantQualification {
   final String label;
 }
 
-/// Consultant consultation types enum based on backend resource API consultants collection schema
+/// Consultation types exposed by the typed consultant API.
 enum ConsultationType {
   inPerson(label: 'In-Person'),
   telemedicine(label: 'Telemedicine'),
@@ -76,7 +76,7 @@ enum ConsultationType {
   final String label;
 }
 
-/// Consultant status enum based on backend resource API consultants collection schema
+/// Consultant statuses exposed by the typed consultant API.
 enum ConsultantStatus {
   active(label: 'Active'),
   inactive(label: 'Inactive'),

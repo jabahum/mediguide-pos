@@ -337,7 +337,7 @@ class ConsultantLocalRepository {
       return false;
     }
 
-    if (verified != null && consultant.verified != verified) {
+    if (verified != null && consultant.isVerified != verified) {
       return false;
     }
 
@@ -373,7 +373,7 @@ class ConsultantLocalRepository {
       'department': consultant.department,
       'city': consultant.city,
       'region': _consultantRegion(consultant),
-      'verified': consultant.verified,
+      'verified': consultant.isVerified,
       'active': _isActive(consultant),
     };
   }

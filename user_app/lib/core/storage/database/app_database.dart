@@ -37,6 +37,33 @@ class AppDatabase extends _$AppDatabase {
       await customStatement('PRAGMA journal_mode = WAL');
     },
   );
+
+  Future<CachedEntity?> cacheEntry(String key) {
+    return (select(cachedEntities)..where(
+          (table) =>
+              table.entityType.equals('http_response') &
+              table.entityId.equals(key) &
+              table.scope.equals('public') &
+              table.isDeleted.equals(false),
+        ))
+        .getSingleOrNull();
+  }
+
+  Future<void> putCacheEntry({
+    required String key,
+    required String payload,
+    required DateTime cachedAt,
+  }) {
+    return into(cachedEntities).insertOnConflictUpdate(
+      CachedEntitiesCompanion.insert(
+        entityType: 'http_response',
+        entityId: key,
+        payload: payload,
+        scope: const Value('public'),
+        cachedAt: cachedAt,
+      ),
+    );
+  }
 }
 
 LazyDatabase _openConnection() {

@@ -107,13 +107,8 @@ class MinistryDirectoryController extends _$MinistryDirectoryController {
           .map((value) => value.label)
           .toList(growable: false);
 
-      final results = await Future.wait([
-        _facilityRepository.districts(perPage: 500),
-        _facilityRepository.regions(perPage: 500),
-      ]);
-
-      final districts = results[0];
-      final regions = results[1];
+      final districts = await _facilityRepository.districts(perPage: 500);
+      final regions = await _facilityRepository.regions(perPage: 500);
 
       _districtIds
         ..clear()
@@ -317,6 +312,10 @@ class MinistryDirectoryController extends _$MinistryDirectoryController {
 
   void refreshData() {
     _refresh();
+  }
+
+  void refresh() {
+    refreshData();
   }
 
   void _refresh() {

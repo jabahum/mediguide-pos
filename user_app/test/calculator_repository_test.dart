@@ -1,6 +1,8 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:user_app/features/calculators/data/repositories/calculator_repository.dart';
 import 'package:user_app/core/network/api_client.dart';
+import 'package:user_app/features/calculators/data/repositories/calculator_local_repository.dart';
+import 'helpers/test_local_store.dart';
 
 class FakeCalculatorApi extends BackendApiService {
   String? path;
@@ -36,13 +38,19 @@ class FakeCalculatorApi extends BackendApiService {
 void main() {
   test('calculator list uses explicit typed sorting and filters', () async {
     final api = FakeCalculatorApi();
-    final result = await CalculatorRepository(api).list(
-      search: 'BMI',
-      statuses: const ['active'],
-      featured: true,
-      sort: 'usage_count',
-      order: 'desc',
-    );
+    final store = TestLocalStore();
+    addTearDown(store.close);
+    final result =
+        await CalculatorRepository(
+          api,
+          CalculatorLocalRepository(store.cache),
+        ).list(
+          search: 'BMI',
+          statuses: const ['active'],
+          featured: true,
+          sort: 'usage_count',
+          order: 'desc',
+        );
 
     expect(api.path, '/api/v2/calculators');
     expect(api.query?['search'], 'BMI');

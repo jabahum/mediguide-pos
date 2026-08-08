@@ -69,8 +69,15 @@ final class ReadGuidelineState {
 
 @riverpod
 class ReadGuidelineController extends _$ReadGuidelineController {
+  bool _disposed = false;
+
   @override
   Future<ReadGuidelineState> build(ReadGuidelineRequest request) async {
+    _disposed = false;
+    ref.onDispose(() {
+      _disposed = true;
+    });
+
     final guidelineId = request.id.trim();
 
     if (guidelineId.isEmpty) {
@@ -175,7 +182,7 @@ class ReadGuidelineController extends _$ReadGuidelineController {
             'is_completed': completed,
           });
 
-      if (!ref.mounted) {
+      if (_disposed) {
         return;
       }
 
@@ -216,7 +223,7 @@ class ReadGuidelineController extends _$ReadGuidelineController {
         {'is_bookmarked': next},
       );
 
-      if (!ref.mounted) {
+      if (_disposed) {
         return false;
       }
 
@@ -236,7 +243,7 @@ class ReadGuidelineController extends _$ReadGuidelineController {
 
       return true;
     } catch (_) {
-      if (ref.mounted) {
+      if (!_disposed) {
         final latest = state.valueOrNull;
 
         if (latest != null) {
@@ -272,7 +279,7 @@ class ReadGuidelineController extends _$ReadGuidelineController {
             'last_read_at': DateTime.now().toUtc().toIso8601String(),
           });
 
-      if (!ref.mounted) {
+      if (_disposed) {
         return false;
       }
 
@@ -292,7 +299,7 @@ class ReadGuidelineController extends _$ReadGuidelineController {
 
       return true;
     } catch (_) {
-      if (ref.mounted) {
+      if (!_disposed) {
         final latest = state.valueOrNull;
 
         if (latest != null) {

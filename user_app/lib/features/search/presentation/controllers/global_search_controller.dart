@@ -10,6 +10,7 @@ import 'package:user_app/features/calculators/data/repositories/calculator_repos
 import 'package:user_app/features/consultants/data/models/consultant.dart';
 import 'package:user_app/features/consultants/data/repositories/consultant_repository.dart';
 import 'package:user_app/features/drugs/data/models/drug.dart';
+import 'package:user_app/features/drugs/data/repositories/drug_repository.dart';
 import 'package:user_app/features/facilities/data/models/health_facility.dart';
 import 'package:user_app/features/facilities/data/repositories/facility_repository.dart';
 import 'package:user_app/features/guidelines/data/models/guideline.dart';
@@ -88,7 +89,7 @@ abstract interface class GlobalSearchDataSource {
 /// ======================================================
 
 @riverpod
-GlobalSearchDataSource globalSearchDataSource(Ref ref) {
+GlobalSearchDataSource globalSearchDataSource(GlobalSearchDataSourceRef ref) {
   return RepositoryGlobalSearchDataSource(
     drugs: ref.watch(drugRepositoryProvider),
     guidelines: ref.watch(guidelineContentRepositoryProvider),

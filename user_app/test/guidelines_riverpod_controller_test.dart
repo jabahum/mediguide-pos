@@ -9,6 +9,10 @@ import 'package:user_app/features/authentication/data/datasources/auth_local_dat
 import 'package:user_app/features/guidelines/presentation/controllers/read_guideline_controller.dart';
 import 'package:user_app/features/guidelines/presentation/controllers/guidelines_controller.dart';
 import 'package:user_app/app/providers/app_providers.dart';
+import 'package:user_app/features/abbreviations/data/repositories/abbreviation_local_repository.dart';
+import 'package:user_app/features/guidelines/data/repositories/guildline_content_local_repository.dart';
+import 'package:user_app/features/guidelines/data/repositories/progress_usage_repository.dart';
+import 'helpers/test_local_store.dart';
 
 final class TestSessionStore implements AuthSessionStore {
   @override
@@ -67,7 +71,7 @@ final class GuidelineApi extends BackendApiService {
         'data': {
           'id': 'progress-1',
           'user_id': 'user-1',
-          'guideline_id': 'guideline-1',
+          'guideline_document_id': 'guideline-1',
           'current_section': 'causes',
           'progress_percentage': 0.4,
           'is_bookmarked': false,
@@ -104,16 +108,32 @@ final class GuidelineApi extends BackendApiService {
 
 void main() {
   test('catalogue route arguments become typed permanent filters', () {
-    final controller = GuidelinesController(
-      GuidelineContentRepository(GuidelineApi()),
-      const {'filterType': 'tag', 'tagId': 'tag-1', 'title': 'Emergency care'},
+    final store = TestLocalStore();
+    addTearDown(store.close);
+    final repository = GuidelineContentRepository(
+      GuidelineApi(),
+      GuidelineContentLocalRepository(store.cache),
+      AbbreviationLocalRepository(store.cache),
     );
-    addTearDown(controller.dispose);
+    const arguments = {
+      'filterType': 'tag',
+      'tagId': 'tag-1',
+      'title': 'Emergency care',
+    };
+    final provider = guidelinesControllerProvider(arguments);
+    final container = ProviderContainer(
+      overrides: [
+        guidelineContentRepositoryProvider.overrideWithValue(repository),
+      ],
+    );
+    addTearDown(container.dispose);
+    container.listen(provider, (_, _) {});
+    final state = container.read(provider);
 
-    expect(controller.isInTagMode, isTrue);
-    expect(controller.selectedTagId, 'tag-1');
-    expect(controller.effectivePageTitle, 'Emergency care');
-    expect(controller.hasPermanentFilter, isTrue);
+    expect(state.isInTagMode, isTrue);
+    expect(state.route.selectedTagId, 'tag-1');
+    expect(state.effectivePageTitle, 'Emergency care');
+    expect(state.hasPermanentFilter, isTrue);
   });
 
   test(
@@ -122,11 +142,24 @@ void main() {
       SharedPreferences.setMockInitialValues({});
       final preferences = await SharedPreferences.getInstance();
       final api = GuidelineApi();
+      final store = TestLocalStore();
+      addTearDown(store.close);
+      final contentRepository = GuidelineContentRepository(
+        api,
+        GuidelineContentLocalRepository(store.cache),
+        AbbreviationLocalRepository(store.cache),
+      );
       final container = ProviderContainer(
         overrides: [
           backendApiServiceProvider.overrideWithValue(api),
           authSessionStoreProvider.overrideWithValue(TestSessionStore()),
           sharedPreferencesProvider.overrideWithValue(preferences),
+          guidelineContentRepositoryProvider.overrideWithValue(
+            contentRepository,
+          ),
+          readingProgressRepositoryProvider.overrideWithValue(
+            ReadingProgressRepository(api, store.cache),
+          ),
         ],
       );
       addTearDown(container.dispose);

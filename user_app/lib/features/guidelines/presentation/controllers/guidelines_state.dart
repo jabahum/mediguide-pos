@@ -29,6 +29,18 @@ final class GuidelinesState {
 
   bool get isEmergencyRoute => route.isEmergencyRoute;
 
+  String get searchQuery => query.search;
+
+  bool get showHighPriorityOnly => query.showHighPriorityOnly;
+
+  String get selectedTargetPopulation => query.selectedTargetPopulation;
+
+  bool get isInCategoryMode => route.isInCategoryMode;
+
+  bool get isInTagMode => route.isInTagMode;
+
+  bool get isInIndexMode => route.isInIndexMode;
+
   GuidelinesState copyWith({
     GuidelinesQuery? query,
     GuidelinesRouteState? route,

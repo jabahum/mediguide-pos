@@ -1,6 +1,8 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:user_app/features/support/data/repositories/help_content_repository.dart';
 import 'package:user_app/core/network/api_client.dart';
+import 'package:user_app/features/support/data/repositories/help_content_local_repository.dart';
+import 'helpers/test_local_store.dart';
 
 class FakeHelpContentApi extends BackendApiService {
   String? path;
@@ -51,8 +53,11 @@ class FakeHelpContentApi extends BackendApiService {
 void main() {
   test('HelpContentRepository uses typed FAQ query parameters', () async {
     final api = FakeHelpContentApi();
+    final store = TestLocalStore();
+    addTearDown(store.close);
     final result = await HelpContentRepository(
       api,
+      HelpContentLocalRepository(store.cache),
     ).listFAQs(search: 'password reset', featured: true);
 
     expect(api.path, '/api/v2/faqs');
@@ -65,8 +70,11 @@ void main() {
 
   test('HelpContentRepository uses the typed documentation endpoint', () async {
     final api = FakeHelpContentApi();
+    final store = TestLocalStore();
+    addTearDown(store.close);
     final result = await HelpContentRepository(
       api,
+      HelpContentLocalRepository(store.cache),
     ).listDocumentation(search: 'account', category: 'getting-started');
 
     expect(api.path, '/api/v2/documentation');

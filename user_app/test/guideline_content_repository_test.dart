@@ -1,6 +1,9 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:user_app/features/guidelines/data/repositories/guideline_content_repository.dart';
 import 'package:user_app/core/network/api_client.dart';
+import 'package:user_app/features/abbreviations/data/repositories/abbreviation_local_repository.dart';
+import 'package:user_app/features/guidelines/data/repositories/guildline_content_local_repository.dart';
+import 'helpers/test_local_store.dart';
 
 class FakeGuidelineContentApi extends BackendApiService {
   String? path;
@@ -42,7 +45,14 @@ void main() {
     'GuidelineContentRepository sends typed publication and taxonomy filters',
     () async {
       final api = FakeGuidelineContentApi();
-      final result = await GuidelineContentRepository(api).guidelines(
+      final store = TestLocalStore();
+      addTearDown(store.close);
+      final repository = GuidelineContentRepository(
+        api,
+        GuidelineContentLocalRepository(store.cache),
+        AbbreviationLocalRepository(store.cache),
+      );
+      final result = await repository.guidelines(
         search: 'blood pressure',
         categoryId: 'category-1',
         tagId: 'tag-1',
@@ -61,7 +71,14 @@ void main() {
 
   test('GuidelineContentRepository uses an explicit hierarchy query', () async {
     final api = FakeGuidelineContentApi();
-    await GuidelineContentRepository(api).categories(parentId: 'parent-1');
+    final store = TestLocalStore();
+    addTearDown(store.close);
+    final repository = GuidelineContentRepository(
+      api,
+      GuidelineContentLocalRepository(store.cache),
+      AbbreviationLocalRepository(store.cache),
+    );
+    await repository.categories(parentId: 'parent-1');
     expect(api.path, '/api/v2/guideline-categories');
     expect(api.query?['parent_id'], 'parent-1');
     expect(api.query?.containsKey('filter'), isFalse);

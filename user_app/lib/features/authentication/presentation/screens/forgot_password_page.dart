@@ -16,7 +16,6 @@ import 'package:user_app/core/widgets/app_button.dart';
 
 import 'package:user_app/features/authentication/presentation/controllers/password_recovery_controller.dart';
 
-import 'package:user_app/l10n/app_translations.dart';
 import 'package:user_app/shared/widgets/app_logo.dart';
 import 'package:user_app/shared/widgets/copyright_terms_widget.dart';
 import 'package:user_app/shared/widgets/glass_card.dart';

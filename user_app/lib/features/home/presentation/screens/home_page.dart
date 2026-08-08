@@ -7,6 +7,7 @@ import 'package:user_app/app/router/app_router.dart';
 import 'package:user_app/core/constants/app_spacing.dart';
 import 'package:user_app/core/utils/app_extensions.dart';
 import 'package:user_app/core/utils/date_utils.dart';
+import 'package:user_app/core/utils/responsive.dart';
 import 'package:user_app/core/widgets/app_error_view.dart';
 import 'package:user_app/core/widgets/app_loading_view.dart';
 import 'package:user_app/core/widgets/empty_state.dart';

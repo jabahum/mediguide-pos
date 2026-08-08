@@ -35,6 +35,10 @@ class GuidelinesController extends _$GuidelinesController {
   GuidelineContentRepository get _contentRepository =>
       ref.read(guidelineContentRepositoryProvider);
 
+  void refresh() {
+    pagingController.refresh();
+  }
+
   @override
   GuidelinesState build(Object? arguments) {
     final route = _routeFromArguments(arguments);

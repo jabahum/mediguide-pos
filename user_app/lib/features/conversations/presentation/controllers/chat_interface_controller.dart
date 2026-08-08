@@ -28,12 +28,10 @@ class ChatInterfaceController extends _$ChatInterfaceController {
   String? get _currentUserId =>
       ref.read(authControllerProvider).valueOrNull?.user?.id;
 
-  late final User otherUser;
+  String get currentUserId => _currentUserId ?? '';
 
   @override
   ChatInterfaceState build(User otherUser) {
-    this.otherUser = otherUser;
-
     ref.onDispose(() {
       _pollTimer?.cancel();
     });

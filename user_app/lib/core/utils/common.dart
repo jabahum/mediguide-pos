@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:user_app/core/config/app_keys.dart';
-import 'package:user_app/core/constants/app_constants.dart';
 import 'package:user_app/core/utils/app_message.dart';
 
 class Common {

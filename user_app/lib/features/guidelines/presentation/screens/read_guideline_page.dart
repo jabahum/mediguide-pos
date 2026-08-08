@@ -158,11 +158,7 @@ class _ReadGuidelinePageState extends ConsumerState<ReadGuidelinePage> {
 
   Widget _buildReader(
     BuildContext context,
-    AutoDisposeAsyncNotifierProvider<
-      ReadGuidelineController,
-      ReadGuidelineState
-    >
-    provider,
+    ReadGuidelineControllerProvider provider,
     ReadGuidelineState state,
   ) {
     final controller = ref.read(provider.notifier);
@@ -323,7 +319,7 @@ class _ReadGuidelinePageState extends ConsumerState<ReadGuidelinePage> {
 
     final navigatorContext = AppKeys.navigatorKey.currentContext;
 
-    if (navigatorContext == null) {
+    if (navigatorContext == null || !navigatorContext.mounted) {
       return;
     }
 

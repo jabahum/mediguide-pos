@@ -82,7 +82,7 @@ class TreeSelectorPage extends ConsumerWidget {
 
     if (state.hasLoadError && !hasNodes) {
       return AppErrorView(
-        error: state.error ?? 'Failed to load selector data',
+        error: state.errorMessage ?? 'Failed to load selector data',
         onRetry: controller.loadRootNodes,
       );
     }

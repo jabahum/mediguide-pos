@@ -8,6 +8,8 @@ import 'package:user_app/features/authentication/data/datasources/auth_local_dat
 import 'package:user_app/features/calculators/presentation/controllers/use_calculator_controller.dart';
 import 'package:user_app/features/calculators/presentation/controllers/tools_controller.dart';
 import 'package:user_app/app/providers/app_providers.dart';
+import 'package:user_app/features/calculators/data/repositories/calculator_local_repository.dart';
+import 'helpers/test_local_store.dart';
 
 final class EmptyToolSessionStore implements AuthSessionStore {
   @override
@@ -60,23 +62,38 @@ final class MemoryCalculatorLoader implements CalculatorContentLoader {
 
 void main() {
   test('tool catalogue applies its initial tab through scoped state', () {
-    final controller = ToolsController(CalculatorRepository(ToolApi()), const {
-      'initialTab': 2,
-    });
-    addTearDown(controller.dispose);
+    final store = TestLocalStore();
+    addTearDown(store.close);
+    final repository = CalculatorRepository(
+      ToolApi(),
+      CalculatorLocalRepository(store.cache),
+    );
+    const arguments = {'initialTab': 2};
+    final provider = toolsControllerProvider(arguments);
+    final container = ProviderContainer(
+      overrides: [calculatorRepositoryProvider.overrideWithValue(repository)],
+    );
+    addTearDown(container.dispose);
+    container.listen(provider, (_, _) {});
+    final state = container.read(provider);
 
-    expect(controller.selectedTabIndex, 2);
-    expect(controller.hasActiveFilters, isTrue);
+    expect(state.selectedTabIndex, 2);
+    expect(state.hasActiveFilters, isTrue);
   });
 
   test('calculator runner resolves an id and exposes loaded HTML', () async {
     final api = ToolApi();
     final loader = MemoryCalculatorLoader();
+    final store = TestLocalStore();
+    addTearDown(store.close);
     final container = ProviderContainer(
       overrides: [
         backendApiServiceProvider.overrideWithValue(api),
         authSessionStoreProvider.overrideWithValue(EmptyToolSessionStore()),
         calculatorContentLoaderProvider.overrideWithValue(loader),
+        calculatorRepositoryProvider.overrideWithValue(
+          CalculatorRepository(api, CalculatorLocalRepository(store.cache)),
+        ),
       ],
     );
     addTearDown(container.dispose);

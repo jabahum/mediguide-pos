@@ -7,7 +7,7 @@ part of 'all_actions_controller.dart';
 // **************************************************************************
 
 String _$allActionsControllerHash() =>
-    r'e76ab12fc4d70ee2cf4b0bf5db96a4a9eb50ad25';
+    r'05ef99adf71e8110e1d8815d5a86cc3c2c8cddf8';
 
 /// See also [AllActionsController].
 @ProviderFor(AllActionsController)

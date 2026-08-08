@@ -99,7 +99,7 @@ class _ChatInterfacePageState extends ConsumerState<ChatInterfacePage> {
       backgroundColor: cs.surface,
       appBar: AppBar(
         titleSpacing: AppSpacing.sm,
-        title: _ChatAppBarTitle(otherUser: state.otherUser),
+        title: _ChatAppBarTitle(otherUser: otherUser),
       ),
       body: Column(
         children: [
@@ -139,7 +139,7 @@ class _ChatInterfacePageState extends ConsumerState<ChatInterfacePage> {
         title: 'Unable to load conversation',
         message: 'The conversation could not be loaded.',
         onRetry: () {
-          controller.initialize();
+          controller.findOrCreateConversation();
         },
       );
     }
@@ -186,7 +186,7 @@ class _ChatInterfacePageState extends ConsumerState<ChatInterfacePage> {
 
               _MessageBubble(
                 message: message,
-                currentUserId: state.currentUserId,
+                currentUserId: controller.currentUserId,
               ),
             ],
           );

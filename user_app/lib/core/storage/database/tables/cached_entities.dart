@@ -19,7 +19,7 @@ class CachedEntities extends Table {
   /// public:
   ///     shared reference data such as guidelines
   ///
-  /// user:<id>:
+  /// `user:<id>`:
   ///     user-specific data such as bookmarks/progress
   TextColumn get scope => text().withDefault(const Constant('public'))();
 

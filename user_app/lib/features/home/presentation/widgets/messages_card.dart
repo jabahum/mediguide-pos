@@ -24,7 +24,7 @@ class MessagesCard extends ConsumerWidget {
     return Padding(
       padding: const EdgeInsets.only(bottom: AppSpacing.md),
       child: InkWell(
-        onTap: () => AppNavigator.pushNamed(AppRoutes.chatList),
+        onTap: () => AppNavigator.push(AppRoutes.chatList),
         borderRadius: BorderRadius.circular(10),
         child: Padding(
           padding: const EdgeInsets.symmetric(vertical: AppSpacing.xs),

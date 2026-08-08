@@ -7,7 +7,7 @@ part of 'abbreviations_controller.dart';
 // **************************************************************************
 
 String _$abbreviationsControllerHash() =>
-    r'f3745a4434573f0a6387e78e0565d62ab31da6e6';
+    r'8556fd0c4f328f9a2b5358df75bc7846a0cae9bd';
 
 /// ======================================================
 /// CONTROLLER

@@ -132,13 +132,13 @@ class ProfilePage extends ConsumerWidget {
                 icon: LucideIcons.circleHelp,
                 title: AppTranslationKey.helpCenter.tr,
                 subtitle: AppTranslationKey.getHelpAndSupport.tr,
-                onTap: () => AppNavigator.pushNamed(AppRoutes.helpCenter),
+                onTap: () => AppNavigator.push(AppRoutes.helpCenter),
               ),
               _SettingsTile(
                 icon: LucideIcons.messageCircleQuestion,
                 title: AppTranslationKey.frequentlyAskedQuestions.tr,
                 subtitle: AppTranslationKey.getAnswersToCommonQuestions.tr,
-                onTap: () => AppNavigator.pushNamed(AppRoutes.faq),
+                onTap: () => AppNavigator.push(AppRoutes.faq),
               ),
               _SettingsTile(
                 icon: LucideIcons.download,
@@ -154,20 +154,21 @@ class ProfilePage extends ConsumerWidget {
                       )
                     : const Icon(LucideIcons.chevronRight),
                 showChevron: false,
-                onTap: isCheckingForUpdate ? null : () => _checkForUpdate(ref),
+                onTap: isCheckingForUpdate
+                    ? null
+                    : () => _checkForUpdate(context, ref),
               ),
               _SettingsTile(
                 icon: LucideIcons.info,
                 title: AppTranslationKey.aboutMediGuide.tr,
                 subtitle: AppTranslationKey.appVersionAndInfo.tr,
-                onTap: () => AppNavigator.pushNamed(AppRoutes.aboutUs),
+                onTap: () => AppNavigator.push(AppRoutes.aboutUs),
               ),
               _SettingsTile(
                 icon: LucideIcons.fileText,
                 title: AppTranslationKey.termsAndPrivacy.tr,
                 subtitle: AppTranslationKey.legalInformation.tr,
-                onTap: () =>
-                    AppNavigator.pushNamed(AppRoutes.termsAndConditions),
+                onTap: () => AppNavigator.push(AppRoutes.termsAndConditions),
               ),
               _SettingsTile(
                 icon: LucideIcons.star,
@@ -310,12 +311,12 @@ class ProfilePage extends ConsumerWidget {
     }
   }
 
-  Future<void> _checkForUpdate(WidgetRef ref) async {
+  Future<void> _checkForUpdate(BuildContext context, WidgetRef ref) async {
     try {
       final result = await ref
           .read(appUpdateControllerProvider.notifier)
           .check();
-      if (result == null) return;
+      if (result == null || !context.mounted) return;
       final description = switch (result) {
         AppUpdateResult.unsupported =>
           'Updates are only supported on Android devices',
@@ -324,12 +325,14 @@ class ProfilePage extends ConsumerWidget {
         AppUpdateResult.upToDate => AppTranslationKey.appIsUpToDate.tr,
       };
 
-      AppMessage.info(AppKeys.navigatorKey.currentContext!, description);
+      AppMessage.info(context, description);
     } catch (_) {
-      AppMessage.error(
-        AppKeys.navigatorKey.currentContext!,
-        AppTranslationKey.failedToCheckForUpdates.tr,
-      );
+      if (context.mounted) {
+        AppMessage.error(
+          context,
+          AppTranslationKey.failedToCheckForUpdates.tr,
+        );
+      }
     }
   }
 

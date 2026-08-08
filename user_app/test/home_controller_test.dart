@@ -6,6 +6,26 @@ import 'package:user_app/features/authentication/presentation/controllers/auth_c
 import 'package:user_app/features/authentication/data/datasources/auth_local_datasource.dart';
 import 'package:user_app/features/home/presentation/controllers/home_controller.dart';
 import 'package:user_app/app/providers/app_providers.dart';
+import 'package:user_app/features/abbreviations/data/repositories/abbreviation_local_repository.dart';
+import 'package:user_app/features/calculators/data/repositories/calculator_local_repository.dart';
+import 'package:user_app/features/calculators/data/repositories/calculator_repository.dart';
+import 'package:user_app/features/guidelines/data/repositories/guildline_content_local_repository.dart';
+import 'package:user_app/features/guidelines/data/repositories/guideline_content_repository.dart';
+import 'helpers/test_local_store.dart';
+
+List<Override> offlineRepositoryOverrides(HomeApi api, TestLocalStore store) =>
+    [
+      calculatorRepositoryProvider.overrideWithValue(
+        CalculatorRepository(api, CalculatorLocalRepository(store.cache)),
+      ),
+      guidelineContentRepositoryProvider.overrideWithValue(
+        GuidelineContentRepository(
+          api,
+          GuidelineContentLocalRepository(store.cache),
+          AbbreviationLocalRepository(store.cache),
+        ),
+      ),
+    ];
 
 final class EmptySessionStore implements AuthSessionStore {
   @override
@@ -83,10 +103,13 @@ final class HomeApi extends BackendApiService {
 void main() {
   test('loads typed home data and unread message count', () async {
     final api = HomeApi();
+    final store = TestLocalStore();
+    addTearDown(store.close);
     final container = ProviderContainer(
       overrides: [
         backendApiServiceProvider.overrideWithValue(api),
         authSessionStoreProvider.overrideWithValue(EmptySessionStore()),
+        ...offlineRepositoryOverrides(api, store),
       ],
     );
     addTearDown(container.dispose);
@@ -103,10 +126,13 @@ void main() {
 
   test('refresh replaces home state without duplicating records', () async {
     final api = HomeApi();
+    final store = TestLocalStore();
+    addTearDown(store.close);
     final container = ProviderContainer(
       overrides: [
         backendApiServiceProvider.overrideWithValue(api),
         authSessionStoreProvider.overrideWithValue(EmptySessionStore()),
+        ...offlineRepositoryOverrides(api, store),
       ],
     );
     addTearDown(container.dispose);

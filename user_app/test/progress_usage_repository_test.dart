@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:user_app/features/guidelines/data/repositories/progress_usage_repository.dart';
 import 'package:user_app/core/network/api_client.dart';
+import 'helpers/test_local_store.dart';
 
 class FakeProgressApi extends BackendApiService {
   FakeProgressApi({this.offline = false});
@@ -34,13 +34,12 @@ class FakeProgressApi extends BackendApiService {
 }
 
 void main() {
-  setUp(() => SharedPreferences.setMockInitialValues({}));
-
   test('reading progress is retained locally when offline', () async {
-    final preferences = await SharedPreferences.getInstance();
+    final store = TestLocalStore();
+    addTearDown(store.close);
     final repository = ReadingProgressRepository(
       FakeProgressApi(offline: true),
-      preferences: preferences,
+      store.cache,
     );
     final record = await repository.upsert('user-1', 'guideline-1', {
       'progress_percentage': 0.4,

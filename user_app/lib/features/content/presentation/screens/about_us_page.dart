@@ -119,7 +119,7 @@ class AboutUsPage extends StatelessWidget {
                         title: AppTranslationKey.feedback.tr,
                         subtitle: AppTranslationKey.shareYourFeedback.tr,
                         onTap: () =>
-                            AppNavigator.pushNamed(AppRoutes.helpCenter),
+                            AppNavigator.push(AppRoutes.helpCenter),
                       ),
                     ],
                   ),
@@ -135,7 +135,7 @@ class AboutUsPage extends StatelessWidget {
                     title: AppTranslationKey.termsAndPrivacy.tr,
                     subtitle: AppTranslationKey.legalInformation.tr,
                     onTap: () =>
-                        AppNavigator.pushNamed(AppRoutes.termsAndConditions),
+                        AppNavigator.push(AppRoutes.termsAndConditions),
                   ),
                 ),
 

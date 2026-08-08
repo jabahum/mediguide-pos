@@ -2,6 +2,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:user_app/shared/models/models.dart';
 import 'package:user_app/features/support/data/repositories/support_repository.dart';
 import 'package:user_app/core/network/api_client.dart';
+import 'package:user_app/features/support/data/repositories/support_local_repository.dart';
+import 'helpers/test_local_store.dart';
 
 class FakeSupportApi extends BackendApiService {
   String? path;
@@ -49,11 +51,18 @@ class FakeSupportApi extends BackendApiService {
 void main() {
   test('SupportRepository uses typed filters and maps ticket status', () async {
     final api = FakeSupportApi();
-    final result = await SupportRepository(api).listTickets(
-      search: 'login',
-      status: TicketStatus.inProgress,
-      priority: TicketPriority.high,
-    );
+    final store = TestLocalStore();
+    addTearDown(store.close);
+    final result =
+        await SupportRepository(
+          api,
+          SupportLocalRepository(store.cache),
+          userId: 'user-1',
+        ).listTickets(
+          search: 'login',
+          status: TicketStatus.inProgress,
+          priority: TicketPriority.high,
+        );
 
     expect(api.path, '/api/v2/support/tickets');
     expect(api.query?['status'], 'in_progress');
@@ -65,7 +74,13 @@ void main() {
     'SupportRepository never sends a client-provided ticket owner',
     () async {
       final api = FakeSupportApi();
-      await SupportRepository(api).createTicket(
+      final store = TestLocalStore();
+      addTearDown(store.close);
+      await SupportRepository(
+        api,
+        SupportLocalRepository(store.cache),
+        userId: 'user-1',
+      ).createTicket(
         subject: 'Cannot sign in',
         description: 'Login fails',
         priority: TicketPriority.high,

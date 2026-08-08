@@ -1,4 +1,4 @@
-/// Ministry enum based on backend resource API ministry_directory collection schema
+/// Ministry-directory values exposed by the typed content API.
 enum Ministry {
   ministryOfHealth(label: 'Ministry of Health'),
   ministryOfEducation(label: 'Ministry of Education'),

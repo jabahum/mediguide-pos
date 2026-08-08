@@ -1,3 +1,4 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:user_app/shared/models/models.dart';
 import 'package:user_app/features/notifications/data/repositories/notification_repository.dart';
@@ -5,6 +6,10 @@ import 'package:user_app/features/support/data/repositories/support_repository.d
 import 'package:user_app/core/network/api_client.dart';
 import 'package:user_app/features/support/presentation/controllers/help_center_controller.dart';
 import 'package:user_app/features/notifications/presentation/controllers/notifications_controller.dart';
+import 'package:user_app/app/providers/app_providers.dart';
+import 'package:user_app/features/notifications/data/repositories/notification_local_repository.dart';
+import 'package:user_app/features/support/data/repositories/support_local_repository.dart';
+import 'helpers/test_local_store.dart';
 
 class SupportNotificationsApi extends BackendApiService {
   String? lastPath;
@@ -106,8 +111,19 @@ void main() {
 
   test('support notifier sends explicit typed filters', () async {
     final api = SupportNotificationsApi();
-    final controller = HelpCenterController(SupportRepository(api));
-    addTearDown(controller.dispose);
+    final store = TestLocalStore();
+    addTearDown(store.close);
+    final repository = SupportRepository(
+      api,
+      SupportLocalRepository(store.cache),
+      userId: 'user-1',
+    );
+    final container = ProviderContainer(
+      overrides: [supportRepositoryProvider.overrideWithValue(repository)],
+    );
+    addTearDown(container.dispose);
+    container.listen(helpCenterControllerProvider, (_, _) {});
+    final controller = container.read(helpCenterControllerProvider.notifier);
 
     controller.updateSearchQuery('login');
     controller.updateStatusFilter('inProgress');
@@ -115,7 +131,10 @@ void main() {
     controller.updateCategoryFilter('Account Problem');
     final tickets = await controller.loadTicketsPage(1);
 
-    expect(controller.hasActiveFilters, isTrue);
+    expect(
+      container.read(helpCenterControllerProvider).hasActiveFilters,
+      isTrue,
+    );
     expect(tickets.single.id, 'ticket-1');
     expect(api.lastPath, '/api/v2/support/tickets');
     expect(api.lastQuery?['search'], 'login');
@@ -125,29 +144,51 @@ void main() {
   });
 
   test('support notifier loads a ticket and its typed replies', () async {
-    final controller = HelpCenterController(
-      SupportRepository(SupportNotificationsApi()),
+    final store = TestLocalStore();
+    addTearDown(store.close);
+    final repository = SupportRepository(
+      SupportNotificationsApi(),
+      SupportLocalRepository(store.cache),
+      userId: 'user-1',
     );
-    addTearDown(controller.dispose);
+    final container = ProviderContainer(
+      overrides: [supportRepositoryProvider.overrideWithValue(repository)],
+    );
+    addTearDown(container.dispose);
+    container.listen(helpCenterControllerProvider, (_, _) {});
+    final controller = container.read(helpCenterControllerProvider.notifier);
 
     await controller.loadTicketDetails('ticket-1');
 
-    expect(controller.isLoading, isFalse);
-    expect(controller.selectedTicket?.id, 'ticket-1');
-    expect(controller.currentTicketReplies.single.id, 'reply-1');
+    final state = container.read(helpCenterControllerProvider);
+    expect(state.isLoading, isFalse);
+    expect(state.selectedTicket?.id, 'ticket-1');
+    expect(state.currentTicketReplies.single.id, 'reply-1');
   });
 
   test('notification notifier owns filters and read commands', () async {
     final api = SupportNotificationsApi();
-    final controller = NotificationsController(NotificationRepository(api));
-    addTearDown(controller.dispose);
+    final store = TestLocalStore();
+    addTearDown(store.close);
+    final repository = NotificationRepository(
+      api,
+      NotificationLocalRepository(store.cache),
+      userId: 'user-1',
+    );
+    final container = ProviderContainer(
+      overrides: [notificationRepositoryProvider.overrideWithValue(repository)],
+    );
+    addTearDown(container.dispose);
+    container.listen(notificationsControllerProvider, (_, _) {});
+    final controller = container.read(notificationsControllerProvider.notifier);
 
     controller.setTypeFilter('warning');
     controller.setPriorityFilter('high');
 
-    expect(controller.hasActiveFilters, isTrue);
-    expect(controller.selectedType, 'warning');
-    expect(controller.selectedPriority, 'high');
+    var state = container.read(notificationsControllerProvider);
+    expect(state.hasActiveFilters, isTrue);
+    expect(state.selectedType, 'warning');
+    expect(state.selectedPriority, 'high');
 
     const notification = MyNotification(
       id: 'notice-1',
@@ -160,6 +201,7 @@ void main() {
     expect(api.lastMethod, 'POST');
 
     controller.clearAllFilters();
-    expect(controller.hasActiveFilters, isFalse);
+    state = container.read(notificationsControllerProvider);
+    expect(state.hasActiveFilters, isFalse);
   });
 }

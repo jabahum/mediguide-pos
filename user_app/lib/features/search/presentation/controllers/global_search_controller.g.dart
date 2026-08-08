@@ -7,7 +7,7 @@ part of 'global_search_controller.dart';
 // **************************************************************************
 
 String _$globalSearchDataSourceHash() =>
-    r'c592b8df890137b3a3ff20a0544bc945d0631aac';
+    r'32d5821f1f268397e63268add80a5b6758fe4181';
 
 /// ======================================================
 /// GENERATED DATA SOURCE PROVIDER

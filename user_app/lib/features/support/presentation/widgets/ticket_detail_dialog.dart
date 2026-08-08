@@ -112,9 +112,9 @@ class _TicketDetailDialogState extends ConsumerState<TicketDetailDialog> {
     // ERROR
     // =====================================================
 
-    if (state.loadTicketError != null && state.selectedTicket == null) {
+    if (state.errorMessage != null && state.selectedTicket == null) {
       return AppErrorView(
-        error: state.loadTicketError!,
+        error: state.errorMessage!,
         onRetry: () {
           controller.loadTicketDetails(widget.ticketId);
         },

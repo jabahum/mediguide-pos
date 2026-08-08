@@ -206,12 +206,7 @@ class BackendApiService {
     );
   }
 
-  String getFileUrl({
-    String? collectionName,
-    String? recordId,
-    required String filename,
-    String? thumb,
-  }) {
+  String getFileUrl({required String filename}) {
     final trimmed = filename.trim();
     if (trimmed.isEmpty) {
       return '';
@@ -227,10 +222,6 @@ class BackendApiService {
 
     if (trimmed.contains('/')) {
       return '$mediguideApiBaseUrl/$trimmed';
-    }
-
-    if (collectionName != null && recordId != null) {
-      return '$mediguideApiBaseUrl/api/files/$collectionName/$recordId/$trimmed';
     }
 
     return '';

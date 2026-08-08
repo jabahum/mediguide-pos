@@ -10,8 +10,6 @@ import 'package:user_app/features/ai_assistant/data/models/ai_context.dart';
 import 'package:user_app/features/ai_assistant/data/models/rag_answer.dart';
 import 'package:user_app/features/ai_assistant/presentation/controllers/ai_assistant_controller.dart';
 
-import 'package:user_app/l10n/app_translations.dart';
-
 class AiAssistantPage extends ConsumerStatefulWidget {
   const AiAssistantPage({super.key, this.arguments});
 

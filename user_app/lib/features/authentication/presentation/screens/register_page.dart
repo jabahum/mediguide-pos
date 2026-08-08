@@ -20,7 +20,6 @@ import 'package:user_app/core/widgets/app_button.dart';
 import 'package:user_app/features/authentication/presentation/controllers/auth_controller.dart';
 import 'package:user_app/features/authentication/presentation/controllers/auth_state.dart';
 
-import 'package:user_app/l10n/app_translations.dart';
 import 'package:user_app/shared/models/models.dart';
 import 'package:user_app/shared/widgets/app_logo.dart';
 import 'package:user_app/shared/widgets/copyright_terms_widget.dart';

@@ -121,11 +121,11 @@ class _UseCalculatorPageState extends ConsumerState<UseCalculatorPage> {
                   await _loadCalculatorHtml(webViewController, state);
                 },
 
-                onLoadStart: (_, __) {
+                onLoadStart: (_, _) {
                   controller.webViewLoading();
                 },
 
-                onLoadStop: (_, __) {
+                onLoadStop: (_, _) {
                   controller.webViewReady();
                 },
 

@@ -1,5 +1,5 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:user_app/features/content/data/repositories/content_reference_repository.dart';
 import 'package:user_app/features/facilities/data/repositories/facility_repository.dart';
 import 'package:user_app/features/guidelines/data/repositories/guideline_content_repository.dart';
@@ -15,6 +15,13 @@ import 'package:user_app/features/guidelines/presentation/controllers/guidelines
 import 'package:user_app/features/content/presentation/controllers/ministry_directory_controller.dart';
 import 'package:user_app/features/tree_selector/data/models/tree_selector_models.dart';
 import 'package:user_app/features/tree_selector/presentation/controllers/tree_selector_controller.dart';
+import 'package:user_app/app/providers/app_providers.dart';
+import 'package:user_app/features/abbreviations/data/repositories/abbreviation_local_repository.dart';
+import 'package:user_app/features/content/data/repositories/generic_page_local_repository.dart';
+import 'package:user_app/features/content/data/repositories/ministry_directory_local_repository.dart';
+import 'package:user_app/features/guidelines/data/repositories/guildline_content_local_repository.dart';
+import 'package:user_app/features/support/data/repositories/help_content_local_repository.dart';
+import 'helpers/test_local_store.dart';
 
 class RemainingFeaturesApi extends BackendApiService {
   final List<String> paths = [];
@@ -113,34 +120,50 @@ class RemainingFeaturesApi extends BackendApiService {
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  setUp(() => SharedPreferences.setMockInitialValues({}));
-
   test('FAQ notifier owns search state without a route binding', () {
-    final controller = FaqController(
-      HelpContentRepository(RemainingFeaturesApi()),
+    final store = TestLocalStore();
+    addTearDown(store.close);
+    final repository = HelpContentRepository(
+      RemainingFeaturesApi(),
+      HelpContentLocalRepository(store.cache),
     );
-    addTearDown(controller.dispose);
+    final container = ProviderContainer(
+      overrides: [helpContentRepositoryProvider.overrideWithValue(repository)],
+    );
+    addTearDown(container.dispose);
+    container.listen(faqControllerProvider, (_, _) {});
+    final controller = container.read(faqControllerProvider.notifier);
 
     controller.searchFAQs('malaria');
-    expect(controller.searchQuery, 'malaria');
-    expect(controller.hasActiveFilters, isTrue);
+    expect(container.read(faqControllerProvider).searchQuery, 'malaria');
+    expect(container.read(faqControllerProvider).hasActiveFilters, isTrue);
 
     controller.clearAllFilters();
-    expect(controller.hasActiveFilters, isFalse);
+    expect(container.read(faqControllerProvider).hasActiveFilters, isFalse);
   });
 
   test('abbreviation notifier loads typed taxonomy and owns filters', () async {
     final api = RemainingFeaturesApi();
-    final controller = AbbreviationsController(
-      UsageRepository(api),
-      GuidelineContentRepository(api),
-      canTrackUsage: true,
+    final store = TestLocalStore();
+    addTearDown(store.close);
+    final repository = GuidelineContentRepository(
+      api,
+      GuidelineContentLocalRepository(store.cache),
+      AbbreviationLocalRepository(store.cache),
     );
-    addTearDown(controller.dispose);
+    final container = ProviderContainer(
+      overrides: [
+        guidelineContentRepositoryProvider.overrideWithValue(repository),
+        usageRepositoryProvider.overrideWithValue(UsageRepository(api)),
+      ],
+    );
+    addTearDown(container.dispose);
+    container.listen(abbreviationsControllerProvider, (_, _) {});
+    final controller = container.read(abbreviationsControllerProvider.notifier);
     await Future<void>.delayed(Duration.zero);
 
     controller.search('BP');
-    expect(controller.query.search, 'BP');
+    expect(container.read(abbreviationsControllerProvider).query.search, 'BP');
     expect(api.paths, contains('/api/v2/guideline-categories'));
     expect(api.paths, contains('/api/v2/guideline-tags'));
   });
@@ -149,22 +172,36 @@ void main() {
     'directory notifier restores route filters and typed metadata',
     () async {
       final api = RemainingFeaturesApi();
-      final controller = MinistryDirectoryController(
-        FacilityRepository(api),
-        MinistryDirectoryRepository(api),
+      final store = TestLocalStore();
+      addTearDown(store.close);
+      final container = ProviderContainer(
+        overrides: [
+          facilityRepositoryProvider.overrideWithValue(FacilityRepository(api)),
+          ministryDirectoryRepositoryProvider.overrideWithValue(
+            MinistryDirectoryRepository(
+              api,
+              MinistryDirectoryLocalRepository(store.cache),
+            ),
+          ),
+        ],
       );
-      addTearDown(controller.dispose);
+      addTearDown(container.dispose);
+      container.listen(ministryDirectoryControllerProvider, (_, _) {});
+      final controller = container.read(
+        ministryDirectoryControllerProvider.notifier,
+      );
       controller.applyTreeFilters({
         'region': 'Central',
         'district': 'Kampala',
         'emergency_only': true,
       });
-      await Future<void>.delayed(Duration.zero);
+      await controller.reloadFilterOptions();
 
-      expect(controller.selectedRegion, 'Central');
-      expect(controller.selectedDistrict, 'Kampala');
-      expect(controller.showEmergencyOnly, isTrue);
-      expect(controller.hasActiveFilters, isTrue);
+      final state = container.read(ministryDirectoryControllerProvider);
+      expect(state.query.selectedRegion, 'Central');
+      expect(state.query.selectedDistrict, 'Kampala');
+      expect(state.query.showEmergencyOnly, isTrue);
+      expect(state.hasActiveFilters, isTrue);
       expect(api.paths, contains('/api/v2/regions'));
     },
   );
@@ -179,43 +216,70 @@ void main() {
       created: DateTime(2026),
       updated: DateTime(2026),
     );
-    final viewer = GenericViewerController(GenericPageRepository(api));
-    final actions = AllActionsController(GenericPageRepository(api));
-    addTearDown(viewer.dispose);
-    addTearDown(actions.dispose);
+    final store = TestLocalStore();
+    addTearDown(store.close);
+    final repository = GenericPageRepository(
+      api,
+      GenericPageLocalRepository(store.cache),
+    );
+    final container = ProviderContainer(
+      overrides: [genericPageRepositoryProvider.overrideWithValue(repository)],
+    );
+    addTearDown(container.dispose);
+    container.listen(genericViewerControllerProvider, (_, _) {});
+    container.listen(allActionsControllerProvider, (_, _) {});
+    final viewer = container.read(genericViewerControllerProvider.notifier);
 
     await viewer.initialize(pageArgument: page);
     await Future<void>.delayed(Duration.zero);
 
-    expect(viewer.pageTitle, 'Privacy');
-    expect(viewer.hasContent, isTrue);
-    expect(actions.genericPages.single.title, 'Privacy');
+    final viewerState = container.read(genericViewerControllerProvider);
+    expect(viewerState.pageTitle, 'Privacy');
+    expect(viewerState.hasContent, isTrue);
+    expect(
+      container.read(allActionsControllerProvider).genericPages.single.title,
+      'Privacy',
+    );
   });
 
   test(
     'guideline index and tree selector load without service locators',
     () async {
       final api = RemainingFeaturesApi();
-      final indexer = GuidelinesIndexerController(
-        GuidelineContentRepository(api),
-      );
-      final selector = TreeSelectorController(
-        const TreeSelectorConfig(
-          title: 'Select region',
-          endpointPath: '/api/v2/tree',
-        ),
+      final store = TestLocalStore();
+      addTearDown(store.close);
+      final repository = GuidelineContentRepository(
         api,
+        GuidelineContentLocalRepository(store.cache),
+        AbbreviationLocalRepository(store.cache),
       );
-      addTearDown(indexer.dispose);
-      addTearDown(selector.dispose);
+      const config = TreeSelectorConfig(
+        title: 'Select region',
+        endpointPath: '/api/v2/tree',
+      );
+      final selectorProvider = treeSelectorControllerProvider(config);
+      final container = ProviderContainer(
+        overrides: [
+          backendApiServiceProvider.overrideWithValue(api),
+          guidelineContentRepositoryProvider.overrideWithValue(repository),
+        ],
+      );
+      addTearDown(container.dispose);
+      container.listen(guidelinesIndexerControllerProvider, (_, _) {});
+      container.listen(selectorProvider, (_, _) {});
+      final indexer = container.read(
+        guidelinesIndexerControllerProvider.notifier,
+      );
 
       await indexer.initialize(channel: 'Clinical');
       await Future<void>.delayed(Duration.zero);
 
-      expect(indexer.hasLoadError, isFalse);
-      expect(indexer.totalSections, 2);
-      expect(indexer.visibleTree.childrenAsList, isNotEmpty);
-      expect(selector.rootTreeNode.childrenAsList, hasLength(1));
+      final indexState = container.read(guidelinesIndexerControllerProvider);
+      final selectorState = container.read(selectorProvider);
+      expect(indexState.hasLoadError, isFalse);
+      expect(indexState.totalSections, 2);
+      expect(indexState.visibleTree.childrenAsList, isNotEmpty);
+      expect(selectorState.rootTreeNode.childrenAsList, hasLength(1));
       expect(api.paths, contains('/api/v2/tree'));
     },
   );

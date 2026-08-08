@@ -172,7 +172,7 @@ class AllActionsController extends _$AllActionsController {
 
       final context = AppKeys.navigatorKey.currentContext;
 
-      if (context != null) {
+      if (context != null && context.mounted) {
         AppMessage.error(context, message);
       }
     } finally {

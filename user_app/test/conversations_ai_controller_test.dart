@@ -1,5 +1,7 @@
 import 'package:flutter_gen_ai_chat_ui/flutter_gen_ai_chat_ui.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:user_app/features/ai_assistant/data/models/ai_context.dart';
 import 'package:user_app/features/ai_assistant/data/models/rag_answer.dart';
 import 'package:user_app/shared/models/models.dart';
@@ -11,12 +13,32 @@ import 'package:user_app/core/network/api_client.dart';
 import 'package:user_app/features/ai_assistant/presentation/controllers/ai_assistant_controller.dart';
 import 'package:user_app/features/conversations/presentation/controllers/chat_interface_controller.dart';
 import 'package:user_app/features/conversations/presentation/controllers/chat_list_controller.dart';
+import 'package:user_app/app/providers/app_providers.dart';
+import 'package:user_app/features/authentication/data/datasources/auth_local_datasource.dart';
+import 'package:user_app/features/authentication/presentation/controllers/auth_controller.dart';
+
+final class ConversationSessionStore implements AuthSessionStore {
+  @override
+  User? currentUser = _user('user-1', 'Current User');
+
+  @override
+  Future<bool> clearUser() async => true;
+
+  @override
+  Future<bool> saveUser(User user) async {
+    currentUser = user;
+    return true;
+  }
+}
 
 class ConversationAiApi extends BackendApiService {
   String? lastPath;
   String? lastMethod;
   Map<String, dynamic>? lastBody;
   int usageWrites = 0;
+
+  @override
+  bool get isAuthenticated => true;
 
   @override
   Future<Map<String, dynamic>> requestJson(
@@ -29,6 +51,16 @@ class ConversationAiApi extends BackendApiService {
     lastPath = path;
     lastMethod = method;
     lastBody = body;
+
+    if (path == '/api/v2/me') {
+      return {
+        'data': {
+          'id': 'user-1',
+          'name': 'Current User',
+          'email': 'user-1@example.test',
+        },
+      };
+    }
 
     if (path == '/api/v2/conversations' && method == 'POST') {
       return {
@@ -124,24 +156,46 @@ User _user(String id, String name) =>
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
+  Future<ProviderContainer> containerFor(ConversationAiApi api) async {
+    SharedPreferences.setMockInitialValues({});
+    final preferences = await SharedPreferences.getInstance();
+    final container = ProviderContainer(
+      overrides: [
+        backendApiServiceProvider.overrideWithValue(api),
+        authSessionStoreProvider.overrideWithValue(ConversationSessionStore()),
+        sharedPreferencesProvider.overrideWithValue(preferences),
+        conversationRepositoryProvider.overrideWithValue(
+          ConversationRepository(api),
+        ),
+      ],
+    );
+    await container.read(authControllerProvider.future);
+    return container;
+  }
+
   test(
     'conversation catalogue owns filter state and authenticated identity',
-    () {
-      final controller = ChatListController(
-        ConversationRepository(ConversationAiApi()),
-        currentUserId: 'user-1',
-      );
-      addTearDown(controller.dispose);
+    () async {
+      final container = await containerFor(ConversationAiApi());
+      addTearDown(container.dispose);
+      container.listen(chatListControllerProvider, (_, _) {});
+      final controller = container.read(chatListControllerProvider.notifier);
 
       controller.setSearchQuery('doctor');
       controller.setRecentOnly(true);
       controller.setVerifiedOnly(true);
 
-      expect(controller.hasActiveFilters, isTrue);
+      expect(
+        container.read(chatListControllerProvider).hasActiveFilters,
+        isTrue,
+      );
       expect(controller.currentUserId, 'user-1');
 
       controller.clearAllFilters();
-      expect(controller.hasActiveFilters, isFalse);
+      expect(
+        container.read(chatListControllerProvider).hasActiveFilters,
+        isFalse,
+      );
     },
   );
 
@@ -149,22 +203,24 @@ void main() {
     'chat notifier initializes, polls, and sends through typed routes',
     () async {
       final api = ConversationAiApi();
-      final controller = ChatInterfaceController(
-        ConversationRepository(api),
-        otherUser: _user('user-2', 'Dr Other'),
-        currentUserId: 'user-1',
+      final container = await containerFor(api);
+      addTearDown(container.dispose);
+      final provider = chatInterfaceControllerProvider(
+        _user('user-2', 'Dr Other'),
       );
-      addTearDown(controller.dispose);
+      container.listen(provider, (_, _) {});
+      final controller = container.read(provider.notifier);
+      await controller.findOrCreateConversation();
+      var state = container.read(provider);
 
-      await controller.initialize();
-
-      expect(controller.conversationId, 'conversation-1');
-      expect(controller.messages.single.content, 'Welcome');
-      expect(controller.isConnected, isTrue);
+      expect(state.conversationId, 'conversation-1');
+      expect(state.messages.single.content, 'Welcome');
+      expect(state.isConnected, isTrue);
 
       final sent = await controller.sendTextMessage('Hello doctor');
       expect(sent, isTrue);
-      expect(controller.messages.last.content, 'Hello doctor');
+      state = container.read(provider);
+      expect(state.messages.last.content, 'Hello doctor');
       expect(api.lastPath, '/api/v2/conversations/conversation-1/messages');
       expect(api.lastBody?.containsKey('sender_user_id'), isFalse);
     },
@@ -180,14 +236,26 @@ void main() {
         content: 'Assess blood pressure and cardiovascular risk.',
         guidelineId: 'guideline-1',
       );
-      final controller = AiAssistantController(
-        ragAssistant: rag,
-        contextService: AiContextService(),
-        usageRepository: UsageRepository(api),
-        currentUser: _user('user-1', 'Clinician'),
-        initialContext: context,
+      SharedPreferences.setMockInitialValues({});
+      final preferences = await SharedPreferences.getInstance();
+      final provider = aiAssistantControllerProvider(context);
+      final scoped = ProviderContainer(
+        overrides: [
+          backendApiServiceProvider.overrideWithValue(api),
+          authSessionStoreProvider.overrideWithValue(
+            ConversationSessionStore(),
+          ),
+          sharedPreferencesProvider.overrideWithValue(preferences),
+          ragRepositoryProvider.overrideWithValue(rag),
+          aiContextServiceProvider.overrideWithValue(AiContextService()),
+          usageRepositoryProvider.overrideWithValue(UsageRepository(api)),
+        ],
       );
-      addTearDown(controller.dispose);
+      addTearDown(scoped.dispose);
+      await scoped.read(authControllerProvider.future);
+      scoped.listen(provider, (_, _) {});
+      scoped.read(provider);
+      final controller = scoped.read(provider.notifier);
 
       await controller.handleSendMessage(
         ChatMessage(
@@ -199,14 +267,16 @@ void main() {
       await Future<void>.delayed(Duration.zero);
 
       expect(rag.lastMessage, contains('Hypertension'));
-      expect(controller.conversationHistory, hasLength(2));
-      expect(controller.latestCitations.single.chunkId, 'chunk-1');
-      expect(controller.isLoading, isFalse);
+      var state = scoped.read(provider);
+      expect(state.conversationHistory, hasLength(2));
+      expect(state.latestCitations.single.chunkId, 'chunk-1');
+      expect(state.isLoading, isFalse);
       expect(api.usageWrites, 1);
       expect(api.lastBody?.containsKey('user_id'), isFalse);
 
       controller.clearContext();
-      expect(controller.currentContext, isNull);
+      state = scoped.read(provider);
+      expect(state.currentContext, isNull);
     },
   );
 }

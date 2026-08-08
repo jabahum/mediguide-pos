@@ -416,9 +416,9 @@ class DrugIndexController extends _$DrugIndexController {
 
       items = items
           .where((drug) {
-            final route = drug.route;
-
-            return route != null && selected.contains(route);
+            return drug.routeOfAdministration.any(
+              (route) => selected.contains(route.name),
+            );
           })
           .toList(growable: false);
     }
@@ -430,7 +430,7 @@ class DrugIndexController extends _$DrugIndexController {
           .where((drug) {
             final category = drug.pregnancyCategory;
 
-            return category != null && selected.contains(category);
+            return category != null && selected.contains(category.name);
           })
           .toList(growable: false);
     }

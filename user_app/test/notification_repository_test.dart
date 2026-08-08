@@ -1,6 +1,8 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:user_app/features/notifications/data/repositories/notification_repository.dart';
 import 'package:user_app/core/network/api_client.dart';
+import 'package:user_app/features/notifications/data/repositories/notification_local_repository.dart';
+import 'helpers/test_local_store.dart';
 
 class FakeNotificationApi extends BackendApiService {
   int? requestedPage;
@@ -56,7 +58,13 @@ void main() {
     'NotificationRepository maps typed pages to application models',
     () async {
       final api = FakeNotificationApi();
-      final repository = NotificationRepository(api);
+      final store = TestLocalStore();
+      addTearDown(store.close);
+      final repository = NotificationRepository(
+        api,
+        NotificationLocalRepository(store.cache),
+        userId: 'user-1',
+      );
 
       final result = await repository.list(
         page: 2,
@@ -75,7 +83,13 @@ void main() {
     'NotificationRepository delegates owner read state to the typed API',
     () async {
       final api = FakeNotificationApi();
-      final repository = NotificationRepository(api);
+      final store = TestLocalStore();
+      addTearDown(store.close);
+      final repository = NotificationRepository(
+        api,
+        NotificationLocalRepository(store.cache),
+        userId: 'user-1',
+      );
 
       final result = await repository.markRead('notice-1');
 

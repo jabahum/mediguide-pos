@@ -1,4 +1,4 @@
-/// User role enum based on backend resource API users collection schema
+/// User roles exposed by the typed user API.
 enum UserRole {
   superAdmin(label: 'Super Admin'),
   admin(label: 'Admin'),
@@ -12,7 +12,7 @@ enum UserRole {
   final String label;
 }
 
-/// User status enum based on backend resource API users collection schema
+/// User statuses exposed by the typed user API.
 enum UserStatus {
   active(label: 'Active'),
   inactive(label: 'Inactive'),
@@ -24,7 +24,7 @@ enum UserStatus {
   final String label;
 }
 
-/// User specialization enum based on backend resource API users collection schema
+/// User specializations exposed by the typed user API.
 enum Specialization {
   generalPractice(label: 'General Practice'),
   pediatrics(label: 'Pediatrics'),
@@ -46,7 +46,7 @@ enum Specialization {
   final String label;
 }
 
-/// Preferred language enum based on backend resource API users collection schema
+/// Preferred languages exposed by the typed user API.
 enum PreferredLanguage {
   english(label: 'English'),
   french(label: 'French'),

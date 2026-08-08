@@ -172,7 +172,7 @@ class AbbreviationsController extends _$AbbreviationsController {
     } catch (error) {
       final context = AppKeys.navigatorKey.currentContext;
 
-      if (context != null) {
+      if (context != null && context.mounted) {
         AppMessage.error(context, error.toString());
       }
 
@@ -256,7 +256,7 @@ class AbbreviationsController extends _$AbbreviationsController {
     } catch (error) {
       final context = AppKeys.navigatorKey.currentContext;
 
-      if (context != null) {
+      if (context != null && context.mounted) {
         AppMessage.error(context, 'Unable to load filter options: $error');
       }
     } finally {

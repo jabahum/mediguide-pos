@@ -109,7 +109,9 @@ class _CreateTicketDialogState extends ConsumerState<CreateTicketDialog> {
                     prefixIcon: Icon(LucideIcons.tag),
                   ),
                   initialValue: 'General Question',
-                  items: state.availableCategories.map((category) {
+                  items: HelpCenterController.availableCategories.map((
+                    category,
+                  ) {
                     return DropdownMenuItem<String>(
                       value: category,
                       child: Text(category),

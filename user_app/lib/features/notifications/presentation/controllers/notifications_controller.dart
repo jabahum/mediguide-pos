@@ -144,6 +144,10 @@ class NotificationsController extends _$NotificationsController {
     pagingController.refresh();
   }
 
+  void refresh() {
+    refreshNotifications();
+  }
+
   void _scheduleRefresh() {
     _debounce?.cancel();
 

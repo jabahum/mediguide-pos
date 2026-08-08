@@ -54,9 +54,8 @@ final class HelpContentRepository {
       final items = (data['items'] as List? ?? const [])
           .whereType<Map>()
           .map(
-            (value) => FAQ.fromJson(
-              _normalize(Map<String, dynamic>.from(value), 'faqs'),
-            ),
+            (value) =>
+                FAQ.fromJson(_normalizeFAQ(Map<String, dynamic>.from(value))),
           )
           .toList(growable: false);
 
@@ -124,7 +123,7 @@ final class HelpContentRepository {
         ),
       );
 
-      final faq = FAQ.fromJson(_normalize(_data(response), 'faqs'));
+      final faq = FAQ.fromJson(_normalizeFAQ(_data(response)));
 
       try {
         await _local.saveFAQ(faq);
@@ -254,10 +253,10 @@ final class HelpContentRepository {
   }
 
   // =========================================================
-  // NORMALIZE FAQ
+  // NORMALIZE FAQ TRANSPORT ALIASES
   // =========================================================
 
-  Map<String, dynamic> _normalize(Map<String, dynamic> raw, String collection) {
+  Map<String, dynamic> _normalizeFAQ(Map<String, dynamic> raw) {
     return {
       ...raw,
 
@@ -266,9 +265,6 @@ final class HelpContentRepository {
 
       if (raw['reviewer'] == null && raw['reviewer_id'] != null)
         'reviewer': raw['reviewer_id'],
-
-      'collectionName': collection,
-      'collectionId': collection,
 
       'created':
           raw['created_at']?.toString() ?? raw['created']?.toString() ?? '',

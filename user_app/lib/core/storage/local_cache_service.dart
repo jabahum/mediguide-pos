@@ -5,6 +5,7 @@ import 'dart:convert';
 import 'package:drift/drift.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:user_app/core/storage/database/app_database.dart';
+import 'package:user_app/core/storage/database/database_provider.dart';
 
 final localCacheServiceProvider = Provider<LocalCacheService>((ref) {
   return LocalCacheService(ref.watch(appDatabaseProvider));

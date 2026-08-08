@@ -3,7 +3,6 @@ import 'package:user_app/shared/models/models.dart';
 import 'package:user_app/core/network/api_client.dart';
 
 import 'package:user_app/features/calculators/data/repositories/calculator_local_repository.dart';
-import 'package:user_app/features/drugs/data/repositories/drug_local_repository.dart';
 
 // ===========================================================
 // CALCULATORS
@@ -65,15 +64,10 @@ final class CalculatorRepository {
             _totalPages(items.length, safePerPage),
       );
     } catch (_) {
-      final cached = await _local.list(
+      final cached = await _local.getCalculators(
         page: safePage,
         perPage: safePerPage,
         search: search ?? '',
-        types: types,
-        statuses: statuses,
-        featured: featured,
-        sort: sort,
-        order: order,
       );
 
       if (cached.isEmpty) {
@@ -135,7 +129,7 @@ final class CalculatorRepository {
 
       return calculator;
     } catch (_) {
-      final cached = await _local.get(normalizedId);
+      final cached = await _local.getCalculator(normalizedId);
 
       if (cached != null) {
         return cached;

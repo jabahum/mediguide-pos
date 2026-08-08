@@ -1,6 +1,8 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:user_app/features/content/data/repositories/content_reference_repository.dart';
 import 'package:user_app/core/network/api_client.dart';
+import 'package:user_app/features/content/data/repositories/generic_page_local_repository.dart';
+import 'helpers/test_local_store.dart';
 
 class FakeContentReferenceApi extends BackendApiService {
   String? path;
@@ -60,7 +62,12 @@ class FakeContentReferenceApi extends BackendApiService {
 void main() {
   test('GenericPageRepository uses typed search parameters', () async {
     final api = FakeContentReferenceApi();
-    final result = await GenericPageRepository(api).list(search: 'about');
+    final store = TestLocalStore();
+    addTearDown(store.close);
+    final result = await GenericPageRepository(
+      api,
+      GenericPageLocalRepository(store.cache),
+    ).list(search: 'about');
     expect(api.path, '/api/v2/pages');
     expect(api.query?['search'], 'about');
     expect(api.query?.containsKey('filter'), isFalse);

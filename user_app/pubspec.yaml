@@ -44,9 +44,9 @@ dependencies:
   # OFFLINE / LOCAL DATABASE
   # ==========================================================
 
-  # Drift 2.32.1 supports Dart 3.5+
-  # and uses sqlite3 3.x internally.
-  drift: ^2.32.1
+  # Keep runtime and generator aligned with Riverpod 2.x's source_gen range.
+  # Upgrade Drift and Riverpod generators together in a dedicated migration.
+  drift: 2.27.0
 
   path: ^1.9.1
   path_provider: ^2.1.5
@@ -137,6 +137,7 @@ dependencies:
   expansion_tile_group: ^2.3.0
   bubble: ^1.2.1
   introduction_screen: ^4.0.0
+  toastification: ^3.0.3
 
   # ==========================================================
   # UTILITIES
@@ -163,7 +164,7 @@ dev_dependencies:
   riverpod_generator: ^2.6.5
 
   # Drift database generation
-  drift_dev: ^2.32.1
+  drift_dev: 2.27.0
 
   # Freezed / JSON generation
   freezed: ^3.0.6

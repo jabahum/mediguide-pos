@@ -410,6 +410,10 @@ class HealthInfrastructureController extends _$HealthInfrastructureController {
     _refresh();
   }
 
+  void refresh() {
+    refreshData();
+  }
+
   void _refresh() {
     pagingController.refresh();
   }

@@ -473,8 +473,8 @@ class DrugDetailsBottomSheet extends ConsumerWidget {
   /// Navigate to AI assistant with drug context
   void _showAiAssistant(AiContextService contextService) {
     final drugContext = _buildDrugContext(contextService);
-    AppNavigator.pushNamed(
-      '/aiAssistant',
+    AppNavigator.push(
+      AppRoutes.aiAssistant,
       extra: {'aiContext': drugContext.toJson()},
     );
   }

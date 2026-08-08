@@ -387,39 +387,42 @@ class GlobalSearchDelegate extends SearchDelegate<String?> {
       case SearchCategory.guidelines:
         final guideline = result.getItem<Guideline>();
         if (guideline != null) {
-          AppNavigator.pushNamed(AppRoutes.readGuideline, extra: guideline);
+          AppNavigator.push(AppRoutes.guideline(guideline.id), extra: guideline);
         }
       case SearchCategory.consultants:
         final consultant = result.getItem<Consultant>();
         if (consultant != null) {
-          AppNavigator.pushNamed(AppRoutes.consultants, extra: consultant);
+          AppNavigator.push(
+            AppRoutes.consultant(consultant.id),
+            extra: consultant,
+          );
         }
       case SearchCategory.healthFacilities:
         final facility = result.getItem<HealthFacility>();
         if (facility != null) {
-          AppNavigator.pushNamed(
-            AppRoutes.healthInfrastructure,
+          AppNavigator.push(
+            AppRoutes.healthFacility(facility.id),
             extra: facility,
           );
         }
       case SearchCategory.abbreviations:
         final abbreviation = result.getItem<Abbreviation>();
         if (abbreviation != null) {
-          AppNavigator.pushNamed(AppRoutes.abbreviations, extra: abbreviation);
+          AppNavigator.push(AppRoutes.abbreviations, extra: abbreviation);
         }
       case SearchCategory.tools:
         final calculator = result.getItem<Calculator>();
-        AppNavigator.pushNamed(
-          AppRoutes.calculators,
+        AppNavigator.push(
+          AppRoutes.calculator(calculator?.id ?? result.id),
           extra: calculator ?? {'calculatorId': result.id},
         );
       case SearchCategory.faq:
         if (result.item != null) {
-          AppNavigator.pushNamed(AppRoutes.faq, extra: result.item);
+          AppNavigator.push(AppRoutes.faq, extra: result.item);
         }
       case SearchCategory.all:
         if (result.route != null) {
-          AppNavigator.pushNamed(result.route!, extra: result.routeArguments);
+          AppNavigator.push(result.route!, extra: result.routeArguments);
         }
     }
   }

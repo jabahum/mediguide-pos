@@ -7,7 +7,7 @@ part of 'ministry_directory_controller.dart';
 // **************************************************************************
 
 String _$ministryDirectoryControllerHash() =>
-    r'd96e14f79097b8947b929dad7b829313c5993842';
+    r'15b8c689aa702aaf3f8c59c013ce214e59419958';
 
 /// See also [MinistryDirectoryController].
 @ProviderFor(MinistryDirectoryController)

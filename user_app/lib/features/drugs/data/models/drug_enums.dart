@@ -1,4 +1,4 @@
-/// Route of administration enum based on backend resource API drugs collection schema
+/// Route of administration values exposed by the typed drugs API.
 enum RouteOfAdministration {
   oral(label: 'Oral'),
   iv(label: 'IV'),
@@ -16,7 +16,7 @@ enum RouteOfAdministration {
   final String label;
 }
 
-/// Pregnancy category enum based on backend resource API drugs collection schema
+/// Pregnancy category values exposed by the typed drugs API.
 enum PregnancyCategory {
   a(label: 'Category A'),
   b(label: 'Category B'),
@@ -30,7 +30,7 @@ enum PregnancyCategory {
   final String label;
 }
 
-/// Controlled substance enum based on backend resource API drugs collection schema
+/// Controlled-substance values exposed by the typed drugs API.
 enum ControlledSubstance {
   none(label: 'None'),
   scheduleI(label: 'Schedule I'),
@@ -44,7 +44,7 @@ enum ControlledSubstance {
   final String label;
 }
 
-/// Drug status enum based on backend resource API drugs collection schema
+/// Drug status values exposed by the typed drugs API.
 enum DrugStatus {
   active(label: 'Active'),
   inactive(label: 'Inactive'),
@@ -56,7 +56,7 @@ enum DrugStatus {
   final String label;
 }
 
-/// Review status enum based on backend resource API drugs collection schema
+/// Review status values exposed by the typed drugs API.
 enum ReviewStatus {
   approved(label: 'Approved'),
   pending(label: 'Pending'),

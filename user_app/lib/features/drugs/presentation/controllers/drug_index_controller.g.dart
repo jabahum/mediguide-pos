@@ -7,7 +7,7 @@ part of 'drug_index_controller.dart';
 // **************************************************************************
 
 String _$drugIndexControllerHash() =>
-    r'086b09ff07107db65d775a31fe36d299d3275bd6';
+    r'9de252f41d83308b83149607b536f3bffbf852d8';
 
 /// See also [DrugIndexController].
 @ProviderFor(DrugIndexController)

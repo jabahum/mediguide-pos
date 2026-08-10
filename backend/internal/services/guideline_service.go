@@ -144,7 +144,8 @@ func (s GuidelineService) UploadPDF(ctx context.Context, versionID uuid.UUID, fi
 	return &job, nil
 }
 func (s GuidelineService) PublishVersion(versionID uuid.UUID, userID uuid.UUID) error {
-	now := time.Now().Format(time.RFC3339)
+	publishedAt := time.Now().UTC()
+	now := publishedAt.Format(time.RFC3339)
 	err := s.DB.Transaction(func(tx *gorm.DB) error {
 		var v models.GuidelineVersion
 		if err := tx.First(&v, "id = ?", versionID).Error; err != nil {
@@ -157,6 +158,9 @@ func (s GuidelineService) PublishVersion(versionID uuid.UUID, userID uuid.UUID) 
 			return err
 		}
 		if err := tx.Model(&models.GuidelineChunk{}).Where("version_id = ?", versionID).Update("review_status", "approved").Error; err != nil {
+			return err
+		}
+		if _, err := generateGuidelineVersionManifest(tx, versionID, publishedAt); err != nil {
 			return err
 		}
 		return tx.Model(&models.GuidelineDocument{}).Where("id = ?", v.DocumentID).Update("current_version_id", versionID).Error

@@ -102,6 +102,13 @@ func TestPublishedMarkdownEndToEndUsesCurrentVersionAndChangesETag(t *testing.T)
 	if err := admin.PublishVersion(draft.ID, uuid.New()); err != nil {
 		t.Fatal(err)
 	}
+	var draftManifest models.GuidelineVersionManifest
+	if err := db.Where("version_id = ?", draft.ID).First(&draftManifest).Error; err != nil {
+		t.Fatalf("published version manifest missing: %v", err)
+	}
+	if draftManifest.ExtractionQuality != models.GuidelineExtractionMarkdownFallback || !draftManifest.HasOriginalPDF {
+		t.Fatalf("unexpected compatibility manifest: %#v", draftManifest)
+	}
 
 	first, err := public.Markdown(ctx, document.ID)
 	if err != nil {
@@ -163,6 +170,9 @@ func publicGuidelineTestDB(t *testing.T) *gorm.DB {
 		&models.GuidelineVersion{},
 		&models.GuidelineSection{},
 		&models.GuidelineChunk{},
+		&models.GuidelineContentBlock{},
+		&models.GuidelineAsset{},
+		&models.GuidelineVersionManifest{},
 		&models.IngestionJob{},
 	); err != nil {
 		t.Fatal(err)

@@ -3,7 +3,7 @@
 import * as React from "react"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { useParams, useRouter } from "next/navigation"
-import { BookOpen, Download, FileCode2, FilePlus2, Pencil, Send, Upload } from "lucide-react"
+import { BookOpen, ClipboardCheck, Download, FileCode2, FilePlus2, Pencil, Send, Upload } from "lucide-react"
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -223,6 +223,15 @@ export default function GuidelineDetailsPage() {
                     {(hasMarkdown || hasHtml) && (
                       <Button variant="outline" size="sm" onClick={() => setViewVersion(version)}>
                         <BookOpen className="h-4 w-4" /> View Content
+                      </Button>
+                    )}
+                    {canUpdate && version.original_file_key && version.status !== "published" && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => router.push(`/guidelines/${id}/versions/${version.id}/review`)}
+                      >
+                        <ClipboardCheck className="h-4 w-4" /> Editorial Review
                       </Button>
                     )}
                     {hasMarkdown && (

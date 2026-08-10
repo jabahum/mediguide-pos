@@ -131,6 +131,12 @@ export interface HandlersGuidelineCategoryEnvelope {
   success?: boolean;
 }
 
+export interface HandlersGuidelineContentBlockEnvelope {
+  data?: ModelsGuidelineContentBlock;
+  /** @example true */
+  success?: boolean;
+}
+
 export interface HandlersGuidelineDocumentEnvelope {
   data?: ModelsGuidelineDocument;
   /** @example true */
@@ -139,6 +145,12 @@ export interface HandlersGuidelineDocumentEnvelope {
 
 export interface HandlersGuidelineIndexEnvelope {
   data?: ModelsGuidelineIndexEntry;
+  success?: boolean;
+}
+
+export interface HandlersGuidelineSectionEnvelope {
+  data?: ModelsGuidelineSection;
+  /** @example true */
   success?: boolean;
 }
 
@@ -765,6 +777,17 @@ export interface HandlersUpdateMarkdownInput {
   content: string;
 }
 
+export interface HandlersUpdatedEnvelope {
+  data?: HandlersUpdatedResult;
+  /** @example true */
+  success?: boolean;
+}
+
+export interface HandlersUpdatedResult {
+  /** @example true */
+  updated?: boolean;
+}
+
 export interface HandlersUsageAggregatesEnvelope {
   data?: ServicesUsageAggregate[];
   success?: boolean;
@@ -1025,6 +1048,52 @@ export interface ModelsGenericPage {
   updated_at?: string;
 }
 
+export interface ModelsGuidelineAsset {
+  checksum?: string;
+  created_at?: string;
+  id?: string;
+  mime_type?: string;
+  original_filename?: string;
+  page_end?: number;
+  page_start?: number;
+  provenance?: object;
+  section_id?: string;
+  size_bytes?: number;
+  source_fingerprint?: string;
+  storage_key?: string;
+  type?: ModelsGuidelineAssetType;
+  updated_at?: string;
+  version_id?: string;
+}
+
+export type ModelsGuidelineAssetType =
+  | "original_pdf"
+  | "figure"
+  | "diagram"
+  | "thumbnail"
+  | "supplementary_document"
+  | "offline_package";
+
+export type ModelsGuidelineBlockReviewStatus =
+  | "draft"
+  | "reviewed"
+  | "rejected";
+
+export type ModelsGuidelineBlockType =
+  | "heading"
+  | "paragraph"
+  | "ordered_list"
+  | "unordered_list"
+  | "table"
+  | "figure"
+  | "recommendation"
+  | "warning"
+  | "key_point"
+  | "algorithm"
+  | "reference"
+  | "page_break"
+  | "unknown";
+
 export interface ModelsGuidelineCategory {
   color?: string;
   created_at?: string;
@@ -1041,8 +1110,10 @@ export interface ModelsGuidelineCategory {
 }
 
 export interface ModelsGuidelineChunk {
+  block_id?: string;
   content?: string;
   created_at?: string;
+  document_id?: string;
   html?: string;
   id?: string;
   language?: string;
@@ -1054,6 +1125,25 @@ export interface ModelsGuidelineChunk {
   source_name?: string;
   source_version?: string;
   title?: string;
+  updated_at?: string;
+  version_id?: string;
+}
+
+export interface ModelsGuidelineContentBlock {
+  content?: object;
+  created_at?: string;
+  extraction_confidence?: number;
+  id?: string;
+  page_end?: number;
+  page_start?: number;
+  provenance?: object;
+  review_status?: ModelsGuidelineBlockReviewStatus;
+  reviewed_at?: string;
+  reviewed_by?: string;
+  section_id?: string;
+  sort_order?: number;
+  source_fingerprint?: string;
+  type?: ModelsGuidelineBlockType;
   updated_at?: string;
   version_id?: string;
 }
@@ -1071,6 +1161,12 @@ export interface ModelsGuidelineDocument {
   updated_at?: string;
   versions?: ModelsGuidelineVersion[];
 }
+
+export type ModelsGuidelineExtractionQuality =
+  | "reviewed"
+  | "partially_reviewed"
+  | "unreviewed"
+  | "markdown_fallback";
 
 export interface ModelsGuidelineIndexEntry {
   created_at?: string;
@@ -1112,11 +1208,17 @@ export interface ModelsGuidelineTag {
 export interface ModelsGuidelineVersion {
   approved_at?: string;
   approved_by?: string;
+  assets?: ModelsGuidelineAsset[];
   checksum?: string;
+  content_blocks?: ModelsGuidelineContentBlock[];
   created_at?: string;
   document_id?: string;
+  extraction_metadata?: object;
+  extraction_schema_version?: number;
+  extraction_warnings?: string[];
   html_file_key?: string;
   id?: string;
+  manifest?: ModelsGuidelineVersionManifest;
   markdown_file_key?: string;
   original_file_key?: string;
   publication_date?: string;
@@ -1125,6 +1227,33 @@ export interface ModelsGuidelineVersion {
   status?: string;
   updated_at?: string;
   version?: string;
+}
+
+export interface ModelsGuidelineVersionManifest {
+  algorithm_count?: number;
+  block_count?: number;
+  checksum?: string;
+  created_at?: string;
+  etag?: string;
+  extraction_quality?: ModelsGuidelineExtractionQuality;
+  figure_count?: number;
+  generated_at?: string;
+  guideline_id?: string;
+  has_algorithms?: boolean;
+  has_chapters?: boolean;
+  has_figures?: boolean;
+  has_key_points?: boolean;
+  has_offline_package?: boolean;
+  has_original_pdf?: boolean;
+  has_tables?: boolean;
+  id?: string;
+  package_version?: number;
+  schema_version?: number;
+  section_count?: number;
+  table_count?: number;
+  updated_at?: string;
+  version?: string;
+  version_id?: string;
 }
 
 export interface ModelsIngestionJob {
@@ -1823,6 +1952,35 @@ export interface ServicesGuidelineIndexInput {
   title?: string;
 }
 
+export interface ServicesGuidelinePublicationValidation {
+  errors?: ServicesGuidelineReviewIssue[];
+  valid?: boolean;
+  warnings?: ServicesGuidelineReviewIssue[];
+}
+
+export interface ServicesGuidelineReviewIssue {
+  block_id?: string;
+  code?: string;
+  message?: string;
+  section_id?: string;
+}
+
+export interface ServicesGuidelineReviewWorkspace {
+  assets?: ModelsGuidelineAsset[];
+  blocks?: ModelsGuidelineContentBlock[];
+  extraction_warnings?: string[];
+  sections?: ModelsGuidelineSection[];
+  validation?: ServicesGuidelinePublicationValidation;
+  version?: ModelsGuidelineVersion;
+}
+
+export interface ServicesGuidelineSectionOrderInput {
+  id: string;
+  level?: number;
+  parent_id?: string;
+  sort_order?: number;
+}
+
 export interface ServicesGuidelineTagInput {
   description?: string;
   name?: string;
@@ -1888,6 +2046,10 @@ export interface ServicesMedicalGuidelineInput {
   tags?: string[];
   target_population?: string;
   version?: string;
+}
+
+export interface ServicesMergeGuidelineSectionInput {
+  target_section_id: string;
 }
 
 export interface ServicesMessageCreate {
@@ -2146,6 +2308,14 @@ export interface ServicesRegionChildren {
   region?: ServicesFacilityReferenceView;
 }
 
+export interface ServicesReorderGuidelineSectionsInput {
+  sections: ServicesGuidelineSectionOrderInput[];
+}
+
+export interface ServicesReviewGuidelineBlockInput {
+  status: ModelsGuidelineBlockReviewStatus;
+}
+
 export interface ServicesRoleInput {
   description?: string;
   isActive?: boolean;
@@ -2181,6 +2351,13 @@ export interface ServicesSearchResult {
   source_name?: string;
   source_version?: string;
   title?: string;
+}
+
+export interface ServicesSplitGuidelineSectionInput {
+  block_id: string;
+  level?: number;
+  slug?: string;
+  title: string;
 }
 
 export interface ServicesStartCalculatorUsageInput {
@@ -2232,12 +2409,27 @@ export interface ServicesUpdateCalculatorInput {
   version?: string;
 }
 
+export interface ServicesUpdateGuidelineBlockInput {
+  content?: object;
+  section_id?: string;
+  sort_order?: number;
+  type?: string;
+}
+
 export interface ServicesUpdateGuidelineInput {
   country?: string;
   description?: string;
   language?: string;
   program_area?: string;
   source_org?: string;
+  title?: string;
+}
+
+export interface ServicesUpdateGuidelineSectionInput {
+  level?: number;
+  parent_id?: string;
+  slug?: string;
+  sort_order?: number;
   title?: string;
 }
 

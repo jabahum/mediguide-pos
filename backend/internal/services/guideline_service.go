@@ -151,10 +151,25 @@ func (s GuidelineService) UploadPDF(ctx context.Context, versionID uuid.UUID, fi
 	}
 	return &job, nil
 }
-func (s GuidelineService) PublishVersion(versionID uuid.UUID, userID uuid.UUID) error {
+func (s GuidelineService) PublishVersion(versionID uuid.UUID, userID uuid.UUID, ipAddress ...string) error {
 	publishedAt := time.Now().UTC()
 	now := publishedAt.Format(time.RFC3339)
-	err := s.DB.Transaction(func(tx *gorm.DB) error {
+	ip := ""
+	if len(ipAddress) > 0 {
+		ip = ipAddress[0]
+	}
+	validation, err := s.ValidateVersionForPublication(versionID)
+	if err != nil {
+		return err
+	}
+	if !validation.Valid {
+		messages := make([]string, 0, len(validation.Errors))
+		for _, issue := range validation.Errors {
+			messages = append(messages, issue.Message)
+		}
+		return fmt.Errorf("%w: %s", ErrGuidelineValidationFailed, strings.Join(messages, "; "))
+	}
+	err = s.DB.Transaction(func(tx *gorm.DB) error {
 		var v models.GuidelineVersion
 		if err := tx.First(&v, "id = ?", versionID).Error; err != nil {
 			return err
@@ -165,13 +180,20 @@ func (s GuidelineService) PublishVersion(versionID uuid.UUID, userID uuid.UUID) 
 		if err := tx.Model(&v).Updates(map[string]any{"status": "published", "approved_by": userID, "approved_at": now}).Error; err != nil {
 			return err
 		}
-		if err := tx.Model(&models.GuidelineChunk{}).Where("version_id = ?", versionID).Update("review_status", "approved").Error; err != nil {
+		reviewedBlockIDs := tx.Model(&models.GuidelineContentBlock{}).
+			Select("id").Where("version_id = ? AND review_status = ?", versionID, models.GuidelineBlockReviewed)
+		if err := tx.Model(&models.GuidelineChunk{}).
+			Where("version_id = ? AND block_id IN (?)", versionID, reviewedBlockIDs).
+			Update("review_status", "approved").Error; err != nil {
 			return err
 		}
 		if _, err := generateGuidelineVersionManifest(tx, versionID, publishedAt); err != nil {
 			return err
 		}
-		return tx.Model(&models.GuidelineDocument{}).Where("id = ?", v.DocumentID).Update("current_version_id", versionID).Error
+		if err := tx.Model(&models.GuidelineDocument{}).Where("id = ?", v.DocumentID).Update("current_version_id", versionID).Error; err != nil {
+			return err
+		}
+		return writeGuidelineAudit(tx, userID, "guideline.version.published", "guideline_version", versionID, ip, map[string]any{"document_id": v.DocumentID})
 	})
 	if err == nil {
 		s.invalidatePublishedCaches(context.Background())
@@ -229,8 +251,28 @@ func (s GuidelineService) ExtractedAsset(ctx context.Context, versionID uuid.UUI
 	}, nil
 }
 
+func (s GuidelineService) ReviewAsset(ctx context.Context, versionID, assetID uuid.UUID) (*ExtractedAsset, error) {
+	var asset models.GuidelineAsset
+	if err := s.DB.First(&asset, "id = ? AND version_id = ?", assetID, versionID).Error; err != nil {
+		return nil, err
+	}
+	reader, err := s.Store.Get(ctx, asset.StorageKey)
+	if err != nil {
+		return nil, err
+	}
+	filename := "guideline-asset-" + asset.ID.String()
+	if asset.OriginalFilename != nil && strings.TrimSpace(*asset.OriginalFilename) != "" {
+		filename = filepath.Base(*asset.OriginalFilename)
+	}
+	return &ExtractedAsset{Reader: reader, Filename: filename, ContentType: asset.MIMEType}, nil
+}
+
 func guidelineAssetDetails(version *models.GuidelineVersion, format string) (key, extension, contentType string, err error) {
 	switch strings.ToLower(strings.TrimPrefix(strings.TrimSpace(format), ".")) {
+	case "pdf", "original":
+		key = version.OriginalFileKey
+		extension = "pdf"
+		contentType = "application/pdf"
 	case "md", "markdown":
 		key = version.MarkdownFileKey
 		extension = "md"
@@ -346,9 +388,6 @@ func ensureDraftProtocol(tx *gorm.DB, document *models.GuidelineDocument, versio
 }
 
 func ensureVersionReadyForPublish(tx *gorm.DB, version *models.GuidelineVersion) error {
-	if strings.EqualFold(strings.TrimSpace(version.Status), "review_required") {
-		return fmt.Errorf("%w: structured extraction requires editorial review", ErrGuidelineIngestionIncomplete)
-	}
 	if strings.TrimSpace(version.OriginalFileKey) == "" {
 		return fmt.Errorf("%w: no PDF has been uploaded for this version", ErrGuidelineIngestionIncomplete)
 	}
@@ -372,6 +411,17 @@ func ensureVersionReadyForPublish(tx *gorm.DB, version *models.GuidelineVersion)
 		}
 	} else if !errors.Is(jobErr, gorm.ErrRecordNotFound) {
 		return jobErr
+	}
+	validation, err := validateGuidelinePublication(tx, version)
+	if err != nil {
+		return err
+	}
+	if !validation.Valid {
+		messages := make([]string, 0, len(validation.Errors))
+		for _, issue := range validation.Errors {
+			messages = append(messages, issue.Message)
+		}
+		return fmt.Errorf("%w: %s", ErrGuidelineValidationFailed, strings.Join(messages, "; "))
 	}
 
 	var sectionCount int64

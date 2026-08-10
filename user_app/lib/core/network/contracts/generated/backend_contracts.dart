@@ -455,6 +455,28 @@ final class HandlersGuidelineCategoryEnvelope {
   Map<String, dynamic> toJson() => Map.of(value);
 }
 
+final class HandlersGuidelineContentBlockEnvelope {
+  HandlersGuidelineContentBlockEnvelope(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory HandlersGuidelineContentBlockEnvelope.fromJson(
+    Map<String, dynamic> json,
+  ) => HandlersGuidelineContentBlockEnvelope(json);
+
+  static const schemaName = 'handlers.GuidelineContentBlockEnvelope';
+  final Map<String, dynamic> value;
+
+  ModelsGuidelineContentBlock? get data {
+    final raw = value['data'];
+    if (raw is! Map) return null;
+    return ModelsGuidelineContentBlock.fromJson(_jsonMap(raw));
+  }
+
+  bool? get success => value['success'] as bool?;
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
 final class HandlersGuidelineDocumentEnvelope {
   HandlersGuidelineDocumentEnvelope(Map<String, dynamic> value)
     : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
@@ -491,6 +513,28 @@ final class HandlersGuidelineIndexEnvelope {
     final raw = value['data'];
     if (raw is! Map) return null;
     return ModelsGuidelineIndexEntry.fromJson(_jsonMap(raw));
+  }
+
+  bool? get success => value['success'] as bool?;
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
+final class HandlersGuidelineSectionEnvelope {
+  HandlersGuidelineSectionEnvelope(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory HandlersGuidelineSectionEnvelope.fromJson(
+    Map<String, dynamic> json,
+  ) => HandlersGuidelineSectionEnvelope(json);
+
+  static const schemaName = 'handlers.GuidelineSectionEnvelope';
+  final Map<String, dynamic> value;
+
+  ModelsGuidelineSection? get data {
+    final raw = value['data'];
+    if (raw is! Map) return null;
+    return ModelsGuidelineSection.fromJson(_jsonMap(raw));
   }
 
   bool? get success => value['success'] as bool?;
@@ -2481,6 +2525,42 @@ final class HandlersUpdateMarkdownInput {
   Map<String, dynamic> toJson() => Map.of(value);
 }
 
+final class HandlersUpdatedEnvelope {
+  HandlersUpdatedEnvelope(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory HandlersUpdatedEnvelope.fromJson(Map<String, dynamic> json) =>
+      HandlersUpdatedEnvelope(json);
+
+  static const schemaName = 'handlers.UpdatedEnvelope';
+  final Map<String, dynamic> value;
+
+  HandlersUpdatedResult? get data {
+    final raw = value['data'];
+    if (raw is! Map) return null;
+    return HandlersUpdatedResult.fromJson(_jsonMap(raw));
+  }
+
+  bool? get success => value['success'] as bool?;
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
+final class HandlersUpdatedResult {
+  HandlersUpdatedResult(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory HandlersUpdatedResult.fromJson(Map<String, dynamic> json) =>
+      HandlersUpdatedResult(json);
+
+  static const schemaName = 'handlers.UpdatedResult';
+  final Map<String, dynamic> value;
+
+  bool? get updated => value['updated'] as bool?;
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
 final class HandlersUsageAggregatesEnvelope {
   HandlersUsageAggregatesEnvelope(Map<String, dynamic> value)
     : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
@@ -3206,6 +3286,93 @@ final class ModelsGenericPage {
   Map<String, dynamic> toJson() => Map.of(value);
 }
 
+final class ModelsGuidelineAsset {
+  ModelsGuidelineAsset(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory ModelsGuidelineAsset.fromJson(Map<String, dynamic> json) =>
+      ModelsGuidelineAsset(json);
+
+  static const schemaName = 'models.GuidelineAsset';
+  final Map<String, dynamic> value;
+
+  String? get checksum => value['checksum']?.toString();
+
+  String? get createdAt => value['created_at']?.toString();
+
+  String? get id => value['id']?.toString();
+
+  String? get mimeType => value['mime_type']?.toString();
+
+  String? get originalFilename => value['original_filename']?.toString();
+
+  int? get pageEnd => (value['page_end'] as num?)?.toInt();
+
+  int? get pageStart => (value['page_start'] as num?)?.toInt();
+
+  Map<String, dynamic> get provenance => _jsonMap(value['provenance']);
+
+  String? get sectionId => value['section_id']?.toString();
+
+  int? get sizeBytes => (value['size_bytes'] as num?)?.toInt();
+
+  String? get sourceFingerprint => value['source_fingerprint']?.toString();
+
+  String? get storageKey => value['storage_key']?.toString();
+
+  ModelsGuidelineAssetType? get type {
+    final raw = value['type'];
+    if (raw is! Map) return null;
+    return ModelsGuidelineAssetType.fromJson(_jsonMap(raw));
+  }
+
+  String? get updatedAt => value['updated_at']?.toString();
+
+  String? get versionId => value['version_id']?.toString();
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
+final class ModelsGuidelineAssetType {
+  ModelsGuidelineAssetType(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory ModelsGuidelineAssetType.fromJson(Map<String, dynamic> json) =>
+      ModelsGuidelineAssetType(json);
+
+  static const schemaName = 'models.GuidelineAssetType';
+  final Map<String, dynamic> value;
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
+final class ModelsGuidelineBlockReviewStatus {
+  ModelsGuidelineBlockReviewStatus(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory ModelsGuidelineBlockReviewStatus.fromJson(
+    Map<String, dynamic> json,
+  ) => ModelsGuidelineBlockReviewStatus(json);
+
+  static const schemaName = 'models.GuidelineBlockReviewStatus';
+  final Map<String, dynamic> value;
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
+final class ModelsGuidelineBlockType {
+  ModelsGuidelineBlockType(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory ModelsGuidelineBlockType.fromJson(Map<String, dynamic> json) =>
+      ModelsGuidelineBlockType(json);
+
+  static const schemaName = 'models.GuidelineBlockType';
+  final Map<String, dynamic> value;
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
 final class ModelsGuidelineCategory {
   ModelsGuidelineCategory(Map<String, dynamic> value)
     : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
@@ -3253,9 +3420,13 @@ final class ModelsGuidelineChunk {
   static const schemaName = 'models.GuidelineChunk';
   final Map<String, dynamic> value;
 
+  String? get blockId => value['block_id']?.toString();
+
   String? get content => value['content']?.toString();
 
   String? get createdAt => value['created_at']?.toString();
+
+  String? get documentId => value['document_id']?.toString();
 
   String? get html => value['html']?.toString();
 
@@ -3278,6 +3449,59 @@ final class ModelsGuidelineChunk {
   String? get sourceVersion => value['source_version']?.toString();
 
   String? get title => value['title']?.toString();
+
+  String? get updatedAt => value['updated_at']?.toString();
+
+  String? get versionId => value['version_id']?.toString();
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
+final class ModelsGuidelineContentBlock {
+  ModelsGuidelineContentBlock(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory ModelsGuidelineContentBlock.fromJson(Map<String, dynamic> json) =>
+      ModelsGuidelineContentBlock(json);
+
+  static const schemaName = 'models.GuidelineContentBlock';
+  final Map<String, dynamic> value;
+
+  Map<String, dynamic> get content => _jsonMap(value['content']);
+
+  String? get createdAt => value['created_at']?.toString();
+
+  num? get extractionConfidence => value['extraction_confidence'] as num?;
+
+  String? get id => value['id']?.toString();
+
+  int? get pageEnd => (value['page_end'] as num?)?.toInt();
+
+  int? get pageStart => (value['page_start'] as num?)?.toInt();
+
+  Map<String, dynamic> get provenance => _jsonMap(value['provenance']);
+
+  ModelsGuidelineBlockReviewStatus? get reviewStatus {
+    final raw = value['review_status'];
+    if (raw is! Map) return null;
+    return ModelsGuidelineBlockReviewStatus.fromJson(_jsonMap(raw));
+  }
+
+  String? get reviewedAt => value['reviewed_at']?.toString();
+
+  String? get reviewedBy => value['reviewed_by']?.toString();
+
+  String? get sectionId => value['section_id']?.toString();
+
+  int? get sortOrder => (value['sort_order'] as num?)?.toInt();
+
+  String? get sourceFingerprint => value['source_fingerprint']?.toString();
+
+  ModelsGuidelineBlockType? get type {
+    final raw = value['type'];
+    if (raw is! Map) return null;
+    return ModelsGuidelineBlockType.fromJson(_jsonMap(raw));
+  }
 
   String? get updatedAt => value['updated_at']?.toString();
 
@@ -3324,6 +3548,20 @@ final class ModelsGuidelineDocument {
         .map((item) => ModelsGuidelineVersion.fromJson(_jsonMap(item)))
         .toList(growable: false);
   }
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
+final class ModelsGuidelineExtractionQuality {
+  ModelsGuidelineExtractionQuality(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory ModelsGuidelineExtractionQuality.fromJson(
+    Map<String, dynamic> json,
+  ) => ModelsGuidelineExtractionQuality(json);
+
+  static const schemaName = 'models.GuidelineExtractionQuality';
+  final Map<String, dynamic> value;
 
   Map<String, dynamic> toJson() => Map.of(value);
 }
@@ -3437,15 +3675,51 @@ final class ModelsGuidelineVersion {
 
   String? get approvedBy => value['approved_by']?.toString();
 
+  List<ModelsGuidelineAsset> get assets {
+    final raw = value['assets'];
+    if (raw is! List) return const [];
+    return raw
+        .whereType<Map>()
+        .map((item) => ModelsGuidelineAsset.fromJson(_jsonMap(item)))
+        .toList(growable: false);
+  }
+
   String? get checksum => value['checksum']?.toString();
+
+  List<ModelsGuidelineContentBlock> get contentBlocks {
+    final raw = value['content_blocks'];
+    if (raw is! List) return const [];
+    return raw
+        .whereType<Map>()
+        .map((item) => ModelsGuidelineContentBlock.fromJson(_jsonMap(item)))
+        .toList(growable: false);
+  }
 
   String? get createdAt => value['created_at']?.toString();
 
   String? get documentId => value['document_id']?.toString();
 
+  Map<String, dynamic> get extractionMetadata =>
+      _jsonMap(value['extraction_metadata']);
+
+  int? get extractionSchemaVersion =>
+      (value['extraction_schema_version'] as num?)?.toInt();
+
+  List<String> get extractionWarnings {
+    final raw = value['extraction_warnings'];
+    if (raw is! List) return const [];
+    return raw.whereType<String>().toList(growable: false);
+  }
+
   String? get htmlFileKey => value['html_file_key']?.toString();
 
   String? get id => value['id']?.toString();
+
+  ModelsGuidelineVersionManifest? get manifest {
+    final raw = value['manifest'];
+    if (raw is! Map) return null;
+    return ModelsGuidelineVersionManifest.fromJson(_jsonMap(raw));
+  }
 
   String? get markdownFileKey => value['markdown_file_key']?.toString();
 
@@ -3469,6 +3743,71 @@ final class ModelsGuidelineVersion {
   String? get updatedAt => value['updated_at']?.toString();
 
   String? get version => value['version']?.toString();
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
+final class ModelsGuidelineVersionManifest {
+  ModelsGuidelineVersionManifest(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory ModelsGuidelineVersionManifest.fromJson(Map<String, dynamic> json) =>
+      ModelsGuidelineVersionManifest(json);
+
+  static const schemaName = 'models.GuidelineVersionManifest';
+  final Map<String, dynamic> value;
+
+  int? get algorithmCount => (value['algorithm_count'] as num?)?.toInt();
+
+  int? get blockCount => (value['block_count'] as num?)?.toInt();
+
+  String? get checksum => value['checksum']?.toString();
+
+  String? get createdAt => value['created_at']?.toString();
+
+  String? get etag => value['etag']?.toString();
+
+  ModelsGuidelineExtractionQuality? get extractionQuality {
+    final raw = value['extraction_quality'];
+    if (raw is! Map) return null;
+    return ModelsGuidelineExtractionQuality.fromJson(_jsonMap(raw));
+  }
+
+  int? get figureCount => (value['figure_count'] as num?)?.toInt();
+
+  String? get generatedAt => value['generated_at']?.toString();
+
+  String? get guidelineId => value['guideline_id']?.toString();
+
+  bool? get hasAlgorithms => value['has_algorithms'] as bool?;
+
+  bool? get hasChapters => value['has_chapters'] as bool?;
+
+  bool? get hasFigures => value['has_figures'] as bool?;
+
+  bool? get hasKeyPoints => value['has_key_points'] as bool?;
+
+  bool? get hasOfflinePackage => value['has_offline_package'] as bool?;
+
+  bool? get hasOriginalPdf => value['has_original_pdf'] as bool?;
+
+  bool? get hasTables => value['has_tables'] as bool?;
+
+  String? get id => value['id']?.toString();
+
+  int? get packageVersion => (value['package_version'] as num?)?.toInt();
+
+  int? get schemaVersion => (value['schema_version'] as num?)?.toInt();
+
+  int? get sectionCount => (value['section_count'] as num?)?.toInt();
+
+  int? get tableCount => (value['table_count'] as num?)?.toInt();
+
+  String? get updatedAt => value['updated_at']?.toString();
+
+  String? get version => value['version']?.toString();
+
+  String? get versionId => value['version_id']?.toString();
 
   Map<String, dynamic> toJson() => Map.of(value);
 }
@@ -5373,6 +5712,142 @@ final class ServicesGuidelineIndexInput {
   Map<String, dynamic> toJson() => Map.of(value);
 }
 
+final class ServicesGuidelinePublicationValidation {
+  ServicesGuidelinePublicationValidation(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory ServicesGuidelinePublicationValidation.fromJson(
+    Map<String, dynamic> json,
+  ) => ServicesGuidelinePublicationValidation(json);
+
+  static const schemaName = 'services.GuidelinePublicationValidation';
+  final Map<String, dynamic> value;
+
+  List<ServicesGuidelineReviewIssue> get errors {
+    final raw = value['errors'];
+    if (raw is! List) return const [];
+    return raw
+        .whereType<Map>()
+        .map((item) => ServicesGuidelineReviewIssue.fromJson(_jsonMap(item)))
+        .toList(growable: false);
+  }
+
+  bool? get valid => value['valid'] as bool?;
+
+  List<ServicesGuidelineReviewIssue> get warnings {
+    final raw = value['warnings'];
+    if (raw is! List) return const [];
+    return raw
+        .whereType<Map>()
+        .map((item) => ServicesGuidelineReviewIssue.fromJson(_jsonMap(item)))
+        .toList(growable: false);
+  }
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
+final class ServicesGuidelineReviewIssue {
+  ServicesGuidelineReviewIssue(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory ServicesGuidelineReviewIssue.fromJson(Map<String, dynamic> json) =>
+      ServicesGuidelineReviewIssue(json);
+
+  static const schemaName = 'services.GuidelineReviewIssue';
+  final Map<String, dynamic> value;
+
+  String? get blockId => value['block_id']?.toString();
+
+  String? get code => value['code']?.toString();
+
+  String? get message => value['message']?.toString();
+
+  String? get sectionId => value['section_id']?.toString();
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
+final class ServicesGuidelineReviewWorkspace {
+  ServicesGuidelineReviewWorkspace(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory ServicesGuidelineReviewWorkspace.fromJson(
+    Map<String, dynamic> json,
+  ) => ServicesGuidelineReviewWorkspace(json);
+
+  static const schemaName = 'services.GuidelineReviewWorkspace';
+  final Map<String, dynamic> value;
+
+  List<ModelsGuidelineAsset> get assets {
+    final raw = value['assets'];
+    if (raw is! List) return const [];
+    return raw
+        .whereType<Map>()
+        .map((item) => ModelsGuidelineAsset.fromJson(_jsonMap(item)))
+        .toList(growable: false);
+  }
+
+  List<ModelsGuidelineContentBlock> get blocks {
+    final raw = value['blocks'];
+    if (raw is! List) return const [];
+    return raw
+        .whereType<Map>()
+        .map((item) => ModelsGuidelineContentBlock.fromJson(_jsonMap(item)))
+        .toList(growable: false);
+  }
+
+  List<String> get extractionWarnings {
+    final raw = value['extraction_warnings'];
+    if (raw is! List) return const [];
+    return raw.whereType<String>().toList(growable: false);
+  }
+
+  List<ModelsGuidelineSection> get sections {
+    final raw = value['sections'];
+    if (raw is! List) return const [];
+    return raw
+        .whereType<Map>()
+        .map((item) => ModelsGuidelineSection.fromJson(_jsonMap(item)))
+        .toList(growable: false);
+  }
+
+  ServicesGuidelinePublicationValidation? get validation {
+    final raw = value['validation'];
+    if (raw is! Map) return null;
+    return ServicesGuidelinePublicationValidation.fromJson(_jsonMap(raw));
+  }
+
+  ModelsGuidelineVersion? get version {
+    final raw = value['version'];
+    if (raw is! Map) return null;
+    return ModelsGuidelineVersion.fromJson(_jsonMap(raw));
+  }
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
+final class ServicesGuidelineSectionOrderInput {
+  ServicesGuidelineSectionOrderInput(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory ServicesGuidelineSectionOrderInput.fromJson(
+    Map<String, dynamic> json,
+  ) => ServicesGuidelineSectionOrderInput(json);
+
+  static const schemaName = 'services.GuidelineSectionOrderInput';
+  final Map<String, dynamic> value;
+
+  String? get id => value['id']?.toString();
+
+  int? get level => (value['level'] as num?)?.toInt();
+
+  String? get parentId => value['parent_id']?.toString();
+
+  int? get sortOrder => (value['sort_order'] as num?)?.toInt();
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
 final class ServicesGuidelineTagInput {
   ServicesGuidelineTagInput(Map<String, dynamic> value)
     : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
@@ -5565,6 +6040,22 @@ final class ServicesMedicalGuidelineInput {
   String? get targetPopulation => value['target_population']?.toString();
 
   String? get version => value['version']?.toString();
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
+final class ServicesMergeGuidelineSectionInput {
+  ServicesMergeGuidelineSectionInput(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory ServicesMergeGuidelineSectionInput.fromJson(
+    Map<String, dynamic> json,
+  ) => ServicesMergeGuidelineSectionInput(json);
+
+  static const schemaName = 'services.MergeGuidelineSectionInput';
+  final Map<String, dynamic> value;
+
+  String? get targetSectionId => value['target_section_id']?.toString();
 
   Map<String, dynamic> toJson() => Map.of(value);
 }
@@ -6471,6 +6962,51 @@ final class ServicesRegionChildren {
   Map<String, dynamic> toJson() => Map.of(value);
 }
 
+final class ServicesReorderGuidelineSectionsInput {
+  ServicesReorderGuidelineSectionsInput(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory ServicesReorderGuidelineSectionsInput.fromJson(
+    Map<String, dynamic> json,
+  ) => ServicesReorderGuidelineSectionsInput(json);
+
+  static const schemaName = 'services.ReorderGuidelineSectionsInput';
+  final Map<String, dynamic> value;
+
+  List<ServicesGuidelineSectionOrderInput> get sections {
+    final raw = value['sections'];
+    if (raw is! List) return const [];
+    return raw
+        .whereType<Map>()
+        .map(
+          (item) => ServicesGuidelineSectionOrderInput.fromJson(_jsonMap(item)),
+        )
+        .toList(growable: false);
+  }
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
+final class ServicesReviewGuidelineBlockInput {
+  ServicesReviewGuidelineBlockInput(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory ServicesReviewGuidelineBlockInput.fromJson(
+    Map<String, dynamic> json,
+  ) => ServicesReviewGuidelineBlockInput(json);
+
+  static const schemaName = 'services.ReviewGuidelineBlockInput';
+  final Map<String, dynamic> value;
+
+  ModelsGuidelineBlockReviewStatus? get status {
+    final raw = value['status'];
+    if (raw is! Map) return null;
+    return ModelsGuidelineBlockReviewStatus.fromJson(_jsonMap(raw));
+  }
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
 final class ServicesRoleInput {
   ServicesRoleInput(Map<String, dynamic> value)
     : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
@@ -6571,6 +7107,28 @@ final class ServicesSearchResult {
   String? get sourceName => value['source_name']?.toString();
 
   String? get sourceVersion => value['source_version']?.toString();
+
+  String? get title => value['title']?.toString();
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
+final class ServicesSplitGuidelineSectionInput {
+  ServicesSplitGuidelineSectionInput(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory ServicesSplitGuidelineSectionInput.fromJson(
+    Map<String, dynamic> json,
+  ) => ServicesSplitGuidelineSectionInput(json);
+
+  static const schemaName = 'services.SplitGuidelineSectionInput';
+  final Map<String, dynamic> value;
+
+  String? get blockId => value['block_id']?.toString();
+
+  int? get level => (value['level'] as num?)?.toInt();
+
+  String? get slug => value['slug']?.toString();
 
   String? get title => value['title']?.toString();
 
@@ -6718,6 +7276,28 @@ final class ServicesUpdateCalculatorInput {
   Map<String, dynamic> toJson() => Map.of(value);
 }
 
+final class ServicesUpdateGuidelineBlockInput {
+  ServicesUpdateGuidelineBlockInput(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory ServicesUpdateGuidelineBlockInput.fromJson(
+    Map<String, dynamic> json,
+  ) => ServicesUpdateGuidelineBlockInput(json);
+
+  static const schemaName = 'services.UpdateGuidelineBlockInput';
+  final Map<String, dynamic> value;
+
+  Map<String, dynamic> get content => _jsonMap(value['content']);
+
+  String? get sectionId => value['section_id']?.toString();
+
+  int? get sortOrder => (value['sort_order'] as num?)?.toInt();
+
+  String? get type => value['type']?.toString();
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
 final class ServicesUpdateGuidelineInput {
   ServicesUpdateGuidelineInput(Map<String, dynamic> value)
     : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
@@ -6737,6 +7317,30 @@ final class ServicesUpdateGuidelineInput {
   String? get programArea => value['program_area']?.toString();
 
   String? get sourceOrg => value['source_org']?.toString();
+
+  String? get title => value['title']?.toString();
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
+final class ServicesUpdateGuidelineSectionInput {
+  ServicesUpdateGuidelineSectionInput(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory ServicesUpdateGuidelineSectionInput.fromJson(
+    Map<String, dynamic> json,
+  ) => ServicesUpdateGuidelineSectionInput(json);
+
+  static const schemaName = 'services.UpdateGuidelineSectionInput';
+  final Map<String, dynamic> value;
+
+  int? get level => (value['level'] as num?)?.toInt();
+
+  String? get parentId => value['parent_id']?.toString();
+
+  String? get slug => value['slug']?.toString();
+
+  int? get sortOrder => (value['sort_order'] as num?)?.toInt();
 
   String? get title => value['title']?.toString();
 

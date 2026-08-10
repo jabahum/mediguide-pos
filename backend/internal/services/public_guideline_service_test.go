@@ -79,7 +79,7 @@ func TestSlugifyUsesSafeStableCharacters(t *testing.T) {
 
 func TestPublishedMarkdownEndToEndUsesCurrentVersionAndChangesETag(t *testing.T) {
 	db := publicGuidelineTestDB(t)
-	store := &fakePublicStore{objects: make(map[string][]byte)}
+	store := &fakePublicStore{objects: map[string][]byte{"guidelines/source.pdf": []byte("%PDF-test")}}
 	admin := GuidelineService{DB: db, Store: store}
 	public := PublicGuidelineService{DB: db, Store: store}
 	ctx := context.Background()
@@ -174,6 +174,7 @@ func publicGuidelineTestDB(t *testing.T) *gorm.DB {
 		&models.GuidelineAsset{},
 		&models.GuidelineVersionManifest{},
 		&models.IngestionJob{},
+		&models.AuditLog{},
 	); err != nil {
 		t.Fatal(err)
 	}

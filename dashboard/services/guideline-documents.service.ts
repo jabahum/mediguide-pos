@@ -17,6 +17,9 @@ export interface GuidelineVersionRecord {
   checksum?: string
   approved_by?: string | null
   approved_at?: string | null
+  extraction_schema_version?: number
+  extraction_metadata?: Record<string, unknown>
+  extraction_warnings?: string[]
   created_at: string
   updated_at: string
 }
@@ -81,6 +84,79 @@ export interface GuidelineSectionRecord {
   page_start?: number | null
   page_end?: number | null
   sort_order: number
+}
+
+export type GuidelineBlockType =
+  | "heading" | "paragraph" | "ordered_list" | "unordered_list" | "table"
+  | "figure" | "recommendation" | "warning" | "key_point" | "algorithm"
+  | "reference" | "page_break" | "unknown"
+
+export type GuidelineBlockReviewStatus = "draft" | "reviewed" | "rejected"
+
+export interface GuidelineContentBlockRecord {
+  id: string
+  version_id: string
+  section_id?: string | null
+  type: GuidelineBlockType
+  sort_order: number
+  content: Record<string, unknown>
+  provenance?: Record<string, unknown>
+  page_start?: number | null
+  page_end?: number | null
+  extraction_confidence?: number | null
+  review_status: GuidelineBlockReviewStatus
+  reviewed_by?: string | null
+  reviewed_at?: string | null
+}
+
+export interface GuidelineAssetRecord {
+  id: string
+  version_id: string
+  section_id?: string | null
+  type: string
+  mime_type: string
+  checksum: string
+  size_bytes: number
+  original_filename?: string | null
+  page_start?: number | null
+  page_end?: number | null
+}
+
+export interface GuidelineReviewIssue {
+  code: string
+  message: string
+  section_id?: string
+  block_id?: string
+}
+
+export interface GuidelinePublicationValidation {
+  valid: boolean
+  errors: GuidelineReviewIssue[]
+  warnings: GuidelineReviewIssue[]
+}
+
+export interface GuidelineReviewWorkspace {
+  version: GuidelineVersionRecord
+  sections: GuidelineSectionRecord[]
+  blocks: GuidelineContentBlockRecord[]
+  assets: GuidelineAssetRecord[]
+  extraction_warnings: string[]
+  validation: GuidelinePublicationValidation
+}
+
+export interface UpdateGuidelineSectionInput {
+  title?: string
+  slug?: string
+  parent_id?: string
+  level?: number
+  sort_order?: number
+}
+
+export interface UpdateGuidelineBlockInput {
+  section_id?: string
+  type?: GuidelineBlockType
+  sort_order?: number
+  content?: Record<string, unknown>
 }
 
 interface GuidelineSectionsPage {
@@ -193,6 +269,94 @@ export class GuidelineDocumentsService {
     return getBackendClient().request<{ published: boolean }>(
       `/api/v2/guideline-versions/${versionId}/publish`,
       { method: "POST" }
+    )
+  }
+
+  static async getReviewWorkspace(versionId: string): Promise<GuidelineReviewWorkspace> {
+    return getBackendClient().request<GuidelineReviewWorkspace>(
+      `/api/v2/guideline-versions/${versionId}/review`, { method: "GET" }
+    )
+  }
+
+  static async validatePublication(versionId: string): Promise<GuidelinePublicationValidation> {
+    return getBackendClient().request<GuidelinePublicationValidation>(
+      `/api/v2/guideline-versions/${versionId}/validate-publication`, { method: "POST" }
+    )
+  }
+
+  static async updateReviewSection(
+    versionId: string, sectionId: string, payload: UpdateGuidelineSectionInput
+  ): Promise<GuidelineSectionRecord> {
+    return getBackendClient().request<GuidelineSectionRecord>(
+      `/api/v2/guideline-versions/${versionId}/sections/${sectionId}`,
+      { method: "PATCH", body: JSON.stringify(payload) }
+    )
+  }
+
+  static async reorderReviewSections(
+    versionId: string,
+    sections: Array<{ id: string; parent_id?: string | null; level: number; sort_order: number }>
+  ): Promise<{ updated: boolean }> {
+    return getBackendClient().request<{ updated: boolean }>(
+      `/api/v2/guideline-versions/${versionId}/sections/reorder`,
+      { method: "PUT", body: JSON.stringify({ sections }) }
+    )
+  }
+
+  static async splitReviewSection(
+    versionId: string, sectionId: string,
+    payload: { block_id: string; title: string; slug?: string; level?: number }
+  ): Promise<GuidelineSectionRecord> {
+    return getBackendClient().request<GuidelineSectionRecord>(
+      `/api/v2/guideline-versions/${versionId}/sections/${sectionId}/split`,
+      { method: "POST", body: JSON.stringify(payload) }
+    )
+  }
+
+  static async mergeReviewSection(
+    versionId: string, sectionId: string, targetSectionId: string
+  ): Promise<{ updated: boolean }> {
+    return getBackendClient().request<{ updated: boolean }>(
+      `/api/v2/guideline-versions/${versionId}/sections/${sectionId}/merge`,
+      { method: "POST", body: JSON.stringify({ target_section_id: targetSectionId }) }
+    )
+  }
+
+  static async updateReviewBlock(
+    versionId: string, blockId: string, payload: UpdateGuidelineBlockInput
+  ): Promise<GuidelineContentBlockRecord> {
+    return getBackendClient().request<GuidelineContentBlockRecord>(
+      `/api/v2/guideline-versions/${versionId}/blocks/${blockId}`,
+      { method: "PATCH", body: JSON.stringify(payload) }
+    )
+  }
+
+  static async reviewBlock(
+    versionId: string, blockId: string, status: "reviewed" | "rejected"
+  ): Promise<GuidelineContentBlockRecord> {
+    return getBackendClient().request<GuidelineContentBlockRecord>(
+      `/api/v2/guideline-versions/${versionId}/blocks/${blockId}/review`,
+      { method: "POST", body: JSON.stringify({ status }) }
+    )
+  }
+
+  static async deleteReviewBlock(versionId: string, blockId: string): Promise<void> {
+    await getBackendClient().request<void>(
+      `/api/v2/guideline-versions/${versionId}/blocks/${blockId}`, { method: "DELETE" }
+    )
+  }
+
+  static async getOriginalPdf(versionId: string): Promise<Blob> {
+    return getBackendClient().request<Blob>(
+      `/api/v2/guideline-versions/${versionId}/extracted/original`,
+      { method: "GET", responseType: "blob" }
+    )
+  }
+
+  static async getReviewAsset(versionId: string, assetId: string): Promise<Blob> {
+    return getBackendClient().request<Blob>(
+      `/api/v2/guideline-versions/${versionId}/assets/${assetId}`,
+      { method: "GET", responseType: "blob" }
     )
   }
 

@@ -239,9 +239,13 @@ func (h GuidelineHandler) Publish(c *gin.Context) {
 		return
 	}
 	claims := c.MustGet(middleware.ClaimsKey).(*security.Claims)
-	if err := h.Service.PublishVersion(versionID, claims.UserID); err != nil {
+	if err := h.Service.PublishVersion(versionID, claims.UserID, c.ClientIP()); err != nil {
 		if errors.Is(err, services.ErrGuidelineIngestionIncomplete) || errors.Is(err, services.ErrGuidelineIngestionFailed) {
 			httpx.Error(c, http.StatusConflict, err.Error())
+			return
+		}
+		if errors.Is(err, services.ErrGuidelineValidationFailed) {
+			httpx.Error(c, http.StatusUnprocessableEntity, err.Error())
 			return
 		}
 		httpx.Error(c, 400, err.Error())
@@ -326,7 +330,7 @@ func (h GuidelineHandler) Chunks(c *gin.Context) {
 // @Produce application/octet-stream
 // @Security BearerAuth
 // @Param id path string true "Guideline version ID" format(uuid)
-// @Param format path string true "Asset format: md, markdown, or html"
+// @Param format path string true "Asset format: original, pdf, md, markdown, or html"
 // @Success 200 {file} binary
 // @Failure 400 {object} handlers.ErrorResponse
 // @Failure 401 {object} handlers.ErrorResponse

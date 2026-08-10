@@ -67,7 +67,10 @@ func TestGuidelineAssetDetailsRejectsMissingAndUnsupportedAssets(t *testing.T) {
 	if _, _, _, err := guidelineAssetDetails(version, "md"); !errors.Is(err, ErrGuidelineAssetMissing) {
 		t.Fatalf("expected missing asset error, got %v", err)
 	}
-	if _, _, _, err := guidelineAssetDetails(version, "pdf"); !errors.Is(err, ErrUnsupportedGuidelineAsset) {
+	if _, _, _, err := guidelineAssetDetails(version, "pdf"); !errors.Is(err, ErrGuidelineAssetMissing) {
+		t.Fatalf("expected missing original PDF error, got %v", err)
+	}
+	if _, _, _, err := guidelineAssetDetails(version, "zip"); !errors.Is(err, ErrUnsupportedGuidelineAsset) {
 		t.Fatalf("expected unsupported format error, got %v", err)
 	}
 }

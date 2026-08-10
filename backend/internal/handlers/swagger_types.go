@@ -66,6 +66,10 @@ type PublishResult struct {
 	Published bool `json:"published" example:"true"`
 }
 
+type UpdatedResult struct {
+	Updated bool `json:"updated" example:"true"`
+}
+
 type MarkdownUpdateResult struct {
 	Updated bool `json:"updated" example:"true"`
 	Size    int  `json:"size" example:"1024"`
@@ -430,6 +434,21 @@ type PaginatedGuidelineDocumentsEnvelope struct {
 type GuidelineVersionEnvelope struct {
 	Success bool                    `json:"success" example:"true"`
 	Data    models.GuidelineVersion `json:"data"`
+}
+
+type GuidelineSectionEnvelope struct {
+	Success bool                    `json:"success" example:"true"`
+	Data    models.GuidelineSection `json:"data"`
+}
+
+type GuidelineContentBlockEnvelope struct {
+	Success bool                         `json:"success" example:"true"`
+	Data    models.GuidelineContentBlock `json:"data"`
+}
+
+type UpdatedEnvelope struct {
+	Success bool          `json:"success" example:"true"`
+	Data    UpdatedResult `json:"data"`
 }
 
 type IngestionJobEnvelope struct {

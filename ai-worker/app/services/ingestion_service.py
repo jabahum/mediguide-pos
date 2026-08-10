@@ -105,6 +105,7 @@ class IngestionService:
             started = time.perf_counter()
             self.storage.upload_bytes(extracted.html.encode("utf-8"), html_key, "text/html; charset=utf-8")
             self.storage.upload_bytes(extracted.markdown.encode("utf-8"), markdown_key, "text/markdown; charset=utf-8")
+            uploaded_asset_keys: set[str] = set()
             for asset in extracted.assets:
                 if not asset.data:
                     continue
@@ -112,7 +113,9 @@ class IngestionService:
                 asset.storage_key = (
                     f"guidelines/{version_id}/assets/{asset.checksum}.{extension}"
                 )
-                self.storage.upload_bytes(asset.data, asset.storage_key, asset.mime_type)
+                if asset.storage_key not in uploaded_asset_keys:
+                    self.storage.upload_bytes(asset.data, asset.storage_key, asset.mime_type)
+                    uploaded_asset_keys.add(asset.storage_key)
                 asset.data = None
 
             original_asset = ExtractedAsset(
@@ -138,6 +141,8 @@ class IngestionService:
                 job_id=str(job["id"]),
                 version_id=version_id,
                 seconds=round(time.perf_counter() - started, 2),
+                extracted_assets=len(extracted.assets),
+                unique_stored_assets=len(uploaded_asset_keys) + 1,
             )
 
             texts = [c.content for c in chunks]
@@ -183,6 +188,7 @@ class IngestionService:
                     "toc_entries": extracted.toc_entries,
                     "structured_block_count": len(extracted.blocks),
                     "asset_count": len(extracted.assets),
+                    "unique_asset_count": len(uploaded_asset_keys) + 1,
                 },
                 warnings=extracted.warnings,
             )

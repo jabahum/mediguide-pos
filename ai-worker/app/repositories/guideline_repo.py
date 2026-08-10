@@ -168,6 +168,14 @@ class GuidelineRepository:
         metadata = metadata or {}
         warnings = warnings or []
         with db_conn() as conn, conn.cursor() as cur:
+            # A job retry or duplicate delivery may reach persistence while an
+            # earlier run for the same version is still finishing. Serialize
+            # the destructive replacement so both transactions cannot insert
+            # the same version-scoped assets concurrently.
+            cur.execute(
+                "SELECT pg_advisory_xact_lock(hashtext('guideline-extraction'), hashtext(%s))",
+                (version_id,),
+            )
             cur.execute("DELETE FROM guideline_chunks WHERE version_id = %s", (version_id,))
             cur.execute("DELETE FROM guideline_tables WHERE version_id = %s", (version_id,))
             cur.execute("DELETE FROM guideline_content_blocks WHERE version_id = %s", (version_id,))
@@ -210,29 +218,11 @@ class GuidelineRepository:
                     section_rows,
                 )
 
-            asset_id_by_source_key: dict[str, str] = {}
-            asset_rows: list[tuple[Any, ...]] = []
-            for asset in assets:
-                asset_id = str(uuid.uuid4())
-                asset_id_by_source_key[asset.source_key] = asset_id
-                section_id = section_id_by_order.get(asset.section_order)
-                asset_rows.append(
-                    (
-                        asset_id,
-                        version_id,
-                        section_id,
-                        asset.type,
-                        asset.mime_type,
-                        asset.checksum,
-                        asset.storage_key,
-                        asset.size_bytes,
-                        asset.original_filename,
-                        asset.source_fingerprint,
-                        json.dumps(asset.provenance),
-                        asset.page_start,
-                        asset.page_end,
-                    )
-                )
+            asset_id_by_source_key, asset_rows = self._prepare_asset_rows(
+                version_id=version_id,
+                assets=assets,
+                section_id_by_order=section_id_by_order,
+            )
             if asset_rows:
                 cur.executemany(
                     """
@@ -378,6 +368,100 @@ class GuidelineRepository:
                 has_original_pdf=any(asset.type == "original_pdf" for asset in assets),
             )
             conn.commit()
+
+    @staticmethod
+    def _prepare_asset_rows(
+        *,
+        version_id: str,
+        assets: list[Any],
+        section_id_by_order: dict[int, str],
+    ) -> tuple[dict[str, str], list[tuple[Any, ...]]]:
+        """Create one row per stored object while retaining every source alias.
+
+        Embedded images are content-addressed, so the same image can occur in
+        several PDF locations with different source keys but one storage key.
+        Blocks for all occurrences must reference the canonical asset row.
+        """
+        asset_id_by_source_key: dict[str, str] = {}
+        canonical_by_storage_key: dict[str, tuple[str, Any]] = {}
+        source_fingerprint_storage: dict[str, str] = {}
+        asset_rows: list[tuple[Any, ...]] = []
+
+        for asset in assets:
+            source_key = str(asset.source_key or "").strip()
+            storage_key = str(asset.storage_key or "").strip()
+            source_fingerprint = str(asset.source_fingerprint or "").strip()
+            if not source_key:
+                raise ValueError("Extracted asset is missing its source key")
+            if not storage_key:
+                raise ValueError(f"Extracted asset {source_key} is missing its storage key")
+            if not source_fingerprint:
+                raise ValueError(f"Extracted asset {source_key} is missing its source fingerprint")
+
+            existing_source_id = asset_id_by_source_key.get(source_key)
+            canonical = canonical_by_storage_key.get(storage_key)
+            if existing_source_id is not None:
+                if canonical is None or canonical[0] != existing_source_id:
+                    raise ValueError(
+                        f"Extracted asset source key maps to multiple objects: {source_key}"
+                    )
+                GuidelineRepository._validate_asset_alias(canonical[1], asset, storage_key)
+                continue
+
+            previous_storage = source_fingerprint_storage.get(source_fingerprint)
+            if previous_storage is not None and previous_storage != storage_key:
+                raise ValueError(
+                    "Extracted asset fingerprint maps to multiple objects: "
+                    f"{source_fingerprint}"
+                )
+
+            if canonical is not None:
+                asset_id, canonical_asset = canonical
+                GuidelineRepository._validate_asset_alias(canonical_asset, asset, storage_key)
+                asset_id_by_source_key[source_key] = asset_id
+                source_fingerprint_storage[source_fingerprint] = storage_key
+                continue
+
+            asset_id = str(uuid.uuid4())
+            asset_id_by_source_key[source_key] = asset_id
+            canonical_by_storage_key[storage_key] = (asset_id, asset)
+            source_fingerprint_storage[source_fingerprint] = storage_key
+            asset_rows.append(
+                (
+                    asset_id,
+                    version_id,
+                    section_id_by_order.get(asset.section_order),
+                    asset.type,
+                    asset.mime_type,
+                    asset.checksum,
+                    storage_key,
+                    asset.size_bytes,
+                    asset.original_filename,
+                    source_fingerprint,
+                    json.dumps(asset.provenance),
+                    asset.page_start,
+                    asset.page_end,
+                )
+            )
+
+        return asset_id_by_source_key, asset_rows
+
+    @staticmethod
+    def _validate_asset_alias(canonical: Any, alias: Any, storage_key: str) -> None:
+        # The same binary may be heuristically classified as a figure in one
+        # location and a diagram in another. Its storage identity is still the
+        # checksum, MIME type and byte length; the canonical row keeps the
+        # first classification while each block keeps its own context.
+        comparable_fields = ("checksum", "mime_type", "size_bytes")
+        mismatches = [
+            field for field in comparable_fields
+            if getattr(canonical, field) != getattr(alias, field)
+        ]
+        if mismatches:
+            raise ValueError(
+                f"Conflicting extracted asset metadata for {storage_key}: "
+                + ", ".join(mismatches)
+            )
 
     @staticmethod
     def _section_id_for_page(sections, section_id_by_order: dict[int, str], page: int) -> str | None:

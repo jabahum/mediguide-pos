@@ -13,6 +13,11 @@ class ExtractionPreviewResponse(BaseModel):
     sections: int
     chunks: int
     tables: int
+    blocks: int = 0
+    assets: int = 0
+    ocr_pages: list[int] = Field(default_factory=list)
+    multi_column_pages: list[int] = Field(default_factory=list)
+    warnings: list[str] = Field(default_factory=list)
     markdown_sample: str
 
 
@@ -39,6 +44,10 @@ class RagAskRequest(BaseModel):
 
 class Citation(BaseModel):
     chunk_id: str
+    document_id: str | None = None
+    version_id: str | None = None
+    section_id: str | None = None
+    block_id: str | None = None
     title: str | None = None
     country: str | None = None
     source_name: str | None = None
@@ -52,6 +61,10 @@ class RetrievedChunk(BaseModel):
     """Safe projection of a retrieved guideline chunk for API consumers.
     Intentionally excludes internal fields such as embedding_text."""
     id: str
+    document_id: str | None = None
+    version_id: str | None = None
+    section_id: str | None = None
+    block_id: str | None = None
     title: str | None = None
     content: str | None = None
     page_start: int | None = None

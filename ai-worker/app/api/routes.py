@@ -9,7 +9,7 @@ from fastapi import APIRouter, Depends, Header, HTTPException, UploadFile, File
 
 from app.core.config import Settings, get_settings
 from app.core.storage import ObjectStorage
-from app.document_processing.chunker import chunk_sections
+from app.document_processing.chunker import chunk_blocks, chunk_sections
 from app.document_processing.pdf_extractor import extract_pdf
 from app.models.schemas import (
     ExtractionPreviewResponse,
@@ -112,13 +112,18 @@ async def preview_pdf(
         path = Path(tmp) / "upload.pdf"
         path.write_bytes(raw)
         extracted = extract_pdf(path)
-        chunks = chunk_sections(extracted.sections)
+        chunks = chunk_blocks(extracted.blocks) or chunk_sections(extracted.sections)
         return ExtractionPreviewResponse(
             title=extracted.title,
             pages=extracted.pages,
             sections=len(extracted.sections),
             chunks=len(chunks),
             tables=len(extracted.tables),
+            blocks=len(extracted.blocks),
+            assets=len(extracted.assets),
+            ocr_pages=extracted.ocr_pages,
+            multi_column_pages=extracted.multi_column_pages,
+            warnings=extracted.warnings,
             markdown_sample=extracted.markdown[:3000],
         )
 

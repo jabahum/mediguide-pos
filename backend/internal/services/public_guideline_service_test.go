@@ -199,7 +199,7 @@ func readyVersion(t *testing.T, db *gorm.DB, documentID uuid.UUID, version, mark
 		t.Fatal(err)
 	}
 	if err := db.Create(&models.GuidelineChunk{
-		VersionID: row.ID, Title: "Care", Content: "Guidance", ReviewStatus: "draft",
+		DocumentID: documentID, VersionID: row.ID, Title: "Care", Content: "Guidance", ReviewStatus: "draft",
 	}).Error; err != nil {
 		t.Fatal(err)
 	}

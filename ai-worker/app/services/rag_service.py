@@ -138,6 +138,10 @@ class RagService:
         retrieved = [
             RetrievedChunk(
                 id=str(h["id"]),
+                document_id=str(h["document_id"]) if h.get("document_id") else None,
+                version_id=str(h["version_id"]) if h.get("version_id") else None,
+                section_id=str(h["section_id"]) if h.get("section_id") else None,
+                block_id=str(h["block_id"]) if h.get("block_id") else None,
                 title=h.get("title"),
                 content=h.get("content"),
                 page_start=h.get("page_start"),
@@ -658,6 +662,10 @@ class RagService:
             {
                 "index": idx,
                 "chunk_id": str(hit["id"]),
+                "document_id": str(hit["document_id"]) if hit.get("document_id") else None,
+                "version_id": str(hit["version_id"]) if hit.get("version_id") else None,
+                "section_id": str(hit["section_id"]) if hit.get("section_id") else None,
+                "block_id": str(hit["block_id"]) if hit.get("block_id") else None,
                 "title": hit.get("title"),
                 "country": hit.get("country"),
                 "source_name": hit.get("source_name"),

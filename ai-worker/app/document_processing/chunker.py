@@ -1,7 +1,8 @@
 from dataclasses import dataclass
+from typing import Any
 import structlog
 from app.core.config import get_settings
-from app.document_processing.types import ExtractedSection
+from app.document_processing.types import ExtractedContentBlock, ExtractedSection
 
 log = structlog.get_logger()
 
@@ -15,6 +16,7 @@ class Chunk:
     page_end: int | None
     section_order: int
     chunk_order: int
+    block_order: int | None = None
 
 
 def _split_words(text: str, chunk_size: int, overlap: int) -> list[str]:
@@ -63,3 +65,54 @@ def chunk_sections(sections: list[ExtractedSection]) -> list[Chunk]:
                 )
             )
     return chunks
+
+
+def chunk_blocks(blocks: list[ExtractedContentBlock]) -> list[Chunk]:
+    settings = get_settings()
+    chunks: list[Chunk] = []
+    for block in blocks:
+        text = _block_text(block)
+        if not text:
+            continue
+        pieces = _split_words(text, settings.chunk_size, settings.chunk_overlap)
+        for index, piece in enumerate(pieces):
+            if len(piece) < settings.min_chunk_chars and len(pieces) > 1:
+                continue
+            chunks.append(
+                Chunk(
+                    title=_block_title(block),
+                    content=piece,
+                    html="",
+                    page_start=block.page_start,
+                    page_end=block.page_end,
+                    section_order=block.section_order or 0,
+                    chunk_order=index,
+                    block_order=block.sort_order,
+                )
+            )
+    return chunks
+
+
+def _block_title(block: ExtractedContentBlock) -> str | None:
+    value = block.content.get("title") or block.content.get("text")
+    if not value:
+        return None
+    return str(value)[:180]
+
+
+def _block_text(block: ExtractedContentBlock) -> str:
+    content: dict[str, Any] = block.content
+    if block.type in {"heading", "paragraph", "unknown"}:
+        return str(content.get("text") or "").strip()
+    if block.type in {"ordered_list", "unordered_list"}:
+        return "\n".join(str(item) for item in content.get("items") or []).strip()
+    if block.type in {"recommendation", "warning", "key_point"}:
+        return " ".join(
+            value for value in (str(content.get("title") or "").strip(), str(content.get("content") or "").strip()) if value
+        )
+    if block.type == "table":
+        rows = [content.get("columns") or [], *(content.get("rows") or [])]
+        return "\n".join(" | ".join(str(cell) for cell in row) for row in rows).strip()
+    if block.type == "reference":
+        return str(content.get("citation") or "").strip()
+    return ""

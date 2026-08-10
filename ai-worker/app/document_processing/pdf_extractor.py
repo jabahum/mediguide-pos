@@ -1,7 +1,9 @@
 from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
+import hashlib
 import html
+import math
 import re
 import subprocess
 import tempfile
@@ -9,7 +11,13 @@ import fitz
 from bs4 import BeautifulSoup
 from markdownify import markdownify as md
 from slugify import slugify
-from app.document_processing.types import ExtractedDocument, ExtractedSection, ExtractedTable
+from app.document_processing.structured_blocks import build_structured_blocks
+from app.document_processing.types import (
+    ExtractedAsset,
+    ExtractedDocument,
+    ExtractedSection,
+    ExtractedTable,
+)
 
 _BULLET_RE = re.compile(r"^(?:[-*]\s+|[~•●○▪■□◦]+\s*)")
 _LOC_CODE_RE = re.compile(r"^(?:HC ?[1-4IVX]+|RRH?|NRH|H|NA)$", re.I)
@@ -828,8 +836,9 @@ def _block_overlaps_table(
 def _page_text_from_blocks(
     blocks: list[tuple[float, float, float, float, str, int, int]],
     table_bboxes: list[tuple[float, float, float, float]],
+    page_width: float | None = None,
 ) -> str:
-    kept: list[str] = []
+    kept: list[tuple[float, float, str]] = []
     for block in blocks:
         text = (block[4] or "").strip()
         if not text:
@@ -837,8 +846,121 @@ def _page_text_from_blocks(
         block_bbox = (float(block[0]), float(block[1]), float(block[2]), float(block[3]))
         if table_bboxes and _block_overlaps_table(block_bbox, table_bboxes):
             continue
-        kept.append(text)
-    return _clean_text("\n".join(kept))
+        kept.append((float(block[0]), float(block[1]), text))
+    if page_width and _is_multi_column_layout(blocks, page_width):
+        midpoint = page_width / 2
+        kept.sort(key=lambda item: (0 if item[0] < midpoint else 1, item[1], item[0]))
+    else:
+        kept.sort(key=lambda item: (item[1], item[0]))
+    return _clean_text("\n".join(item[2] for item in kept))
+
+
+def _is_multi_column_layout(
+    blocks: list[tuple[float, float, float, float, str, int, int]],
+    page_width: float,
+) -> bool:
+    if page_width <= 0:
+        return False
+    substantial = [
+        block for block in blocks
+        if len(_clean_text(block[4] or "")) >= 40
+        and float(block[2]) - float(block[0]) < page_width * 0.72
+    ]
+    left = [block for block in substantial if float(block[0]) < page_width * 0.42]
+    right = [block for block in substantial if float(block[0]) > page_width * 0.42]
+    return len(left) >= 2 and len(right) >= 2
+
+
+def _remove_repeated_margin_lines(page_lines: list[tuple[int, str]]) -> list[tuple[int, str]]:
+    if len(page_lines) < 3:
+        return page_lines
+    candidates: dict[str, int] = {}
+    for _, text in page_lines:
+        lines = [_clean_line(line) for line in text.splitlines() if _clean_line(line)]
+        for line in set([*lines[:2], *lines[-2:]]):
+            if 2 <= len(line) <= 120:
+                candidates[line] = candidates.get(line, 0) + 1
+    threshold = max(2, math.ceil(len(page_lines) * 0.6))
+    repeated = {line for line, count in candidates.items() if count >= threshold}
+    if not repeated:
+        return page_lines
+    cleaned: list[tuple[int, str]] = []
+    for page, text in page_lines:
+        lines = text.splitlines()
+        retained = [line for line in lines if _clean_line(line) not in repeated]
+        cleaned.append((page, _clean_text("\n".join(retained))))
+    return cleaned
+
+
+def _image_caption(page: fitz.Page, rect: fitz.Rect) -> str:
+    candidates: list[tuple[float, str]] = []
+    for block in page.get_text("blocks") or []:
+        text = _clean_text(block[4] or "")
+        if not re.match(r"^(?:figure|fig\.)\s*\d*", text, re.I):
+            continue
+        y0 = float(block[1])
+        if rect.y1 - 12 <= y0 <= rect.y1 + 100:
+            candidates.append((abs(y0 - rect.y1), text[:500]))
+    return min(candidates, default=(0.0, ""), key=lambda item: item[0])[1]
+
+
+def _extract_embedded_images(doc: fitz.Document) -> list[ExtractedAsset]:
+    assets: list[ExtractedAsset] = []
+    seen: set[str] = set()
+    for page_number, page in enumerate(doc, start=1):
+        for image_index, image in enumerate(page.get_images(full=True) or []):
+            xref = int(image[0])
+            try:
+                extracted = doc.extract_image(xref)
+                data = extracted.get("image") or b""
+                width = int(extracted.get("width") or 0)
+                height = int(extracted.get("height") or 0)
+                if len(data) < 1024 or width < 48 or height < 48:
+                    continue
+                checksum = hashlib.sha256(data).hexdigest()
+                fingerprint = hashlib.sha256(f"{page_number}:{xref}:{checksum}".encode()).hexdigest()
+                if fingerprint in seen:
+                    continue
+                seen.add(fingerprint)
+                extension = str(extracted.get("ext") or "bin").lower()
+                mime_type = {
+                    "png": "image/png",
+                    "jpg": "image/jpeg",
+                    "jpeg": "image/jpeg",
+                    "jp2": "image/jp2",
+                    "tiff": "image/tiff",
+                }.get(extension, "application/octet-stream")
+                rects = page.get_image_rects(xref)
+                rect = rects[0] if rects else fitz.Rect(0, 0, 0, 0)
+                caption = _image_caption(page, rect)
+                source_key = f"page-{page_number}-image-{image_index}-{checksum[:12]}"
+                asset_type = "diagram" if re.search(r"algorithm|flowchart|flow chart", caption, re.I) else "figure"
+                assets.append(
+                    ExtractedAsset(
+                        type=asset_type,
+                        source_key=source_key,
+                        source_fingerprint=fingerprint,
+                        mime_type=mime_type,
+                        checksum=checksum,
+                        size_bytes=len(data),
+                        original_filename=f"{source_key}.{extension}",
+                        page_start=page_number,
+                        page_end=page_number,
+                        data=data,
+                        provenance={
+                            "page": page_number,
+                            "xref": xref,
+                            "bbox": [rect.x0, rect.y0, rect.x1, rect.y1],
+                            "width": width,
+                            "height": height,
+                            "caption": caption,
+                            "review_required": True,
+                        },
+                    )
+                )
+            except Exception:
+                continue
+    return assets
 
 
 def _dedupe_section_html(section_html: str, tables: list[ExtractedTable]) -> str:
@@ -943,17 +1065,40 @@ def extract_pdf(path: Path) -> ExtractedDocument:
     page_lines: list[tuple[int, str]] = []
     all_text: list[str] = []
     title = None
+    page_methods: dict[int, str] = {}
+    ocr_pages: list[int] = []
+    multi_column_pages: list[int] = []
+    toc_entries: list[str] = []
+    warnings: list[str] = []
 
     for page_number, page in enumerate(doc, start=1):
         blocks = page.get_text("blocks") or []
         raw_text = _clean_text(page.get_text("text"))
-        text = _clean_text(_page_text_from_blocks(blocks, table_bboxes_by_page.get(page_number, [])))
+        multi_column = _is_multi_column_layout(blocks, float(page.rect.width))
+        if multi_column:
+            multi_column_pages.append(page_number)
+        text = _clean_text(
+            _page_text_from_blocks(
+                blocks,
+                table_bboxes_by_page.get(page_number, []),
+                float(page.rect.width),
+            )
+        )
+        method = "embedded_text"
         if _should_use_raw_page_text(text, raw_text):
             text = raw_text
         if _is_low_signal_page_text(text):
             ocr_text = _ocr_page_text(page)
             if len(ocr_text) > len(text):
                 text = ocr_text
+                method = "ocr"
+                ocr_pages.append(page_number)
+            elif not text:
+                warnings.append(f"Page {page_number} has no extractable text and OCR produced no result")
+        page_methods[page_number] = method
+        toc_entries.extend(
+            line[:500] for line in raw_text.splitlines() if _looks_like_toc_entry(_clean_line(line))
+        )
         if page_number == 1:
             for line in text.splitlines():
                 if len(line.strip()) > 8:
@@ -962,7 +1107,21 @@ def extract_pdf(path: Path) -> ExtractedDocument:
         page_lines.append((page_number, text))
         all_text.append(text)
 
+    page_lines = _remove_repeated_margin_lines(page_lines)
     sections = _split_sections(page_lines)
+    for section in sections:
+        methods = {
+            page_methods.get(page, "embedded_text")
+            for page in range(section.page_start or 1, (section.page_end or section.page_start or 1) + 1)
+        }
+        section.extraction_confidence = 0.68 if "ocr" in methods else 0.9
+        section.provenance = {
+            "page_start": section.page_start,
+            "page_end": section.page_end,
+            "page_methods": sorted(methods),
+            "heading_detection": "heuristic",
+            "review_required": True,
+        }
     section_by_page: dict[int, ExtractedSection] = {}
     for section in sections:
         start = section.page_start or 0
@@ -993,6 +1152,40 @@ def extract_pdf(path: Path) -> ExtractedDocument:
     clean_html = str(soup)
     markdown = md(clean_html, heading_style="ATX")
     text = _clean_text("\n\n".join(all_text))
+    assets = _extract_embedded_images(doc)
+    blocks = build_structured_blocks(
+        sections,
+        tables,
+        assets,
+        page_methods=page_methods,
+        multi_column_pages=multi_column_pages,
+    )
+    for table in tables:
+        table.extraction_confidence = 0.72
+        table.provenance = {
+            "page": table.page,
+            "bbox": list(table.bbox) if table.bbox else None,
+            "extraction_method": "pdfplumber",
+            "review_required": True,
+        }
+    if ocr_pages:
+        warnings.append("OCR-derived text requires additional editorial comparison with the source PDF")
+    if any(asset.provenance.get("caption") == "" for asset in assets):
+        warnings.append("One or more extracted figures require caption and alternative-text review")
+    metadata = {
+        key: value
+        for key, value in (doc.metadata or {}).items()
+        if value not in (None, "")
+    }
+    metadata.update(
+        {
+            "page_count": len(doc),
+            "text_mode": "ocr_required" if ocr_pages else "embedded_text",
+            "ocr_pages": ocr_pages,
+            "multi_column_pages": multi_column_pages,
+            "toc_detected": bool(toc_entries),
+        }
+    )
 
     return ExtractedDocument(
         title=title,
@@ -1002,4 +1195,11 @@ def extract_pdf(path: Path) -> ExtractedDocument:
         text=text,
         sections=sections,
         tables=tables,
+        blocks=blocks,
+        assets=assets,
+        metadata=metadata,
+        toc_entries=toc_entries,
+        ocr_pages=ocr_pages,
+        multi_column_pages=multi_column_pages,
+        warnings=warnings,
     )

@@ -47,7 +47,8 @@ class SearchRepository:
         params = select_params + [vector] + filter_params + [vector, top_k]
         sql = f"""
             SELECT
-              gc.id, gc.title, gc.content, gc.page_start, gc.page_end, gc.language,
+              gc.id, gc.document_id, gc.version_id, gc.section_id, gc.block_id,
+              gc.title, gc.content, gc.page_start, gc.page_end, gc.language,
               gc.program_area, gc.source_name, gc.source_version,
               {country_select}
               1 - (gc.embedding <=> %s::vector) AS similarity
@@ -104,7 +105,8 @@ class SearchRepository:
 
         sql = f"""
             SELECT
-                gc.id, gc.title, gc.content, gc.page_start, gc.page_end, gc.language,
+                gc.id, gc.document_id, gc.version_id, gc.section_id, gc.block_id,
+                gc.title, gc.content, gc.page_start, gc.page_end, gc.language,
                 gc.program_area, gc.source_name, gc.source_version,
                 {country_select}
                 ts_rank(gc.search_vector, plainto_tsquery('simple', %s)) AS similarity

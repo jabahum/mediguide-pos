@@ -206,6 +206,14 @@ func (h GuidelineHandler) UploadPDF(c *gin.Context) {
 	defer file.Close()
 	job, err := h.Service.UploadPDF(c.Request.Context(), versionID, file, header)
 	if err != nil {
+		if errors.Is(err, services.ErrPublishedVersionImmutable) {
+			httpx.Error(c, http.StatusConflict, err.Error())
+			return
+		}
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			httpx.Error(c, http.StatusNotFound, "guideline version not found")
+			return
+		}
 		httpx.Error(c, 500, "internal server error")
 		return
 	}

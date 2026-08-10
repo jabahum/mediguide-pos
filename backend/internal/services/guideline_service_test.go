@@ -95,6 +95,22 @@ func TestValidateMarkdownUpdateRequiresContentAndExistingAsset(t *testing.T) {
 	}
 }
 
+func TestValidateVersionAllowsIngestionProtectsPublishedVersion(t *testing.T) {
+	if err := validateVersionAllowsIngestion(&models.GuidelineVersion{Status: "published"}); !errors.Is(err, ErrPublishedVersionImmutable) {
+		t.Fatalf("expected published version to be immutable, got %v", err)
+	}
+	if err := validateVersionAllowsIngestion(&models.GuidelineVersion{Status: "review_required"}); err != nil {
+		t.Fatalf("expected review-required draft to allow retry, got %v", err)
+	}
+}
+
+func TestEnsureVersionReadyForPublishRequiresStructuredEditorialReview(t *testing.T) {
+	err := ensureVersionReadyForPublish(nil, &models.GuidelineVersion{Status: "review_required"})
+	if !errors.Is(err, ErrGuidelineIngestionIncomplete) {
+		t.Fatalf("expected editorial review gate, got %v", err)
+	}
+}
+
 func TestProtocolProgramAreaFallsBackToTitle(t *testing.T) {
 	document := &models.GuidelineDocument{Title: "HIV Guideline"}
 

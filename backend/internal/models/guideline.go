@@ -1,6 +1,9 @@
 package models
 
-import "github.com/google/uuid"
+import (
+	"github.com/google/uuid"
+	"gorm.io/datatypes"
+)
 
 type GuidelineDocument struct {
 	Base
@@ -16,21 +19,24 @@ type GuidelineDocument struct {
 
 type GuidelineVersion struct {
 	Base
-	DocumentID      uuid.UUID                 `gorm:"type:uuid;index;not null" json:"document_id"`
-	Version         string                    `gorm:"not null" json:"version"`
-	PublicationDate string                    `json:"publication_date"`
-	ReviewDate      string                    `json:"review_date"`
-	Status          string                    `gorm:"default:'draft';index" json:"status"`
-	OriginalFileKey string                    `json:"original_file_key"`
-	HTMLFileKey     string                    `json:"html_file_key"`
-	MarkdownFileKey string                    `json:"markdown_file_key"`
-	Checksum        string                    `json:"checksum"`
-	ApprovedBy      *uuid.UUID                `gorm:"type:uuid" json:"approved_by"`
-	ApprovedAt      *string                   `json:"approved_at"`
-	Sections        []GuidelineSection        `gorm:"foreignKey:VersionID" json:"sections,omitempty"`
-	ContentBlocks   []GuidelineContentBlock   `gorm:"foreignKey:VersionID" json:"content_blocks,omitempty"`
-	Assets          []GuidelineAsset          `gorm:"foreignKey:VersionID" json:"assets,omitempty"`
-	Manifest        *GuidelineVersionManifest `gorm:"foreignKey:VersionID" json:"manifest,omitempty"`
+	DocumentID              uuid.UUID                 `gorm:"type:uuid;index;not null" json:"document_id"`
+	Version                 string                    `gorm:"not null" json:"version"`
+	PublicationDate         string                    `json:"publication_date"`
+	ReviewDate              string                    `json:"review_date"`
+	Status                  string                    `gorm:"default:'draft';index" json:"status"`
+	OriginalFileKey         string                    `json:"original_file_key"`
+	HTMLFileKey             string                    `json:"html_file_key"`
+	MarkdownFileKey         string                    `json:"markdown_file_key"`
+	Checksum                string                    `json:"checksum"`
+	ApprovedBy              *uuid.UUID                `gorm:"type:uuid" json:"approved_by"`
+	ApprovedAt              *string                   `json:"approved_at"`
+	ExtractionSchemaVersion int                       `gorm:"not null;default:0" json:"extraction_schema_version"`
+	ExtractionMetadataJSON  datatypes.JSON            `gorm:"column:extraction_metadata_json;type:jsonb;not null;default:'{}'" json:"extraction_metadata" swaggertype:"object"`
+	ExtractionWarningsJSON  datatypes.JSON            `gorm:"column:extraction_warnings_json;type:jsonb;not null;default:'[]'" json:"extraction_warnings" swaggertype:"array,string"`
+	Sections                []GuidelineSection        `gorm:"foreignKey:VersionID" json:"sections,omitempty"`
+	ContentBlocks           []GuidelineContentBlock   `gorm:"foreignKey:VersionID" json:"content_blocks,omitempty"`
+	Assets                  []GuidelineAsset          `gorm:"foreignKey:VersionID" json:"assets,omitempty"`
+	Manifest                *GuidelineVersionManifest `gorm:"foreignKey:VersionID" json:"manifest,omitempty"`
 }
 
 type GuidelineSection struct {
@@ -49,8 +55,10 @@ type GuidelineSection struct {
 
 type GuidelineChunk struct {
 	Base
+	DocumentID    uuid.UUID  `gorm:"type:uuid;index;not null" json:"document_id"`
 	VersionID     uuid.UUID  `gorm:"type:uuid;index;not null" json:"version_id"`
 	SectionID     *uuid.UUID `gorm:"type:uuid;index" json:"section_id"`
+	BlockID       *uuid.UUID `gorm:"type:uuid;index" json:"block_id"`
 	Title         string     `json:"title"`
 	Content       string     `gorm:"type:text" json:"content"`
 	HTML          string     `gorm:"type:text" json:"html"`

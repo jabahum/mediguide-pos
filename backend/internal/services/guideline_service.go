@@ -57,6 +57,7 @@ var (
 	ErrGuidelineAssetMissing        = errors.New("extracted guideline asset is missing")
 	ErrUnsupportedGuidelineAsset    = errors.New("unsupported extracted guideline asset format")
 	ErrPublishedMarkdownImmutable   = errors.New("published guideline markdown cannot be edited")
+	ErrPublishedVersionImmutable    = errors.New("published guideline version cannot be re-ingested")
 )
 
 func (s GuidelineService) CreateDocument(in CreateGuidelineInput) (*models.GuidelineDocument, error) {
@@ -117,6 +118,13 @@ func (s GuidelineService) CreateVersion(docID uuid.UUID, in CreateVersionInput) 
 	return &v, s.DB.Create(&v).Error
 }
 func (s GuidelineService) UploadPDF(ctx context.Context, versionID uuid.UUID, file multipart.File, header *multipart.FileHeader) (*models.IngestionJob, error) {
+	var target models.GuidelineVersion
+	if err := s.DB.First(&target, "id = ?", versionID).Error; err != nil {
+		return nil, err
+	}
+	if err := validateVersionAllowsIngestion(&target); err != nil {
+		return nil, err
+	}
 	key := fmt.Sprintf("guidelines/%s/original/%d_%s", versionID.String(), time.Now().Unix(), filepath.Base(header.Filename))
 	if err := s.Store.Put(ctx, key, file, header.Size, header.Header.Get("Content-Type")); err != nil {
 		return nil, err
@@ -285,6 +293,13 @@ func validateMarkdownUpdate(version *models.GuidelineVersion, content []byte) er
 	return nil
 }
 
+func validateVersionAllowsIngestion(version *models.GuidelineVersion) error {
+	if strings.EqualFold(strings.TrimSpace(version.Status), "published") {
+		return ErrPublishedVersionImmutable
+	}
+	return nil
+}
+
 func (s GuidelineService) loadVersionDocument(tx *gorm.DB, versionID uuid.UUID) (*models.GuidelineVersion, *models.GuidelineDocument, error) {
 	var version models.GuidelineVersion
 	if err := tx.First(&version, "id = ?", versionID).Error; err != nil {
@@ -331,6 +346,9 @@ func ensureDraftProtocol(tx *gorm.DB, document *models.GuidelineDocument, versio
 }
 
 func ensureVersionReadyForPublish(tx *gorm.DB, version *models.GuidelineVersion) error {
+	if strings.EqualFold(strings.TrimSpace(version.Status), "review_required") {
+		return fmt.Errorf("%w: structured extraction requires editorial review", ErrGuidelineIngestionIncomplete)
+	}
 	if strings.TrimSpace(version.OriginalFileKey) == "" {
 		return fmt.Errorf("%w: no PDF has been uploaded for this version", ErrGuidelineIngestionIncomplete)
 	}

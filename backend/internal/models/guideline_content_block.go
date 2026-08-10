@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"gorm.io/datatypes"
 )
 
 type GuidelineBlockType string
@@ -40,6 +41,8 @@ type GuidelineContentBlock struct {
 	Type                 GuidelineBlockType         `gorm:"type:text;not null" json:"type"`
 	SortOrder            int                        `gorm:"not null;default:0" json:"sort_order"`
 	ContentJSON          json.RawMessage            `gorm:"column:content_json;type:jsonb;not null" json:"content" swaggertype:"object"`
+	SourceFingerprint    string                     `gorm:"not null" json:"source_fingerprint"`
+	ProvenanceJSON       datatypes.JSON             `gorm:"column:provenance_json;type:jsonb;not null;default:'{}'" json:"provenance" swaggertype:"object"`
 	PageStart            *int                       `json:"page_start,omitempty"`
 	PageEnd              *int                       `json:"page_end,omitempty"`
 	ExtractionConfidence *float64                   `json:"extraction_confidence,omitempty"`
@@ -61,16 +64,18 @@ const (
 
 type GuidelineAsset struct {
 	Base
-	VersionID        uuid.UUID          `gorm:"type:uuid;index;not null" json:"version_id"`
-	SectionID        *uuid.UUID         `gorm:"type:uuid;index" json:"section_id,omitempty"`
-	Type             GuidelineAssetType `gorm:"type:text;not null" json:"type"`
-	MIMEType         string             `gorm:"not null" json:"mime_type"`
-	Checksum         string             `gorm:"not null" json:"checksum"`
-	StorageKey       string             `gorm:"not null" json:"storage_key"`
-	SizeBytes        int64              `gorm:"not null" json:"size_bytes"`
-	OriginalFilename *string            `json:"original_filename,omitempty"`
-	PageStart        *int               `json:"page_start,omitempty"`
-	PageEnd          *int               `json:"page_end,omitempty"`
+	VersionID         uuid.UUID          `gorm:"type:uuid;index;not null" json:"version_id"`
+	SectionID         *uuid.UUID         `gorm:"type:uuid;index" json:"section_id,omitempty"`
+	Type              GuidelineAssetType `gorm:"type:text;not null" json:"type"`
+	MIMEType          string             `gorm:"not null" json:"mime_type"`
+	Checksum          string             `gorm:"not null" json:"checksum"`
+	StorageKey        string             `gorm:"not null" json:"storage_key"`
+	SizeBytes         int64              `gorm:"not null" json:"size_bytes"`
+	OriginalFilename  *string            `json:"original_filename,omitempty"`
+	SourceFingerprint string             `gorm:"not null" json:"source_fingerprint"`
+	ProvenanceJSON    datatypes.JSON     `gorm:"column:provenance_json;type:jsonb;not null;default:'{}'" json:"provenance" swaggertype:"object"`
+	PageStart         *int               `json:"page_start,omitempty"`
+	PageEnd           *int               `json:"page_end,omitempty"`
 }
 
 type GuidelineTextBlockPayload struct {

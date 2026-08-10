@@ -16,18 +16,20 @@ type GuidelineDocument struct {
 
 type GuidelineVersion struct {
 	Base
-	DocumentID      uuid.UUID          `gorm:"type:uuid;index;not null" json:"document_id"`
-	Version         string             `gorm:"not null" json:"version"`
-	PublicationDate string             `json:"publication_date"`
-	ReviewDate      string             `json:"review_date"`
-	Status          string             `gorm:"default:'draft';index" json:"status"`
-	OriginalFileKey string             `json:"original_file_key"`
-	HTMLFileKey     string             `json:"html_file_key"`
-	MarkdownFileKey string             `json:"markdown_file_key"`
-	Checksum        string             `json:"checksum"`
-	ApprovedBy      *uuid.UUID         `gorm:"type:uuid" json:"approved_by"`
-	ApprovedAt      *string            `json:"approved_at"`
-	Sections        []GuidelineSection `gorm:"foreignKey:VersionID" json:"sections,omitempty"`
+	DocumentID      uuid.UUID               `gorm:"type:uuid;index;not null" json:"document_id"`
+	Version         string                  `gorm:"not null" json:"version"`
+	PublicationDate string                  `json:"publication_date"`
+	ReviewDate      string                  `json:"review_date"`
+	Status          string                  `gorm:"default:'draft';index" json:"status"`
+	OriginalFileKey string                  `json:"original_file_key"`
+	HTMLFileKey     string                  `json:"html_file_key"`
+	MarkdownFileKey string                  `json:"markdown_file_key"`
+	Checksum        string                  `json:"checksum"`
+	ApprovedBy      *uuid.UUID              `gorm:"type:uuid" json:"approved_by"`
+	ApprovedAt      *string                 `json:"approved_at"`
+	Sections        []GuidelineSection      `gorm:"foreignKey:VersionID" json:"sections,omitempty"`
+	ContentBlocks   []GuidelineContentBlock `gorm:"foreignKey:VersionID" json:"content_blocks,omitempty"`
+	Assets          []GuidelineAsset        `gorm:"foreignKey:VersionID" json:"assets,omitempty"`
 }
 
 type GuidelineSection struct {

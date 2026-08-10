@@ -131,7 +131,7 @@ func New(cfg config.Config) (*App, error) {
 
 	authH := handlers.AuthHandler{Service: authSvc}
 	guidelineH := handlers.GuidelineHandler{Service: guidelineSvc, MaxUploadMB: cfg.MaxUploadMB}
-	publicGuidelineH := handlers.PublicGuidelineHandler{Service: publicGuidelineSvc}
+	publicGuidelineH := handlers.PublicGuidelineHandler{Service: publicGuidelineSvc, Content: publicGuidelineSvc}
 	searchH := handlers.SearchHandler{Service: searchSvc}
 	ragH := handlers.RAGHandler{Service: ragSvc}
 	protocolH := handlers.ProtocolHandler{Service: protocolSvc}
@@ -148,6 +148,7 @@ func New(cfg config.Config) (*App, error) {
 	emergencyProtocolH := handlers.EmergencyProtocolHandler{Service: emergencyProtocolSvc}
 	contentReferenceH := handlers.ContentReferenceHandler{Service: contentReferenceSvc}
 	progressUsageH := handlers.ProgressUsageHandler{Service: services.ProgressUsageService{DB: database}}
+	guidelineLibraryH := handlers.GuidelineLibraryHandler{Service: services.GuidelineLibraryService{DB: database}}
 	conversationH := handlers.ConversationHandler{Service: services.ConversationService{DB: database}}
 	consultantH := handlers.ConsultantHandler{Service: consultantSvc}
 	legacyAPIH := handlers.LegacyAPIHandler{Service: legacyAPISvc, Cfg: cfg}
@@ -171,6 +172,14 @@ func New(cfg config.Config) (*App, error) {
 	{
 		public.GET("/guidelines", publicGuidelineH.List)
 		public.GET("/guidelines/:id", publicGuidelineH.Get)
+		public.GET("/guidelines/:id/manifest", publicGuidelineH.Manifest)
+		public.GET("/guidelines/:id/sections", publicGuidelineH.Sections)
+		public.GET("/guidelines/:id/sections/:sectionId", publicGuidelineH.Section)
+		public.GET("/guidelines/:id/tables", publicGuidelineH.Tables)
+		public.GET("/guidelines/:id/figures", publicGuidelineH.Figures)
+		public.GET("/guidelines/:id/algorithms", publicGuidelineH.Algorithms)
+		public.GET("/guidelines/:id/original", rateLimiter.Limit(middleware.Policy("public-guideline-original", 30, time.Minute, 5), middleware.IPIdentity), publicGuidelineH.Original)
+		public.GET("/guidelines/:id/offline-package", rateLimiter.Limit(middleware.Policy("public-guideline-offline", 20, time.Minute, 3), middleware.IPIdentity), publicGuidelineH.OfflinePackage)
 		public.GET("/guidelines/:id/markdown", rateLimiter.Limit(middleware.Policy("public-markdown", 60, time.Minute, 10), middleware.IPIdentity), publicGuidelineH.Markdown)
 	}
 
@@ -360,14 +369,21 @@ func New(cfg config.Config) (*App, error) {
 		protected.POST("/guideline-versions/:id/upload", middleware.RequirePermission("guideline.write"), rateLimiter.Limit(middleware.Policy("guideline-upload", 10, time.Hour, 0), middleware.UserIdentity), rateLimiter.Concurrency("guideline-upload", 1, 15*time.Minute, middleware.UserIdentity), guidelineH.UploadPDF)
 		protected.POST("/guideline-versions/:id/publish", middleware.RequirePermission("guideline.publish"), rateLimiter.Limit(middleware.Policy("guideline-publish", 10, time.Hour, 0), middleware.UserIdentity), guidelineH.Publish)
 		protected.GET("/guideline-versions/:id/review", middleware.RequirePermission("guideline.write"), guidelineH.ReviewWorkspace)
+		protected.GET("/guideline-versions/:id/extraction-status", middleware.RequirePermission("guideline.write"), guidelineH.ExtractionStatus)
+		protected.GET("/guideline-versions/:id/preview", middleware.RequirePermission("guideline.write"), guidelineH.PreviewVersion)
 		protected.GET("/guideline-versions/:id/assets/:assetId", middleware.RequirePermission("guideline.write"), guidelineH.ReviewAsset)
+		protected.POST("/guideline-versions/:id/assets/:assetId/review", middleware.RequirePermission("guideline.publish"), guidelineH.ReviewGuidelineAsset)
 		protected.POST("/guideline-versions/:id/validate-publication", middleware.RequirePermission("guideline.publish"), guidelineH.ValidatePublication)
 		protected.GET("/guideline-versions/:id/sections", middleware.RequirePermission("guideline.write"), guidelineH.Sections)
+		protected.POST("/guideline-versions/:id/sections", middleware.RequirePermission("guideline.write"), guidelineH.CreateReviewSection)
 		protected.PUT("/guideline-versions/:id/sections/reorder", middleware.RequirePermission("guideline.write"), guidelineH.ReorderReviewSections)
 		protected.PATCH("/guideline-versions/:id/sections/:sectionId", middleware.RequirePermission("guideline.write"), guidelineH.UpdateReviewSection)
+		protected.DELETE("/guideline-versions/:id/sections/:sectionId", middleware.RequirePermission("guideline.write"), guidelineH.DeleteReviewSection)
 		protected.POST("/guideline-versions/:id/sections/:sectionId/split", middleware.RequirePermission("guideline.write"), guidelineH.SplitReviewSection)
 		protected.POST("/guideline-versions/:id/sections/:sectionId/merge", middleware.RequirePermission("guideline.write"), guidelineH.MergeReviewSection)
 		protected.PATCH("/guideline-versions/:id/blocks/:blockId", middleware.RequirePermission("guideline.write"), guidelineH.UpdateReviewBlock)
+		protected.POST("/guideline-versions/:id/blocks", middleware.RequirePermission("guideline.write"), guidelineH.CreateReviewBlock)
+		protected.PUT("/guideline-versions/:id/blocks/reorder", middleware.RequirePermission("guideline.write"), guidelineH.ReorderReviewBlocks)
 		protected.DELETE("/guideline-versions/:id/blocks/:blockId", middleware.RequirePermission("guideline.write"), guidelineH.DeleteReviewBlock)
 		protected.POST("/guideline-versions/:id/blocks/:blockId/review", middleware.RequirePermission("guideline.publish"), guidelineH.ReviewBlock)
 		protected.GET("/guideline-versions/:id/chunks", middleware.RequirePermission("guideline.write"), guidelineH.Chunks)
@@ -397,6 +413,16 @@ func New(cfg config.Config) (*App, error) {
 		protected.GET("/reading-progress/:guidelineId", progressUsageH.GetProgress)
 		protected.PUT("/reading-progress/:guidelineId", rateLimiter.Limit(middleware.Policy("reading-progress-write", 120, time.Minute, 20), middleware.UserIdentity), progressUsageH.UpsertProgress)
 		protected.DELETE("/reading-progress/:guidelineId", progressUsageH.DeleteProgress)
+		protected.GET("/library/collections", guidelineLibraryH.ListCollections)
+		protected.POST("/library/collections", guidelineLibraryH.CreateCollection)
+		protected.GET("/library/collections/:id", guidelineLibraryH.GetCollection)
+		protected.PATCH("/library/collections/:id", guidelineLibraryH.UpdateCollection)
+		protected.DELETE("/library/collections/:id", guidelineLibraryH.DeleteCollection)
+		protected.POST("/library/collections/:id/items", guidelineLibraryH.AddCollectionItem)
+		protected.GET("/library/collections/:id/items", guidelineLibraryH.ListCollectionItems)
+		protected.DELETE("/library/collections/:id/items/:guidelineId", guidelineLibraryH.RemoveCollectionItem)
+		protected.GET("/library/downloads", guidelineLibraryH.ListDownloads)
+		protected.POST("/library/downloads", rateLimiter.Limit(middleware.Policy("guideline-download-record", 120, time.Minute, 20), middleware.UserIdentity), guidelineLibraryH.RecordDownload)
 		protected.POST("/usage/guidelines", rateLimiter.Limit(middleware.Policy("usage-event-write", 120, time.Minute, 20), middleware.UserIdentity), progressUsageH.RecordGuidelineUsage)
 		protected.POST("/usage/abbreviations", rateLimiter.Limit(middleware.Policy("usage-event-write", 120, time.Minute, 20), middleware.UserIdentity), progressUsageH.RecordAbbreviationUsage)
 		protected.POST("/usage/consultants", rateLimiter.Limit(middleware.Policy("usage-event-write", 120, time.Minute, 20), middleware.UserIdentity), progressUsageH.RecordConsultantUsage)

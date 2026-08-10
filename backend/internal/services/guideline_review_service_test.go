@@ -186,6 +186,83 @@ func TestPublishedVersionReviewMutationIsRejected(t *testing.T) {
 	}
 }
 
+func TestGuidelineEditorLifecycleCreatesAuditsAndProtectsDependencies(t *testing.T) {
+	db := guidelineReviewTestDB(t)
+	document := models.GuidelineDocument{Title: "Clinical guidance"}
+	if err := db.Create(&document).Error; err != nil {
+		t.Fatal(err)
+	}
+	version := models.GuidelineVersion{DocumentID: document.ID, Version: "1", Status: "review_required", ExtractionSchemaVersion: 1}
+	if err := db.Create(&version).Error; err != nil {
+		t.Fatal(err)
+	}
+	service := GuidelineService{DB: db}
+	actor := uuid.New()
+	section, err := service.CreateReviewSection(version.ID, actor, "127.0.0.1", CreateGuidelineSectionInput{Title: "Assessment", Level: 1})
+	if err != nil {
+		t.Fatal(err)
+	}
+	block, err := service.CreateReviewBlock(version.ID, actor, "127.0.0.1", CreateGuidelineBlockInput{SectionID: &section.ID, Type: models.GuidelineBlockParagraph, Content: []byte(`{"type":"paragraph","text":"Assess airway"}`)})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := service.DeleteReviewSection(version.ID, section.ID, actor, ""); !errors.Is(err, ErrGuidelineReviewConflict) {
+		t.Fatalf("section with content was deleted: %v", err)
+	}
+	if err := service.ReorderReviewBlocks(version.ID, actor, "", ReorderGuidelineBlocksInput{Blocks: []GuidelineBlockOrderInput{{ID: block.ID, SectionID: &section.ID, SortOrder: 2}}}); err != nil {
+		t.Fatal(err)
+	}
+	if err := service.DeleteReviewBlock(version.ID, block.ID, actor, ""); err != nil {
+		t.Fatal(err)
+	}
+	if err := service.DeleteReviewSection(version.ID, section.ID, actor, ""); err != nil {
+		t.Fatal(err)
+	}
+	var auditCount int64
+	if err := db.Model(&models.AuditLog{}).Where("actor_id = ?", actor.String()).Count(&auditCount).Error; err != nil {
+		t.Fatal(err)
+	}
+	if auditCount < 5 {
+		t.Fatalf("expected audited lifecycle, got %d events", auditCount)
+	}
+}
+
+func TestGuidelineAssetReviewAndExtractionStatus(t *testing.T) {
+	db := guidelineReviewTestDB(t)
+	document := models.GuidelineDocument{Title: "Clinical guidance"}
+	if err := db.Create(&document).Error; err != nil {
+		t.Fatal(err)
+	}
+	version := models.GuidelineVersion{DocumentID: document.ID, Version: "1", Status: "review_required", ExtractionSchemaVersion: 3, ExtractionWarningsJSON: []byte(`["verify table"]`)}
+	if err := db.Create(&version).Error; err != nil {
+		t.Fatal(err)
+	}
+	asset := models.GuidelineAsset{VersionID: version.ID, Type: models.GuidelineAssetFigure, MIMEType: "image/png", Checksum: "sum", StorageKey: "private/key", SourceFingerprint: "figure"}
+	if err := db.Create(&asset).Error; err != nil {
+		t.Fatal(err)
+	}
+	job := models.IngestionJob{VersionID: version.ID, Status: "completed", AttemptCount: 1}
+	if err := db.Create(&job).Error; err != nil {
+		t.Fatal(err)
+	}
+	service := GuidelineService{DB: db}
+	actor := uuid.New()
+	reviewed, err := service.ReviewGuidelineAsset(version.ID, asset.ID, actor, "", ReviewGuidelineAssetInput{Status: models.GuidelineBlockReviewed})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if reviewed.ReviewStatus != models.GuidelineBlockReviewed || reviewed.ReviewedBy == nil || *reviewed.ReviewedBy != actor {
+		t.Fatalf("asset review provenance missing: %#v", reviewed)
+	}
+	status, err := service.ExtractionStatus(version.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if status.JobStatus != "completed" || status.AssetCount != 1 || status.ExtractionSchema != 3 || len(status.Warnings) != 1 {
+		t.Fatalf("unexpected extraction status: %#v", status)
+	}
+}
+
 func guidelineReviewTestDB(t *testing.T) *gorm.DB {
 	t.Helper()
 	db, err := gorm.Open(sqlite.Open("file:"+uuid.NewString()+"?mode=memory&cache=shared"), &gorm.Config{})
@@ -195,6 +272,7 @@ func guidelineReviewTestDB(t *testing.T) *gorm.DB {
 	if err := db.AutoMigrate(
 		&models.GuidelineDocument{}, &models.GuidelineVersion{}, &models.GuidelineSection{},
 		&models.GuidelineContentBlock{}, &models.GuidelineAsset{}, &models.GuidelineChunk{}, &models.AuditLog{},
+		&models.IngestionJob{},
 	); err != nil {
 		t.Fatal(err)
 	}

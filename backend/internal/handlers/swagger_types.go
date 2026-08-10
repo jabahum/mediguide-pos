@@ -663,3 +663,128 @@ type RunProtocolResult = services.RunProtocolResult
 type CreateSyncPackageInput = services.CreateSyncPackageInput
 type ManifestResult = services.ManifestResult
 type CreateSettingInput = services.CreateSettingInput
+
+type PublicGuidelineEnvelope struct {
+	Success bool                     `json:"success"`
+	Data    services.PublicGuideline `json:"data"`
+}
+type PaginatedPublicGuidelines struct {
+	Items      []services.PublicGuideline `json:"items"`
+	Page       int                        `json:"page"`
+	PerPage    int                        `json:"per_page"`
+	TotalItems int64                      `json:"total_items"`
+	TotalPages int                        `json:"total_pages"`
+}
+type PaginatedPublicGuidelinesEnvelope struct {
+	Success bool                      `json:"success"`
+	Data    PaginatedPublicGuidelines `json:"data"`
+}
+type PublicGuidelineManifestEnvelope struct {
+	Success bool                             `json:"success"`
+	Data    services.PublicGuidelineManifest `json:"data"`
+}
+type PaginatedPublicGuidelineSections struct {
+	Items      []services.PublicGuidelineSection `json:"items"`
+	Page       int                               `json:"page"`
+	PerPage    int                               `json:"per_page"`
+	TotalItems int64                             `json:"total_items"`
+	TotalPages int                               `json:"total_pages"`
+}
+type PaginatedPublicGuidelineSectionsEnvelope struct {
+	Success bool                             `json:"success"`
+	Data    PaginatedPublicGuidelineSections `json:"data"`
+}
+type PublicGuidelineSectionEnvelope struct {
+	Success bool                                  `json:"success"`
+	Data    services.PublicGuidelineSectionDetail `json:"data"`
+}
+type PaginatedPublicGuidelineTables struct {
+	Items      []services.PublicGuidelineTable `json:"items"`
+	Page       int                             `json:"page"`
+	PerPage    int                             `json:"per_page"`
+	TotalItems int64                           `json:"total_items"`
+	TotalPages int                             `json:"total_pages"`
+}
+type PaginatedPublicGuidelineTablesEnvelope struct {
+	Success bool                           `json:"success"`
+	Data    PaginatedPublicGuidelineTables `json:"data"`
+}
+type PaginatedPublicGuidelineFigures struct {
+	Items      []services.PublicGuidelineFigure `json:"items"`
+	Page       int                              `json:"page"`
+	PerPage    int                              `json:"per_page"`
+	TotalItems int64                            `json:"total_items"`
+	TotalPages int                              `json:"total_pages"`
+}
+type PaginatedPublicGuidelineFiguresEnvelope struct {
+	Success bool                            `json:"success"`
+	Data    PaginatedPublicGuidelineFigures `json:"data"`
+}
+type PaginatedPublicGuidelineAlgorithms struct {
+	Items      []services.PublicGuidelineAlgorithm `json:"items"`
+	Page       int                                 `json:"page"`
+	PerPage    int                                 `json:"per_page"`
+	TotalItems int64                               `json:"total_items"`
+	TotalPages int                                 `json:"total_pages"`
+}
+type PaginatedPublicGuidelineAlgorithmsEnvelope struct {
+	Success bool                               `json:"success"`
+	Data    PaginatedPublicGuidelineAlgorithms `json:"data"`
+}
+type PublicGuidelineAssetEnvelope struct {
+	Success bool                              `json:"success"`
+	Data    services.PublicGuidelineAssetLink `json:"data"`
+}
+type GuidelineExtractionStatusEnvelope struct {
+	Success bool                               `json:"success"`
+	Data    services.GuidelineExtractionStatus `json:"data"`
+}
+type GuidelineAssetEnvelope struct {
+	Success bool                  `json:"success"`
+	Data    models.GuidelineAsset `json:"data"`
+}
+type GuidelinePreviewEnvelope struct {
+	Success bool                      `json:"success"`
+	Data    services.GuidelinePreview `json:"data"`
+}
+type GuidelineCollectionEnvelope struct {
+	Success bool                            `json:"success"`
+	Data    services.GuidelineCollectionDTO `json:"data"`
+}
+type PaginatedGuidelineCollections struct {
+	Items      []services.GuidelineCollectionDTO `json:"items"`
+	Page       int                               `json:"page"`
+	PerPage    int                               `json:"per_page"`
+	TotalItems int64                             `json:"total_items"`
+	TotalPages int                               `json:"total_pages"`
+}
+type PaginatedGuidelineCollectionsEnvelope struct {
+	Success bool                          `json:"success"`
+	Data    PaginatedGuidelineCollections `json:"data"`
+}
+type PaginatedGuidelineCollectionItems struct {
+	Items      []services.GuidelineCollectionItemDTO `json:"items"`
+	Page       int                                   `json:"page"`
+	PerPage    int                                   `json:"per_page"`
+	TotalItems int64                                 `json:"total_items"`
+	TotalPages int                                   `json:"total_pages"`
+}
+type PaginatedGuidelineCollectionItemsEnvelope struct {
+	Success bool                              `json:"success"`
+	Data    PaginatedGuidelineCollectionItems `json:"data"`
+}
+type GuidelineDownloadEnvelope struct {
+	Success bool                          `json:"success"`
+	Data    services.GuidelineDownloadDTO `json:"data"`
+}
+type PaginatedGuidelineDownloads struct {
+	Items      []services.GuidelineDownloadDTO `json:"items"`
+	Page       int                             `json:"page"`
+	PerPage    int                             `json:"per_page"`
+	TotalItems int64                           `json:"total_items"`
+	TotalPages int                             `json:"total_pages"`
+}
+type PaginatedGuidelineDownloadsEnvelope struct {
+	Success bool                        `json:"success"`
+	Data    PaginatedGuidelineDownloads `json:"data"`
+}

@@ -154,3 +154,24 @@ func TestPublicGuidelineInvalidIDReturnsNotFoundWithoutServiceLookup(t *testing.
 		t.Fatalf("expected 404, got %d", response.Code)
 	}
 }
+
+func TestPublicGuidelineDetailSupportsConditionalRequests(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	id := uuid.New()
+	fake := &fakePublicGuidelineReader{detail: &services.PublicGuideline{ID: id, Title: "Care", LastUpdated: time.Now().UTC()}}
+	router := gin.New()
+	handler := PublicGuidelineHandler{Service: fake}
+	router.GET("/api/public/guidelines/:id", handler.Get)
+	first := httptest.NewRecorder()
+	router.ServeHTTP(first, httptest.NewRequest(http.MethodGet, "/api/public/guidelines/"+id.String(), nil))
+	if first.Code != http.StatusOK || first.Header().Get("ETag") == "" {
+		t.Fatalf("missing public ETag: %d %#v", first.Code, first.Header())
+	}
+	second := httptest.NewRecorder()
+	request := httptest.NewRequest(http.MethodGet, "/api/public/guidelines/"+id.String(), nil)
+	request.Header.Set("If-None-Match", first.Header().Get("ETag"))
+	router.ServeHTTP(second, request)
+	if second.Code != http.StatusNotModified || second.Body.Len() != 0 {
+		t.Fatalf("expected empty 304, got %d %s", second.Code, second.Body.String())
+	}
+}

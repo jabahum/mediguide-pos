@@ -64,18 +64,21 @@ const (
 
 type GuidelineAsset struct {
 	Base
-	VersionID         uuid.UUID          `gorm:"type:uuid;index;not null" json:"version_id"`
-	SectionID         *uuid.UUID         `gorm:"type:uuid;index" json:"section_id,omitempty"`
-	Type              GuidelineAssetType `gorm:"type:text;not null" json:"type"`
-	MIMEType          string             `gorm:"not null" json:"mime_type"`
-	Checksum          string             `gorm:"not null" json:"checksum"`
-	StorageKey        string             `gorm:"not null" json:"storage_key"`
-	SizeBytes         int64              `gorm:"not null" json:"size_bytes"`
-	OriginalFilename  *string            `json:"original_filename,omitempty"`
-	SourceFingerprint string             `gorm:"not null" json:"source_fingerprint"`
-	ProvenanceJSON    datatypes.JSON     `gorm:"column:provenance_json;type:jsonb;not null;default:'{}'" json:"provenance" swaggertype:"object"`
-	PageStart         *int               `json:"page_start,omitempty"`
-	PageEnd           *int               `json:"page_end,omitempty"`
+	VersionID         uuid.UUID                  `gorm:"type:uuid;index;not null" json:"version_id"`
+	SectionID         *uuid.UUID                 `gorm:"type:uuid;index" json:"section_id,omitempty"`
+	Type              GuidelineAssetType         `gorm:"type:text;not null" json:"type"`
+	MIMEType          string                     `gorm:"not null" json:"mime_type"`
+	Checksum          string                     `gorm:"not null" json:"checksum"`
+	StorageKey        string                     `gorm:"not null" json:"storage_key"`
+	SizeBytes         int64                      `gorm:"not null" json:"size_bytes"`
+	OriginalFilename  *string                    `json:"original_filename,omitempty"`
+	SourceFingerprint string                     `gorm:"not null" json:"source_fingerprint"`
+	ProvenanceJSON    datatypes.JSON             `gorm:"column:provenance_json;type:jsonb;not null;default:'{}'" json:"provenance" swaggertype:"object"`
+	PageStart         *int                       `json:"page_start,omitempty"`
+	PageEnd           *int                       `json:"page_end,omitempty"`
+	ReviewStatus      GuidelineBlockReviewStatus `gorm:"type:text;not null;default:'draft';index" json:"review_status"`
+	ReviewedBy        *uuid.UUID                 `gorm:"type:uuid" json:"reviewed_by,omitempty"`
+	ReviewedAt        *time.Time                 `json:"reviewed_at,omitempty"`
 }
 
 type GuidelineTextBlockPayload struct {

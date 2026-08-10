@@ -429,6 +429,14 @@ func (s GuidelineService) ReviewBlock(versionID, blockID, actorID uuid.UUID, ip 
 		if err := tx.Model(&result).Updates(map[string]any{"review_status": in.Status, "reviewed_by": actorID, "reviewed_at": now}).Error; err != nil {
 			return err
 		}
+		if result.Type == models.GuidelineBlockFigure {
+			var figure models.GuidelineFigureBlockPayload
+			if err := json.Unmarshal(result.ContentJSON, &figure); err == nil && figure.AssetID != uuid.Nil {
+				if err := tx.Model(&models.GuidelineAsset{}).Where("id = ? AND version_id = ?", figure.AssetID, versionID).Updates(map[string]any{"review_status": in.Status, "reviewed_by": actorID, "reviewed_at": now}).Error; err != nil {
+					return err
+				}
+			}
+		}
 		chunkStatus := "draft"
 		if in.Status == models.GuidelineBlockRejected {
 			chunkStatus = "rejected"

@@ -3,6 +3,7 @@ package services
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 	"io"
 	"net/url"
@@ -48,8 +49,11 @@ func (f *fakePublicStore) Get(_ context.Context, key string) (io.ReadCloser, err
 	return io.NopCloser(bytes.NewReader(content)), nil
 }
 func (f *fakePublicStore) Delete(context.Context, string) error { return errors.New("not implemented") }
-func (f *fakePublicStore) PresignGet(context.Context, string, time.Duration) (*url.URL, error) {
-	return nil, errors.New("not implemented")
+func (f *fakePublicStore) PresignGet(_ context.Context, key string, _ time.Duration) (*url.URL, error) {
+	f.mutex.Lock()
+	f.key = key
+	f.mutex.Unlock()
+	return url.Parse("https://objects.example.test/" + key)
 }
 
 func TestPublicGuidelineProjectionExcludesInternalFields(t *testing.T) {
@@ -74,6 +78,68 @@ func TestSlugifyUsesSafeStableCharacters(t *testing.T) {
 		if got := slugify(input); got != expected {
 			t.Fatalf("slugify(%q) = %q, want %q", input, got, expected)
 		}
+	}
+}
+
+func TestPublicStructuredGuidelineExposesOnlyReviewedPublishedContent(t *testing.T) {
+	db := publicGuidelineTestDB(t)
+	store := &fakePublicStore{objects: map[string][]byte{}}
+	document := models.GuidelineDocument{Title: "Emergency care"}
+	if err := db.Create(&document).Error; err != nil {
+		t.Fatal(err)
+	}
+	version := models.GuidelineVersion{DocumentID: document.ID, Version: "1", Status: "published", OriginalFileKey: "source/care.pdf"}
+	if err := db.Create(&version).Error; err != nil {
+		t.Fatal(err)
+	}
+	document.CurrentVersionID = &version.ID
+	if err := db.Save(&document).Error; err != nil {
+		t.Fatal(err)
+	}
+	section := models.GuidelineSection{VersionID: version.ID, Title: "Assessment", Slug: "assessment", Level: 1}
+	if err := db.Create(&section).Error; err != nil {
+		t.Fatal(err)
+	}
+	reviewer := uuid.New()
+	reviewedAt := time.Now().UTC()
+	reviewed := models.GuidelineContentBlock{VersionID: version.ID, SectionID: &section.ID, Type: models.GuidelineBlockParagraph, ContentJSON: []byte(`{"type":"paragraph","text":"Assess airway"}`), SourceFingerprint: "private-source", ProvenanceJSON: []byte(`{"page":7}`), ReviewStatus: models.GuidelineBlockReviewed, ReviewedBy: &reviewer, ReviewedAt: &reviewedAt}
+	draft := models.GuidelineContentBlock{VersionID: version.ID, SectionID: &section.ID, Type: models.GuidelineBlockWarning, SortOrder: 1, ContentJSON: []byte(`{"type":"warning","content":"DRAFT SECRET","severity":"high"}`), SourceFingerprint: "draft", ProvenanceJSON: []byte(`{}`), ReviewStatus: models.GuidelineBlockDraft}
+	if err := db.Create(&[]models.GuidelineContentBlock{reviewed, draft}).Error; err != nil {
+		t.Fatal(err)
+	}
+	manifest := models.GuidelineVersionManifest{GuidelineID: document.ID, VersionID: version.ID, Version: version.Version, SchemaVersion: 1, PackageVersion: 1, ExtractionQuality: models.GuidelineExtractionReviewed, HasChapters: true, SectionCount: 1, BlockCount: 1, Checksum: "safe", ETag: `"manifest-safe"`, GeneratedAt: reviewedAt}
+	if err := db.Create(&manifest).Error; err != nil {
+		t.Fatal(err)
+	}
+
+	service := PublicGuidelineService{DB: db, Store: store}
+	sections, err := service.Sections(context.Background(), document.ID, PublicGuidelineContentQuery{})
+	if err != nil || len(sections.Items) != 1 {
+		t.Fatalf("unexpected sections: %#v %v", sections, err)
+	}
+	detail, err := service.Section(context.Background(), document.ID, section.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(detail.Blocks) != 1 || string(detail.Blocks[0].Content) == "" {
+		t.Fatalf("draft content leaked or reviewed content missing: %#v", detail)
+	}
+	encoded, err := json.Marshal(detail)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, forbidden := range []string{"DRAFT SECRET", "private-source", "provenance", "reviewed_by", "extraction_confidence"} {
+		if bytes.Contains(encoded, []byte(forbidden)) {
+			t.Fatalf("public content leaked %q: %s", forbidden, encoded)
+		}
+	}
+	gotManifest, err := service.Manifest(context.Background(), document.ID)
+	if err != nil || gotManifest.ETag != `"manifest-safe"` {
+		t.Fatalf("unexpected manifest: %#v %v", gotManifest, err)
+	}
+	link, err := service.Original(context.Background(), document.ID)
+	if err != nil || link.URL != "https://objects.example.test/source/care.pdf" {
+		t.Fatalf("unexpected original link: %#v %v", link, err)
 	}
 }
 

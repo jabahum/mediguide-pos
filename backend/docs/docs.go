@@ -22,6 +22,410 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
+        "/api/public/guidelines": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Public Guidelines"
+                ],
+                "summary": "List published guidelines",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Search title, description, or source",
+                        "name": "search",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Program area",
+                        "name": "program_area",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Country",
+                        "name": "country",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Language",
+                        "name": "language",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "RFC3339 lower update bound",
+                        "name": "updated_from",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "title, publication_date, last_updated, version, or program_area",
+                        "name": "sort",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "asc or desc",
+                        "name": "order",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Page",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Items per page",
+                        "name": "per_page",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.PaginatedPublicGuidelinesEnvelope"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/public/guidelines/{id}": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Public Guidelines"
+                ],
+                "summary": "Get a published guideline",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Guideline UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.PublicGuidelineEnvelope"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/public/guidelines/{id}/algorithms": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Public Guidelines"
+                ],
+                "summary": "List reviewed algorithms in a published guideline",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Guideline UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.PaginatedPublicGuidelineAlgorithmsEnvelope"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/public/guidelines/{id}/figures": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Public Guidelines"
+                ],
+                "summary": "List reviewed figures in a published guideline",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Guideline UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.PaginatedPublicGuidelineFiguresEnvelope"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/public/guidelines/{id}/manifest": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Public Guidelines"
+                ],
+                "summary": "Get a published guideline content manifest",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Guideline UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.PublicGuidelineManifestEnvelope"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/public/guidelines/{id}/markdown": {
+            "get": {
+                "produces": [
+                    "text/markdown"
+                ],
+                "tags": [
+                    "Public Guidelines"
+                ],
+                "summary": "Get published guideline Markdown",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Guideline UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/public/guidelines/{id}/offline-package": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Public Guidelines"
+                ],
+                "summary": "Create a short-lived download link for the published offline package",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Guideline UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.PublicGuidelineAssetEnvelope"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/public/guidelines/{id}/original": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Public Guidelines"
+                ],
+                "summary": "Create a short-lived download link for the published original file",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Guideline UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.PublicGuidelineAssetEnvelope"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/public/guidelines/{id}/sections": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Public Guidelines"
+                ],
+                "summary": "List reviewed sections in a published guideline",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Guideline UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Parent section UUID",
+                        "name": "parent_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "sort_order, title, or page_start",
+                        "name": "sort",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "asc or desc",
+                        "name": "order",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Page",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Items per page",
+                        "name": "per_page",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.PaginatedPublicGuidelineSectionsEnvelope"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/public/guidelines/{id}/sections/{sectionId}": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Public Guidelines"
+                ],
+                "summary": "Get one reviewed guideline section and its reviewed blocks",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Guideline UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Section UUID",
+                        "name": "sectionId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.PublicGuidelineSectionEnvelope"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/public/guidelines/{id}/tables": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Public Guidelines"
+                ],
+                "summary": "List reviewed tables in a published guideline",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Guideline UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.PaginatedPublicGuidelineTablesEnvelope"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/consultants/tree": {
             "get": {
                 "description": "Legacy v1 endpoint that groups consultants by region, city, then specialty.",
@@ -4111,6 +4515,139 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/v2/guideline-versions/{id}/assets/{assetId}/review": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "tags": [
+                    "guideline-review"
+                ],
+                "summary": "Review or reject a guideline asset",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Guideline version UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Asset UUID",
+                        "name": "assetId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Review decision",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/services.ReviewGuidelineAssetInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.GuidelineAssetEnvelope"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v2/guideline-versions/{id}/blocks": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "tags": [
+                    "guideline-review"
+                ],
+                "summary": "Create a typed content block in an editable guideline version",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Guideline version UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Block",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/services.CreateGuidelineBlockInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.GuidelineContentBlockEnvelope"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v2/guideline-versions/{id}/blocks/reorder": {
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "tags": [
+                    "guideline-review"
+                ],
+                "summary": "Replace block section assignment and ordering for a version",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Guideline version UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Complete block ordering",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/services.ReorderGuidelineBlocksInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.UpdatedEnvelope"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v2/guideline-versions/{id}/blocks/{blockId}": {
             "delete": {
                 "security": [
@@ -4504,6 +5041,66 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/v2/guideline-versions/{id}/extraction-status": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "guideline-review"
+                ],
+                "summary": "Get guideline version extraction status and typed content counts",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Guideline version UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.GuidelineExtractionStatusEnvelope"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v2/guideline-versions/{id}/preview": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "guideline-review"
+                ],
+                "summary": "Preview the reviewed public projection of an unpublished version",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Guideline version UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.GuidelinePreviewEnvelope"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v2/guideline-versions/{id}/publish": {
             "post": {
                 "security": [
@@ -4700,6 +5297,46 @@ const docTemplate = `{
                         }
                     }
                 }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "tags": [
+                    "guideline-review"
+                ],
+                "summary": "Create a guideline section in an editable version",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Guideline version UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Section",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/services.CreateGuidelineSectionInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.GuidelineSectionEnvelope"
+                        }
+                    }
+                }
             }
         },
         "/api/v2/guideline-versions/{id}/sections/reorder": {
@@ -4749,6 +5386,38 @@ const docTemplate = `{
             }
         },
         "/api/v2/guideline-versions/{id}/sections/{sectionId}": {
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "guideline-review"
+                ],
+                "summary": "Delete an empty, childless guideline section",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Guideline version UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Section UUID",
+                        "name": "sectionId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    }
+                }
+            },
             "patch": {
                 "security": [
                     {
@@ -5471,6 +6140,356 @@ const docTemplate = `{
                         "description": "OK",
                         "schema": {
                             "$ref": "#/definitions/handlers.LanguageEnvelope"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v2/library/collections": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "guideline-library"
+                ],
+                "summary": "List the authenticated user's guideline collections",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Page",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Items per page",
+                        "name": "per_page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "name, created_at, or updated_at",
+                        "name": "sort",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "asc or desc",
+                        "name": "order",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.PaginatedGuidelineCollectionsEnvelope"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "tags": [
+                    "guideline-library"
+                ],
+                "summary": "Create a guideline collection",
+                "parameters": [
+                    {
+                        "description": "Collection",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/services.GuidelineCollectionInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.GuidelineCollectionEnvelope"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v2/library/collections/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "guideline-library"
+                ],
+                "summary": "Get an owned guideline collection",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Collection UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.GuidelineCollectionEnvelope"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "guideline-library"
+                ],
+                "summary": "Delete an owned guideline collection",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Collection UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    }
+                }
+            },
+            "patch": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "tags": [
+                    "guideline-library"
+                ],
+                "summary": "Update an owned guideline collection",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Collection UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Collection",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/services.GuidelineCollectionInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.GuidelineCollectionEnvelope"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v2/library/collections/{id}/items": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "guideline-library"
+                ],
+                "summary": "List published guidelines in an owned collection",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Collection UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Page",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Items per page",
+                        "name": "per_page",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.PaginatedGuidelineCollectionItemsEnvelope"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "tags": [
+                    "guideline-library"
+                ],
+                "summary": "Add a published guideline to an owned collection",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Collection UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Collection item",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/services.GuidelineCollectionItemInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    }
+                }
+            }
+        },
+        "/api/v2/library/collections/{id}/items/{guidelineId}": {
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "guideline-library"
+                ],
+                "summary": "Remove a guideline from an owned collection",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Collection UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Guideline UUID",
+                        "name": "guidelineId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    }
+                }
+            }
+        },
+        "/api/v2/library/downloads": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "guideline-library"
+                ],
+                "summary": "List the authenticated user's guideline download history",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "original_pdf or offline_package",
+                        "name": "asset_type",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.PaginatedGuidelineDownloadsEnvelope"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "tags": [
+                    "guideline-library"
+                ],
+                "summary": "Record an owned guideline download event",
+                "parameters": [
+                    {
+                        "description": "Download",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/services.GuidelineDownloadInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.GuidelineDownloadEnvelope"
                         }
                     }
                 }
@@ -8798,11 +9817,33 @@ const docTemplate = `{
                 }
             }
         },
+        "handlers.GuidelineAssetEnvelope": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/models.GuidelineAsset"
+                },
+                "success": {
+                    "type": "boolean"
+                }
+            }
+        },
         "handlers.GuidelineCategoryEnvelope": {
             "type": "object",
             "properties": {
                 "data": {
                     "$ref": "#/definitions/models.GuidelineCategory"
+                },
+                "success": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "handlers.GuidelineCollectionEnvelope": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/services.GuidelineCollectionDTO"
                 },
                 "success": {
                     "type": "boolean"
@@ -8833,11 +9874,44 @@ const docTemplate = `{
                 }
             }
         },
+        "handlers.GuidelineDownloadEnvelope": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/services.GuidelineDownloadDTO"
+                },
+                "success": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "handlers.GuidelineExtractionStatusEnvelope": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/services.GuidelineExtractionStatus"
+                },
+                "success": {
+                    "type": "boolean"
+                }
+            }
+        },
         "handlers.GuidelineIndexEnvelope": {
             "type": "object",
             "properties": {
                 "data": {
                     "$ref": "#/definitions/models.GuidelineIndexEntry"
+                },
+                "success": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "handlers.GuidelinePreviewEnvelope": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/services.GuidelinePreview"
                 },
                 "success": {
                     "type": "boolean"
@@ -9531,6 +10605,74 @@ const docTemplate = `{
                 }
             }
         },
+        "handlers.PaginatedGuidelineCollectionItems": {
+            "type": "object",
+            "properties": {
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/services.GuidelineCollectionItemDTO"
+                    }
+                },
+                "page": {
+                    "type": "integer"
+                },
+                "per_page": {
+                    "type": "integer"
+                },
+                "total_items": {
+                    "type": "integer"
+                },
+                "total_pages": {
+                    "type": "integer"
+                }
+            }
+        },
+        "handlers.PaginatedGuidelineCollectionItemsEnvelope": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/handlers.PaginatedGuidelineCollectionItems"
+                },
+                "success": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "handlers.PaginatedGuidelineCollections": {
+            "type": "object",
+            "properties": {
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/services.GuidelineCollectionDTO"
+                    }
+                },
+                "page": {
+                    "type": "integer"
+                },
+                "per_page": {
+                    "type": "integer"
+                },
+                "total_items": {
+                    "type": "integer"
+                },
+                "total_pages": {
+                    "type": "integer"
+                }
+            }
+        },
+        "handlers.PaginatedGuidelineCollectionsEnvelope": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/handlers.PaginatedGuidelineCollections"
+                },
+                "success": {
+                    "type": "boolean"
+                }
+            }
+        },
         "handlers.PaginatedGuidelineDocuments": {
             "type": "object",
             "properties": {
@@ -9567,6 +10709,40 @@ const docTemplate = `{
                 "success": {
                     "type": "boolean",
                     "example": true
+                }
+            }
+        },
+        "handlers.PaginatedGuidelineDownloads": {
+            "type": "object",
+            "properties": {
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/services.GuidelineDownloadDTO"
+                    }
+                },
+                "page": {
+                    "type": "integer"
+                },
+                "per_page": {
+                    "type": "integer"
+                },
+                "total_items": {
+                    "type": "integer"
+                },
+                "total_pages": {
+                    "type": "integer"
+                }
+            }
+        },
+        "handlers.PaginatedGuidelineDownloadsEnvelope": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/handlers.PaginatedGuidelineDownloads"
+                },
+                "success": {
+                    "type": "boolean"
                 }
             }
         },
@@ -9810,6 +10986,176 @@ const docTemplate = `{
                 }
             }
         },
+        "handlers.PaginatedPublicGuidelineAlgorithms": {
+            "type": "object",
+            "properties": {
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/services.PublicGuidelineAlgorithm"
+                    }
+                },
+                "page": {
+                    "type": "integer"
+                },
+                "per_page": {
+                    "type": "integer"
+                },
+                "total_items": {
+                    "type": "integer"
+                },
+                "total_pages": {
+                    "type": "integer"
+                }
+            }
+        },
+        "handlers.PaginatedPublicGuidelineAlgorithmsEnvelope": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/handlers.PaginatedPublicGuidelineAlgorithms"
+                },
+                "success": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "handlers.PaginatedPublicGuidelineFigures": {
+            "type": "object",
+            "properties": {
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/services.PublicGuidelineFigure"
+                    }
+                },
+                "page": {
+                    "type": "integer"
+                },
+                "per_page": {
+                    "type": "integer"
+                },
+                "total_items": {
+                    "type": "integer"
+                },
+                "total_pages": {
+                    "type": "integer"
+                }
+            }
+        },
+        "handlers.PaginatedPublicGuidelineFiguresEnvelope": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/handlers.PaginatedPublicGuidelineFigures"
+                },
+                "success": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "handlers.PaginatedPublicGuidelineSections": {
+            "type": "object",
+            "properties": {
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/services.PublicGuidelineSection"
+                    }
+                },
+                "page": {
+                    "type": "integer"
+                },
+                "per_page": {
+                    "type": "integer"
+                },
+                "total_items": {
+                    "type": "integer"
+                },
+                "total_pages": {
+                    "type": "integer"
+                }
+            }
+        },
+        "handlers.PaginatedPublicGuidelineSectionsEnvelope": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/handlers.PaginatedPublicGuidelineSections"
+                },
+                "success": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "handlers.PaginatedPublicGuidelineTables": {
+            "type": "object",
+            "properties": {
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/services.PublicGuidelineTable"
+                    }
+                },
+                "page": {
+                    "type": "integer"
+                },
+                "per_page": {
+                    "type": "integer"
+                },
+                "total_items": {
+                    "type": "integer"
+                },
+                "total_pages": {
+                    "type": "integer"
+                }
+            }
+        },
+        "handlers.PaginatedPublicGuidelineTablesEnvelope": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/handlers.PaginatedPublicGuidelineTables"
+                },
+                "success": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "handlers.PaginatedPublicGuidelines": {
+            "type": "object",
+            "properties": {
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/services.PublicGuideline"
+                    }
+                },
+                "page": {
+                    "type": "integer"
+                },
+                "per_page": {
+                    "type": "integer"
+                },
+                "total_items": {
+                    "type": "integer"
+                },
+                "total_pages": {
+                    "type": "integer"
+                }
+            }
+        },
+        "handlers.PaginatedPublicGuidelinesEnvelope": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/handlers.PaginatedPublicGuidelines"
+                },
+                "success": {
+                    "type": "boolean"
+                }
+            }
+        },
         "handlers.PaginatedReadingProgressEnvelope": {
             "type": "object",
             "properties": {
@@ -10011,6 +11357,50 @@ const docTemplate = `{
                 "success": {
                     "type": "boolean",
                     "example": true
+                }
+            }
+        },
+        "handlers.PublicGuidelineAssetEnvelope": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/services.PublicGuidelineAssetLink"
+                },
+                "success": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "handlers.PublicGuidelineEnvelope": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/services.PublicGuideline"
+                },
+                "success": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "handlers.PublicGuidelineManifestEnvelope": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/services.PublicGuidelineManifest"
+                },
+                "success": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "handlers.PublicGuidelineSectionEnvelope": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/services.PublicGuidelineSectionDetail"
+                },
+                "success": {
+                    "type": "boolean"
                 }
             }
         },
@@ -10353,6 +11743,18 @@ const docTemplate = `{
                 "success": {
                     "type": "boolean",
                     "example": true
+                }
+            }
+        },
+        "httpx.Response": {
+            "type": "object",
+            "properties": {
+                "data": {},
+                "error": {
+                    "type": "string"
+                },
+                "success": {
+                    "type": "boolean"
                 }
             }
         },
@@ -11004,6 +12406,43 @@ const docTemplate = `{
                 }
             }
         },
+        "models.GuidelineAlgorithmBlockPayload": {
+            "type": "object",
+            "properties": {
+                "nodes": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.GuidelineAlgorithmNode"
+                    }
+                },
+                "title": {
+                    "type": "string"
+                },
+                "type": {
+                    "$ref": "#/definitions/models.GuidelineBlockType"
+                }
+            }
+        },
+        "models.GuidelineAlgorithmNode": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "string"
+                },
+                "kind": {
+                    "type": "string"
+                },
+                "label": {
+                    "type": "string"
+                },
+                "next": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
         "models.GuidelineAsset": {
             "type": "object",
             "properties": {
@@ -11030,6 +12469,15 @@ const docTemplate = `{
                 },
                 "provenance": {
                     "type": "object"
+                },
+                "review_status": {
+                    "$ref": "#/definitions/models.GuidelineBlockReviewStatus"
+                },
+                "reviewed_at": {
+                    "type": "string"
+                },
+                "reviewed_by": {
+                    "type": "string"
                 },
                 "section_id": {
                     "type": "string"
@@ -11325,6 +12773,23 @@ const docTemplate = `{
                 "GuidelineExtractionMarkdownFallback"
             ]
         },
+        "models.GuidelineFigureBlockPayload": {
+            "type": "object",
+            "properties": {
+                "alternative_text": {
+                    "type": "string"
+                },
+                "asset_id": {
+                    "type": "string"
+                },
+                "caption": {
+                    "type": "string"
+                },
+                "type": {
+                    "$ref": "#/definitions/models.GuidelineBlockType"
+                }
+            }
+        },
         "models.GuidelineIndexEntry": {
             "type": "object",
             "properties": {
@@ -11401,6 +12866,38 @@ const docTemplate = `{
                 },
                 "version_id": {
                     "type": "string"
+                }
+            }
+        },
+        "models.GuidelineTableBlockPayload": {
+            "type": "object",
+            "properties": {
+                "columns": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "footnotes": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "rows": {
+                    "type": "array",
+                    "items": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    }
+                },
+                "title": {
+                    "type": "string"
+                },
+                "type": {
+                    "$ref": "#/definitions/models.GuidelineBlockType"
                 }
             }
         },
@@ -12815,6 +14312,27 @@ const docTemplate = `{
                 }
             }
         },
+        "services.CreateGuidelineBlockInput": {
+            "type": "object",
+            "required": [
+                "content",
+                "type"
+            ],
+            "properties": {
+                "content": {
+                    "type": "object"
+                },
+                "section_id": {
+                    "type": "string"
+                },
+                "sort_order": {
+                    "type": "integer"
+                },
+                "type": {
+                    "$ref": "#/definitions/models.GuidelineBlockType"
+                }
+            }
+        },
         "services.CreateGuidelineInput": {
             "type": "object",
             "properties": {
@@ -12832,6 +14350,30 @@ const docTemplate = `{
                 },
                 "source_org": {
                     "type": "string"
+                },
+                "title": {
+                    "type": "string"
+                }
+            }
+        },
+        "services.CreateGuidelineSectionInput": {
+            "type": "object",
+            "required": [
+                "level",
+                "title"
+            ],
+            "properties": {
+                "level": {
+                    "type": "integer"
+                },
+                "parent_id": {
+                    "type": "string"
+                },
+                "slug": {
+                    "type": "string"
+                },
+                "sort_order": {
+                    "type": "integer"
                 },
                 "title": {
                     "type": "string"
@@ -13491,6 +15033,23 @@ const docTemplate = `{
                 }
             }
         },
+        "services.GuidelineBlockOrderInput": {
+            "type": "object",
+            "required": [
+                "id"
+            ],
+            "properties": {
+                "id": {
+                    "type": "string"
+                },
+                "section_id": {
+                    "type": "string"
+                },
+                "sort_order": {
+                    "type": "integer"
+                }
+            }
+        },
         "services.GuidelineCategoryInput": {
             "type": "object",
             "properties": {
@@ -13520,6 +15079,153 @@ const docTemplate = `{
                 }
             }
         },
+        "services.GuidelineCollectionDTO": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "item_count": {
+                    "type": "integer"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                }
+            }
+        },
+        "services.GuidelineCollectionInput": {
+            "type": "object",
+            "required": [
+                "name"
+            ],
+            "properties": {
+                "description": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                }
+            }
+        },
+        "services.GuidelineCollectionItemDTO": {
+            "type": "object",
+            "properties": {
+                "added_at": {
+                    "type": "string"
+                },
+                "guideline": {
+                    "$ref": "#/definitions/services.PublicGuideline"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "sort_order": {
+                    "type": "integer"
+                }
+            }
+        },
+        "services.GuidelineCollectionItemInput": {
+            "type": "object",
+            "required": [
+                "guideline_id"
+            ],
+            "properties": {
+                "guideline_id": {
+                    "type": "string"
+                },
+                "sort_order": {
+                    "type": "integer"
+                }
+            }
+        },
+        "services.GuidelineDownloadDTO": {
+            "type": "object",
+            "properties": {
+                "asset_type": {
+                    "type": "string"
+                },
+                "downloaded_at": {
+                    "type": "string"
+                },
+                "guideline_id": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "version_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "services.GuidelineDownloadInput": {
+            "type": "object",
+            "required": [
+                "asset_type",
+                "guideline_id"
+            ],
+            "properties": {
+                "asset_type": {
+                    "type": "string"
+                },
+                "guideline_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "services.GuidelineExtractionStatus": {
+            "type": "object",
+            "properties": {
+                "asset_count": {
+                    "type": "integer"
+                },
+                "attempt_count": {
+                    "type": "integer"
+                },
+                "block_count": {
+                    "type": "integer"
+                },
+                "completed_at": {
+                    "type": "string"
+                },
+                "error": {
+                    "type": "string"
+                },
+                "extraction_schema_version": {
+                    "type": "integer"
+                },
+                "job_status": {
+                    "type": "string"
+                },
+                "section_count": {
+                    "type": "integer"
+                },
+                "started_at": {
+                    "type": "string"
+                },
+                "version_id": {
+                    "type": "string"
+                },
+                "version_status": {
+                    "type": "string"
+                },
+                "warnings": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
         "services.GuidelineIndexInput": {
             "type": "object",
             "properties": {
@@ -13533,6 +15239,32 @@ const docTemplate = `{
                     "type": "integer"
                 },
                 "title": {
+                    "type": "string"
+                }
+            }
+        },
+        "services.GuidelinePreview": {
+            "type": "object",
+            "properties": {
+                "blocks": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/services.PublicGuidelineBlock"
+                    }
+                },
+                "sections": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/services.PublicGuidelineSection"
+                    }
+                },
+                "status": {
+                    "type": "string"
+                },
+                "validation": {
+                    "$ref": "#/definitions/services.GuidelinePublicationValidation"
+                },
+                "version_id": {
                     "type": "string"
                 }
             }
@@ -14516,6 +16248,285 @@ const docTemplate = `{
                 }
             }
         },
+        "services.PublicGuideline": {
+            "type": "object",
+            "properties": {
+                "country": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "language": {
+                    "type": "string"
+                },
+                "last_updated": {
+                    "type": "string"
+                },
+                "program_area": {
+                    "type": "string"
+                },
+                "publication_date": {
+                    "type": "string"
+                },
+                "review_date": {
+                    "type": "string"
+                },
+                "slug": {
+                    "type": "string"
+                },
+                "source_org": {
+                    "type": "string"
+                },
+                "title": {
+                    "type": "string"
+                },
+                "version": {
+                    "type": "string"
+                }
+            }
+        },
+        "services.PublicGuidelineAlgorithm": {
+            "type": "object",
+            "properties": {
+                "content": {
+                    "$ref": "#/definitions/models.GuidelineAlgorithmBlockPayload"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "page_end": {
+                    "type": "integer"
+                },
+                "page_start": {
+                    "type": "integer"
+                },
+                "section_id": {
+                    "type": "string"
+                },
+                "sort_order": {
+                    "type": "integer"
+                }
+            }
+        },
+        "services.PublicGuidelineAssetLink": {
+            "type": "object",
+            "properties": {
+                "asset_id": {
+                    "type": "string"
+                },
+                "checksum": {
+                    "type": "string"
+                },
+                "expires_at": {
+                    "type": "string"
+                },
+                "mime_type": {
+                    "type": "string"
+                },
+                "original_filename": {
+                    "type": "string"
+                },
+                "size_bytes": {
+                    "type": "integer"
+                },
+                "type": {
+                    "type": "string"
+                },
+                "url": {
+                    "type": "string"
+                }
+            }
+        },
+        "services.PublicGuidelineBlock": {
+            "type": "object",
+            "properties": {
+                "content": {
+                    "type": "object"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "page_end": {
+                    "type": "integer"
+                },
+                "page_start": {
+                    "type": "integer"
+                },
+                "section_id": {
+                    "type": "string"
+                },
+                "sort_order": {
+                    "type": "integer"
+                },
+                "type": {
+                    "$ref": "#/definitions/models.GuidelineBlockType"
+                }
+            }
+        },
+        "services.PublicGuidelineFigure": {
+            "type": "object",
+            "properties": {
+                "asset": {
+                    "$ref": "#/definitions/services.PublicGuidelineAssetLink"
+                },
+                "content": {
+                    "$ref": "#/definitions/models.GuidelineFigureBlockPayload"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "page_end": {
+                    "type": "integer"
+                },
+                "page_start": {
+                    "type": "integer"
+                },
+                "section_id": {
+                    "type": "string"
+                },
+                "sort_order": {
+                    "type": "integer"
+                }
+            }
+        },
+        "services.PublicGuidelineManifest": {
+            "type": "object",
+            "properties": {
+                "algorithm_count": {
+                    "type": "integer"
+                },
+                "block_count": {
+                    "type": "integer"
+                },
+                "checksum": {
+                    "type": "string"
+                },
+                "etag": {
+                    "type": "string"
+                },
+                "extraction_quality": {
+                    "$ref": "#/definitions/models.GuidelineExtractionQuality"
+                },
+                "figure_count": {
+                    "type": "integer"
+                },
+                "generated_at": {
+                    "type": "string"
+                },
+                "guideline_id": {
+                    "type": "string"
+                },
+                "has_algorithms": {
+                    "type": "boolean"
+                },
+                "has_chapters": {
+                    "type": "boolean"
+                },
+                "has_figures": {
+                    "type": "boolean"
+                },
+                "has_key_points": {
+                    "type": "boolean"
+                },
+                "has_offline_package": {
+                    "type": "boolean"
+                },
+                "has_original_pdf": {
+                    "type": "boolean"
+                },
+                "has_tables": {
+                    "type": "boolean"
+                },
+                "package_version": {
+                    "type": "integer"
+                },
+                "schema_version": {
+                    "type": "integer"
+                },
+                "section_count": {
+                    "type": "integer"
+                },
+                "table_count": {
+                    "type": "integer"
+                },
+                "version": {
+                    "type": "string"
+                },
+                "version_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "services.PublicGuidelineSection": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "string"
+                },
+                "level": {
+                    "type": "integer"
+                },
+                "page_end": {
+                    "type": "integer"
+                },
+                "page_start": {
+                    "type": "integer"
+                },
+                "parent_id": {
+                    "type": "string"
+                },
+                "slug": {
+                    "type": "string"
+                },
+                "sort_order": {
+                    "type": "integer"
+                },
+                "title": {
+                    "type": "string"
+                }
+            }
+        },
+        "services.PublicGuidelineSectionDetail": {
+            "type": "object",
+            "properties": {
+                "blocks": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/services.PublicGuidelineBlock"
+                    }
+                },
+                "section": {
+                    "$ref": "#/definitions/services.PublicGuidelineSection"
+                }
+            }
+        },
+        "services.PublicGuidelineTable": {
+            "type": "object",
+            "properties": {
+                "content": {
+                    "$ref": "#/definitions/models.GuidelineTableBlockPayload"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "page_end": {
+                    "type": "integer"
+                },
+                "page_start": {
+                    "type": "integer"
+                },
+                "section_id": {
+                    "type": "string"
+                },
+                "sort_order": {
+                    "type": "integer"
+                }
+            }
+        },
         "services.ReadingProgressInput": {
             "type": "object",
             "properties": {
@@ -14565,6 +16576,20 @@ const docTemplate = `{
                 }
             }
         },
+        "services.ReorderGuidelineBlocksInput": {
+            "type": "object",
+            "required": [
+                "blocks"
+            ],
+            "properties": {
+                "blocks": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/services.GuidelineBlockOrderInput"
+                    }
+                }
+            }
+        },
         "services.ReorderGuidelineSectionsInput": {
             "type": "object",
             "required": [
@@ -14576,6 +16601,17 @@ const docTemplate = `{
                     "items": {
                         "$ref": "#/definitions/services.GuidelineSectionOrderInput"
                     }
+                }
+            }
+        },
+        "services.ReviewGuidelineAssetInput": {
+            "type": "object",
+            "required": [
+                "status"
+            ],
+            "properties": {
+                "status": {
+                    "$ref": "#/definitions/models.GuidelineBlockReviewStatus"
                 }
             }
         },

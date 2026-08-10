@@ -23,6 +23,7 @@ const maxPublicMarkdownBytes = 20 << 20
 var (
 	ErrPublicGuidelineNotFound = errors.New("public guideline not found")
 	ErrPublicMarkdownTooLarge  = errors.New("public guideline markdown is too large")
+	ErrPublicGuidelineQuery    = errors.New("invalid public guideline query")
 	nonSlugCharacter           = regexp.MustCompile(`[^a-z0-9]+`)
 )
 
@@ -38,6 +39,8 @@ type PublicGuidelineFilter struct {
 	Country     string
 	Language    string
 	UpdatedFrom *time.Time
+	Sort        string
+	Order       string
 	Page        PageInput
 }
 
@@ -77,6 +80,7 @@ type publicGuidelineRow struct {
 	VersionID       uuid.UUID
 	VersionUpdated  time.Time
 	MarkdownFileKey string
+	OriginalFileKey string
 }
 
 func (s PublicGuidelineService) List(ctx context.Context, filter PublicGuidelineFilter) (*PageResult[PublicGuideline], error) {
@@ -97,9 +101,17 @@ func (s PublicGuidelineService) listUncached(ctx context.Context, filter PublicG
 	}
 
 	var rows []publicGuidelineRow
+	order, err := publicOrder(filter.Sort, filter.Order, map[string]string{
+		"title": "gd.title", "publication_date": "gv.publication_date",
+		"last_updated": "gv.updated_at", "version": "gv.version",
+		"program_area": "gd.program_area",
+	}, "gv.updated_at DESC")
+	if err != nil {
+		return nil, err
+	}
 	if err := query.Session(&gorm.Session{}).
 		Select(publicGuidelineSelect).
-		Order("gv.updated_at DESC, gd.title ASC").
+		Order(order).
 		Limit(page.PerPage).
 		Offset(page.Offset()).
 		Scan(&rows).Error; err != nil {
@@ -123,6 +135,9 @@ func (s PublicGuidelineService) getUncached(ctx context.Context, id uuid.UUID) (
 	row, err := s.getVisibleRow(ctx, id)
 	if err != nil {
 		return nil, err
+	}
+	if strings.TrimSpace(row.MarkdownFileKey) == "" {
+		return nil, ErrPublicGuidelineNotFound
 	}
 	result := row.public()
 	return &result, nil
@@ -168,8 +183,7 @@ func (s PublicGuidelineService) visibleQuery(ctx context.Context) *gorm.DB {
 		Joins("JOIN guideline_versions AS gv ON gv.id = gd.current_version_id AND gv.document_id = gd.id").
 		Where("gd.deleted_at IS NULL").
 		Where("gv.deleted_at IS NULL").
-		Where("LOWER(gv.status) = ?", "published").
-		Where("gv.markdown_file_key IS NOT NULL AND gv.markdown_file_key <> ''")
+		Where("LOWER(gv.status) = ?", "published")
 }
 
 func (s PublicGuidelineService) getVisibleRow(ctx context.Context, id uuid.UUID) (*publicGuidelineRow, error) {
@@ -249,5 +263,6 @@ const publicGuidelineSelect = `
 	gv.version,
 	gv.id AS version_id,
 	gv.updated_at AS version_updated,
-	gv.markdown_file_key
+	gv.markdown_file_key,
+	gv.original_file_key
 `

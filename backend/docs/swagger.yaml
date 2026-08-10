@@ -155,10 +155,24 @@ definitions:
       success:
         type: boolean
     type: object
+  handlers.GuidelineAssetEnvelope:
+    properties:
+      data:
+        $ref: '#/definitions/models.GuidelineAsset'
+      success:
+        type: boolean
+    type: object
   handlers.GuidelineCategoryEnvelope:
     properties:
       data:
         $ref: '#/definitions/models.GuidelineCategory'
+      success:
+        type: boolean
+    type: object
+  handlers.GuidelineCollectionEnvelope:
+    properties:
+      data:
+        $ref: '#/definitions/services.GuidelineCollectionDTO'
       success:
         type: boolean
     type: object
@@ -178,10 +192,31 @@ definitions:
         example: true
         type: boolean
     type: object
+  handlers.GuidelineDownloadEnvelope:
+    properties:
+      data:
+        $ref: '#/definitions/services.GuidelineDownloadDTO'
+      success:
+        type: boolean
+    type: object
+  handlers.GuidelineExtractionStatusEnvelope:
+    properties:
+      data:
+        $ref: '#/definitions/services.GuidelineExtractionStatus'
+      success:
+        type: boolean
+    type: object
   handlers.GuidelineIndexEnvelope:
     properties:
       data:
         $ref: '#/definitions/models.GuidelineIndexEntry'
+      success:
+        type: boolean
+    type: object
+  handlers.GuidelinePreviewEnvelope:
+    properties:
+      data:
+        $ref: '#/definitions/services.GuidelinePreview'
       success:
         type: boolean
     type: object
@@ -644,6 +679,50 @@ definitions:
         example: true
         type: boolean
     type: object
+  handlers.PaginatedGuidelineCollectionItems:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/services.GuidelineCollectionItemDTO'
+        type: array
+      page:
+        type: integer
+      per_page:
+        type: integer
+      total_items:
+        type: integer
+      total_pages:
+        type: integer
+    type: object
+  handlers.PaginatedGuidelineCollectionItemsEnvelope:
+    properties:
+      data:
+        $ref: '#/definitions/handlers.PaginatedGuidelineCollectionItems'
+      success:
+        type: boolean
+    type: object
+  handlers.PaginatedGuidelineCollections:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/services.GuidelineCollectionDTO'
+        type: array
+      page:
+        type: integer
+      per_page:
+        type: integer
+      total_items:
+        type: integer
+      total_pages:
+        type: integer
+    type: object
+  handlers.PaginatedGuidelineCollectionsEnvelope:
+    properties:
+      data:
+        $ref: '#/definitions/handlers.PaginatedGuidelineCollections'
+      success:
+        type: boolean
+    type: object
   handlers.PaginatedGuidelineDocuments:
     properties:
       items:
@@ -669,6 +748,28 @@ definitions:
         $ref: '#/definitions/handlers.PaginatedGuidelineDocuments'
       success:
         example: true
+        type: boolean
+    type: object
+  handlers.PaginatedGuidelineDownloads:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/services.GuidelineDownloadDTO'
+        type: array
+      page:
+        type: integer
+      per_page:
+        type: integer
+      total_items:
+        type: integer
+      total_pages:
+        type: integer
+    type: object
+  handlers.PaginatedGuidelineDownloadsEnvelope:
+    properties:
+      data:
+        $ref: '#/definitions/handlers.PaginatedGuidelineDownloads'
+      success:
         type: boolean
     type: object
   handlers.PaginatedGuidelineIndexEnvelope:
@@ -831,6 +932,116 @@ definitions:
         example: true
         type: boolean
     type: object
+  handlers.PaginatedPublicGuidelineAlgorithms:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/services.PublicGuidelineAlgorithm'
+        type: array
+      page:
+        type: integer
+      per_page:
+        type: integer
+      total_items:
+        type: integer
+      total_pages:
+        type: integer
+    type: object
+  handlers.PaginatedPublicGuidelineAlgorithmsEnvelope:
+    properties:
+      data:
+        $ref: '#/definitions/handlers.PaginatedPublicGuidelineAlgorithms'
+      success:
+        type: boolean
+    type: object
+  handlers.PaginatedPublicGuidelineFigures:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/services.PublicGuidelineFigure'
+        type: array
+      page:
+        type: integer
+      per_page:
+        type: integer
+      total_items:
+        type: integer
+      total_pages:
+        type: integer
+    type: object
+  handlers.PaginatedPublicGuidelineFiguresEnvelope:
+    properties:
+      data:
+        $ref: '#/definitions/handlers.PaginatedPublicGuidelineFigures'
+      success:
+        type: boolean
+    type: object
+  handlers.PaginatedPublicGuidelineSections:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/services.PublicGuidelineSection'
+        type: array
+      page:
+        type: integer
+      per_page:
+        type: integer
+      total_items:
+        type: integer
+      total_pages:
+        type: integer
+    type: object
+  handlers.PaginatedPublicGuidelineSectionsEnvelope:
+    properties:
+      data:
+        $ref: '#/definitions/handlers.PaginatedPublicGuidelineSections'
+      success:
+        type: boolean
+    type: object
+  handlers.PaginatedPublicGuidelineTables:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/services.PublicGuidelineTable'
+        type: array
+      page:
+        type: integer
+      per_page:
+        type: integer
+      total_items:
+        type: integer
+      total_pages:
+        type: integer
+    type: object
+  handlers.PaginatedPublicGuidelineTablesEnvelope:
+    properties:
+      data:
+        $ref: '#/definitions/handlers.PaginatedPublicGuidelineTables'
+      success:
+        type: boolean
+    type: object
+  handlers.PaginatedPublicGuidelines:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/services.PublicGuideline'
+        type: array
+      page:
+        type: integer
+      per_page:
+        type: integer
+      total_items:
+        type: integer
+      total_pages:
+        type: integer
+    type: object
+  handlers.PaginatedPublicGuidelinesEnvelope:
+    properties:
+      data:
+        $ref: '#/definitions/handlers.PaginatedPublicGuidelines'
+      success:
+        type: boolean
+    type: object
   handlers.PaginatedReadingProgressEnvelope:
     properties:
       data:
@@ -964,6 +1175,34 @@ definitions:
         $ref: '#/definitions/services.RunProtocolResult'
       success:
         example: true
+        type: boolean
+    type: object
+  handlers.PublicGuidelineAssetEnvelope:
+    properties:
+      data:
+        $ref: '#/definitions/services.PublicGuidelineAssetLink'
+      success:
+        type: boolean
+    type: object
+  handlers.PublicGuidelineEnvelope:
+    properties:
+      data:
+        $ref: '#/definitions/services.PublicGuideline'
+      success:
+        type: boolean
+    type: object
+  handlers.PublicGuidelineManifestEnvelope:
+    properties:
+      data:
+        $ref: '#/definitions/services.PublicGuidelineManifest'
+      success:
+        type: boolean
+    type: object
+  handlers.PublicGuidelineSectionEnvelope:
+    properties:
+      data:
+        $ref: '#/definitions/services.PublicGuidelineSectionDetail'
+      success:
         type: boolean
     type: object
   handlers.PublishEnvelope:
@@ -1196,6 +1435,14 @@ definitions:
         $ref: '#/definitions/handlers.VerificationResult'
       success:
         example: true
+        type: boolean
+    type: object
+  httpx.Response:
+    properties:
+      data: {}
+      error:
+        type: string
+      success:
         type: boolean
     type: object
   models.Abbreviation:
@@ -1625,6 +1872,30 @@ definitions:
       updated_at:
         type: string
     type: object
+  models.GuidelineAlgorithmBlockPayload:
+    properties:
+      nodes:
+        items:
+          $ref: '#/definitions/models.GuidelineAlgorithmNode'
+        type: array
+      title:
+        type: string
+      type:
+        $ref: '#/definitions/models.GuidelineBlockType'
+    type: object
+  models.GuidelineAlgorithmNode:
+    properties:
+      id:
+        type: string
+      kind:
+        type: string
+      label:
+        type: string
+      next:
+        items:
+          type: string
+        type: array
+    type: object
   models.GuidelineAsset:
     properties:
       checksum:
@@ -1643,6 +1914,12 @@ definitions:
         type: integer
       provenance:
         type: object
+      review_status:
+        $ref: '#/definitions/models.GuidelineBlockReviewStatus'
+      reviewed_at:
+        type: string
+      reviewed_by:
+        type: string
       section_id:
         type: string
       size_bytes:
@@ -1852,6 +2129,17 @@ definitions:
     - GuidelineExtractionPartiallyReviewed
     - GuidelineExtractionUnreviewed
     - GuidelineExtractionMarkdownFallback
+  models.GuidelineFigureBlockPayload:
+    properties:
+      alternative_text:
+        type: string
+      asset_id:
+        type: string
+      caption:
+        type: string
+      type:
+        $ref: '#/definitions/models.GuidelineBlockType'
+    type: object
   models.GuidelineIndexEntry:
     properties:
       created_at:
@@ -1903,6 +2191,27 @@ definitions:
         type: string
       version_id:
         type: string
+    type: object
+  models.GuidelineTableBlockPayload:
+    properties:
+      columns:
+        items:
+          type: string
+        type: array
+      footnotes:
+        items:
+          type: string
+        type: array
+      rows:
+        items:
+          items:
+            type: string
+          type: array
+        type: array
+      title:
+        type: string
+      type:
+        $ref: '#/definitions/models.GuidelineBlockType'
     type: object
   models.GuidelineTag:
     properties:
@@ -2834,6 +3143,20 @@ definitions:
       version:
         type: string
     type: object
+  services.CreateGuidelineBlockInput:
+    properties:
+      content:
+        type: object
+      section_id:
+        type: string
+      sort_order:
+        type: integer
+      type:
+        $ref: '#/definitions/models.GuidelineBlockType'
+    required:
+    - content
+    - type
+    type: object
   services.CreateGuidelineInput:
     properties:
       country:
@@ -2848,6 +3171,22 @@ definitions:
         type: string
       title:
         type: string
+    type: object
+  services.CreateGuidelineSectionInput:
+    properties:
+      level:
+        type: integer
+      parent_id:
+        type: string
+      slug:
+        type: string
+      sort_order:
+        type: integer
+      title:
+        type: string
+    required:
+    - level
+    - title
     type: object
   services.CreateProtocolInput:
     properties:
@@ -3278,6 +3617,17 @@ definitions:
       title:
         type: string
     type: object
+  services.GuidelineBlockOrderInput:
+    properties:
+      id:
+        type: string
+      section_id:
+        type: string
+      sort_order:
+        type: integer
+    required:
+    - id
+    type: object
   services.GuidelineCategoryInput:
     properties:
       color:
@@ -3297,6 +3647,102 @@ definitions:
       status:
         type: string
     type: object
+  services.GuidelineCollectionDTO:
+    properties:
+      created_at:
+        type: string
+      description:
+        type: string
+      id:
+        type: string
+      item_count:
+        type: integer
+      name:
+        type: string
+      updated_at:
+        type: string
+    type: object
+  services.GuidelineCollectionInput:
+    properties:
+      description:
+        type: string
+      name:
+        type: string
+    required:
+    - name
+    type: object
+  services.GuidelineCollectionItemDTO:
+    properties:
+      added_at:
+        type: string
+      guideline:
+        $ref: '#/definitions/services.PublicGuideline'
+      id:
+        type: string
+      sort_order:
+        type: integer
+    type: object
+  services.GuidelineCollectionItemInput:
+    properties:
+      guideline_id:
+        type: string
+      sort_order:
+        type: integer
+    required:
+    - guideline_id
+    type: object
+  services.GuidelineDownloadDTO:
+    properties:
+      asset_type:
+        type: string
+      downloaded_at:
+        type: string
+      guideline_id:
+        type: string
+      id:
+        type: string
+      version_id:
+        type: string
+    type: object
+  services.GuidelineDownloadInput:
+    properties:
+      asset_type:
+        type: string
+      guideline_id:
+        type: string
+    required:
+    - asset_type
+    - guideline_id
+    type: object
+  services.GuidelineExtractionStatus:
+    properties:
+      asset_count:
+        type: integer
+      attempt_count:
+        type: integer
+      block_count:
+        type: integer
+      completed_at:
+        type: string
+      error:
+        type: string
+      extraction_schema_version:
+        type: integer
+      job_status:
+        type: string
+      section_count:
+        type: integer
+      started_at:
+        type: string
+      version_id:
+        type: string
+      version_status:
+        type: string
+      warnings:
+        items:
+          type: string
+        type: array
+    type: object
   services.GuidelineIndexInput:
     properties:
       description:
@@ -3306,6 +3752,23 @@ definitions:
       sort_order:
         type: integer
       title:
+        type: string
+    type: object
+  services.GuidelinePreview:
+    properties:
+      blocks:
+        items:
+          $ref: '#/definitions/services.PublicGuidelineBlock'
+        type: array
+      sections:
+        items:
+          $ref: '#/definitions/services.PublicGuidelineSection'
+        type: array
+      status:
+        type: string
+      validation:
+        $ref: '#/definitions/services.GuidelinePublicationValidation'
+      version_id:
         type: string
     type: object
   services.GuidelinePublicationValidation:
@@ -3949,6 +4412,189 @@ definitions:
       type:
         type: string
     type: object
+  services.PublicGuideline:
+    properties:
+      country:
+        type: string
+      description:
+        type: string
+      id:
+        type: string
+      language:
+        type: string
+      last_updated:
+        type: string
+      program_area:
+        type: string
+      publication_date:
+        type: string
+      review_date:
+        type: string
+      slug:
+        type: string
+      source_org:
+        type: string
+      title:
+        type: string
+      version:
+        type: string
+    type: object
+  services.PublicGuidelineAlgorithm:
+    properties:
+      content:
+        $ref: '#/definitions/models.GuidelineAlgorithmBlockPayload'
+      id:
+        type: string
+      page_end:
+        type: integer
+      page_start:
+        type: integer
+      section_id:
+        type: string
+      sort_order:
+        type: integer
+    type: object
+  services.PublicGuidelineAssetLink:
+    properties:
+      asset_id:
+        type: string
+      checksum:
+        type: string
+      expires_at:
+        type: string
+      mime_type:
+        type: string
+      original_filename:
+        type: string
+      size_bytes:
+        type: integer
+      type:
+        type: string
+      url:
+        type: string
+    type: object
+  services.PublicGuidelineBlock:
+    properties:
+      content:
+        type: object
+      id:
+        type: string
+      page_end:
+        type: integer
+      page_start:
+        type: integer
+      section_id:
+        type: string
+      sort_order:
+        type: integer
+      type:
+        $ref: '#/definitions/models.GuidelineBlockType'
+    type: object
+  services.PublicGuidelineFigure:
+    properties:
+      asset:
+        $ref: '#/definitions/services.PublicGuidelineAssetLink'
+      content:
+        $ref: '#/definitions/models.GuidelineFigureBlockPayload'
+      id:
+        type: string
+      page_end:
+        type: integer
+      page_start:
+        type: integer
+      section_id:
+        type: string
+      sort_order:
+        type: integer
+    type: object
+  services.PublicGuidelineManifest:
+    properties:
+      algorithm_count:
+        type: integer
+      block_count:
+        type: integer
+      checksum:
+        type: string
+      etag:
+        type: string
+      extraction_quality:
+        $ref: '#/definitions/models.GuidelineExtractionQuality'
+      figure_count:
+        type: integer
+      generated_at:
+        type: string
+      guideline_id:
+        type: string
+      has_algorithms:
+        type: boolean
+      has_chapters:
+        type: boolean
+      has_figures:
+        type: boolean
+      has_key_points:
+        type: boolean
+      has_offline_package:
+        type: boolean
+      has_original_pdf:
+        type: boolean
+      has_tables:
+        type: boolean
+      package_version:
+        type: integer
+      schema_version:
+        type: integer
+      section_count:
+        type: integer
+      table_count:
+        type: integer
+      version:
+        type: string
+      version_id:
+        type: string
+    type: object
+  services.PublicGuidelineSection:
+    properties:
+      id:
+        type: string
+      level:
+        type: integer
+      page_end:
+        type: integer
+      page_start:
+        type: integer
+      parent_id:
+        type: string
+      slug:
+        type: string
+      sort_order:
+        type: integer
+      title:
+        type: string
+    type: object
+  services.PublicGuidelineSectionDetail:
+    properties:
+      blocks:
+        items:
+          $ref: '#/definitions/services.PublicGuidelineBlock'
+        type: array
+      section:
+        $ref: '#/definitions/services.PublicGuidelineSection'
+    type: object
+  services.PublicGuidelineTable:
+    properties:
+      content:
+        $ref: '#/definitions/models.GuidelineTableBlockPayload'
+      id:
+        type: string
+      page_end:
+        type: integer
+      page_start:
+        type: integer
+      section_id:
+        type: string
+      sort_order:
+        type: integer
+    type: object
   services.ReadingProgressInput:
     properties:
       current_section:
@@ -3981,6 +4627,15 @@ definitions:
       region:
         $ref: '#/definitions/services.FacilityReferenceView'
     type: object
+  services.ReorderGuidelineBlocksInput:
+    properties:
+      blocks:
+        items:
+          $ref: '#/definitions/services.GuidelineBlockOrderInput'
+        type: array
+    required:
+    - blocks
+    type: object
   services.ReorderGuidelineSectionsInput:
     properties:
       sections:
@@ -3989,6 +4644,13 @@ definitions:
         type: array
     required:
     - sections
+    type: object
+  services.ReviewGuidelineAssetInput:
+    properties:
+      status:
+        $ref: '#/definitions/models.GuidelineBlockReviewStatus'
+    required:
+    - status
     type: object
   services.ReviewGuidelineBlockInput:
     properties:
@@ -4347,6 +5009,268 @@ info:
   title: MediGuide Backend API
   version: "1.0"
 paths:
+  /api/public/guidelines:
+    get:
+      parameters:
+      - description: Search title, description, or source
+        in: query
+        name: search
+        type: string
+      - description: Program area
+        in: query
+        name: program_area
+        type: string
+      - description: Country
+        in: query
+        name: country
+        type: string
+      - description: Language
+        in: query
+        name: language
+        type: string
+      - description: RFC3339 lower update bound
+        in: query
+        name: updated_from
+        type: string
+      - description: title, publication_date, last_updated, version, or program_area
+        in: query
+        name: sort
+        type: string
+      - description: asc or desc
+        in: query
+        name: order
+        type: string
+      - description: Page
+        in: query
+        name: page
+        type: integer
+      - description: Items per page
+        in: query
+        name: per_page
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.PaginatedPublicGuidelinesEnvelope'
+      summary: List published guidelines
+      tags:
+      - Public Guidelines
+  /api/public/guidelines/{id}:
+    get:
+      parameters:
+      - description: Guideline UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.PublicGuidelineEnvelope'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/httpx.Response'
+      summary: Get a published guideline
+      tags:
+      - Public Guidelines
+  /api/public/guidelines/{id}/algorithms:
+    get:
+      parameters:
+      - description: Guideline UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.PaginatedPublicGuidelineAlgorithmsEnvelope'
+      summary: List reviewed algorithms in a published guideline
+      tags:
+      - Public Guidelines
+  /api/public/guidelines/{id}/figures:
+    get:
+      parameters:
+      - description: Guideline UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.PaginatedPublicGuidelineFiguresEnvelope'
+      summary: List reviewed figures in a published guideline
+      tags:
+      - Public Guidelines
+  /api/public/guidelines/{id}/manifest:
+    get:
+      parameters:
+      - description: Guideline UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.PublicGuidelineManifestEnvelope'
+      summary: Get a published guideline content manifest
+      tags:
+      - Public Guidelines
+  /api/public/guidelines/{id}/markdown:
+    get:
+      parameters:
+      - description: Guideline UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - text/markdown
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: string
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/httpx.Response'
+      summary: Get published guideline Markdown
+      tags:
+      - Public Guidelines
+  /api/public/guidelines/{id}/offline-package:
+    get:
+      parameters:
+      - description: Guideline UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.PublicGuidelineAssetEnvelope'
+      summary: Create a short-lived download link for the published offline package
+      tags:
+      - Public Guidelines
+  /api/public/guidelines/{id}/original:
+    get:
+      parameters:
+      - description: Guideline UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.PublicGuidelineAssetEnvelope'
+      summary: Create a short-lived download link for the published original file
+      tags:
+      - Public Guidelines
+  /api/public/guidelines/{id}/sections:
+    get:
+      parameters:
+      - description: Guideline UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Parent section UUID
+        in: query
+        name: parent_id
+        type: string
+      - description: sort_order, title, or page_start
+        in: query
+        name: sort
+        type: string
+      - description: asc or desc
+        in: query
+        name: order
+        type: string
+      - description: Page
+        in: query
+        name: page
+        type: integer
+      - description: Items per page
+        in: query
+        name: per_page
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.PaginatedPublicGuidelineSectionsEnvelope'
+      summary: List reviewed sections in a published guideline
+      tags:
+      - Public Guidelines
+  /api/public/guidelines/{id}/sections/{sectionId}:
+    get:
+      parameters:
+      - description: Guideline UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Section UUID
+        in: path
+        name: sectionId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.PublicGuidelineSectionEnvelope'
+      summary: Get one reviewed guideline section and its reviewed blocks
+      tags:
+      - Public Guidelines
+  /api/public/guidelines/{id}/tables:
+    get:
+      parameters:
+      - description: Guideline UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.PaginatedPublicGuidelineTablesEnvelope'
+      summary: List reviewed tables in a published guideline
+      tags:
+      - Public Guidelines
   /api/v1/consultants/tree:
     get:
       description: Legacy v1 endpoint that groups consultants by region, city, then
@@ -6916,6 +7840,63 @@ paths:
       summary: Stream an extracted guideline asset for editorial review
       tags:
       - guideline-review
+  /api/v2/guideline-versions/{id}/assets/{assetId}/review:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Guideline version UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Asset UUID
+        in: path
+        name: assetId
+        required: true
+        type: string
+      - description: Review decision
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/services.ReviewGuidelineAssetInput'
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.GuidelineAssetEnvelope'
+      security:
+      - BearerAuth: []
+      summary: Review or reject a guideline asset
+      tags:
+      - guideline-review
+  /api/v2/guideline-versions/{id}/blocks:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Guideline version UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Block
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/services.CreateGuidelineBlockInput'
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/handlers.GuidelineContentBlockEnvelope'
+      security:
+      - BearerAuth: []
+      summary: Create a typed content block in an editable guideline version
+      tags:
+      - guideline-review
   /api/v2/guideline-versions/{id}/blocks/{blockId}:
     delete:
       parameters:
@@ -7008,6 +7989,32 @@ paths:
       security:
       - BearerAuth: []
       summary: Approve or reject an extracted guideline block
+      tags:
+      - guideline-review
+  /api/v2/guideline-versions/{id}/blocks/reorder:
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Guideline version UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Complete block ordering
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/services.ReorderGuidelineBlocksInput'
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.UpdatedEnvelope'
+      security:
+      - BearerAuth: []
+      summary: Replace block section assignment and ordering for a version
       tags:
       - guideline-review
   /api/v2/guideline-versions/{id}/chunks:
@@ -7173,6 +8180,42 @@ paths:
       summary: Replace extracted guideline Markdown
       tags:
       - guidelines
+  /api/v2/guideline-versions/{id}/extraction-status:
+    get:
+      parameters:
+      - description: Guideline version UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.GuidelineExtractionStatusEnvelope'
+      security:
+      - BearerAuth: []
+      summary: Get guideline version extraction status and typed content counts
+      tags:
+      - guideline-review
+  /api/v2/guideline-versions/{id}/preview:
+    get:
+      parameters:
+      - description: Guideline version UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.GuidelinePreviewEnvelope'
+      security:
+      - BearerAuth: []
+      summary: Preview the reviewed public projection of an unpublished version
+      tags:
+      - guideline-review
   /api/v2/guideline-versions/{id}/publish:
     post:
       parameters:
@@ -7302,7 +8345,52 @@ paths:
       summary: List sections for a guideline version
       tags:
       - guidelines
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Guideline version UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Section
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/services.CreateGuidelineSectionInput'
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/handlers.GuidelineSectionEnvelope'
+      security:
+      - BearerAuth: []
+      summary: Create a guideline section in an editable version
+      tags:
+      - guideline-review
   /api/v2/guideline-versions/{id}/sections/{sectionId}:
+    delete:
+      parameters:
+      - description: Guideline version UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Section UUID
+        in: path
+        name: sectionId
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+      security:
+      - BearerAuth: []
+      summary: Delete an empty, childless guideline section
+      tags:
+      - guideline-review
     patch:
       consumes:
       - application/json
@@ -7793,6 +8881,220 @@ paths:
       summary: Update a language
       tags:
       - content-reference
+  /api/v2/library/collections:
+    get:
+      parameters:
+      - description: Page
+        in: query
+        name: page
+        type: integer
+      - description: Items per page
+        in: query
+        name: per_page
+        type: integer
+      - description: name, created_at, or updated_at
+        in: query
+        name: sort
+        type: string
+      - description: asc or desc
+        in: query
+        name: order
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.PaginatedGuidelineCollectionsEnvelope'
+      security:
+      - BearerAuth: []
+      summary: List the authenticated user's guideline collections
+      tags:
+      - guideline-library
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Collection
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/services.GuidelineCollectionInput'
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/handlers.GuidelineCollectionEnvelope'
+      security:
+      - BearerAuth: []
+      summary: Create a guideline collection
+      tags:
+      - guideline-library
+  /api/v2/library/collections/{id}:
+    delete:
+      parameters:
+      - description: Collection UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+      security:
+      - BearerAuth: []
+      summary: Delete an owned guideline collection
+      tags:
+      - guideline-library
+    get:
+      parameters:
+      - description: Collection UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.GuidelineCollectionEnvelope'
+      security:
+      - BearerAuth: []
+      summary: Get an owned guideline collection
+      tags:
+      - guideline-library
+    patch:
+      consumes:
+      - application/json
+      parameters:
+      - description: Collection UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Collection
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/services.GuidelineCollectionInput'
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.GuidelineCollectionEnvelope'
+      security:
+      - BearerAuth: []
+      summary: Update an owned guideline collection
+      tags:
+      - guideline-library
+  /api/v2/library/collections/{id}/items:
+    get:
+      parameters:
+      - description: Collection UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Page
+        in: query
+        name: page
+        type: integer
+      - description: Items per page
+        in: query
+        name: per_page
+        type: integer
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.PaginatedGuidelineCollectionItemsEnvelope'
+      security:
+      - BearerAuth: []
+      summary: List published guidelines in an owned collection
+      tags:
+      - guideline-library
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Collection UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Collection item
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/services.GuidelineCollectionItemInput'
+      responses:
+        "204":
+          description: No Content
+      security:
+      - BearerAuth: []
+      summary: Add a published guideline to an owned collection
+      tags:
+      - guideline-library
+  /api/v2/library/collections/{id}/items/{guidelineId}:
+    delete:
+      parameters:
+      - description: Collection UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Guideline UUID
+        in: path
+        name: guidelineId
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+      security:
+      - BearerAuth: []
+      summary: Remove a guideline from an owned collection
+      tags:
+      - guideline-library
+  /api/v2/library/downloads:
+    get:
+      parameters:
+      - description: original_pdf or offline_package
+        in: query
+        name: asset_type
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.PaginatedGuidelineDownloadsEnvelope'
+      security:
+      - BearerAuth: []
+      summary: List the authenticated user's guideline download history
+      tags:
+      - guideline-library
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Download
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/services.GuidelineDownloadInput'
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/handlers.GuidelineDownloadEnvelope'
+      security:
+      - BearerAuth: []
+      summary: Record an owned guideline download event
+      tags:
+      - guideline-library
   /api/v2/me:
     get:
       description: Return the currently authenticated user.

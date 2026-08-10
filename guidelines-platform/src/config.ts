@@ -3,7 +3,6 @@ declare global {
     __APP_CONFIG__?: {
       mediguidePosUrl?: string;
       mediguideApiUrl?: string;
-      staticGuidelineFallbackEnabled?: string | boolean;
     };
   }
 }
@@ -33,10 +32,3 @@ export const publicApiBaseUrl = normalizeBaseUrl(
 export const dashboardBaseUrl = mediguidePosUrl;
 export const dashboardLoginUrl = `${dashboardBaseUrl}/login`;
 export const mediguidePosLoginUrl = dashboardLoginUrl;
-
-const fallbackSetting =
-  runtimeConfig?.staticGuidelineFallbackEnabled ??
-  import.meta.env.VITE_STATIC_GUIDELINE_FALLBACK_ENABLED;
-
-export const staticGuidelineFallbackEnabled =
-  String(fallbackSetting ?? "false").toLowerCase() === "true";

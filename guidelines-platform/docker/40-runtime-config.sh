@@ -13,16 +13,8 @@ if ! printf '%s' "${MEDIGUIDE_API_URL}" |
   exit 1
 fi
 
-case "${STATIC_GUIDELINE_FALLBACK_ENABLED}" in
-  true|false) ;;
-  *)
-    echo "STATIC_GUIDELINE_FALLBACK_ENABLED must be true or false." >&2
-    exit 1
-    ;;
-esac
-
 runtime_config="$(mktemp /tmp/runtime-config.XXXXXX)"
-envsubst '${MEDIGUIDE_POS_URL} ${MEDIGUIDE_API_URL} ${STATIC_GUIDELINE_FALLBACK_ENABLED}' \
+envsubst '${MEDIGUIDE_POS_URL} ${MEDIGUIDE_API_URL}' \
   < /etc/clinical-guidelines/runtime-config.js.template \
   > "${runtime_config}"
 chmod 0444 "${runtime_config}"

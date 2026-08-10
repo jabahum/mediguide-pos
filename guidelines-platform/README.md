@@ -1,6 +1,6 @@
 # Clinical Guidelines Platform
 
-A React and Markdown platform for publishing multiple clinical guidelines. Uganda Clinical Guidelines is the first available publication.
+A React platform for reading the clinical guidelines published by MediGuide.
 
 The platform is the public entry point to the MediGuide ecosystem. Clinical
 publications are available without authentication, while the staff login links
@@ -13,9 +13,9 @@ The application uses a feature-oriented structure:
 ```text
 src/
   components/common/       Shared branding, icons, and loading states
-  content/                 Publication metadata, generated index, and loaders
+  content/                 Historical migration sources and tooling (not production)
   features/landing/        Public landing page and publication library
-  features/reader/         Markdown reader, search, and table of contents
+  features/reader/         Manifest-driven structured and Markdown readers
   layouts/                 Public application shell
   lib/markdown/            Parsing, headings, paths, and navigation utilities
   styles/                  Design tokens and page-specific style layers
@@ -26,33 +26,25 @@ The main routes are:
 
 ```text
 /                                                   Public guideline library
-/guidelines/:id                                     Current backend publication
-/publications/:publication                          Publication entry redirect
-/publications/:publication/read/:document            Lazy-loaded reader route
+/guidelines/:id                                     Published guideline reader
 ```
 
-The first two routes are primary in production. Cards come from
-`GET /api/public/guidelines`; opening one fetches public metadata and then its
-Markdown. Dashboard edits use the same object and become visible after a new
-version is published, without rebuilding this frontend.
+Cards come from `GET /api/public/guidelines`. The reader then loads that
+document's typed manifest, sections, blocks and declared capabilities from the
+public API. Tables, figures and algorithms only appear when the per-document
+manifest declares them. Every source/version/page citation therefore refers to
+the same publication consumed by the Flutter app.
 
-Chapter `index.md` files contain aggregate copies of entire chapters. The
-smaller documents under each chapter directory are the canonical reader
-sources, preventing duplicated content and providing stable section routes.
-The front matter and split documents are indexed in
-`src/content/generated-manifest.json`.
+When reviewed structured content is unavailable, the reader falls back to the
+published Markdown compatibility endpoint and retains access to the original
+PDF. Raw embedded HTML is disabled. Unknown typed blocks display a safe notice
+instead of interpreting arbitrary markup or executable content.
 
-The manifest contains navigation and search metadata only. Vite creates a
-separate lazy chunk for each Markdown body, so opening the landing page does not
-download the clinical publications.
-
-Bundled publications are temporary migration content. Set
-`STATIC_GUIDELINE_FALLBACK_ENABLED=true` to show them only when the live list
-cannot be reached; the UI always displays a stale-content warning. A successful
-empty list or a valid `404` never silently falls back. Production defaults this
-off. To migrate, compare `src/content/publications.ts` with the public list,
-upload any missing documents, save Markdown, and publish their versions before
-removing bundled content.
+The files under `src/content` are retained only as historical migration input
+and for content tooling. They are not reachable from the application route
+graph, are not generated during `npm run build`, and must not be used as a
+production clinical source. Production guideline changes are published through
+the backend and become visible without rebuilding this frontend.
 
 With the backend running, generate that comparison directly:
 
@@ -76,8 +68,7 @@ make up
 ```
 
 Open <http://localhost:5173>. The source tree is mounted into the container, so
-edits are reflected without rebuilding. The content manifest is regenerated
-when the container starts.
+edits are reflected without rebuilding.
 
 The “Log in” button opens the Mediguide POS login page configured by
 `DASHBOARD_PUBLIC_URL` in `infra/development.env`.
@@ -136,7 +127,6 @@ docker build \
 docker run --rm -p 8081:8080 \
   -e MEDIGUIDE_POS_URL=https://app.example.org \
   -e MEDIGUIDE_API_URL=https://api.example.org \
-  -e STATIC_GUIDELINE_FALLBACK_ENABLED=false \
   --read-only \
   --tmpfs /tmp:rw,noexec,nosuid,size=16m \
   mediguide-guidelines:production
@@ -215,20 +205,15 @@ npm run build
 npm run verify
 ```
 
-The build regenerates the content manifest automatically.
+`content:manifest` is a migration-tool command. The production build does not
+generate or import that historical manifest.
 
-## Adding a publication
+## Publishing a guideline
 
-1. Add typed publication metadata to `src/content/publications.ts`.
-2. Place its Markdown source in a dedicated content directory.
-3. Extend `scripts/generate-content-manifest.mjs` with the publication's
-   filename and ordering rules.
-4. Add the new lazy Markdown glob to `src/content/content-loader.ts`.
-5. Regenerate the manifest and run `npm run verify`.
-
-Publication bodies should remain authoritative source material. Use metadata,
-routes, and presentation changes to improve navigation; do not rewrite clinical
-recommendations during platform maintenance.
+Upload and review a guideline in the administrative dashboard, then publish a
+version. The backend owns the publication manifest, reviewed blocks, Markdown
+compatibility output and original-document asset. No platform source-code or
+image rebuild is required.
 
 ## Configuration
 
@@ -246,8 +231,8 @@ dependencies are excluded.
 
 `VITE_MEDIGUIDE_API_URL` configures local Vite builds.
 `MEDIGUIDE_API_URL` configures the production container at startup; neither
-value is a secret. The reader keeps a bounded in-memory Markdown cache and
-revalidates it with ETags.
+value is a secret. The reader keeps bounded in-memory structured-content and
+Markdown caches and revalidates them with ETags.
 
 Raw embedded HTML is disabled. Unsafe URL protocols are rejected and external
 links use `noopener noreferrer`. Because this is a client-rendered Vite SPA,

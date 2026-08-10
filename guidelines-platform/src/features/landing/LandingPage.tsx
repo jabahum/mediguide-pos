@@ -6,11 +6,7 @@ import {
   type PublicGuideline,
 } from "../../api/public-guidelines";
 import { ArrowIcon, BookIcon, ShieldIcon } from "../../components/common/Icons";
-import {
-  dashboardLoginUrl,
-  staticGuidelineFallbackEnabled,
-} from "../../config";
-import { publications } from "../../content/publications";
+import { dashboardLoginUrl } from "../../config";
 
 type LibraryState =
   | { status: "loading" }
@@ -72,15 +68,6 @@ export function LandingPage() {
     if (programArea) areas.push(programArea);
     return [...new Set(areas)].sort();
   }, [library, programArea]);
-
-  const useFallback =
-    library.status === "error" && staticGuidelineFallbackEnabled;
-
-  useEffect(() => {
-    if (useFallback && import.meta.env.DEV) {
-      console.warn("Using explicitly enabled bundled guideline fallback");
-    }
-  }, [useFallback]);
 
   return (
     <>
@@ -168,7 +155,7 @@ export function LandingPage() {
 
         {library.status === "loading" && <GuidelineSkeleton />}
 
-        {library.status === "error" && !useFallback && (
+        {library.status === "error" && (
           <div className="library-state">
             <h3>We could not load the guideline library.</h3>
             <p>Check your connection and try again.</p>
@@ -198,31 +185,6 @@ export function LandingPage() {
           </div>
         )}
 
-        {useFallback && (
-          <>
-            <div className="fallback-notice" role="status">
-              The live library is temporarily unavailable. Showing explicitly
-              enabled bundled publications, which may not be the latest version.
-            </div>
-            <div className="publication-grid">
-              {publications.map((publication) => (
-                <Link className="publication-card" to={publication.entryRoute} key={publication.id}>
-                  <div className="publication-cover">
-                    <span>{publication.country}</span>
-                    <strong>{publication.shortTitle}</strong>
-                    <small>{publication.year}</small>
-                  </div>
-                  <div className="publication-card-content">
-                    <span className="publication-publisher">{publication.publisher}</span>
-                    <h3>{publication.title}</h3>
-                    <p>{publication.description}</p>
-                    <span className="card-action">Open bundled publication <ArrowIcon /></span>
-                  </div>
-                </Link>
-              ))}
-            </div>
-          </>
-        )}
       </section>
 
       <section className="about-section" id="about">

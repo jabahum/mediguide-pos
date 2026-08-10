@@ -1,5 +1,4 @@
 window.__APP_CONFIG__ = {
   mediguidePosUrl: "${MEDIGUIDE_POS_URL}",
   mediguideApiUrl: "${MEDIGUIDE_API_URL}",
-  staticGuidelineFallbackEnabled: "${STATIC_GUIDELINE_FALLBACK_ENABLED}",
 };

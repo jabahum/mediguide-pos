@@ -18,6 +18,12 @@ from app.repositories.ingestion_repo import IngestionRepository
 
 log = structlog.get_logger()
 
+class IngestionCanceled(Exception):
+    pass
+
+class IngestionSuperseded(Exception):
+    pass
+
 
 class IngestionService:
     def __init__(self):
@@ -31,17 +37,34 @@ class IngestionService:
         job = self.jobs.get_job(job_id)
         if not job:
             raise ValueError(f"Ingestion job not found: {job_id}")
+        if job.get("status") in {"completed", "canceled"}:
+            return
+        if job.get("status") == "cancel_requested":
+            self.jobs.mark_canceled(job_id)
+            return
         # For API-triggered runs the job may not be in 'running' state yet.
         self.jobs.mark_running(job_id)
         try:
             self._process(job)
             self.jobs.mark_completed(job_id)
+        except IngestionCanceled:
+            self.jobs.mark_canceled(job_id)
+            log.info("ingestion_job_canceled", job_id=job_id)
+        except IngestionSuperseded:
+            self.jobs.mark_superseded(job_id)
+            log.info("ingestion_job_superseded", job_id=job_id)
         except Exception as exc:
             log.exception("ingestion_job_failed", job_id=job_id, error=str(exc))
             self.jobs.mark_failed(job_id, str(exc))
             raise
 
     def _process(self, job: dict) -> None:
+        job_id = str(job["id"])
+        def stage(name: str, percent: int) -> None:
+            if self.jobs.cancellation_requested(job_id):
+                raise IngestionCanceled()
+            self.jobs.set_progress(job_id, name, percent)
+
         version_id = str(job["version_id"])
         version = self.guidelines.get_version_with_document(version_id)
         if not version:
@@ -63,12 +86,13 @@ class IngestionService:
                 version_id=version_id,
                 source_format=source_format,
             )
-            return
+            raise IngestionSuperseded()
 
         with tempfile.TemporaryDirectory(prefix="mediguide-ingest-") as tmp:
             tmp_path = Path(tmp)
             source_path = tmp_path / ("source.md" if source_format == "markdown" else "source.pdf")
 
+            stage("downloading", 5)
             started = time.perf_counter()
             self.storage.download_file(source_key, source_path)
             document_checksum = self._file_checksum(source_path)
@@ -90,8 +114,10 @@ class IngestionService:
                     checksum=document_checksum,
                     extraction_schema_version=self.guidelines.EXTRACTION_SCHEMA_VERSION,
                 )
+                self.jobs.complete_noop_comparison(job_id)
                 return
 
+            stage("parsing", 20)
             started = time.perf_counter()
             extracted = (
                 extract_markdown(source_path, fallback_title=version.get("document_title") or "Guideline")
@@ -111,6 +137,7 @@ class IngestionService:
                 tables=len(extracted.tables),
             )
 
+            stage("building_structure", 40)
             started = time.perf_counter()
             chunks = chunk_blocks(extracted.blocks)
             if not chunks:
@@ -171,11 +198,14 @@ class IngestionService:
                 unique_stored_assets=len(uploaded_asset_keys) + (1 if source_format == "pdf" else 0),
             )
 
+            stage("chunking", 55)
             texts = [c.content for c in chunks]
             embeddings = []
             batch_size = max(1, self.settings.embedding_request_batch_size)
             started = time.perf_counter()
+            stage("embeddings", 65)
             for i in range(0, len(texts), batch_size):
+                stage("embeddings", min(84, 65 + int((i / max(1, len(texts))) * 19)))
                 batch_started = time.perf_counter()
                 batch = texts[i:i + batch_size]
                 embeddings.extend(self.embedder.embed(batch))
@@ -196,6 +226,9 @@ class IngestionService:
                 chunks=len(chunks),
             )
 
+            # Cancellation is deliberately no longer accepted after persistence
+            # starts: replacement is one database transaction.
+            stage("persisting", 90)
             started = time.perf_counter()
             latest = self.guidelines.get_version_with_document(version_id)
             if not latest or str(latest.get(source_field) or "").strip() != source_key:
@@ -205,7 +238,7 @@ class IngestionService:
                     version_id=version_id,
                     source_format=source_format,
                 )
-                return
+                raise IngestionSuperseded()
             self.guidelines.replace_extraction(
                 version_id=version_id,
                 version=version,
@@ -233,6 +266,7 @@ class IngestionService:
                 markdown_revision_id=str(payload.get("revision_id") or "").strip() or None,
                 ingestion_job_id=str(job["id"]),
             )
+            self.jobs.set_progress(job_id, "review_required", 98)
             log.info(
                 "ingestion_persist_completed",
                 job_id=str(job["id"]),

@@ -341,6 +341,225 @@ func (h GuidelineHandler) RegenerateMarkdown(c *gin.Context) {
 	c.JSON(http.StatusAccepted, gin.H{"success": true, "data": result})
 }
 
+// ValidateMarkdownRevision godoc
+// @Summary Validate an immutable Markdown revision
+// @Tags guideline-markdown
+// @Produce json
+// @Security BearerAuth
+// @Param id path string true "Guideline version ID" format(uuid)
+// @Param revisionId path string true "Markdown revision ID" format(uuid)
+// @Success 200 {object} handlers.MarkdownValidationEnvelope
+// @Router /api/v2/guideline-versions/{id}/markdown-revisions/{revisionId}/validation [get]
+func (h GuidelineHandler) ValidateMarkdownRevision(c *gin.Context) {
+	versionID, revisionID, ok := markdownRevisionIDs(c)
+	if !ok {
+		return
+	}
+	result, err := h.Service.ValidateMarkdownRevision(c.Request.Context(), versionID, revisionID)
+	if err != nil {
+		markdownError(c, err)
+		return
+	}
+	httpx.OK(c, result)
+}
+
+func regenerationIDs(c *gin.Context) (uuid.UUID, uuid.UUID, bool) {
+	versionID, ok := markdownVersionID(c)
+	if !ok {
+		return uuid.Nil, uuid.Nil, false
+	}
+	jobID, err := uuid.Parse(c.Param("jobId"))
+	if err != nil {
+		httpx.Error(c, http.StatusBadRequest, "invalid regeneration job id")
+		return uuid.Nil, uuid.Nil, false
+	}
+	return versionID, jobID, true
+}
+
+// GetRegenerationJob godoc
+// @Summary Get observable regeneration progress
+// @Tags guideline-markdown
+// @Produce json
+// @Security BearerAuth
+// @Param id path string true "Guideline version ID" format(uuid)
+// @Param jobId path string true "Regeneration job ID" format(uuid)
+// @Success 200 {object} handlers.RegenerationJobViewEnvelope
+// @Router /api/v2/guideline-versions/{id}/regeneration-jobs/{jobId} [get]
+func (h GuidelineHandler) GetRegenerationJob(c *gin.Context) {
+	versionID, jobID, ok := regenerationIDs(c)
+	if !ok {
+		return
+	}
+	row, err := h.Service.GetRegenerationJob(versionID, jobID)
+	if err != nil {
+		markdownError(c, err)
+		return
+	}
+	httpx.OK(c, row)
+}
+
+// CancelRegenerationJob godoc
+// @Summary Request safe cancellation of regeneration
+// @Tags guideline-markdown
+// @Security BearerAuth
+// @Param id path string true "Guideline version ID" format(uuid)
+// @Param jobId path string true "Regeneration job ID" format(uuid)
+// @Success 200 {object} handlers.IngestionJobResponse
+// @Router /api/v2/guideline-versions/{id}/regeneration-jobs/{jobId}/cancel [post]
+func (h GuidelineHandler) CancelRegenerationJob(c *gin.Context) {
+	versionID, jobID, ok := regenerationIDs(c)
+	if !ok {
+		return
+	}
+	row, err := h.Service.CancelRegenerationJob(versionID, jobID, markdownClaims(c).UserID)
+	if err != nil {
+		markdownError(c, err)
+		return
+	}
+	httpx.OK(c, row)
+}
+
+// RetryRegenerationJob godoc
+// @Summary Retry a failed or canceled regeneration
+// @Tags guideline-markdown
+// @Security BearerAuth
+// @Param id path string true "Guideline version ID" format(uuid)
+// @Param jobId path string true "Regeneration job ID" format(uuid)
+// @Success 200 {object} handlers.IngestionJobResponse
+// @Router /api/v2/guideline-versions/{id}/regeneration-jobs/{jobId}/retry [post]
+func (h GuidelineHandler) RetryRegenerationJob(c *gin.Context) {
+	versionID, jobID, ok := regenerationIDs(c)
+	if !ok {
+		return
+	}
+	row, err := h.Service.RetryRegenerationJob(versionID, jobID, markdownClaims(c).UserID)
+	if err != nil {
+		markdownError(c, err)
+		return
+	}
+	httpx.OK(c, row)
+}
+
+// GetRegenerationReview godoc
+// @Summary Compare regenerated content with the prior projection
+// @Tags guideline-review
+// @Security BearerAuth
+// @Param id path string true "Guideline version ID" format(uuid)
+// @Param jobId path string true "Regeneration job ID" format(uuid)
+// @Success 200 {object} handlers.RegenerationReviewEnvelope
+// @Router /api/v2/guideline-versions/{id}/regeneration-reviews/{jobId} [get]
+func (h GuidelineHandler) GetRegenerationReview(c *gin.Context) {
+	versionID, jobID, ok := regenerationIDs(c)
+	if !ok {
+		return
+	}
+	row, err := h.Service.GetRegenerationReview(versionID, jobID)
+	if err != nil {
+		markdownError(c, err)
+		return
+	}
+	httpx.OK(c, row)
+}
+
+func (h GuidelineHandler) decideRegeneration(c *gin.Context, accept bool) {
+	versionID, jobID, ok := regenerationIDs(c)
+	if !ok {
+		return
+	}
+	var input services.RegenerationDecisionInput
+	if c.Request.ContentLength > 0 {
+		if err := c.ShouldBindJSON(&input); err != nil {
+			httpx.Error(c, http.StatusBadRequest, "invalid decision payload")
+			return
+		}
+	}
+	row, err := h.Service.DecideRegenerationReview(versionID, jobID, markdownClaims(c).UserID, accept, input)
+	if err != nil {
+		markdownError(c, err)
+		return
+	}
+	httpx.OK(c, row)
+}
+
+// AcceptRegeneration godoc
+// @Summary Accept a regenerated projection after high-risk review
+// @Tags guideline-review
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param id path string true "Guideline version ID" format(uuid)
+// @Param jobId path string true "Regeneration job ID" format(uuid)
+// @Param payload body services.RegenerationDecisionInput false "Reviewer comment"
+// @Success 200 {object} handlers.RegenerationReviewEnvelope
+// @Failure 409 {object} handlers.ErrorResponse
+// @Router /api/v2/guideline-versions/{id}/regeneration-reviews/{jobId}/accept [post]
+func (h GuidelineHandler) AcceptRegeneration(c *gin.Context) { h.decideRegeneration(c, true) }
+
+// RejectRegeneration godoc
+// @Summary Reject a regenerated projection and return to Markdown
+// @Tags guideline-review
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param id path string true "Guideline version ID" format(uuid)
+// @Param jobId path string true "Regeneration job ID" format(uuid)
+// @Param payload body services.RegenerationDecisionInput true "Required rejection comment"
+// @Success 200 {object} handlers.RegenerationReviewEnvelope
+// @Failure 409 {object} handlers.ErrorResponse
+// @Router /api/v2/guideline-versions/{id}/regeneration-reviews/{jobId}/reject [post]
+func (h GuidelineHandler) RejectRegeneration(c *gin.Context) { h.decideRegeneration(c, false) }
+
+// ListRegenerationComments godoc
+// @Summary List ordered comments for a regeneration review
+// @Tags guideline-review
+// @Produce json
+// @Security BearerAuth
+// @Param id path string true "Guideline version ID" format(uuid)
+// @Param jobId path string true "Regeneration job ID" format(uuid)
+// @Success 200 {object} handlers.RegenerationCommentsEnvelope
+// @Router /api/v2/guideline-versions/{id}/regeneration-reviews/{jobId}/comments [get]
+func (h GuidelineHandler) ListRegenerationComments(c *gin.Context) {
+	versionID, jobID, ok := regenerationIDs(c)
+	if !ok {
+		return
+	}
+	rows, err := h.Service.ListRegenerationComments(versionID, jobID)
+	if err != nil {
+		markdownError(c, err)
+		return
+	}
+	httpx.OK(c, rows)
+}
+
+// AddRegenerationComment godoc
+// @Summary Add a review or block-level comment
+// @Tags guideline-review
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param id path string true "Guideline version ID" format(uuid)
+// @Param jobId path string true "Regeneration job ID" format(uuid)
+// @Param payload body services.GuidelineReviewCommentInput true "Comment"
+// @Success 201 {object} handlers.RegenerationCommentEnvelope
+// @Router /api/v2/guideline-versions/{id}/regeneration-reviews/{jobId}/comments [post]
+func (h GuidelineHandler) AddRegenerationComment(c *gin.Context) {
+	versionID, jobID, ok := regenerationIDs(c)
+	if !ok {
+		return
+	}
+	var input services.GuidelineReviewCommentInput
+	if err := c.ShouldBindJSON(&input); err != nil {
+		httpx.Error(c, http.StatusBadRequest, "invalid comment payload")
+		return
+	}
+	row, err := h.Service.AddRegenerationComment(versionID, jobID, markdownClaims(c).UserID, input)
+	if err != nil {
+		markdownError(c, err)
+		return
+	}
+	httpx.Created(c, row)
+}
+
 func markdownVersionID(c *gin.Context) (uuid.UUID, bool) {
 	id, err := uuid.Parse(c.Param("id"))
 	if err != nil {
@@ -377,6 +596,10 @@ func markdownError(c *gin.Context, err error) {
 		errors.Is(err, services.ErrPublishedVersionImmutable),
 		errors.Is(err, services.ErrMarkdownAlreadyCurrent):
 		httpx.Error(c, http.StatusConflict, err.Error())
+	case errors.Is(err, services.ErrRegenerationJobConflict), errors.Is(err, services.ErrRegenerationReviewIncomplete):
+		httpx.Error(c, http.StatusConflict, err.Error())
+	case errors.Is(err, services.ErrMarkdownValidationFailed):
+		httpx.Error(c, http.StatusUnprocessableEntity, err.Error())
 	case errors.Is(err, services.ErrMarkdownRevisionMissing),
 		errors.Is(err, gorm.ErrRecordNotFound):
 		httpx.Error(c, http.StatusNotFound, err.Error())

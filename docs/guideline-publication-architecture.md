@@ -257,6 +257,16 @@ The editorial API now includes extraction status, reviewed-content preview, sect
 
 Swagger/OpenAPI and generated TypeScript/Dart contracts include the Phase 6 routes and concrete response DTOs. Backend ownership/isolation, editor lifecycle, public projection and conditional-request tests cover the new surface. Migration `00017` has been validated up/down/up against the development PostgreSQL service.
 
+## Markdown authoring phases 12–14
+
+Markdown validation now runs twice: the dashboard provides immediate advisory feedback while `GET /api/v2/guideline-versions/:id/markdown-revisions/:revisionId/validation` validates the immutable object in backend storage. The backend result is authoritative for regeneration. Invalid and empty drafts remain saveable so clinical language is never silently corrected or lost; blocking validation errors prevent regeneration and publication instead. Issues include a severity, stable code, message, and source range. Rendering continues to sanitize untrusted Markdown and HTML.
+
+Manual regeneration is bound to the requested immutable revision and creates both an ingestion job and a pending regeneration review. Job status is available from `/regeneration-jobs/:jobId`, including the real worker stage and percentage. Cancellation is cooperative before persistence, and is rejected after transactional persistence begins. Failed or canceled jobs may be retried up to the configured attempt limit. The worker reports downloading, parsing, structure building, chunking, embedding, persistence, review-required, failed, canceled, and completed states. A newer Markdown source prevents a superseded job from persisting.
+
+Every regeneration records a before snapshot and a post-regeneration snapshot. Its comparison reports section additions/removals/renames and hierarchy changes, block-type changes, tables, chunks, asset references/provenance, and original-PDF availability. Reviewers may comment, approve or reject individual structured blocks with the existing block-review API, then accept or reject the overall regeneration. Rejection requires a comment and returns the Markdown revision to authoring. Acceptance is refused while any high-risk table, recommendation, warning, caution, contraindication, dosage, procedure, referral, or algorithm block is unreviewed. Publication requires an accepted regeneration review; the previously published version stays available throughout regeneration and review.
+
+Migration `00021_guideline_regeneration_review.sql` adds observable job progress, cooperative cancellation, durable regeneration comparisons, decisions, and review comments. Original PDFs and immutable Markdown revisions remain the provenance sources; generated output never fabricates citations.
+
 This does not complete the overall migration. The next safe slice is capability-driven rendering in `guidelines-platform`, followed by the Flutter canonical repository/offline package and dynamic reader behind a feature flag. Neither client should migrate progress/bookmark keys until the canonical/legacy identity mapping is implemented and verified.
 
 Direct Markdown ingestion is implemented as an additive editorial source option. The existing

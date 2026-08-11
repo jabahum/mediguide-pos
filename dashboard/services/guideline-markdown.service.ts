@@ -27,6 +27,39 @@ export type StructuredContentStatus =
   | "review_required"
   | "approved"
   | "failed"
+  | "canceled"
+
+export interface MarkdownValidationIssue {
+  severity: "error" | "warning" | "info"
+  code: string
+  message: string
+  line: number
+  column: number
+  end_line: number
+  end_column: number
+}
+
+export interface MarkdownValidationResult {
+  revision_id: string
+  valid: boolean
+  issues: MarkdownValidationIssue[]
+  errors: number
+  warnings: number
+  info: number
+}
+
+export interface RegenerationJob {
+  id: string; status: string; progress_stage: string; progress_percent: number
+  error?: string; attempt_count: number; created_at: string; started_at?: string; completed_at?: string
+}
+export interface RegenerationJobView { job: RegenerationJob; revision_id: string; operations: string[] }
+export interface RegenerationReview {
+  id: string; version_id: string; revision_id: string; job_id: string
+  status: "pending" | "accepted" | "rejected"
+  before_snapshot: Record<string, unknown>; after_snapshot: Record<string, unknown>; comparison: Record<string, unknown>
+  decision_comment?: string; reviewed_by?: string; reviewed_at?: string
+}
+export interface RegenerationReviewComment { id:string; job_id:string; block_id?:string; author_id:string; body:string; created_at:string }
 
 export interface MarkdownRevision {
   id: string
@@ -244,6 +277,20 @@ export class GuidelineMarkdownService {
       throw toGuidelineMarkdownError(error, "Failed to queue Markdown regeneration")
     }
   }
+
+  static async validate(versionId: string, revisionId: string): Promise<MarkdownValidationResult> {
+    return getBackendClient().request<MarkdownValidationResult>(`/api/v2/guideline-versions/${versionId}/markdown-revisions/${revisionId}/validation`)
+  }
+
+  static async regenerationJob(versionId:string, jobId:string):Promise<RegenerationJobView>{
+    return getBackendClient().request<RegenerationJobView>(`/api/v2/guideline-versions/${versionId}/regeneration-jobs/${jobId}`)
+  }
+  static async cancelRegeneration(versionId:string,jobId:string):Promise<RegenerationJob>{return getBackendClient().request<RegenerationJob>(`/api/v2/guideline-versions/${versionId}/regeneration-jobs/${jobId}/cancel`,{method:"POST"})}
+  static async retryRegeneration(versionId:string,jobId:string):Promise<RegenerationJob>{return getBackendClient().request<RegenerationJob>(`/api/v2/guideline-versions/${versionId}/regeneration-jobs/${jobId}/retry`,{method:"POST"})}
+  static async regenerationReview(versionId:string,jobId:string):Promise<RegenerationReview>{return getBackendClient().request<RegenerationReview>(`/api/v2/guideline-versions/${versionId}/regeneration-reviews/${jobId}`)}
+  static async decideRegeneration(versionId:string,jobId:string,decision:"accept"|"reject",comment=""):Promise<RegenerationReview>{return getBackendClient().request<RegenerationReview>(`/api/v2/guideline-versions/${versionId}/regeneration-reviews/${jobId}/${decision}`,{method:"POST",body:JSON.stringify({comment})})}
+  static async reviewComments(versionId:string,jobId:string):Promise<RegenerationReviewComment[]>{return getBackendClient().request<RegenerationReviewComment[]>(`/api/v2/guideline-versions/${versionId}/regeneration-reviews/${jobId}/comments`)}
+  static async addReviewComment(versionId:string,jobId:string,body:string,blockId?:string):Promise<RegenerationReviewComment>{return getBackendClient().request<RegenerationReviewComment>(`/api/v2/guideline-versions/${versionId}/regeneration-reviews/${jobId}/comments`,{method:"POST",body:JSON.stringify({body,block_id:blockId})})}
 
   static async load(versionId: string): Promise<string> {
     try {

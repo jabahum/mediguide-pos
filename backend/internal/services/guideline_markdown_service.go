@@ -26,6 +26,7 @@ var (
 	ErrMarkdownRevisionConflict = errors.New("the Markdown draft was changed by another editor")
 	ErrMarkdownRevisionMissing  = errors.New("Markdown draft revision not found")
 	ErrMarkdownAlreadyCurrent   = errors.New("structured content is already current for this revision")
+	ErrMarkdownValidationFailed = errors.New("Markdown has blocking validation errors")
 	ErrGuidelineVersionExists   = errors.New("a guideline version with this version number already exists")
 )
 
@@ -115,9 +116,6 @@ func (s GuidelineService) SaveMarkdownDraft(
 	input MarkdownDraftInput,
 ) (*MarkdownDraft, error) {
 	content := strings.ReplaceAll(strings.ReplaceAll(input.Content, "\r\n", "\n"), "\r", "\n")
-	if strings.TrimSpace(content) == "" {
-		return nil, errors.New("markdown content is required")
-	}
 	if len([]byte(content)) > maxMarkdownDraftBytes {
 		return nil, errors.New("markdown exceeds maximum allowed size")
 	}
@@ -470,6 +468,13 @@ func (s GuidelineService) RegenerateMarkdown(
 	if err != nil {
 		return nil, err
 	}
+	validation, err := s.ValidateMarkdownRevision(context.Background(), versionID, input.RevisionID)
+	if err != nil {
+		return nil, err
+	}
+	if !validation.Valid {
+		return nil, fmt.Errorf("%w: %d error(s)", ErrMarkdownValidationFailed, validation.Errors)
+	}
 	var result MarkdownRegenerationResult
 	err = s.DB.Transaction(func(tx *gorm.DB) error {
 		var version models.GuidelineVersion
@@ -527,6 +532,13 @@ func (s GuidelineService) RegenerateMarkdown(
 			PayloadJSON: string(payload),
 		}
 		if err := tx.Create(&job).Error; err != nil {
+			return err
+		}
+		review := models.GuidelineRegenerationReview{
+			VersionID: versionID, RevisionID: revision.ID, JobID: job.ID,
+			Status: "pending", BeforeSnapshot: guidelineProjectionSnapshot(tx, versionID),
+		}
+		if err := tx.Create(&review).Error; err != nil {
 			return err
 		}
 		if err := tx.Model(&revision).Updates(map[string]any{

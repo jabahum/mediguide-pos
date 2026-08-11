@@ -566,6 +566,19 @@ func ensureVersionReadyForPublish(tx *gorm.DB, version *models.GuidelineVersion)
 		if version.StructuredContentStatus != "review_required" && version.StructuredContentStatus != "approved" {
 			return fmt.Errorf("%w: structured content status is %s", ErrGuidelineIngestionIncomplete, version.StructuredContentStatus)
 		}
+		var currentRevision models.GuidelineMarkdownRevision
+		if err := tx.First(&currentRevision, "id = ?", *version.CurrentMarkdownRevisionID).Error; err != nil {
+			return err
+		}
+		if currentRevision.RegenerationJobID != nil {
+			var review models.GuidelineRegenerationReview
+			if err := tx.First(&review, "job_id = ? AND version_id = ?", *currentRevision.RegenerationJobID, version.ID).Error; err != nil {
+				return fmt.Errorf("%w: regeneration comparison review is missing", ErrGuidelineValidationFailed)
+			}
+			if review.Status != "accepted" {
+				return fmt.Errorf("%w: regenerated projection has not been accepted", ErrGuidelineValidationFailed)
+			}
+		}
 	}
 
 	var latestJob models.IngestionJob

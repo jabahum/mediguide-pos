@@ -820,3 +820,24 @@ type PaginatedGuidelineDownloadsEnvelope struct {
 	Success bool                        `json:"success"`
 	Data    PaginatedGuidelineDownloads `json:"data"`
 }
+
+type MarkdownValidationEnvelope struct {
+	Success bool                              `json:"success"`
+	Data    services.MarkdownValidationResult `json:"data"`
+}
+type RegenerationJobViewEnvelope struct {
+	Success bool                         `json:"success"`
+	Data    services.RegenerationJobView `json:"data"`
+}
+type RegenerationReviewEnvelope struct {
+	Success bool                               `json:"success"`
+	Data    models.GuidelineRegenerationReview `json:"data"`
+}
+type RegenerationCommentsEnvelope struct {
+	Success bool                            `json:"success"`
+	Data    []models.GuidelineReviewComment `json:"data"`
+}
+type RegenerationCommentEnvelope struct {
+	Success bool                          `json:"success"`
+	Data    models.GuidelineReviewComment `json:"data"`
+}

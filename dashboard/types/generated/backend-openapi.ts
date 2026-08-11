@@ -202,6 +202,24 @@ export interface HandlersIngestionJobEnvelope {
   success?: boolean;
 }
 
+export interface HandlersIngestionJobResponse {
+  attempt_count?: number;
+  cancel_requested_at?: string;
+  canceled_at?: string;
+  completed_at?: string;
+  created_at?: string;
+  error?: string;
+  id?: string;
+  job_type?: string;
+  payload_json?: string;
+  progress_percent?: number;
+  progress_stage?: string;
+  started_at?: string;
+  status?: string;
+  updated_at?: string;
+  version_id?: string;
+}
+
 export type HandlersJSONMap = Record<string, any>;
 
 export interface HandlersLanguageEnvelope {
@@ -302,6 +320,11 @@ export interface HandlersMarkdownUpdateResult {
   size?: number;
   /** @example true */
   updated?: boolean;
+}
+
+export interface HandlersMarkdownValidationEnvelope {
+  data?: ServicesMarkdownValidationResult;
+  success?: boolean;
 }
 
 export interface HandlersMedicalGuidelineEnvelope {
@@ -864,6 +887,26 @@ export interface HandlersReadingProgressEnvelope {
 export interface HandlersRefreshRequest {
   /** @example "Gm8m3Wq2oJ7l6p4XnYx9QbT2f1WvL0H1v2z3k4m5n6o" */
   refresh_token?: string;
+}
+
+export interface HandlersRegenerationCommentEnvelope {
+  data?: ModelsGuidelineReviewComment;
+  success?: boolean;
+}
+
+export interface HandlersRegenerationCommentsEnvelope {
+  data?: ModelsGuidelineReviewComment[];
+  success?: boolean;
+}
+
+export interface HandlersRegenerationJobViewEnvelope {
+  data?: ServicesRegenerationJobView;
+  success?: boolean;
+}
+
+export interface HandlersRegenerationReviewEnvelope {
+  data?: ModelsGuidelineRegenerationReview;
+  success?: boolean;
 }
 
 export interface HandlersRegisterRequest {
@@ -1442,6 +1485,33 @@ export interface ModelsGuidelineMarkdownRevision {
   version_id?: string;
 }
 
+export interface ModelsGuidelineRegenerationReview {
+  after_snapshot?: object;
+  before_snapshot?: object;
+  comparison?: object;
+  created_at?: string;
+  decision_comment?: string;
+  id?: string;
+  job_id?: string;
+  reviewed_at?: string;
+  reviewed_by?: string;
+  revision_id?: string;
+  status?: string;
+  updated_at?: string;
+  version_id?: string;
+}
+
+export interface ModelsGuidelineReviewComment {
+  author_id?: string;
+  block_id?: string;
+  body?: string;
+  created_at?: string;
+  id?: string;
+  job_id?: string;
+  updated_at?: string;
+  version_id?: string;
+}
+
 export interface ModelsGuidelineSection {
   created_at?: string;
   html?: string;
@@ -1531,12 +1601,16 @@ export interface ModelsGuidelineVersionManifest {
 
 export interface ModelsIngestionJob {
   attempt_count?: number;
+  cancel_requested_at?: string;
+  canceled_at?: string;
   completed_at?: string;
   created_at?: string;
   error?: string;
   id?: string;
   job_type?: string;
   payload_json?: string;
+  progress_percent?: number;
+  progress_stage?: string;
   started_at?: string;
   status?: string;
   updated_at?: string;
@@ -2380,6 +2454,11 @@ export interface ServicesGuidelinePublicationValidation {
   warnings?: ServicesGuidelineReviewIssue[];
 }
 
+export interface ServicesGuidelineReviewCommentInput {
+  block_id?: string;
+  body?: string;
+}
+
 export interface ServicesGuidelineReviewIssue {
   asset_id?: string;
   block_id?: string;
@@ -2465,6 +2544,25 @@ export interface ServicesMarkdownRegenerationResult {
   operations?: string[];
   queued_at?: string;
   revision_id?: string;
+}
+
+export interface ServicesMarkdownValidationIssue {
+  code?: string;
+  column?: number;
+  end_column?: number;
+  end_line?: number;
+  line?: number;
+  message?: string;
+  severity?: string;
+}
+
+export interface ServicesMarkdownValidationResult {
+  errors?: number;
+  info?: number;
+  issues?: ServicesMarkdownValidationIssue[];
+  revision_id?: string;
+  valid?: boolean;
+  warnings?: number;
 }
 
 export interface ServicesMedicalGuidelineInput {
@@ -2857,6 +2955,16 @@ export interface ServicesReadingProgressInput {
   progress_percentage?: number;
   reading_time_seconds?: number;
   total_sections?: number;
+}
+
+export interface ServicesRegenerationDecisionInput {
+  comment?: string;
+}
+
+export interface ServicesRegenerationJobView {
+  job?: ModelsIngestionJob;
+  operations?: string[];
+  revision_id?: string;
 }
 
 export interface ServicesRegionChildren {

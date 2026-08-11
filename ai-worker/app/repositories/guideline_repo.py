@@ -178,6 +178,7 @@ class GuidelineRepository:
                 "SELECT pg_advisory_xact_lock(hashtext('guideline-extraction'), hashtext(%s))",
                 (version_id,),
             )
+            before_snapshot = self._projection_snapshot(cur, version_id)
             cur.execute("DELETE FROM guideline_chunks WHERE version_id = %s", (version_id,))
             cur.execute("DELETE FROM guideline_tables WHERE version_id = %s", (version_id,))
             cur.execute("DELETE FROM guideline_content_blocks WHERE version_id = %s", (version_id,))
@@ -185,7 +186,7 @@ class GuidelineRepository:
                 """
                 SELECT id FROM guideline_assets
                 WHERE version_id = %s AND deleted_at IS NULL
-                  AND source_fingerprint LIKE 'editor:%%'
+                  AND (source_fingerprint LIKE 'editor:%%' OR type='original_pdf')
                 """,
                 (version_id,),
             )
@@ -193,7 +194,7 @@ class GuidelineRepository:
             cur.execute(
                 """
                 DELETE FROM guideline_assets
-                WHERE version_id = %s AND source_fingerprint NOT LIKE 'editor:%%'
+                WHERE version_id = %s AND source_fingerprint NOT LIKE 'editor:%%' AND type <> 'original_pdf'
                 """,
                 (version_id,),
             )
@@ -461,7 +462,60 @@ class GuidelineRepository:
                 has_original_pdf=bool(str(version.get("original_file_key") or "").strip())
                 or any(asset.type == "original_pdf" for asset in assets),
             )
+            if ingestion_job_id:
+                after_snapshot = self._projection_snapshot(cur, version_id)
+                comparison = self._compare_projection_snapshots(before_snapshot, after_snapshot)
+                cur.execute(
+                    """
+                    UPDATE guideline_regeneration_reviews
+                    SET after_snapshot=%s::jsonb, comparison=%s::jsonb, updated_at=now()
+                    WHERE job_id=%s AND version_id=%s AND deleted_at IS NULL
+                    """,
+                    (json.dumps(after_snapshot, default=str), json.dumps(comparison, default=str), ingestion_job_id, version_id),
+                )
             conn.commit()
+
+    @staticmethod
+    def _projection_snapshot(cur, version_id: str) -> dict[str, Any]:
+        cur.execute("SELECT title, slug, level, sort_order FROM guideline_sections WHERE version_id=%s AND deleted_at IS NULL ORDER BY sort_order,id", (version_id,))
+        sections = cur.fetchall()
+        cur.execute("SELECT type, source_fingerprint, provenance_json, review_status, page_start, page_end FROM guideline_content_blocks WHERE version_id=%s AND deleted_at IS NULL ORDER BY sort_order,id", (version_id,))
+        blocks = cur.fetchall()
+        counts: dict[str, int] = {}
+        for block in blocks:
+            key = str(block.get("type") or "unknown")
+            counts[key] = counts.get(key, 0) + 1
+        cur.execute("SELECT count(*) AS count FROM guideline_tables WHERE version_id=%s AND deleted_at IS NULL", (version_id,)); table_count = int(cur.fetchone()["count"])
+        cur.execute("SELECT count(*) AS count FROM guideline_chunks WHERE version_id=%s AND deleted_at IS NULL", (version_id,)); chunk_count = int(cur.fetchone()["count"])
+        cur.execute("SELECT type, source_fingerprint, provenance_json FROM guideline_assets WHERE version_id=%s AND deleted_at IS NULL ORDER BY type,source_fingerprint", (version_id,)); assets = cur.fetchall()
+        return {"sections": sections, "blocks": blocks, "block_type_counts": counts, "table_count": table_count, "chunk_count": chunk_count, "assets": assets}
+
+    @staticmethod
+    def _compare_projection_snapshots(before: dict[str, Any], after: dict[str, Any]) -> dict[str, Any]:
+        before_sections = {str(row.get("slug")): row for row in before.get("sections", [])}
+        after_sections = {str(row.get("slug")): row for row in after.get("sections", [])}
+        before_types = before.get("block_type_counts", {})
+        after_types = after.get("block_type_counts", {})
+        all_types = sorted(set(before_types) | set(after_types))
+        before_assets = {str(row.get("source_fingerprint")): row for row in before.get("assets", [])}
+        after_assets = {str(row.get("source_fingerprint")): row for row in after.get("assets", [])}
+        has_original_pdf = any(row.get("type") == "original_pdf" for row in after.get("assets", []))
+        has_page_citations = any(row.get("page_start") is not None for row in after.get("blocks", []))
+        return {
+            "sections": {
+                "added": [after_sections[key] for key in sorted(set(after_sections) - set(before_sections))],
+                "removed": [before_sections[key] for key in sorted(set(before_sections) - set(after_sections))],
+                "renamed": [{"before": before_sections[key], "after": after_sections[key]} for key in sorted(set(before_sections) & set(after_sections)) if before_sections[key].get("title") != after_sections[key].get("title")],
+                "hierarchy_changed": [{"before": before_sections[key], "after": after_sections[key]} for key in sorted(set(before_sections) & set(after_sections)) if before_sections[key].get("level") != after_sections[key].get("level")],
+            },
+            "block_types": [{"type": key, "before": int(before_types.get(key, 0)), "after": int(after_types.get(key, 0))} for key in all_types if before_types.get(key, 0) != after_types.get(key, 0)],
+            "tables": {"before": before.get("table_count", 0), "after": after.get("table_count", 0)},
+            "chunks": {"before": before.get("chunk_count", 0), "after": after.get("chunk_count", 0)},
+            "assets": {"added": [after_assets[key] for key in sorted(set(after_assets)-set(before_assets))], "removed": [before_assets[key] for key in sorted(set(before_assets)-set(after_assets))]},
+            "provenance": {"before_fingerprints": len({row.get("source_fingerprint") for row in before.get("blocks", [])}), "after_fingerprints": len({row.get("source_fingerprint") for row in after.get("blocks", [])})},
+            "original_pdf_available": has_original_pdf,
+            "pdf_citations_unavailable": not has_original_pdf or not has_page_citations,
+        }
 
     @staticmethod
     def _prepare_asset_rows(

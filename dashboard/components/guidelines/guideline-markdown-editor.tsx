@@ -91,6 +91,10 @@ import {
   GuidelineMarkdownService,
   MarkdownDraft,
   MarkdownRevision,
+  MarkdownValidationIssue,
+  RegenerationJobView,
+  RegenerationReview,
+  RegenerationReviewComment,
 } from "@/services/guideline-markdown.service"
 
 interface GuidelineMarkdownEditorProps {
@@ -250,6 +254,12 @@ export function GuidelineMarkdownEditor({
   const [compareLabel, setCompareLabel] = React.useState("")
   const [conflictDraft, setConflictDraft] = React.useState<MarkdownDraft | null>(null)
   const [regenerating, setRegenerating] = React.useState(false)
+  const [serverIssues, setServerIssues] = React.useState<MarkdownValidationIssue[]>([])
+  const [regenerationJob, setRegenerationJob] = React.useState<RegenerationJobView | null>(null)
+  const [regenerationReview, setRegenerationReview] = React.useState<RegenerationReview | null>(null)
+  const [reviewComment, setReviewComment] = React.useState("")
+  const [threadComment, setThreadComment] = React.useState("")
+  const [reviewComments, setReviewComments] = React.useState<RegenerationReviewComment[]>([])
   const [pendingSourceType, setPendingSourceType] = React.useState<"blank" | "template" | "uploaded_markdown" | null>(null)
   const [previewPresentation, setPreviewPresentation] = React.useState<MarkdownPreviewPresentation>("rendered")
   const [duplicateOpen, setDuplicateOpen] = React.useState(false)
@@ -278,7 +288,8 @@ export function GuidelineMarkdownEditor({
   const canEdit = editable && !published
   const dirty = canEdit && content !== savedContent
   const headings = React.useMemo(() => markdownHeadings(content), [content])
-  const issues = React.useMemo(() => validateMarkdown(content), [content])
+  const localIssues = React.useMemo(() => validateMarkdown(content), [content])
+  const issues = !dirty && serverIssues.length > 0 ? serverIssues : localIssues
   const stats = React.useMemo(() => markdownStats(content), [content])
   const visibleHeadings = React.useMemo(() => headings.filter((heading, index) => {
     if (!heading.text.toLowerCase().includes(outlineSearch.toLowerCase())) return false
@@ -400,10 +411,6 @@ export function GuidelineMarkdownEditor({
 
   const save = React.useCallback(async (checkpoint?: { name: string; summary: string }) => {
     if (!canEdit || !dirty || saving || !online) return
-    if (!content.trim()) {
-      setSaveError("Markdown content cannot be empty.")
-      return
-    }
     setSaving(true)
     setSaveError(null)
     try {
@@ -473,19 +480,39 @@ export function GuidelineMarkdownEditor({
   }, [canEdit, changeMode, mode, save])
 
   React.useEffect(() => {
-    if (!draft || !["queued", "processing"].includes(draft.revision.structured_content_status)) return
-    const timer = window.setInterval(async () => {
+    if (!draft || dirty) return
+    let active = true
+    void GuidelineMarkdownService.validate(versionId, draft.revision.id).then((result) => { if(active)setServerIssues(result.issues) }).catch(() => { /* Local validation remains available. */ })
+    return () => { active=false }
+  }, [draft, dirty, versionId])
+
+  React.useEffect(() => {
+    const jobId = draft?.revision.regeneration_job_id
+    if (!draft || !jobId || !["queued", "processing"].includes(draft.revision.structured_content_status)) return
+    let active = true
+    const refresh = async () => {
       try {
-        const refreshed = await GuidelineMarkdownService.loadDraft(versionId)
-        setDraft(refreshed)
-        if (!["queued", "processing"].includes(refreshed.revision.structured_content_status)) {
-          showToast.success("Regeneration updated", `Structured content is ${refreshed.revision.structured_content_status}.`)
+        const job = await GuidelineMarkdownService.regenerationJob(versionId, jobId)
+        if (!active) return
+        setRegenerationJob(job)
+        if (["completed","failed","canceled"].includes(job.job.status)) {
+          const refreshed = await GuidelineMarkdownService.loadDraft(versionId)
+          if (!active) return
+          setDraft(refreshed)
+          if (job.job.status === "completed") {
+            setRegenerationReview(await GuidelineMarkdownService.regenerationReview(versionId,jobId))
+            setReviewComments(await GuidelineMarkdownService.reviewComments(versionId,jobId))
+          }
+          if (job.job.status === "failed") showToast.error("Regeneration failed", job.job.error || "The worker could not regenerate this revision.")
+          else showToast.success("Regeneration updated", `Regeneration is ${job.job.status}.`)
         }
-      } catch {
-        // Retain the last known status and retry on the next interval.
-      }
-    }, 5000)
-    return () => window.clearInterval(timer)
+      } catch { /* Retain the last known status and retry. */ }
+    }
+    void refresh()
+    const timer = window.setInterval(async () => {
+      await refresh()
+    }, 2500)
+    return () => { active=false; window.clearInterval(timer) }
   }, [draft, versionId])
 
   const format = (action: MarkdownFormatAction) => {
@@ -630,6 +657,9 @@ export function GuidelineMarkdownEditor({
     }
     setRegenerating(true)
     try {
+      const validation = await GuidelineMarkdownService.validate(versionId, draft.revision.id)
+      setServerIssues(validation.issues)
+      if (!validation.valid) { showToast.error("Fix validation errors", `The server found ${validation.errors} blocking issue(s).`); return }
       const result = await GuidelineMarkdownService.regenerate(versionId, draft.revision.id)
       setDraft({
         ...draft,
@@ -639,12 +669,26 @@ export function GuidelineMarkdownEditor({
           structured_content_status: "queued",
         },
       })
+      setRegenerationJob({job:{...result.job,progress_stage:"queued",progress_percent:0,attempt_count:0},revision_id:result.revision_id,operations:result.operations})
+      setRegenerationReview(null)
       showToast.success("Regeneration queued", "Sections, structured blocks, search chunks, and embeddings will be rebuilt.")
     } catch (error) {
       showToast.error("Regeneration failed", error instanceof Error ? error.message : "Could not queue regeneration")
     } finally {
       setRegenerating(false)
     }
+  }
+
+  const decideRegeneration = async (decision:"accept"|"reject") => {
+    const jobId=draft?.revision.regeneration_job_id;if(!jobId)return
+    try { const review=await GuidelineMarkdownService.decideRegeneration(versionId,jobId,decision,reviewComment);setRegenerationReview(review);setReviewComment("");setDraft(await GuidelineMarkdownService.loadDraft(versionId));showToast.success(`Regeneration ${decision}ed`) }
+    catch(error){showToast.error("Review decision failed",error instanceof Error?error.message:"Could not save the review decision")}
+  }
+
+  const addReviewComment = async () => {
+    const jobId=draft?.revision.regeneration_job_id;if(!jobId||!threadComment.trim())return
+    try{const comment=await GuidelineMarkdownService.addReviewComment(versionId,jobId,threadComment.trim());setReviewComments((current)=>[...current,comment]);setThreadComment("")}
+    catch(error){showToast.error("Comment not saved",error instanceof Error?error.message:"Could not save comment")}
   }
 
   const loadMarkdownFile = async (file: File) => {
@@ -858,6 +902,28 @@ export function GuidelineMarkdownEditor({
         {published && <Alert className="m-4 mb-0"><Info className="h-4 w-4" /><AlertTitle>Published version</AlertTitle><AlertDescription>Published Markdown is immutable. Create a new version to revise it.</AlertDescription></Alert>}
         {renamedAnchors.length > 0 && <Alert className="m-4 mb-0"><Info className="h-4 w-4" /><AlertTitle>Stable section anchor retained</AlertTitle><AlertDescription>{renamedAnchors.length} renamed heading{renamedAnchors.length === 1 ? "" : "s"} will retain revision metadata anchors. Review inbound links before publication.</AlertDescription></Alert>}
         {saveError && <Alert variant="destructive" className="m-4 mb-0"><AlertCircle className="h-4 w-4" /><AlertTitle>Markdown was not saved</AlertTitle><AlertDescription className="flex flex-wrap items-center gap-2"><span>{saveError} Your edits remain available.</span><Button size="sm" variant="outline" disabled={saving || !online} onClick={() => void save()}>Retry save</Button></AlertDescription></Alert>}</div>
+        {regenerationJob && <Alert className="m-4 mb-0 print:hidden">
+          <Clock3 className="h-4 w-4" />
+          <AlertTitle>Regeneration: {regenerationJob.job.progress_stage.replaceAll("_"," ")} ({regenerationJob.job.progress_percent}%)</AlertTitle>
+          <AlertDescription>
+            <div className="mt-2 h-2 overflow-hidden rounded bg-muted"><div className="h-full bg-primary transition-all" style={{width:`${regenerationJob.job.progress_percent}%`}} /></div>
+            <div className="mt-2 flex flex-wrap gap-2">
+              {["queued","running","cancel_requested"].includes(regenerationJob.job.status) && <Button size="sm" variant="outline" onClick={async()=>{try{const job=await GuidelineMarkdownService.cancelRegeneration(versionId,regenerationJob.job.id);setRegenerationJob({...regenerationJob,job})}catch(error){showToast.error("Cancellation unavailable",error instanceof Error?error.message:"Could not cancel")}}}>Cancel safely</Button>}
+              {["failed","canceled"].includes(regenerationJob.job.status) && <Button size="sm" variant="outline" onClick={async()=>{try{const job=await GuidelineMarkdownService.retryRegeneration(versionId,regenerationJob.job.id);setRegenerationJob({...regenerationJob,job});setDraft((current)=>current?{...current,revision:{...current.revision,structured_content_status:"queued"}}:current)}catch(error){showToast.error("Retry unavailable",error instanceof Error?error.message:"Could not retry")}}}>Retry</Button>}
+              {regenerationJob.job.error && <span className="text-destructive">{regenerationJob.job.error}</span>}
+            </div>
+          </AlertDescription>
+        </Alert>}
+        {regenerationReview && <Alert className="m-4 mb-0 print:hidden">
+          <GitCompareArrows className="h-4 w-4" /><AlertTitle>Regeneration review: {regenerationReview.status}</AlertTitle>
+          <AlertDescription className="space-y-3">
+            <p>The comparison covers hierarchy, block-type counts, tables, chunks, assets, provenance, and original-PDF availability. Review individual high-risk blocks in the structured review workspace before acceptance.</p>
+            <pre className="max-h-56 overflow-auto rounded bg-muted p-3 text-xs">{JSON.stringify(regenerationReview.comparison,null,2)}</pre>
+            <div className="space-y-2">{reviewComments.map((comment)=><div key={comment.id} className="rounded border p-2 text-xs"><span className="font-medium">{comment.author_id}</span> · {new Date(comment.created_at).toLocaleString()}<p className="mt-1 whitespace-pre-wrap">{comment.body}</p></div>)}</div>
+            <div className="flex gap-2"><Textarea className="min-h-16" value={threadComment} onChange={(event)=>setThreadComment(event.target.value)} placeholder="Leave a review comment" /><Button size="sm" variant="outline" disabled={!threadComment.trim()} onClick={()=>void addReviewComment()}>Comment</Button></div>
+            {regenerationReview.status === "pending" && <><Textarea value={reviewComment} onChange={(event)=>setReviewComment(event.target.value)} placeholder="Reviewer comment (required for rejection)" /><div className="flex gap-2"><Button size="sm" onClick={()=>void decideRegeneration("accept")}>Accept regenerated projection</Button><Button size="sm" variant="destructive" disabled={!reviewComment.trim()} onClick={()=>void decideRegeneration("reject")}>Reject and return to Markdown</Button></div></>}
+          </AlertDescription>
+        </Alert>}
 
         <div className={cn("grid", !preferences.distractionFree && "lg:grid-cols-[220px_minmax(0,1fr)]")}>
           {!preferences.distractionFree && (

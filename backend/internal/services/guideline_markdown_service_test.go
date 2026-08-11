@@ -54,6 +54,24 @@ func TestSaveMarkdownDraftCreatesImmutableRevisionWithoutIngestion(t *testing.T)
 	}
 }
 
+func TestSaveMarkdownDraftPreservesInvalidEmptyDraftForRecovery(t *testing.T) {
+	service, version, actorID := markdownServiceFixture(t)
+	draft, err := service.SaveMarkdownDraft(context.Background(), version.ID, actorID, MarkdownDraftInput{Content: "", SourceType: "blank"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if draft.Content != "" {
+		t.Fatalf("empty draft was rewritten: %q", draft.Content)
+	}
+	validation, err := service.ValidateMarkdownRevision(context.Background(), version.ID, draft.Revision.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if validation.Valid || validation.Errors == 0 {
+		t.Fatal("empty draft should remain saved but invalid")
+	}
+}
+
 func TestSaveMarkdownDraftRejectsStaleRevisionAndPreservesCurrent(t *testing.T) {
 	service, version, actorID := markdownServiceFixture(t)
 	first, err := service.SaveMarkdownDraft(context.Background(), version.ID, actorID, MarkdownDraftInput{Content: "# First", SourceType: "blank"})
@@ -200,5 +218,97 @@ func TestRegenerateMarkdownIsExplicitAndIdempotent(t *testing.T) {
 	})
 	if !errors.Is(err, ErrMarkdownRevisionConflict) {
 		t.Fatalf("expected reused idempotency key with different operations to conflict, got %v", err)
+	}
+}
+
+func TestRegenerateMarkdownUsesAuthoritativeValidation(t *testing.T) {
+	service, version, actorID := markdownServiceFixture(t)
+	draft, err := service.SaveMarkdownDraft(context.Background(), version.ID, actorID, MarkdownDraftInput{Content: "# Unsafe\n\n<script>alert(1)</script>", SourceType: "blank"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = service.RegenerateMarkdown(version.ID, actorID, MarkdownRegenerationInput{RevisionID: draft.Revision.ID})
+	if !errors.Is(err, ErrMarkdownValidationFailed) {
+		t.Fatalf("expected validation failure, got %v", err)
+	}
+	var count int64
+	if err := service.DB.Model(&models.IngestionJob{}).Count(&count).Error; err != nil {
+		t.Fatal(err)
+	}
+	if count != 0 {
+		t.Fatal("invalid Markdown queued a job")
+	}
+}
+
+func TestRegenerationCancellationRetryAndReviewGate(t *testing.T) {
+	service, version, actorID := markdownServiceFixture(t)
+	draft, err := service.SaveMarkdownDraft(context.Background(), version.ID, actorID, MarkdownDraftInput{Content: "# Ready", SourceType: "blank"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	queued, err := service.RegenerateMarkdown(version.ID, actorID, MarkdownRegenerationInput{RevisionID: draft.Revision.ID, IdempotencyKey: "review-gate"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	canceled, err := service.CancelRegenerationJob(version.ID, queued.Job.ID, actorID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if canceled.Status != "canceled" {
+		t.Fatalf("unexpected status %s", canceled.Status)
+	}
+	retried, err := service.RetryRegenerationJob(version.ID, queued.Job.ID, actorID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if retried.Status != "queued" {
+		t.Fatalf("unexpected retry status %s", retried.Status)
+	}
+	if err := service.DB.Model(&models.IngestionJob{}).Where("id=?", queued.Job.ID).Updates(map[string]any{"status": "completed", "progress_stage": "completed", "progress_percent": 100}).Error; err != nil {
+		t.Fatal(err)
+	}
+	block := models.GuidelineContentBlock{VersionID: version.ID, Type: models.GuidelineBlockWarning, SortOrder: 1, ContentJSON: []byte(`{"type":"warning","content":"Escalate"}`), SourceFingerprint: "warning", ProvenanceJSON: []byte(`{}`), ReviewStatus: models.GuidelineBlockDraft}
+	if err := service.DB.Create(&block).Error; err != nil {
+		t.Fatal(err)
+	}
+	_, err = service.DecideRegenerationReview(version.ID, queued.Job.ID, actorID, true, RegenerationDecisionInput{})
+	if !errors.Is(err, ErrRegenerationReviewIncomplete) {
+		t.Fatalf("unreviewed high-risk block was accepted: %v", err)
+	}
+	if err := service.DB.Model(&block).Update("review_status", models.GuidelineBlockReviewed).Error; err != nil {
+		t.Fatal(err)
+	}
+	review, err := service.DecideRegenerationReview(version.ID, queued.Job.ID, actorID, true, RegenerationDecisionInput{Comment: "Reviewed against source"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if review.Status != "accepted" {
+		t.Fatalf("unexpected review status %s", review.Status)
+	}
+}
+
+func TestRegenerationRejectionRequiresComment(t *testing.T) {
+	service, version, actorID := markdownServiceFixture(t)
+	draft, err := service.SaveMarkdownDraft(context.Background(), version.ID, actorID, MarkdownDraftInput{Content: "# Ready", SourceType: "blank"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	queued, err := service.RegenerateMarkdown(version.ID, actorID, MarkdownRegenerationInput{RevisionID: draft.Revision.ID})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := service.DB.Model(&models.IngestionJob{}).Where("id=?", queued.Job.ID).Update("status", "completed").Error; err != nil {
+		t.Fatal(err)
+	}
+	_, err = service.DecideRegenerationReview(version.ID, queued.Job.ID, actorID, false, RegenerationDecisionInput{})
+	if !errors.Is(err, ErrRegenerationJobConflict) {
+		t.Fatalf("empty rejection reason accepted: %v", err)
+	}
+	review, err := service.DecideRegenerationReview(version.ID, queued.Job.ID, actorID, false, RegenerationDecisionInput{Comment: "Hierarchy differs from source"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if review.Status != "rejected" {
+		t.Fatalf("unexpected status %s", review.Status)
 	}
 }

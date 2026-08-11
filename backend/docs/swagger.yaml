@@ -259,6 +259,39 @@ definitions:
         example: true
         type: boolean
     type: object
+  handlers.IngestionJobResponse:
+    properties:
+      attempt_count:
+        type: integer
+      cancel_requested_at:
+        type: string
+      canceled_at:
+        type: string
+      completed_at:
+        type: string
+      created_at:
+        type: string
+      error:
+        type: string
+      id:
+        type: string
+      job_type:
+        type: string
+      payload_json:
+        type: string
+      progress_percent:
+        type: integer
+      progress_stage:
+        type: string
+      started_at:
+        type: string
+      status:
+        type: string
+      updated_at:
+        type: string
+      version_id:
+        type: string
+    type: object
   handlers.JSONMap:
     additionalProperties: {}
     type: object
@@ -431,6 +464,13 @@ definitions:
         type: integer
       updated:
         example: true
+        type: boolean
+    type: object
+  handlers.MarkdownValidationEnvelope:
+    properties:
+      data:
+        $ref: '#/definitions/services.MarkdownValidationResult'
+      success:
         type: boolean
     type: object
   handlers.MedicalGuidelineEnvelope:
@@ -1288,6 +1328,36 @@ definitions:
       refresh_token:
         example: Gm8m3Wq2oJ7l6p4XnYx9QbT2f1WvL0H1v2z3k4m5n6o
         type: string
+    type: object
+  handlers.RegenerationCommentEnvelope:
+    properties:
+      data:
+        $ref: '#/definitions/models.GuidelineReviewComment'
+      success:
+        type: boolean
+    type: object
+  handlers.RegenerationCommentsEnvelope:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/models.GuidelineReviewComment'
+        type: array
+      success:
+        type: boolean
+    type: object
+  handlers.RegenerationJobViewEnvelope:
+    properties:
+      data:
+        $ref: '#/definitions/services.RegenerationJobView'
+      success:
+        type: boolean
+    type: object
+  handlers.RegenerationReviewEnvelope:
+    properties:
+      data:
+        $ref: '#/definitions/models.GuidelineRegenerationReview'
+      success:
+        type: boolean
     type: object
   handlers.RegisterRequest:
     properties:
@@ -2300,6 +2370,54 @@ definitions:
       version_id:
         type: string
     type: object
+  models.GuidelineRegenerationReview:
+    properties:
+      after_snapshot:
+        type: object
+      before_snapshot:
+        type: object
+      comparison:
+        type: object
+      created_at:
+        type: string
+      decision_comment:
+        type: string
+      id:
+        type: string
+      job_id:
+        type: string
+      reviewed_at:
+        type: string
+      reviewed_by:
+        type: string
+      revision_id:
+        type: string
+      status:
+        type: string
+      updated_at:
+        type: string
+      version_id:
+        type: string
+    type: object
+  models.GuidelineReviewComment:
+    properties:
+      author_id:
+        type: string
+      block_id:
+        type: string
+      body:
+        type: string
+      created_at:
+        type: string
+      id:
+        type: string
+      job_id:
+        type: string
+      updated_at:
+        type: string
+      version_id:
+        type: string
+    type: object
   models.GuidelineSection:
     properties:
       created_at:
@@ -2479,6 +2597,10 @@ definitions:
     properties:
       attempt_count:
         type: integer
+      cancel_requested_at:
+        type: string
+      canceled_at:
+        type: string
       completed_at:
         type: string
       created_at:
@@ -2490,6 +2612,10 @@ definitions:
       job_type:
         type: string
       payload_json:
+        type: string
+      progress_percent:
+        type: integer
+      progress_stage:
         type: string
       started_at:
         type: string
@@ -4047,6 +4173,13 @@ definitions:
           $ref: '#/definitions/services.GuidelineReviewIssue'
         type: array
     type: object
+  services.GuidelineReviewCommentInput:
+    properties:
+      block_id:
+        type: string
+      body:
+        type: string
+    type: object
   services.GuidelineReviewIssue:
     properties:
       asset_id:
@@ -4203,6 +4336,40 @@ definitions:
         type: string
       revision_id:
         type: string
+    type: object
+  services.MarkdownValidationIssue:
+    properties:
+      code:
+        type: string
+      column:
+        type: integer
+      end_column:
+        type: integer
+      end_line:
+        type: integer
+      line:
+        type: integer
+      message:
+        type: string
+      severity:
+        type: string
+    type: object
+  services.MarkdownValidationResult:
+    properties:
+      errors:
+        type: integer
+      info:
+        type: integer
+      issues:
+        items:
+          $ref: '#/definitions/services.MarkdownValidationIssue'
+        type: array
+      revision_id:
+        type: string
+      valid:
+        type: boolean
+      warnings:
+        type: integer
     type: object
   services.MedicalGuidelineInput:
     properties:
@@ -4930,6 +5097,22 @@ definitions:
         type: integer
       total_sections:
         type: integer
+    type: object
+  services.RegenerationDecisionInput:
+    properties:
+      comment:
+        type: string
+    type: object
+  services.RegenerationJobView:
+    properties:
+      job:
+        $ref: '#/definitions/models.IngestionJob'
+      operations:
+        items:
+          type: string
+        type: array
+      revision_id:
+        type: string
     type: object
   services.RegionChildren:
     properties:
@@ -9008,6 +9191,33 @@ paths:
       summary: Restore a historical Markdown revision as a new draft
       tags:
       - guideline-markdown
+  /api/v2/guideline-versions/{id}/markdown-revisions/{revisionId}/validation:
+    get:
+      parameters:
+      - description: Guideline version ID
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Markdown revision ID
+        format: uuid
+        in: path
+        name: revisionId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.MarkdownValidationEnvelope'
+      security:
+      - BearerAuth: []
+      summary: Validate an immutable Markdown revision
+      tags:
+      - guideline-markdown
   /api/v2/guideline-versions/{id}/preview:
     get:
       parameters:
@@ -9100,6 +9310,246 @@ paths:
       summary: Regenerate structured content and RAG data from an exact Markdown revision
       tags:
       - guideline-markdown
+  /api/v2/guideline-versions/{id}/regeneration-jobs/{jobId}:
+    get:
+      parameters:
+      - description: Guideline version ID
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Regeneration job ID
+        format: uuid
+        in: path
+        name: jobId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.RegenerationJobViewEnvelope'
+      security:
+      - BearerAuth: []
+      summary: Get observable regeneration progress
+      tags:
+      - guideline-markdown
+  /api/v2/guideline-versions/{id}/regeneration-jobs/{jobId}/cancel:
+    post:
+      parameters:
+      - description: Guideline version ID
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Regeneration job ID
+        format: uuid
+        in: path
+        name: jobId
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.IngestionJobResponse'
+      security:
+      - BearerAuth: []
+      summary: Request safe cancellation of regeneration
+      tags:
+      - guideline-markdown
+  /api/v2/guideline-versions/{id}/regeneration-jobs/{jobId}/retry:
+    post:
+      parameters:
+      - description: Guideline version ID
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Regeneration job ID
+        format: uuid
+        in: path
+        name: jobId
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.IngestionJobResponse'
+      security:
+      - BearerAuth: []
+      summary: Retry a failed or canceled regeneration
+      tags:
+      - guideline-markdown
+  /api/v2/guideline-versions/{id}/regeneration-reviews/{jobId}:
+    get:
+      parameters:
+      - description: Guideline version ID
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Regeneration job ID
+        format: uuid
+        in: path
+        name: jobId
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.RegenerationReviewEnvelope'
+      security:
+      - BearerAuth: []
+      summary: Compare regenerated content with the prior projection
+      tags:
+      - guideline-review
+  /api/v2/guideline-versions/{id}/regeneration-reviews/{jobId}/accept:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Guideline version ID
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Regeneration job ID
+        format: uuid
+        in: path
+        name: jobId
+        required: true
+        type: string
+      - description: Reviewer comment
+        in: body
+        name: payload
+        schema:
+          $ref: '#/definitions/services.RegenerationDecisionInput'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.RegenerationReviewEnvelope'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Accept a regenerated projection after high-risk review
+      tags:
+      - guideline-review
+  /api/v2/guideline-versions/{id}/regeneration-reviews/{jobId}/comments:
+    get:
+      parameters:
+      - description: Guideline version ID
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Regeneration job ID
+        format: uuid
+        in: path
+        name: jobId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.RegenerationCommentsEnvelope'
+      security:
+      - BearerAuth: []
+      summary: List ordered comments for a regeneration review
+      tags:
+      - guideline-review
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Guideline version ID
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Regeneration job ID
+        format: uuid
+        in: path
+        name: jobId
+        required: true
+        type: string
+      - description: Comment
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/services.GuidelineReviewCommentInput'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/handlers.RegenerationCommentEnvelope'
+      security:
+      - BearerAuth: []
+      summary: Add a review or block-level comment
+      tags:
+      - guideline-review
+  /api/v2/guideline-versions/{id}/regeneration-reviews/{jobId}/reject:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Guideline version ID
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Regeneration job ID
+        format: uuid
+        in: path
+        name: jobId
+        required: true
+        type: string
+      - description: Required rejection comment
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/services.RegenerationDecisionInput'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.RegenerationReviewEnvelope'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Reject a regenerated projection and return to Markdown
+      tags:
+      - guideline-review
   /api/v2/guideline-versions/{id}/review:
     get:
       parameters:

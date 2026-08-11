@@ -181,7 +181,22 @@ class GuidelineRepository:
             cur.execute("DELETE FROM guideline_chunks WHERE version_id = %s", (version_id,))
             cur.execute("DELETE FROM guideline_tables WHERE version_id = %s", (version_id,))
             cur.execute("DELETE FROM guideline_content_blocks WHERE version_id = %s", (version_id,))
-            cur.execute("DELETE FROM guideline_assets WHERE version_id = %s", (version_id,))
+            cur.execute(
+                """
+                SELECT id FROM guideline_assets
+                WHERE version_id = %s AND deleted_at IS NULL
+                  AND source_fingerprint LIKE 'editor:%%'
+                """,
+                (version_id,),
+            )
+            authored_asset_ids = {str(row["id"]) for row in cur.fetchall()}
+            cur.execute(
+                """
+                DELETE FROM guideline_assets
+                WHERE version_id = %s AND source_fingerprint NOT LIKE 'editor:%%'
+                """,
+                (version_id,),
+            )
             cur.execute("DELETE FROM guideline_sections WHERE version_id = %s", (version_id,))
 
             section_id_by_order: dict[int, str] = {}
@@ -250,6 +265,17 @@ class GuidelineRepository:
                     if not asset_id:
                         raise ValueError(f"Structured block references missing asset: {asset_source_key}")
                     content["asset_id"] = asset_id
+                direct_asset_id = str(content.get("asset_id") or "").strip()
+                generated_asset_ids = asset_id_by_source_key.values()
+                if (
+                    direct_asset_id
+                    and direct_asset_id not in authored_asset_ids
+                    and direct_asset_id not in generated_asset_ids
+                ):
+                    raise ValueError(
+                        "Structured block references an asset outside this version: "
+                        f"{direct_asset_id}"
+                    )
                 block_rows.append(
                     (
                         block_id,

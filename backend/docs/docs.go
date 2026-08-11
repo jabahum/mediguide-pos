@@ -4455,7 +4455,245 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/v2/guideline-versions/{id}/assets": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "guideline-assets"
+                ],
+                "summary": "List a version's authored guideline assets",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Guideline version UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/services.GuidelineAssetList"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "multipart/form-data"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "guideline-assets"
+                ],
+                "summary": "Upload a version-scoped guideline image",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Guideline version UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "file",
+                        "description": "PNG, JPEG, GIF or WebP image",
+                        "name": "file",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Image alternative text",
+                        "name": "alternative_text",
+                        "in": "formData"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Caption",
+                        "name": "caption",
+                        "in": "formData"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Source",
+                        "name": "source",
+                        "in": "formData"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Attribution",
+                        "name": "attribution",
+                        "in": "formData"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Copyright or license",
+                        "name": "license",
+                        "in": "formData"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Positive figure number",
+                        "name": "figure_number",
+                        "in": "formData"
+                    },
+                    {
+                        "type": "boolean",
+                        "description": "Require clinical review",
+                        "name": "clinically_sensitive",
+                        "in": "formData"
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/services.GuidelineAssetDTO"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v2/guideline-versions/{id}/assets/{assetId}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "guideline-assets"
+                ],
+                "summary": "Get guideline asset metadata and a short-lived URL",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Guideline version UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Asset UUID",
+                        "name": "assetId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/services.GuidelineAssetDTO"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "guideline-assets"
+                ],
+                "summary": "Remove an asset from an editable guideline version",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Guideline version UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Asset UUID",
+                        "name": "assetId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    }
+                }
+            },
+            "patch": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "guideline-assets"
+                ],
+                "summary": "Update editable guideline asset metadata",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Guideline version UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Asset UUID",
+                        "name": "assetId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Asset metadata",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/services.GuidelineAssetInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/services.GuidelineAssetDTO"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v2/guideline-versions/{id}/assets/{assetId}/content": {
             "get": {
                 "security": [
                     {
@@ -13127,13 +13365,31 @@ const docTemplate = `{
         "models.GuidelineAsset": {
             "type": "object",
             "properties": {
+                "alternative_text": {
+                    "type": "string"
+                },
+                "attribution": {
+                    "type": "string"
+                },
+                "caption": {
+                    "type": "string"
+                },
                 "checksum": {
                     "type": "string"
+                },
+                "clinically_sensitive": {
+                    "type": "boolean"
                 },
                 "created_at": {
                     "type": "string"
                 },
+                "figure_number": {
+                    "type": "integer"
+                },
                 "id": {
+                    "type": "string"
+                },
+                "license": {
                     "type": "string"
                 },
                 "mime_type": {
@@ -13166,16 +13422,19 @@ const docTemplate = `{
                 "size_bytes": {
                     "type": "integer"
                 },
-                "source_fingerprint": {
+                "source": {
                     "type": "string"
                 },
-                "storage_key": {
+                "source_fingerprint": {
                     "type": "string"
                 },
                 "type": {
                     "$ref": "#/definitions/models.GuidelineAssetType"
                 },
                 "updated_at": {
+                    "type": "string"
+                },
+                "uploaded_by": {
                     "type": "string"
                 },
                 "version_id": {
@@ -15869,6 +16128,126 @@ const docTemplate = `{
                 }
             }
         },
+        "services.GuidelineAssetDTO": {
+            "type": "object",
+            "properties": {
+                "alternative_text": {
+                    "type": "string"
+                },
+                "attribution": {
+                    "type": "string"
+                },
+                "caption": {
+                    "type": "string"
+                },
+                "checksum": {
+                    "type": "string"
+                },
+                "clinically_sensitive": {
+                    "type": "boolean"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "figure_number": {
+                    "type": "integer"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "license": {
+                    "type": "string"
+                },
+                "mime_type": {
+                    "type": "string"
+                },
+                "original_filename": {
+                    "type": "string"
+                },
+                "reference": {
+                    "type": "string"
+                },
+                "referenced": {
+                    "type": "boolean"
+                },
+                "review_status": {
+                    "$ref": "#/definitions/models.GuidelineBlockReviewStatus"
+                },
+                "reviewed_at": {
+                    "type": "string"
+                },
+                "reviewed_by": {
+                    "type": "string"
+                },
+                "size_bytes": {
+                    "type": "integer"
+                },
+                "source": {
+                    "type": "string"
+                },
+                "type": {
+                    "$ref": "#/definitions/models.GuidelineAssetType"
+                },
+                "updated_at": {
+                    "type": "string"
+                },
+                "uploaded_by": {
+                    "type": "string"
+                },
+                "url": {
+                    "type": "string"
+                },
+                "url_expires_at": {
+                    "type": "string"
+                },
+                "version_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "services.GuidelineAssetInput": {
+            "type": "object",
+            "properties": {
+                "alternative_text": {
+                    "type": "string"
+                },
+                "attribution": {
+                    "type": "string"
+                },
+                "caption": {
+                    "type": "string"
+                },
+                "clinically_sensitive": {
+                    "type": "boolean"
+                },
+                "figure_number": {
+                    "type": "integer"
+                },
+                "license": {
+                    "type": "string"
+                },
+                "source": {
+                    "type": "string"
+                }
+            }
+        },
+        "services.GuidelineAssetList": {
+            "type": "object",
+            "properties": {
+                "broken_references": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/services.GuidelineAssetDTO"
+                    }
+                }
+            }
+        },
         "services.GuidelineBlockOrderInput": {
             "type": "object",
             "required": [
@@ -16128,6 +16507,9 @@ const docTemplate = `{
         "services.GuidelineReviewIssue": {
             "type": "object",
             "properties": {
+                "asset_id": {
+                    "type": "string"
+                },
                 "block_id": {
                     "type": "string"
                 },

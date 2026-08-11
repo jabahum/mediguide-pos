@@ -20,6 +20,7 @@ import {
   FilePlus2,
   GitCompareArrows,
   Info,
+  Images,
   ListTree,
   Printer,
   RotateCcw,
@@ -49,6 +50,10 @@ import {
   validateMarkdown,
 } from "./markdown-authoring"
 import { MarkdownDiffViewer } from "./markdown-diff-viewer"
+import { MarkdownTableEditor } from "./markdown-table-editor"
+import { emptyMarkdownTable, markdownTableAt, type MarkdownTableModel } from "./markdown-table"
+import { GuidelineAssetLibrary } from "./guideline-asset-library"
+import { GuidelineAssetsService, type GuidelineAsset } from "@/services/guideline-assets.service"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -263,6 +268,11 @@ export function GuidelineMarkdownEditor({
   const [calloutEvidence, setCalloutEvidence] = React.useState("")
   const [calloutSource, setCalloutSource] = React.useState("")
   const [calloutContent, setCalloutContent] = React.useState("")
+  const [tableOpen, setTableOpen] = React.useState(false)
+  const [tableInitial, setTableInitial] = React.useState<MarkdownTableModel>(() => emptyMarkdownTable())
+  const [tableRange, setTableRange] = React.useState<{ from: number; to: number } | null>(null)
+  const [assetLibraryOpen, setAssetLibraryOpen] = React.useState(false)
+  const [assets, setAssets] = React.useState<GuidelineAsset[]>([])
   const [anchorMetadata, setAnchorMetadata] = React.useState(() => stableHeadingAnchors(initialContent, initialDraft?.revision.anchor_metadata))
 
   const canEdit = editable && !published
@@ -342,6 +352,12 @@ export function GuidelineMarkdownEditor({
       window.removeEventListener("offline", offlineListener)
     }
   }, [initialContent, versionId])
+
+  React.useEffect(() => {
+    let active = true
+    void GuidelineAssetsService.list(versionId).then((result) => { if (active) setAssets(result.items) }).catch(() => { /* The editor remains usable when the asset service is unavailable. */ })
+    return () => { active = false }
+  }, [versionId])
 
   React.useEffect(() => {
     try {
@@ -498,9 +514,16 @@ export function GuidelineMarkdownEditor({
       case "unordered-list": prefixLines(editor, "- "); break
       case "task-list": prefixLines(editor, "- [ ] "); break
       case "link": selectionReplacement(editor, "[", "](https://)", "link text"); break
-      case "image": selectionReplacement(editor, "![", "](asset-url)", "alternative text"); break
+      case "image": setAssetLibraryOpen(true); break
       case "horizontal-rule": selectionReplacement(editor, "\n---\n", "", ""); break
-      case "table": selectionReplacement(editor, "", "", "| Column 1 | Column 2 |\n| --- | --- |\n| Value | Value |"); break
+      case "table": {
+        const selection = editor.state.selection.main
+        const existing = markdownTableAt(editor.state.doc.toString(), selection.head)
+        setTableInitial(existing?.table || emptyMarkdownTable())
+        setTableRange(existing ? { from: existing.from, to: existing.to } : { from: selection.from, to: selection.to })
+        setTableOpen(true)
+        break
+      }
       case "footnote": selectionReplacement(editor, "[^", "]", "reference"); break
       case "reference": selectionReplacement(editor, "[", "]", "reference"); break
       case "format": setContent(formatMarkdown(content)); break
@@ -731,6 +754,7 @@ export function GuidelineMarkdownEditor({
           title={documentTitle}
           versionLabel={versionLabel}
           presentation={previewPresentation}
+          assets={assets}
         />
       </div>
     </div>
@@ -780,6 +804,7 @@ export function GuidelineMarkdownEditor({
           {canEdit && <Button size="sm" variant="ghost" onClick={() => setCheckpointOpen(true)} disabled={!dirty}><CheckCircle2 className="mr-2 h-4 w-4" />Checkpoint</Button>}
           {canEdit && !content.trim() && <Button size="sm" variant="ghost" onClick={() => setTemplatesOpen(true)}><ListTree className="mr-2 h-4 w-4" />Start from template</Button>}
           {canEdit && <Button size="sm" variant="ghost" onClick={() => uploadRef.current?.click()}><Upload className="mr-2 h-4 w-4" />Load Markdown</Button>}
+          <Button size="sm" variant="ghost" onClick={() => setAssetLibraryOpen(true)}><Images className="mr-2 h-4 w-4" />Assets</Button>
           {draft && <Button size="sm" variant="ghost" onClick={() => setDuplicateOpen(true)}><FilePlus2 className="mr-2 h-4 w-4" />{published ? "Create draft version" : "Duplicate draft"}</Button>}
           {publishedVersionId && publishedVersionId !== versionId && <Button size="sm" variant="ghost" onClick={() => void compareWithPublished()}><GitCompareArrows className="mr-2 h-4 w-4" />Compare published</Button>}
           {dirty && <Button size="sm" variant="ghost" onClick={() => void compareSpecialRevision("saved")}><GitCompareArrows className="mr-2 h-4 w-4" />Compare saved</Button>}
@@ -1025,6 +1050,10 @@ export function GuidelineMarkdownEditor({
       <AlertDialog open={Boolean(pendingRestore)} onOpenChange={(open) => { if (!open) setPendingRestore(null) }}><AlertDialogContent><AlertDialogHeader><AlertDialogTitle>Restore revision {pendingRestore?.revision_number}?</AlertDialogTitle><AlertDialogDescription>This does not overwrite history. A new current draft revision will reference the selected immutable revision.</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel>Cancel</AlertDialogCancel><AlertDialogAction onClick={() => { if (pendingRestore) void restoreRevision(pendingRestore); setPendingRestore(null) }}>Create restored draft</AlertDialogAction></AlertDialogFooter></AlertDialogContent></AlertDialog>
 
       <Dialog open={calloutOpen} onOpenChange={setCalloutOpen}><DialogContent><DialogHeader><DialogTitle>Insert clinical callout</DialogTitle><DialogDescription>Enter only reviewed clinical content. The editor will preserve values and units exactly; high-risk callouts require reviewer approval before publication.</DialogDescription></DialogHeader><div className="space-y-4"><div><Label htmlFor="callout-type">Callout type</Label><select id="callout-type" className="mt-1 h-9 w-full rounded border bg-background px-3" value={calloutType} onChange={(event) => setCalloutType(event.target.value as ClinicalCalloutType)}>{["recommendation", "warning", "caution", "key-point", "contraindication", "dosage", "evidence", "definition", "procedure", "algorithm-reference", "clinical-note", "referral-criteria"].map((type) => <option key={type} value={type}>{type.replaceAll("-", " ")}</option>)}</select></div><div><Label htmlFor="callout-title">Title (optional)</Label><Input id="callout-title" value={calloutTitle} onChange={(event) => setCalloutTitle(event.target.value)} /></div><div className="grid gap-4 sm:grid-cols-2"><div><Label htmlFor="callout-severity">Severity</Label><select id="callout-severity" className="mt-1 h-9 w-full rounded border bg-background px-3" value={calloutSeverity} onChange={(event) => setCalloutSeverity(event.target.value as typeof calloutSeverity)}><option value="">Not specified</option>{["standard", "important", "high", "critical"].map((value) => <option key={value} value={value}>{value}</option>)}</select></div><div><Label htmlFor="callout-evidence">Evidence grade</Label><Input id="callout-evidence" value={calloutEvidence} onChange={(event) => setCalloutEvidence(event.target.value)} /></div></div><div><Label htmlFor="callout-source">Source or reference</Label><Input id="callout-source" value={calloutSource} onChange={(event) => setCalloutSource(event.target.value)} /></div><div><Label htmlFor="callout-content">Clinical content</Label><Textarea id="callout-content" rows={7} value={calloutContent} onChange={(event) => setCalloutContent(event.target.value)} placeholder="Enter reviewed content exactly as approved." /></div>{["recommendation", "warning", "caution", "contraindication", "dosage", "procedure", "algorithm-reference", "referral-criteria"].includes(calloutType) && <Alert><ShieldAlert className="h-4 w-4" /><AlertTitle>Clinical review required</AlertTitle><AlertDescription>This high-risk block cannot be published until an authorized reviewer approves the regenerated structured block.</AlertDescription></Alert>}</div><DialogFooter><Button variant="outline" onClick={() => setCalloutOpen(false)}>Cancel</Button><Button disabled={!calloutContent.trim()} onClick={insertClinicalCallout}>Insert without rewriting</Button></DialogFooter></DialogContent></Dialog>
+
+      <MarkdownTableEditor open={tableOpen} initialTable={tableInitial} onOpenChange={setTableOpen} onApply={(markdown) => { const editor = view(); if (!editor || !tableRange) return; editor.dispatch({ changes: { from: tableRange.from, to: tableRange.to, insert: markdown }, selection: { anchor: tableRange.from + markdown.length }, scrollIntoView: true }); editor.focus(); setTableRange(null) }} />
+
+      <GuidelineAssetLibrary open={assetLibraryOpen} versionId={versionId} editable={canEdit} onOpenChange={setAssetLibraryOpen} onAssetsChange={setAssets} onInsert={(asset) => { const editor = view(); if (!editor) return; const selection = editor.state.selection.main; const alt = asset.alternative_text || "Describe this image"; const caption = asset.caption ? `\n*${asset.caption}*` : ""; const source = asset.source ? `\n*Source: ${asset.source}*` : ""; const markdown = `![${alt}](${asset.reference})${caption}${source}`; editor.dispatch({ changes: { from: selection.from, to: selection.to, insert: markdown }, selection: { anchor: selection.from + markdown.length }, scrollIntoView: true }); editor.focus(); setAssetLibraryOpen(false) }} onReplaceReference={(reference, replacement) => setContent((current) => current.replaceAll(reference, replacement.reference))} />
 
       <AlertDialog open={Boolean(conflictDraft)} onOpenChange={(open) => { if (!open) setConflictDraft(null) }}>
         <AlertDialogContent><AlertDialogHeader><AlertDialogTitle>Another editor saved this draft</AlertDialogTitle><AlertDialogDescription>Your local text has been preserved. Choose how to resolve the conflict.</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter className="flex-wrap"><AlertDialogCancel onClick={() => { if (conflictDraft) keepLocalAgainstServerRevision(conflictDraft) }}>Keep local text</AlertDialogCancel><Button variant="outline" onClick={() => { if (!conflictDraft) return; setCompareContent(conflictDraft.content); setCompareLabel("server draft"); setCompareOpen(true) }}>Open diff</Button><Button variant="outline" onClick={() => { if (conflictDraft) applySavedDraft(conflictDraft); setConflictDraft(null) }}>Reload server draft</Button><AlertDialogAction onClick={async () => { if (!conflictDraft) return; keepLocalAgainstServerRevision(conflictDraft); setCheckpointName("Conflict recovery"); setCheckpointSummary("Local edits saved after a concurrent change"); setCheckpointOpen(true) }}>Save local as checkpoint</AlertDialogAction></AlertDialogFooter></AlertDialogContent>

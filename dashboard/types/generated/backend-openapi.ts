@@ -1261,9 +1261,15 @@ export interface ModelsGuidelineAlgorithmNode {
 }
 
 export interface ModelsGuidelineAsset {
+  alternative_text?: string;
+  attribution?: string;
+  caption?: string;
   checksum?: string;
+  clinically_sensitive?: boolean;
   created_at?: string;
+  figure_number?: number;
   id?: string;
+  license?: string;
   mime_type?: string;
   original_filename?: string;
   page_end?: number;
@@ -1274,10 +1280,11 @@ export interface ModelsGuidelineAsset {
   reviewed_by?: string;
   section_id?: string;
   size_bytes?: number;
+  source?: string;
   source_fingerprint?: string;
-  storage_key?: string;
   type?: ModelsGuidelineAssetType;
   updated_at?: string;
+  uploaded_by?: string;
   version_id?: string;
 }
 
@@ -2239,6 +2246,48 @@ export interface ServicesGenericPageInput {
   title?: string;
 }
 
+export interface ServicesGuidelineAssetDTO {
+  alternative_text?: string;
+  attribution?: string;
+  caption?: string;
+  checksum?: string;
+  clinically_sensitive?: boolean;
+  created_at?: string;
+  figure_number?: number;
+  id?: string;
+  license?: string;
+  mime_type?: string;
+  original_filename?: string;
+  reference?: string;
+  referenced?: boolean;
+  review_status?: ModelsGuidelineBlockReviewStatus;
+  reviewed_at?: string;
+  reviewed_by?: string;
+  size_bytes?: number;
+  source?: string;
+  type?: ModelsGuidelineAssetType;
+  updated_at?: string;
+  uploaded_by?: string;
+  url?: string;
+  url_expires_at?: string;
+  version_id?: string;
+}
+
+export interface ServicesGuidelineAssetInput {
+  alternative_text?: string;
+  attribution?: string;
+  caption?: string;
+  clinically_sensitive?: boolean;
+  figure_number?: number;
+  license?: string;
+  source?: string;
+}
+
+export interface ServicesGuidelineAssetList {
+  broken_references?: string[];
+  items?: ServicesGuidelineAssetDTO[];
+}
+
 export interface ServicesGuidelineBlockOrderInput {
   id: string;
   section_id?: string;
@@ -2332,6 +2381,7 @@ export interface ServicesGuidelinePublicationValidation {
 }
 
 export interface ServicesGuidelineReviewIssue {
+  asset_id?: string;
   block_id?: string;
   code?: string;
   message?: string;

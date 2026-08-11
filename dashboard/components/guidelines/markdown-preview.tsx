@@ -1,13 +1,16 @@
 "use client"
+/* eslint-disable @next/next/no-img-element -- guideline assets use short-lived signed URLs */
 
-import ReactMarkdown from "react-markdown"
+import ReactMarkdown, { defaultUrlTransform } from "react-markdown"
 import remarkGfm from "remark-gfm"
 
 import { cn } from "@/lib/utils"
+import type { GuidelineAsset } from "@/services/guideline-assets.service"
 
 interface MarkdownPreviewProps {
   content: string
   className?: string
+  assets?: GuidelineAsset[]
 }
 
 const calloutLabels: Record<string, string> = {
@@ -52,7 +55,7 @@ export function renderableClinicalMarkdown(content: string) {
   return output.join("\n")
 }
 
-export function MarkdownPreview({ content, className }: MarkdownPreviewProps) {
+export function MarkdownPreview({ content, className, assets = [] }: MarkdownPreviewProps) {
   if (!content.trim()) {
     return (
       <div className={cn("grid min-h-64 place-items-center text-sm text-muted-foreground", className)}>
@@ -83,6 +86,7 @@ export function MarkdownPreview({ content, className }: MarkdownPreviewProps) {
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
         skipHtml
+        urlTransform={(url) => typeof url === "string" && url.startsWith("guideline-asset://") ? url : defaultUrlTransform(url)}
         components={{
           a: ({ href, children, node, ...props }) => {
             void node
@@ -96,6 +100,15 @@ export function MarkdownPreview({ content, className }: MarkdownPreviewProps) {
                 {children}
               </a>
             )
+          },
+          img: ({ src, alt, node, ...props }) => {
+            void node
+            const source = typeof src === "string" ? src : ""
+            const asset = assets.find((item) => item.reference === source)
+            if (source.startsWith("guideline-asset://") && !asset) {
+              return <span role="img" aria-label={alt || "Broken guideline image"} className="my-3 block rounded border border-destructive p-3 text-destructive">Broken guideline asset reference</span>
+            }
+            return <img {...props} src={asset?.url || source} alt={alt || asset?.alternative_text || ""} loading="lazy" />
           },
         }}
       >

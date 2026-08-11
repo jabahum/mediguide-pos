@@ -25,6 +25,7 @@ type GuidelineReviewIssue struct {
 	Message   string     `json:"message"`
 	SectionID *uuid.UUID `json:"section_id,omitempty"`
 	BlockID   *uuid.UUID `json:"block_id,omitempty"`
+	AssetID   *uuid.UUID `json:"asset_id,omitempty"`
 }
 
 type GuidelinePublicationValidation struct {
@@ -567,6 +568,20 @@ func validateGuidelinePublication(tx *gorm.DB, version *models.GuidelineVersion)
 	for _, block := range blocks {
 		if block.ReviewStatus != models.GuidelineBlockRejected {
 			activeBlockCount++
+		}
+	}
+	var assets []models.GuidelineAsset
+	if err := tx.Where("version_id = ?", version.ID).Find(&assets).Error; err != nil {
+		return nil, err
+	}
+	for _, asset := range assets {
+		current := asset
+		if asset.Type == models.GuidelineAssetFigure && strings.TrimSpace(asset.AlternativeText) == "" {
+			result.Warnings = append(result.Warnings, GuidelineReviewIssue{Code: "missing_asset_alternative_text", Message: fmt.Sprintf("Image %s is missing alternative text.", asset.ID)})
+		}
+		if asset.ClinicallySensitive && asset.ReviewStatus != models.GuidelineBlockReviewed {
+			result.Errors = append(result.Errors, GuidelineReviewIssue{Code: "unreviewed_clinical_asset", Message: "A clinically sensitive image requires publisher review.", SectionID: asset.SectionID, AssetID: &current.ID})
+			result.Valid = false
 		}
 	}
 	if activeBlockCount == 0 {

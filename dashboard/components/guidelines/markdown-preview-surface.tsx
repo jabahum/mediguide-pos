@@ -6,6 +6,7 @@ import { MarkdownPreview } from "./markdown-preview"
 import { markdownHeadings } from "./markdown-authoring"
 import { Badge } from "@/components/ui/badge"
 import { cn } from "@/lib/utils"
+import type { GuidelineAsset } from "@/services/guideline-assets.service"
 
 export type MarkdownPreviewPresentation =
   | "rendered"
@@ -19,6 +20,7 @@ interface MarkdownPreviewSurfaceProps {
   versionLabel: string
   presentation: MarkdownPreviewPresentation
   className?: string
+  assets?: GuidelineAsset[]
 }
 
 export function MarkdownPreviewSurface({
@@ -27,11 +29,12 @@ export function MarkdownPreviewSurface({
   versionLabel,
   presentation,
   className,
+  assets = [],
 }: MarkdownPreviewSurfaceProps) {
   const headings = markdownHeadings(content)
 
   if (presentation === "rendered") {
-    return <MarkdownPreview content={content} className={className} />
+    return <MarkdownPreview content={content} className={className} assets={assets} />
   }
 
   if (presentation === "public-reader") {
@@ -50,7 +53,7 @@ export function MarkdownPreviewSurface({
           <p className="mt-1 text-sm text-muted-foreground">Version {versionLabel}</p>
         </header>
         <div className="px-5 py-6 sm:px-8">
-          <MarkdownPreview content={content} />
+          <MarkdownPreview content={content} assets={assets} />
         </div>
       </section>
     )
@@ -84,7 +87,7 @@ export function MarkdownPreviewSurface({
             </ol>
           </nav>
           <div className="min-w-0 p-5 sm:p-8">
-            <MarkdownPreview content={content} />
+            <MarkdownPreview content={content} assets={assets} />
           </div>
         </div>
       </section>
@@ -101,7 +104,7 @@ export function MarkdownPreviewSurface({
         <h1 className="mt-2 text-3xl font-bold">{title}</h1>
         <p className="mt-1 text-sm">Version {versionLabel}</p>
       </header>
-      <MarkdownPreview content={content} className="text-black" />
+      <MarkdownPreview content={content} className="text-black" assets={assets} />
     </article>
   )
 }

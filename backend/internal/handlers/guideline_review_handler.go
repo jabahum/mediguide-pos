@@ -5,6 +5,8 @@ import (
 	"io"
 	"mime"
 	"net/http"
+	"strconv"
+	"strings"
 
 	"mediguide/internal/httpx"
 	"mediguide/internal/middleware"
@@ -27,7 +29,7 @@ import (
 // @Failure 401 {object} handlers.ErrorResponse
 // @Failure 403 {object} handlers.ErrorResponse
 // @Failure 404 {object} handlers.ErrorResponse
-// @Router /api/v2/guideline-versions/{id}/assets/{assetId} [get]
+// @Router /api/v2/guideline-versions/{id}/assets/{assetId}/content [get]
 func (h GuidelineHandler) ReviewAsset(c *gin.Context) {
 	versionID, ok := reviewUUIDParam(c, "id")
 	if !ok {
@@ -49,6 +51,189 @@ func (h GuidelineHandler) ReviewAsset(c *gin.Context) {
 	if _, err := io.Copy(c.Writer, asset.Reader); err != nil {
 		_ = c.Error(err)
 	}
+}
+
+// CreateGuidelineAsset godoc
+// @Summary Upload a version-scoped guideline image
+// @Tags guideline-assets
+// @Accept mpfd
+// @Produce json
+// @Security BearerAuth
+// @Param id path string true "Guideline version UUID"
+// @Param file formData file true "PNG, JPEG, GIF or WebP image"
+// @Param alternative_text formData string false "Image alternative text"
+// @Param caption formData string false "Caption"
+// @Param source formData string false "Source"
+// @Param attribution formData string false "Attribution"
+// @Param license formData string false "Copyright or license"
+// @Param figure_number formData int false "Positive figure number"
+// @Param clinically_sensitive formData bool false "Require clinical review"
+// @Success 201 {object} services.GuidelineAssetDTO
+// @Router /api/v2/guideline-versions/{id}/assets [post]
+func (h GuidelineHandler) CreateGuidelineAsset(c *gin.Context) {
+	versionID, ok := reviewUUIDParam(c, "id")
+	if !ok {
+		return
+	}
+	c.Request.Body = http.MaxBytesReader(c.Writer, c.Request.Body, (10<<20)+(1<<20))
+	if err := c.Request.ParseMultipartForm(10 << 20); err != nil {
+		httpx.Error(c, http.StatusRequestEntityTooLarge, "guideline image exceeds maximum allowed size")
+		return
+	}
+	file, header, err := c.Request.FormFile("file")
+	if err != nil {
+		httpx.Error(c, http.StatusBadRequest, "file is required")
+		return
+	}
+	defer file.Close()
+	data, err := io.ReadAll(io.LimitReader(file, (10<<20)+1))
+	if err != nil || len(data) > 10<<20 {
+		httpx.Error(c, http.StatusRequestEntityTooLarge, "guideline image exceeds maximum allowed size")
+		return
+	}
+	input, err := guidelineAssetFormInput(c)
+	if err != nil {
+		httpx.Error(c, http.StatusBadRequest, err.Error())
+		return
+	}
+	result, err := h.Service.CreateGuidelineAsset(c.Request.Context(), versionID, reviewActor(c), header.Filename, data, input, c.ClientIP())
+	if err != nil {
+		reviewError(c, err)
+		return
+	}
+	httpx.Created(c, result)
+}
+
+// ListGuidelineAssets godoc
+// @Summary List a version's authored guideline assets
+// @Tags guideline-assets
+// @Produce json
+// @Security BearerAuth
+// @Param id path string true "Guideline version UUID"
+// @Success 200 {object} services.GuidelineAssetList
+// @Router /api/v2/guideline-versions/{id}/assets [get]
+func (h GuidelineHandler) ListGuidelineAssets(c *gin.Context) {
+	versionID, ok := reviewUUIDParam(c, "id")
+	if !ok {
+		return
+	}
+	result, err := h.Service.ListGuidelineAssets(c.Request.Context(), versionID)
+	if err != nil {
+		reviewError(c, err)
+		return
+	}
+	httpx.OK(c, result)
+}
+
+// GetGuidelineAsset godoc
+// @Summary Get guideline asset metadata and a short-lived URL
+// @Tags guideline-assets
+// @Produce json
+// @Security BearerAuth
+// @Param id path string true "Guideline version UUID"
+// @Param assetId path string true "Asset UUID"
+// @Success 200 {object} services.GuidelineAssetDTO
+// @Router /api/v2/guideline-versions/{id}/assets/{assetId} [get]
+func (h GuidelineHandler) GetGuidelineAsset(c *gin.Context) {
+	versionID, ok := reviewUUIDParam(c, "id")
+	if !ok {
+		return
+	}
+	assetID, ok := reviewUUIDParam(c, "assetId")
+	if !ok {
+		return
+	}
+	result, err := h.Service.GetGuidelineAsset(c.Request.Context(), versionID, assetID)
+	if err != nil {
+		reviewError(c, err)
+		return
+	}
+	httpx.OK(c, result)
+}
+
+// UpdateGuidelineAsset godoc
+// @Summary Update editable guideline asset metadata
+// @Tags guideline-assets
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param id path string true "Guideline version UUID"
+// @Param assetId path string true "Asset UUID"
+// @Param payload body services.GuidelineAssetInput true "Asset metadata"
+// @Success 200 {object} services.GuidelineAssetDTO
+// @Router /api/v2/guideline-versions/{id}/assets/{assetId} [patch]
+func (h GuidelineHandler) UpdateGuidelineAsset(c *gin.Context) {
+	versionID, ok := reviewUUIDParam(c, "id")
+	if !ok {
+		return
+	}
+	assetID, ok := reviewUUIDParam(c, "assetId")
+	if !ok {
+		return
+	}
+	var input services.GuidelineAssetInput
+	if err := c.ShouldBindJSON(&input); err != nil {
+		httpx.Error(c, http.StatusBadRequest, "invalid request body")
+		return
+	}
+	result, err := h.Service.UpdateGuidelineAsset(c.Request.Context(), versionID, assetID, reviewActor(c), input, c.ClientIP())
+	if err != nil {
+		reviewError(c, err)
+		return
+	}
+	httpx.OK(c, result)
+}
+
+// DeleteGuidelineAsset godoc
+// @Summary Remove an asset from an editable guideline version
+// @Tags guideline-assets
+// @Security BearerAuth
+// @Param id path string true "Guideline version UUID"
+// @Param assetId path string true "Asset UUID"
+// @Success 204
+// @Router /api/v2/guideline-versions/{id}/assets/{assetId} [delete]
+func (h GuidelineHandler) DeleteGuidelineAsset(c *gin.Context) {
+	versionID, ok := reviewUUIDParam(c, "id")
+	if !ok {
+		return
+	}
+	assetID, ok := reviewUUIDParam(c, "assetId")
+	if !ok {
+		return
+	}
+	if err := h.Service.DeleteGuidelineAsset(versionID, assetID, reviewActor(c), c.ClientIP()); err != nil {
+		reviewError(c, err)
+		return
+	}
+	c.Status(http.StatusNoContent)
+}
+
+func guidelineAssetFormInput(c *gin.Context) (services.GuidelineAssetInput, error) {
+	input := services.GuidelineAssetInput{}
+	stringField := func(name string) *string {
+		if _, exists := c.Request.MultipartForm.Value[name]; !exists {
+			return nil
+		}
+		value := c.PostForm(name)
+		return &value
+	}
+	input.AlternativeText, input.Caption, input.Source = stringField("alternative_text"), stringField("caption"), stringField("source")
+	input.Attribution, input.License = stringField("attribution"), stringField("license")
+	if value := strings.TrimSpace(c.PostForm("figure_number")); value != "" {
+		number, err := strconv.Atoi(value)
+		if err != nil {
+			return input, errors.New("figure_number must be an integer")
+		}
+		input.FigureNumber = &number
+	}
+	if value := strings.TrimSpace(c.PostForm("clinically_sensitive")); value != "" {
+		sensitive, err := strconv.ParseBool(value)
+		if err != nil {
+			return input, errors.New("clinically_sensitive must be a boolean")
+		}
+		input.ClinicallySensitive = &sensitive
+	}
+	return input, nil
 }
 
 // ReviewWorkspace godoc
@@ -333,6 +518,8 @@ func reviewError(c *gin.Context, err error) {
 		httpx.Error(c, http.StatusConflict, err.Error())
 	case errors.Is(err, services.ErrGuidelineValidationFailed):
 		httpx.Error(c, http.StatusUnprocessableEntity, err.Error())
+	case errors.Is(err, services.ErrGuidelineAssetInvalid):
+		httpx.Error(c, http.StatusBadRequest, err.Error())
 	default:
 		httpx.Error(c, http.StatusInternalServerError, "guideline review operation failed")
 	}

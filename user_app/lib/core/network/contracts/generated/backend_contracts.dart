@@ -4131,11 +4131,23 @@ final class ModelsGuidelineAsset {
   static const schemaName = 'models.GuidelineAsset';
   final Map<String, dynamic> value;
 
+  String? get alternativeText => value['alternative_text']?.toString();
+
+  String? get attribution => value['attribution']?.toString();
+
+  String? get caption => value['caption']?.toString();
+
   String? get checksum => value['checksum']?.toString();
+
+  bool? get clinicallySensitive => value['clinically_sensitive'] as bool?;
 
   String? get createdAt => value['created_at']?.toString();
 
+  int? get figureNumber => (value['figure_number'] as num?)?.toInt();
+
   String? get id => value['id']?.toString();
+
+  String? get license => value['license']?.toString();
 
   String? get mimeType => value['mime_type']?.toString();
 
@@ -4157,13 +4169,15 @@ final class ModelsGuidelineAsset {
 
   int? get sizeBytes => (value['size_bytes'] as num?)?.toInt();
 
-  String? get sourceFingerprint => value['source_fingerprint']?.toString();
+  String? get source => value['source']?.toString();
 
-  String? get storageKey => value['storage_key']?.toString();
+  String? get sourceFingerprint => value['source_fingerprint']?.toString();
 
   String? get type => value['type']?.toString();
 
   String? get updatedAt => value['updated_at']?.toString();
+
+  String? get uploadedBy => value['uploaded_by']?.toString();
 
   String? get versionId => value['version_id']?.toString();
 
@@ -6740,6 +6754,122 @@ final class ServicesGenericPageInput {
   Map<String, dynamic> toJson() => Map.of(value);
 }
 
+final class ServicesGuidelineAssetDTO {
+  ServicesGuidelineAssetDTO(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory ServicesGuidelineAssetDTO.fromJson(Map<String, dynamic> json) =>
+      ServicesGuidelineAssetDTO(json);
+
+  static const schemaName = 'services.GuidelineAssetDTO';
+  final Map<String, dynamic> value;
+
+  String? get alternativeText => value['alternative_text']?.toString();
+
+  String? get attribution => value['attribution']?.toString();
+
+  String? get caption => value['caption']?.toString();
+
+  String? get checksum => value['checksum']?.toString();
+
+  bool? get clinicallySensitive => value['clinically_sensitive'] as bool?;
+
+  String? get createdAt => value['created_at']?.toString();
+
+  int? get figureNumber => (value['figure_number'] as num?)?.toInt();
+
+  String? get id => value['id']?.toString();
+
+  String? get license => value['license']?.toString();
+
+  String? get mimeType => value['mime_type']?.toString();
+
+  String? get originalFilename => value['original_filename']?.toString();
+
+  String? get reference => value['reference']?.toString();
+
+  bool? get referenced => value['referenced'] as bool?;
+
+  String? get reviewStatus => value['review_status']?.toString();
+
+  String? get reviewedAt => value['reviewed_at']?.toString();
+
+  String? get reviewedBy => value['reviewed_by']?.toString();
+
+  int? get sizeBytes => (value['size_bytes'] as num?)?.toInt();
+
+  String? get source => value['source']?.toString();
+
+  String? get type => value['type']?.toString();
+
+  String? get updatedAt => value['updated_at']?.toString();
+
+  String? get uploadedBy => value['uploaded_by']?.toString();
+
+  String? get url => value['url']?.toString();
+
+  String? get urlExpiresAt => value['url_expires_at']?.toString();
+
+  String? get versionId => value['version_id']?.toString();
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
+final class ServicesGuidelineAssetInput {
+  ServicesGuidelineAssetInput(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory ServicesGuidelineAssetInput.fromJson(Map<String, dynamic> json) =>
+      ServicesGuidelineAssetInput(json);
+
+  static const schemaName = 'services.GuidelineAssetInput';
+  final Map<String, dynamic> value;
+
+  String? get alternativeText => value['alternative_text']?.toString();
+
+  String? get attribution => value['attribution']?.toString();
+
+  String? get caption => value['caption']?.toString();
+
+  bool? get clinicallySensitive => value['clinically_sensitive'] as bool?;
+
+  int? get figureNumber => (value['figure_number'] as num?)?.toInt();
+
+  String? get license => value['license']?.toString();
+
+  String? get source => value['source']?.toString();
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
+final class ServicesGuidelineAssetList {
+  ServicesGuidelineAssetList(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory ServicesGuidelineAssetList.fromJson(Map<String, dynamic> json) =>
+      ServicesGuidelineAssetList(json);
+
+  static const schemaName = 'services.GuidelineAssetList';
+  final Map<String, dynamic> value;
+
+  List<String> get brokenReferences {
+    final raw = value['broken_references'];
+    if (raw is! List) return const [];
+    return raw.whereType<String>().toList(growable: false);
+  }
+
+  List<ServicesGuidelineAssetDTO> get items {
+    final raw = value['items'];
+    if (raw is! List) return const [];
+    return raw
+        .whereType<Map>()
+        .map((item) => ServicesGuidelineAssetDTO.fromJson(_jsonMap(item)))
+        .toList(growable: false);
+  }
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
 final class ServicesGuidelineBlockOrderInput {
   ServicesGuidelineBlockOrderInput(Map<String, dynamic> value)
     : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
@@ -7064,6 +7194,8 @@ final class ServicesGuidelineReviewIssue {
 
   static const schemaName = 'services.GuidelineReviewIssue';
   final Map<String, dynamic> value;
+
+  String? get assetId => value['asset_id']?.toString();
 
   String? get blockId => value['block_id']?.toString();
 

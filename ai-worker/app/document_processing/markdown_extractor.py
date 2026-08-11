@@ -21,6 +21,10 @@ _HEADING_RE = re.compile(r"^(#{1,6})\s+(.+?)\s*#*\s*$")
 _UNORDERED_RE = re.compile(r"^\s*[-*+]\s+(.+)$")
 _ORDERED_RE = re.compile(r"^\s*\d+[.)]\s+(.+)$")
 _TABLE_SEPARATOR_RE = re.compile(r"^\s*\|?\s*:?-{3,}:?\s*(?:\|\s*:?-{3,}:?\s*)+\|?\s*$")
+_ASSET_IMAGE_RE = re.compile(
+    r'^!\[([^\]]*)\]\(guideline-asset://'
+    r'([0-9a-fA-F]{8}(?:-[0-9a-fA-F]{4}){3}-[0-9a-fA-F]{12})\)\s*$'
+)
 _CALLOUT_RE = re.compile(
     r"^(?:>\s*)?(recommendation|recommended action|warning|caution|key point|important note)\s*[:\-]?\s*(.*)$",
     re.IGNORECASE,
@@ -265,6 +269,30 @@ def _section_blocks(section: _MarkdownSection) -> list[ExtractedContentBlock]:
             )
             local_order += 1
             continue
+        asset_image = _ASSET_IMAGE_RE.match(stripped)
+        if asset_image:
+            flush_paragraph()
+            alternative_text = asset_image.group(1).strip()
+            if not alternative_text:
+                raise ValueError(f"Guideline image on line {line_number} requires alternative text")
+            blocks.append(
+                _block(
+                    section,
+                    "figure",
+                    {
+                        "type": "figure",
+                        "asset_id": asset_image.group(2).lower(),
+                        "caption": "",
+                        "alternative_text": alternative_text,
+                    },
+                    local_order,
+                    line_number,
+                    line_number,
+                )
+            )
+            local_order += 1
+            index += 1
+            continue
         if index + 1 < len(lines) and "|" in stripped and _TABLE_SEPARATOR_RE.match(lines[index + 1][1]):
             flush_paragraph()
             columns = _table_cells(stripped)
@@ -399,6 +427,8 @@ def _block_text(block: ExtractedContentBlock) -> str:
     if block.type == "table":
         rows = [block.content.get("columns") or [], *(block.content.get("rows") or [])]
         return "\n".join(" | ".join(str(cell) for cell in row) for row in rows)
+    if block.type == "figure":
+        return str(block.content.get("alternative_text") or block.content.get("caption") or "")
     return ""
 
 
@@ -431,6 +461,12 @@ def _block_html(block: ExtractedContentBlock) -> str:
             for row in content.get("rows") or []
         )
         return f"<table><thead><tr>{columns}</tr></thead><tbody>{rows}</tbody></table>"
+    if block.type == "figure":
+        alternative_text = html.escape(str(content.get("alternative_text") or ""))
+        return (
+            f'<figure><span role="img" aria-label="{alternative_text}"></span>'
+            f'<figcaption>{alternative_text}</figcaption></figure>'
+        )
     return ""
 
 

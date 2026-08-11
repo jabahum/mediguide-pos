@@ -237,7 +237,7 @@ func TestGuidelineAssetReviewAndExtractionStatus(t *testing.T) {
 	if err := db.Create(&version).Error; err != nil {
 		t.Fatal(err)
 	}
-	asset := models.GuidelineAsset{VersionID: version.ID, Type: models.GuidelineAssetFigure, MIMEType: "image/png", Checksum: "sum", StorageKey: "private/key", SourceFingerprint: "figure"}
+	asset := models.GuidelineAsset{VersionID: version.ID, Type: models.GuidelineAssetFigure, MIMEType: "image/png", Checksum: "sum", StorageKey: "private/key", SourceFingerprint: "figure", ClinicallySensitive: true}
 	if err := db.Create(&asset).Error; err != nil {
 		t.Fatal(err)
 	}
@@ -247,6 +247,13 @@ func TestGuidelineAssetReviewAndExtractionStatus(t *testing.T) {
 	}
 	service := GuidelineService{DB: db}
 	actor := uuid.New()
+	validation, err := service.ValidateVersionForPublication(version.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !hasGuidelineReviewIssue(validation.Errors, "unreviewed_clinical_asset") {
+		t.Fatalf("expected clinically sensitive asset review blocker: %#v", validation.Errors)
+	}
 	reviewed, err := service.ReviewGuidelineAsset(version.ID, asset.ID, actor, "", ReviewGuidelineAssetInput{Status: models.GuidelineBlockReviewed})
 	if err != nil {
 		t.Fatal(err)
@@ -263,6 +270,15 @@ func TestGuidelineAssetReviewAndExtractionStatus(t *testing.T) {
 	}
 }
 
+func hasGuidelineReviewIssue(issues []GuidelineReviewIssue, code string) bool {
+	for _, issue := range issues {
+		if issue.Code == code {
+			return true
+		}
+	}
+	return false
+}
+
 func guidelineReviewTestDB(t *testing.T) *gorm.DB {
 	t.Helper()
 	db, err := gorm.Open(sqlite.Open("file:"+uuid.NewString()+"?mode=memory&cache=shared"), &gorm.Config{})
@@ -272,7 +288,7 @@ func guidelineReviewTestDB(t *testing.T) *gorm.DB {
 	if err := db.AutoMigrate(
 		&models.GuidelineDocument{}, &models.GuidelineVersion{}, &models.GuidelineSection{},
 		&models.GuidelineContentBlock{}, &models.GuidelineAsset{}, &models.GuidelineChunk{}, &models.AuditLog{},
-		&models.IngestionJob{},
+		&models.IngestionJob{}, &models.GuidelineMarkdownRevision{},
 	); err != nil {
 		t.Fatal(err)
 	}

@@ -1960,11 +1960,23 @@ definitions:
     type: object
   models.GuidelineAsset:
     properties:
+      alternative_text:
+        type: string
+      attribution:
+        type: string
+      caption:
+        type: string
       checksum:
         type: string
+      clinically_sensitive:
+        type: boolean
       created_at:
         type: string
+      figure_number:
+        type: integer
       id:
+        type: string
+      license:
         type: string
       mime_type:
         type: string
@@ -1986,13 +1998,15 @@ definitions:
         type: string
       size_bytes:
         type: integer
-      source_fingerprint:
+      source:
         type: string
-      storage_key:
+      source_fingerprint:
         type: string
       type:
         $ref: '#/definitions/models.GuidelineAssetType'
       updated_at:
+        type: string
+      uploaded_by:
         type: string
       version_id:
         type: string
@@ -3787,6 +3801,85 @@ definitions:
       title:
         type: string
     type: object
+  services.GuidelineAssetDTO:
+    properties:
+      alternative_text:
+        type: string
+      attribution:
+        type: string
+      caption:
+        type: string
+      checksum:
+        type: string
+      clinically_sensitive:
+        type: boolean
+      created_at:
+        type: string
+      figure_number:
+        type: integer
+      id:
+        type: string
+      license:
+        type: string
+      mime_type:
+        type: string
+      original_filename:
+        type: string
+      reference:
+        type: string
+      referenced:
+        type: boolean
+      review_status:
+        $ref: '#/definitions/models.GuidelineBlockReviewStatus'
+      reviewed_at:
+        type: string
+      reviewed_by:
+        type: string
+      size_bytes:
+        type: integer
+      source:
+        type: string
+      type:
+        $ref: '#/definitions/models.GuidelineAssetType'
+      updated_at:
+        type: string
+      uploaded_by:
+        type: string
+      url:
+        type: string
+      url_expires_at:
+        type: string
+      version_id:
+        type: string
+    type: object
+  services.GuidelineAssetInput:
+    properties:
+      alternative_text:
+        type: string
+      attribution:
+        type: string
+      caption:
+        type: string
+      clinically_sensitive:
+        type: boolean
+      figure_number:
+        type: integer
+      license:
+        type: string
+      source:
+        type: string
+    type: object
+  services.GuidelineAssetList:
+    properties:
+      broken_references:
+        items:
+          type: string
+        type: array
+      items:
+        items:
+          $ref: '#/definitions/services.GuidelineAssetDTO'
+        type: array
+    type: object
   services.GuidelineBlockOrderInput:
     properties:
       id:
@@ -3956,6 +4049,8 @@ definitions:
     type: object
   services.GuidelineReviewIssue:
     properties:
+      asset_id:
+        type: string
       block_id:
         type: string
       code:
@@ -8023,7 +8118,158 @@ paths:
       summary: Update a guideline tag
       tags:
       - guideline-taxonomy
+  /api/v2/guideline-versions/{id}/assets:
+    get:
+      parameters:
+      - description: Guideline version UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/services.GuidelineAssetList'
+      security:
+      - BearerAuth: []
+      summary: List a version's authored guideline assets
+      tags:
+      - guideline-assets
+    post:
+      consumes:
+      - multipart/form-data
+      parameters:
+      - description: Guideline version UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: PNG, JPEG, GIF or WebP image
+        in: formData
+        name: file
+        required: true
+        type: file
+      - description: Image alternative text
+        in: formData
+        name: alternative_text
+        type: string
+      - description: Caption
+        in: formData
+        name: caption
+        type: string
+      - description: Source
+        in: formData
+        name: source
+        type: string
+      - description: Attribution
+        in: formData
+        name: attribution
+        type: string
+      - description: Copyright or license
+        in: formData
+        name: license
+        type: string
+      - description: Positive figure number
+        in: formData
+        name: figure_number
+        type: integer
+      - description: Require clinical review
+        in: formData
+        name: clinically_sensitive
+        type: boolean
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/services.GuidelineAssetDTO'
+      security:
+      - BearerAuth: []
+      summary: Upload a version-scoped guideline image
+      tags:
+      - guideline-assets
   /api/v2/guideline-versions/{id}/assets/{assetId}:
+    delete:
+      parameters:
+      - description: Guideline version UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Asset UUID
+        in: path
+        name: assetId
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+      security:
+      - BearerAuth: []
+      summary: Remove an asset from an editable guideline version
+      tags:
+      - guideline-assets
+    get:
+      parameters:
+      - description: Guideline version UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Asset UUID
+        in: path
+        name: assetId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/services.GuidelineAssetDTO'
+      security:
+      - BearerAuth: []
+      summary: Get guideline asset metadata and a short-lived URL
+      tags:
+      - guideline-assets
+    patch:
+      consumes:
+      - application/json
+      parameters:
+      - description: Guideline version UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Asset UUID
+        in: path
+        name: assetId
+        required: true
+        type: string
+      - description: Asset metadata
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/services.GuidelineAssetInput'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/services.GuidelineAssetDTO'
+      security:
+      - BearerAuth: []
+      summary: Update editable guideline asset metadata
+      tags:
+      - guideline-assets
+  /api/v2/guideline-versions/{id}/assets/{assetId}/content:
     get:
       parameters:
       - description: Guideline version ID

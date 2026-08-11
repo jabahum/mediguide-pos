@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react"
+import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
@@ -8,6 +8,12 @@ import {
   GuidelineMarkdownService,
   MarkdownDraft,
 } from "@/services/guideline-markdown.service"
+
+const { routerPush } = vi.hoisted(() => ({ routerPush: vi.fn() }))
+
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ push: routerPush }),
+}))
 
 vi.mock("@uiw/react-codemirror", async () => {
   const React = await import("react")
@@ -61,12 +67,15 @@ describe("GuidelineMarkdownEditor", () => {
 
   beforeEach(() => {
     vi.restoreAllMocks()
+    routerPush.mockReset()
   })
 
   it("is preview-only without update permission", () => {
     render(
       <GuidelineMarkdownEditor
         versionId="version-1"
+        documentTitle="Test guideline"
+        versionLabel="1.0"
         initialContent="# Read only"
         editable={false}
         published={false}
@@ -88,6 +97,8 @@ describe("GuidelineMarkdownEditor", () => {
     render(
       <GuidelineMarkdownEditor
         versionId="version-1"
+        documentTitle="Test guideline"
+        versionLabel="1.0"
         initialContent="# Original"
         editable
         published={false}
@@ -115,6 +126,8 @@ describe("GuidelineMarkdownEditor", () => {
     render(
       <GuidelineMarkdownEditor
         versionId="version-modes"
+        documentTitle="Test guideline"
+        versionLabel="1.0"
         initialContent="# Mode preview"
         editable
         published={false}
@@ -145,6 +158,8 @@ describe("GuidelineMarkdownEditor", () => {
     render(
       <GuidelineMarkdownEditor
         versionId="version-2"
+        documentTitle="Test guideline"
+        versionLabel="1.0"
         initialContent="# Initial"
         editable
         published={false}
@@ -171,6 +186,8 @@ describe("GuidelineMarkdownEditor", () => {
     render(
       <GuidelineMarkdownEditor
         versionId="version-3"
+        documentTitle="Test guideline"
+        versionLabel="1.0"
         initialContent="# Initial"
         editable
         published={false}
@@ -205,6 +222,8 @@ describe("GuidelineMarkdownEditor", () => {
     render(
       <GuidelineMarkdownEditor
         versionId="version-conflict"
+        documentTitle="Test guideline"
+        versionLabel="1.0"
         initialContent={initialDraft.content}
         initialDraft={initialDraft}
         editable
@@ -228,6 +247,8 @@ describe("GuidelineMarkdownEditor", () => {
     render(
       <GuidelineMarkdownEditor
         versionId="version-4"
+        documentTitle="Test guideline"
+        versionLabel="1.0"
         initialContent="# Published"
         editable
         published
@@ -237,5 +258,77 @@ describe("GuidelineMarkdownEditor", () => {
     expect(screen.getByText("Published version")).toBeInTheDocument()
     expect(screen.queryByRole("textbox", { name: "Markdown source" })).not.toBeInTheDocument()
     expect(screen.queryByRole("button", { name: "Save draft" })).not.toBeInTheDocument()
+  })
+
+  it("provides rendered, public, structured, and print preview presentations", async () => {
+    const user = userEvent.setup()
+    const print = vi.spyOn(window, "print").mockImplementation(() => undefined)
+    render(
+      <GuidelineMarkdownEditor
+        versionId="version-preview"
+        documentTitle="Malaria management"
+        versionLabel="3.0"
+        initialContent="# Malaria management\n\n## Treatment"
+        editable={false}
+        published={false}
+      />,
+    )
+
+    const presentation = screen.getByRole("combobox", { name: "Preview presentation" })
+    await user.selectOptions(presentation, "public-reader")
+    expect(screen.getByRole("region", { name: "Public reader preview" })).toBeInTheDocument()
+    expect(screen.getByText("Draft preview")).toBeInTheDocument()
+
+    await user.selectOptions(presentation, "structured-reader")
+    expect(screen.getByRole("region", { name: "Structured reader preview" })).toBeInTheDocument()
+    expect(screen.getByRole("navigation", { name: "Structured preview contents" })).toBeInTheDocument()
+
+    await user.click(screen.getByRole("button", { name: "Print" }))
+    await waitFor(() => expect(print).toHaveBeenCalled())
+    expect(screen.getByRole("article", { name: "Print preview" })).toBeInTheDocument()
+  })
+
+  it("creates an independent draft version from a published version", async () => {
+    const user = userEvent.setup()
+    const source = savedDraft("# Published source")
+    vi.spyOn(GuidelineMarkdownService, "duplicateVersion").mockResolvedValue({
+      version: {
+        id: "new-version",
+        document_id: "document-1",
+        version: "2.0",
+        status: "draft",
+        created_at: "2026-08-11T08:00:00Z",
+        updated_at: "2026-08-11T08:00:00Z",
+      },
+      draft: {
+        ...source,
+        revision: { ...source.revision, id: "new-revision", version_id: "new-version", source_type: "duplicated" },
+      },
+    })
+
+    render(
+      <GuidelineMarkdownEditor
+        versionId="published-version"
+        documentTitle="Published guideline"
+        versionLabel="1.0"
+        initialContent="# Published source"
+        initialDraft={source}
+        editable
+        published
+      />,
+    )
+
+    await user.click(screen.getByRole("button", { name: "Create draft version" }))
+    const dialog = screen.getByRole("dialog", { name: "Create a draft from this published version" })
+    await user.type(within(dialog).getByLabelText("New version"), "2.0")
+    await user.click(within(dialog).getByRole("button", { name: "Create draft version" }))
+
+    await waitFor(() => {
+      expect(GuidelineMarkdownService.duplicateVersion).toHaveBeenCalledWith(
+        "published-version",
+        expect.objectContaining({ version: "2.0" }),
+      )
+      expect(routerPush).toHaveBeenCalledWith("/guidelines/document-1/versions/new-version/markdown")
+    })
   })
 })

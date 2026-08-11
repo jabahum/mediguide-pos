@@ -1,8 +1,8 @@
 "use client"
 
 import * as React from "react"
-import { useQuery, useQueryClient } from "@tanstack/react-query"
-import { Check, FileText, Loader2, Upload } from "lucide-react"
+import { useQuery } from "@tanstack/react-query"
+import { BookOpen, Check, FileText, LayoutTemplate, Loader2, Upload } from "lucide-react"
 import { useRouter } from "next/navigation"
 
 import { GuidelineDocumentForm } from "../components/guideline-document-form"
@@ -12,7 +12,6 @@ import { FileUpload } from "@/components/ui/file-upload"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { PageHeader } from "@/components/ui/page-header"
-import { Textarea } from "@/components/ui/textarea"
 import { usePermissionContext } from "@/lib/permission-context"
 import { showToast } from "@/lib/toast"
 import {
@@ -32,7 +31,6 @@ const stages = [
 
 export default function CreateGuidelinePage() {
   const router = useRouter()
-  const queryClient = useQueryClient()
   const { hasPermission, loading } = usePermissionContext()
   const [stage, setStage] = React.useState(0)
   const [document, setDocument] = React.useState<GuidelineDocumentRecord | null>(null)
@@ -41,8 +39,6 @@ export default function CreateGuidelinePage() {
   const [publicationDate, setPublicationDate] = React.useState("")
   const [reviewDate, setReviewDate] = React.useState("")
   const [file, setFile] = React.useState<File | null>(null)
-  const [markdown, setMarkdown] = React.useState("")
-  const [markdownLoaded, setMarkdownLoaded] = React.useState(false)
   const [submitting, setSubmitting] = React.useState(false)
 
   React.useEffect(() => {
@@ -62,26 +58,6 @@ export default function CreateGuidelinePage() {
 
   const reviewedVersion = reviewDocumentQuery.data?.versions.find((item) => item.id === version?.id)
   const extractionReady = Boolean(reviewedVersion?.markdown_file_key && reviewedVersion?.html_file_key)
-
-  React.useEffect(() => {
-    if (!extractionReady || !reviewedVersion || markdownLoaded) return
-    let cancelled = false
-    GuidelineDocumentsService.getExtractedMarkdown(reviewedVersion.id)
-      .then((content) => {
-        if (!cancelled) {
-          setMarkdown(content)
-          setMarkdownLoaded(true)
-        }
-      })
-      .catch((error) => {
-        if (!cancelled) {
-          showToast.error("Markdown unavailable", error instanceof Error ? error.message : "Unknown error")
-        }
-      })
-    return () => {
-      cancelled = true
-    }
-  }, [extractionReady, markdownLoaded, reviewedVersion])
 
   async function createDocument(payload: GuidelineDocumentInput) {
     setSubmitting(true)
@@ -125,20 +101,6 @@ export default function CreateGuidelinePage() {
       showToast.success("Source uploaded", "Extraction and indexing are running. This page will refresh automatically.")
     } catch (error) {
       showToast.error("Upload failed", error instanceof Error ? error.message : "Unknown error")
-    } finally {
-      setSubmitting(false)
-    }
-  }
-
-  async function saveMarkdown() {
-    if (!reviewedVersion || !markdown.trim()) return
-    setSubmitting(true)
-    try {
-      await GuidelineDocumentsService.updateExtractedMarkdown(reviewedVersion.id, markdown)
-      await queryClient.invalidateQueries({ queryKey: guidelineDocumentsQueryKey })
-      showToast.success("Markdown saved", "Structured content and the AI index are being regenerated.")
-    } catch (error) {
-      showToast.error("Save failed", error instanceof Error ? error.message : "Unknown error")
     } finally {
       setSubmitting(false)
     }
@@ -251,6 +213,12 @@ export default function CreateGuidelinePage() {
               <Button variant="outline" onClick={() => router.push(`/guidelines/${document?.id}`)}>
                 Finish Later
               </Button>
+              <Button variant="outline" onClick={() => router.push(`/guidelines/${document?.id}/versions/${version?.id}/markdown`)}>
+                <BookOpen className="h-4 w-4" /> Start with blank Markdown
+              </Button>
+              <Button variant="outline" onClick={() => router.push(`/guidelines/${document?.id}/versions/${version?.id}/markdown?start=template`)}>
+                <LayoutTemplate className="h-4 w-4" /> Start from template
+              </Button>
               <Button disabled={submitting || !file} onClick={uploadVersion}>
                 {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
                 Upload and Review
@@ -281,35 +249,23 @@ export default function CreateGuidelinePage() {
                   </div>
                 </div>
               </div>
-            ) : !markdownLoaded ? (
-              <div className="flex min-h-72 items-center justify-center">
-                <Loader2 className="h-8 w-8 animate-spin" />
-              </div>
             ) : (
-              <Textarea
-                className="min-h-[55vh] font-mono text-sm"
-                value={markdown}
-                onChange={(event) => setMarkdown(event.target.value)}
-              />
+              <div className="flex min-h-72 flex-col items-center justify-center gap-4 rounded-lg border border-dashed text-center">
+                <BookOpen className="h-9 w-9 text-primary" />
+                <div>
+                  <div className="font-medium">Your source is ready for authoring</div>
+                  <div className="mt-1 text-sm text-muted-foreground">Continue in the full Markdown workspace to edit, preview, save revisions, and regenerate explicitly.</div>
+                </div>
+                <Button onClick={() => router.push(`/guidelines/${document?.id}/versions/${reviewedVersion?.id}/markdown`)}>
+                  Open Markdown workspace
+                </Button>
+              </div>
             )}
             <div className="flex flex-wrap justify-end gap-2">
               <Button variant="outline" onClick={() => router.push(`/guidelines/${document?.id}`)}>
                 {extractionReady ? "View Guideline" : "Finish Later"}
               </Button>
-              {extractionReady && (
-                <>
-                  <Button
-                    variant="outline"
-                    onClick={() => router.push(`/guidelines/${document?.id}/edit`)}
-                  >
-                    Edit Metadata
-                  </Button>
-                  <Button disabled={submitting || !markdownLoaded || !markdown.trim()} onClick={saveMarkdown}>
-                    {submitting && <Loader2 className="h-4 w-4 animate-spin" />}
-                    Save Markdown
-                  </Button>
-                </>
-              )}
+              {extractionReady && <Button variant="outline" onClick={() => router.push(`/guidelines/${document?.id}/edit`)}>Edit Metadata</Button>}
             </div>
           </CardContent>
         </Card>

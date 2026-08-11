@@ -26,6 +26,7 @@ var (
 	ErrMarkdownRevisionConflict = errors.New("the Markdown draft was changed by another editor")
 	ErrMarkdownRevisionMissing  = errors.New("Markdown draft revision not found")
 	ErrMarkdownAlreadyCurrent   = errors.New("structured content is already current for this revision")
+	ErrGuidelineVersionExists   = errors.New("a guideline version with this version number already exists")
 )
 
 type MarkdownDraftInput struct {
@@ -63,6 +64,30 @@ type MarkdownRegenerationResult struct {
 	RevisionID uuid.UUID           `json:"revision_id"`
 	Operations []string            `json:"operations"`
 	QueuedAt   time.Time           `json:"queued_at"`
+}
+
+type DuplicateMarkdownVersionInput struct {
+	Version         string `json:"version"`
+	PublicationDate string `json:"publication_date,omitempty"`
+	ReviewDate      string `json:"review_date,omitempty"`
+}
+
+type DuplicatedGuidelineVersion struct {
+	ID                        uuid.UUID  `json:"id"`
+	DocumentID                uuid.UUID  `json:"document_id"`
+	Version                   string     `json:"version"`
+	PublicationDate           string     `json:"publication_date"`
+	ReviewDate                string     `json:"review_date"`
+	Status                    string     `json:"status"`
+	CurrentMarkdownRevisionID *uuid.UUID `json:"current_markdown_revision_id"`
+	StructuredContentStatus   string     `json:"structured_content_status"`
+	CreatedAt                 time.Time  `json:"created_at"`
+	UpdatedAt                 time.Time  `json:"updated_at"`
+}
+
+type DuplicatedMarkdownVersion struct {
+	Version DuplicatedGuidelineVersion `json:"version"`
+	Draft   MarkdownDraft              `json:"draft"`
 }
 
 func (s GuidelineService) GetMarkdownDraft(ctx context.Context, versionID uuid.UUID) (*MarkdownDraft, error) {
@@ -281,6 +306,148 @@ func (s GuidelineService) RestoreMarkdownRevision(
 		SourceType:       "restored",
 		ParentRevisionID: &parent,
 	})
+}
+
+// DuplicateMarkdownVersion creates a new draft version from one exact immutable
+// source revision. Published versions branch from their published revision;
+// drafts branch from the revision that was current when this request began.
+func (s GuidelineService) DuplicateMarkdownVersion(
+	ctx context.Context,
+	sourceVersionID uuid.UUID,
+	actorID uuid.UUID,
+	input DuplicateMarkdownVersionInput,
+) (*DuplicatedMarkdownVersion, error) {
+	input.Version = strings.TrimSpace(input.Version)
+	if input.Version == "" {
+		return nil, errors.New("version is required")
+	}
+
+	var sourceVersion models.GuidelineVersion
+	if err := s.DB.First(&sourceVersion, "id = ?", sourceVersionID).Error; err != nil {
+		return nil, err
+	}
+	sourceRevisionID := sourceVersion.CurrentMarkdownRevisionID
+	if strings.EqualFold(sourceVersion.Status, "published") && sourceVersion.PublishedMarkdownRevisionID != nil {
+		sourceRevisionID = sourceVersion.PublishedMarkdownRevisionID
+	}
+	if sourceRevisionID == nil {
+		return nil, ErrMarkdownRevisionMissing
+	}
+
+	var sourceRevision models.GuidelineMarkdownRevision
+	if err := s.DB.First(&sourceRevision, "id = ? AND version_id = ?", *sourceRevisionID, sourceVersionID).Error; err != nil {
+		return nil, err
+	}
+	content, err := s.readMarkdownObject(ctx, sourceRevision.StorageKey)
+	if err != nil {
+		return nil, err
+	}
+
+	versionID := uuid.New()
+	revisionID := uuid.New()
+	data := []byte(content)
+	key := fmt.Sprintf("guidelines/%s/revisions/%s.md", versionID, revisionID)
+	if err := s.Store.Put(ctx, key, bytes.NewReader(data), int64(len(data)), "text/markdown; charset=utf-8"); err != nil {
+		return nil, err
+	}
+
+	result := DuplicatedMarkdownVersion{}
+	err = s.DB.Transaction(func(tx *gorm.DB) error {
+		var lockedSource models.GuidelineVersion
+		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).First(&lockedSource, "id = ?", sourceVersionID).Error; err != nil {
+			return err
+		}
+		lockedRevisionID := lockedSource.CurrentMarkdownRevisionID
+		if strings.EqualFold(lockedSource.Status, "published") && lockedSource.PublishedMarkdownRevisionID != nil {
+			lockedRevisionID = lockedSource.PublishedMarkdownRevisionID
+		}
+		if lockedRevisionID == nil || *lockedRevisionID != sourceRevision.ID {
+			return ErrMarkdownRevisionConflict
+		}
+
+		var duplicateCount int64
+		if err := tx.Model(&models.GuidelineVersion{}).
+			Where("document_id = ? AND lower(version) = lower(?)", lockedSource.DocumentID, input.Version).
+			Count(&duplicateCount).Error; err != nil {
+			return err
+		}
+		if duplicateCount > 0 {
+			return ErrGuidelineVersionExists
+		}
+
+		version := models.GuidelineVersion{
+			Base:                    models.Base{ID: versionID},
+			DocumentID:              lockedSource.DocumentID,
+			Version:                 input.Version,
+			PublicationDate:         strings.TrimSpace(input.PublicationDate),
+			ReviewDate:              strings.TrimSpace(input.ReviewDate),
+			Status:                  "draft",
+			OriginalFileKey:         lockedSource.OriginalFileKey,
+			MarkdownFileKey:         key,
+			Checksum:                sourceRevision.Checksum,
+			StructuredContentStatus: "outdated",
+		}
+		if err := tx.Create(&version).Error; err != nil {
+			return err
+		}
+		parentID := sourceRevision.ID
+		actor := actorID
+		revision := models.GuidelineMarkdownRevision{
+			Base:                    models.Base{ID: revisionID},
+			DocumentID:              lockedSource.DocumentID,
+			VersionID:               version.ID,
+			RevisionNumber:          1,
+			StorageKey:              key,
+			Checksum:                markdownContentChecksum(data),
+			SizeBytes:               int64(len(data)),
+			SourceType:              "duplicated",
+			ParentRevisionID:        &parentID,
+			CheckpointName:          fmt.Sprintf("Duplicated from version %s", lockedSource.Version),
+			ChangeSummary:           "Created as a new draft from an immutable Markdown revision",
+			CreatedBy:               &actor,
+			IsCurrent:               true,
+			StructuredContentStatus: "outdated",
+			ReviewState:             "draft",
+			PublicationState:        "draft",
+		}
+		if err := tx.Create(&revision).Error; err != nil {
+			return err
+		}
+		if err := tx.Model(&version).Updates(map[string]any{
+			"current_markdown_revision_id": revision.ID,
+			"markdown_file_key":            key,
+			"checksum":                     revision.Checksum,
+		}).Error; err != nil {
+			return err
+		}
+		version.CurrentMarkdownRevisionID = &revision.ID
+		result.Version = DuplicatedGuidelineVersion{
+			ID:                        version.ID,
+			DocumentID:                version.DocumentID,
+			Version:                   version.Version,
+			PublicationDate:           version.PublicationDate,
+			ReviewDate:                version.ReviewDate,
+			Status:                    version.Status,
+			CurrentMarkdownRevisionID: version.CurrentMarkdownRevisionID,
+			StructuredContentStatus:   version.StructuredContentStatus,
+			CreatedAt:                 version.CreatedAt,
+			UpdatedAt:                 version.UpdatedAt,
+		}
+		result.Draft = MarkdownDraft{
+			Revision: revision,
+			Content:  content,
+			ETag:     markdownRevisionETag(&revision),
+			Saved:    true,
+		}
+		return nil
+	})
+	if err != nil {
+		_ = s.Store.Delete(ctx, key)
+		return nil, err
+	}
+
+	s.invalidatePublishedCaches(ctx)
+	return &result, nil
 }
 
 func (s GuidelineService) RegenerateMarkdown(

@@ -2,7 +2,7 @@
 
 import * as React from "react"
 import Link from "next/link"
-import { useParams, useRouter } from "next/navigation"
+import { useParams, useRouter, useSearchParams } from "next/navigation"
 import { AlertCircle, ArrowLeft, FileText, RefreshCw } from "lucide-react"
 
 import { GuidelineMarkdownEditor } from "@/components/guidelines/guideline-markdown-editor"
@@ -54,6 +54,7 @@ function EditorSkeleton() {
 export default function GuidelineMarkdownPage() {
   const params = useParams<{ id: string; versionId: string }>()
   const router = useRouter()
+  const searchParams = useSearchParams()
   const { hasPermission, loading: permissionsLoading } = usePermissionContext()
   const [data, setData] = React.useState<EditorData | null>(null)
   const [error, setError] = React.useState<GuidelineMarkdownError | null>(null)
@@ -219,6 +220,10 @@ export default function GuidelineMarkdownPage() {
       <GuidelineMarkdownEditor
         key={data.version.id}
         versionId={data.version.id}
+        documentTitle={data.document.title}
+        versionLabel={data.version.version}
+        publishedVersionId={data.document.current_version_id}
+        openTemplatesInitially={searchParams.get("start") === "template"}
         initialContent={data.markdown}
         initialDraft={data.draft}
         editable={canUpdate}

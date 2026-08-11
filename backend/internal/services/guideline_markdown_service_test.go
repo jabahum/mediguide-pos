@@ -98,6 +98,73 @@ func TestRestoreMarkdownRevisionCreatesNewRevision(t *testing.T) {
 	}
 }
 
+func TestDuplicateMarkdownVersionCreatesIndependentDraftFromExactRevision(t *testing.T) {
+	service, sourceVersion, actorID := markdownServiceFixture(t)
+	source, err := service.SaveMarkdownDraft(context.Background(), sourceVersion.ID, actorID, MarkdownDraftInput{
+		Content: "# Source guideline\n\nReviewed source text.", SourceType: "blank",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	result, err := service.DuplicateMarkdownVersion(context.Background(), sourceVersion.ID, actorID, DuplicateMarkdownVersionInput{
+		Version: "2.0",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result.Version.ID == sourceVersion.ID || result.Version.Status != "draft" {
+		t.Fatalf("unexpected duplicated version: %#v", result.Version)
+	}
+	if result.Draft.Content != source.Content || result.Draft.Revision.SourceType != "duplicated" {
+		t.Fatalf("unexpected duplicated draft: %#v", result.Draft)
+	}
+	if result.Draft.Revision.ParentRevisionID == nil || *result.Draft.Revision.ParentRevisionID != source.Revision.ID {
+		t.Fatalf("duplicate did not retain its immutable origin: %#v", result.Draft.Revision)
+	}
+	if result.Draft.Revision.StorageKey == source.Revision.StorageKey {
+		t.Fatal("duplicate reused the source object key")
+	}
+
+	current, err := service.GetMarkdownDraft(context.Background(), sourceVersion.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if current.Revision.ID != source.Revision.ID {
+		t.Fatal("duplicating changed the source version")
+	}
+}
+
+func TestDuplicatePublishedMarkdownVersionUsesPublishedRevision(t *testing.T) {
+	service, sourceVersion, actorID := markdownServiceFixture(t)
+	source, err := service.SaveMarkdownDraft(context.Background(), sourceVersion.ID, actorID, MarkdownDraftInput{
+		Content: "# Published guideline", SourceType: "blank",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := service.DB.Model(&models.GuidelineVersion{}).Where("id = ?", sourceVersion.ID).Updates(map[string]any{
+		"status":                         "published",
+		"published_markdown_revision_id": source.Revision.ID,
+	}).Error; err != nil {
+		t.Fatal(err)
+	}
+	if err := service.DB.Model(&models.GuidelineMarkdownRevision{}).Where("id = ?", source.Revision.ID).Update("publication_state", "published").Error; err != nil {
+		t.Fatal(err)
+	}
+
+	result, err := service.DuplicateMarkdownVersion(context.Background(), sourceVersion.ID, actorID, DuplicateMarkdownVersionInput{Version: "2.0-draft"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result.Draft.Revision.ParentRevisionID == nil || *result.Draft.Revision.ParentRevisionID != source.Revision.ID {
+		t.Fatalf("published origin was not retained: %#v", result.Draft.Revision)
+	}
+	if result.Version.Status != "draft" {
+		t.Fatalf("published state leaked into new draft: %#v", result.Version)
+	}
+}
+
 func TestRegenerateMarkdownIsExplicitAndIdempotent(t *testing.T) {
 	service, version, actorID := markdownServiceFixture(t)
 	draft, err := service.SaveMarkdownDraft(context.Background(), version.ID, actorID, MarkdownDraftInput{Content: "# Ready", SourceType: "blank"})

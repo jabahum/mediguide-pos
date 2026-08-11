@@ -440,6 +440,11 @@ type GuidelineVersionEnvelope struct {
 	Data    models.GuidelineVersion `json:"data"`
 }
 
+type DuplicatedMarkdownVersionEnvelope struct {
+	Success bool                               `json:"success" example:"true"`
+	Data    services.DuplicatedMarkdownVersion `json:"data"`
+}
+
 type GuidelineSectionEnvelope struct {
 	Success bool                    `json:"success" example:"true"`
 	Data    models.GuidelineSection `json:"data"`

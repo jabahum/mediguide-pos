@@ -22,7 +22,6 @@ import {
 } from "@/services/guideline-documents.service"
 import {
   CreateVersionDialog,
-  EditMarkdownDialog,
   UploadVersionDialog,
 } from "../components/guideline-version-dialogs"
 
@@ -34,10 +33,7 @@ export default function GuidelineDetailsPage() {
   const canUpdate = hasPermission("content", "update:any")
   const [createVersionOpen, setCreateVersionOpen] = React.useState(false)
   const [uploadVersion, setUploadVersion] = React.useState<GuidelineVersionRecord | null>(null)
-  const [markdownVersion, setMarkdownVersion] = React.useState<GuidelineVersionRecord | null>(null)
-  const [markdown, setMarkdown] = React.useState("")
   const [viewVersion, setViewVersion] = React.useState<GuidelineVersionRecord | null>(null)
-  const [loadingMarkdown, setLoadingMarkdown] = React.useState(false)
   const [submitting, setSubmitting] = React.useState(false)
 
   React.useEffect(() => {
@@ -113,35 +109,6 @@ export default function GuidelineDetailsPage() {
       showToast.success("Version published", `${version.version} is now the current version.`)
     } catch (error) {
       showToast.error("Publish failed", error instanceof Error ? error.message : "Unknown error")
-    } finally {
-      setSubmitting(false)
-    }
-  }
-
-  async function openMarkdown(version: GuidelineVersionRecord) {
-    setMarkdownVersion(version)
-    setMarkdown("")
-    setLoadingMarkdown(true)
-    try {
-      setMarkdown(await GuidelineDocumentsService.getExtractedMarkdown(version.id))
-    } catch (error) {
-      setMarkdownVersion(null)
-      showToast.error("Load failed", error instanceof Error ? error.message : "Unknown error")
-    } finally {
-      setLoadingMarkdown(false)
-    }
-  }
-
-  async function saveMarkdown() {
-    if (!markdownVersion) return
-    setSubmitting(true)
-    try {
-      await GuidelineDocumentsService.updateExtractedMarkdown(markdownVersion.id, markdown)
-      setMarkdownVersion(null)
-      await refresh()
-      showToast.success("Markdown updated", "Structured content and the AI index are being regenerated.")
-    } catch (error) {
-      showToast.error("Save failed", error instanceof Error ? error.message : "Unknown error")
     } finally {
       setSubmitting(false)
     }
@@ -254,9 +221,14 @@ export default function GuidelineDetailsPage() {
                         <FileCode2 className="h-4 w-4" /> HTML
                       </Button>
                     )}
-                    {canUpdate && hasMarkdown && version.status !== "published" && (
-                      <Button variant="outline" size="sm" onClick={() => openMarkdown(version)}>
-                        <Pencil className="h-4 w-4" /> Edit Markdown
+                    {canUpdate && version.status !== "published" && (
+                      <Button variant="outline" size="sm" onClick={() => router.push(`/guidelines/${id}/versions/${version.id}/markdown`)}>
+                        <Pencil className="h-4 w-4" /> {hasMarkdown ? "Edit Markdown" : "Author Markdown"}
+                      </Button>
+                    )}
+                    {hasMarkdown && version.status === "published" && (
+                      <Button variant="outline" size="sm" onClick={() => router.push(`/guidelines/${id}/versions/${version.id}/markdown`)}>
+                        <BookOpen className="h-4 w-4" /> Preview Markdown
                       </Button>
                     )}
                     {canUpdate && publishable && (
@@ -360,16 +332,6 @@ export default function GuidelineDetailsPage() {
         submitting={submitting}
         onOpenChange={(open) => !open && setUploadVersion(null)}
         onSubmit={uploadSource}
-      />
-      <EditMarkdownDialog
-        version={markdownVersion}
-        open={Boolean(markdownVersion)}
-        loading={loadingMarkdown}
-        submitting={submitting}
-        content={markdown}
-        onContentChange={setMarkdown}
-        onOpenChange={(open) => !open && setMarkdownVersion(null)}
-        onSubmit={saveMarkdown}
       />
     </div>
   )

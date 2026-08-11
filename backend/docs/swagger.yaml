@@ -107,6 +107,14 @@ definitions:
         example: true
         type: boolean
     type: object
+  handlers.DuplicatedMarkdownVersionEnvelope:
+    properties:
+      data:
+        $ref: '#/definitions/services.DuplicatedMarkdownVersion'
+      success:
+        example: true
+        type: boolean
+    type: object
   handlers.EmailVerificationConfirmRequest:
     properties:
       token:
@@ -3459,6 +3467,45 @@ definitions:
         type: string
       tag_category:
         type: string
+    type: object
+  services.DuplicateMarkdownVersionInput:
+    properties:
+      publication_date:
+        type: string
+      review_date:
+        type: string
+      version:
+        type: string
+    type: object
+  services.DuplicatedGuidelineVersion:
+    properties:
+      created_at:
+        type: string
+      current_markdown_revision_id:
+        type: string
+      document_id:
+        type: string
+      id:
+        type: string
+      publication_date:
+        type: string
+      review_date:
+        type: string
+      status:
+        type: string
+      structured_content_status:
+        type: string
+      updated_at:
+        type: string
+      version:
+        type: string
+    type: object
+  services.DuplicatedMarkdownVersion:
+    properties:
+      draft:
+        $ref: '#/definitions/services.MarkdownDraft'
+      version:
+        $ref: '#/definitions/services.DuplicatedGuidelineVersion'
     type: object
   services.EmergencyProtocolInput:
     properties:
@@ -8229,6 +8276,57 @@ paths:
       summary: List chunks for a guideline version
       tags:
       - guidelines
+  /api/v2/guideline-versions/{id}/duplicate:
+    post:
+      consumes:
+      - application/json
+      description: Drafts branch from their current revision. Published versions branch
+        from their exact published revision.
+      parameters:
+      - description: Source guideline version ID
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: New draft version metadata
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/services.DuplicateMarkdownVersionInput'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/handlers.DuplicatedMarkdownVersionEnvelope'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Duplicate a guideline Markdown revision into a new draft version
+      tags:
+      - guideline-markdown
   /api/v2/guideline-versions/{id}/extracted/{format}:
     get:
       parameters:

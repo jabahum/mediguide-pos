@@ -396,6 +396,7 @@ func New(cfg config.Config) (*App, error) {
 		protected.GET("/guideline-versions/:id/markdown-revisions/:revisionId", middleware.RequirePermission("guideline.write"), guidelineH.GetMarkdownRevision)
 		protected.GET("/guideline-versions/:id/markdown-revisions/:revisionId/download", middleware.RequirePermission("guideline.write"), guidelineH.DownloadMarkdownRevision)
 		protected.POST("/guideline-versions/:id/markdown-revisions/:revisionId/restore", middleware.RequirePermission("guideline.write"), guidelineH.RestoreMarkdownRevision)
+		protected.POST("/guideline-versions/:id/duplicate", middleware.RequirePermission("guideline.write"), rateLimiter.Limit(middleware.Policy("guideline-markdown-duplicate", 30, time.Hour, 5), middleware.UserIdentity), guidelineH.DuplicateMarkdownVersion)
 		protected.POST("/guideline-versions/:id/regenerate", middleware.RequirePermission("guideline.write"), rateLimiter.Limit(middleware.Policy("guideline-regenerate", 20, time.Hour, 2), middleware.UserIdentity), rateLimiter.Concurrency("guideline-regenerate", 1, 15*time.Minute, middleware.UserIdentity), guidelineH.RegenerateMarkdown)
 
 		protected.GET("/search", middleware.RequirePermission("guideline.read"), rateLimiter.Limit(middleware.Policy("guideline-search", 60, time.Minute, 10), middleware.UserIdentity), searchH.Search)

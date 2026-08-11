@@ -90,6 +90,12 @@ export interface HandlersDrugUsageEnvelope {
   success?: boolean;
 }
 
+export interface HandlersDuplicatedMarkdownVersionEnvelope {
+  data?: ServicesDuplicatedMarkdownVersion;
+  /** @example true */
+  success?: boolean;
+}
+
 export interface HandlersEmailVerificationConfirmRequest {
   token?: string;
 }
@@ -2056,6 +2062,30 @@ export interface ServicesDrugTagInput {
   sort_order?: number;
   status?: string;
   tag_category?: string;
+}
+
+export interface ServicesDuplicateMarkdownVersionInput {
+  publication_date?: string;
+  review_date?: string;
+  version?: string;
+}
+
+export interface ServicesDuplicatedGuidelineVersion {
+  created_at?: string;
+  current_markdown_revision_id?: string;
+  document_id?: string;
+  id?: string;
+  publication_date?: string;
+  review_date?: string;
+  status?: string;
+  structured_content_status?: string;
+  updated_at?: string;
+  version?: string;
+}
+
+export interface ServicesDuplicatedMarkdownVersion {
+  draft?: ServicesMarkdownDraft;
+  version?: ServicesDuplicatedGuidelineVersion;
 }
 
 export interface ServicesEmergencyProtocolInput {

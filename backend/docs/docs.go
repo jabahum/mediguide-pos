@@ -4881,6 +4881,83 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/v2/guideline-versions/{id}/duplicate": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Drafts branch from their current revision. Published versions branch from their exact published revision.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "guideline-markdown"
+                ],
+                "summary": "Duplicate a guideline Markdown revision into a new draft version",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "Source guideline version ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "New draft version metadata",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/services.DuplicateMarkdownVersionInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.DuplicatedMarkdownVersionEnvelope"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v2/guideline-versions/{id}/extracted/markdown": {
             "put": {
                 "security": [
@@ -10256,6 +10333,18 @@ const docTemplate = `{
                 }
             }
         },
+        "handlers.DuplicatedMarkdownVersionEnvelope": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/services.DuplicatedMarkdownVersion"
+                },
+                "success": {
+                    "type": "boolean",
+                    "example": true
+                }
+            }
+        },
         "handlers.EmailVerificationConfirmRequest": {
             "type": "object",
             "properties": {
@@ -15301,6 +15390,66 @@ const docTemplate = `{
                 },
                 "tag_category": {
                     "type": "string"
+                }
+            }
+        },
+        "services.DuplicateMarkdownVersionInput": {
+            "type": "object",
+            "properties": {
+                "publication_date": {
+                    "type": "string"
+                },
+                "review_date": {
+                    "type": "string"
+                },
+                "version": {
+                    "type": "string"
+                }
+            }
+        },
+        "services.DuplicatedGuidelineVersion": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "current_markdown_revision_id": {
+                    "type": "string"
+                },
+                "document_id": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "publication_date": {
+                    "type": "string"
+                },
+                "review_date": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "structured_content_status": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                },
+                "version": {
+                    "type": "string"
+                }
+            }
+        },
+        "services.DuplicatedMarkdownVersion": {
+            "type": "object",
+            "properties": {
+                "draft": {
+                    "$ref": "#/definitions/services.MarkdownDraft"
+                },
+                "version": {
+                    "$ref": "#/definitions/services.DuplicatedGuidelineVersion"
                 }
             }
         },

@@ -15,7 +15,6 @@ import {
 import { FileUpload } from "@/components/ui/file-upload"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
 import {
   CreateGuidelineVersionInput,
   GuidelineDocumentRecord,
@@ -163,62 +162,6 @@ export function UploadVersionDialog({
           <Button onClick={() => file && onSubmit(file)} disabled={submitting || !file}>
             {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
             Upload Source
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  )
-}
-
-export function EditMarkdownDialog({
-  version,
-  open,
-  loading,
-  submitting,
-  content,
-  onContentChange,
-  onOpenChange,
-  onSubmit,
-}: {
-  version: GuidelineVersionRecord | null
-  open: boolean
-  loading: boolean
-  submitting: boolean
-  content: string
-  onContentChange: (content: string) => void
-  onOpenChange: (open: boolean) => void
-  onSubmit: () => Promise<void>
-}) {
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl">
-        <DialogHeader>
-          <DialogTitle>Edit Extracted Markdown</DialogTitle>
-          <DialogDescription>
-            Update the extracted Markdown for version {version?.version}. Published versions are read-only.
-          </DialogDescription>
-        </DialogHeader>
-        {loading ? (
-          <div className="flex min-h-64 items-center justify-center">
-            <Loader2 className="h-6 w-6 animate-spin" />
-          </div>
-        ) : (
-          <Textarea
-            className="min-h-[55vh] font-mono text-sm"
-            value={content}
-            onChange={(event) => onContentChange(event.target.value)}
-          />
-        )}
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={submitting}>
-            Cancel
-          </Button>
-          <Button
-            onClick={onSubmit}
-            disabled={loading || submitting || !content.trim() || version?.status === "published"}
-          >
-            {submitting && <Loader2 className="h-4 w-4 animate-spin" />}
-            Save Markdown
           </Button>
         </DialogFooter>
       </DialogContent>

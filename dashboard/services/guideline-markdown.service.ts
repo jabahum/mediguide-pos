@@ -3,8 +3,11 @@
 import { BackendRequestError, getBackendClient } from "@/lib/backend-client"
 import type {
   HandlersPaginatedMarkdownRevisions,
+  ServicesDuplicatedMarkdownVersion,
+  ServicesDuplicateMarkdownVersionInput,
   ServicesMarkdownDraftInput,
 } from "@/types/generated/backend-openapi"
+import type { GuidelineVersionRecord } from "@/services/guideline-documents.service"
 
 export type MarkdownRevisionSource =
   | "blank"
@@ -79,6 +82,15 @@ export interface MarkdownRegenerationResult {
   queued_at: string
 }
 
+export interface DuplicateMarkdownVersionInput extends ServicesDuplicateMarkdownVersionInput {
+  version: string
+}
+
+export interface DuplicatedMarkdownVersion extends Omit<ServicesDuplicatedMarkdownVersion, "version" | "draft"> {
+  version: GuidelineVersionRecord
+  draft: MarkdownDraft
+}
+
 export interface MarkdownUpdateResult {
   updated: boolean
   queued: boolean
@@ -111,6 +123,21 @@ function toGuidelineMarkdownError(error: unknown, fallback: string) {
 }
 
 export class GuidelineMarkdownService {
+
+  static async duplicateVersion(
+    sourceVersionId: string,
+    input: DuplicateMarkdownVersionInput,
+  ): Promise<DuplicatedMarkdownVersion> {
+    try {
+      return await getBackendClient().send<DuplicatedMarkdownVersion>(
+        `/api/v2/guideline-versions/${sourceVersionId}/duplicate`,
+        { method: "POST", body: JSON.stringify(input) },
+      )
+    } catch (error) {
+      throw toGuidelineMarkdownError(error, "Failed to create the new Markdown draft version")
+    }
+  }
+
   static async loadDraft(versionId: string): Promise<MarkdownDraft> {
     try {
       return await getBackendClient().send<MarkdownDraft>(

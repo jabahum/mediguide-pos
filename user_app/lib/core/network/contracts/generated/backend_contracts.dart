@@ -299,6 +299,28 @@ final class HandlersDrugUsageEnvelope {
   Map<String, dynamic> toJson() => Map.of(value);
 }
 
+final class HandlersDuplicatedMarkdownVersionEnvelope {
+  HandlersDuplicatedMarkdownVersionEnvelope(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory HandlersDuplicatedMarkdownVersionEnvelope.fromJson(
+    Map<String, dynamic> json,
+  ) => HandlersDuplicatedMarkdownVersionEnvelope(json);
+
+  static const schemaName = 'handlers.DuplicatedMarkdownVersionEnvelope';
+  final Map<String, dynamic> value;
+
+  ServicesDuplicatedMarkdownVersion? get data {
+    final raw = value['data'];
+    if (raw is! Map) return null;
+    return ServicesDuplicatedMarkdownVersion.fromJson(_jsonMap(raw));
+  }
+
+  bool? get success => value['success'] as bool?;
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
 final class HandlersEmailVerificationConfirmRequest {
   HandlersEmailVerificationConfirmRequest(Map<String, dynamic> value)
     : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
@@ -6283,6 +6305,88 @@ final class ServicesDrugTagInput {
   String? get status => value['status']?.toString();
 
   String? get tagCategory => value['tag_category']?.toString();
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
+final class ServicesDuplicateMarkdownVersionInput {
+  ServicesDuplicateMarkdownVersionInput(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory ServicesDuplicateMarkdownVersionInput.fromJson(
+    Map<String, dynamic> json,
+  ) => ServicesDuplicateMarkdownVersionInput(json);
+
+  static const schemaName = 'services.DuplicateMarkdownVersionInput';
+  final Map<String, dynamic> value;
+
+  String? get publicationDate => value['publication_date']?.toString();
+
+  String? get reviewDate => value['review_date']?.toString();
+
+  String? get version => value['version']?.toString();
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
+final class ServicesDuplicatedGuidelineVersion {
+  ServicesDuplicatedGuidelineVersion(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory ServicesDuplicatedGuidelineVersion.fromJson(
+    Map<String, dynamic> json,
+  ) => ServicesDuplicatedGuidelineVersion(json);
+
+  static const schemaName = 'services.DuplicatedGuidelineVersion';
+  final Map<String, dynamic> value;
+
+  String? get createdAt => value['created_at']?.toString();
+
+  String? get currentMarkdownRevisionId =>
+      value['current_markdown_revision_id']?.toString();
+
+  String? get documentId => value['document_id']?.toString();
+
+  String? get id => value['id']?.toString();
+
+  String? get publicationDate => value['publication_date']?.toString();
+
+  String? get reviewDate => value['review_date']?.toString();
+
+  String? get status => value['status']?.toString();
+
+  String? get structuredContentStatus =>
+      value['structured_content_status']?.toString();
+
+  String? get updatedAt => value['updated_at']?.toString();
+
+  String? get version => value['version']?.toString();
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
+final class ServicesDuplicatedMarkdownVersion {
+  ServicesDuplicatedMarkdownVersion(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory ServicesDuplicatedMarkdownVersion.fromJson(
+    Map<String, dynamic> json,
+  ) => ServicesDuplicatedMarkdownVersion(json);
+
+  static const schemaName = 'services.DuplicatedMarkdownVersion';
+  final Map<String, dynamic> value;
+
+  ServicesMarkdownDraft? get draft {
+    final raw = value['draft'];
+    if (raw is! Map) return null;
+    return ServicesMarkdownDraft.fromJson(_jsonMap(raw));
+  }
+
+  ServicesDuplicatedGuidelineVersion? get version {
+    final raw = value['version'];
+    if (raw is! Map) return null;
+    return ServicesDuplicatedGuidelineVersion.fromJson(_jsonMap(raw));
+  }
 
   Map<String, dynamic> toJson() => Map.of(value);
 }

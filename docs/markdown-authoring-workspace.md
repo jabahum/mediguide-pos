@@ -32,6 +32,7 @@ Authenticated guideline editors use:
 - `GET /api/v2/guideline-versions/:id/markdown-revisions/:revisionId`
 - `GET /api/v2/guideline-versions/:id/markdown-revisions/:revisionId/download`
 - `POST /api/v2/guideline-versions/:id/markdown-revisions/:revisionId/restore`
+- `POST /api/v2/guideline-versions/:id/duplicate`
 - `POST /api/v2/guideline-versions/:id/regenerate`
 
 The current permission model maps these operations to `guideline.write`.
@@ -48,6 +49,10 @@ writes. A failed database transaction attempts to remove only the newly written
 object; historical objects are not removed. Restore always creates a new
 revision. Regeneration requires the current revision UUID and uses an
 idempotency key so a lost response can be retried without creating another job.
+Version duplication copies one exact immutable source revision into a new,
+independent draft object. A draft branches from its current revision, while a
+published version branches from its published revision. The new version starts
+with structured content marked `outdated`; duplication never starts ingestion.
 
 ## Dashboard behavior
 
@@ -56,6 +61,13 @@ fullscreen and distraction-free modes, light/dark CodeMirror themes, line
 numbers, folding, Markdown highlighting, history-aware undo/redo, search and
 replace, indentation, wrapping and font preferences. Editor preferences and a
 crash-recovery draft are browser-local.
+
+Split mode can synchronize editor and preview scrolling, and cursor/scroll
+position is restored when switching between edit, split and preview modes.
+Preview presentations include rendered Markdown, a draft public-reader shell,
+a draft structured-reader shell, responsive mobile/tablet/desktop widths and a
+print layout. These previews stay inside the authenticated dashboard and do not
+publish or expose draft content.
 
 It includes:
 
@@ -71,6 +83,13 @@ It includes:
   footnotes, references, and documented clinical callouts;
 - safe GFM preview with raw HTML disabled;
 - explicit regeneration and worker-status polling.
+
+New versions can begin with blank Markdown, one of the six clinical templates,
+PDF upload or Markdown upload. Editors can also duplicate an existing draft or
+create a new draft from an immutable published revision. Loading another
+Markdown file replaces only the unsaved editor source until the editor confirms
+the save. Drafts can be compared with the document's published Markdown before
+regeneration.
 
 Supported callout fences are `recommendation`, `warning`, `caution`,
 `key-point`, `contraindication`, `dosage`, `evidence`, `definition`, `procedure`,
@@ -91,16 +110,20 @@ executable HTML.
 - Clinical templates contain headings and placeholders only. They never
   fabricate recommendations or doses.
 - Asset-library upload, threaded review comments, drag-to-reorder outline
-  sections, word-level/side-by-side diff controls, and dedicated public/mobile/
-  print preview shells require separate typed contracts and are not represented
-  as complete by this implementation.
+  sections, word-level/side-by-side diff controls, and a canonical Flutter
+  reader preview require later phases and are not represented as complete by
+  this implementation. Public and structured dashboard shells are layout
+  previews of the current Markdown; they do not claim to be regenerated
+  canonical structured content.
 
 ## Validation
 
 Migration `00018_guideline_markdown_revisions.sql` has been validated up/down/up
 against a disposable PostgreSQL 16/pgvector database. Backend focused tests
-cover save-only behavior, optimistic conflicts, immutable restore, explicit
-regeneration, and idempotent retries. Dashboard focused tests cover permission
+cover save-only behavior, optimistic conflicts, immutable restore, exact
+revision duplication, published-version branching, explicit regeneration, and
+idempotent retries. Dashboard focused tests cover permission
 states, editing, modes, keyboard save, failed-save preservation, publication
-immutability, safe HTML handling, GFM, and clinical callouts. OpenAPI,
+immutability, preview presentations, published branching, safe HTML handling,
+GFM, and clinical callouts. OpenAPI,
 TypeScript, and Dart contracts are regenerated from the backend specification.

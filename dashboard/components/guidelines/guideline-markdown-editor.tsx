@@ -8,6 +8,7 @@ import { keymap, EditorView } from "@codemirror/view"
 import { openSearchPanel, searchKeymap } from "@codemirror/search"
 import { oneDark } from "@codemirror/theme-one-dark"
 import { useTheme } from "next-themes"
+import { useRouter } from "next/navigation"
 import {
   AlertCircle,
   CheckCircle2,
@@ -15,8 +16,11 @@ import {
   CloudOff,
   Copy,
   FileClock,
+  FilePlus2,
+  GitCompareArrows,
   Info,
   ListTree,
+  Printer,
   RotateCcw,
   Settings2,
   ShieldAlert,
@@ -28,7 +32,10 @@ import {
   MarkdownFormatAction,
   MarkdownViewMode,
 } from "./markdown-editor-toolbar"
-import { MarkdownPreview } from "./markdown-preview"
+import {
+  MarkdownPreviewPresentation,
+  MarkdownPreviewSurface,
+} from "./markdown-preview-surface"
 import {
   formatMarkdown,
   lineDiff,
@@ -76,6 +83,10 @@ import {
 
 interface GuidelineMarkdownEditorProps {
   versionId: string
+  documentTitle: string
+  versionLabel: string
+  publishedVersionId?: string | null
+  openTemplatesInitially?: boolean
   initialContent: string
   initialDraft?: MarkdownDraft | null
   editable: boolean
@@ -89,6 +100,7 @@ interface EditorPreferences {
   fontSize: number
   previewWidth: "mobile" | "tablet" | "desktop"
   distractionFree: boolean
+  scrollSync: boolean
 }
 
 const defaultPreferences: EditorPreferences = {
@@ -98,6 +110,7 @@ const defaultPreferences: EditorPreferences = {
   fontSize: 14,
   previewWidth: "desktop",
   distractionFree: false,
+  scrollSync: true,
 }
 
 const recoveryKey = (versionId: string) => `mediguide.markdown.recovery.${versionId}`
@@ -156,13 +169,21 @@ function downloadText(filename: string, content: string) {
 
 export function GuidelineMarkdownEditor({
   versionId,
+  documentTitle,
+  versionLabel,
+  publishedVersionId,
+  openTemplatesInitially = false,
   initialContent,
   initialDraft = null,
   editable,
   published,
 }: GuidelineMarkdownEditorProps) {
+  const router = useRouter()
   const { resolvedTheme } = useTheme()
   const editorRef = React.useRef<ReactCodeMirrorRef>(null)
+  const previewScrollRef = React.useRef<HTMLDivElement>(null)
+  const scrollSyncLock = React.useRef(false)
+  const editorPosition = React.useRef({ anchor: 0, head: 0, scrollTop: 0 })
   const uploadRef = React.useRef<HTMLInputElement>(null)
   const [content, setContent] = React.useState(initialContent)
   const [savedContent, setSavedContent] = React.useState(initialContent)
@@ -179,7 +200,7 @@ export function GuidelineMarkdownEditor({
   const [settingsOpen, setSettingsOpen] = React.useState(false)
   const [commandOpen, setCommandOpen] = React.useState(false)
   const [goToLine, setGoToLine] = React.useState("")
-  const [templatesOpen, setTemplatesOpen] = React.useState(false)
+  const [templatesOpen, setTemplatesOpen] = React.useState(openTemplatesInitially && editable && !published && !initialContent.trim())
   const [checkpointOpen, setCheckpointOpen] = React.useState(false)
   const [checkpointName, setCheckpointName] = React.useState("")
   const [checkpointSummary, setCheckpointSummary] = React.useState("")
@@ -192,6 +213,12 @@ export function GuidelineMarkdownEditor({
   const [conflictDraft, setConflictDraft] = React.useState<MarkdownDraft | null>(null)
   const [regenerating, setRegenerating] = React.useState(false)
   const [pendingSourceType, setPendingSourceType] = React.useState<"blank" | "template" | "uploaded_markdown" | null>(null)
+  const [previewPresentation, setPreviewPresentation] = React.useState<MarkdownPreviewPresentation>("rendered")
+  const [duplicateOpen, setDuplicateOpen] = React.useState(false)
+  const [duplicateVersion, setDuplicateVersion] = React.useState("")
+  const [duplicatePublicationDate, setDuplicatePublicationDate] = React.useState("")
+  const [duplicateReviewDate, setDuplicateReviewDate] = React.useState("")
+  const [duplicating, setDuplicating] = React.useState(false)
 
   const canEdit = editable && !published
   const dirty = canEdit && content !== savedContent
@@ -200,6 +227,45 @@ export function GuidelineMarkdownEditor({
   const stats = React.useMemo(() => markdownStats(content), [content])
   const diff = React.useMemo(() => lineDiff(compareContent, content), [compareContent, content])
   useUnsavedChanges(dirty)
+
+  const view = () => editorRef.current?.view
+
+  const captureEditorPosition = React.useCallback(() => {
+    const editor = editorRef.current?.view
+    if (!editor) return
+    editorPosition.current = {
+      anchor: editor.state.selection.main.anchor,
+      head: editor.state.selection.main.head,
+      scrollTop: editor.scrollDOM.scrollTop,
+    }
+  }, [])
+
+  const changeMode = React.useCallback((nextMode: MarkdownViewMode) => {
+    captureEditorPosition()
+    setMode(nextMode)
+  }, [captureEditorPosition])
+
+  const restoreEditorPosition = React.useCallback((editor: EditorView) => {
+    const saved = editorPosition.current
+    window.requestAnimationFrame(() => {
+      const anchor = Math.min(saved.anchor, editor.state.doc.length)
+      const head = Math.min(saved.head, editor.state.doc.length)
+      editor.dispatch({ selection: { anchor, head } })
+      editor.scrollDOM.scrollTop = saved.scrollTop
+    })
+  }, [])
+
+  const synchronizeScroll = React.useCallback((source: HTMLElement, target?: HTMLElement | null) => {
+    if (!target || !preferences.scrollSync || mode !== "split" || scrollSyncLock.current) return
+    const available = source.scrollHeight - source.clientHeight
+    const targetAvailable = target.scrollHeight - target.clientHeight
+    if (available <= 0 || targetAvailable <= 0) return
+    scrollSyncLock.current = true
+    target.scrollTop = (source.scrollTop / available) * targetAvailable
+    window.requestAnimationFrame(() => {
+      scrollSyncLock.current = false
+    })
+  }, [mode, preferences.scrollSync])
 
   React.useEffect(() => {
     setOnline(navigator.onLine)
@@ -321,7 +387,7 @@ export function GuidelineMarkdownEditor({
       }
       if ((event.metaKey || event.ctrlKey) && event.shiftKey && event.key.toLowerCase() === "v") {
         event.preventDefault()
-        setMode((current) => current === "preview" ? (canEdit ? "split" : "preview") : "preview")
+        changeMode(mode === "preview" ? (canEdit ? "split" : "preview") : "preview")
       }
       if (event.key === "F11") {
         event.preventDefault()
@@ -330,7 +396,7 @@ export function GuidelineMarkdownEditor({
     }
     window.addEventListener("keydown", handleKeyDown)
     return () => window.removeEventListener("keydown", handleKeyDown)
-  }, [canEdit, save])
+  }, [canEdit, changeMode, mode, save])
 
   React.useEffect(() => {
     if (!draft || !["queued", "processing"].includes(draft.revision.structured_content_status)) return
@@ -347,8 +413,6 @@ export function GuidelineMarkdownEditor({
     }, 5000)
     return () => window.clearInterval(timer)
   }, [draft, versionId])
-
-  const view = () => editorRef.current?.view
 
   const format = (action: MarkdownFormatAction) => {
     const editor = view()
@@ -468,16 +532,59 @@ export function GuidelineMarkdownEditor({
     }
   }
 
+  const compareWithPublished = async () => {
+    if (!publishedVersionId || publishedVersionId === versionId) return
+    try {
+      const publishedDraft = await GuidelineMarkdownService.loadDraft(publishedVersionId)
+      setCompareContent(publishedDraft.content)
+      setCompareLabel("published revision")
+      setCompareOpen(true)
+    } catch (error) {
+      showToast.error("Published comparison unavailable", error instanceof Error ? error.message : "Could not load published Markdown")
+    }
+  }
+
+  const duplicateAsDraft = async () => {
+    if (!duplicateVersion.trim() || duplicating) return
+    setDuplicating(true)
+    try {
+      const result = await GuidelineMarkdownService.duplicateVersion(versionId, {
+        version: duplicateVersion.trim(),
+        publication_date: duplicatePublicationDate || undefined,
+        review_date: duplicateReviewDate || undefined,
+      })
+      showToast.success(
+        published ? "Draft created from published version" : "Draft duplicated",
+        "The new version has an independent immutable Markdown draft.",
+      )
+      setDuplicateOpen(false)
+      router.push(`/guidelines/${result.version.document_id}/versions/${result.version.id}/markdown`)
+    } catch (error) {
+      showToast.error("Draft creation failed", error instanceof Error ? error.message : "Could not create the draft version")
+    } finally {
+      setDuplicating(false)
+    }
+  }
+
+  const openPrintPreview = () => {
+    changeMode("preview")
+    setPreviewPresentation("print")
+    window.requestAnimationFrame(() => window.print())
+  }
+
   const editorExtensions = React.useMemo(() => [
     markdown(),
     keymap.of([...editorFormattingKeymap, ...defaultKeymap, ...historyKeymap, ...searchKeymap, indentWithTab]),
+    EditorView.domEventHandlers({
+      scroll: (_event, editor) => synchronizeScroll(editor.scrollDOM, previewScrollRef.current),
+    }),
     ...(preferences.lineWrapping ? [EditorView.lineWrapping] : []),
     EditorView.theme({
       "&": { fontSize: `${preferences.fontSize}px`, height: "100%" },
       ".cm-scroller": { fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace" },
       ".cm-content": { minHeight: "62vh", padding: "16px 0" },
     }),
-  ], [preferences.fontSize, preferences.lineWrapping])
+  ], [preferences.fontSize, preferences.lineWrapping, synchronizeScroll])
 
   const previewClass = preferences.previewWidth === "mobile"
     ? "mx-auto max-w-[430px]"
@@ -485,13 +592,30 @@ export function GuidelineMarkdownEditor({
       ? "mx-auto max-w-[820px]"
       : "w-full"
 
+  const renderPreviewPane = () => (
+    <div
+      ref={previewScrollRef}
+      className="h-[65vh] overflow-auto p-5 print:h-auto print:overflow-visible print:p-0 lg:p-8 lg:print:p-0"
+      onScroll={(event) => synchronizeScroll(event.currentTarget, view()?.scrollDOM)}
+    >
+      <div className={previewPresentation === "print" ? "w-full" : previewClass}>
+        <MarkdownPreviewSurface
+          content={content}
+          title={documentTitle}
+          versionLabel={versionLabel}
+          presentation={previewPresentation}
+        />
+      </div>
+    </div>
+  )
+
   return (
     <>
       <section className={cn(
-        "overflow-hidden rounded-lg border bg-card shadow-sm",
+        "overflow-hidden rounded-lg border bg-card shadow-sm print:fixed print:inset-0 print:z-[100] print:overflow-visible print:rounded-none print:border-0 print:bg-white print:shadow-none",
         fullscreen && "fixed inset-0 z-50 rounded-none",
       )}>
-        <MarkdownEditorToolbar
+        <div className="print:hidden"><MarkdownEditorToolbar
           mode={mode}
           canEdit={canEdit}
           dirty={dirty}
@@ -501,7 +625,7 @@ export function GuidelineMarkdownEditor({
           fullscreen={fullscreen}
           words={stats.words}
           characters={stats.characters}
-          onModeChange={setMode}
+          onModeChange={changeMode}
           onSave={() => void save()}
           onRevert={() => setRevertOpen(true)}
           onFormat={format}
@@ -511,9 +635,9 @@ export function GuidelineMarkdownEditor({
           onFullscreen={() => setFullscreen((value) => !value)}
           onRegenerate={canEdit && draft ? () => void regenerate() : undefined}
           onDownload={() => downloadText(`guideline-revision-${draft?.revision.revision_number || "draft"}.md`, content)}
-        />
+        /></div>
 
-        <div className="flex flex-wrap items-center gap-2 border-b px-3 py-2 text-xs">
+        <div className="flex flex-wrap items-center gap-2 border-b px-3 py-2 text-xs print:hidden">
           <input
             ref={uploadRef}
             type="file"
@@ -529,8 +653,28 @@ export function GuidelineMarkdownEditor({
           {canEdit && <Button size="sm" variant="ghost" onClick={() => setCheckpointOpen(true)} disabled={!dirty}><CheckCircle2 className="mr-2 h-4 w-4" />Checkpoint</Button>}
           {canEdit && !content.trim() && <Button size="sm" variant="ghost" onClick={() => setTemplatesOpen(true)}><ListTree className="mr-2 h-4 w-4" />Start from template</Button>}
           {canEdit && <Button size="sm" variant="ghost" onClick={() => uploadRef.current?.click()}><Upload className="mr-2 h-4 w-4" />Load Markdown</Button>}
+          {draft && <Button size="sm" variant="ghost" onClick={() => setDuplicateOpen(true)}><FilePlus2 className="mr-2 h-4 w-4" />{published ? "Create draft version" : "Duplicate draft"}</Button>}
+          {publishedVersionId && publishedVersionId !== versionId && <Button size="sm" variant="ghost" onClick={() => void compareWithPublished()}><GitCompareArrows className="mr-2 h-4 w-4" />Compare published</Button>}
           <Button size="sm" variant="ghost" onClick={() => void copyMarkdown()}><Copy className="mr-2 h-4 w-4" />Copy</Button>
           <Button size="sm" variant="ghost" onClick={() => setSettingsOpen(true)}><Settings2 className="mr-2 h-4 w-4" />Editor settings</Button>
+          {(mode === "preview" || mode === "split") && (
+            <>
+              <Label className="sr-only" htmlFor="markdown-preview-presentation">Preview presentation</Label>
+              <select
+                id="markdown-preview-presentation"
+                aria-label="Preview presentation"
+                className="h-8 rounded-md border bg-background px-2 text-xs"
+                value={previewPresentation}
+                onChange={(event) => setPreviewPresentation(event.target.value as MarkdownPreviewPresentation)}
+              >
+                <option value="rendered">Rendered Markdown</option>
+                <option value="public-reader">Public reader</option>
+                <option value="structured-reader">Structured reader</option>
+                <option value="print">Print layout</option>
+              </select>
+              <Button size="sm" variant="ghost" onClick={openPrintPreview}><Printer className="mr-2 h-4 w-4" />Print</Button>
+            </>
+          )}
           <Badge variant="outline">{stats.lines} lines</Badge>
           <Badge variant="outline">{stats.headings} headings</Badge>
           <Badge variant="outline">{stats.readingMinutes} min read</Badge>
@@ -543,7 +687,7 @@ export function GuidelineMarkdownEditor({
           {saving ? "Saving Markdown" : saveError ? `Save failed: ${saveError}` : dirty ? "Markdown has unsaved changes" : "All Markdown changes are saved"}
         </div>
 
-        {recovery && (
+        <div className="print:hidden">{recovery && (
           <Alert className="m-4 mb-0">
             <RotateCcw className="h-4 w-4" />
             <AlertTitle>Recovered browser draft available</AlertTitle>
@@ -556,11 +700,11 @@ export function GuidelineMarkdownEditor({
         )}
         {!online && <Alert className="m-4 mb-0"><CloudOff className="h-4 w-4" /><AlertTitle>Working offline</AlertTitle><AlertDescription>Your text is retained locally. Server saving resumes after reconnection.</AlertDescription></Alert>}
         {published && <Alert className="m-4 mb-0"><Info className="h-4 w-4" /><AlertTitle>Published version</AlertTitle><AlertDescription>Published Markdown is immutable. Create a new version to revise it.</AlertDescription></Alert>}
-        {saveError && <Alert variant="destructive" className="m-4 mb-0"><AlertCircle className="h-4 w-4" /><AlertTitle>Markdown was not saved</AlertTitle><AlertDescription className="flex flex-wrap items-center gap-2"><span>{saveError} Your edits remain available.</span><Button size="sm" variant="outline" disabled={saving || !online} onClick={() => void save()}>Retry save</Button></AlertDescription></Alert>}
+        {saveError && <Alert variant="destructive" className="m-4 mb-0"><AlertCircle className="h-4 w-4" /><AlertTitle>Markdown was not saved</AlertTitle><AlertDescription className="flex flex-wrap items-center gap-2"><span>{saveError} Your edits remain available.</span><Button size="sm" variant="outline" disabled={saving || !online} onClick={() => void save()}>Retry save</Button></AlertDescription></Alert>}</div>
 
         <div className={cn("grid", !preferences.distractionFree && "lg:grid-cols-[220px_minmax(0,1fr)]")}>
           {!preferences.distractionFree && (
-            <aside className="hidden border-r lg:block">
+            <aside className="hidden border-r print:hidden lg:block">
               <div className="border-b p-3 text-sm font-medium">Document outline</div>
               <ScrollArea className="h-[65vh] p-2">
                 {headings.length === 0 && <p className="p-2 text-xs text-muted-foreground">Add headings to build navigation.</p>}
@@ -614,12 +758,13 @@ export function GuidelineMarkdownEditor({
                     extensions={editorExtensions}
                     basicSetup={{ lineNumbers: true, foldGutter: true, bracketMatching: true, highlightActiveLine: true, autocompletion: true, history: true }}
                     onChange={(value) => { setContent(value); setSaveError(null) }}
+                    onCreateEditor={restoreEditorPosition}
                     aria-label="Markdown source"
                   />
                 </ResizablePanel>
                 <ResizableHandle withHandle />
                 <ResizablePanel defaultSize={50} minSize={25}>
-                  <div className="h-[65vh] overflow-auto p-5 lg:p-8"><div className={previewClass}><MarkdownPreview content={content} /></div></div>
+                  {renderPreviewPane()}
                 </ResizablePanel>
               </ResizablePanelGroup>
             ) : mode === "edit" && canEdit ? (
@@ -631,15 +776,16 @@ export function GuidelineMarkdownEditor({
                 extensions={editorExtensions}
                 basicSetup={{ lineNumbers: true, foldGutter: true, bracketMatching: true, highlightActiveLine: true, autocompletion: true, history: true }}
                 onChange={(value) => { setContent(value); setSaveError(null) }}
+                onCreateEditor={restoreEditorPosition}
                 aria-label="Markdown source"
               />
             ) : (
-              <div className="h-[65vh] overflow-auto p-5 lg:p-8"><div className={previewClass}><MarkdownPreview content={content} /></div></div>
+              renderPreviewPane()
             )}
           </div>
         </div>
 
-        <footer className="flex min-h-11 items-center border-t px-4 text-xs text-muted-foreground">
+        <footer className="flex min-h-11 items-center border-t px-4 text-xs text-muted-foreground print:hidden">
           <Clock3 className="mr-2 h-3.5 w-3.5" />
           {lastSavedAt ? `Last saved at ${lastSavedAt.toLocaleTimeString()}` : draft ? `Saved ${new Date(draft.revision.updated_at).toLocaleString()}` : "No server draft yet"}
           <span className="ml-auto">Conflict protection: {draft ? "enabled" : "starts after first save"}</span>
@@ -658,8 +804,51 @@ export function GuidelineMarkdownEditor({
         <DialogContent className="max-w-2xl"><DialogHeader><DialogTitle>Start from a clinical template</DialogTitle><DialogDescription>Templates provide structure only and never invent clinical recommendations or dosage values.</DialogDescription></DialogHeader><div className="grid gap-3 sm:grid-cols-2">{markdownTemplates.map((template) => <button key={template.key} type="button" className="rounded-lg border p-4 text-left hover:bg-muted" onClick={() => { setContent(template.content); setPendingSourceType("template"); setTemplatesOpen(false) }}><span className="font-medium">{template.name}</span><span className="mt-1 block text-sm text-muted-foreground">{template.description}</span></button>)}</div></DialogContent>
       </Dialog>
 
+      <Dialog
+        open={duplicateOpen}
+        onOpenChange={(open) => {
+          setDuplicateOpen(open)
+          if (!open && !duplicating) {
+            setDuplicateVersion("")
+            setDuplicatePublicationDate("")
+            setDuplicateReviewDate("")
+          }
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{published ? "Create a draft from this published version" : "Duplicate this draft"}</DialogTitle>
+            <DialogDescription>
+              The exact immutable Markdown revision is copied into a new draft version. Structured content is marked outdated and regeneration does not start automatically.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="duplicate-version-number">New version</Label>
+              <Input id="duplicate-version-number" placeholder="2026.2" value={duplicateVersion} onChange={(event) => setDuplicateVersion(event.target.value)} />
+            </div>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="duplicate-publication-date">Planned publication date</Label>
+                <Input id="duplicate-publication-date" type="date" value={duplicatePublicationDate} onChange={(event) => setDuplicatePublicationDate(event.target.value)} />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="duplicate-review-date">Review date</Label>
+                <Input id="duplicate-review-date" type="date" value={duplicateReviewDate} onChange={(event) => setDuplicateReviewDate(event.target.value)} />
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" disabled={duplicating} onClick={() => setDuplicateOpen(false)}>Cancel</Button>
+            <Button disabled={duplicating || !duplicateVersion.trim()} onClick={() => void duplicateAsDraft()}>
+              {duplicating ? "Creating…" : published ? "Create draft version" : "Duplicate draft"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       <Dialog open={settingsOpen} onOpenChange={setSettingsOpen}>
-        <DialogContent><DialogHeader><DialogTitle>Editor settings</DialogTitle><DialogDescription>These preferences are stored only in this browser.</DialogDescription></DialogHeader><div className="space-y-5"><div className="flex items-center justify-between"><Label htmlFor="autosave">Autosave drafts</Label><Switch id="autosave" checked={preferences.autosave} onCheckedChange={(value) => setPreferences((current) => ({ ...current, autosave: value }))} /></div><div><Label htmlFor="autosave-delay">Autosave delay (milliseconds)</Label><Input id="autosave-delay" type="number" min={1000} max={30000} step={500} value={preferences.autosaveDelay} onChange={(event) => setPreferences((current) => ({ ...current, autosaveDelay: Math.min(30000, Math.max(1000, Number(event.target.value))) }))} /></div><div className="flex items-center justify-between"><Label htmlFor="line-wrap">Soft line wrapping</Label><Switch id="line-wrap" checked={preferences.lineWrapping} onCheckedChange={(value) => setPreferences((current) => ({ ...current, lineWrapping: value }))} /></div><div className="flex items-center justify-between"><Label htmlFor="distraction-free">Distraction-free mode</Label><Switch id="distraction-free" checked={preferences.distractionFree} onCheckedChange={(value) => setPreferences((current) => ({ ...current, distractionFree: value }))} /></div><div><Label htmlFor="font-size">Editor font size</Label><Input id="font-size" type="number" min={12} max={22} value={preferences.fontSize} onChange={(event) => setPreferences((current) => ({ ...current, fontSize: Math.min(22, Math.max(12, Number(event.target.value))) }))} /></div><div><Label htmlFor="preview-width">Preview width</Label><select id="preview-width" className="mt-1 h-9 w-full rounded-md border bg-background px-3" value={preferences.previewWidth} onChange={(event) => setPreferences((current) => ({ ...current, previewWidth: event.target.value as EditorPreferences["previewWidth"] }))}><option value="mobile">Mobile</option><option value="tablet">Tablet</option><option value="desktop">Desktop</option></select></div></div></DialogContent>
+        <DialogContent><DialogHeader><DialogTitle>Editor settings</DialogTitle><DialogDescription>These preferences are stored only in this browser.</DialogDescription></DialogHeader><div className="space-y-5"><div className="flex items-center justify-between"><Label htmlFor="autosave">Autosave drafts</Label><Switch id="autosave" checked={preferences.autosave} onCheckedChange={(value) => setPreferences((current) => ({ ...current, autosave: value }))} /></div><div><Label htmlFor="autosave-delay">Autosave delay (milliseconds)</Label><Input id="autosave-delay" type="number" min={1000} max={30000} step={500} value={preferences.autosaveDelay} onChange={(event) => setPreferences((current) => ({ ...current, autosaveDelay: Math.min(30000, Math.max(1000, Number(event.target.value))) }))} /></div><div className="flex items-center justify-between"><Label htmlFor="line-wrap">Soft line wrapping</Label><Switch id="line-wrap" checked={preferences.lineWrapping} onCheckedChange={(value) => setPreferences((current) => ({ ...current, lineWrapping: value }))} /></div><div className="flex items-center justify-between"><Label htmlFor="scroll-sync">Synchronize editor and preview scrolling</Label><Switch id="scroll-sync" checked={preferences.scrollSync} onCheckedChange={(value) => setPreferences((current) => ({ ...current, scrollSync: value }))} /></div><div className="flex items-center justify-between"><Label htmlFor="distraction-free">Distraction-free mode</Label><Switch id="distraction-free" checked={preferences.distractionFree} onCheckedChange={(value) => setPreferences((current) => ({ ...current, distractionFree: value }))} /></div><div><Label htmlFor="font-size">Editor font size</Label><Input id="font-size" type="number" min={12} max={22} value={preferences.fontSize} onChange={(event) => setPreferences((current) => ({ ...current, fontSize: Math.min(22, Math.max(12, Number(event.target.value))) }))} /></div><div><Label htmlFor="preview-width">Preview width</Label><select id="preview-width" className="mt-1 h-9 w-full rounded-md border bg-background px-3" value={preferences.previewWidth} onChange={(event) => setPreferences((current) => ({ ...current, previewWidth: event.target.value as EditorPreferences["previewWidth"] }))}><option value="mobile">Mobile</option><option value="tablet">Tablet</option><option value="desktop">Desktop</option></select></div></div></DialogContent>
       </Dialog>
 
       <Dialog open={commandOpen} onOpenChange={setCommandOpen}>
@@ -667,7 +856,7 @@ export function GuidelineMarkdownEditor({
           <DialogHeader><DialogTitle>Markdown commands</DialogTitle><DialogDescription>Open with Ctrl/Command+Shift+P. Commands act on the current draft and editor selection.</DialogDescription></DialogHeader>
           <div className="grid gap-2 sm:grid-cols-2">
             <Button variant="outline" disabled={!dirty || saving || !online} onClick={() => { setCommandOpen(false); void save() }}>Save draft</Button>
-            <Button variant="outline" onClick={() => { setMode((current) => current === "preview" ? (canEdit ? "split" : "preview") : "preview"); setCommandOpen(false) }}>Toggle preview</Button>
+            <Button variant="outline" onClick={() => { changeMode(mode === "preview" ? (canEdit ? "split" : "preview") : "preview"); setCommandOpen(false) }}>Toggle preview</Button>
             <Button variant="outline" onClick={() => { setFullscreen((value) => !value); setCommandOpen(false) }}>Toggle fullscreen</Button>
             <Button variant="outline" disabled={!canEdit} onClick={() => { setContent(formatMarkdown(content)); setCommandOpen(false) }}>Format document</Button>
             <Button variant="outline" disabled={!canEdit} onClick={() => { const editor = view(); if (editor) openSearchPanel(editor); setCommandOpen(false) }}>Find and replace</Button>

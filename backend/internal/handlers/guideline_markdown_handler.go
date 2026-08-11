@@ -274,6 +274,43 @@ func (h GuidelineHandler) RestoreMarkdownRevision(c *gin.Context) {
 	httpx.Created(c, draft)
 }
 
+// DuplicateMarkdownVersion godoc
+// @Summary Duplicate a guideline Markdown revision into a new draft version
+// @Description Drafts branch from their current revision. Published versions branch from their exact published revision.
+// @Tags guideline-markdown
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param id path string true "Source guideline version ID" format(uuid)
+// @Param payload body services.DuplicateMarkdownVersionInput true "New draft version metadata"
+// @Success 201 {object} handlers.DuplicatedMarkdownVersionEnvelope
+// @Failure 400 {object} handlers.ErrorResponse
+// @Failure 401 {object} handlers.ErrorResponse
+// @Failure 403 {object} handlers.ErrorResponse
+// @Failure 404 {object} handlers.ErrorResponse
+// @Failure 409 {object} handlers.ErrorResponse
+// @Router /api/v2/guideline-versions/{id}/duplicate [post]
+func (h GuidelineHandler) DuplicateMarkdownVersion(c *gin.Context) {
+	versionID, ok := markdownVersionID(c)
+	if !ok {
+		return
+	}
+	var input services.DuplicateMarkdownVersionInput
+	if err := c.ShouldBindJSON(&input); err != nil {
+		httpx.Error(c, http.StatusBadRequest, err.Error())
+		return
+	}
+	result, err := h.Service.DuplicateMarkdownVersion(
+		c.Request.Context(), versionID, markdownClaims(c).UserID, input,
+	)
+	if err != nil {
+		markdownError(c, err)
+		return
+	}
+	c.Header("ETag", result.Draft.ETag)
+	httpx.Created(c, result)
+}
+
 // RegenerateMarkdown godoc
 // @Summary Regenerate structured content and RAG data from an exact Markdown revision
 // @Tags guideline-markdown
@@ -333,6 +370,8 @@ func markdownClaims(c *gin.Context) *security.Claims {
 func markdownError(c *gin.Context, err error) {
 	switch {
 	case errors.Is(err, services.ErrMarkdownRevisionConflict):
+		httpx.Error(c, http.StatusConflict, err.Error())
+	case errors.Is(err, services.ErrGuidelineVersionExists):
 		httpx.Error(c, http.StatusConflict, err.Error())
 	case errors.Is(err, services.ErrPublishedMarkdownImmutable),
 		errors.Is(err, services.ErrPublishedVersionImmutable),

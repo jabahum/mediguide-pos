@@ -30,7 +30,9 @@ class IngestionRepository:
                 WITH picked AS (
                     SELECT id
                     FROM ingestion_jobs
-                    WHERE status = 'queued' AND job_type = 'pdf_ingestion' AND deleted_at IS NULL
+                    WHERE status = 'queued'
+                      AND job_type IN ('pdf_ingestion', 'markdown_ingestion')
+                      AND deleted_at IS NULL
                     ORDER BY created_at ASC
                     LIMIT %s
                     FOR UPDATE SKIP LOCKED
@@ -58,7 +60,7 @@ class IngestionRepository:
                     SELECT id
                     FROM ingestion_jobs
                     WHERE status = 'failed'
-                      AND job_type = 'pdf_ingestion'
+                      AND job_type IN ('pdf_ingestion', 'markdown_ingestion')
                       AND deleted_at IS NULL
                       AND coalesce(attempt_count, 0) < %s
                       AND (completed_at IS NULL OR completed_at < now() - (coalesce(attempt_count, 1) * %s * interval '1 second'))

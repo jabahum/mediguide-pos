@@ -14,7 +14,7 @@ interface GuidelineRowActionsOptions {
   onAssignIndex?: (guideline: MedicalGuidelinesWithExpanded) => void
   onMutationSuccess?: () => MaybeAsync
   onNewVersion?: (guideline: MedicalGuidelinesWithExpanded) => void
-  onUploadPDF?: (guideline: MedicalGuidelinesWithExpanded) => void
+  onUploadSource?: (guideline: MedicalGuidelinesWithExpanded) => void
   onPublishVersion?: (guideline: MedicalGuidelinesWithExpanded) => void | Promise<void>
   onOpenMarkdown?: (guideline: MedicalGuidelinesWithExpanded) => void
   hasVersionDocument?: (guideline: MedicalGuidelinesWithExpanded) => boolean
@@ -38,7 +38,7 @@ export const createGuidelineRowActions = (
     onAssignIndex,
     onMutationSuccess,
     onNewVersion,
-    onUploadPDF,
+    onUploadSource,
     onPublishVersion,
     onOpenMarkdown,
     hasVersionDocument,
@@ -98,15 +98,18 @@ export const createGuidelineRowActions = (
       disabled: (guideline) => versionActionsLoading || !hasVersionDocument?.(guideline),
     },
     {
-      id: "upload-pdf",
-      label: "Upload PDF",
+      id: "upload-source",
+      label: "Upload PDF or Markdown",
       icon: Upload,
       onClick: async (guideline) => {
-        if (onUploadPDF) {
-          onUploadPDF(guideline)
+        if (onUploadSource) {
+          onUploadSource(guideline)
           return
         }
-        showToast.warning("Upload unavailable", "Create a version first, then upload the PDF.")
+        showToast.warning(
+          "Upload unavailable",
+          "Create a version first, then upload its PDF or Markdown source.",
+        )
       },
       disabled: (guideline) => versionActionsLoading || !hasVersionRecord?.(guideline),
     },

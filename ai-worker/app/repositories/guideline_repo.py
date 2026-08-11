@@ -365,7 +365,8 @@ class GuidelineRepository:
             self._upsert_draft_manifest(
                 cur,
                 version=version,
-                has_original_pdf=any(asset.type == "original_pdf" for asset in assets),
+                has_original_pdf=bool(str(version.get("original_file_key") or "").strip())
+                or any(asset.type == "original_pdf" for asset in assets),
             )
             conn.commit()
 

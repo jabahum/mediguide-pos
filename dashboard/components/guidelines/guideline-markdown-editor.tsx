@@ -68,7 +68,10 @@ export function GuidelineMarkdownEditor({
       await GuidelineMarkdownService.update(versionId, content)
       setSavedContent(content)
       setLastSavedAt(new Date())
-      showToast.success("Markdown saved", "The extracted guideline Markdown was updated.")
+      showToast.success(
+        "Markdown saved",
+        "Structured content and the AI index are being regenerated.",
+      )
     } catch (error) {
       const message =
         error instanceof GuidelineMarkdownError

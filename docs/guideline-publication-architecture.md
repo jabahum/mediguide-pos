@@ -25,9 +25,12 @@ The upload and publishing pipeline already uses these models:
 - `GuidelineSection`: extracted hierarchy, text/HTML, source pages, and order.
 - `GuidelineTable`: extracted tabular HTML/JSON with source page.
 - `GuidelineChunk`: searchable/RAG content with document metadata, review status, source pages, and embedding.
-- `IngestionJob`: queued PDF processing work.
+- `IngestionJob`: queued PDF or Markdown processing work.
 
-The AI worker downloads the original PDF from object storage, extracts text, inferred headings, section hierarchy and tables, generates HTML and Markdown, chunks section text, computes embeddings, and atomically replaces extraction rows. Publishing sets the selected version to `published`, approves its chunks, and assigns it as the document's current version.
+The AI worker downloads an immutable PDF or Markdown source from object storage, extracts or parses
+its hierarchy and typed content, generates safe HTML and canonical Markdown, chunks the content,
+computes embeddings, and atomically replaces extraction rows. Publishing sets the selected version
+to `published`, approves its chunks, and assigns it as the document's current version.
 
 Known limitations that later phases must address:
 
@@ -35,8 +38,8 @@ Known limitations that later phases must address:
 - Tables are currently persisted without their detected section relationship.
 - There is no typed heterogeneous content-block stream or capability manifest.
 - Heading inference is heuristic and therefore requires review before clinical publication.
-- Markdown can be edited, but structured rows are not rebuilt from the edited Markdown.
-- A checksum field exists but ingestion is not yet checksum-idempotent.
+- Markdown edits rebuild structured rows, chunks, and embeddings asynchronously before review.
+- Source checksums make retries idempotent, and superseded source jobs cannot overwrite newer edits.
 
 ### Representation B: fixed clinical records
 
@@ -137,7 +140,7 @@ For each fixed record:
 
 ### 3. Dual-read and canonical-write rollout
 
-- New PDF uploads write only to document/version storage.
+- New PDF and Markdown uploads write only to document/version storage.
 - Existing fixed editors continue writing legacy records until their dashboard screens migrate.
 - Canonical list/detail APIs return canonical documents and may expose verified legacy records through a server-side adapter with an explicit `legacy_fixed` mode.
 - Flutter reads canonical results behind a feature flag and falls back to legacy endpoints during rollout.
@@ -239,7 +242,7 @@ Phase 5 is implemented by the version-scoped guideline review service and dashbo
 
 The dashboard review route synchronizes the original PDF page, extracted hierarchy and block editor, and a safe React-rendered preview with web/mobile widths. It displays extraction warnings and publication blockers, links blockers back to affected sections or blocks, and makes the original PDF the fidelity reference. The preview does not execute arbitrary extracted HTML.
 
-Structured publication validation rejects missing source PDFs, empty content, missing or duplicate ordering, invalid levels, missing or duplicate slugs, broken or circular parent relationships, invalid typed payloads, executable markup, broken figure assets, and unreviewed high-risk tables, recommendations, warnings, key points, or algorithms. Legacy schema-version-zero Markdown publications retain their compatibility workflow; they are explicitly reported as legacy fallback rather than being treated as reviewed structured content. Readers continue to use published public endpoints and cannot access the internal draft review routes.
+Structured publication validation rejects missing source files, empty content, missing or duplicate ordering, invalid levels, missing or duplicate slugs, broken or circular parent relationships, invalid typed payloads, executable markup, broken figure assets, and unreviewed high-risk tables, recommendations, warnings, key points, or algorithms. Legacy schema-version-zero Markdown publications retain their compatibility workflow; they are explicitly reported as legacy fallback rather than being treated as reviewed structured content. Readers continue to use published public endpoints and cannot access the internal draft review routes.
 
 Correcting a block also replaces its linked keyword-search chunk content and resets its review state. The previous vector embedding is cleared so stale clinical text cannot be returned by semantic search. Corrected content remains available to PostgreSQL keyword search after publication; a later embedding refresh workflow must restore semantic-search coverage for corrected blocks without re-running destructive PDF extraction.
 
@@ -252,3 +255,16 @@ The editorial API now includes extraction status, reviewed-content preview, sect
 Swagger/OpenAPI and generated TypeScript/Dart contracts include the Phase 6 routes and concrete response DTOs. Backend ownership/isolation, editor lifecycle, public projection and conditional-request tests cover the new surface. Migration `00017` has been validated up/down/up against the development PostgreSQL service.
 
 This does not complete the overall migration. The next safe slice is capability-driven rendering in `guidelines-platform`, followed by the Flutter canonical repository/offline package and dynamic reader behind a feature flag. Neither client should migrate progress/bookmark keys until the canonical/legacy identity mapping is implemented and verified.
+
+Direct Markdown ingestion is implemented as an additive editorial source option. The existing
+version upload route accepts PDF, `.md`, and `.markdown` files. Markdown sources are required to be
+non-empty UTF-8 and are stored under immutable, version-scoped object keys. Markdown editor saves
+use the same revision path and queue a `markdown_ingestion` job rather than changing only the
+rendered file. The worker rebuilds section hierarchy, typed blocks, safe HTML, chunks, and
+embeddings, then returns the version to `review_required`. Jobs carry their exact source key and
+skip persistence if a newer upload or edit superseded them. Published versions remain immutable.
+
+Markdown-only publications deliberately report that original-PDF access and PDF page citations are
+unavailable. When an editor revises Markdown originally generated from a PDF, the immutable PDF is
+retained as the fidelity reference. The dashboard upload and create workflows expose both formats,
+and save feedback states that structured content and the AI index are regenerating.

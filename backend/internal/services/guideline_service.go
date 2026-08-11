@@ -58,6 +58,7 @@ var (
 	ErrUnsupportedGuidelineAsset    = errors.New("unsupported extracted guideline asset format")
 	ErrPublishedMarkdownImmutable   = errors.New("published guideline markdown cannot be edited")
 	ErrPublishedVersionImmutable    = errors.New("published guideline version cannot be re-ingested")
+	ErrUnsupportedGuidelineSource   = errors.New("guideline source must be a PDF or Markdown file")
 )
 
 func (s GuidelineService) CreateDocument(in CreateGuidelineInput) (*models.GuidelineDocument, error) {
@@ -143,13 +144,28 @@ func (s GuidelineService) UploadPDF(ctx context.Context, versionID uuid.UUID, fi
 			return err
 		}
 
-		job = models.IngestionJob{VersionID: versionID, JobType: "pdf_ingestion", Status: "queued", PayloadJSON: fmt.Sprintf(`{"file_key":"%s"}`, key)}
+		payload, err := json.Marshal(map[string]string{"file_key": key, "source_format": "pdf"})
+		if err != nil {
+			return err
+		}
+		job = models.IngestionJob{VersionID: versionID, JobType: "pdf_ingestion", Status: "queued", PayloadJSON: string(payload)}
 		return tx.Create(&job).Error
 	})
 	if err != nil {
 		return nil, err
 	}
 	return &job, nil
+}
+
+func (s GuidelineService) UploadMarkdown(ctx context.Context, versionID uuid.UUID, file multipart.File, header *multipart.FileHeader) (*models.IngestionJob, error) {
+	extension := strings.ToLower(filepath.Ext(header.Filename))
+	if extension != ".md" && extension != ".markdown" {
+		return nil, ErrUnsupportedGuidelineSource
+	}
+	if header.Size <= 0 {
+		return nil, errors.New("markdown content is required")
+	}
+	return s.queueMarkdownSource(ctx, versionID, file, header.Size, header.Filename, "uploaded_markdown")
 }
 func (s GuidelineService) PublishVersion(versionID uuid.UUID, userID uuid.UUID, ipAddress ...string) error {
 	publishedAt := time.Now().UTC()
@@ -314,6 +330,92 @@ func (s GuidelineService) UpdateMarkdown(ctx context.Context, versionID uuid.UUI
 	return err
 }
 
+// ReplaceMarkdown stores an immutable draft revision and queues structured
+// content and embedding regeneration. UpdateMarkdown remains the low-level
+// storage-only operation used by historical migration tests.
+func (s GuidelineService) ReplaceMarkdown(ctx context.Context, versionID uuid.UUID, content []byte) (*models.IngestionJob, error) {
+	var version models.GuidelineVersion
+	if err := s.DB.First(&version, "id = ?", versionID).Error; err != nil {
+		return nil, err
+	}
+	if err := validateMarkdownUpdate(&version, content); err != nil {
+		return nil, err
+	}
+	filename := fmt.Sprintf("edited-%d.md", time.Now().UTC().UnixNano())
+	return s.queueMarkdownSource(ctx, versionID, bytes.NewReader(content), int64(len(content)), filename, "edited_markdown")
+}
+
+func (s GuidelineService) queueMarkdownSource(
+	ctx context.Context,
+	versionID uuid.UUID,
+	reader io.Reader,
+	size int64,
+	filename string,
+	source string,
+) (*models.IngestionJob, error) {
+	var target models.GuidelineVersion
+	if err := s.DB.First(&target, "id = ?", versionID).Error; err != nil {
+		return nil, err
+	}
+	if err := validateVersionAllowsIngestion(&target); err != nil {
+		return nil, err
+	}
+	key := fmt.Sprintf(
+		"guidelines/%s/source/%d_%s",
+		versionID,
+		time.Now().UTC().UnixNano(),
+		filepath.Base(filename),
+	)
+	if err := s.Store.Put(ctx, key, reader, size, "text/markdown; charset=utf-8"); err != nil {
+		return nil, err
+	}
+
+	payload, err := json.Marshal(map[string]string{
+		"file_key":      key,
+		"source_format": "markdown",
+		"source":        source,
+	})
+	if err != nil {
+		_ = s.Store.Delete(ctx, key)
+		return nil, err
+	}
+	var job models.IngestionJob
+	err = s.DB.Transaction(func(tx *gorm.DB) error {
+		version, document, err := s.loadVersionDocument(tx, versionID)
+		if err != nil {
+			return err
+		}
+		if err := validateVersionAllowsIngestion(version); err != nil {
+			return err
+		}
+		if err := ensureDraftProtocol(tx, document, version); err != nil {
+			return err
+		}
+		if err := tx.Model(version).Updates(map[string]any{
+			"markdown_file_key": key,
+			"html_file_key":     "",
+			"checksum":          "",
+			"status":            "draft",
+			"updated_at":        time.Now().UTC(),
+		}).Error; err != nil {
+			return err
+		}
+		job = models.IngestionJob{
+			VersionID:   versionID,
+			JobType:     "markdown_ingestion",
+			Status:      "queued",
+			PayloadJSON: string(payload),
+		}
+		return tx.Create(&job).Error
+	})
+	if err != nil {
+		_ = s.Store.Delete(ctx, key)
+		return nil, err
+	}
+	s.invalidatePublishedCaches(ctx)
+	return &job, nil
+}
+
 func (s GuidelineService) invalidatePublishedCaches(ctx context.Context) {
 	if s.Cache == nil {
 		return
@@ -388,8 +490,8 @@ func ensureDraftProtocol(tx *gorm.DB, document *models.GuidelineDocument, versio
 }
 
 func ensureVersionReadyForPublish(tx *gorm.DB, version *models.GuidelineVersion) error {
-	if strings.TrimSpace(version.OriginalFileKey) == "" {
-		return fmt.Errorf("%w: no PDF has been uploaded for this version", ErrGuidelineIngestionIncomplete)
+	if strings.TrimSpace(version.OriginalFileKey) == "" && strings.TrimSpace(version.MarkdownFileKey) == "" {
+		return fmt.Errorf("%w: no PDF or Markdown source has been uploaded for this version", ErrGuidelineIngestionIncomplete)
 	}
 	if strings.TrimSpace(version.HTMLFileKey) == "" || strings.TrimSpace(version.MarkdownFileKey) == "" {
 		return fmt.Errorf("%w: extracted HTML/Markdown assets are missing", ErrGuidelineIngestionIncomplete)
@@ -429,7 +531,7 @@ func ensureVersionReadyForPublish(tx *gorm.DB, version *models.GuidelineVersion)
 		return err
 	}
 	if sectionCount == 0 {
-		return fmt.Errorf("%w: no extracted sections were generated from the uploaded PDF", ErrGuidelineIngestionIncomplete)
+		return fmt.Errorf("%w: no extracted sections were generated from the uploaded source", ErrGuidelineIngestionIncomplete)
 	}
 
 	var chunkCount int64
@@ -437,7 +539,7 @@ func ensureVersionReadyForPublish(tx *gorm.DB, version *models.GuidelineVersion)
 		return err
 	}
 	if chunkCount == 0 {
-		return fmt.Errorf("%w: no vectorized chunks were generated from the uploaded PDF", ErrGuidelineIngestionIncomplete)
+		return fmt.Errorf("%w: no vectorized chunks were generated from the uploaded source", ErrGuidelineIngestionIncomplete)
 	}
 
 	return nil

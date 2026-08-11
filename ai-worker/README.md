@@ -2,7 +2,7 @@
 
 Python AI/document-processing worker for the MediGuide platform.
 
-It processes uploaded clinical guideline PDFs into:
+It processes uploaded clinical guideline PDFs and Markdown files into:
 
 - cleaned HTML
 - Markdown
@@ -20,6 +20,7 @@ This project is designed to plug into the Go backend scaffold generated earlier.
 - Background worker that polls `ingestion_jobs` from PostgreSQL
 - MinIO/S3 file download and upload
 - PDF extraction using PyMuPDF and optional pdfplumber
+- UTF-8 Markdown parsing with heading hierarchy, lists, callouts, and GFM tables
 - HTML cleaning using BeautifulSoup
 - Section detection from PDF heading/font structure
 - Chunking with overlap
@@ -80,20 +81,21 @@ docker compose -f backend/docker-compose.yml -f ai-worker/docker-compose.overrid
 
 ## Integration with Go backend
 
-The Go backend creates rows in `ingestion_jobs` after a guideline PDF upload.
+The Go backend creates rows in `ingestion_jobs` after a guideline PDF/Markdown upload or a
+Markdown editor save.
 
 The worker polls jobs with:
 
 ```sql
 status = 'queued'
-job_type = 'pdf_ingestion'
+job_type IN ('pdf_ingestion', 'markdown_ingestion')
 ```
 
 For each job, it:
 
-1. Reads `guideline_versions.original_file_key`
-2. Downloads the PDF from MinIO
-3. Extracts text/tables/HTML/Markdown
+1. Reads the immutable source key from the job payload and validates that it is still current.
+2. Downloads the PDF or Markdown source from MinIO.
+3. Extracts or parses text, hierarchy, typed blocks, HTML, and Markdown.
 4. Stores HTML and Markdown back to MinIO
 5. Inserts records into:
    - `guideline_sections`
@@ -101,6 +103,9 @@ For each job, it:
    - `guideline_tables`
 6. Updates `guideline_versions.html_file_key` and `markdown_file_key`
 7. Marks the job as `completed`
+
+Superseded Markdown jobs exit without overwriting a newer edit. Markdown-only guidelines have no
+PDF page provenance; the worker records that limitation in extraction metadata and warnings.
 
 ## Recommended first production mode
 

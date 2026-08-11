@@ -975,6 +975,10 @@ final class HandlersMarkdownUpdateResult {
   static const schemaName = 'handlers.MarkdownUpdateResult';
   final Map<String, dynamic> value;
 
+  String? get jobId => value['job_id']?.toString();
+
+  bool? get queued => value['queued'] as bool?;
+
   int? get size => (value['size'] as num?)?.toInt();
 
   bool? get updated => value['updated'] as bool?;

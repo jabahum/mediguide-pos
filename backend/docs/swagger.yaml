@@ -396,6 +396,12 @@ definitions:
     type: object
   handlers.MarkdownUpdateResult:
     properties:
+      job_id:
+        format: uuid
+        type: string
+      queued:
+        example: true
+        type: boolean
       size:
         example: 1024
         type: integer
@@ -8535,7 +8541,7 @@ paths:
         name: id
         required: true
         type: string
-      - description: PDF file
+      - description: PDF or Markdown file
         in: formData
         name: file
         required: true
@@ -8559,13 +8565,17 @@ paths:
           description: Forbidden
           schema:
             $ref: '#/definitions/handlers.ErrorResponse'
+        "413":
+          description: Request Entity Too Large
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
         "500":
           description: Internal Server Error
           schema:
             $ref: '#/definitions/handlers.ErrorResponse'
       security:
       - BearerAuth: []
-      summary: Upload a guideline PDF
+      summary: Upload a guideline PDF or Markdown source
       tags:
       - guidelines
   /api/v2/guideline-versions/{id}/validate-publication:

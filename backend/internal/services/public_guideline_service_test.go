@@ -241,6 +241,7 @@ func publicGuidelineTestDB(t *testing.T) *gorm.DB {
 		&models.GuidelineVersionManifest{},
 		&models.IngestionJob{},
 		&models.AuditLog{},
+		&models.ClinicalProtocol{},
 	); err != nil {
 		t.Fatal(err)
 	}

@@ -135,7 +135,7 @@ export default function GuidelineMarkdownPage() {
           <AlertTitle>{missing ? "Markdown is not available" : "Could not load Markdown"}</AlertTitle>
           <AlertDescription>
             {error.message}
-            {missing && " Upload and process a PDF for this version before opening the editor."}
+            {missing && " Upload and process a PDF or Markdown file before opening the editor."}
           </AlertDescription>
         </Alert>
         <Button variant="outline" onClick={() => void load()}>

@@ -39,7 +39,7 @@ describe("GuidelineMarkdownEditor", () => {
     const user = userEvent.setup()
     const update = vi
       .spyOn(GuidelineMarkdownService, "update")
-      .mockResolvedValue({ updated: true, size: 17 })
+      .mockResolvedValue({ updated: true, queued: true, size: 17, job_id: "job-1" })
 
     render(
       <GuidelineMarkdownEditor
@@ -93,7 +93,7 @@ describe("GuidelineMarkdownEditor", () => {
     const user = userEvent.setup()
     const update = vi
       .spyOn(GuidelineMarkdownService, "update")
-      .mockResolvedValue({ updated: true, size: 9 })
+      .mockResolvedValue({ updated: true, queued: true, size: 9, job_id: "job-2" })
 
     render(
       <GuidelineMarkdownEditor

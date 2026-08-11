@@ -276,6 +276,10 @@ export interface HandlersMarkdownUpdateEnvelope {
 }
 
 export interface HandlersMarkdownUpdateResult {
+  /** @format uuid */
+  job_id?: string;
+  /** @example true */
+  queued?: boolean;
   /** @example 1024 */
   size?: number;
   /** @example true */

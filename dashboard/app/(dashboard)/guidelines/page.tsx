@@ -69,7 +69,7 @@ export default function GuidelinesPage() {
       await GuidelineDocumentsService.createVersion(versionDocument.id, payload)
       setVersionDocument(null)
       await refresh()
-      showToast.success("Version created", "The new version is ready for PDF upload.")
+      showToast.success("Version created", "The new version is ready for PDF or Markdown upload.")
     } catch (error) {
       showToast.error("Create version failed", error instanceof Error ? error.message : "Unknown error")
     } finally {
@@ -77,14 +77,14 @@ export default function GuidelinesPage() {
     }
   }
 
-  async function uploadPdf(file: File) {
+  async function uploadSource(file: File) {
     if (!uploadVersion) return
     setSubmitting(true)
     try {
-      await GuidelineDocumentsService.uploadVersionPdf(uploadVersion.id, file)
+      await GuidelineDocumentsService.uploadVersionSource(uploadVersion.id, file)
       setUploadVersion(null)
       await refresh()
-      showToast.success("PDF uploaded", "Document extraction has been queued.")
+      showToast.success("Source uploaded", "Document extraction and indexing have been queued.")
     } catch (error) {
       showToast.error("Upload failed", error instanceof Error ? error.message : "Unknown error")
     } finally {
@@ -140,7 +140,7 @@ export default function GuidelinesPage() {
         open={Boolean(uploadVersion)}
         submitting={submitting}
         onOpenChange={(open) => !open && setUploadVersion(null)}
-        onSubmit={uploadPdf}
+        onSubmit={uploadSource}
       />
     </div>
   )

@@ -4,7 +4,9 @@ import { BackendRequestError, getBackendClient } from "@/lib/backend-client"
 
 export interface MarkdownUpdateResult {
   updated: boolean
+  queued: boolean
   size: number
+  job_id: string
 }
 
 export class GuidelineMarkdownError extends Error {

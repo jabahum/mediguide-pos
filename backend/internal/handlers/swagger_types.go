@@ -5,6 +5,8 @@ import (
 
 	"mediguide/internal/models"
 	"mediguide/internal/services"
+
+	"github.com/google/uuid"
 )
 
 type RegisterRequest struct {
@@ -71,8 +73,10 @@ type UpdatedResult struct {
 }
 
 type MarkdownUpdateResult struct {
-	Updated bool `json:"updated" example:"true"`
-	Size    int  `json:"size" example:"1024"`
+	Updated bool      `json:"updated" example:"true"`
+	Queued  bool      `json:"queued" example:"true"`
+	Size    int       `json:"size" example:"1024"`
+	JobID   uuid.UUID `json:"job_id" format:"uuid"`
 }
 
 type LogoutResult struct {

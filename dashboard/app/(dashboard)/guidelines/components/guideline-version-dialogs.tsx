@@ -53,7 +53,7 @@ export function CreateVersionDialog({
         <DialogHeader>
           <DialogTitle>Create Guideline Version</DialogTitle>
           <DialogDescription>
-            Add a version record for {document?.title || "this guideline"} before uploading the PDF.
+            Add a version record for {document?.title || "this guideline"} before uploading PDF or Markdown.
           </DialogDescription>
         </DialogHeader>
 
@@ -139,20 +139,20 @@ export function UploadVersionDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Upload Guideline PDF</DialogTitle>
+          <DialogTitle>Upload Guideline Source</DialogTitle>
           <DialogDescription>
-            Upload the source PDF for version {version?.version || ""}. The backend will queue ingestion after upload.
+            Upload PDF or UTF-8 Markdown for version {version?.version || ""}. The backend will extract structured content and rebuild the AI index.
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-2">
-          <Label>PDF File</Label>
+          <Label>PDF or Markdown File</Label>
           <FileUpload
             value={file || undefined}
             onValueChange={setFile}
-            accept="application/pdf,.pdf"
+            accept="application/pdf,text/markdown,.pdf,.md,.markdown"
             maxSize={100}
-            placeholder="Choose guideline PDF or drag and drop"
+            placeholder="Choose guideline PDF or Markdown file"
           />
         </div>
 
@@ -162,7 +162,7 @@ export function UploadVersionDialog({
           </Button>
           <Button onClick={() => file && onSubmit(file)} disabled={submitting || !file}>
             {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
-            Upload PDF
+            Upload Source
           </Button>
         </DialogFooter>
       </DialogContent>

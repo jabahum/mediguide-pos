@@ -256,13 +256,17 @@ export class GuidelineDocumentsService {
     })
   }
 
-  static async uploadVersionPdf(versionId: string, file: File): Promise<IngestionJobRecord> {
+  static async uploadVersionSource(versionId: string, file: File): Promise<IngestionJobRecord> {
     const formData = new FormData()
     formData.append("file", file)
     return getBackendClient().request<IngestionJobRecord>(`/api/v2/guideline-versions/${versionId}/upload`, {
       method: "POST",
       body: formData,
     })
+  }
+
+  static async uploadVersionPdf(versionId: string, file: File): Promise<IngestionJobRecord> {
+    return this.uploadVersionSource(versionId, file)
   }
 
   static async publishVersion(versionId: string): Promise<{ published: boolean }> {

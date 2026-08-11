@@ -82,7 +82,7 @@ export default function GuidelineDetailsPage() {
       await GuidelineDocumentsService.createVersion(id, payload)
       setCreateVersionOpen(false)
       await refresh()
-      showToast.success("Version created", "Upload the source PDF to start extraction.")
+      showToast.success("Version created", "Upload PDF or Markdown to start extraction.")
     } catch (error) {
       showToast.error("Create failed", error instanceof Error ? error.message : "Unknown error")
     } finally {
@@ -90,14 +90,14 @@ export default function GuidelineDetailsPage() {
     }
   }
 
-  async function uploadPdf(file: File) {
+  async function uploadSource(file: File) {
     if (!uploadVersion) return
     setSubmitting(true)
     try {
-      await GuidelineDocumentsService.uploadVersionPdf(uploadVersion.id, file)
+      await GuidelineDocumentsService.uploadVersionSource(uploadVersion.id, file)
       setUploadVersion(null)
       await refresh()
-      showToast.success("PDF uploaded", "Extraction has been queued.")
+      showToast.success("Source uploaded", "Extraction and indexing have been queued.")
     } catch (error) {
       showToast.error("Upload failed", error instanceof Error ? error.message : "Unknown error")
     } finally {
@@ -139,7 +139,7 @@ export default function GuidelineDetailsPage() {
       await GuidelineDocumentsService.updateExtractedMarkdown(markdownVersion.id, markdown)
       setMarkdownVersion(null)
       await refresh()
-      showToast.success("Markdown updated", "The extracted Markdown file has been saved.")
+      showToast.success("Markdown updated", "Structured content and the AI index are being regenerated.")
     } catch (error) {
       showToast.error("Save failed", error instanceof Error ? error.message : "Unknown error")
     } finally {
@@ -192,14 +192,12 @@ export default function GuidelineDetailsPage() {
         <CardContent className="space-y-4">
           {document.versions.length === 0 ? (
             <div className="rounded-md border border-dashed p-8 text-center text-muted-foreground">
-              No versions yet. Create one before uploading a PDF.
+              No versions yet. Create one before uploading PDF or Markdown.
             </div>
           ) : document.versions.map((version) => {
             const hasMarkdown = Boolean(version.markdown_file_key)
             const hasHtml = Boolean(version.html_file_key)
-            const publishable = version.status !== "published" && Boolean(
-              version.original_file_key && hasMarkdown && hasHtml
-            )
+            const publishable = version.status !== "published" && Boolean(hasMarkdown && hasHtml)
             return (
               <div key={version.id} className="rounded-lg border p-4">
                 <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
@@ -361,7 +359,7 @@ export default function GuidelineDetailsPage() {
         open={Boolean(uploadVersion)}
         submitting={submitting}
         onOpenChange={(open) => !open && setUploadVersion(null)}
-        onSubmit={uploadPdf}
+        onSubmit={uploadSource}
       />
       <EditMarkdownDialog
         version={markdownVersion}

@@ -51,7 +51,7 @@ func main() {
 
 func claimQueuedJob(database *gorm.DB) (*models.IngestionJob, bool, error) {
 	var job models.IngestionJob
-	if err := database.Where("status = ? AND job_type = ?", "queued", "pdf_ingestion").Order("created_at asc").First(&job).Error; err != nil {
+	if err := database.Where("status = ? AND job_type IN ?", "queued", []string{"pdf_ingestion", "markdown_ingestion"}).Order("created_at asc").First(&job).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
 			return nil, false, nil
 		}

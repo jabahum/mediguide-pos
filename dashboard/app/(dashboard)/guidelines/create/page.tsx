@@ -61,7 +61,7 @@ export default function CreateGuidelinePage() {
   })
 
   const reviewedVersion = reviewDocumentQuery.data?.versions.find((item) => item.id === version?.id)
-  const extractionReady = Boolean(reviewedVersion?.markdown_file_key)
+  const extractionReady = Boolean(reviewedVersion?.markdown_file_key && reviewedVersion?.html_file_key)
 
   React.useEffect(() => {
     if (!extractionReady || !reviewedVersion || markdownLoaded) return
@@ -108,7 +108,7 @@ export default function CreateGuidelinePage() {
       })
       setVersion(created)
       setStage(2)
-      showToast.success("Version created", "Upload its source PDF.")
+      showToast.success("Version created", "Upload its PDF or Markdown source.")
     } catch (error) {
       showToast.error("Version failed", error instanceof Error ? error.message : "Unknown error")
     } finally {
@@ -120,9 +120,9 @@ export default function CreateGuidelinePage() {
     if (!version || !file) return
     setSubmitting(true)
     try {
-      await GuidelineDocumentsService.uploadVersionPdf(version.id, file)
+      await GuidelineDocumentsService.uploadVersionSource(version.id, file)
       setStage(3)
-      showToast.success("PDF uploaded", "Extraction is running. This page will refresh automatically.")
+      showToast.success("Source uploaded", "Extraction and indexing are running. This page will refresh automatically.")
     } catch (error) {
       showToast.error("Upload failed", error instanceof Error ? error.message : "Unknown error")
     } finally {
@@ -136,7 +136,7 @@ export default function CreateGuidelinePage() {
     try {
       await GuidelineDocumentsService.updateExtractedMarkdown(reviewedVersion.id, markdown)
       await queryClient.invalidateQueries({ queryKey: guidelineDocumentsQueryKey })
-      showToast.success("Guideline saved", "The extracted Markdown has been updated.")
+      showToast.success("Markdown saved", "Structured content and the AI index are being regenerated.")
     } catch (error) {
       showToast.error("Save failed", error instanceof Error ? error.message : "Unknown error")
     } finally {
@@ -148,7 +148,7 @@ export default function CreateGuidelinePage() {
     <div className="space-y-6">
       <PageHeader
         title="Create Guideline"
-        description="Create the document, attach its first version, upload the PDF, and review the extraction."
+        description="Create the document, attach its first version, upload PDF or Markdown, and review the extraction."
       />
 
       <nav aria-label="Guideline creation progress" className="grid gap-2 md:grid-cols-4">
@@ -236,16 +236,16 @@ export default function CreateGuidelinePage() {
       {stage === 2 && (
         <Card>
           <CardHeader>
-            <CardTitle>Upload source PDF</CardTitle>
-            <CardDescription>Upload the PDF for version {version?.version} to begin extraction.</CardDescription>
+            <CardTitle>Upload guideline source</CardTitle>
+            <CardDescription>Upload PDF or UTF-8 Markdown for version {version?.version} to begin extraction and indexing.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-5">
             <FileUpload
               value={file || undefined}
               onValueChange={setFile}
-              accept="application/pdf,.pdf"
+              accept="application/pdf,text/markdown,.pdf,.md,.markdown"
               maxSize={100}
-              placeholder="Choose guideline PDF or drag and drop"
+              placeholder="Choose guideline PDF or Markdown file"
             />
             <div className="flex justify-end gap-2">
               <Button variant="outline" onClick={() => router.push(`/guidelines/${document?.id}`)}>
@@ -267,7 +267,7 @@ export default function CreateGuidelinePage() {
             <CardDescription>
               {extractionReady
                 ? "Review the complete extracted Markdown and make corrections before publishing."
-                : "The worker is extracting and indexing the PDF. This page checks for updates every five seconds."}
+                : "The worker is extracting and indexing the uploaded source. This page checks for updates every five seconds."}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-5">

@@ -5595,7 +5595,7 @@ const docTemplate = `{
                 "tags": [
                     "guidelines"
                 ],
-                "summary": "Upload a guideline PDF",
+                "summary": "Upload a guideline PDF or Markdown source",
                 "parameters": [
                     {
                         "type": "string",
@@ -5607,7 +5607,7 @@ const docTemplate = `{
                     },
                     {
                         "type": "file",
-                        "description": "PDF file",
+                        "description": "PDF or Markdown file",
                         "name": "file",
                         "in": "formData",
                         "required": true
@@ -5634,6 +5634,12 @@ const docTemplate = `{
                     },
                     "403": {
                         "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    },
+                    "413": {
+                        "description": "Request Entity Too Large",
                         "schema": {
                             "$ref": "#/definitions/handlers.ErrorResponse"
                         }
@@ -10179,6 +10185,14 @@ const docTemplate = `{
         "handlers.MarkdownUpdateResult": {
             "type": "object",
             "properties": {
+                "job_id": {
+                    "type": "string",
+                    "format": "uuid"
+                },
+                "queued": {
+                    "type": "boolean",
+                    "example": true
+                },
                 "size": {
                     "type": "integer",
                     "example": 1024

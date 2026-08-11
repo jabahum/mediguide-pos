@@ -1,10 +1,16 @@
 package services
 
 import (
+	"context"
+	"encoding/json"
 	"errors"
+	"mime/multipart"
+	"os"
 	"testing"
 
 	"mediguide/internal/models"
+
+	"github.com/google/uuid"
 )
 
 func TestGeneratedProtocolDefinitionUsesGuidelineMetadata(t *testing.T) {
@@ -111,6 +117,102 @@ func TestEnsureVersionReadyForPublishRequiresStructuredEditorialReview(t *testin
 	err := ensureVersionReadyForPublish(nil, &models.GuidelineVersion{Status: "review_required"})
 	if !errors.Is(err, ErrGuidelineIngestionIncomplete) {
 		t.Fatalf("expected editorial review gate, got %v", err)
+	}
+}
+
+func TestUploadMarkdownStoresSourceAndQueuesIngestion(t *testing.T) {
+	db := publicGuidelineTestDB(t)
+	store := &fakePublicStore{objects: map[string][]byte{}}
+	service := GuidelineService{DB: db, Store: store}
+	document := models.GuidelineDocument{Title: "Malaria Care", Language: "en"}
+	if err := db.Create(&document).Error; err != nil {
+		t.Fatal(err)
+	}
+	version := models.GuidelineVersion{DocumentID: document.ID, Version: "2026.1", Status: "draft"}
+	if err := db.Create(&version).Error; err != nil {
+		t.Fatal(err)
+	}
+
+	file, err := os.CreateTemp(t.TempDir(), "guideline-*.md")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer file.Close()
+	content := []byte("# Assessment\nReview danger signs.")
+	if _, err := file.Write(content); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := file.Seek(0, 0); err != nil {
+		t.Fatal(err)
+	}
+
+	job, err := service.UploadMarkdown(context.Background(), version.ID, file, &multipart.FileHeader{
+		Filename: "malaria.md",
+		Size:     int64(len(content)),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if job.JobType != "markdown_ingestion" || job.Status != "queued" {
+		t.Fatalf("unexpected job: %#v", job)
+	}
+	var payload map[string]string
+	if err := json.Unmarshal([]byte(job.PayloadJSON), &payload); err != nil {
+		t.Fatal(err)
+	}
+	if payload["source_format"] != "markdown" || payload["file_key"] == "" {
+		t.Fatalf("unexpected payload: %#v", payload)
+	}
+	if string(store.objects[payload["file_key"]]) != string(content) {
+		t.Fatal("uploaded Markdown was not stored at the queued source key")
+	}
+	if err := db.First(&version, "id = ?", version.ID).Error; err != nil {
+		t.Fatal(err)
+	}
+	if version.MarkdownFileKey != payload["file_key"] || version.HTMLFileKey != "" {
+		t.Fatalf("version source was not prepared for ingestion: %#v", version)
+	}
+}
+
+func TestReplaceMarkdownQueuesNewImmutableRevision(t *testing.T) {
+	db := publicGuidelineTestDB(t)
+	store := &fakePublicStore{objects: map[string][]byte{"existing.md": []byte("# Existing")}}
+	service := GuidelineService{DB: db, Store: store}
+	document := models.GuidelineDocument{Title: "Malaria Care", Language: "en"}
+	if err := db.Create(&document).Error; err != nil {
+		t.Fatal(err)
+	}
+	version := models.GuidelineVersion{
+		DocumentID: document.ID, Version: "2026.1", Status: "review_required",
+		MarkdownFileKey: "existing.md", HTMLFileKey: "existing.html", Checksum: "old",
+	}
+	if err := db.Create(&version).Error; err != nil {
+		t.Fatal(err)
+	}
+
+	job, err := service.ReplaceMarkdown(context.Background(), version.ID, []byte("# Revised\nUpdated care."))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if job.JobType != "markdown_ingestion" {
+		t.Fatalf("unexpected job type: %s", job.JobType)
+	}
+	if err := db.First(&version, "id = ?", version.ID).Error; err != nil {
+		t.Fatal(err)
+	}
+	if version.MarkdownFileKey == "existing.md" || version.HTMLFileKey != "" || version.Checksum != "" || version.Status != "draft" {
+		t.Fatalf("edited version was not reset for re-indexing: %#v", version)
+	}
+	if _, ok := store.objects[version.MarkdownFileKey]; !ok {
+		t.Fatal("immutable Markdown revision was not stored")
+	}
+}
+
+func TestUploadMarkdownRejectsUnsupportedExtension(t *testing.T) {
+	service := GuidelineService{}
+	_, err := service.UploadMarkdown(context.Background(), uuid.New(), nil, &multipart.FileHeader{Filename: "guideline.txt"})
+	if !errors.Is(err, ErrUnsupportedGuidelineSource) {
+		t.Fatalf("expected unsupported source error, got %v", err)
 	}
 }
 

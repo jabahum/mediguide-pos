@@ -3,6 +3,7 @@
 import * as React from "react"
 import CodeMirror, { ReactCodeMirrorRef } from "@uiw/react-codemirror"
 import { markdown } from "@codemirror/lang-markdown"
+import { foldAll, unfoldAll } from "@codemirror/language"
 import { defaultKeymap, historyKeymap, indentWithTab, redo, undo } from "@codemirror/commands"
 import { keymap, EditorView } from "@codemirror/view"
 import { openSearchPanel, searchKeymap } from "@codemirror/search"
@@ -38,12 +39,16 @@ import {
 } from "./markdown-preview-surface"
 import {
   formatMarkdown,
-  lineDiff,
+  clinicalCalloutMarkdown,
+  ClinicalCalloutType,
   markdownHeadings,
   markdownStats,
   markdownTemplates,
+  moveMarkdownSection,
+  stableHeadingAnchors,
   validateMarkdown,
 } from "./markdown-authoring"
+import { MarkdownDiffViewer } from "./markdown-diff-viewer"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -61,6 +66,8 @@ import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/componen
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Switch } from "@/components/ui/switch"
 import { Textarea } from "@/components/ui/textarea"
+import { Checkbox } from "@/components/ui/checkbox"
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -86,6 +93,8 @@ interface GuidelineMarkdownEditorProps {
   documentTitle: string
   versionLabel: string
   publishedVersionId?: string | null
+  structuredRevisionId?: string | null
+  publishedRevisionId?: string | null
   openTemplatesInitially?: boolean
   initialContent: string
   initialDraft?: MarkdownDraft | null
@@ -167,11 +176,25 @@ function downloadText(filename: string, content: string) {
   URL.revokeObjectURL(url)
 }
 
+function reorderAnchorMetadata(metadata: ReturnType<typeof stableHeadingAnchors>, headings: ReturnType<typeof markdownHeadings>, fromIndex: number, toIndex: number) {
+  const source = headings[fromIndex]
+  if (!source || !headings[toIndex]) return metadata
+  const endIndex = headings.findIndex((heading, index) => index > fromIndex && heading.level <= source.level)
+  const count = (endIndex < 0 ? headings.length : endIndex) - fromIndex
+  const values = headings.map((_, index) => metadata[String(index)])
+  const moved = values.splice(fromIndex, count)
+  const insertion = toIndex > fromIndex ? Math.max(0, toIndex - count) : toIndex
+  values.splice(insertion, 0, ...moved)
+  return Object.fromEntries(values.map((value, index) => [String(index), value]))
+}
+
 export function GuidelineMarkdownEditor({
   versionId,
   documentTitle,
   versionLabel,
   publishedVersionId,
+  structuredRevisionId,
+  publishedRevisionId,
   openTemplatesInitially = false,
   initialContent,
   initialDraft = null,
@@ -207,8 +230,18 @@ export function GuidelineMarkdownEditor({
   const [historyOpen, setHistoryOpen] = React.useState(false)
   const [historyLoading, setHistoryLoading] = React.useState(false)
   const [revisions, setRevisions] = React.useState<MarkdownRevision[]>([])
+  const [historyPage, setHistoryPage] = React.useState(1)
+  const [historyTotalPages, setHistoryTotalPages] = React.useState(1)
+  const [historySource, setHistorySource] = React.useState("")
+  const [historyEditor, setHistoryEditor] = React.useState("")
+  const [historyFrom, setHistoryFrom] = React.useState("")
+  const [historyTo, setHistoryTo] = React.useState("")
+  const [selectedRevisionIds, setSelectedRevisionIds] = React.useState<string[]>([])
+  const [revisionPreview, setRevisionPreview] = React.useState<MarkdownDraft | null>(null)
+  const [pendingRestore, setPendingRestore] = React.useState<MarkdownRevision | null>(null)
   const [compareOpen, setCompareOpen] = React.useState(false)
   const [compareContent, setCompareContent] = React.useState("")
+  const [compareCurrentContent, setCompareCurrentContent] = React.useState("")
   const [compareLabel, setCompareLabel] = React.useState("")
   const [conflictDraft, setConflictDraft] = React.useState<MarkdownDraft | null>(null)
   const [regenerating, setRegenerating] = React.useState(false)
@@ -219,13 +252,36 @@ export function GuidelineMarkdownEditor({
   const [duplicatePublicationDate, setDuplicatePublicationDate] = React.useState("")
   const [duplicateReviewDate, setDuplicateReviewDate] = React.useState("")
   const [duplicating, setDuplicating] = React.useState(false)
+  const [outlineSearch, setOutlineSearch] = React.useState("")
+  const [activeHeading, setActiveHeading] = React.useState(0)
+  const [draggedHeading, setDraggedHeading] = React.useState<number | null>(null)
+  const [collapsedHeadingIndexes, setCollapsedHeadingIndexes] = React.useState<Set<number>>(() => new Set())
+  const [calloutOpen, setCalloutOpen] = React.useState(false)
+  const [calloutType, setCalloutType] = React.useState<ClinicalCalloutType>("recommendation")
+  const [calloutTitle, setCalloutTitle] = React.useState("")
+  const [calloutSeverity, setCalloutSeverity] = React.useState<"" | "standard" | "important" | "high" | "critical">("")
+  const [calloutEvidence, setCalloutEvidence] = React.useState("")
+  const [calloutSource, setCalloutSource] = React.useState("")
+  const [calloutContent, setCalloutContent] = React.useState("")
+  const [anchorMetadata, setAnchorMetadata] = React.useState(() => stableHeadingAnchors(initialContent, initialDraft?.revision.anchor_metadata))
 
   const canEdit = editable && !published
   const dirty = canEdit && content !== savedContent
   const headings = React.useMemo(() => markdownHeadings(content), [content])
   const issues = React.useMemo(() => validateMarkdown(content), [content])
   const stats = React.useMemo(() => markdownStats(content), [content])
-  const diff = React.useMemo(() => lineDiff(compareContent, content), [compareContent, content])
+  const visibleHeadings = React.useMemo(() => headings.filter((heading, index) => {
+    if (!heading.text.toLowerCase().includes(outlineSearch.toLowerCase())) return false
+    if (outlineSearch.trim()) return true
+    for (const collapsedIndex of collapsedHeadingIndexes) {
+      const parent = headings[collapsedIndex]
+      if (!parent || collapsedIndex >= index) continue
+      const nextPeer = headings.findIndex((candidate, candidateIndex) => candidateIndex > collapsedIndex && candidate.level <= parent.level)
+      if (nextPeer < 0 || index < nextPeer) return false
+    }
+    return true
+  }), [collapsedHeadingIndexes, headings, outlineSearch])
+  const renamedAnchors = React.useMemo(() => headings.filter((heading, index) => anchorMetadata[String(index)] && anchorMetadata[String(index)].title !== heading.text), [anchorMetadata, headings])
   useUnsavedChanges(dirty)
 
   const view = () => editorRef.current?.view
@@ -311,12 +367,13 @@ export function GuidelineMarkdownEditor({
     setLastSavedAt(new Date(result.revision.updated_at))
     setSaveError(null)
     setPendingSourceType(null)
+    setAnchorMetadata(result.revision.anchor_metadata || stableHeadingAnchors(result.content, anchorMetadata))
     try {
       localStorage.removeItem(recoveryKey(versionId))
     } catch {
       // Recovery storage is best effort.
     }
-  }, [versionId])
+  }, [anchorMetadata, versionId])
 
   const keepLocalAgainstServerRevision = React.useCallback((serverDraft: MarkdownDraft) => {
     setDraft(serverDraft)
@@ -340,6 +397,7 @@ export function GuidelineMarkdownEditor({
         source_type: pendingSourceType ?? (draft ? "manual_edit" as const : "blank" as const),
         checkpoint_name: checkpoint?.name,
         change_summary: checkpoint?.summary,
+        anchor_metadata: stableHeadingAnchors(content, anchorMetadata),
       }
       const result = checkpoint
         ? await GuidelineMarkdownService.createCheckpoint(versionId, input)
@@ -367,7 +425,7 @@ export function GuidelineMarkdownEditor({
     } finally {
       setSaving(false)
     }
-  }, [applySavedDraft, canEdit, content, dirty, draft, online, pendingSourceType, saving, versionId])
+  }, [anchorMetadata, applySavedDraft, canEdit, content, dirty, draft, online, pendingSourceType, saving, versionId])
 
   React.useEffect(() => {
     if (!preferences.autosave || !dirty || !online || saving || conflictDraft) return
@@ -422,7 +480,11 @@ export function GuidelineMarkdownEditor({
       return
     }
     if (action.startsWith("callout-")) {
-      selectionReplacement(editor, `:::${action.slice(8)}\n`, "\n:::", "Add reviewed clinical content.")
+      const type = action.slice(8) as ClinicalCalloutType
+      const selection = editor.state.selection.main
+      setCalloutType(type)
+      setCalloutContent(editor.state.sliceDoc(selection.from, selection.to))
+      setCalloutOpen(true)
       return
     }
     switch (action) {
@@ -445,11 +507,28 @@ export function GuidelineMarkdownEditor({
     }
   }
 
-  const loadHistory = async () => {
+  const loadHistory = async (page = historyPage) => {
     setHistoryOpen(true)
     setHistoryLoading(true)
     try {
-      setRevisions((await GuidelineMarkdownService.revisions(versionId)).items)
+      const result = await GuidelineMarkdownService.revisions(versionId, {
+        page,
+        per_page: 20,
+        source_type: historySource as never,
+        created_by: historyEditor.trim() || undefined,
+        from: historyFrom ? new Date(`${historyFrom}T00:00:00`).toISOString() : undefined,
+        to: historyTo ? new Date(`${historyTo}T23:59:59`).toISOString() : undefined,
+      })
+      setHistoryPage(result.page)
+      setHistoryTotalPages(result.total_pages)
+      setRevisions(result.items.map((revision) => ({
+        ...revision,
+        change_summary: [
+          revision.change_summary,
+          revision.id === structuredRevisionId ? "Current structured-content source" : "",
+          revision.id === publishedRevisionId ? "Currently published revision" : "",
+        ].filter(Boolean).join(" · "),
+      })))
     } catch (error) {
       showToast.error("History unavailable", error instanceof Error ? error.message : "Could not load revisions")
     } finally {
@@ -461,11 +540,52 @@ export function GuidelineMarkdownEditor({
     try {
       const result = await GuidelineMarkdownService.revision(versionId, revision.id)
       setCompareContent(result.content)
+      setCompareCurrentContent(content)
       setCompareLabel(`Revision ${revision.revision_number}`)
       setCompareOpen(true)
     } catch (error) {
       showToast.error("Comparison failed", error instanceof Error ? error.message : "Could not load revision")
     }
+  }
+
+  const compareSelectedRevisions = async () => {
+    if (selectedRevisionIds.length !== 2) return
+    try {
+      const [before, after] = await Promise.all(selectedRevisionIds.map((id) => GuidelineMarkdownService.revision(versionId, id)))
+      setCompareContent(before.content)
+      setCompareCurrentContent(after.content)
+      setCompareLabel(`revision ${before.revision.revision_number} with revision ${after.revision.revision_number}`)
+      setCompareOpen(true)
+    } catch (error) {
+      showToast.error("Comparison failed", error instanceof Error ? error.message : "Could not load revisions")
+    }
+  }
+
+  const previewRevision = async (revision: MarkdownRevision) => {
+    try { setRevisionPreview(await GuidelineMarkdownService.revision(versionId, revision.id)) }
+    catch (error) { showToast.error("Preview failed", error instanceof Error ? error.message : "Could not load revision") }
+  }
+
+  const compareSpecialRevision = async (kind: "saved" | "regenerated") => {
+    if (kind === "saved") {
+      setCompareContent(savedContent); setCompareCurrentContent(content); setCompareLabel("last saved revision"); setCompareOpen(true); return
+    }
+    const result = await GuidelineMarkdownService.revisions(versionId, { page: 1, per_page: 100 })
+    const revision = result.items.find((item) => Boolean(item.regeneration_job_id) && ["review_required", "approved"].includes(item.structured_content_status))
+    if (!revision) { showToast.error("No regenerated revision", "No completed regenerated Markdown revision is available."); return }
+    await compareRevision(revision)
+    setCompareLabel(`last regenerated revision ${revision.revision_number}`)
+  }
+
+  const insertClinicalCallout = () => {
+    const editor = view()
+    if (!editor || !calloutContent.trim()) return
+    const selection = editor.state.selection.main
+    const markdown = clinicalCalloutMarkdown({ type: calloutType, title: calloutTitle || undefined, severity: calloutSeverity || undefined, evidenceGrade: calloutEvidence || undefined, source: calloutSource || undefined, content: calloutContent })
+    editor.dispatch({ changes: { from: selection.from, to: selection.to, insert: markdown }, selection: { anchor: selection.from + markdown.length }, scrollIntoView: true })
+    setCalloutOpen(false)
+    setCalloutTitle(""); setCalloutSeverity(""); setCalloutEvidence(""); setCalloutSource(""); setCalloutContent("")
+    editor.focus()
   }
 
   const restoreRevision = async (revision: MarkdownRevision) => {
@@ -537,6 +657,7 @@ export function GuidelineMarkdownEditor({
     try {
       const publishedDraft = await GuidelineMarkdownService.loadDraft(publishedVersionId)
       setCompareContent(publishedDraft.content)
+      setCompareCurrentContent(content)
       setCompareLabel("published revision")
       setCompareOpen(true)
     } catch (error) {
@@ -577,6 +698,12 @@ export function GuidelineMarkdownEditor({
     keymap.of([...editorFormattingKeymap, ...defaultKeymap, ...historyKeymap, ...searchKeymap, indentWithTab]),
     EditorView.domEventHandlers({
       scroll: (_event, editor) => synchronizeScroll(editor.scrollDOM, previewScrollRef.current),
+    }),
+    EditorView.updateListener.of((update) => {
+      if (!update.selectionSet && !update.docChanged) return
+      const cursor = update.state.selection.main.head
+      const next = markdownHeadings(update.state.doc.toString()).findLastIndex((heading) => heading.from <= cursor)
+      setActiveHeading(Math.max(0, next))
     }),
     ...(preferences.lineWrapping ? [EditorView.lineWrapping] : []),
     EditorView.theme({
@@ -655,6 +782,8 @@ export function GuidelineMarkdownEditor({
           {canEdit && <Button size="sm" variant="ghost" onClick={() => uploadRef.current?.click()}><Upload className="mr-2 h-4 w-4" />Load Markdown</Button>}
           {draft && <Button size="sm" variant="ghost" onClick={() => setDuplicateOpen(true)}><FilePlus2 className="mr-2 h-4 w-4" />{published ? "Create draft version" : "Duplicate draft"}</Button>}
           {publishedVersionId && publishedVersionId !== versionId && <Button size="sm" variant="ghost" onClick={() => void compareWithPublished()}><GitCompareArrows className="mr-2 h-4 w-4" />Compare published</Button>}
+          {dirty && <Button size="sm" variant="ghost" onClick={() => void compareSpecialRevision("saved")}><GitCompareArrows className="mr-2 h-4 w-4" />Compare saved</Button>}
+          <Button size="sm" variant="ghost" onClick={() => void compareSpecialRevision("regenerated")}><GitCompareArrows className="mr-2 h-4 w-4" />Compare regenerated</Button>
           <Button size="sm" variant="ghost" onClick={() => void copyMarkdown()}><Copy className="mr-2 h-4 w-4" />Copy</Button>
           <Button size="sm" variant="ghost" onClick={() => setSettingsOpen(true)}><Settings2 className="mr-2 h-4 w-4" />Editor settings</Button>
           {(mode === "preview" || mode === "split") && (
@@ -679,6 +808,8 @@ export function GuidelineMarkdownEditor({
           <Badge variant="outline">{stats.headings} headings</Badge>
           <Badge variant="outline">{stats.readingMinutes} min read</Badge>
           {draft && <Badge variant="secondary">Revision {draft.revision.revision_number}</Badge>}
+          {draft?.revision.id === structuredRevisionId && <Badge variant="outline">Current structured source</Badge>}
+          {draft?.revision.id === publishedRevisionId && <Badge variant="secondary">Published revision</Badge>}
           {draft && <Badge variant={draft.revision.structured_content_status === "failed" ? "destructive" : "outline"}>{draft.revision.structured_content_status.replaceAll("_", " ")}</Badge>}
           <span className="ml-auto">{issues.filter((issue) => issue.severity === "error").length} errors · {issues.filter((issue) => issue.severity === "warning").length} warnings</span>
         </div>
@@ -700,30 +831,40 @@ export function GuidelineMarkdownEditor({
         )}
         {!online && <Alert className="m-4 mb-0"><CloudOff className="h-4 w-4" /><AlertTitle>Working offline</AlertTitle><AlertDescription>Your text is retained locally. Server saving resumes after reconnection.</AlertDescription></Alert>}
         {published && <Alert className="m-4 mb-0"><Info className="h-4 w-4" /><AlertTitle>Published version</AlertTitle><AlertDescription>Published Markdown is immutable. Create a new version to revise it.</AlertDescription></Alert>}
+        {renamedAnchors.length > 0 && <Alert className="m-4 mb-0"><Info className="h-4 w-4" /><AlertTitle>Stable section anchor retained</AlertTitle><AlertDescription>{renamedAnchors.length} renamed heading{renamedAnchors.length === 1 ? "" : "s"} will retain revision metadata anchors. Review inbound links before publication.</AlertDescription></Alert>}
         {saveError && <Alert variant="destructive" className="m-4 mb-0"><AlertCircle className="h-4 w-4" /><AlertTitle>Markdown was not saved</AlertTitle><AlertDescription className="flex flex-wrap items-center gap-2"><span>{saveError} Your edits remain available.</span><Button size="sm" variant="outline" disabled={saving || !online} onClick={() => void save()}>Retry save</Button></AlertDescription></Alert>}</div>
 
         <div className={cn("grid", !preferences.distractionFree && "lg:grid-cols-[220px_minmax(0,1fr)]")}>
           {!preferences.distractionFree && (
             <aside className="hidden border-r print:hidden lg:block">
-              <div className="border-b p-3 text-sm font-medium">Document outline</div>
+              <div className="space-y-2 border-b p-3"><div className="text-sm font-medium">Document outline</div><Input aria-label="Search headings" placeholder="Search headings…" className="h-8 text-xs" value={outlineSearch} onChange={(event) => setOutlineSearch(event.target.value)} /><div className="flex gap-1"><Button size="sm" variant="ghost" className="h-7 px-2 text-[11px]" onClick={() => { const editor = view(); if (editor) foldAll(editor) }}>Collapse source</Button><Button size="sm" variant="ghost" className="h-7 px-2 text-[11px]" onClick={() => { const editor = view(); if (editor) unfoldAll(editor) }}>Expand source</Button></div>{headings[activeHeading] && <p className="truncate text-[11px] text-muted-foreground">{headings[activeHeading].breadcrumb.join(" › ")}</p>}</div>
               <ScrollArea className="h-[65vh] p-2">
                 {headings.length === 0 && <p className="p-2 text-xs text-muted-foreground">Add headings to build navigation.</p>}
-                {headings.map((heading, index) => (
+                {visibleHeadings.map((heading) => {
+                  const index = headings.indexOf(heading)
+                  const sectionIssues = issues.filter((issue) => issue.line >= heading.line && issue.line < (headings[index + 1]?.line ?? Number.MAX_SAFE_INTEGER))
+                  return (
                   <button
                     key={`${heading.id}-${index}`}
                     type="button"
-                    className="block w-full truncate rounded px-2 py-1.5 text-left text-xs hover:bg-muted"
+                    draggable={canEdit}
+                    onDragStart={() => setDraggedHeading(index)}
+                    onDragOver={(event) => event.preventDefault()}
+                    onDrop={() => { if (draggedHeading === null) return; setContent(moveMarkdownSection(content, draggedHeading, index)); setAnchorMetadata(reorderAnchorMetadata(anchorMetadata, headings, draggedHeading, index)); setDraggedHeading(null) }}
+                    className={cn("flex w-full items-center gap-1 truncate rounded px-2 py-1.5 text-left text-xs hover:bg-muted", activeHeading === index && "bg-muted font-medium")}
                     style={{ paddingLeft: `${8 + (heading.level - 1) * 12}px` }}
-                    title={`${heading.text} · ${heading.words} words`}
+                    title={`${heading.text} · ${heading.words} words · Double-click to ${collapsedHeadingIndexes.has(index) ? "expand" : "collapse"} descendants · review ${draft?.revision.review_state || "draft"}`}
+                    onDoubleClick={() => setCollapsedHeadingIndexes((current) => { const next = new Set(current); if (next.has(index)) next.delete(index); else next.add(index); return next })}
+                    onKeyDown={(event) => { if (!event.altKey || !["ArrowLeft", "ArrowRight"].includes(event.key)) return; event.preventDefault(); setCollapsedHeadingIndexes((current) => { const next = new Set(current); if (event.key === "ArrowLeft") next.add(index); else next.delete(index); return next }) }}
                     onClick={() => {
                       const editor = view()
                       editor?.dispatch({ selection: { anchor: heading.from }, scrollIntoView: true })
                       editor?.focus()
                     }}
                   >
-                    {heading.text}
+                    <span aria-hidden="true" className="w-3 shrink-0">{collapsedHeadingIndexes.has(index) ? "▸" : "▾"}</span><span className="truncate">{heading.text}</span><span className="ml-auto shrink-0 text-[10px] text-muted-foreground">{heading.words}w</span>{sectionIssues.length > 0 && <Badge variant={sectionIssues.some((issue) => issue.severity === "error") ? "destructive" : "outline"} className="h-4 px-1 text-[9px]">{sectionIssues.length}</Badge>}
                   </button>
-                ))}
+                )})}
                 {issues.length > 0 && <div className="mt-4 border-t pt-3 text-xs font-medium">Validation</div>}
                 {issues.map((issue, index) => (
                   <button
@@ -852,27 +993,38 @@ export function GuidelineMarkdownEditor({
       </Dialog>
 
       <Dialog open={commandOpen} onOpenChange={setCommandOpen}>
-        <DialogContent>
+        <DialogContent className="overflow-hidden p-0">
           <DialogHeader><DialogTitle>Markdown commands</DialogTitle><DialogDescription>Open with Ctrl/Command+Shift+P. Commands act on the current draft and editor selection.</DialogDescription></DialogHeader>
-          <div className="grid gap-2 sm:grid-cols-2">
-            <Button variant="outline" disabled={!dirty || saving || !online} onClick={() => { setCommandOpen(false); void save() }}>Save draft</Button>
-            <Button variant="outline" onClick={() => { changeMode(mode === "preview" ? (canEdit ? "split" : "preview") : "preview"); setCommandOpen(false) }}>Toggle preview</Button>
-            <Button variant="outline" onClick={() => { setFullscreen((value) => !value); setCommandOpen(false) }}>Toggle fullscreen</Button>
-            <Button variant="outline" disabled={!canEdit} onClick={() => { setContent(formatMarkdown(content)); setCommandOpen(false) }}>Format document</Button>
-            <Button variant="outline" disabled={!canEdit} onClick={() => { const editor = view(); if (editor) openSearchPanel(editor); setCommandOpen(false) }}>Find and replace</Button>
-            <Button variant="outline" onClick={() => { setHistoryOpen(true); setCommandOpen(false); void loadHistory() }}>Revision history</Button>
-          </div>
-          {canEdit && <div className="flex items-end gap-2"><div className="flex-1"><Label htmlFor="go-to-line">Go to line</Label><Input id="go-to-line" type="number" min={1} value={goToLine} onChange={(event) => setGoToLine(event.target.value)} /></div><Button onClick={() => { const editor = view(); if (!editor) return; const number = Math.min(Math.max(1, Number(goToLine) || 1), editor.state.doc.lines); const line = editor.state.doc.line(number); editor.dispatch({ selection: { anchor: line.from }, scrollIntoView: true }); editor.focus(); setCommandOpen(false) }}>Go</Button></div>}
+          <Command><CommandInput placeholder="Search document commands or headings…" /><CommandList><CommandEmpty>No command or heading found.</CommandEmpty><CommandGroup heading="Commands">
+            <CommandItem disabled={!dirty || saving || !online} onSelect={() => { setCommandOpen(false); void save() }}>Save draft</CommandItem>
+            <CommandItem onSelect={() => { changeMode(mode === "preview" ? (canEdit ? "split" : "preview") : "preview"); setCommandOpen(false) }}>Toggle preview</CommandItem>
+            <CommandItem onSelect={() => { setFullscreen((value) => !value); setCommandOpen(false) }}>Toggle fullscreen</CommandItem>
+            <CommandItem disabled={!canEdit} onSelect={() => { setContent(formatMarkdown(content)); setCommandOpen(false) }}>Format document / normalize line endings / remove trailing whitespace</CommandItem>
+            <CommandItem disabled={!canEdit} onSelect={() => { const editor = view(); if (editor) openSearchPanel(editor); setCommandOpen(false) }}>Find and replace</CommandItem>
+            <CommandItem onSelect={() => { setCommandOpen(false); void loadHistory() }}>Revision history</CommandItem>
+          </CommandGroup><CommandGroup heading="Go to heading">{headings.map((heading, index) => <CommandItem key={`${heading.id}-${index}`} value={`heading ${heading.breadcrumb.join(" ")}`} onSelect={() => { const editor = view(); editor?.dispatch({ selection: { anchor: heading.from }, scrollIntoView: true }); editor?.focus(); setCommandOpen(false) }}>{heading.breadcrumb.join(" › ")}</CommandItem>)}</CommandGroup></CommandList></Command>
+          {canEdit && <div className="flex items-end gap-2 border-t p-4"><div className="flex-1"><Label htmlFor="go-to-line">Go to line</Label><Input id="go-to-line" type="number" min={1} value={goToLine} onChange={(event) => setGoToLine(event.target.value)} /></div><Button onClick={() => { const editor = view(); if (!editor) return; const number = Math.min(Math.max(1, Number(goToLine) || 1), editor.state.doc.lines); const line = editor.state.doc.line(number); editor.dispatch({ selection: { anchor: line.from }, scrollIntoView: true }); editor.focus(); setCommandOpen(false) }}>Go</Button></div>}
         </DialogContent>
       </Dialog>
 
       <Dialog open={historyOpen} onOpenChange={setHistoryOpen}>
-        <DialogContent className="max-w-3xl"><DialogHeader><DialogTitle>Markdown revision history</DialogTitle><DialogDescription>Every entry is immutable. Restore creates a new draft revision.</DialogDescription></DialogHeader><ScrollArea className="max-h-[60vh]"><div className="space-y-2 pr-3">{historyLoading && <p className="text-sm text-muted-foreground">Loading revisions…</p>}{revisions.map((revision) => <div key={revision.id} className="flex flex-col gap-3 rounded-lg border p-3 sm:flex-row sm:items-center"><div className="min-w-0 flex-1"><div className="flex flex-wrap items-center gap-2"><span className="font-medium">Revision {revision.revision_number}</span>{revision.is_current && <Badge>Current</Badge>}{revision.publication_state === "published" && <Badge variant="secondary">Published</Badge>}<Badge variant="outline">{revision.source_type.replaceAll("_", " ")}</Badge></div><p className="mt-1 truncate text-sm">{revision.checkpoint_name || revision.change_summary || "Unnamed draft"}</p><p className="text-xs text-muted-foreground">{new Date(revision.created_at).toLocaleString()} · {revision.size_bytes.toLocaleString()} bytes · {revision.structured_content_status.replaceAll("_", " ")}</p></div><div className="flex gap-2"><Button size="sm" variant="outline" onClick={() => void compareRevision(revision)}>Compare</Button><Button size="sm" variant="outline" onClick={async () => { const item = await GuidelineMarkdownService.revision(versionId, revision.id); downloadText(`guideline-revision-${revision.revision_number}.md`, item.content) }}>Download</Button>{canEdit && !revision.is_current && <Button size="sm" onClick={() => void restoreRevision(revision)}>Restore</Button>}</div></div>)}</div></ScrollArea></DialogContent>
+        <DialogContent className="max-w-5xl"><DialogHeader><DialogTitle>Markdown revision history</DialogTitle><DialogDescription>Every entry is immutable. Select two revisions for an exact comparison; restore always creates a new revision.</DialogDescription></DialogHeader>
+          <div className="grid gap-2 sm:grid-cols-4"><Input aria-label="Filter by editor UUID" placeholder="Editor UUID" value={historyEditor} onChange={(event) => setHistoryEditor(event.target.value)} /><select aria-label="Filter by source type" className="h-9 rounded-md border bg-background px-3 text-sm" value={historySource} onChange={(event) => setHistorySource(event.target.value)}><option value="">All sources</option>{["blank", "template", "uploaded_markdown", "pdf_generated", "manual_edit", "restored", "duplicated"].map((source) => <option key={source} value={source}>{source.replaceAll("_", " ")}</option>)}</select><Input aria-label="Created from" type="date" value={historyFrom} onChange={(event) => setHistoryFrom(event.target.value)} /><Input aria-label="Created to" type="date" value={historyTo} onChange={(event) => setHistoryTo(event.target.value)} /></div>
+          <div className="flex flex-wrap gap-2"><Button size="sm" onClick={() => void loadHistory(1)}>Apply filters</Button><Button size="sm" variant="outline" disabled={selectedRevisionIds.length !== 2} onClick={() => void compareSelectedRevisions()}>Compare selected ({selectedRevisionIds.length}/2)</Button></div>
+          <ScrollArea className="max-h-[55vh]"><div className="space-y-2 pr-3">{historyLoading && <p className="text-sm text-muted-foreground">Loading revisions…</p>}{revisions.map((revision) => <div key={revision.id} className="flex flex-col gap-3 rounded-lg border p-3 sm:flex-row sm:items-center"><Checkbox aria-label={`Select revision ${revision.revision_number}`} checked={selectedRevisionIds.includes(revision.id)} onCheckedChange={(checked) => setSelectedRevisionIds((current) => checked ? [...current.filter((id) => id !== revision.id), revision.id].slice(-2) : current.filter((id) => id !== revision.id))} /><div className="min-w-0 flex-1"><div className="flex flex-wrap items-center gap-2"><span className="font-medium">Revision {revision.revision_number}</span>{revision.is_current && <Badge>Current draft</Badge>}{revision.publication_state === "published" && <Badge variant="secondary">Published source</Badge>}{revision.regeneration_job_id && <Badge variant="outline">Generated structured content</Badge>}<Badge variant="outline">{revision.source_type.replaceAll("_", " ")}</Badge></div><p className="mt-1 truncate text-sm">{revision.checkpoint_name || revision.change_summary || "Unnamed draft"}</p><p className="text-xs text-muted-foreground">{new Date(revision.created_at).toLocaleString()} · editor {revision.created_by || "system"} · {revision.size_bytes.toLocaleString()} bytes · {revision.structured_content_status.replaceAll("_", " ")}</p>{revision.change_summary && <p className="mt-1 text-xs text-muted-foreground">{revision.change_summary}</p>}</div><div className="flex flex-wrap gap-2"><Button size="sm" variant="outline" onClick={() => void previewRevision(revision)}>Preview</Button><Button size="sm" variant="outline" onClick={() => void compareRevision(revision)}>Compare current</Button><Button size="sm" variant="outline" onClick={async () => { const item = await GuidelineMarkdownService.revision(versionId, revision.id); downloadText(`guideline-revision-${revision.revision_number}.md`, item.content) }}>Download</Button>{canEdit && !revision.is_current && <Button size="sm" onClick={() => setPendingRestore(revision)}>Restore</Button>}</div></div>)}</div></ScrollArea>
+          <DialogFooter className="items-center"><span className="mr-auto text-xs text-muted-foreground">Page {historyPage} of {Math.max(1, historyTotalPages)}</span><Button variant="outline" disabled={historyPage <= 1 || historyLoading} onClick={() => void loadHistory(historyPage - 1)}>Previous</Button><Button variant="outline" disabled={historyPage >= historyTotalPages || historyLoading} onClick={() => void loadHistory(historyPage + 1)}>Next</Button></DialogFooter>
+        </DialogContent>
       </Dialog>
 
-      <Dialog open={compareOpen} onOpenChange={setCompareOpen}>
-        <DialogContent className="max-w-5xl"><DialogHeader><DialogTitle>Compare {compareLabel} with current draft</DialogTitle><DialogDescription>Removed lines are red and additions are green. Markdown is shown as text and is never executed.</DialogDescription></DialogHeader><ScrollArea className="max-h-[65vh] rounded border bg-muted/20 font-mono text-xs"><div className="min-w-max p-3">{diff.map((line, index) => <div key={`${index}-${line.type}`} className={cn("whitespace-pre px-2", line.type === "added" && "bg-green-100 text-green-950 dark:bg-green-950 dark:text-green-100", line.type === "removed" && "bg-red-100 text-red-950 dark:bg-red-950 dark:text-red-100")}><span className="mr-3 select-none text-muted-foreground">{line.type === "added" ? "+" : line.type === "removed" ? "−" : " "}</span>{line.text || " "}</div>)}</div></ScrollArea><DialogFooter><Button variant="outline" onClick={() => downloadText("guideline-diff.txt", diff.map((line) => `${line.type === "added" ? "+" : line.type === "removed" ? "-" : " "}${line.text}`).join("\n"))}>Download diff</Button></DialogFooter></DialogContent>
+      <Dialog open={compareOpen} onOpenChange={(open) => { setCompareOpen(open); if (!open) setCompareCurrentContent("") }}>
+        <DialogContent className="max-w-6xl"><DialogHeader><DialogTitle>Compare {compareLabel}</DialogTitle><DialogDescription>Markdown is compared as inert text. Raw HTML is never executed.</DialogDescription></DialogHeader><MarkdownDiffViewer before={compareContent} after={compareCurrentContent || content} beforeLabel={compareLabel} onDownload={(value) => downloadText("guideline-diff.txt", value)} /></DialogContent>
       </Dialog>
+
+      <Dialog open={Boolean(revisionPreview)} onOpenChange={(open) => { if (!open) setRevisionPreview(null) }}><DialogContent className="max-w-4xl"><DialogHeader><DialogTitle>Revision {revisionPreview?.revision.revision_number} preview</DialogTitle><DialogDescription>Read-only safe Markdown preview.</DialogDescription></DialogHeader><ScrollArea className="max-h-[70vh] p-4">{revisionPreview && <MarkdownPreviewSurface content={revisionPreview.content} title={documentTitle} versionLabel={versionLabel} presentation="rendered" />}</ScrollArea></DialogContent></Dialog>
+
+      <AlertDialog open={Boolean(pendingRestore)} onOpenChange={(open) => { if (!open) setPendingRestore(null) }}><AlertDialogContent><AlertDialogHeader><AlertDialogTitle>Restore revision {pendingRestore?.revision_number}?</AlertDialogTitle><AlertDialogDescription>This does not overwrite history. A new current draft revision will reference the selected immutable revision.</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel>Cancel</AlertDialogCancel><AlertDialogAction onClick={() => { if (pendingRestore) void restoreRevision(pendingRestore); setPendingRestore(null) }}>Create restored draft</AlertDialogAction></AlertDialogFooter></AlertDialogContent></AlertDialog>
+
+      <Dialog open={calloutOpen} onOpenChange={setCalloutOpen}><DialogContent><DialogHeader><DialogTitle>Insert clinical callout</DialogTitle><DialogDescription>Enter only reviewed clinical content. The editor will preserve values and units exactly; high-risk callouts require reviewer approval before publication.</DialogDescription></DialogHeader><div className="space-y-4"><div><Label htmlFor="callout-type">Callout type</Label><select id="callout-type" className="mt-1 h-9 w-full rounded border bg-background px-3" value={calloutType} onChange={(event) => setCalloutType(event.target.value as ClinicalCalloutType)}>{["recommendation", "warning", "caution", "key-point", "contraindication", "dosage", "evidence", "definition", "procedure", "algorithm-reference", "clinical-note", "referral-criteria"].map((type) => <option key={type} value={type}>{type.replaceAll("-", " ")}</option>)}</select></div><div><Label htmlFor="callout-title">Title (optional)</Label><Input id="callout-title" value={calloutTitle} onChange={(event) => setCalloutTitle(event.target.value)} /></div><div className="grid gap-4 sm:grid-cols-2"><div><Label htmlFor="callout-severity">Severity</Label><select id="callout-severity" className="mt-1 h-9 w-full rounded border bg-background px-3" value={calloutSeverity} onChange={(event) => setCalloutSeverity(event.target.value as typeof calloutSeverity)}><option value="">Not specified</option>{["standard", "important", "high", "critical"].map((value) => <option key={value} value={value}>{value}</option>)}</select></div><div><Label htmlFor="callout-evidence">Evidence grade</Label><Input id="callout-evidence" value={calloutEvidence} onChange={(event) => setCalloutEvidence(event.target.value)} /></div></div><div><Label htmlFor="callout-source">Source or reference</Label><Input id="callout-source" value={calloutSource} onChange={(event) => setCalloutSource(event.target.value)} /></div><div><Label htmlFor="callout-content">Clinical content</Label><Textarea id="callout-content" rows={7} value={calloutContent} onChange={(event) => setCalloutContent(event.target.value)} placeholder="Enter reviewed content exactly as approved." /></div>{["recommendation", "warning", "caution", "contraindication", "dosage", "procedure", "algorithm-reference", "referral-criteria"].includes(calloutType) && <Alert><ShieldAlert className="h-4 w-4" /><AlertTitle>Clinical review required</AlertTitle><AlertDescription>This high-risk block cannot be published until an authorized reviewer approves the regenerated structured block.</AlertDescription></Alert>}</div><DialogFooter><Button variant="outline" onClick={() => setCalloutOpen(false)}>Cancel</Button><Button disabled={!calloutContent.trim()} onClick={insertClinicalCallout}>Insert without rewriting</Button></DialogFooter></DialogContent></Dialog>
 
       <AlertDialog open={Boolean(conflictDraft)} onOpenChange={(open) => { if (!open) setConflictDraft(null) }}>
         <AlertDialogContent><AlertDialogHeader><AlertDialogTitle>Another editor saved this draft</AlertDialogTitle><AlertDialogDescription>Your local text has been preserved. Choose how to resolve the conflict.</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter className="flex-wrap"><AlertDialogCancel onClick={() => { if (conflictDraft) keepLocalAgainstServerRevision(conflictDraft) }}>Keep local text</AlertDialogCancel><Button variant="outline" onClick={() => { if (!conflictDraft) return; setCompareContent(conflictDraft.content); setCompareLabel("server draft"); setCompareOpen(true) }}>Open diff</Button><Button variant="outline" onClick={() => { if (conflictDraft) applySavedDraft(conflictDraft); setConflictDraft(null) }}>Reload server draft</Button><AlertDialogAction onClick={async () => { if (!conflictDraft) return; keepLocalAgainstServerRevision(conflictDraft); setCheckpointName("Conflict recovery"); setCheckpointSummary("Local edits saved after a concurrent change"); setCheckpointOpen(true) }}>Save local as checkpoint</AlertDialogAction></AlertDialogFooter></AlertDialogContent>

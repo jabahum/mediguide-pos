@@ -5,6 +5,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:user_app/shared/models/models.dart' as models;
 import 'package:user_app/core/constants/app_spacing.dart';
 import 'package:user_app/shared/widgets/html_styles.dart';
+import 'package:user_app/features/guidelines/presentation/widgets/clinical_callout.dart';
 
 class GuidelineSectionWidget extends StatelessWidget {
   final models.GuidelineSection section;
@@ -67,7 +68,16 @@ class GuidelineSectionWidget extends StatelessWidget {
           ],
         ),
         AppSpacing.gapMd,
-        Html(data: content, style: HtmlStyles.content(context)),
+        for (final part in parseGuidelineCallouts(content))
+          switch (part) {
+            GuidelineHtmlPart(:final content) => Html(
+              data: content,
+              style: HtmlStyles.content(context),
+            ),
+            GuidelineCalloutPart(:final callout) => ClinicalCalloutCard(
+              callout: callout,
+            ),
+          },
         AppSpacing.elementGap,
       ],
     );

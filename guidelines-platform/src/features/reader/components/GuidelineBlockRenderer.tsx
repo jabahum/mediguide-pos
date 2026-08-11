@@ -51,7 +51,16 @@ export function GuidelineBlockRenderer({
       break;
     case "recommendation":
     case "warning":
+    case "caution":
     case "key_point":
+    case "contraindication":
+    case "dosage":
+    case "evidence":
+    case "definition":
+    case "procedure":
+    case "algorithm_reference":
+    case "clinical_note":
+    case "referral_criteria":
       rendered = <ClinicalCallout kind={block.type} content={content} />;
       break;
     case "algorithm":
@@ -121,6 +130,8 @@ function ClinicalCallout({ kind, content }: { kind: string; content: Record<stri
       <strong>{title}</strong>
       <p>{textValue(content.content || content.text)}</p>
       {textValue(content.severity) && <small>Priority: {textValue(content.severity)}</small>}
+      {textValue(content.evidence_grade) && <small>Evidence grade: {textValue(content.evidence_grade)}</small>}
+      {textValue(content.source) && <small>Source: {textValue(content.source)}</small>}
     </aside>
   );
 }

@@ -1303,7 +1303,16 @@ export type ModelsGuidelineBlockType =
   | "figure"
   | "recommendation"
   | "warning"
+  | "caution"
   | "key_point"
+  | "contraindication"
+  | "dosage"
+  | "evidence"
+  | "definition"
+  | "procedure"
+  | "clinical_note"
+  | "referral_criteria"
+  | "algorithm_reference"
   | "algorithm"
   | "reference"
   | "page_break"
@@ -1404,6 +1413,7 @@ export interface ModelsGuidelineIndexEntry {
 }
 
 export interface ModelsGuidelineMarkdownRevision {
+  anchor_metadata?: object;
   change_summary?: string;
   checkpoint_name?: string;
   checksum?: string;
@@ -2385,6 +2395,7 @@ export interface ServicesMarkdownDraft {
 }
 
 export interface ServicesMarkdownDraftInput {
+  anchor_metadata?: object;
   change_summary?: string;
   checkpoint_name?: string;
   content?: string;

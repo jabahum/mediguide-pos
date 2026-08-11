@@ -20,7 +20,7 @@ const calloutLabels: Record<string, string> = {
   evidence: "Evidence statement",
   definition: "Definition",
   procedure: "Procedure",
-  algorithm: "Algorithm reference",
+  "algorithm-reference": "Algorithm reference",
   "clinical-note": "Clinical note",
   "referral-criteria": "Referral criteria",
 }
@@ -29,10 +29,17 @@ export function renderableClinicalMarkdown(content: string) {
   const output: string[] = []
   let callout: string | null = null
   for (const line of content.split("\n")) {
-    const start = /^:::([a-z][a-z-]*)\s*$/u.exec(line)
+    const start = /^:::([a-z][a-z-]*)(?:\s+(.*))?$/u.exec(line)
     if (!callout && start && calloutLabels[start[1]]) {
       callout = start[1]
-      output.push(`> **${calloutLabels[callout]}**`)
+      const title = /(?:^|\s)title=(?:"([^"]*)"|'([^']*)'|([^\s]+))/u.exec(start[2] || "")
+      const severity = /(?:^|\s)severity=([^\s]+)/u.exec(start[2] || "")
+      const evidence = /(?:^|\s)evidence_grade=(?:"([^"]*)"|'([^']*)'|([^\s]+))/u.exec(start[2] || "")
+      const source = /(?:^|\s)source=(?:"([^"]*)"|'([^']*)'|([^\s]+))/u.exec(start[2] || "")
+      output.push(`> **${title?.[1] || title?.[2] || title?.[3] || calloutLabels[callout]}**`)
+      if (severity?.[1]) output.push(`> _Priority: ${severity[1]}_`)
+      if (evidence) output.push(`> _Evidence grade: ${evidence[1] || evidence[2] || evidence[3]}_`)
+      if (source) output.push(`> _Source: ${source[1] || source[2] || source[3]}_`)
       continue
     }
     if (callout && /^:::\s*$/u.test(line)) {

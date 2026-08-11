@@ -57,6 +57,32 @@ def test_markdown_html_output_escapes_raw_html(tmp_path: Path):
     assert "&lt;script&gt;" in extracted.html
 
 
+def test_markdown_fenced_clinical_callouts_are_typed_and_preserved(tmp_path: Path):
+    path = tmp_path / "callouts.md"
+    path.write_text(
+        '# Safety\n\n:::dosage title="Reviewed dose" severity=high evidence_grade=A\n'
+        'Give 5 mg exactly as clinically reviewed.\n:::\n\n'
+        ':::contraindication\nDo not use in the documented condition.\n:::\n',
+        encoding="utf-8",
+    )
+
+    extracted = extract_markdown(path)
+    callouts = [block for block in extracted.blocks if block.type in {"dosage", "contraindication"}]
+
+    assert [block.type for block in callouts] == ["dosage", "contraindication"]
+    assert callouts[0].content["title"] == "Reviewed dose"
+    assert callouts[0].content["severity"] == "high"
+    assert ":::dosage" in extracted.markdown
+
+
+def test_markdown_rejects_unclosed_or_empty_clinical_callouts(tmp_path: Path):
+    path = tmp_path / "invalid-callout.md"
+    path.write_text("# Safety\n\n:::warning\n", encoding="utf-8")
+
+    with pytest.raises(ValueError, match="not closed"):
+        extract_markdown(path)
+
+
 def test_markdown_source_requires_utf8(tmp_path: Path):
     path = tmp_path / "invalid.md"
     path.write_bytes(b"# Guidance\n\xff")

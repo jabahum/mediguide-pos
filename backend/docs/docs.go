@@ -13226,7 +13226,16 @@ const docTemplate = `{
                 "figure",
                 "recommendation",
                 "warning",
+                "caution",
                 "key_point",
+                "contraindication",
+                "dosage",
+                "evidence",
+                "definition",
+                "procedure",
+                "clinical_note",
+                "referral_criteria",
+                "algorithm_reference",
                 "algorithm",
                 "reference",
                 "page_break",
@@ -13241,7 +13250,16 @@ const docTemplate = `{
                 "GuidelineBlockFigure",
                 "GuidelineBlockRecommendation",
                 "GuidelineBlockWarning",
+                "GuidelineBlockCaution",
                 "GuidelineBlockKeyPoint",
+                "GuidelineBlockContraindication",
+                "GuidelineBlockDosage",
+                "GuidelineBlockEvidence",
+                "GuidelineBlockDefinition",
+                "GuidelineBlockProcedure",
+                "GuidelineBlockClinicalNote",
+                "GuidelineBlockReferralCriteria",
+                "GuidelineBlockAlgorithmReference",
                 "GuidelineBlockAlgorithm",
                 "GuidelineBlockReference",
                 "GuidelineBlockPageBreak",
@@ -13509,6 +13527,9 @@ const docTemplate = `{
         "models.GuidelineMarkdownRevision": {
             "type": "object",
             "properties": {
+                "anchor_metadata": {
+                    "type": "object"
+                },
                 "change_summary": {
                     "type": "string"
                 },
@@ -16282,6 +16303,9 @@ const docTemplate = `{
         "services.MarkdownDraftInput": {
             "type": "object",
             "properties": {
+                "anchor_metadata": {
+                    "type": "object"
+                },
                 "change_summary": {
                     "type": "string"
                 },

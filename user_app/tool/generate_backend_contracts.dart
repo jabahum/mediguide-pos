@@ -42,11 +42,11 @@ void main(List<String> arguments) {
 
   for (final definitionName in names) {
     final schema = _map(definitions[definitionName]);
-    _writeContract(buffer, definitionName, schema);
+    _writeContract(buffer, definitionName, schema, definitions);
   }
 
   output.parent.createSync(recursive: true);
-  output.writeAsStringSync(buffer.toString());
+  output.writeAsStringSync('${buffer.toString().trimRight()}\n');
   stdout.writeln('Generated mobile contracts: ${output.path}');
 }
 
@@ -54,6 +54,7 @@ void _writeContract(
   StringBuffer buffer,
   String definitionName,
   Map<String, dynamic> schema,
+  Map<String, dynamic> definitions,
 ) {
   final className = _className(definitionName);
   final properties = _map(schema['properties']);
@@ -76,7 +77,7 @@ void _writeContract(
 
   for (final propertyName in propertyNames) {
     final property = _map(properties[propertyName]);
-    _writeGetter(buffer, propertyName, property);
+    _writeGetter(buffer, propertyName, property, definitions);
   }
 
   buffer
@@ -89,11 +90,21 @@ void _writeGetter(
   StringBuffer buffer,
   String jsonName,
   Map<String, dynamic> schema,
+  Map<String, dynamic> definitions,
 ) {
   final fieldName = _fieldName(jsonName);
   final reference = schema[r'$ref']?.toString();
   if (reference != null && reference.isNotEmpty) {
-    final target = _className(reference.split('/').last);
+    final definitionName = reference.split('/').last;
+    final referencedSchema = _map(definitions[definitionName]);
+    final referencedType = referencedSchema['type']?.toString();
+    if (referencedType == 'string') {
+      buffer
+        ..writeln("  String? get $fieldName => value['$jsonName']?.toString();")
+        ..writeln();
+      return;
+    }
+    final target = _className(definitionName);
     buffer
       ..writeln('  $target? get $fieldName {')
       ..writeln("    final raw = value['$jsonName'];")

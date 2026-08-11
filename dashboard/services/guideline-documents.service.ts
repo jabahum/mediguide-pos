@@ -20,6 +20,10 @@ export interface GuidelineVersionRecord {
   extraction_schema_version?: number
   extraction_metadata?: Record<string, unknown>
   extraction_warnings?: string[]
+  current_markdown_revision_id?: string | null
+  structured_markdown_revision_id?: string | null
+  published_markdown_revision_id?: string | null
+  structured_content_status?: string
   created_at: string
   updated_at: string
 }

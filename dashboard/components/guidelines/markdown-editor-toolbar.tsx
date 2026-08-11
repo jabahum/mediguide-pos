@@ -188,7 +188,7 @@ export function MarkdownEditorToolbar({
             <option value="">Clinical callout</option>
             {[
               "recommendation", "warning", "caution", "key-point", "contraindication",
-              "dosage", "evidence", "definition", "procedure", "algorithm",
+              "dosage", "evidence", "definition", "procedure", "algorithm-reference",
               "clinical-note", "referral-criteria",
             ].map((value) => <option key={value} value={value}>{value.replaceAll("-", " ")}</option>)}
           </select>

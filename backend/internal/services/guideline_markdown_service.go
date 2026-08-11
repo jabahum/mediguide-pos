@@ -30,12 +30,13 @@ var (
 )
 
 type MarkdownDraftInput struct {
-	Content          string     `json:"content"`
-	ExpectedRevision string     `json:"expected_revision,omitempty"`
-	CheckpointName   string     `json:"checkpoint_name,omitempty"`
-	ChangeSummary    string     `json:"change_summary,omitempty"`
-	SourceType       string     `json:"source_type,omitempty"`
-	ParentRevisionID *uuid.UUID `json:"parent_revision_id,omitempty"`
+	Content          string          `json:"content"`
+	ExpectedRevision string          `json:"expected_revision,omitempty"`
+	CheckpointName   string          `json:"checkpoint_name,omitempty"`
+	ChangeSummary    string          `json:"change_summary,omitempty"`
+	SourceType       string          `json:"source_type,omitempty"`
+	ParentRevisionID *uuid.UUID      `json:"parent_revision_id,omitempty"`
+	AnchorMetadata   json.RawMessage `json:"anchor_metadata,omitempty" swaggertype:"object"`
 }
 
 type MarkdownDraft struct {
@@ -120,6 +121,13 @@ func (s GuidelineService) SaveMarkdownDraft(
 	if len([]byte(content)) > maxMarkdownDraftBytes {
 		return nil, errors.New("markdown exceeds maximum allowed size")
 	}
+	anchorMetadata := input.AnchorMetadata
+	if len(anchorMetadata) == 0 {
+		anchorMetadata = json.RawMessage(`{}`)
+	}
+	if !json.Valid(anchorMetadata) || anchorMetadata[0] != '{' {
+		return nil, errors.New("anchor metadata must be a JSON object")
+	}
 
 	var target models.GuidelineVersion
 	if err := s.DB.First(&target, "id = ?", versionID).Error; err != nil {
@@ -202,6 +210,7 @@ func (s GuidelineService) SaveMarkdownDraft(
 			ParentRevisionID:        parentID,
 			CheckpointName:          strings.TrimSpace(input.CheckpointName),
 			ChangeSummary:           strings.TrimSpace(input.ChangeSummary),
+			AnchorMetadataJSON:      append([]byte(nil), anchorMetadata...),
 			CreatedBy:               &actor,
 			IsCurrent:               true,
 			StructuredContentStatus: "outdated",
@@ -305,6 +314,7 @@ func (s GuidelineService) RestoreMarkdownRevision(
 		ChangeSummary:    "Restored from revision history",
 		SourceType:       "restored",
 		ParentRevisionID: &parent,
+		AnchorMetadata:   append([]byte(nil), source.Revision.AnchorMetadataJSON...),
 	})
 }
 
@@ -404,6 +414,7 @@ func (s GuidelineService) DuplicateMarkdownVersion(
 			ParentRevisionID:        &parentID,
 			CheckpointName:          fmt.Sprintf("Duplicated from version %s", lockedSource.Version),
 			ChangeSummary:           "Created as a new draft from an immutable Markdown revision",
+			AnchorMetadataJSON:      append([]byte(nil), sourceRevision.AnchorMetadataJSON...),
 			CreatedBy:               &actor,
 			IsCurrent:               true,
 			StructuredContentStatus: "outdated",

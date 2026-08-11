@@ -67,10 +67,13 @@ func ValidateGuidelineBlockContent(blockType models.GuidelineBlockType, raw json
 		if err == nil {
 			err = requireGuidelineBlockType(payload.Type, blockType)
 		}
-	case models.GuidelineBlockRecommendation, models.GuidelineBlockWarning, models.GuidelineBlockKeyPoint:
+	case models.GuidelineBlockRecommendation, models.GuidelineBlockWarning, models.GuidelineBlockCaution,
+		models.GuidelineBlockKeyPoint, models.GuidelineBlockContraindication, models.GuidelineBlockDosage,
+		models.GuidelineBlockEvidence, models.GuidelineBlockDefinition, models.GuidelineBlockProcedure,
+		models.GuidelineBlockClinicalNote, models.GuidelineBlockReferralCriteria, models.GuidelineBlockAlgorithmReference:
 		var payload models.GuidelineCalloutBlockPayload
 		err = decodeGuidelineBlock(raw, &payload)
-		if err == nil && (blank(payload.Content) || !validGuidelineSeverity(payload.Severity)) {
+		if err == nil && (blank(payload.Content) || !validOptionalGuidelineSeverity(payload.Severity)) {
 			err = ErrInvalidGuidelineBlockContent
 		}
 		if err == nil {
@@ -175,6 +178,10 @@ func validGuidelineSeverity(value string) bool {
 	default:
 		return false
 	}
+}
+
+func validOptionalGuidelineSeverity(value string) bool {
+	return blank(value) || validGuidelineSeverity(value)
 }
 
 func containsBlank(values []string) bool {

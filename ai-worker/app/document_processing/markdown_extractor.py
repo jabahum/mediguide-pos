@@ -4,6 +4,7 @@ import hashlib
 import html
 import json
 import re
+import shlex
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -24,6 +25,21 @@ _CALLOUT_RE = re.compile(
     r"^(?:>\s*)?(recommendation|recommended action|warning|caution|key point|important note)\s*[:\-]?\s*(.*)$",
     re.IGNORECASE,
 )
+_FENCED_CALLOUT_RE = re.compile(r"^:::([a-z][a-z-]*)(?:\s+(.*))?$", re.IGNORECASE)
+_CALLOUT_TYPES = {
+    "recommendation": "recommendation",
+    "warning": "warning",
+    "caution": "caution",
+    "key-point": "key_point",
+    "contraindication": "contraindication",
+    "dosage": "dosage",
+    "evidence": "evidence",
+    "definition": "definition",
+    "procedure": "procedure",
+    "algorithm-reference": "algorithm_reference",
+    "clinical-note": "clinical_note",
+    "referral-criteria": "referral_criteria",
+}
 
 
 @dataclass
@@ -201,6 +217,31 @@ def _section_blocks(section: _MarkdownSection) -> list[ExtractedContentBlock]:
             flush_paragraph()
             index += 1
             continue
+        fenced_callout = _FENCED_CALLOUT_RE.match(stripped)
+        if fenced_callout and fenced_callout.group(1).lower() in _CALLOUT_TYPES:
+            flush_paragraph()
+            name = fenced_callout.group(1).lower()
+            metadata = _callout_metadata(fenced_callout.group(2) or "")
+            body_lines: list[str] = []
+            start_line = line_number
+            index += 1
+            while index < len(lines) and lines[index][1].strip() != ":::":
+                body_lines.append(lines[index][1])
+                index += 1
+            if index >= len(lines):
+                raise ValueError(f"Clinical callout opened on line {start_line} is not closed")
+            end_line = lines[index][0]
+            index += 1
+            body = "\n".join(body_lines).strip()
+            if not body:
+                raise ValueError(f"Clinical callout opened on line {start_line} is empty")
+            block_type = _CALLOUT_TYPES[name]
+            content = {"type": block_type, "content": body, **metadata}
+            blocks.append(
+                _block(section, block_type, content, local_order, start_line, end_line)
+            )
+            local_order += 1
+            continue
         if stripped.startswith("```") or stripped.startswith("~~~"):
             flush_paragraph()
             marker = stripped[:3]
@@ -353,7 +394,7 @@ def _block_text(block: ExtractedContentBlock) -> str:
         return str(block.content.get("text") or "")
     if block.type in {"ordered_list", "unordered_list"}:
         return "\n".join(str(item) for item in block.content.get("items") or [])
-    if block.type in {"recommendation", "warning", "key_point"}:
+    if block.type in set(_CALLOUT_TYPES.values()):
         return str(block.content.get("content") or "")
     if block.type == "table":
         rows = [block.content.get("columns") or [], *(block.content.get("rows") or [])]
@@ -374,7 +415,7 @@ def _block_html(block: ExtractedContentBlock) -> str:
             f"<li>{html.escape(str(item))}</li>" for item in content.get("items") or []
         )
         return f"<{tag}>{items}</{tag}>"
-    if block.type in {"recommendation", "warning", "key_point"}:
+    if block.type in set(_CALLOUT_TYPES.values()):
         title = html.escape(str(content.get("title") or ""))
         body = html.escape(str(content.get("content") or ""))
         return f"<aside><strong>{title}</strong><p>{body}</p></aside>"
@@ -391,6 +432,26 @@ def _block_html(block: ExtractedContentBlock) -> str:
         )
         return f"<table><thead><tr>{columns}</tr></thead><tbody>{rows}</tbody></table>"
     return ""
+
+
+def _callout_metadata(value: str) -> dict[str, str]:
+    """Parse a deliberately small key=value grammar; HTML is never interpreted."""
+    allowed = {"title", "severity", "evidence_grade", "source"}
+    result: dict[str, str] = {}
+    try:
+        tokens = shlex.split(value)
+    except ValueError as exc:
+        raise ValueError("Clinical callout metadata contains invalid quoting") from exc
+    for token in tokens:
+        if "=" not in token:
+            raise ValueError("Clinical callout metadata must use key=value")
+        key, item = token.split("=", 1)
+        if key not in allowed:
+            raise ValueError(f"Unsupported clinical callout metadata field: {key}")
+        if not item.strip():
+            raise ValueError(f"Clinical callout metadata field {key} cannot be empty")
+        result[key] = item
+    return result
 
 
 def _json_value(value: Any) -> Any:

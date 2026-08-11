@@ -223,6 +223,8 @@ export default function GuidelineMarkdownPage() {
         documentTitle={data.document.title}
         versionLabel={data.version.version}
         publishedVersionId={data.document.current_version_id}
+        structuredRevisionId={data.version.structured_markdown_revision_id}
+        publishedRevisionId={data.version.published_markdown_revision_id}
         openTemplatesInitially={searchParams.get("start") === "template"}
         initialContent={data.markdown}
         initialDraft={data.draft}

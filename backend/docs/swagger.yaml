@@ -2033,7 +2033,16 @@ definitions:
     - figure
     - recommendation
     - warning
+    - caution
     - key_point
+    - contraindication
+    - dosage
+    - evidence
+    - definition
+    - procedure
+    - clinical_note
+    - referral_criteria
+    - algorithm_reference
     - algorithm
     - reference
     - page_break
@@ -2048,7 +2057,16 @@ definitions:
     - GuidelineBlockFigure
     - GuidelineBlockRecommendation
     - GuidelineBlockWarning
+    - GuidelineBlockCaution
     - GuidelineBlockKeyPoint
+    - GuidelineBlockContraindication
+    - GuidelineBlockDosage
+    - GuidelineBlockEvidence
+    - GuidelineBlockDefinition
+    - GuidelineBlockProcedure
+    - GuidelineBlockClinicalNote
+    - GuidelineBlockReferralCriteria
+    - GuidelineBlockAlgorithmReference
     - GuidelineBlockAlgorithm
     - GuidelineBlockReference
     - GuidelineBlockPageBreak
@@ -2227,6 +2245,8 @@ definitions:
     type: object
   models.GuidelineMarkdownRevision:
     properties:
+      anchor_metadata:
+        type: object
       change_summary:
         type: string
       checkpoint_name:
@@ -4050,6 +4070,8 @@ definitions:
     type: object
   services.MarkdownDraftInput:
     properties:
+      anchor_metadata:
+        type: object
       change_summary:
         type: string
       checkpoint_name:

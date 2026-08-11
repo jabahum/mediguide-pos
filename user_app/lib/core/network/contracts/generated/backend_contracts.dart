@@ -4091,11 +4091,7 @@ final class ModelsGuidelineAlgorithmBlockPayload {
 
   String? get title => value['title']?.toString();
 
-  ModelsGuidelineBlockType? get type {
-    final raw = value['type'];
-    if (raw is! Map) return null;
-    return ModelsGuidelineBlockType.fromJson(_jsonMap(raw));
-  }
+  String? get type => value['type']?.toString();
 
   Map<String, dynamic> toJson() => Map.of(value);
 }
@@ -4151,11 +4147,7 @@ final class ModelsGuidelineAsset {
 
   Map<String, dynamic> get provenance => _jsonMap(value['provenance']);
 
-  ModelsGuidelineBlockReviewStatus? get reviewStatus {
-    final raw = value['review_status'];
-    if (raw is! Map) return null;
-    return ModelsGuidelineBlockReviewStatus.fromJson(_jsonMap(raw));
-  }
+  String? get reviewStatus => value['review_status']?.toString();
 
   String? get reviewedAt => value['reviewed_at']?.toString();
 
@@ -4169,11 +4161,7 @@ final class ModelsGuidelineAsset {
 
   String? get storageKey => value['storage_key']?.toString();
 
-  ModelsGuidelineAssetType? get type {
-    final raw = value['type'];
-    if (raw is! Map) return null;
-    return ModelsGuidelineAssetType.fromJson(_jsonMap(raw));
-  }
+  String? get type => value['type']?.toString();
 
   String? get updatedAt => value['updated_at']?.toString();
 
@@ -4330,11 +4318,7 @@ final class ModelsGuidelineContentBlock {
 
   Map<String, dynamic> get provenance => _jsonMap(value['provenance']);
 
-  ModelsGuidelineBlockReviewStatus? get reviewStatus {
-    final raw = value['review_status'];
-    if (raw is! Map) return null;
-    return ModelsGuidelineBlockReviewStatus.fromJson(_jsonMap(raw));
-  }
+  String? get reviewStatus => value['review_status']?.toString();
 
   String? get reviewedAt => value['reviewed_at']?.toString();
 
@@ -4346,11 +4330,7 @@ final class ModelsGuidelineContentBlock {
 
   String? get sourceFingerprint => value['source_fingerprint']?.toString();
 
-  ModelsGuidelineBlockType? get type {
-    final raw = value['type'];
-    if (raw is! Map) return null;
-    return ModelsGuidelineBlockType.fromJson(_jsonMap(raw));
-  }
+  String? get type => value['type']?.toString();
 
   String? get updatedAt => value['updated_at']?.toString();
 
@@ -4432,11 +4412,7 @@ final class ModelsGuidelineFigureBlockPayload {
 
   String? get caption => value['caption']?.toString();
 
-  ModelsGuidelineBlockType? get type {
-    final raw = value['type'];
-    if (raw is! Map) return null;
-    return ModelsGuidelineBlockType.fromJson(_jsonMap(raw));
-  }
+  String? get type => value['type']?.toString();
 
   Map<String, dynamic> toJson() => Map.of(value);
 }
@@ -4483,6 +4459,8 @@ final class ModelsGuidelineMarkdownRevision {
 
   static const schemaName = 'models.GuidelineMarkdownRevision';
   final Map<String, dynamic> value;
+
+  Map<String, dynamic> get anchorMetadata => _jsonMap(value['anchor_metadata']);
 
   String? get changeSummary => value['change_summary']?.toString();
 
@@ -4597,11 +4575,7 @@ final class ModelsGuidelineTableBlockPayload {
 
   String? get title => value['title']?.toString();
 
-  ModelsGuidelineBlockType? get type {
-    final raw = value['type'];
-    if (raw is! Map) return null;
-    return ModelsGuidelineBlockType.fromJson(_jsonMap(raw));
-  }
+  String? get type => value['type']?.toString();
 
   Map<String, dynamic> toJson() => Map.of(value);
 }
@@ -4747,11 +4721,7 @@ final class ModelsGuidelineVersionManifest {
 
   String? get etag => value['etag']?.toString();
 
-  ModelsGuidelineExtractionQuality? get extractionQuality {
-    final raw = value['extraction_quality'];
-    if (raw is! Map) return null;
-    return ModelsGuidelineExtractionQuality.fromJson(_jsonMap(raw));
-  }
+  String? get extractionQuality => value['extraction_quality']?.toString();
 
   int? get figureCount => (value['figure_count'] as num?)?.toInt();
 
@@ -5985,11 +5955,7 @@ final class ServicesCreateGuidelineBlockInput {
 
   int? get sortOrder => (value['sort_order'] as num?)?.toInt();
 
-  ModelsGuidelineBlockType? get type {
-    final raw = value['type'];
-    if (raw is! Map) return null;
-    return ModelsGuidelineBlockType.fromJson(_jsonMap(raw));
-  }
+  String? get type => value['type']?.toString();
 
   Map<String, dynamic> toJson() => Map.of(value);
 }
@@ -7331,6 +7297,8 @@ final class ServicesMarkdownDraftInput {
   static const schemaName = 'services.MarkdownDraftInput';
   final Map<String, dynamic> value;
 
+  Map<String, dynamic> get anchorMetadata => _jsonMap(value['anchor_metadata']);
+
   String? get changeSummary => value['change_summary']?.toString();
 
   String? get checkpointName => value['checkpoint_name']?.toString();
@@ -8461,11 +8429,7 @@ final class ServicesPublicGuidelineBlock {
 
   int? get sortOrder => (value['sort_order'] as num?)?.toInt();
 
-  ModelsGuidelineBlockType? get type {
-    final raw = value['type'];
-    if (raw is! Map) return null;
-    return ModelsGuidelineBlockType.fromJson(_jsonMap(raw));
-  }
+  String? get type => value['type']?.toString();
 
   Map<String, dynamic> toJson() => Map.of(value);
 }
@@ -8523,11 +8487,7 @@ final class ServicesPublicGuidelineManifest {
 
   String? get etag => value['etag']?.toString();
 
-  ModelsGuidelineExtractionQuality? get extractionQuality {
-    final raw = value['extraction_quality'];
-    if (raw is! Map) return null;
-    return ModelsGuidelineExtractionQuality.fromJson(_jsonMap(raw));
-  }
+  String? get extractionQuality => value['extraction_quality']?.toString();
 
   int? get figureCount => (value['figure_count'] as num?)?.toInt();
 
@@ -8779,11 +8739,7 @@ final class ServicesReviewGuidelineAssetInput {
   static const schemaName = 'services.ReviewGuidelineAssetInput';
   final Map<String, dynamic> value;
 
-  ModelsGuidelineBlockReviewStatus? get status {
-    final raw = value['status'];
-    if (raw is! Map) return null;
-    return ModelsGuidelineBlockReviewStatus.fromJson(_jsonMap(raw));
-  }
+  String? get status => value['status']?.toString();
 
   Map<String, dynamic> toJson() => Map.of(value);
 }
@@ -8799,11 +8755,7 @@ final class ServicesReviewGuidelineBlockInput {
   static const schemaName = 'services.ReviewGuidelineBlockInput';
   final Map<String, dynamic> value;
 
-  ModelsGuidelineBlockReviewStatus? get status {
-    final raw = value['status'];
-    if (raw is! Map) return null;
-    return ModelsGuidelineBlockReviewStatus.fromJson(_jsonMap(raw));
-  }
+  String? get status => value['status']?.toString();
 
   Map<String, dynamic> toJson() => Map.of(value);
 }

@@ -659,9 +659,12 @@ func validateGuidelineBlockPayload(tx *gorm.DB, versionID uuid.UUID, blockType m
 			return fmt.Errorf("figure references a missing asset")
 		}
 		return nil
-	case models.GuidelineBlockRecommendation, models.GuidelineBlockWarning, models.GuidelineBlockKeyPoint:
+	case models.GuidelineBlockRecommendation, models.GuidelineBlockWarning, models.GuidelineBlockCaution,
+		models.GuidelineBlockKeyPoint, models.GuidelineBlockContraindication, models.GuidelineBlockDosage,
+		models.GuidelineBlockEvidence, models.GuidelineBlockDefinition, models.GuidelineBlockProcedure,
+		models.GuidelineBlockClinicalNote, models.GuidelineBlockReferralCriteria, models.GuidelineBlockAlgorithmReference:
 		var payload models.GuidelineCalloutBlockPayload
-		if err := json.Unmarshal(content, &payload); err != nil || strings.TrimSpace(payload.Content) == "" {
+		if err := json.Unmarshal(content, &payload); err != nil || strings.TrimSpace(payload.Content) == "" || !validOptionalGuidelineSeverity(payload.Severity) {
 			return fmt.Errorf("invalid clinical callout payload")
 		}
 		return requireType(payload.Type)
@@ -692,7 +695,10 @@ func validGuidelineBlockType(value models.GuidelineBlockType) bool {
 	switch value {
 	case models.GuidelineBlockHeading, models.GuidelineBlockParagraph, models.GuidelineBlockOrderedList,
 		models.GuidelineBlockUnorderedList, models.GuidelineBlockTable, models.GuidelineBlockFigure,
-		models.GuidelineBlockRecommendation, models.GuidelineBlockWarning, models.GuidelineBlockKeyPoint,
+		models.GuidelineBlockRecommendation, models.GuidelineBlockWarning, models.GuidelineBlockCaution,
+		models.GuidelineBlockKeyPoint, models.GuidelineBlockContraindication, models.GuidelineBlockDosage,
+		models.GuidelineBlockEvidence, models.GuidelineBlockDefinition, models.GuidelineBlockProcedure,
+		models.GuidelineBlockClinicalNote, models.GuidelineBlockReferralCriteria, models.GuidelineBlockAlgorithmReference,
 		models.GuidelineBlockAlgorithm, models.GuidelineBlockReference, models.GuidelineBlockPageBreak,
 		models.GuidelineBlockUnknown:
 		return true
@@ -704,7 +710,9 @@ func validGuidelineBlockType(value models.GuidelineBlockType) bool {
 func highRiskGuidelineBlock(value models.GuidelineBlockType) bool {
 	switch value {
 	case models.GuidelineBlockTable, models.GuidelineBlockRecommendation, models.GuidelineBlockWarning,
-		models.GuidelineBlockKeyPoint, models.GuidelineBlockAlgorithm:
+		models.GuidelineBlockCaution, models.GuidelineBlockContraindication, models.GuidelineBlockDosage,
+		models.GuidelineBlockProcedure, models.GuidelineBlockAlgorithm, models.GuidelineBlockAlgorithmReference,
+		models.GuidelineBlockReferralCriteria:
 		return true
 	default:
 		return false
@@ -758,7 +766,10 @@ func guidelineBlockSearchText(blockType models.GuidelineBlockType, content json.
 			return "", "", err
 		}
 		return strings.TrimSpace(strings.Join([]string{payload.Caption, payload.AlternativeText}, "\n")), strings.TrimSpace(payload.Caption), nil
-	case models.GuidelineBlockRecommendation, models.GuidelineBlockWarning, models.GuidelineBlockKeyPoint:
+	case models.GuidelineBlockRecommendation, models.GuidelineBlockWarning, models.GuidelineBlockCaution,
+		models.GuidelineBlockKeyPoint, models.GuidelineBlockContraindication, models.GuidelineBlockDosage,
+		models.GuidelineBlockEvidence, models.GuidelineBlockDefinition, models.GuidelineBlockProcedure,
+		models.GuidelineBlockClinicalNote, models.GuidelineBlockReferralCriteria, models.GuidelineBlockAlgorithmReference:
 		var payload models.GuidelineCalloutBlockPayload
 		if err := json.Unmarshal(content, &payload); err != nil {
 			return "", "", err

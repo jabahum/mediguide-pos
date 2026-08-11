@@ -15,6 +15,16 @@ function block(overrides: Partial<PublicGuidelineBlock>): PublicGuidelineBlock {
 }
 
 describe("GuidelineBlockRenderer", () => {
+  it("renders high-risk typed clinical callouts as escaped text", () => {
+    const html = renderToStaticMarkup(<GuidelineBlockRenderer block={block({
+      type: "dosage",
+      content: { title: "Reviewed dose", content: "5 mg <script>alert(1)</script>", severity: "high", evidence_grade: "A" },
+    })} />);
+    expect(html).toContain("Reviewed dose");
+    expect(html).toContain("5 mg &lt;script&gt;");
+    expect(html).not.toContain("<script>");
+    expect(html).toContain("Evidence grade: A");
+  });
   it("renders typed tables without interpreting cell content as HTML", () => {
     const html = renderToStaticMarkup(<GuidelineBlockRenderer block={block({
       type: "table",

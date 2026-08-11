@@ -93,7 +93,7 @@ regeneration.
 
 Supported callout fences are `recommendation`, `warning`, `caution`,
 `key-point`, `contraindication`, `dosage`, `evidence`, `definition`, `procedure`,
-`algorithm`, `clinical-note`, and `referral-criteria`. They are transformed to
+`algorithm-reference`, `clinical-note`, and `referral-criteria`. They are transformed to
 safe presentational Markdown before preview; their body is never interpreted as
 executable HTML.
 
@@ -109,16 +109,17 @@ executable HTML.
   by revision ETags and explicit conflict resolution.
 - Clinical templates contain headings and placeholders only. They never
   fabricate recommendations or doses.
-- Asset-library upload, threaded review comments, drag-to-reorder outline
-  sections, word-level/side-by-side diff controls, and a canonical Flutter
-  reader preview require later phases and are not represented as complete by
-  this implementation. Public and structured dashboard shells are layout
-  previews of the current Markdown; they do not claim to be regenerated
-  canonical structured content.
+- Asset-library upload and threaded review comments remain later phases. The
+  public and structured dashboard shells are layout previews of the current
+  Markdown; they do not claim to be regenerated canonical structured content.
+- Revision `anchor_metadata` is stored separately from Markdown. Renames retain
+  the stable revision anchor and surface a review warning; outline reordering
+  moves the complete source section and its anchor metadata together.
 
 ## Validation
 
-Migration `00018_guideline_markdown_revisions.sql` has been validated up/down/up
+Migrations `00018_guideline_markdown_revisions.sql` and
+`00019_guideline_markdown_anchor_metadata.sql` were validated up/down/up
 against a disposable PostgreSQL 16/pgvector database. Backend focused tests
 cover save-only behavior, optimistic conflicts, immutable restore, exact
 revision duplication, published-version branching, explicit regeneration, and
@@ -127,3 +128,16 @@ states, editing, modes, keyboard save, failed-save preservation, publication
 immutability, preview presentations, published branching, safe HTML handling,
 GFM, and clinical callouts. OpenAPI,
 TypeScript, and Dart contracts are regenerated from the backend specification.
+## Clinical callout syntax
+
+Clinical callouts use fenced Markdown. Their exact body is retained in the immutable Markdown revision and is never treated as executable HTML.
+
+```md
+:::warning title="Renal safety" severity=high evidence_grade="A" source="National guideline"
+Do not administer this medicine when severe renal impairment is present.
+:::
+```
+
+Supported names are `recommendation`, `warning`, `caution`, `key-point`, `contraindication`, `dosage`, `evidence`, `definition`, `procedure`, `algorithm-reference`, `clinical-note`, and `referral-criteria`. Optional metadata uses `key=value` syntax and is limited to `title`, `severity`, `evidence_grade`, and `source`. Quote values containing spaces. Severity, when supplied, must be `standard`, `important`, `high`, or `critical`.
+
+The body is mandatory. Unsupported metadata, invalid quoting, empty or unclosed fences, and executable markup are rejected. Recommendation, warning, caution, contraindication, dosage, procedure, algorithm-reference, and referral-criteria blocks are high risk and require explicit block review before publication. Authors and extractors must never infer or normalize clinical doses, units, contraindications, or recommendations.

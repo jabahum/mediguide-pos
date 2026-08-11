@@ -8,6 +8,7 @@ import type {
   ServicesMarkdownDraftInput,
 } from "@/types/generated/backend-openapi"
 import type { GuidelineVersionRecord } from "@/services/guideline-documents.service"
+import type { MarkdownAnchorMetadata } from "@/components/guidelines/markdown-authoring"
 
 export type MarkdownRevisionSource =
   | "blank"
@@ -47,6 +48,7 @@ export interface MarkdownRevision {
   publication_state: "draft" | "published" | "superseded"
   created_at: string
   updated_at: string
+  anchor_metadata?: MarkdownAnchorMetadata
 }
 
 export interface MarkdownDraft {
@@ -59,6 +61,7 @@ export interface MarkdownDraft {
 export interface MarkdownDraftInput extends Omit<ServicesMarkdownDraftInput, "source_type"> {
   content: string
   source_type?: MarkdownRevisionSource
+  anchor_metadata?: MarkdownAnchorMetadata
 }
 
 export interface MarkdownRevisionPage
@@ -68,6 +71,15 @@ export interface MarkdownRevisionPage
   per_page: number
   total_items: number
   total_pages: number
+}
+
+export interface MarkdownRevisionQuery {
+  page?: number
+  per_page?: number
+  source_type?: MarkdownRevisionSource | ""
+  created_by?: string
+  from?: string
+  to?: string
 }
 
 export interface MarkdownRegenerationResult {
@@ -173,11 +185,12 @@ export class GuidelineMarkdownService {
     }
   }
 
-  static async revisions(versionId: string, page = 1): Promise<MarkdownRevisionPage> {
+  static async revisions(versionId: string, query: MarkdownRevisionQuery | number = {}): Promise<MarkdownRevisionPage> {
     try {
+      const normalized = typeof query === "number" ? { page: query } : query
       return await getBackendClient().send<MarkdownRevisionPage>(
         `/api/v2/guideline-versions/${versionId}/markdown-revisions`,
-        { query: { page, per_page: 50 } },
+        { query: { page: normalized.page ?? 1, per_page: normalized.per_page ?? 20, ...normalized } },
       )
     } catch (error) {
       throw toGuidelineMarkdownError(error, "Failed to load Markdown revision history")

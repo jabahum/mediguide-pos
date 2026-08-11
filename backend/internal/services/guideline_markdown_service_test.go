@@ -2,6 +2,7 @@ package services
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"testing"
 
@@ -28,8 +29,9 @@ func TestSaveMarkdownDraftCreatesImmutableRevisionWithoutIngestion(t *testing.T)
 	service, version, actorID := markdownServiceFixture(t)
 
 	draft, err := service.SaveMarkdownDraft(context.Background(), version.ID, actorID, MarkdownDraftInput{
-		Content:    "# Clinical care\r\n\r\nReviewed content.\r\n",
-		SourceType: "blank",
+		Content:        "# Clinical care\r\n\r\nReviewed content.\r\n",
+		SourceType:     "blank",
+		AnchorMetadata: json.RawMessage(`{"0":{"id":"clinical-care","title":"Clinical care"}}`),
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -39,6 +41,9 @@ func TestSaveMarkdownDraftCreatesImmutableRevisionWithoutIngestion(t *testing.T)
 	}
 	if draft.Revision.RevisionNumber != 1 || !draft.Revision.IsCurrent || draft.Revision.StructuredContentStatus != "outdated" {
 		t.Fatalf("unexpected revision state: %#v", draft.Revision)
+	}
+	if string(draft.Revision.AnchorMetadataJSON) != `{"0":{"id":"clinical-care","title":"Clinical care"}}` {
+		t.Fatalf("stable anchor metadata was not stored separately: %s", draft.Revision.AnchorMetadataJSON)
 	}
 	var jobs int64
 	if err := service.DB.Model(&models.IngestionJob{}).Count(&jobs).Error; err != nil {

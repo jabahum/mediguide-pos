@@ -13223,7 +13223,16 @@
                 "figure",
                 "recommendation",
                 "warning",
+                "caution",
                 "key_point",
+                "contraindication",
+                "dosage",
+                "evidence",
+                "definition",
+                "procedure",
+                "clinical_note",
+                "referral_criteria",
+                "algorithm_reference",
                 "algorithm",
                 "reference",
                 "page_break",
@@ -13238,7 +13247,16 @@
                 "GuidelineBlockFigure",
                 "GuidelineBlockRecommendation",
                 "GuidelineBlockWarning",
+                "GuidelineBlockCaution",
                 "GuidelineBlockKeyPoint",
+                "GuidelineBlockContraindication",
+                "GuidelineBlockDosage",
+                "GuidelineBlockEvidence",
+                "GuidelineBlockDefinition",
+                "GuidelineBlockProcedure",
+                "GuidelineBlockClinicalNote",
+                "GuidelineBlockReferralCriteria",
+                "GuidelineBlockAlgorithmReference",
                 "GuidelineBlockAlgorithm",
                 "GuidelineBlockReference",
                 "GuidelineBlockPageBreak",
@@ -13506,6 +13524,9 @@
         "models.GuidelineMarkdownRevision": {
             "type": "object",
             "properties": {
+                "anchor_metadata": {
+                    "type": "object"
+                },
                 "change_summary": {
                     "type": "string"
                 },
@@ -16279,6 +16300,9 @@
         "services.MarkdownDraftInput": {
             "type": "object",
             "properties": {
+                "anchor_metadata": {
+                    "type": "object"
+                },
                 "change_summary": {
                     "type": "string"
                 },

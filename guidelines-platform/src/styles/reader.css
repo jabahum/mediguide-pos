@@ -150,6 +150,9 @@
 .clinical-callout { margin: 1.5rem 0; padding: 1.1rem 1.25rem; background: #eef7f2; border: 1px solid #cfe3d9; border-left: 4px solid var(--color-green-700); border-radius: var(--radius-sm); }
 .clinical-callout strong { display: block; color: var(--color-ink); text-transform: capitalize; }.clinical-callout p { margin: .45rem 0 0; }.clinical-callout small { display: block; margin-top: .65rem; color: var(--color-muted); text-transform: capitalize; }
 .callout-warning { background: #fff5ee; border-color: #f0cbb6; border-left-color: #bd5932; }.callout-key_point { background: #eef4fb; border-color: #c9dcef; border-left-color: var(--color-blue); }
+.callout-caution, .callout-contraindication, .callout-dosage { background: #fff8e6; border-color: #edd7a0; border-left-color: #a86400; }
+.callout-evidence, .callout-definition, .callout-clinical_note { background: #eef4fb; border-color: #c9dcef; border-left-color: var(--color-blue); }
+.callout-procedure, .callout-algorithm_reference, .callout-referral_criteria { background: #f3f0fb; border-color: #d9cff0; border-left-color: #6748a5; }
 .structured-table { margin: 1.75rem 0; }.structured-table figcaption, .structured-algorithm figcaption { margin-bottom: .75rem; color: var(--color-ink); font-family: Georgia,serif; font-size: 1.15rem; font-weight: 700; }
 .table-scroll { max-width: 100%; overflow-x: auto; border: 1px solid var(--color-line); border-radius: var(--radius-sm); }.table-scroll:focus-visible { outline-offset: 2px; }
 .structured-table table { width: 100%; min-width: 560px; border-collapse: collapse; }.structured-table th, .structured-table td { padding: .75rem; text-align: left; vertical-align: top; border: 1px solid var(--color-line); font-size: .82rem; }.structured-table th { color: var(--color-ink); background: var(--color-soft); }

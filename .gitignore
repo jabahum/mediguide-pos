@@ -4,6 +4,7 @@
 !docs/pocketbase-removal.md
 !docs/rate-limits-and-cache.md
 !docs/guideline-publication-architecture.md
+!docs/markdown-authoring-workspace.md
 !guidelines-platform/src/content/**/*.md
 backend/.env
 backend/.env.local

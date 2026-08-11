@@ -20,6 +20,7 @@ import (
 	"github.com/google/uuid"
 	"gopkg.in/yaml.v3"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 type GuidelineService struct {
@@ -196,6 +197,23 @@ func (s GuidelineService) PublishVersion(versionID uuid.UUID, userID uuid.UUID, 
 		if err := tx.Model(&v).Updates(map[string]any{"status": "published", "approved_by": userID, "approved_at": now}).Error; err != nil {
 			return err
 		}
+		if v.CurrentMarkdownRevisionID != nil {
+			if err := tx.Model(&models.GuidelineMarkdownRevision{}).
+				Where("id = ? AND version_id = ?", *v.CurrentMarkdownRevisionID, versionID).
+				Updates(map[string]any{
+					"structured_content_status": "approved",
+					"review_state":              "approved",
+					"publication_state":         "published",
+				}).Error; err != nil {
+				return err
+			}
+			if err := tx.Model(&v).Updates(map[string]any{
+				"published_markdown_revision_id": *v.CurrentMarkdownRevisionID,
+				"structured_content_status":      "approved",
+			}).Error; err != nil {
+				return err
+			}
+		}
 		reviewedBlockIDs := tx.Model(&models.GuidelineContentBlock{}).
 			Select("id").Where("version_id = ? AND review_status = ?", versionID, models.GuidelineBlockReviewed)
 		if err := tx.Model(&models.GuidelineChunk{}).
@@ -360,20 +378,24 @@ func (s GuidelineService) queueMarkdownSource(
 	if err := validateVersionAllowsIngestion(&target); err != nil {
 		return nil, err
 	}
-	key := fmt.Sprintf(
-		"guidelines/%s/source/%d_%s",
-		versionID,
-		time.Now().UTC().UnixNano(),
-		filepath.Base(filename),
-	)
-	if err := s.Store.Put(ctx, key, reader, size, "text/markdown; charset=utf-8"); err != nil {
+	content, err := io.ReadAll(io.LimitReader(reader, maxMarkdownDraftBytes+1))
+	if err != nil {
+		return nil, err
+	}
+	if len(content) == 0 || len(content) > maxMarkdownDraftBytes {
+		return nil, errors.New("markdown content is required or exceeds maximum allowed size")
+	}
+	revisionID := uuid.New()
+	key := fmt.Sprintf("guidelines/%s/revisions/%s_%s", versionID, revisionID, filepath.Base(filename))
+	if err := s.Store.Put(ctx, key, bytes.NewReader(content), int64(len(content)), "text/markdown; charset=utf-8"); err != nil {
 		return nil, err
 	}
 
-	payload, err := json.Marshal(map[string]string{
+	payload, err := json.Marshal(map[string]any{
 		"file_key":      key,
 		"source_format": "markdown",
 		"source":        source,
+		"revision_id":   revisionID,
 	})
 	if err != nil {
 		_ = s.Store.Delete(ctx, key)
@@ -381,6 +403,10 @@ func (s GuidelineService) queueMarkdownSource(
 	}
 	var job models.IngestionJob
 	err = s.DB.Transaction(func(tx *gorm.DB) error {
+		var locked models.GuidelineVersion
+		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).First(&locked, "id = ?", versionID).Error; err != nil {
+			return err
+		}
 		version, document, err := s.loadVersionDocument(tx, versionID)
 		if err != nil {
 			return err
@@ -391,14 +417,18 @@ func (s GuidelineService) queueMarkdownSource(
 		if err := ensureDraftProtocol(tx, document, version); err != nil {
 			return err
 		}
-		if err := tx.Model(version).Updates(map[string]any{
-			"markdown_file_key": key,
-			"html_file_key":     "",
-			"checksum":          "",
-			"status":            "draft",
-			"updated_at":        time.Now().UTC(),
-		}).Error; err != nil {
+		var revisionNumber int
+		if err := tx.Model(&models.GuidelineMarkdownRevision{}).
+			Where("version_id = ?", versionID).
+			Select("COALESCE(MAX(revision_number), 0)").Scan(&revisionNumber).Error; err != nil {
 			return err
+		}
+		revisionNumber++
+		if version.CurrentMarkdownRevisionID != nil {
+			if err := tx.Model(&models.GuidelineMarkdownRevision{}).
+				Where("id = ?", *version.CurrentMarkdownRevisionID).Update("is_current", false).Error; err != nil {
+				return err
+			}
 		}
 		job = models.IngestionJob{
 			VersionID:   versionID,
@@ -406,7 +436,39 @@ func (s GuidelineService) queueMarkdownSource(
 			Status:      "queued",
 			PayloadJSON: string(payload),
 		}
-		return tx.Create(&job).Error
+		if err := tx.Create(&job).Error; err != nil {
+			return err
+		}
+		revisionSource := "uploaded_markdown"
+		if source == "edited_markdown" {
+			revisionSource = "manual_edit"
+		}
+		revision := models.GuidelineMarkdownRevision{
+			Base:                    models.Base{ID: revisionID},
+			DocumentID:              version.DocumentID,
+			VersionID:               versionID,
+			RevisionNumber:          revisionNumber,
+			StorageKey:              key,
+			Checksum:                markdownContentChecksum(content),
+			SizeBytes:               int64(len(content)),
+			SourceType:              revisionSource,
+			SourceIngestionJobID:    &job.ID,
+			RegenerationJobID:       &job.ID,
+			IsCurrent:               true,
+			StructuredContentStatus: "queued",
+			ReviewState:             "draft",
+			PublicationState:        "draft",
+		}
+		if err := tx.Create(&revision).Error; err != nil {
+			return err
+		}
+		return tx.Model(version).Updates(map[string]any{
+			"current_markdown_revision_id": revision.ID,
+			"markdown_file_key":            key,
+			"structured_content_status":    "queued",
+			"status":                       "draft",
+			"updated_at":                   time.Now().UTC(),
+		}).Error
 	})
 	if err != nil {
 		_ = s.Store.Delete(ctx, key)
@@ -495,6 +557,15 @@ func ensureVersionReadyForPublish(tx *gorm.DB, version *models.GuidelineVersion)
 	}
 	if strings.TrimSpace(version.HTMLFileKey) == "" || strings.TrimSpace(version.MarkdownFileKey) == "" {
 		return fmt.Errorf("%w: extracted HTML/Markdown assets are missing", ErrGuidelineIngestionIncomplete)
+	}
+	if version.CurrentMarkdownRevisionID != nil {
+		if version.StructuredMarkdownRevisionID == nil ||
+			*version.CurrentMarkdownRevisionID != *version.StructuredMarkdownRevisionID {
+			return fmt.Errorf("%w: structured content is outdated for the current Markdown revision", ErrGuidelineIngestionIncomplete)
+		}
+		if version.StructuredContentStatus != "review_required" && version.StructuredContentStatus != "approved" {
+			return fmt.Errorf("%w: structured content status is %s", ErrGuidelineIngestionIncomplete, version.StructuredContentStatus)
+		}
 	}
 
 	var latestJob models.IngestionJob

@@ -392,7 +392,7 @@ func (h GuidelineHandler) ExtractedAsset(c *gin.Context) {
 }
 
 // UpdateMarkdown godoc
-// @Summary Replace extracted guideline Markdown
+// @Summary Save a guideline Markdown draft (legacy editor route)
 // @Tags guidelines
 // @Accept json,text/markdown
 // @Produce json
@@ -438,12 +438,22 @@ func (h GuidelineHandler) UpdateMarkdown(c *gin.Context) {
 		}
 	}
 
-	job, err := h.Service.ReplaceMarkdown(c.Request.Context(), versionID, content)
+	draft, err := h.Service.SaveMarkdownDraft(
+		c.Request.Context(),
+		versionID,
+		c.MustGet(middleware.ClaimsKey).(*security.Claims).UserID,
+		services.MarkdownDraftInput{
+			Content:          string(content),
+			ExpectedRevision: c.GetHeader("If-Match"),
+			SourceType:       "manual_edit",
+		},
+	)
 	if err != nil {
 		switch {
 		case errors.Is(err, services.ErrGuidelineAssetMissing), errors.Is(err, gorm.ErrRecordNotFound):
 			httpx.Error(c, http.StatusNotFound, err.Error())
-		case errors.Is(err, services.ErrPublishedMarkdownImmutable):
+		case errors.Is(err, services.ErrPublishedMarkdownImmutable),
+			errors.Is(err, services.ErrMarkdownRevisionConflict):
 			httpx.Error(c, http.StatusConflict, err.Error())
 		case strings.Contains(err.Error(), "content is required"):
 			httpx.Error(c, http.StatusBadRequest, err.Error())
@@ -452,10 +462,11 @@ func (h GuidelineHandler) UpdateMarkdown(c *gin.Context) {
 		}
 		return
 	}
+	c.Header("ETag", draft.ETag)
 	httpx.OK(c, MarkdownUpdateResult{
 		Updated: true,
-		Queued:  true,
+		Queued:  false,
 		Size:    len(content),
-		JobID:   job.ID,
+		JobID:   uuid.Nil,
 	})
 }

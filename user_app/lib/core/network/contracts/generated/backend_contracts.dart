@@ -944,6 +944,49 @@ final class HandlersManifestEnvelope {
   Map<String, dynamic> toJson() => Map.of(value);
 }
 
+final class HandlersMarkdownDraftEnvelope {
+  HandlersMarkdownDraftEnvelope(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory HandlersMarkdownDraftEnvelope.fromJson(Map<String, dynamic> json) =>
+      HandlersMarkdownDraftEnvelope(json);
+
+  static const schemaName = 'handlers.MarkdownDraftEnvelope';
+  final Map<String, dynamic> value;
+
+  ServicesMarkdownDraft? get data {
+    final raw = value['data'];
+    if (raw is! Map) return null;
+    return ServicesMarkdownDraft.fromJson(_jsonMap(raw));
+  }
+
+  bool? get success => value['success'] as bool?;
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
+final class HandlersMarkdownRegenerationEnvelope {
+  HandlersMarkdownRegenerationEnvelope(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory HandlersMarkdownRegenerationEnvelope.fromJson(
+    Map<String, dynamic> json,
+  ) => HandlersMarkdownRegenerationEnvelope(json);
+
+  static const schemaName = 'handlers.MarkdownRegenerationEnvelope';
+  final Map<String, dynamic> value;
+
+  ServicesMarkdownRegenerationResult? get data {
+    final raw = value['data'];
+    if (raw is! Map) return null;
+    return ServicesMarkdownRegenerationResult.fromJson(_jsonMap(raw));
+  }
+
+  bool? get success => value['success'] as bool?;
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
 final class HandlersMarkdownUpdateEnvelope {
   HandlersMarkdownUpdateEnvelope(Map<String, dynamic> value)
     : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
@@ -1926,6 +1969,59 @@ final class HandlersPaginatedLanguagesEnvelope {
     final raw = value['data'];
     if (raw is! Map) return null;
     return HandlersPaginatedLanguages.fromJson(_jsonMap(raw));
+  }
+
+  bool? get success => value['success'] as bool?;
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
+final class HandlersPaginatedMarkdownRevisions {
+  HandlersPaginatedMarkdownRevisions(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory HandlersPaginatedMarkdownRevisions.fromJson(
+    Map<String, dynamic> json,
+  ) => HandlersPaginatedMarkdownRevisions(json);
+
+  static const schemaName = 'handlers.PaginatedMarkdownRevisions';
+  final Map<String, dynamic> value;
+
+  List<ModelsGuidelineMarkdownRevision> get items {
+    final raw = value['items'];
+    if (raw is! List) return const [];
+    return raw
+        .whereType<Map>()
+        .map((item) => ModelsGuidelineMarkdownRevision.fromJson(_jsonMap(item)))
+        .toList(growable: false);
+  }
+
+  int? get page => (value['page'] as num?)?.toInt();
+
+  int? get perPage => (value['per_page'] as num?)?.toInt();
+
+  int? get totalItems => (value['total_items'] as num?)?.toInt();
+
+  int? get totalPages => (value['total_pages'] as num?)?.toInt();
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
+final class HandlersPaginatedMarkdownRevisionsEnvelope {
+  HandlersPaginatedMarkdownRevisionsEnvelope(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory HandlersPaginatedMarkdownRevisionsEnvelope.fromJson(
+    Map<String, dynamic> json,
+  ) => HandlersPaginatedMarkdownRevisionsEnvelope(json);
+
+  static const schemaName = 'handlers.PaginatedMarkdownRevisionsEnvelope';
+  final Map<String, dynamic> value;
+
+  HandlersPaginatedMarkdownRevisions? get data {
+    final raw = value['data'];
+    if (raw is! Map) return null;
+    return HandlersPaginatedMarkdownRevisions.fromJson(_jsonMap(raw));
   }
 
   bool? get success => value['success'] as bool?;
@@ -2932,6 +3028,22 @@ final class HandlersRegisterRequest {
   }
 
   String? get timezone => value['timezone']?.toString();
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
+final class HandlersRestoreMarkdownRevisionInput {
+  HandlersRestoreMarkdownRevisionInput(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory HandlersRestoreMarkdownRevisionInput.fromJson(
+    Map<String, dynamic> json,
+  ) => HandlersRestoreMarkdownRevisionInput(json);
+
+  static const schemaName = 'handlers.RestoreMarkdownRevisionInput';
+  final Map<String, dynamic> value;
+
+  String? get expectedRevision => value['expected_revision']?.toString();
 
   Map<String, dynamic> toJson() => Map.of(value);
 }
@@ -4340,6 +4452,59 @@ final class ModelsGuidelineIndexEntry {
   Map<String, dynamic> toJson() => Map.of(value);
 }
 
+final class ModelsGuidelineMarkdownRevision {
+  ModelsGuidelineMarkdownRevision(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory ModelsGuidelineMarkdownRevision.fromJson(Map<String, dynamic> json) =>
+      ModelsGuidelineMarkdownRevision(json);
+
+  static const schemaName = 'models.GuidelineMarkdownRevision';
+  final Map<String, dynamic> value;
+
+  String? get changeSummary => value['change_summary']?.toString();
+
+  String? get checkpointName => value['checkpoint_name']?.toString();
+
+  String? get checksum => value['checksum']?.toString();
+
+  String? get createdAt => value['created_at']?.toString();
+
+  String? get createdBy => value['created_by']?.toString();
+
+  String? get documentId => value['document_id']?.toString();
+
+  String? get id => value['id']?.toString();
+
+  bool? get isCurrent => value['is_current'] as bool?;
+
+  String? get parentRevisionId => value['parent_revision_id']?.toString();
+
+  String? get publicationState => value['publication_state']?.toString();
+
+  String? get regenerationJobId => value['regeneration_job_id']?.toString();
+
+  String? get reviewState => value['review_state']?.toString();
+
+  int? get revisionNumber => (value['revision_number'] as num?)?.toInt();
+
+  int? get sizeBytes => (value['size_bytes'] as num?)?.toInt();
+
+  String? get sourceIngestionJobId =>
+      value['source_ingestion_job_id']?.toString();
+
+  String? get sourceType => value['source_type']?.toString();
+
+  String? get structuredContentStatus =>
+      value['structured_content_status']?.toString();
+
+  String? get updatedAt => value['updated_at']?.toString();
+
+  String? get versionId => value['version_id']?.toString();
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
 final class ModelsGuidelineSection {
   ModelsGuidelineSection(Map<String, dynamic> value)
     : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
@@ -4478,6 +4643,9 @@ final class ModelsGuidelineVersion {
 
   String? get createdAt => value['created_at']?.toString();
 
+  String? get currentMarkdownRevisionId =>
+      value['current_markdown_revision_id']?.toString();
+
   String? get documentId => value['document_id']?.toString();
 
   Map<String, dynamic> get extractionMetadata =>
@@ -4508,6 +4676,9 @@ final class ModelsGuidelineVersion {
 
   String? get publicationDate => value['publication_date']?.toString();
 
+  String? get publishedMarkdownRevisionId =>
+      value['published_markdown_revision_id']?.toString();
+
   String? get reviewDate => value['review_date']?.toString();
 
   List<ModelsGuidelineSection> get sections {
@@ -4520,6 +4691,12 @@ final class ModelsGuidelineVersion {
   }
 
   String? get status => value['status']?.toString();
+
+  String? get structuredContentStatus =>
+      value['structured_content_status']?.toString();
+
+  String? get structuredMarkdownRevisionId =>
+      value['structured_markdown_revision_id']?.toString();
 
   String? get updatedAt => value['updated_at']?.toString();
 
@@ -7011,6 +7188,110 @@ final class ServicesManifestResult {
         .map((item) => ModelsSyncPackage.fromJson(_jsonMap(item)))
         .toList(growable: false);
   }
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
+final class ServicesMarkdownDraft {
+  ServicesMarkdownDraft(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory ServicesMarkdownDraft.fromJson(Map<String, dynamic> json) =>
+      ServicesMarkdownDraft(json);
+
+  static const schemaName = 'services.MarkdownDraft';
+  final Map<String, dynamic> value;
+
+  String? get content => value['content']?.toString();
+
+  String? get etag => value['etag']?.toString();
+
+  ModelsGuidelineMarkdownRevision? get revision {
+    final raw = value['revision'];
+    if (raw is! Map) return null;
+    return ModelsGuidelineMarkdownRevision.fromJson(_jsonMap(raw));
+  }
+
+  bool? get saved => value['saved'] as bool?;
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
+final class ServicesMarkdownDraftInput {
+  ServicesMarkdownDraftInput(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory ServicesMarkdownDraftInput.fromJson(Map<String, dynamic> json) =>
+      ServicesMarkdownDraftInput(json);
+
+  static const schemaName = 'services.MarkdownDraftInput';
+  final Map<String, dynamic> value;
+
+  String? get changeSummary => value['change_summary']?.toString();
+
+  String? get checkpointName => value['checkpoint_name']?.toString();
+
+  String? get content => value['content']?.toString();
+
+  String? get expectedRevision => value['expected_revision']?.toString();
+
+  String? get parentRevisionId => value['parent_revision_id']?.toString();
+
+  String? get sourceType => value['source_type']?.toString();
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
+final class ServicesMarkdownRegenerationInput {
+  ServicesMarkdownRegenerationInput(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory ServicesMarkdownRegenerationInput.fromJson(
+    Map<String, dynamic> json,
+  ) => ServicesMarkdownRegenerationInput(json);
+
+  static const schemaName = 'services.MarkdownRegenerationInput';
+  final Map<String, dynamic> value;
+
+  String? get idempotencyKey => value['idempotency_key']?.toString();
+
+  List<String> get operations {
+    final raw = value['operations'];
+    if (raw is! List) return const [];
+    return raw.whereType<String>().toList(growable: false);
+  }
+
+  String? get revisionId => value['revision_id']?.toString();
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
+final class ServicesMarkdownRegenerationResult {
+  ServicesMarkdownRegenerationResult(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory ServicesMarkdownRegenerationResult.fromJson(
+    Map<String, dynamic> json,
+  ) => ServicesMarkdownRegenerationResult(json);
+
+  static const schemaName = 'services.MarkdownRegenerationResult';
+  final Map<String, dynamic> value;
+
+  ModelsIngestionJob? get job {
+    final raw = value['job'];
+    if (raw is! Map) return null;
+    return ModelsIngestionJob.fromJson(_jsonMap(raw));
+  }
+
+  List<String> get operations {
+    final raw = value['operations'];
+    if (raw is! List) return const [];
+    return raw.whereType<String>().toList(growable: false);
+  }
+
+  String? get queuedAt => value['queued_at']?.toString();
+
+  String? get revisionId => value['revision_id']?.toString();
 
   Map<String, dynamic> toJson() => Map.of(value);
 }

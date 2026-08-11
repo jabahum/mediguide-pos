@@ -269,6 +269,18 @@ export interface HandlersManifestEnvelope {
   success?: boolean;
 }
 
+export interface HandlersMarkdownDraftEnvelope {
+  data?: ServicesMarkdownDraft;
+  /** @example true */
+  success?: boolean;
+}
+
+export interface HandlersMarkdownRegenerationEnvelope {
+  data?: ServicesMarkdownRegenerationResult;
+  /** @example true */
+  success?: boolean;
+}
+
 export interface HandlersMarkdownUpdateEnvelope {
   data?: HandlersMarkdownUpdateResult;
   /** @example true */
@@ -573,6 +585,24 @@ export interface HandlersPaginatedLanguagesEnvelope {
   success?: boolean;
 }
 
+export interface HandlersPaginatedMarkdownRevisions {
+  items?: ModelsGuidelineMarkdownRevision[];
+  /** @example 1 */
+  page?: number;
+  /** @example 20 */
+  per_page?: number;
+  /** @example 1 */
+  total_items?: number;
+  /** @example 1 */
+  total_pages?: number;
+}
+
+export interface HandlersPaginatedMarkdownRevisionsEnvelope {
+  data?: HandlersPaginatedMarkdownRevisions;
+  /** @example true */
+  success?: boolean;
+}
+
 export interface HandlersPaginatedMedicalGuidelinesEnvelope {
   data?: ServicesPageResultModelsMedicalGuideline;
   success?: boolean;
@@ -869,6 +899,10 @@ export interface HandlersRegisterRequest {
   specialization?: string[];
   /** @example "Africa/Kampala" */
   timezone?: string;
+}
+
+export interface HandlersRestoreMarkdownRevisionInput {
+  expected_revision?: string;
 }
 
 export interface HandlersRolePermissionsRequest {
@@ -1363,6 +1397,28 @@ export interface ModelsGuidelineIndexEntry {
   updated_at?: string;
 }
 
+export interface ModelsGuidelineMarkdownRevision {
+  change_summary?: string;
+  checkpoint_name?: string;
+  checksum?: string;
+  created_at?: string;
+  created_by?: string;
+  document_id?: string;
+  id?: string;
+  is_current?: boolean;
+  parent_revision_id?: string;
+  publication_state?: string;
+  regeneration_job_id?: string;
+  review_state?: string;
+  revision_number?: number;
+  size_bytes?: number;
+  source_ingestion_job_id?: string;
+  source_type?: string;
+  structured_content_status?: string;
+  updated_at?: string;
+  version_id?: string;
+}
+
 export interface ModelsGuidelineSection {
   created_at?: string;
   html?: string;
@@ -1402,6 +1458,7 @@ export interface ModelsGuidelineVersion {
   checksum?: string;
   content_blocks?: ModelsGuidelineContentBlock[];
   created_at?: string;
+  current_markdown_revision_id?: string;
   document_id?: string;
   extraction_metadata?: object;
   extraction_schema_version?: number;
@@ -1412,9 +1469,12 @@ export interface ModelsGuidelineVersion {
   markdown_file_key?: string;
   original_file_key?: string;
   publication_date?: string;
+  published_markdown_revision_id?: string;
   review_date?: string;
   sections?: ModelsGuidelineSection[];
   status?: string;
+  structured_content_status?: string;
+  structured_markdown_revision_id?: string;
   updated_at?: string;
   version?: string;
 }
@@ -2285,6 +2345,35 @@ export interface ServicesLoginResult {
 export interface ServicesManifestResult {
   generated_at?: string;
   packages?: ModelsSyncPackage[];
+}
+
+export interface ServicesMarkdownDraft {
+  content?: string;
+  etag?: string;
+  revision?: ModelsGuidelineMarkdownRevision;
+  saved?: boolean;
+}
+
+export interface ServicesMarkdownDraftInput {
+  change_summary?: string;
+  checkpoint_name?: string;
+  content?: string;
+  expected_revision?: string;
+  parent_revision_id?: string;
+  source_type?: string;
+}
+
+export interface ServicesMarkdownRegenerationInput {
+  idempotency_key?: string;
+  operations?: string[];
+  revision_id?: string;
+}
+
+export interface ServicesMarkdownRegenerationResult {
+  job?: ModelsIngestionJob;
+  operations?: string[];
+  queued_at?: string;
+  revision_id?: string;
 }
 
 export interface ServicesMedicalGuidelineInput {

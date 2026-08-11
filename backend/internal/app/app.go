@@ -73,7 +73,7 @@ func New(cfg config.Config) (*App, error) {
 	}
 	r.Use(cors.New(cors.Config{
 		AllowOrigins:  allowedOrigins,
-		AllowHeaders:  []string{"Accept", "Authorization", "Content-Type", "If-None-Match"},
+		AllowHeaders:  []string{"Accept", "Authorization", "Content-Type", "If-Match", "If-None-Match"},
 		ExposeHeaders: []string{"ETag", "Last-Modified", "Retry-After", "RateLimit-Limit", "RateLimit-Remaining", "RateLimit-Reset"},
 		AllowMethods:  []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
 	}))
@@ -389,6 +389,14 @@ func New(cfg config.Config) (*App, error) {
 		protected.GET("/guideline-versions/:id/chunks", middleware.RequirePermission("guideline.write"), guidelineH.Chunks)
 		protected.GET("/guideline-versions/:id/extracted/:format", middleware.RequirePermission("guideline.write"), guidelineH.ExtractedAsset)
 		protected.PUT("/guideline-versions/:id/extracted/markdown", middleware.RequirePermission("guideline.write"), guidelineH.UpdateMarkdown)
+		protected.GET("/guideline-versions/:id/markdown-draft", middleware.RequirePermission("guideline.write"), guidelineH.GetMarkdownDraft)
+		protected.PUT("/guideline-versions/:id/markdown-draft", middleware.RequirePermission("guideline.write"), rateLimiter.Limit(middleware.Policy("guideline-markdown-save", 120, time.Hour, 20), middleware.UserIdentity), guidelineH.SaveMarkdownDraft)
+		protected.GET("/guideline-versions/:id/markdown-revisions", middleware.RequirePermission("guideline.write"), guidelineH.ListMarkdownRevisions)
+		protected.POST("/guideline-versions/:id/markdown-revisions", middleware.RequirePermission("guideline.write"), rateLimiter.Limit(middleware.Policy("guideline-markdown-checkpoint", 60, time.Hour, 10), middleware.UserIdentity), guidelineH.CreateMarkdownRevision)
+		protected.GET("/guideline-versions/:id/markdown-revisions/:revisionId", middleware.RequirePermission("guideline.write"), guidelineH.GetMarkdownRevision)
+		protected.GET("/guideline-versions/:id/markdown-revisions/:revisionId/download", middleware.RequirePermission("guideline.write"), guidelineH.DownloadMarkdownRevision)
+		protected.POST("/guideline-versions/:id/markdown-revisions/:revisionId/restore", middleware.RequirePermission("guideline.write"), guidelineH.RestoreMarkdownRevision)
+		protected.POST("/guideline-versions/:id/regenerate", middleware.RequirePermission("guideline.write"), rateLimiter.Limit(middleware.Policy("guideline-regenerate", 20, time.Hour, 2), middleware.UserIdentity), rateLimiter.Concurrency("guideline-regenerate", 1, 15*time.Minute, middleware.UserIdentity), guidelineH.RegenerateMarkdown)
 
 		protected.GET("/search", middleware.RequirePermission("guideline.read"), rateLimiter.Limit(middleware.Policy("guideline-search", 60, time.Minute, 10), middleware.UserIdentity), searchH.Search)
 		protected.POST("/chat/ask", middleware.RequirePermission("chat.ask"),

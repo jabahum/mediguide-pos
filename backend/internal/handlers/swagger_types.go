@@ -470,6 +470,29 @@ type MarkdownUpdateEnvelope struct {
 	Data    MarkdownUpdateResult `json:"data"`
 }
 
+type MarkdownDraftEnvelope struct {
+	Success bool                   `json:"success" example:"true"`
+	Data    services.MarkdownDraft `json:"data"`
+}
+
+type PaginatedMarkdownRevisions struct {
+	Items      []models.GuidelineMarkdownRevision `json:"items"`
+	Page       int                                `json:"page" example:"1"`
+	PerPage    int                                `json:"per_page" example:"20"`
+	TotalItems int64                              `json:"total_items" example:"1"`
+	TotalPages int                                `json:"total_pages" example:"1"`
+}
+
+type PaginatedMarkdownRevisionsEnvelope struct {
+	Success bool                       `json:"success" example:"true"`
+	Data    PaginatedMarkdownRevisions `json:"data"`
+}
+
+type MarkdownRegenerationEnvelope struct {
+	Success bool                                `json:"success" example:"true"`
+	Data    services.MarkdownRegenerationResult `json:"data"`
+}
+
 type PaginatedGuidelineSections struct {
 	Items      []models.GuidelineSection `json:"items"`
 	Page       int                       `json:"page" example:"1"`

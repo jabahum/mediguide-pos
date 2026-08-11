@@ -10,6 +10,41 @@ interface MarkdownPreviewProps {
   className?: string
 }
 
+const calloutLabels: Record<string, string> = {
+  recommendation: "Recommendation",
+  warning: "Warning",
+  caution: "Caution",
+  "key-point": "Key point",
+  contraindication: "Contraindication",
+  dosage: "Dosage",
+  evidence: "Evidence statement",
+  definition: "Definition",
+  procedure: "Procedure",
+  algorithm: "Algorithm reference",
+  "clinical-note": "Clinical note",
+  "referral-criteria": "Referral criteria",
+}
+
+export function renderableClinicalMarkdown(content: string) {
+  const output: string[] = []
+  let callout: string | null = null
+  for (const line of content.split("\n")) {
+    const start = /^:::([a-z][a-z-]*)\s*$/u.exec(line)
+    if (!callout && start && calloutLabels[start[1]]) {
+      callout = start[1]
+      output.push(`> **${calloutLabels[callout]}**`)
+      continue
+    }
+    if (callout && /^:::\s*$/u.test(line)) {
+      callout = null
+      output.push("")
+      continue
+    }
+    output.push(callout ? `> ${line || " "}` : line)
+  }
+  return output.join("\n")
+}
+
 export function MarkdownPreview({ content, className }: MarkdownPreviewProps) {
   if (!content.trim()) {
     return (
@@ -57,7 +92,7 @@ export function MarkdownPreview({ content, className }: MarkdownPreviewProps) {
           },
         }}
       >
-        {content}
+        {renderableClinicalMarkdown(content)}
       </ReactMarkdown>
     </article>
   )

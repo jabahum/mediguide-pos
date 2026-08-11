@@ -154,6 +154,8 @@ class GuidelineRepository:
         checksum: str = "",
         metadata: dict[str, Any] | None = None,
         warnings: list[str] | None = None,
+        markdown_revision_id: str | None = None,
+        ingestion_job_id: str | None = None,
         extraction_schema_version: int = EXTRACTION_SCHEMA_VERSION,
         status: str = "review_required",
     ) -> None:
@@ -338,6 +340,66 @@ class GuidelineRepository:
                     chunk_rows,
                 )
 
+            resolved_revision_id = markdown_revision_id
+            if resolved_revision_id:
+                cur.execute(
+                    """
+                    UPDATE guideline_markdown_revisions
+                    SET checksum=%s,
+                        size_bytes=%s,
+                        structured_content_status='review_required',
+                        review_state='review_required',
+                        regeneration_job_id=COALESCE(regeneration_job_id, %s),
+                        updated_at=now()
+                    WHERE id=%s AND version_id=%s AND deleted_at IS NULL
+                    """,
+                    (
+                        str(metadata.get("markdown_checksum") or ""),
+                        int(metadata.get("markdown_size_bytes") or 0),
+                        ingestion_job_id,
+                        resolved_revision_id,
+                        version_id,
+                    ),
+                )
+                if cur.rowcount != 1:
+                    raise ValueError("Markdown revision was not found for ingestion")
+            else:
+                resolved_revision_id = str(uuid.uuid4())
+                cur.execute(
+                    "UPDATE guideline_markdown_revisions SET is_current=FALSE, updated_at=now() "
+                    "WHERE version_id=%s AND is_current=TRUE AND deleted_at IS NULL",
+                    (version_id,),
+                )
+                cur.execute(
+                    "SELECT COALESCE(MAX(revision_number), 0) + 1 AS revision_number "
+                    "FROM guideline_markdown_revisions WHERE version_id=%s AND deleted_at IS NULL",
+                    (version_id,),
+                )
+                revision_number = int(cur.fetchone()["revision_number"])
+                cur.execute(
+                    """
+                    INSERT INTO guideline_markdown_revisions(
+                      id, document_id, version_id, revision_number, storage_key,
+                      checksum, size_bytes, source_type, source_ingestion_job_id,
+                      regeneration_job_id, is_current, structured_content_status,
+                      review_state, publication_state
+                    )
+                    VALUES (%s,%s,%s,%s,%s,%s,%s,'pdf_generated',%s,%s,TRUE,
+                            'review_required','review_required','draft')
+                    """,
+                    (
+                        resolved_revision_id,
+                        version["document_id"],
+                        version_id,
+                        revision_number,
+                        markdown_key,
+                        str(metadata.get("markdown_checksum") or ""),
+                        int(metadata.get("markdown_size_bytes") or 0),
+                        ingestion_job_id,
+                        ingestion_job_id,
+                    ),
+                )
+
             cur.execute(
                 """
                 UPDATE guideline_versions
@@ -347,6 +409,9 @@ class GuidelineRepository:
                     extraction_schema_version=%s,
                     extraction_metadata_json=%s::jsonb,
                     extraction_warnings_json=%s::jsonb,
+                    current_markdown_revision_id=%s,
+                    structured_markdown_revision_id=%s,
+                    structured_content_status='review_required',
                     status=%s,
                     updated_at=now()
                 WHERE id=%s
@@ -358,6 +423,8 @@ class GuidelineRepository:
                     extraction_schema_version,
                     json.dumps(metadata, ensure_ascii=False),
                     json.dumps(warnings, ensure_ascii=False),
+                    resolved_revision_id,
+                    resolved_revision_id,
                     status,
                     version_id,
                 ),

@@ -1,5 +1,8 @@
 # Guideline publication architecture
 
+The draft/revision and explicit-regeneration lifecycle is documented in
+[`markdown-authoring-workspace.md`](markdown-authoring-workspace.md).
+
 - Status: Accepted for staged implementation
 - Date: 2026-08-10
 - Scope: backend, AI worker, dashboard, Flutter `user_app`, and `guidelines-platform`

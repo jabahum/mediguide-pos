@@ -94,6 +94,25 @@ class IngestionRepository:
                 "UPDATE ingestion_jobs SET status='running', started_at=coalesce(started_at, now()), updated_at=now() WHERE id=%s AND status != 'running'",
                 (job_id,),
             )
+            cur.execute(
+                """
+                UPDATE guideline_markdown_revisions
+                SET structured_content_status='processing', updated_at=now()
+                WHERE regeneration_job_id=%s AND deleted_at IS NULL
+                """,
+                (job_id,),
+            )
+            cur.execute(
+                """
+                UPDATE guideline_versions gv
+                SET structured_content_status='processing', updated_at=now()
+                FROM guideline_markdown_revisions revision
+                WHERE revision.regeneration_job_id=%s
+                  AND revision.id=gv.current_markdown_revision_id
+                  AND revision.deleted_at IS NULL
+                """,
+                (job_id,),
+            )
             conn.commit()
 
     def mark_completed(self, job_id: str) -> None:
@@ -117,6 +136,7 @@ class IngestionRepository:
                        WHERE id=%s""",
                     (error[:4000], job_id),
                 )
+                self._mark_revision_failed(cur, job_id)
                 conn.commit()
             return
         with db_conn() as conn, conn.cursor() as cur:
@@ -130,4 +150,27 @@ class IngestionRepository:
                    WHERE id=%s""",
                 (error[:4000], job_id),
             )
+            self._mark_revision_failed(cur, job_id)
             conn.commit()
+
+    @staticmethod
+    def _mark_revision_failed(cur, job_id: str) -> None:
+        cur.execute(
+            """
+            UPDATE guideline_markdown_revisions
+            SET structured_content_status='failed', updated_at=now()
+            WHERE regeneration_job_id=%s AND deleted_at IS NULL
+            """,
+            (job_id,),
+        )
+        cur.execute(
+            """
+            UPDATE guideline_versions gv
+            SET structured_content_status='failed', updated_at=now()
+            FROM guideline_markdown_revisions revision
+            WHERE revision.regeneration_job_id=%s
+              AND revision.id=gv.current_markdown_revision_id
+              AND revision.deleted_at IS NULL
+            """,
+            (job_id,),
+        )

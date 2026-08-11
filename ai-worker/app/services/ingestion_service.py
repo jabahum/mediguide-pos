@@ -98,6 +98,8 @@ class IngestionService:
                 if source_format == "markdown"
                 else extract_pdf(source_path)
             )
+            markdown_bytes = extracted.markdown.encode("utf-8")
+            markdown_checksum = hashlib.sha256(markdown_bytes).hexdigest()
             log.info(
                 "ingestion_extract_completed",
                 job_id=str(job["id"]),
@@ -127,7 +129,7 @@ class IngestionService:
 
             started = time.perf_counter()
             self.storage.upload_bytes(extracted.html.encode("utf-8"), html_key, "text/html; charset=utf-8")
-            self.storage.upload_bytes(extracted.markdown.encode("utf-8"), markdown_key, "text/markdown; charset=utf-8")
+            self.storage.upload_bytes(markdown_bytes, markdown_key, "text/markdown; charset=utf-8")
             uploaded_asset_keys: set[str] = set()
             for asset in extracted.assets:
                 if not asset.data:
@@ -220,12 +222,16 @@ class IngestionService:
                     **extracted.metadata,
                     "source_format": source_format,
                     "source_file_key": source_key,
+                    "markdown_checksum": markdown_checksum,
+                    "markdown_size_bytes": len(markdown_bytes),
                     "toc_entries": extracted.toc_entries,
                     "structured_block_count": len(extracted.blocks),
                     "asset_count": len(extracted.assets),
                     "unique_asset_count": len(uploaded_asset_keys) + (1 if source_format == "pdf" else 0),
                 },
                 warnings=extracted.warnings,
+                markdown_revision_id=str(payload.get("revision_id") or "").strip() or None,
+                ingestion_job_id=str(job["id"]),
             )
             log.info(
                 "ingestion_persist_completed",

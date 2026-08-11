@@ -200,8 +200,11 @@ func TestReplaceMarkdownQueuesNewImmutableRevision(t *testing.T) {
 	if err := db.First(&version, "id = ?", version.ID).Error; err != nil {
 		t.Fatal(err)
 	}
-	if version.MarkdownFileKey == "existing.md" || version.HTMLFileKey != "" || version.Checksum != "" || version.Status != "draft" {
-		t.Fatalf("edited version was not reset for re-indexing: %#v", version)
+	if version.MarkdownFileKey == "existing.md" || version.Status != "draft" || version.StructuredContentStatus != "queued" {
+		t.Fatalf("edited version was not queued as a new revision: %#v", version)
+	}
+	if version.HTMLFileKey != "existing.html" || version.Checksum != "old" {
+		t.Fatal("the last generated artifacts must remain available until regeneration succeeds")
 	}
 	if _, ok := store.objects[version.MarkdownFileKey]; !ok {
 		t.Fatal("immutable Markdown revision was not stored")

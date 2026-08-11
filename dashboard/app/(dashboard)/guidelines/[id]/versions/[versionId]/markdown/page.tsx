@@ -28,11 +28,13 @@ import {
 import {
   GuidelineMarkdownError,
   GuidelineMarkdownService,
+  MarkdownDraft,
 } from "@/services/guideline-markdown.service"
 
 interface EditorData {
   document: GuidelineDocumentRecord
   version: GuidelineVersionRecord
+  draft: MarkdownDraft | null
   markdown: string
 }
 
@@ -77,9 +79,32 @@ export default function GuidelineMarkdownPage() {
           404,
         )
       }
-      const markdown = await GuidelineMarkdownService.load(params.versionId)
+      let draft: MarkdownDraft | null = null
+      let markdown = ""
+      try {
+        draft = await GuidelineMarkdownService.loadDraft(params.versionId)
+        markdown = draft.content
+      } catch (draftError) {
+        if (!(draftError instanceof GuidelineMarkdownError) || draftError.status !== 404) {
+          throw draftError
+        }
+        try {
+          markdown = await GuidelineMarkdownService.load(params.versionId)
+        } catch (legacyError) {
+          const publishedVersion = version.status.toLowerCase() === "published"
+          if (
+            publishedVersion ||
+            !(legacyError instanceof GuidelineMarkdownError) ||
+            legacyError.status !== 404
+          ) {
+            throw legacyError
+          }
+          // A writable version without a source is a valid blank-authoring entry point.
+          markdown = ""
+        }
+      }
       if (currentRequest === requestId.current) {
-        setData({ document, version, markdown })
+        setData({ document, version, draft, markdown })
       }
     } catch (loadError) {
       if (currentRequest !== requestId.current) return
@@ -179,7 +204,7 @@ export default function GuidelineMarkdownPage() {
           <h1 className="text-2xl font-semibold tracking-tight">{data.document.title}</h1>
           <p className="mt-1 text-sm text-muted-foreground">
             {canUpdate && !published
-              ? "Review, edit, and preview the extracted clinical Markdown."
+              ? "Author, validate, save, compare, and explicitly regenerate clinical Markdown."
               : "Preview the extracted clinical Markdown in read-only mode."}
           </p>
         </div>
@@ -195,6 +220,7 @@ export default function GuidelineMarkdownPage() {
         key={data.version.id}
         versionId={data.version.id}
         initialContent={data.markdown}
+        initialDraft={data.draft}
         editable={canUpdate}
         published={published}
       />

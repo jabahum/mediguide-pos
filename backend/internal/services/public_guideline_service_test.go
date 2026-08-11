@@ -234,6 +234,7 @@ func publicGuidelineTestDB(t *testing.T) *gorm.DB {
 	if err := db.AutoMigrate(
 		&models.GuidelineDocument{},
 		&models.GuidelineVersion{},
+		&models.GuidelineMarkdownRevision{},
 		&models.GuidelineSection{},
 		&models.GuidelineChunk{},
 		&models.GuidelineContentBlock{},

@@ -386,6 +386,22 @@ definitions:
         example: true
         type: boolean
     type: object
+  handlers.MarkdownDraftEnvelope:
+    properties:
+      data:
+        $ref: '#/definitions/services.MarkdownDraft'
+      success:
+        example: true
+        type: boolean
+    type: object
+  handlers.MarkdownRegenerationEnvelope:
+    properties:
+      data:
+        $ref: '#/definitions/services.MarkdownRegenerationResult'
+      success:
+        example: true
+        type: boolean
+    type: object
   handlers.MarkdownUpdateEnvelope:
     properties:
       data:
@@ -846,6 +862,33 @@ definitions:
         example: true
         type: boolean
     type: object
+  handlers.PaginatedMarkdownRevisions:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/models.GuidelineMarkdownRevision'
+        type: array
+      page:
+        example: 1
+        type: integer
+      per_page:
+        example: 20
+        type: integer
+      total_items:
+        example: 1
+        type: integer
+      total_pages:
+        example: 1
+        type: integer
+    type: object
+  handlers.PaginatedMarkdownRevisionsEnvelope:
+    properties:
+      data:
+        $ref: '#/definitions/handlers.PaginatedMarkdownRevisions'
+      success:
+        example: true
+        type: boolean
+    type: object
   handlers.PaginatedMedicalGuidelinesEnvelope:
     properties:
       data:
@@ -1300,6 +1343,11 @@ definitions:
         type: array
       timezone:
         example: Africa/Kampala
+        type: string
+    type: object
+  handlers.RestoreMarkdownRevisionInput:
+    properties:
+      expected_revision:
         type: string
     type: object
   handlers.RolePermissionsRequest:
@@ -2169,6 +2217,47 @@ definitions:
       updated_at:
         type: string
     type: object
+  models.GuidelineMarkdownRevision:
+    properties:
+      change_summary:
+        type: string
+      checkpoint_name:
+        type: string
+      checksum:
+        type: string
+      created_at:
+        type: string
+      created_by:
+        type: string
+      document_id:
+        type: string
+      id:
+        type: string
+      is_current:
+        type: boolean
+      parent_revision_id:
+        type: string
+      publication_state:
+        type: string
+      regeneration_job_id:
+        type: string
+      review_state:
+        type: string
+      revision_number:
+        type: integer
+      size_bytes:
+        type: integer
+      source_ingestion_job_id:
+        type: string
+      source_type:
+        type: string
+      structured_content_status:
+        type: string
+      updated_at:
+        type: string
+      version_id:
+        type: string
+    type: object
   models.GuidelineSection:
     properties:
       created_at:
@@ -2250,6 +2339,8 @@ definitions:
         type: array
       created_at:
         type: string
+      current_markdown_revision_id:
+        type: string
       document_id:
         type: string
       extraction_metadata:
@@ -2272,6 +2363,8 @@ definitions:
         type: string
       publication_date:
         type: string
+      published_markdown_revision_id:
+        type: string
       review_date:
         type: string
       sections:
@@ -2279,6 +2372,10 @@ definitions:
           $ref: '#/definitions/models.GuidelineSection'
         type: array
       status:
+        type: string
+      structured_content_status:
+        type: string
+      structured_markdown_revision_id:
         type: string
       updated_at:
         type: string
@@ -3892,6 +3989,56 @@ definitions:
         items:
           $ref: '#/definitions/models.SyncPackage'
         type: array
+    type: object
+  services.MarkdownDraft:
+    properties:
+      content:
+        type: string
+      etag:
+        type: string
+      revision:
+        $ref: '#/definitions/models.GuidelineMarkdownRevision'
+      saved:
+        type: boolean
+    type: object
+  services.MarkdownDraftInput:
+    properties:
+      change_summary:
+        type: string
+      checkpoint_name:
+        type: string
+      content:
+        type: string
+      expected_revision:
+        type: string
+      parent_revision_id:
+        type: string
+      source_type:
+        type: string
+    type: object
+  services.MarkdownRegenerationInput:
+    properties:
+      idempotency_key:
+        type: string
+      operations:
+        items:
+          type: string
+        type: array
+      revision_id:
+        type: string
+    type: object
+  services.MarkdownRegenerationResult:
+    properties:
+      job:
+        $ref: '#/definitions/models.IngestionJob'
+      operations:
+        items:
+          type: string
+        type: array
+      queued_at:
+        type: string
+      revision_id:
+        type: string
     type: object
   services.MedicalGuidelineInput:
     properties:
@@ -8183,7 +8330,7 @@ paths:
             $ref: '#/definitions/handlers.ErrorResponse'
       security:
       - BearerAuth: []
-      summary: Replace extracted guideline Markdown
+      summary: Save a guideline Markdown draft (legacy editor route)
       tags:
       - guidelines
   /api/v2/guideline-versions/{id}/extraction-status:
@@ -8204,6 +8351,297 @@ paths:
       summary: Get guideline version extraction status and typed content counts
       tags:
       - guideline-review
+  /api/v2/guideline-versions/{id}/markdown-draft:
+    get:
+      parameters:
+      - description: Guideline version ID
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.MarkdownDraftEnvelope'
+        "304":
+          description: Not Modified
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get the current guideline Markdown draft
+      tags:
+      - guideline-markdown
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Guideline version ID
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Current draft ETag
+        in: header
+        name: If-Match
+        type: string
+      - description: Markdown draft
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/services.MarkdownDraftInput'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.MarkdownDraftEnvelope'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "413":
+          description: Request Entity Too Large
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Save a guideline Markdown draft without regenerating structured content
+      tags:
+      - guideline-markdown
+  /api/v2/guideline-versions/{id}/markdown-revisions:
+    get:
+      parameters:
+      - description: Guideline version ID
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Source type
+        in: query
+        name: source_type
+        type: string
+      - description: Editor ID
+        format: uuid
+        in: query
+        name: created_by
+        type: string
+      - description: Created at or after
+        format: date-time
+        in: query
+        name: from
+        type: string
+      - description: Created at or before
+        format: date-time
+        in: query
+        name: to
+        type: string
+      - description: Page number
+        in: query
+        name: page
+        type: integer
+      - description: Page size
+        in: query
+        name: per_page
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.PaginatedMarkdownRevisionsEnvelope'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: List immutable Markdown revisions
+      tags:
+      - guideline-markdown
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Guideline version ID
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Current draft ETag
+        in: header
+        name: If-Match
+        type: string
+      - description: Named Markdown checkpoint
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/services.MarkdownDraftInput'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/handlers.MarkdownDraftEnvelope'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "413":
+          description: Request Entity Too Large
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Save a named Markdown checkpoint
+      tags:
+      - guideline-markdown
+  /api/v2/guideline-versions/{id}/markdown-revisions/{revisionId}:
+    get:
+      parameters:
+      - description: Guideline version ID
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Revision ID
+        format: uuid
+        in: path
+        name: revisionId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.MarkdownDraftEnvelope'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get one Markdown revision and its content
+      tags:
+      - guideline-markdown
+  /api/v2/guideline-versions/{id}/markdown-revisions/{revisionId}/download:
+    get:
+      parameters:
+      - description: Guideline version ID
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Revision ID
+        format: uuid
+        in: path
+        name: revisionId
+        required: true
+        type: string
+      produces:
+      - text/markdown
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: string
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Download a Markdown revision
+      tags:
+      - guideline-markdown
+  /api/v2/guideline-versions/{id}/markdown-revisions/{revisionId}/restore:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Guideline version ID
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Revision ID
+        format: uuid
+        in: path
+        name: revisionId
+        required: true
+        type: string
+      - description: Current draft ETag
+        in: header
+        name: If-Match
+        type: string
+      - description: Restore options
+        in: body
+        name: payload
+        schema:
+          $ref: '#/definitions/handlers.RestoreMarkdownRevisionInput'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/handlers.MarkdownDraftEnvelope'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Restore a historical Markdown revision as a new draft
+      tags:
+      - guideline-markdown
   /api/v2/guideline-versions/{id}/preview:
     get:
       parameters:
@@ -8259,6 +8697,43 @@ paths:
       summary: Publish a guideline version
       tags:
       - guidelines
+  /api/v2/guideline-versions/{id}/regenerate:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Guideline version ID
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Regeneration request
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/services.MarkdownRegenerationInput'
+      produces:
+      - application/json
+      responses:
+        "202":
+          description: Accepted
+          schema:
+            $ref: '#/definitions/handlers.MarkdownRegenerationEnvelope'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Regenerate structured content and RAG data from an exact Markdown revision
+      tags:
+      - guideline-markdown
   /api/v2/guideline-versions/{id}/review:
     get:
       parameters:

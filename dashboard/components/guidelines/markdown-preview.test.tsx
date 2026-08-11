@@ -44,6 +44,19 @@ describe("MarkdownPreview", () => {
     )
   })
 
+  it("renders supported clinical callouts without enabling raw HTML", () => {
+    render(
+      <MarkdownPreview
+        content={`:::warning
+Confirm renal function before treatment.
+:::`}
+      />,
+    )
+
+    expect(screen.getByText("Warning")).toBeInTheDocument()
+    expect(screen.getByText("Confirm renal function before treatment.")).toBeInTheDocument()
+  })
+
   it("shows a clear empty Markdown state", () => {
     render(<MarkdownPreview content={`  
  `} />)

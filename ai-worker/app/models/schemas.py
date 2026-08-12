@@ -60,6 +60,7 @@ class Citation(BaseModel):
 class RetrievedChunk(BaseModel):
     """Safe projection of a retrieved guideline chunk for API consumers.
     Intentionally excludes internal fields such as embedding_text."""
+
     id: str
     document_id: str | None = None
     version_id: str | None = None

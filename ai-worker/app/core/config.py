@@ -12,7 +12,9 @@ class Settings(BaseSettings):
     api_host: str = "0.0.0.0"
     api_port: int = Field(default=8090, validation_alias=AliasChoices("API_PORT", "HTTP_PORT"))
     grpc_host: str = Field(default="0.0.0.0", validation_alias=AliasChoices("GRPC_HOST"))
-    grpc_port: int = Field(default=50051, validation_alias=AliasChoices("GRPC_PORT", "WORKER_GRPC_PORT"))
+    grpc_port: int = Field(
+        default=50051, validation_alias=AliasChoices("GRPC_PORT", "WORKER_GRPC_PORT")
+    )
 
     # Comma-separated list of allowed CORS origins. Use "*" only for local dev.
     allowed_origins: str = Field(
@@ -35,7 +37,9 @@ class Settings(BaseSettings):
         default=30000,
         validation_alias=AliasChoices("DB_STATEMENT_TIMEOUT_MS"),
     )
-    redis_url: str = Field(default="redis://localhost:6379", validation_alias=AliasChoices("REDIS_URL"))
+    redis_url: str = Field(
+        default="redis://localhost:6379", validation_alias=AliasChoices("REDIS_URL")
+    )
 
     minio_endpoint: str = Field(
         default="localhost:9000",
@@ -62,9 +66,13 @@ class Settings(BaseSettings):
     worker_poll_interval_seconds: int = 5
     worker_batch_size: int = 2
     # Maximum ingestion attempts before a job is permanently marked failed.
-    worker_max_attempts: int = Field(default=3, validation_alias=AliasChoices("WORKER_MAX_ATTEMPTS"))
+    worker_max_attempts: int = Field(
+        default=3, validation_alias=AliasChoices("WORKER_MAX_ATTEMPTS")
+    )
     # Back-off multiplier (seconds) between attempts: attempt * worker_retry_backoff_seconds.
-    worker_retry_backoff_seconds: int = Field(default=30, validation_alias=AliasChoices("WORKER_RETRY_BACKOFF_SECONDS"))
+    worker_retry_backoff_seconds: int = Field(
+        default=30, validation_alias=AliasChoices("WORKER_RETRY_BACKOFF_SECONDS")
+    )
 
     # Maximum PDF upload size in bytes for the preview endpoint (default 50 MB).
     max_upload_bytes: int = Field(

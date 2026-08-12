@@ -31,6 +31,7 @@ class ObjectStorage:
 
     def upload_bytes(self, data: bytes, object_key: str, content_type: str) -> str:
         from io import BytesIO
+
         self.client.put_object(
             self.settings.minio_bucket,
             object_key,

@@ -15,7 +15,9 @@ from app.document_processing.types import (
 _BULLET_RE = re.compile(r"^(?:[-*]|[~•●○▪■□◦])\s*(.+)$")
 _ORDERED_RE = re.compile(r"^\s*\d{1,3}[.)]\s+(.+)$")
 _RECOMMENDATION_RE = re.compile(r"^(?:recommendation|recommended action)\s*[:\-]?\s*(.*)$", re.I)
-_WARNING_RE = re.compile(r"^(?:warning|caution|contraindication|contraindications)\s*[:\-]?\s*(.*)$", re.I)
+_WARNING_RE = re.compile(
+    r"^(?:warning|caution|contraindication|contraindications)\s*[:\-]?\s*(.*)$", re.I
+)
 _KEY_POINT_RE = re.compile(r"^(?:key point|important note)\s*[:\-]?\s*(.*)$", re.I)
 
 
@@ -51,15 +53,15 @@ def build_structured_blocks(
                 provenance=provenance,
             )
         )
-        blocks.extend(
-            _text_blocks(section, confidence, page_methods, multi_column_pages)
-        )
+        blocks.extend(_text_blocks(section, confidence, page_methods, multi_column_pages))
 
         local_order = 10_000
         for table in tables_by_section.get(section.sort_order, []):
             payload, warning = _table_payload(table)
             table_provenance = {
-                **_provenance(table.page, table.page, "pdfplumber_table", page_methods, multi_column_pages),
+                **_provenance(
+                    table.page, table.page, "pdfplumber_table", page_methods, multi_column_pages
+                ),
                 "bbox": list(table.bbox) if table.bbox else None,
                 "warning": warning,
             }
@@ -211,10 +213,20 @@ def _callout(line: str) -> tuple[str, str, str, str] | None:
 
 
 def _table_payload(table: ExtractedTable) -> tuple[dict[str, Any], str | None]:
-    rows = [[str(cell or "") for cell in row] for row in table.data if any(str(cell or "").strip() for cell in row)]
+    rows = [
+        [str(cell or "") for cell in row]
+        for row in table.data
+        if any(str(cell or "").strip() for cell in row)
+    ]
     width = max((len(row) for row in rows), default=0)
     if width == 0:
-        return {"type": "table", "title": table.title or "", "columns": [], "rows": [], "footnotes": []}, "empty_table"
+        return {
+            "type": "table",
+            "title": table.title or "",
+            "columns": [],
+            "rows": [],
+            "footnotes": [],
+        }, "empty_table"
     normalized = [row + [""] * (width - len(row)) for row in rows]
     columns = normalized[0]
     body = normalized[1:]
@@ -227,7 +239,9 @@ def _table_payload(table: ExtractedTable) -> tuple[dict[str, Any], str | None]:
     }, "header_inferred_from_first_row"
 
 
-def _tables_by_section(sections: list[ExtractedSection], tables: list[ExtractedTable]) -> dict[int, list[ExtractedTable]]:
+def _tables_by_section(
+    sections: list[ExtractedSection], tables: list[ExtractedTable]
+) -> dict[int, list[ExtractedTable]]:
     result: dict[int, list[ExtractedTable]] = {}
     for table in tables:
         section = _section_for_page(sections, table.page)
@@ -236,7 +250,9 @@ def _tables_by_section(sections: list[ExtractedSection], tables: list[ExtractedT
     return result
 
 
-def _assets_by_section(sections: list[ExtractedSection], assets: list[ExtractedAsset]) -> dict[int, list[ExtractedAsset]]:
+def _assets_by_section(
+    sections: list[ExtractedSection], assets: list[ExtractedAsset]
+) -> dict[int, list[ExtractedAsset]]:
     result: dict[int, list[ExtractedAsset]] = {}
     for asset in assets:
         page = asset.page_start or asset.page_end
@@ -249,7 +265,8 @@ def _assets_by_section(sections: list[ExtractedSection], assets: list[ExtractedA
 
 def _section_for_page(sections: list[ExtractedSection], page: int) -> ExtractedSection | None:
     candidates = [
-        section for section in sections
+        section
+        for section in sections
         if (section.page_start or 0) <= page <= (section.page_end or section.page_start or 0)
     ]
     return candidates[-1] if candidates else None
@@ -258,7 +275,9 @@ def _section_for_page(sections: list[ExtractedSection], page: int) -> ExtractedS
 def _section_confidence(section: ExtractedSection, page_methods: dict[int, str]) -> float:
     methods = {
         page_methods.get(page, "embedded_text")
-        for page in range(section.page_start or 1, (section.page_end or section.page_start or 1) + 1)
+        for page in range(
+            section.page_start or 1, (section.page_end or section.page_start or 1) + 1
+        )
     }
     return 0.68 if "ocr" in methods else 0.9
 

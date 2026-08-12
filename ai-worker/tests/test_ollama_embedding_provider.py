@@ -83,7 +83,9 @@ def test_ollama_embedding_provider_calls_embed_api(monkeypatch: pytest.MonkeyPat
     ]
 
 
-def test_ollama_embedding_provider_falls_back_to_legacy_embeddings_api(monkeypatch: pytest.MonkeyPatch):
+def test_ollama_embedding_provider_falls_back_to_legacy_embeddings_api(
+    monkeypatch: pytest.MonkeyPatch,
+):
     calls: list[tuple[str, dict]] = []
     monkeypatch.setenv("OLLAMA_BASE_URL", "http://ollama:11434")
     monkeypatch.setenv("OLLAMA_EMBEDDING_MODEL", "mxbai-embed-large:latest")
@@ -136,7 +138,9 @@ def test_ollama_embedding_provider_falls_back_to_legacy_embeddings_api(monkeypat
     ]
 
 
-def test_ollama_embedding_provider_splits_failed_batch_before_fallback(monkeypatch: pytest.MonkeyPatch):
+def test_ollama_embedding_provider_splits_failed_batch_before_fallback(
+    monkeypatch: pytest.MonkeyPatch,
+):
     calls: list[tuple[str, dict]] = []
     monkeypatch.setenv("OLLAMA_BASE_URL", "http://ollama:11434")
     monkeypatch.setenv("OLLAMA_EMBEDDING_MODEL", "mxbai-embed-large:latest")

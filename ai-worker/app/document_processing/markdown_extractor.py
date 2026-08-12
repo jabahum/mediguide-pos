@@ -22,8 +22,8 @@ _UNORDERED_RE = re.compile(r"^\s*[-*+]\s+(.+)$")
 _ORDERED_RE = re.compile(r"^\s*\d+[.)]\s+(.+)$")
 _TABLE_SEPARATOR_RE = re.compile(r"^\s*\|?\s*:?-{3,}:?\s*(?:\|\s*:?-{3,}:?\s*)+\|?\s*$")
 _ASSET_IMAGE_RE = re.compile(
-    r'^!\[([^\]]*)\]\(guideline-asset://'
-    r'([0-9a-fA-F]{8}(?:-[0-9a-fA-F]{4}){3}-[0-9a-fA-F]{12})\)\s*$'
+    r"^!\[([^\]]*)\]\(guideline-asset://"
+    r"([0-9a-fA-F]{8}(?:-[0-9a-fA-F]{4}){3}-[0-9a-fA-F]{12})\)\s*$"
 )
 _CALLOUT_RE = re.compile(
     r"^(?:>\s*)?(recommendation|recommended action|warning|caution|key point|important note)\s*[:\-]?\s*(.*)$",
@@ -74,7 +74,9 @@ def extract_markdown(path: Path, fallback_title: str = "Guideline") -> Extracted
     for section in sections:
         section_blocks = _section_blocks(section)
         blocks.extend(section_blocks)
-        text = "\n".join(_block_text(block) for block in section_blocks if _block_text(block)).strip()
+        text = "\n".join(
+            _block_text(block) for block in section_blocks if _block_text(block)
+        ).strip()
         extracted_sections.append(
             ExtractedSection(
                 title=section.title,
@@ -97,7 +99,9 @@ def extract_markdown(path: Path, fallback_title: str = "Guideline") -> Extracted
         block.source_fingerprint = _fingerprint(block)
 
     title = str(metadata.get("title") or sections[0].title or fallback_title).strip()
-    document_html = "<article>" + "".join(section.html for section in extracted_sections) + "</article>"
+    document_html = (
+        "<article>" + "".join(section.html for section in extracted_sections) + "</article>"
+    )
     return ExtractedDocument(
         title=title,
         pages=0,
@@ -132,9 +136,7 @@ def _front_matter(markdown: str) -> tuple[str, dict[str, Any]]:
         raise ValueError("Markdown front matter is invalid YAML") from exc
     if not isinstance(value, dict):
         raise ValueError("Markdown front matter must be an object")
-    return markdown[end + 5 :].strip(), {
-        str(key): _json_value(item) for key, item in value.items()
-    }
+    return markdown[end + 5 :].strip(), {str(key): _json_value(item) for key, item in value.items()}
 
 
 def _split_sections(markdown: str, fallback_title: str) -> list[_MarkdownSection]:
@@ -241,9 +243,7 @@ def _section_blocks(section: _MarkdownSection) -> list[ExtractedContentBlock]:
                 raise ValueError(f"Clinical callout opened on line {start_line} is empty")
             block_type = _CALLOUT_TYPES[name]
             content = {"type": block_type, "content": body, **metadata}
-            blocks.append(
-                _block(section, block_type, content, local_order, start_line, end_line)
-            )
+            blocks.append(_block(section, block_type, content, local_order, start_line, end_line))
             local_order += 1
             continue
         if stripped.startswith("```") or stripped.startswith("~~~"):
@@ -293,7 +293,11 @@ def _section_blocks(section: _MarkdownSection) -> list[ExtractedContentBlock]:
             local_order += 1
             index += 1
             continue
-        if index + 1 < len(lines) and "|" in stripped and _TABLE_SEPARATOR_RE.match(lines[index + 1][1]):
+        if (
+            index + 1 < len(lines)
+            and "|" in stripped
+            and _TABLE_SEPARATOR_RE.match(lines[index + 1][1])
+        ):
             flush_paragraph()
             columns = _table_cells(stripped)
             start_line = line_number
@@ -410,7 +414,9 @@ def _fingerprint(block: ExtractedContentBlock) -> str:
         "section_order": block.section_order,
         "sort_order": block.sort_order,
     }
-    return hashlib.sha256(json.dumps(value, sort_keys=True, ensure_ascii=False).encode()).hexdigest()
+    return hashlib.sha256(
+        json.dumps(value, sort_keys=True, ensure_ascii=False).encode()
+    ).hexdigest()
 
 
 def _table_cells(line: str) -> list[str]:
@@ -441,9 +447,7 @@ def _block_html(block: ExtractedContentBlock) -> str:
         return f"<p>{html.escape(str(content.get('text') or ''))}</p>"
     if block.type in {"ordered_list", "unordered_list"}:
         tag = "ol" if block.type == "ordered_list" else "ul"
-        items = "".join(
-            f"<li>{html.escape(str(item))}</li>" for item in content.get("items") or []
-        )
+        items = "".join(f"<li>{html.escape(str(item))}</li>" for item in content.get("items") or [])
         return f"<{tag}>{items}</{tag}>"
     if block.type in set(_CALLOUT_TYPES.values()):
         title = html.escape(str(content.get("title") or ""))
@@ -451,13 +455,10 @@ def _block_html(block: ExtractedContentBlock) -> str:
         return f"<aside><strong>{title}</strong><p>{body}</p></aside>"
     if block.type == "table":
         columns = "".join(
-            f"<th>{html.escape(str(cell))}</th>"
-            for cell in content.get("columns") or []
+            f"<th>{html.escape(str(cell))}</th>" for cell in content.get("columns") or []
         )
         rows = "".join(
-            "<tr>"
-            + "".join(f"<td>{html.escape(str(cell))}</td>" for cell in row)
-            + "</tr>"
+            "<tr>" + "".join(f"<td>{html.escape(str(cell))}</td>" for cell in row) + "</tr>"
             for row in content.get("rows") or []
         )
         return f"<table><thead><tr>{columns}</tr></thead><tbody>{rows}</tbody></table>"
@@ -465,7 +466,7 @@ def _block_html(block: ExtractedContentBlock) -> str:
         alternative_text = html.escape(str(content.get("alternative_text") or ""))
         return (
             f'<figure><span role="img" aria-label="{alternative_text}"></span>'
-            f'<figcaption>{alternative_text}</figcaption></figure>'
+            f"<figcaption>{alternative_text}</figcaption></figure>"
         )
     return ""
 

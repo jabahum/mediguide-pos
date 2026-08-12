@@ -120,12 +120,18 @@ def test_section_html_does_not_promote_bullet_glyphs_to_headings():
 def test_is_noise_line_ignores_page_markers():
     assert _is_noise_line("LIII")
     assert _is_noise_line("465")
-    assert _is_noise_line("1 EMERGENCIES AND TRAUMA.....................................................1")
+    assert _is_noise_line(
+        "1 EMERGENCIES AND TRAUMA.....................................................1"
+    )
 
 
 def test_looks_like_toc_entry_matches_numbered_rows_with_trailing_page_numbers():
-    assert _looks_like_toc_entry("2.1.5.2 Cryptococcal Meningitis........................................................................213")
-    assert _looks_like_toc_entry("3.1 HIV Infection And Acquired Immunodeficiency Syndrome (AIDS) .186")
+    assert _looks_like_toc_entry(
+        "2.1.5.2 Cryptococcal Meningitis........................................................................213"
+    )
+    assert _looks_like_toc_entry(
+        "3.1 HIV Infection And Acquired Immunodeficiency Syndrome (AIDS) .186"
+    )
 
 
 def test_render_table_cell_content_preserves_bullet_lists():

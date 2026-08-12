@@ -22,6 +22,7 @@ async def lifespan(app: FastAPI):
     grpc_server.stop(grace=5)
     # Gracefully close the pool on shutdown.
     from app.core import db as _db
+
     if _db._pool is not None:
         _db._pool.close()
 
@@ -31,7 +32,7 @@ app = FastAPI(title=settings.app_name, version="0.1.0", lifespan=lifespan)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.allowed_origins_list,
-    allow_credentials=False,          # never use credentials with a public worker API
+    allow_credentials=False,  # never use credentials with a public worker API
     allow_methods=["GET", "POST"],
     allow_headers=["Content-Type", "X-Worker-Secret"],
 )

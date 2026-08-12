@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone
 from typing import Any
 
 from app.core.db import db_conn
@@ -50,7 +49,9 @@ class IngestionRepository:
             conn.commit()
             return rows
 
-    def claim_retryable_jobs(self, limit: int = 1, max_attempts: int = 3, backoff_seconds: int = 30) -> list[dict[str, Any]]:
+    def claim_retryable_jobs(
+        self, limit: int = 1, max_attempts: int = 3, backoff_seconds: int = 30
+    ) -> list[dict[str, Any]]:
         """Pick up previously-failed jobs that are within the retry limit and past their back-off window."""
         if not self._has_attempt_count():
             return []
@@ -134,7 +135,10 @@ class IngestionRepository:
 
     def cancellation_requested(self, job_id: str) -> bool:
         with db_conn() as conn, conn.cursor() as cur:
-            cur.execute("SELECT status='cancel_requested' AS requested FROM ingestion_jobs WHERE id=%s", (job_id,))
+            cur.execute(
+                "SELECT status='cancel_requested' AS requested FROM ingestion_jobs WHERE id=%s",
+                (job_id,),
+            )
             row = cur.fetchone()
             return bool(row and row.get("requested"))
 
@@ -144,14 +148,26 @@ class IngestionRepository:
                 "UPDATE ingestion_jobs SET status='canceled', progress_stage='canceled', canceled_at=now(), completed_at=now(), updated_at=now() WHERE id=%s AND status='cancel_requested'",
                 (job_id,),
             )
-            cur.execute("UPDATE guideline_markdown_revisions SET structured_content_status='canceled', review_state='draft', updated_at=now() WHERE regeneration_job_id=%s", (job_id,))
-            cur.execute("UPDATE guideline_versions gv SET structured_content_status='canceled', updated_at=now() FROM guideline_markdown_revisions r WHERE r.regeneration_job_id=%s AND gv.current_markdown_revision_id=r.id", (job_id,))
+            cur.execute(
+                "UPDATE guideline_markdown_revisions SET structured_content_status='canceled', review_state='draft', updated_at=now() WHERE regeneration_job_id=%s",
+                (job_id,),
+            )
+            cur.execute(
+                "UPDATE guideline_versions gv SET structured_content_status='canceled', updated_at=now() FROM guideline_markdown_revisions r WHERE r.regeneration_job_id=%s AND gv.current_markdown_revision_id=r.id",
+                (job_id,),
+            )
             conn.commit()
 
     def mark_superseded(self, job_id: str) -> None:
         with db_conn() as conn, conn.cursor() as cur:
-            cur.execute("UPDATE ingestion_jobs SET status='canceled', progress_stage='superseded', canceled_at=now(), completed_at=now(), updated_at=now() WHERE id=%s AND status='running'", (job_id,))
-            cur.execute("UPDATE guideline_markdown_revisions SET structured_content_status='canceled', review_state='draft', updated_at=now() WHERE regeneration_job_id=%s", (job_id,))
+            cur.execute(
+                "UPDATE ingestion_jobs SET status='canceled', progress_stage='superseded', canceled_at=now(), completed_at=now(), updated_at=now() WHERE id=%s AND status='running'",
+                (job_id,),
+            )
+            cur.execute(
+                "UPDATE guideline_markdown_revisions SET structured_content_status='canceled', review_state='draft', updated_at=now() WHERE regeneration_job_id=%s",
+                (job_id,),
+            )
             conn.commit()
 
     def complete_noop_comparison(self, job_id: str) -> None:

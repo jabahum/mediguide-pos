@@ -61,8 +61,8 @@ def test_markdown_fenced_clinical_callouts_are_typed_and_preserved(tmp_path: Pat
     path = tmp_path / "callouts.md"
     path.write_text(
         '# Safety\n\n:::dosage title="Reviewed dose" severity=high evidence_grade=A\n'
-        'Give 5 mg exactly as clinically reviewed.\n:::\n\n'
-        ':::contraindication\nDo not use in the documented condition.\n:::\n',
+        "Give 5 mg exactly as clinically reviewed.\n:::\n\n"
+        ":::contraindication\nDo not use in the documented condition.\n:::\n",
         encoding="utf-8",
     )
 
@@ -111,9 +111,12 @@ def test_markdown_source_requires_utf8(tmp_path: Path):
 
 
 def test_ingestion_job_payload_accepts_json_and_rejects_non_objects():
-    assert IngestionService._job_payload({
-        "payload_json": '{"file_key":"guidelines/source.md","source_format":"markdown"}'
-    })["source_format"] == "markdown"
+    assert (
+        IngestionService._job_payload(
+            {"payload_json": '{"file_key":"guidelines/source.md","source_format":"markdown"}'}
+        )["source_format"]
+        == "markdown"
+    )
 
     with pytest.raises(ValueError, match="must be an object"):
         IngestionService._job_payload({"payload_json": "[]"})

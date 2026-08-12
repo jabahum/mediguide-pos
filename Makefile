@@ -37,6 +37,8 @@ help:
 		"  backend-run      Run backend API locally" \
 		"  backend-worker   Run backend Go worker locally" \
 		"  swagger          Generate backend Swagger JSON/YAML docs" \
+		"  contracts        Regenerate Go, TypeScript, and Dart API contracts" \
+		"  contracts-check  Verify committed API contracts have no drift" \
 		"  migrate-up       Apply backend migrations" \
 		"  migrate-down     Roll back backend migrations" \
 		"  migrate-status   Show backend migration status" \
@@ -137,6 +139,14 @@ backend-worker:
 .PHONY: swagger
 swagger:
 	$(MAKE) -C $(BACKEND_DIR) swagger
+
+.PHONY: contracts
+contracts:
+	bash scripts/generate-contracts.sh
+
+.PHONY: contracts-check
+contracts-check:
+	bash scripts/check-generated-contracts.sh
 
 .PHONY: migrate-up
 migrate-up:

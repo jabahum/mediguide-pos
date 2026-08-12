@@ -194,7 +194,10 @@ def _remove_matching_heading_runs(soup: BeautifulSoup, header_cells: list[str]) 
         removed = False
         headings = list(soup.find_all(re.compile(r"^h[1-6]$")))
         for idx in range(len(headings) - len(signature) + 1):
-            texts = [_normalize_for_match(headings[idx + offset].get_text(" ", strip=True)) for offset in range(len(signature))]
+            texts = [
+                _normalize_for_match(headings[idx + offset].get_text(" ", strip=True))
+                for offset in range(len(signature))
+            ]
             if texts == signature:
                 for offset in range(len(signature)):
                     headings[idx + offset].decompose()
@@ -219,7 +222,9 @@ def _guess_heading(line: str) -> int:
     return 0
 
 
-def _heading_info(line: str, current_level: int, current_title: str | None = None) -> HeadingInfo | None:
+def _heading_info(
+    line: str, current_level: int, current_title: str | None = None
+) -> HeadingInfo | None:
     s = line.strip()
     if not s or len(s) > 160:
         return None
@@ -253,11 +258,19 @@ def _heading_info(line: str, current_level: int, current_title: str | None = Non
         return None
     lowered = candidate.lower()
     if lowered in _COMMON_SUBHEADINGS:
-        level = current_level if current_title and _is_semantic_subheading_title(current_title) else current_level + 1
+        level = (
+            current_level
+            if current_title and _is_semantic_subheading_title(current_title)
+            else current_level + 1
+        )
         return HeadingInfo(title=candidate, level=min(max(level, 2), 6))
 
     if candidate.isupper() and 1 < len(candidate.split()) <= 10:
-        level = current_level if current_title and _is_semantic_subheading_title(current_title) else current_level + 1
+        level = (
+            current_level
+            if current_title and _is_semantic_subheading_title(current_title)
+            else current_level + 1
+        )
         return HeadingInfo(title=candidate, level=min(max(level, 2), 6))
 
     return None
@@ -300,7 +313,9 @@ def _split_sections(page_lines: list[tuple[int, str]]) -> list[ExtractedSection]
 
     for page, raw in page_lines:
         for line in _content_lines(raw):
-            info = _heading_info(line, current.level if current else 1, current.title if current else None)
+            info = _heading_info(
+                line, current.level if current else 1, current.title if current else None
+            )
             if info:
                 if info.primary:
                     seen_primary_heading = True
@@ -329,7 +344,9 @@ def _split_sections(page_lines: list[tuple[int, str]]) -> list[ExtractedSection]
                 if current is None:
                     fallback_order += 1
                     current = ExtractedSection(
-                        title="Introduction" if fallback_order == 1 else f"Section {fallback_order}",
+                        title="Introduction"
+                        if fallback_order == 1
+                        else f"Section {fallback_order}",
                         level=1,
                         page_start=page,
                         page_end=page,
@@ -372,7 +389,7 @@ def _split_sections(page_lines: list[tuple[int, str]]) -> list[ExtractedSection]
 def _section_html(title: str, level: int, text: str) -> str:
     h_level = max(1, min(level, 4))
     body = _render_section_body(_content_lines(text), min(h_level + 1, 6))
-    return f"<h{h_level} id=\"{slugify(title)}\">{html.escape(title)}</h{h_level}>{body}"
+    return f'<h{h_level} id="{slugify(title)}">{html.escape(title)}</h{h_level}>{body}'
 
 
 def _is_subheading(line: str) -> bool:
@@ -396,8 +413,7 @@ def _is_subheading(line: str) -> bool:
     if not significant:
         return False
     return all(
-        w[0].isupper() or w.lower() in {"and", "of", "in", "to", "for", "with"}
-        for w in significant
+        w[0].isupper() or w.lower() in {"and", "of", "in", "to", "for", "with"} for w in significant
     )
 
 
@@ -448,7 +464,9 @@ def _render_section_body(lines: list[str], subheading_level: int) -> str:
         if _is_subheading(line):
             flush_paragraph()
             flush_list()
-            parts.append(f"<h{subheading_level}>{html.escape(line.rstrip(':'))}</h{subheading_level}>")
+            parts.append(
+                f"<h{subheading_level}>{html.escape(line.rstrip(':'))}</h{subheading_level}>"
+            )
             index += 1
             continue
 
@@ -458,7 +476,11 @@ def _render_section_body(lines: list[str], subheading_level: int) -> str:
             index += 1
             while index < len(lines):
                 next_line = lines[index]
-                if _strip_bullet(next_line) is not None or _is_subheading(next_line) or _is_management_table_header(lines, index):
+                if (
+                    _strip_bullet(next_line) is not None
+                    or _is_subheading(next_line)
+                    or _is_management_table_header(lines, index)
+                ):
                     break
                 items[-1] = f"{items[-1]} {next_line}".strip()
                 index += 1
@@ -519,10 +541,11 @@ def _parse_management_table(lines: list[str], start_index: int) -> tuple[str, in
         return "", start_index + 2
 
     body_rows = [
-        [f"&#x2610; {html.escape(treatment)}", html.escape(loc)]
-        for treatment, loc in rows
+        [f"&#x2610; {html.escape(treatment)}", html.escape(loc)] for treatment, loc in rows
     ]
-    return _render_table_html([["TREATMENT", "LOC"], *body_rows], title=None, already_escaped=True), index
+    return _render_table_html(
+        [["TREATMENT", "LOC"], *body_rows], title=None, already_escaped=True
+    ), index
 
 
 def _clean_table_rows(rows: list[list[object]]) -> list[list[str]]:
@@ -572,7 +595,9 @@ def _is_low_signal_table(rows: list[list[str]]) -> bool:
     return False
 
 
-def _split_table_parts(rows: list[list[str]]) -> tuple[str | None, list[str] | None, list[list[str]]]:
+def _split_table_parts(
+    rows: list[list[str]],
+) -> tuple[str | None, list[str] | None, list[list[str]]]:
     if not rows:
         return None, None, []
 
@@ -658,17 +683,17 @@ def _render_inline_grid_html(rows: list[list[str]]) -> str:
         padded = row + [""] * (max_cols - len(row))
         cell_tag = "strong" if index == 0 else "span"
         cells = "".join(
-            f"<div style=\"padding:4px 8px;border:1px solid {_TABLE_BORDER};background:{_TABLE_HEAD_BG if index == 0 else '#ffffff'};\"><{cell_tag}>{cell}</{cell_tag}></div>"
+            f'<div style="padding:4px 8px;border:1px solid {_TABLE_BORDER};background:{_TABLE_HEAD_BG if index == 0 else "#ffffff"};"><{cell_tag}>{cell}</{cell_tag}></div>'
             for cell in padded
         )
         rendered_rows.append(
-            f"<div style=\"display:grid;grid-template-columns:repeat({max_cols}, minmax(0,1fr));\">{cells}</div>"
+            f'<div style="display:grid;grid-template-columns:repeat({max_cols}, minmax(0,1fr));">{cells}</div>'
         )
     return (
-        "<div class=\"guideline-inline-grid\" "
-        "style=\"margin:8px 0 10px 0;border:1px solid #667085;border-bottom:none;overflow-x:auto;\">"
-        + "".join(rendered_rows) +
-        "</div>"
+        '<div class="guideline-inline-grid" '
+        'style="margin:8px 0 10px 0;border:1px solid #667085;border-bottom:none;overflow-x:auto;">'
+        + "".join(rendered_rows)
+        + "</div>"
     )
 
 
@@ -740,14 +765,15 @@ def _render_table_html(
         return ""
 
     caption_html = (
-        f"<caption style=\"caption-side:top;text-align:left;font-weight:600;padding:0 0 8px 0;\">{cell(title)}</caption>"
-        if title else ""
+        f'<caption style="caption-side:top;text-align:left;font-weight:600;padding:0 0 8px 0;">{cell(title)}</caption>'
+        if title
+        else ""
     )
     thead = ""
     if header:
         padded_header = header + [""] * (column_count - len(header))
         thead_cells = "".join(
-            f"<th style=\"border:1px solid {_TABLE_BORDER};background:{_TABLE_HEAD_BG};padding:8px 10px;text-align:left;vertical-align:top;font-weight:600;\">{cell(col)}</th>"
+            f'<th style="border:1px solid {_TABLE_BORDER};background:{_TABLE_HEAD_BG};padding:8px 10px;text-align:left;vertical-align:top;font-weight:600;">{cell(col)}</th>'
             for col in padded_header[:column_count]
         )
         thead = f"<thead><tr>{thead_cells}</tr></thead>"
@@ -755,14 +781,14 @@ def _render_table_html(
     for row in body:
         padded = row + [""] * (column_count - len(row))
         tds = "".join(
-            f"<td style=\"border:1px solid {_TABLE_BORDER};padding:8px 10px;vertical-align:top;\">{_render_table_cell_content(col, already_escaped=already_escaped)}</td>"
+            f'<td style="border:1px solid {_TABLE_BORDER};padding:8px 10px;vertical-align:top;">{_render_table_cell_content(col, already_escaped=already_escaped)}</td>'
             for col in padded[:column_count]
         )
         tbody_rows.append(f"<tr>{tds}</tr>")
     tbody = f"<tbody>{''.join(tbody_rows)}</tbody>" if tbody_rows else ""
     return (
-        "<div class=\"guideline-table\" style=\"margin:16px 0;overflow-x:auto;\">"
-        f"<table style=\"width:100%;border-collapse:collapse;border:1px solid {_TABLE_BORDER};\">"
+        '<div class="guideline-table" style="margin:16px 0;overflow-x:auto;">'
+        f'<table style="width:100%;border-collapse:collapse;border:1px solid {_TABLE_BORDER};">'
         f"{caption_html}{thead}{tbody}</table></div>"
     )
 
@@ -781,9 +807,7 @@ def _table_anchor_phrases(rows: list[list[str]]) -> list[str]:
             if _LOC_CODE_RE.fullmatch(normalized.upper().replace(" ", "")):
                 continue
             is_first_column_label = (
-                cell_index == 0
-                and len(normalized) >= 4
-                and any(ch.isalpha() for ch in normalized)
+                cell_index == 0 and len(normalized) >= 4 and any(ch.isalpha() for ch in normalized)
             )
             if (
                 len(normalized) >= 18
@@ -862,7 +886,8 @@ def _is_multi_column_layout(
     if page_width <= 0:
         return False
     substantial = [
-        block for block in blocks
+        block
+        for block in blocks
         if len(_clean_text(block[4] or "")) >= 40
         and float(block[2]) - float(block[0]) < page_width * 0.72
     ]
@@ -918,7 +943,9 @@ def _extract_embedded_images(doc: fitz.Document) -> list[ExtractedAsset]:
                 if len(data) < 1024 or width < 48 or height < 48:
                     continue
                 checksum = hashlib.sha256(data).hexdigest()
-                fingerprint = hashlib.sha256(f"{page_number}:{xref}:{checksum}".encode()).hexdigest()
+                fingerprint = hashlib.sha256(
+                    f"{page_number}:{xref}:{checksum}".encode()
+                ).hexdigest()
                 if fingerprint in seen:
                     continue
                 seen.add(fingerprint)
@@ -934,7 +961,11 @@ def _extract_embedded_images(doc: fitz.Document) -> list[ExtractedAsset]:
                 rect = rects[0] if rects else fitz.Rect(0, 0, 0, 0)
                 caption = _image_caption(page, rect)
                 source_key = f"page-{page_number}-image-{image_index}-{checksum[:12]}"
-                asset_type = "diagram" if re.search(r"algorithm|flowchart|flow chart", caption, re.I) else "figure"
+                asset_type = (
+                    "diagram"
+                    if re.search(r"algorithm|flowchart|flow chart", caption, re.I)
+                    else "figure"
+                )
                 assets.append(
                     ExtractedAsset(
                         type=asset_type,
@@ -987,7 +1018,9 @@ def _dedupe_section_html(section_html: str, tables: list[ExtractedTable]) -> str
         for paragraph in list(soup.find_all("p")):
             text = _normalize_for_match(paragraph.get_text(" ", strip=True))
             matches = sum(1 for anchor in anchors if anchor in text)
-            header_hits = sum(1 for cell in _header_signature(header_cells) if cell and cell in text)
+            header_hits = sum(
+                1 for cell in _header_signature(header_cells) if cell and cell in text
+            )
             if matches >= 2 or (len(text) > 280 and (matches >= 1 or header_hits >= 1)):
                 paragraph.decompose()
 
@@ -998,6 +1031,7 @@ def _extract_tables_pdfplumber(path: Path) -> list[ExtractedTable]:
     tables: list[ExtractedTable] = []
     try:
         import pdfplumber
+
         with pdfplumber.open(str(path)) as pdf:
             for i, page in enumerate(pdf.pages, start=1):
                 for table in page.find_tables() or []:
@@ -1094,7 +1128,9 @@ def extract_pdf(path: Path) -> ExtractedDocument:
                 method = "ocr"
                 ocr_pages.append(page_number)
             elif not text:
-                warnings.append(f"Page {page_number} has no extractable text and OCR produced no result")
+                warnings.append(
+                    f"Page {page_number} has no extractable text and OCR produced no result"
+                )
         page_methods[page_number] = method
         toc_entries.extend(
             line[:500] for line in raw_text.splitlines() if _looks_like_toc_entry(_clean_line(line))
@@ -1112,7 +1148,9 @@ def extract_pdf(path: Path) -> ExtractedDocument:
     for section in sections:
         methods = {
             page_methods.get(page, "embedded_text")
-            for page in range(section.page_start or 1, (section.page_end or section.page_start or 1) + 1)
+            for page in range(
+                section.page_start or 1, (section.page_end or section.page_start or 1) + 1
+            )
         }
         section.extraction_confidence = 0.68 if "ocr" in methods else 0.9
         section.provenance = {
@@ -1169,13 +1207,13 @@ def extract_pdf(path: Path) -> ExtractedDocument:
             "review_required": True,
         }
     if ocr_pages:
-        warnings.append("OCR-derived text requires additional editorial comparison with the source PDF")
+        warnings.append(
+            "OCR-derived text requires additional editorial comparison with the source PDF"
+        )
     if any(asset.provenance.get("caption") == "" for asset in assets):
         warnings.append("One or more extracted figures require caption and alternative-text review")
     metadata = {
-        key: value
-        for key, value in (doc.metadata or {}).items()
-        if value not in (None, "")
+        key: value for key, value in (doc.metadata or {}).items() if value not in (None, "")
     }
     metadata.update(
         {

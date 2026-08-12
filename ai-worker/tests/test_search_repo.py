@@ -67,8 +67,19 @@ def test_vector_search_prioritizes_requested_country_when_national_first(monkeyp
         national_first=True,
     )
 
-    assert "CASE WHEN lower(coalesce(gd.country, '')) = lower(%s) THEN 0 ELSE 1 END AS country_rank" in capture["sql"]
-    assert "ORDER BY country_rank ASC, gc.embedding <=> %s::vector" in " ".join(capture["sql"].split())
+    assert (
+        "CASE WHEN lower(coalesce(gd.country, '')) = lower(%s) THEN 0 ELSE 1 END AS country_rank"
+        in capture["sql"]
+    )
+    assert "ORDER BY country_rank ASC, gc.embedding <=> %s::vector" in " ".join(
+        capture["sql"].split()
+    )
     assert "gv.status = 'published'" in capture["sql"]
     assert "gd.current_version_id = gv.id" in capture["sql"]
-    assert capture["params"] == ("Uganda", "[0.10000000,0.20000000]", "en", "[0.10000000,0.20000000]", 4)
+    assert capture["params"] == (
+        "Uganda",
+        "[0.10000000,0.20000000]",
+        "en",
+        "[0.10000000,0.20000000]",
+        4,
+    )

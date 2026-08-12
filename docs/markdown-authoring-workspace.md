@@ -115,9 +115,10 @@ executable HTML.
   by revision ETags and explicit conflict resolution.
 - Clinical templates contain headings and placeholders only. They never
   fabricate recommendations or doses.
-- Threaded review comments remain a later phase. The
-  public and structured dashboard shells are layout previews of the current
-  Markdown; they do not claim to be regenerated canonical structured content.
+- Reviewer assignments, revision/section/block comments, resolution state and
+  the audit timeline are durable asynchronous collaboration features. Presence,
+  live cursors and realtime delivery are not supported; refresh or polling is
+  required to observe another editor's changes.
 - Revision `anchor_metadata` is stored separately from Markdown. Renames retain
   the stable revision anchor and surface a review warning; outline reordering
   moves the complete source section and its anchor metadata together.
@@ -133,8 +134,12 @@ revision duplication, published-version branching, explicit regeneration, and
 idempotent retries. Dashboard focused tests cover permission
 states, editing, modes, keyboard save, failed-save preservation, publication
 immutability, preview presentations, published branching, safe HTML handling,
-GFM, and clinical callouts. OpenAPI,
-TypeScript, and Dart contracts are regenerated from the backend specification.
+GFM, and clinical callouts. OpenAPI, TypeScript, and Dart contracts are
+regenerated from the backend specification. Run `make contracts` at the
+repository root after an annotated API DTO or route changes. Run
+`make contracts-check` in CI and before review. It regenerates Go Swagger,
+TypeScript and Dart into a temporary directory and compares each artifact
+byte-for-byte; generated files must never be edited by hand.
 ## Clinical callout syntax
 
 Clinical callouts use fenced Markdown. Their exact body is retained in the immutable Markdown revision and is never treated as executable HTML.
@@ -177,3 +182,72 @@ versions reject upload, metadata update and deletion, so replacement requires
 a new draft version. The library reports unused assets and UUID references that
 do not resolve in the current draft. Clinically sensitive assets require an
 authorized review before publication.
+
+## Save, recovery, conflict, and revision behavior
+
+Autosave is debounced and never discards the editor buffer when a request
+fails. The workspace shows `unsaved`, `saving`, `saved`, `offline`, `conflict`
+or `failed` rather than inferring success. Browser recovery is scoped by user,
+document and version; it records the server ETag on which the local text was
+based. A confirmed server save clears only the matching recovery record.
+
+If another writer advances the revision, the API returns `409 Conflict` and
+the UI keeps both local and remote text available for compare/copy. It does not
+silently merge clinical text. Restoring a checkpoint creates a new head
+revision, preserving immutable history and monotonic numbering. Published
+revisions are immutable; continue editing by duplicating the accepted source
+into a new draft version.
+
+## Draft, regeneration, review, and publication
+
+A Markdown save changes source only. Regeneration is a separate, explicit
+operation bound to the current immutable revision and an idempotency key. The
+worker rebuilds structured sections, blocks, chunks and embeddings while the
+previously published version remains live. Superseded or canceled jobs cannot
+persist. Failures preserve both the source revision and previous generated
+projection.
+
+Regenerated output is `review_required`. Reviewers compare its before/after
+snapshot, resolve comments, and review high-risk blocks individually. Overall
+acceptance requires all high-risk blocks to be reviewed; publication requires
+the accepted revision to be the current structured revision. Markdown-only
+guidelines have no original-PDF or page citation capability. PDF-derived
+Markdown retains its fidelity reference, but edited blocks receive page
+provenance only when an unchanged source fingerprint proves it.
+
+## Validation and limits
+
+Client validation is advisory. The backend validates the immutable stored
+revision and is authoritative for regeneration and publication. Empty or
+invalid Markdown may still be saved so work is not lost, but blocking issues
+prevent regeneration/publication. Reports include stable codes, severity,
+messages and source ranges.
+
+The API accepts `.md` and `.markdown` UTF-8 source files and PDFs. Images are
+limited to PNG, JPEG, GIF and WebP; SVG and executable content are rejected.
+The deployment-wide source upload ceiling is `MAX_UPLOAD_MB` (100 MiB by
+default). Asset endpoints apply content-type and size validation. Reverse
+proxy, API, object-store and worker limits must agree.
+
+## Permissions and review workflow
+
+See [`guideline-editor-permissions.md`](guideline-editor-permissions.md) for the
+granular permission matrix and default role behavior. Private draft reads,
+Markdown edits, asset management, regeneration, ordinary/high-risk review,
+revision restore and publication are separate authorities. Actor identity is
+derived from JWT claims and state-changing operations are audited.
+
+## Troubleshooting
+
+- `409` while saving: compare the preserved local recovery draft with the
+  remote head, then intentionally save a reconciled revision.
+- A queued job that does not advance: check Redis, worker loop, PostgreSQL,
+  MinIO and the shared worker secret.
+- A superseded job: reload and explicitly regenerate the newest revision.
+- A broken preview image: verify a same-version `guideline-asset://<uuid>`
+  reference and refresh its short-lived signed URL.
+- Publication blocked: run authoritative validation, resolve comments, review
+  high-risk blocks, accept regeneration and align current/structured/accepted
+  revision IDs.
+- Missing page citations for Markdown-only sources are intentional; never
+  manufacture page numbers.

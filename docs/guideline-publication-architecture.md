@@ -3,7 +3,7 @@
 The draft/revision and explicit-regeneration lifecycle is documented in
 [`markdown-authoring-workspace.md`](markdown-authoring-workspace.md).
 
-- Status: Accepted for staged implementation
+- Status: Implemented through Markdown authoring Phase 24
 - Date: 2026-08-10
 - Scope: backend, AI worker, dashboard, Flutter `user_app`, and `guidelines-platform`
 
@@ -319,9 +319,23 @@ citations remain unavailable. For a PDF-derived draft, page provenance is retain
 whose source fingerprint is unchanged; edited or unmatched blocks never inherit guessed pages.
 All derived content remains review-required and a processing failure preserves the source revision.
 
-Validation for this slice includes backend unit/handler/service tests and build/vet, dashboard
-lint/typecheck/tests/production build, AI-worker tests, generated TypeScript/Dart contract analysis,
-and PostgreSQL migrations 22–23 up/down/up. Dashboard lint currently reports repository-existing
-warnings separately from errors. End-to-end publication still requires an authenticated seeded
-editor/reviewer workflow against a fully running local stack; it is not represented as complete by
-unit tests alone.
+Phase 22 adds an authoritative service-level publication workflow that creates a blank draft,
+creates checkpoints, restores history, explicitly regenerates, reviews high-risk content, accepts
+the regeneration, publishes the selected revision, verifies the public Markdown/structured
+projection, and proves RAG eligibility contains only approved chunks from the published version.
+Focused backend, worker and dashboard suites cover failure, conflict, validation, rendering,
+permission, provenance, supersession, idempotency and accessibility boundaries. A seeded browser
+smoke test remains an operational deployment check rather than a substitute for service
+authorization tests.
+
+Phase 23 standardizes contract generation. `make contracts` regenerates Go Swagger and the
+TypeScript/Dart consumers. `make contracts-check` regenerates into a temporary tree and fails on
+byte drift, preventing manually edited generated DTOs. Markdown revision, validation, asset,
+regeneration, review and public projection schemas are concrete OpenAPI definitions.
+
+Phase 24 closes the operator and maintainer handoff in
+[`markdown-authoring-workspace.md`](markdown-authoring-workspace.md),
+[`guideline-editor-permissions.md`](guideline-editor-permissions.md), the AI-worker pipeline guide
+and `infra/README.md`. These documents define syntax, lifecycle, autosave/recovery, conflicts,
+assets/limits, permissions, asynchronous collaboration, worker/embedding requirements,
+troubleshooting, reproducible builds and non-production validation.

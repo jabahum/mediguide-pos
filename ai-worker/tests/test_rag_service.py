@@ -97,7 +97,9 @@ def build_service(
     return rag_module.RagService(), embedder, search
 
 
-def test_ask_propagates_language_country_and_returns_country_metadata(monkeypatch: pytest.MonkeyPatch):
+def test_ask_propagates_language_country_and_returns_country_metadata(
+    monkeypatch: pytest.MonkeyPatch,
+):
     hit = {
         "id": "chunk-1",
         "title": "Dehydration treatment",
@@ -148,7 +150,9 @@ def test_ask_propagates_language_country_and_returns_country_metadata(monkeypatc
     assert response["citations"][0]["country"] == "Uganda"
 
 
-def test_ask_retries_without_program_area_when_specific_filter_returns_no_hits(monkeypatch: pytest.MonkeyPatch):
+def test_ask_retries_without_program_area_when_specific_filter_returns_no_hits(
+    monkeypatch: pytest.MonkeyPatch,
+):
     hit = {
         "id": "chunk-1",
         "title": "Dehydration treatment",
@@ -164,7 +168,15 @@ def test_ask_retries_without_program_area_when_specific_filter_returns_no_hits(m
     }
 
     class ProgramAreaFallbackSearchRepository(FakeSearchRepository):
-        def vector_search(self, query_embedding, top_k, program_area=None, language=None, country=None, national_first=True):
+        def vector_search(
+            self,
+            query_embedding,
+            top_k,
+            program_area=None,
+            language=None,
+            country=None,
+            national_first=True,
+        ):
             self.vector_calls.append(
                 {
                     "query_embedding": query_embedding,
@@ -177,7 +189,9 @@ def test_ask_retries_without_program_area_when_specific_filter_returns_no_hits(m
             )
             return [] if program_area else [hit]
 
-        def keyword_search(self, query, top_k, program_area=None, language=None, country=None, national_first=True):
+        def keyword_search(
+            self, query, top_k, program_area=None, language=None, country=None, national_first=True
+        ):
             self.keyword_calls.append(
                 {
                     "query": query,
@@ -208,7 +222,9 @@ def test_ask_retries_without_program_area_when_specific_filter_returns_no_hits(m
     assert response["retrieved"][0].program_area == "General"
 
 
-def test_merge_hits_preserves_vector_similarity_for_duplicate_chunks(monkeypatch: pytest.MonkeyPatch):
+def test_merge_hits_preserves_vector_similarity_for_duplicate_chunks(
+    monkeypatch: pytest.MonkeyPatch,
+):
     service, _, _ = build_service(monkeypatch)
     vector_hit = {
         "id": "chunk-1",
@@ -357,7 +373,9 @@ def test_ask_rejects_weakly_grounded_vector_hits(monkeypatch: pytest.MonkeyPatch
     assert response["safety"]["reason"] in {"weak_grounding", "insufficient_context"}
 
 
-def test_plan_b_follow_up_reuses_pediatric_context_and_filters_adult_hits(monkeypatch: pytest.MonkeyPatch):
+def test_plan_b_follow_up_reuses_pediatric_context_and_filters_adult_hits(
+    monkeypatch: pytest.MonkeyPatch,
+):
     child_hit = {
         "id": "child-chunk",
         "title": "Dehydration in Children under 5 years > Management",
@@ -438,5 +456,7 @@ def test_extractive_ranking_prefers_dehydration_signs_over_rehydration_monitorin
         hits,
     )
 
-    assert any(term in ranked[0][1].lower() for term in ("sunken eyes", "lethargic", "unable to drink"))
+    assert any(
+        term in ranked[0][1].lower() for term in ("sunken eyes", "lethargic", "unable to drink")
+    )
     assert "rehydration" not in ranked[0][1].lower()

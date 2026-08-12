@@ -20,7 +20,9 @@ def get_pool() -> ConnectionPool:
                 settings = get_settings()
                 connect_kwargs: dict = {"row_factory": dict_row}
                 if settings.db_statement_timeout_ms > 0:
-                    connect_kwargs["options"] = f"-c statement_timeout={settings.db_statement_timeout_ms}ms"
+                    connect_kwargs["options"] = (
+                        f"-c statement_timeout={settings.db_statement_timeout_ms}ms"
+                    )
                 _pool = ConnectionPool(
                     settings.database_url,
                     min_size=1,

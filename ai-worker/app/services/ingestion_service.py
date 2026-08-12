@@ -18,8 +18,10 @@ from app.repositories.ingestion_repo import IngestionRepository
 
 log = structlog.get_logger()
 
+
 class IngestionCanceled(Exception):
     pass
+
 
 class IngestionSuperseded(Exception):
     pass
@@ -60,6 +62,7 @@ class IngestionService:
 
     def _process(self, job: dict) -> None:
         job_id = str(job["id"])
+
         def stage(name: str, percent: int) -> None:
             if self.jobs.cancellation_requested(job_id):
                 raise IngestionCanceled()
@@ -120,7 +123,9 @@ class IngestionService:
             stage("parsing", 20)
             started = time.perf_counter()
             extracted = (
-                extract_markdown(source_path, fallback_title=version.get("document_title") or "Guideline")
+                extract_markdown(
+                    source_path, fallback_title=version.get("document_title") or "Guideline"
+                )
                 if source_format == "markdown"
                 else extract_pdf(source_path)
             )
@@ -158,20 +163,24 @@ class IngestionService:
             )
 
             schema_version = self.guidelines.EXTRACTION_SCHEMA_VERSION
-            html_key = f"guidelines/{version_id}/extracted/{document_checksum}.v{schema_version}.html"
-            markdown_key = f"guidelines/{version_id}/extracted/{document_checksum}.v{schema_version}.md"
+            html_key = (
+                f"guidelines/{version_id}/extracted/{document_checksum}.v{schema_version}.html"
+            )
+            markdown_key = (
+                f"guidelines/{version_id}/extracted/{document_checksum}.v{schema_version}.md"
+            )
 
             started = time.perf_counter()
-            self.storage.upload_bytes(extracted.html.encode("utf-8"), html_key, "text/html; charset=utf-8")
+            self.storage.upload_bytes(
+                extracted.html.encode("utf-8"), html_key, "text/html; charset=utf-8"
+            )
             self.storage.upload_bytes(markdown_bytes, markdown_key, "text/markdown; charset=utf-8")
             uploaded_asset_keys: set[str] = set()
             for asset in extracted.assets:
                 if not asset.data:
                     continue
                 extension = self._extension_for_asset(asset)
-                asset.storage_key = (
-                    f"guidelines/{version_id}/assets/{asset.checksum}.{extension}"
-                )
+                asset.storage_key = f"guidelines/{version_id}/assets/{asset.checksum}.{extension}"
                 if asset.storage_key not in uploaded_asset_keys:
                     self.storage.upload_bytes(asset.data, asset.storage_key, asset.mime_type)
                     uploaded_asset_keys.add(asset.storage_key)
@@ -202,7 +211,8 @@ class IngestionService:
                 version_id=version_id,
                 seconds=round(time.perf_counter() - started, 2),
                 extracted_assets=len(extracted.assets),
-                unique_stored_assets=len(uploaded_asset_keys) + (1 if source_format == "pdf" else 0),
+                unique_stored_assets=len(uploaded_asset_keys)
+                + (1 if source_format == "pdf" else 0),
             )
 
             stage("chunking", 55)
@@ -214,7 +224,7 @@ class IngestionService:
             for i in range(0, len(texts), batch_size):
                 stage("embeddings", min(84, 65 + int((i / max(1, len(texts))) * 19)))
                 batch_started = time.perf_counter()
-                batch = texts[i:i + batch_size]
+                batch = texts[i : i + batch_size]
                 embeddings.extend(self.embedder.embed(batch))
                 log.info(
                     "ingestion_embedding_batch_completed",
@@ -267,7 +277,8 @@ class IngestionService:
                     "toc_entries": extracted.toc_entries,
                     "structured_block_count": len(extracted.blocks),
                     "asset_count": len(extracted.assets),
-                    "unique_asset_count": len(uploaded_asset_keys) + (1 if source_format == "pdf" else 0),
+                    "unique_asset_count": len(uploaded_asset_keys)
+                    + (1 if source_format == "pdf" else 0),
                     "markdown_revision_id": revision_id,
                     "ingestion_job_id": job_id,
                 },

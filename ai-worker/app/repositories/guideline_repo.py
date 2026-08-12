@@ -77,7 +77,9 @@ class GuidelineRepository:
             conn.commit()
             return section_id
 
-    def insert_chunk(self, *, version: dict[str, Any], section_id: str | None, chunk, embedding: list[float]) -> str:
+    def insert_chunk(
+        self, *, version: dict[str, Any], section_id: str | None, chunk, embedding: list[float]
+    ) -> str:
         review_status = self._chunk_review_status(version.get("status"))
         with db_conn() as conn, conn.cursor() as cur:
             cur.execute(
@@ -120,13 +122,22 @@ class GuidelineRepository:
                 VALUES (%s,%s,%s,%s,%s::jsonb,%s)
                 RETURNING id
                 """,
-                (version_id, section_id, table.title, table.html, json.dumps(table.data), table.page),
+                (
+                    version_id,
+                    section_id,
+                    table.title,
+                    table.html,
+                    json.dumps(table.data),
+                    table.page,
+                ),
             )
             table_id = str(cur.fetchone()["id"])
             conn.commit()
             return table_id
 
-    def update_version_assets(self, version_id: str, html_key: str, markdown_key: str, status: str = "extracted") -> None:
+    def update_version_assets(
+        self, version_id: str, html_key: str, markdown_key: str, status: str = "extracted"
+    ) -> None:
         with db_conn() as conn, conn.cursor() as cur:
             cur.execute(
                 """
@@ -277,7 +288,9 @@ class GuidelineRepository:
                 if asset_source_key:
                     asset_id = asset_id_by_source_key.get(asset_source_key)
                     if not asset_id:
-                        raise ValueError(f"Structured block references missing asset: {asset_source_key}")
+                        raise ValueError(
+                            f"Structured block references missing asset: {asset_source_key}"
+                        )
                     content["asset_id"] = asset_id
                 direct_asset_id = str(content.get("asset_id") or "").strip()
                 generated_asset_ids = asset_id_by_source_key.values()
@@ -297,10 +310,12 @@ class GuidelineRepository:
                 if page_start is None and previous is not None:
                     page_start = previous.get("page_start")
                     page_end = previous.get("page_end")
-                    provenance.update({
-                        "pdf_mapping_preserved": True,
-                        "pdf_mapping_method": "unchanged_source_fingerprint",
-                    })
+                    provenance.update(
+                        {
+                            "pdf_mapping_preserved": True,
+                            "pdf_mapping_method": "unchanged_source_fingerprint",
+                        }
+                    )
                     preserved_page_citations += 1
                 block_rows.append(
                     (
@@ -334,13 +349,17 @@ class GuidelineRepository:
             if str(metadata.get("source_format") or "") == "markdown":
                 metadata["page_citations_available"] = preserved_page_citations > 0
                 metadata["preserved_pdf_page_citation_count"] = preserved_page_citations
-                warnings[:] = [item for item in warnings if "original-PDF access are unavailable" not in item]
+                warnings[:] = [
+                    item for item in warnings if "original-PDF access are unavailable" not in item
+                ]
                 if previous_page_provenance:
                     warnings.append(
                         f"PDF page provenance was retained for {preserved_page_citations} unchanged fingerprint-matched block(s); edited blocks have no page citation."
                     )
                 else:
-                    warnings.append("Markdown source has no verified PDF page mappings; page citations are unavailable.")
+                    warnings.append(
+                        "Markdown source has no verified PDF page mappings; page citations are unavailable."
+                    )
 
             table_rows: list[tuple[Any, ...]] = []
             for table in tables:
@@ -368,7 +387,11 @@ class GuidelineRepository:
             chunk_rows: list[tuple[Any, ...]] = []
             for chunk, embedding in zip(chunks, embeddings):
                 section_id = section_id_by_order.get(chunk.section_order)
-                block_id = block_id_by_order.get(chunk.block_order) if chunk.block_order is not None else None
+                block_id = (
+                    block_id_by_order.get(chunk.block_order)
+                    if chunk.block_order is not None
+                    else None
+                )
                 chunk_rows.append(
                     (
                         str(uuid.uuid4()),
@@ -507,48 +530,126 @@ class GuidelineRepository:
                     SET after_snapshot=%s::jsonb, comparison=%s::jsonb, updated_at=now()
                     WHERE job_id=%s AND version_id=%s AND deleted_at IS NULL
                     """,
-                    (json.dumps(after_snapshot, default=str), json.dumps(comparison, default=str), ingestion_job_id, version_id),
+                    (
+                        json.dumps(after_snapshot, default=str),
+                        json.dumps(comparison, default=str),
+                        ingestion_job_id,
+                        version_id,
+                    ),
                 )
             conn.commit()
 
     @staticmethod
     def _projection_snapshot(cur, version_id: str) -> dict[str, Any]:
-        cur.execute("SELECT title, slug, level, sort_order FROM guideline_sections WHERE version_id=%s AND deleted_at IS NULL ORDER BY sort_order,id", (version_id,))
+        cur.execute(
+            "SELECT title, slug, level, sort_order FROM guideline_sections WHERE version_id=%s AND deleted_at IS NULL ORDER BY sort_order,id",
+            (version_id,),
+        )
         sections = cur.fetchall()
-        cur.execute("SELECT type, source_fingerprint, provenance_json, review_status, page_start, page_end FROM guideline_content_blocks WHERE version_id=%s AND deleted_at IS NULL ORDER BY sort_order,id", (version_id,))
+        cur.execute(
+            "SELECT type, source_fingerprint, provenance_json, review_status, page_start, page_end FROM guideline_content_blocks WHERE version_id=%s AND deleted_at IS NULL ORDER BY sort_order,id",
+            (version_id,),
+        )
         blocks = cur.fetchall()
         counts: dict[str, int] = {}
         for block in blocks:
             key = str(block.get("type") or "unknown")
             counts[key] = counts.get(key, 0) + 1
-        cur.execute("SELECT count(*) AS count FROM guideline_tables WHERE version_id=%s AND deleted_at IS NULL", (version_id,)); table_count = int(cur.fetchone()["count"])
-        cur.execute("SELECT count(*) AS count FROM guideline_chunks WHERE version_id=%s AND deleted_at IS NULL", (version_id,)); chunk_count = int(cur.fetchone()["count"])
-        cur.execute("SELECT type, source_fingerprint, provenance_json FROM guideline_assets WHERE version_id=%s AND deleted_at IS NULL ORDER BY type,source_fingerprint", (version_id,)); assets = cur.fetchall()
-        return {"sections": sections, "blocks": blocks, "block_type_counts": counts, "table_count": table_count, "chunk_count": chunk_count, "assets": assets}
+        cur.execute(
+            "SELECT count(*) AS count FROM guideline_tables WHERE version_id=%s AND deleted_at IS NULL",
+            (version_id,),
+        )
+        table_count = int(cur.fetchone()["count"])
+        cur.execute(
+            "SELECT count(*) AS count FROM guideline_chunks WHERE version_id=%s AND deleted_at IS NULL",
+            (version_id,),
+        )
+        chunk_count = int(cur.fetchone()["count"])
+        cur.execute(
+            "SELECT type, source_fingerprint, provenance_json FROM guideline_assets WHERE version_id=%s AND deleted_at IS NULL ORDER BY type,source_fingerprint",
+            (version_id,),
+        )
+        assets = cur.fetchall()
+        return {
+            "sections": sections,
+            "blocks": blocks,
+            "block_type_counts": counts,
+            "table_count": table_count,
+            "chunk_count": chunk_count,
+            "assets": assets,
+        }
 
     @staticmethod
-    def _compare_projection_snapshots(before: dict[str, Any], after: dict[str, Any]) -> dict[str, Any]:
+    def _compare_projection_snapshots(
+        before: dict[str, Any], after: dict[str, Any]
+    ) -> dict[str, Any]:
         before_sections = {str(row.get("slug")): row for row in before.get("sections", [])}
         after_sections = {str(row.get("slug")): row for row in after.get("sections", [])}
         before_types = before.get("block_type_counts", {})
         after_types = after.get("block_type_counts", {})
         all_types = sorted(set(before_types) | set(after_types))
-        before_assets = {str(row.get("source_fingerprint")): row for row in before.get("assets", [])}
+        before_assets = {
+            str(row.get("source_fingerprint")): row for row in before.get("assets", [])
+        }
         after_assets = {str(row.get("source_fingerprint")): row for row in after.get("assets", [])}
         has_original_pdf = any(row.get("type") == "original_pdf" for row in after.get("assets", []))
-        has_page_citations = any(row.get("page_start") is not None for row in after.get("blocks", []))
+        has_page_citations = any(
+            row.get("page_start") is not None for row in after.get("blocks", [])
+        )
         return {
             "sections": {
-                "added": [after_sections[key] for key in sorted(set(after_sections) - set(before_sections))],
-                "removed": [before_sections[key] for key in sorted(set(before_sections) - set(after_sections))],
-                "renamed": [{"before": before_sections[key], "after": after_sections[key]} for key in sorted(set(before_sections) & set(after_sections)) if before_sections[key].get("title") != after_sections[key].get("title")],
-                "hierarchy_changed": [{"before": before_sections[key], "after": after_sections[key]} for key in sorted(set(before_sections) & set(after_sections)) if before_sections[key].get("level") != after_sections[key].get("level")],
+                "added": [
+                    after_sections[key]
+                    for key in sorted(set(after_sections) - set(before_sections))
+                ],
+                "removed": [
+                    before_sections[key]
+                    for key in sorted(set(before_sections) - set(after_sections))
+                ],
+                "renamed": [
+                    {"before": before_sections[key], "after": after_sections[key]}
+                    for key in sorted(set(before_sections) & set(after_sections))
+                    if before_sections[key].get("title") != after_sections[key].get("title")
+                ],
+                "hierarchy_changed": [
+                    {"before": before_sections[key], "after": after_sections[key]}
+                    for key in sorted(set(before_sections) & set(after_sections))
+                    if before_sections[key].get("level") != after_sections[key].get("level")
+                ],
             },
-            "block_types": [{"type": key, "before": int(before_types.get(key, 0)), "after": int(after_types.get(key, 0))} for key in all_types if before_types.get(key, 0) != after_types.get(key, 0)],
-            "tables": {"before": before.get("table_count", 0), "after": after.get("table_count", 0)},
-            "chunks": {"before": before.get("chunk_count", 0), "after": after.get("chunk_count", 0)},
-            "assets": {"added": [after_assets[key] for key in sorted(set(after_assets)-set(before_assets))], "removed": [before_assets[key] for key in sorted(set(before_assets)-set(after_assets))]},
-            "provenance": {"before_fingerprints": len({row.get("source_fingerprint") for row in before.get("blocks", [])}), "after_fingerprints": len({row.get("source_fingerprint") for row in after.get("blocks", [])})},
+            "block_types": [
+                {
+                    "type": key,
+                    "before": int(before_types.get(key, 0)),
+                    "after": int(after_types.get(key, 0)),
+                }
+                for key in all_types
+                if before_types.get(key, 0) != after_types.get(key, 0)
+            ],
+            "tables": {
+                "before": before.get("table_count", 0),
+                "after": after.get("table_count", 0),
+            },
+            "chunks": {
+                "before": before.get("chunk_count", 0),
+                "after": after.get("chunk_count", 0),
+            },
+            "assets": {
+                "added": [
+                    after_assets[key] for key in sorted(set(after_assets) - set(before_assets))
+                ],
+                "removed": [
+                    before_assets[key] for key in sorted(set(before_assets) - set(after_assets))
+                ],
+            },
+            "provenance": {
+                "before_fingerprints": len(
+                    {row.get("source_fingerprint") for row in before.get("blocks", [])}
+                ),
+                "after_fingerprints": len(
+                    {row.get("source_fingerprint") for row in after.get("blocks", [])}
+                ),
+            },
             "original_pdf_available": has_original_pdf,
             "pdf_citations_unavailable": not has_original_pdf or not has_page_citations,
         }
@@ -595,8 +696,7 @@ class GuidelineRepository:
             previous_storage = source_fingerprint_storage.get(source_fingerprint)
             if previous_storage is not None and previous_storage != storage_key:
                 raise ValueError(
-                    "Extracted asset fingerprint maps to multiple objects: "
-                    f"{source_fingerprint}"
+                    f"Extracted asset fingerprint maps to multiple objects: {source_fingerprint}"
                 )
 
             if canonical is not None:
@@ -638,26 +738,31 @@ class GuidelineRepository:
         # first classification while each block keeps its own context.
         comparable_fields = ("checksum", "mime_type", "size_bytes")
         mismatches = [
-            field for field in comparable_fields
+            field
+            for field in comparable_fields
             if getattr(canonical, field) != getattr(alias, field)
         ]
         if mismatches:
             raise ValueError(
-                f"Conflicting extracted asset metadata for {storage_key}: "
-                + ", ".join(mismatches)
+                f"Conflicting extracted asset metadata for {storage_key}: " + ", ".join(mismatches)
             )
 
     @staticmethod
-    def _section_id_for_page(sections, section_id_by_order: dict[int, str], page: int) -> str | None:
+    def _section_id_for_page(
+        sections, section_id_by_order: dict[int, str], page: int
+    ) -> str | None:
         candidates = [
-            section for section in sections
+            section
+            for section in sections
             if (section.page_start or 0) <= page <= (section.page_end or section.page_start or 0)
         ]
         if not candidates:
             return None
         return section_id_by_order.get(candidates[-1].sort_order)
 
-    def _upsert_draft_manifest(self, cur, *, version: dict[str, Any], has_original_pdf: bool) -> None:
+    def _upsert_draft_manifest(
+        self, cur, *, version: dict[str, Any], has_original_pdf: bool
+    ) -> None:
         payload = {
             "guideline_id": str(version["document_id"]),
             "version_id": str(version["id"]),
@@ -726,6 +831,7 @@ class GuidelineRepository:
     @staticmethod
     def _slug(value: str) -> str:
         from slugify import slugify
+
         return slugify(value or "section")
 
     @staticmethod

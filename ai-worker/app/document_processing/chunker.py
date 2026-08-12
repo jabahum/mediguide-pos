@@ -108,7 +108,12 @@ def _block_text(block: ExtractedContentBlock) -> str:
         return "\n".join(str(item) for item in content.get("items") or []).strip()
     if block.type in {"recommendation", "warning", "key_point"}:
         return " ".join(
-            value for value in (str(content.get("title") or "").strip(), str(content.get("content") or "").strip()) if value
+            value
+            for value in (
+                str(content.get("title") or "").strip(),
+                str(content.get("content") or "").strip(),
+            )
+            if value
         )
     if block.type == "table":
         rows = [content.get("columns") or [], *(content.get("rows") or [])]

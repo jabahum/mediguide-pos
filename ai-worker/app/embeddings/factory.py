@@ -10,12 +10,15 @@ def get_embedding_provider() -> EmbeddingProvider:
         return HashEmbeddingProvider(settings.embedding_dim)
     if provider == "ollama":
         from app.embeddings.ollama_provider import OllamaEmbeddingProvider
+
         return OllamaEmbeddingProvider()
     if provider == "sentence_transformers":
         from app.embeddings.sentence_transformers_provider import SentenceTransformersProvider
+
         return SentenceTransformersProvider()
     if provider == "openai":
         from app.embeddings.openai_provider import OpenAIEmbeddingProvider
+
         return OpenAIEmbeddingProvider()
     raise ValueError(f"Unsupported EMBEDDING_PROVIDER={settings.embedding_provider}")
 

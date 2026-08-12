@@ -98,10 +98,42 @@ def test_repeated_margin_lines_are_removed_without_changing_body():
 
 def test_multi_column_reading_order_is_left_column_then_right_column():
     blocks = [
-        (320.0, 40.0, 580.0, 100.0, "Right first paragraph with enough clinical detail to count.", 0, 0),
-        (20.0, 200.0, 280.0, 260.0, "Left second paragraph with enough clinical detail to count.", 1, 0),
-        (20.0, 40.0, 280.0, 100.0, "Left first paragraph with enough clinical detail to count.", 2, 0),
-        (320.0, 200.0, 580.0, 260.0, "Right second paragraph with enough clinical detail to count.", 3, 0),
+        (
+            320.0,
+            40.0,
+            580.0,
+            100.0,
+            "Right first paragraph with enough clinical detail to count.",
+            0,
+            0,
+        ),
+        (
+            20.0,
+            200.0,
+            280.0,
+            260.0,
+            "Left second paragraph with enough clinical detail to count.",
+            1,
+            0,
+        ),
+        (
+            20.0,
+            40.0,
+            280.0,
+            100.0,
+            "Left first paragraph with enough clinical detail to count.",
+            2,
+            0,
+        ),
+        (
+            320.0,
+            200.0,
+            580.0,
+            260.0,
+            "Right second paragraph with enough clinical detail to count.",
+            3,
+            0,
+        ),
     ]
 
     text = _page_text_from_blocks(blocks, [], 600.0)

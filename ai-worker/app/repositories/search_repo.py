@@ -55,8 +55,8 @@ class SearchRepository:
             FROM guideline_chunks gc
             JOIN guideline_versions gv ON gv.id = gc.version_id
             JOIN guideline_documents gd ON gd.id = gv.document_id
-            WHERE {' AND '.join(filters)}
-            ORDER BY {', '.join(order_by + ['gc.embedding <=> %s::vector'])}
+            WHERE {" AND ".join(filters)}
+            ORDER BY {", ".join(order_by + ["gc.embedding <=> %s::vector"])}
             LIMIT %s
         """
         with db_conn() as conn, conn.cursor() as cur:
@@ -113,8 +113,8 @@ class SearchRepository:
             FROM guideline_chunks gc
             JOIN guideline_versions gv ON gv.id = gc.version_id
             JOIN guideline_documents gd ON gd.id = gv.document_id
-            WHERE {' AND '.join(filters)}
-            ORDER BY {', '.join(order_by + ['similarity DESC'])}
+            WHERE {" AND ".join(filters)}
+            ORDER BY {", ".join(order_by + ["similarity DESC"])}
             LIMIT %s
         """
         exec_params = select_params + [query] + filter_params + [top_k]

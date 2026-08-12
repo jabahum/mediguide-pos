@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import io
 from functools import lru_cache
 from pathlib import Path
 import tempfile
@@ -29,6 +28,7 @@ router = APIRouter()
 # Singleton service factories
 # ---------------------------------------------------------------------------
 
+
 @lru_cache(maxsize=1)
 def _get_ingestion_service() -> IngestionService:
     return IngestionService()
@@ -42,6 +42,7 @@ def _get_rag_service() -> RagService:
 # ---------------------------------------------------------------------------
 # Internal-API auth dependency
 # ---------------------------------------------------------------------------
+
 
 def _require_worker_secret(
     x_worker_secret: str | None = Header(default=None, alias="X-Worker-Secret"),
@@ -59,6 +60,7 @@ def _require_worker_secret(
 # Routes
 # ---------------------------------------------------------------------------
 
+
 @router.get("/healthz", response_model=HealthResponse)
 def healthz():
     return HealthResponse()
@@ -72,6 +74,7 @@ def readyz(settings: Settings = Depends(get_settings)):
     # DB check
     try:
         from app.core.db import db_conn
+
         with db_conn() as conn, conn.cursor() as cur:
             cur.execute("SELECT 1")
         checks["db"] = "ok"
@@ -80,14 +83,16 @@ def readyz(settings: Settings = Depends(get_settings)):
 
     # MinIO check
     try:
-        store = ObjectStorage()
+        ObjectStorage()
         checks["storage"] = "ok"
     except Exception as exc:
         checks["storage"] = f"error: {exc}"
 
     status = "ok" if all(v == "ok" for v in checks.values()) else "degraded"
     if status != "ok":
-        raise HTTPException(status_code=503, detail=ReadinessResponse(status=status, checks=checks).model_dump())
+        raise HTTPException(
+            status_code=503, detail=ReadinessResponse(status=status, checks=checks).model_dump()
+        )
     return ReadinessResponse(status=status, checks=checks)
 
 

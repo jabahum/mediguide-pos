@@ -3,9 +3,9 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
-BACKEND_SWAGGER="${SCRIPT_DIR}/../../backend/docs/swagger.json"
-OUTPUT_DIR="${SCRIPT_DIR}/../types/generated"
-OUTPUT_FILE="${OUTPUT_DIR}/backend-openapi.ts"
+BACKEND_SWAGGER="${1:-${SCRIPT_DIR}/../../backend/docs/swagger.json}"
+OUTPUT_FILE="${2:-${SCRIPT_DIR}/../types/generated/backend-openapi.ts}"
+OUTPUT_DIR="$(dirname -- "${OUTPUT_FILE}")"
 
 if [[ ! -f "${BACKEND_SWAGGER}" ]]; then
   printf 'Missing backend OpenAPI document: %s\n' "${BACKEND_SWAGGER}" >&2

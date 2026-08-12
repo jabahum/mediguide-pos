@@ -506,7 +506,23 @@ func validateGuidelinePublication(tx *gorm.DB, version *models.GuidelineVersion)
 		result.Valid = false
 	}
 	if strings.TrimSpace(version.OriginalFileKey) == "" {
-		addError("missing_original_file", "The original PDF is missing.", nil, nil)
+		// Structured versions created before Markdown revisions were introduced
+		// were PDF-derived. Keep the safe legacy requirement unless an immutable
+		// revision explicitly proves that the source is Markdown-only.
+		requiresOriginalPDF := true
+		if version.CurrentMarkdownRevisionID != nil {
+			var revision models.GuidelineMarkdownRevision
+			if err := tx.Select("source_type").First(&revision, "id = ? AND version_id = ?", *version.CurrentMarkdownRevisionID, version.ID).Error; err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+				return nil, err
+			} else if err == nil {
+				requiresOriginalPDF = revision.SourceType == "pdf_generated"
+			}
+		}
+		if requiresOriginalPDF {
+			addError("missing_original_file", "The original PDF for this PDF-derived revision is missing.", nil, nil)
+		} else {
+			result.Warnings = append(result.Warnings, GuidelineReviewIssue{Code: "markdown_only_source", Message: "This Markdown-only guideline has no original PDF or PDF page citations."})
+		}
 	}
 	if version.ExtractionSchemaVersion == 0 {
 		result.Warnings = append(result.Warnings, GuidelineReviewIssue{

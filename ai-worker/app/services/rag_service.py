@@ -28,7 +28,9 @@ FOLLOW_UP_PATTERN = re.compile(
     r"how do i|what are they|what are those|why is that|when should that|when should it)\b",
     re.I,
 )
-PRONOUN_PATTERN = re.compile(r"\b(it|that|those|they|them|this|these|he|she|there|the other)\b", re.I)
+PRONOUN_PATTERN = re.compile(
+    r"\b(it|that|those|they|them|this|these|he|she|there|the other)\b", re.I
+)
 PLAN_REFERENCE_PATTERN = re.compile(r"\bplan\s*[abc]\b", re.I)
 PEDIATRIC_PATTERN = re.compile(
     r"\b(child|children|under\s*5|under-five|infant|infants|baby|babies|pediatric|paediatric)\b",
@@ -70,7 +72,9 @@ class RagService:
         top_k = top_k or self.settings.rag_top_k
         recent_messages = recent_messages or []
         conversation_summary = self._build_conversation_summary(history_summary, recent_messages)
-        standalone_question = self._rewrite_question(question, conversation_summary, recent_messages)
+        standalone_question = self._rewrite_question(
+            question, conversation_summary, recent_messages
+        )
         if self._is_out_of_scope(question, standalone_question, recent_messages):
             return {
                 "answer": FALLBACK_ANSWER,
@@ -227,7 +231,9 @@ class RagService:
         keyword_hits = [dict(hit, retrieval_method="keyword") for hit in keyword_hits]
         return self._merge_hits(vector_hits, keyword_hits, top_k=top_k)
 
-    def _merge_hits(self, vector_hits: list[dict], keyword_hits: list[dict], top_k: int) -> list[dict]:
+    def _merge_hits(
+        self, vector_hits: list[dict], keyword_hits: list[dict], top_k: int
+    ) -> list[dict]:
         """Reciprocal Rank Fusion (RRF) — merges ranked lists without relying on
         incomparable similarity scores from different retrieval methods."""
         rrf_k = 60  # standard RRF constant
@@ -301,7 +307,9 @@ class RagService:
             source = h.get("source_name") or "Approved guideline"
             version = h.get("source_version") or ""
             pages = self._pages(h)
-            blocks.append(f"[{idx}] {source} {version} {pages}\nTitle: {h.get('title') or ''}\n{h.get('content') or ''}")
+            blocks.append(
+                f"[{idx}] {source} {version} {pages}\nTitle: {h.get('title') or ''}\n{h.get('content') or ''}"
+            )
         return "\n\n".join(blocks)
 
     @staticmethod
@@ -325,9 +333,13 @@ class RagService:
         if provider == "extractive":
             return self._extractive_answer(question, hits)
         if provider == "ollama":
-            return self._ollama_answer(question, standalone_question, context, history_summary, recent_messages)
+            return self._ollama_answer(
+                question, standalone_question, context, history_summary, recent_messages
+            )
         if provider == "openai":
-            return self._openai_answer(question, standalone_question, context, history_summary, recent_messages)
+            return self._openai_answer(
+                question, standalone_question, context, history_summary, recent_messages
+            )
         return self._extractive_answer(question, hits)
 
     def _extractive_answer(self, question: str, hits: list[dict]) -> str:
@@ -361,7 +373,9 @@ class RagService:
         question_terms = set(self._important_terms(question))
         profile = self._question_profile(question)
         for idx, hit in enumerate(hits[:3], start=1):
-            hit_context = " ".join(((hit.get("title") or "") + " " + (hit.get("content") or "")).split())
+            hit_context = " ".join(
+                ((hit.get("title") or "") + " " + (hit.get("content") or "")).split()
+            )
             if self._is_age_mismatch_hit(hit_context, profile):
                 continue
             content = " ".join((hit.get("content") or "").split())
@@ -377,22 +391,28 @@ class RagService:
                 score = overlap * 10 + title_overlap * 4 + max(0, 4 - idx) * 2
                 lowered_passage = passage.lower()
                 if profile["signs"]:
-                    if any(term in lowered_passage for term in (
-                        "sunken eyes",
-                        "letharg",
-                        "drinks poorly",
-                        "unable to drink",
-                        "skin",
-                        "restless",
-                        "irritable",
-                    )):
+                    if any(
+                        term in lowered_passage
+                        for term in (
+                            "sunken eyes",
+                            "letharg",
+                            "drinks poorly",
+                            "unable to drink",
+                            "skin",
+                            "restless",
+                            "irritable",
+                        )
+                    ):
                         score += 6
                     if "rehydration" in lowered_passage and "dehydration" not in lowered_passage:
                         score -= 6
                 if profile["dosing"] or profile["ors"]:
                     if "ors" in lowered_passage:
                         score += 4
-                    if any(token in lowered_passage for token in ("ml", "packet", "packets", "4-hour", "4 hour", "75 ml")):
+                    if any(
+                        token in lowered_passage
+                        for token in ("ml", "packet", "packets", "4-hour", "4 hour", "75 ml")
+                    ):
                         score += 5
                 score += min(len(passage), 240) // 80
                 ranked.append((score, idx, passage[:280] + ("..." if len(passage) > 280 else "")))
@@ -461,7 +481,9 @@ class RagService:
         )
         return response.choices[0].message.content or ""
 
-    def _build_conversation_summary(self, history_summary: str | None, recent_messages: list[dict]) -> str:
+    def _build_conversation_summary(
+        self, history_summary: str | None, recent_messages: list[dict]
+    ) -> str:
         summary = (history_summary or "").strip()
         if summary:
             return summary[:1200]
@@ -478,7 +500,9 @@ class RagService:
             parts.append(f"{role}: {content[:220]}")
         return " | ".join(parts)[:1200]
 
-    def _rewrite_question(self, question: str, history_summary: str, recent_messages: list[dict]) -> str:
+    def _rewrite_question(
+        self, question: str, history_summary: str, recent_messages: list[dict]
+    ) -> str:
         cleaned = " ".join(question.split())
         if not recent_messages or self._looks_standalone(cleaned):
             return cleaned
@@ -486,12 +510,15 @@ class RagService:
         recent_user_messages = [
             " ".join((message.get("content") or "").split())
             for message in recent_messages
-            if (message.get("role") or "").lower() == "user" and (message.get("content") or "").strip()
+            if (message.get("role") or "").lower() == "user"
+            and (message.get("content") or "").strip()
         ]
         last_user_context = recent_user_messages[-1] if recent_user_messages else ""
         last_assistant_context = ""
         for message in reversed(recent_messages):
-            if (message.get("role") or "").lower() == "assistant" and (message.get("content") or "").strip():
+            if (message.get("role") or "").lower() == "assistant" and (
+                message.get("content") or ""
+            ).strip():
                 last_assistant_context = " ".join(message["content"].split())[:240]
                 break
 
@@ -518,7 +545,9 @@ class RagService:
             return False
         return PRONOUN_PATTERN.search(normalized) is None
 
-    def _is_out_of_scope(self, question: str, standalone_question: str, recent_messages: list[dict]) -> bool:
+    def _is_out_of_scope(
+        self, question: str, standalone_question: str, recent_messages: list[dict]
+    ) -> bool:
         if recent_messages and not self._looks_standalone(question):
             return False
         return MEDICAL_HINT_PATTERN.search(standalone_question) is None
@@ -546,8 +575,7 @@ class RagService:
         overlap_ratio = len(overlap_terms) / max(len(query_terms), 1)
         keyword_supported = any(float(hit.get("keyword_similarity") or 0) > 0 for hit in top_hits)
         max_vector_similarity = max(
-            float(hit.get("vector_similarity") or hit.get("similarity") or 0)
-            for hit in top_hits
+            float(hit.get("vector_similarity") or hit.get("similarity") or 0) for hit in top_hits
         )
 
         if keyword_supported and overlap_ratio >= 0.34:
@@ -572,7 +600,10 @@ class RagService:
         keyword_similarity = hit.get("keyword_similarity")
         overlap = self._term_overlap(question, content)
         title_overlap = self._term_overlap(question, title)
-        if vector_similarity is not None and float(vector_similarity) >= self.settings.rag_min_similarity:
+        if (
+            vector_similarity is not None
+            and float(vector_similarity) >= self.settings.rag_min_similarity
+        ):
             if overlap == 0 and title_overlap == 0:
                 return False
             return True
@@ -610,15 +641,43 @@ class RagService:
 
     def _important_terms(self, text: str) -> list[str]:
         stop_words = {
-            "what", "when", "where", "which", "with", "that", "this", "those", "these", "from",
-            "into", "about", "they", "them", "then", "than", "have", "has", "should", "would",
-            "could", "there", "their", "your", "ours", "does", "doesnt", "under", "over", "after",
-            "before", "please", "guideline", "guidelines",
+            "what",
+            "when",
+            "where",
+            "which",
+            "with",
+            "that",
+            "this",
+            "those",
+            "these",
+            "from",
+            "into",
+            "about",
+            "they",
+            "them",
+            "then",
+            "than",
+            "have",
+            "has",
+            "should",
+            "would",
+            "could",
+            "there",
+            "their",
+            "your",
+            "ours",
+            "does",
+            "doesnt",
+            "under",
+            "over",
+            "after",
+            "before",
+            "please",
+            "guideline",
+            "guidelines",
         }
         return [
-            token.lower()
-            for token in WORD_PATTERN.findall(text)
-            if token.lower() not in stop_words
+            token.lower() for token in WORD_PATTERN.findall(text) if token.lower() not in stop_words
         ]
 
     def _build_answer_prompt(
@@ -678,9 +737,7 @@ class RagService:
         ]
 
         cited_indexes = {
-            int(match)
-            for match in SOURCE_NUMBER_PATTERN.findall(answer)
-            if match.isdigit()
+            int(match) for match in SOURCE_NUMBER_PATTERN.findall(answer) if match.isdigit()
         }
         cited = [citation for citation in indexed_citations if citation["index"] in cited_indexes]
         if not cited and hits:

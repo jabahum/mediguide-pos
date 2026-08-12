@@ -148,3 +148,51 @@ curl --fail http://localhost:8081/healthz
 The Nginx service provides immutable asset caching, no-cache HTML and runtime
 configuration, security headers, gzip compression, and SPA fallback for deep
 reader URLs.
+
+## Markdown authoring deployment checklist
+
+Authoring and regeneration require the API, PostgreSQL, Redis, MinIO, AI worker
+API and worker loop. Apply database migrations before new application images
+receive traffic. Migrations 18–23 add immutable Markdown revisions, anchors,
+private assets, regeneration review, granular permissions and collaboration.
+
+Before a development rollout:
+
+```bash
+make contracts-check
+docker compose --env-file infra/development.env \
+  -f infra/docker-compose.yml -f infra/docker-compose.dev.yml config
+docker compose --env-file infra/development.env \
+  -f infra/docker-compose.yml -f infra/docker-compose.dev.yml build \
+  api ai-worker dashboard
+```
+
+Render production configuration with a populated ignored environment file,
+but do not start, migrate or restart production during validation:
+
+```bash
+make prod-config
+```
+
+Verify `MAX_UPLOAD_MB`, reverse-proxy body limits, object-store credentials,
+Redis no-eviction policy, `AI_WORKER_SECRET`, embedding provider/model/dimension
+and CORS URLs agree across services. Use immutable image SHA/version tags.
+
+After starting a non-production stack, verify PostgreSQL `pg_isready`, Redis
+`PING`, MinIO `/minio/health/live`, API health, dashboard health and both worker
+processes. Exercise one PDF and one Markdown job through `review_required`; a
+successful queue acknowledgement alone does not prove ingestion. Confirm an
+accepted publication is public while a newer draft stays private.
+
+## Rebuild, recovery, and rollback
+
+Generated contracts are build inputs. Run `make contracts`, review the Swagger
+source change and commit Go/TypeScript/Dart outputs together.
+`make contracts-check` must pass in CI. Never edit generated contracts.
+
+Retry a failed regeneration with its idempotency key or start a job for the
+newest revision. Never delete immutable source revisions to repair derived
+data. Test database migration up/down/up against disposable PostgreSQL data
+containing representative revisions, assets, comments and assignments.
+Production mutation, restart or rollback requires a separately approved
+operational change.

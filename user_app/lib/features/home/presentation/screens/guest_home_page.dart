@@ -1,102 +1,310 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
+
+import 'package:user_app/app/providers/app_providers.dart';
 import 'package:user_app/app/router/route_names.dart';
 import 'package:user_app/core/constants/app_spacing.dart';
 import 'package:user_app/core/utils/responsive.dart';
+import 'package:user_app/features/guidelines/data/models/guideline_publication.dart';
+import 'package:user_app/shared/widgets/section_header.dart';
 
-class GuestHomePage extends StatelessWidget {
+final guestHomePublicationsProvider =
+    FutureProvider.autoDispose<List<GuidelinePublication>>((ref) async {
+      final page = await ref
+          .watch(guidelinePublicationRepositoryProvider)
+          .publications(page: 1, perPage: 12);
+      return page.items;
+    });
+
+class GuestHomePage extends ConsumerWidget {
   const GuestHomePage({super.key});
 
   @override
-  Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(
-      title: const Text('MediGuide'),
-      actions: [
-        TextButton(
-          onPressed: () => context.push(AppRoutes.login),
-          child: const Text('Sign in'),
-        ),
-      ],
-    ),
-    body: ListView(
-      padding: EdgeInsets.symmetric(
-        horizontal: Responsive.horizontalPadding(context),
-        vertical: AppSpacing.md,
-      ),
-      children: [
-        Semantics(
-          header: true,
-          child: Text(
-            'Clinical guidance, wherever care happens',
-            style: Theme.of(context).textTheme.headlineMedium,
+  Widget build(BuildContext context, WidgetRef ref) {
+    final publications = ref.watch(guestHomePublicationsProvider);
+    return Scaffold(
+      appBar: AppBar(
+        automaticallyImplyLeading: false,
+        title: const Text('MediGuide'),
+        actions: [
+          IconButton(
+            tooltip: 'About MediGuide',
+            onPressed: () => context.push(AppRoutes.aboutUs),
+            icon: const Icon(LucideIcons.info),
           ),
+        ],
+      ),
+      body: RefreshIndicator(
+        onRefresh: () async =>
+            ref.refresh(guestHomePublicationsProvider.future),
+        child: ListView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: EdgeInsets.symmetric(
+            horizontal: Responsive.horizontalPadding(context),
+            vertical: AppSpacing.md,
+          ),
+          children: [
+            Semantics(
+              header: true,
+              child: Text(
+                'Trusted clinical guidance',
+                style: Theme.of(context).textTheme.headlineMedium,
+              ),
+            ),
+            AppSpacing.gapXs,
+            Text(
+              'Search published guidance and clinical reference tools. Sign in to sync private bookmarks, notes and reading progress.',
+              style: Theme.of(context).textTheme.bodyMedium,
+            ),
+            AppSpacing.gapMd,
+            Semantics(
+              button: true,
+              label: 'Search MediGuide clinical content',
+              child: SearchBar(
+                hintText: 'Search conditions, drugs, procedures…',
+                leading: const Icon(LucideIcons.search),
+                trailing: const [Icon(LucideIcons.slidersHorizontal)],
+                onTap: () => context.push(AppRoutes.search),
+              ),
+            ),
+            AppSpacing.gapLg,
+            const SectionHeader(
+              title: 'Emergency care',
+              subtitle: 'Fast access to essential clinical references',
+              icon: LucideIcons.siren,
+            ),
+            AppSpacing.gapSm,
+            _QuickActionGrid(
+              actions: [
+                _QuickAction(
+                  'Guidelines',
+                  LucideIcons.bookOpenText,
+                  AppRoutes.publicGuidelines,
+                ),
+                _QuickAction(
+                  'Drug index',
+                  LucideIcons.pill,
+                  AppRoutes.drugIndex,
+                ),
+                _QuickAction(
+                  'Calculators',
+                  LucideIcons.calculator,
+                  AppRoutes.tools,
+                ),
+                _QuickAction(
+                  'Facilities',
+                  LucideIcons.hospital,
+                  AppRoutes.healthFacilities,
+                ),
+              ],
+            ),
+            AppSpacing.gapLg,
+            publications.when(
+              loading: () => const _PublicationSkeleton(),
+              error: (_, _) => _SectionError(
+                onRetry: () => ref.invalidate(guestHomePublicationsProvider),
+              ),
+              data: (items) => _PublicationSections(publications: items),
+            ),
+            AppSpacing.gapLg,
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(AppSpacing.md),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Icon(
+                      LucideIcons.cloudDownload,
+                      color: Theme.of(context).colorScheme.primary,
+                    ),
+                    AppSpacing.gapMd,
+                    const Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Offline access',
+                            style: TextStyle(fontWeight: FontWeight.w700),
+                          ),
+                          SizedBox(height: 4),
+                          Text(
+                            'Previously opened public guidance remains available when a connection is interrupted.',
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _PublicationSections extends StatelessWidget {
+  const _PublicationSections({required this.publications});
+  final List<GuidelinePublication> publications;
+
+  @override
+  Widget build(BuildContext context) {
+    if (publications.isEmpty) {
+      return const Card(
+        child: Padding(
+          padding: EdgeInsets.all(AppSpacing.lg),
+          child: Text('No published guidelines are currently available.'),
+        ),
+      );
+    }
+    final areas = publications
+        .map((item) => item.programArea.trim())
+        .where((value) => value.isNotEmpty)
+        .toSet()
+        .take(6)
+        .toList(growable: false);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (areas.isNotEmpty) ...[
+          SectionHeader(
+            title: 'Clinical categories',
+            subtitle: 'Browse current publication program areas',
+            icon: LucideIcons.layoutGrid,
+            onSeeAll: () => context.push(AppRoutes.publicGuidelines),
+          ),
+          AppSpacing.gapSm,
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              for (final area in areas)
+                ActionChip(
+                  avatar: const Icon(LucideIcons.bookOpen, size: 18),
+                  label: Text(area),
+                  onPressed: () => context.push(AppRoutes.publicGuidelines),
+                ),
+            ],
+          ),
+          AppSpacing.gapLg,
+        ],
+        SectionHeader(
+          title: 'Latest guidance',
+          subtitle: 'Recently published or updated',
+          icon: LucideIcons.bookOpenText,
+          onSeeAll: () => context.push(AppRoutes.publicGuidelines),
         ),
         AppSpacing.gapSm,
-        const Text(
-          'Browse reviewed public guidelines. Sign in for bookmarks, notes, downloads, progress and private services.',
-        ),
-        AppSpacing.gapLg,
-        FilledButton.icon(
-          onPressed: () => context.push(AppRoutes.publicGuidelines),
-          icon: const Icon(LucideIcons.search),
-          label: const Text('Search guidelines'),
-        ),
-        AppSpacing.gapLg,
-        _GuestFeatureCard(
-          icon: LucideIcons.siren,
-          title: 'Outbreak and campaign updates',
-          description:
-              'View current public alerts and situation reports published by the backend.',
-          onTap: () => context.push(AppRoutes.outbreakHub),
-        ),
-        _GuestFeatureCard(
-          icon: LucideIcons.bookOpenText,
-          title: 'Published guidelines',
-          description:
-              'Document-aware chapters, tables, figures and source links.',
-          onTap: () => context.push(AppRoutes.publicGuidelines),
-        ),
-        _GuestFeatureCard(
-          icon: LucideIcons.cloudDownload,
-          title: 'Offline ready',
-          description:
-              'Public packages remain reusable; private reading data requires sign-in.',
-          onTap: () => context.push(AppRoutes.publicGuidelines),
-        ),
-        _GuestFeatureCard(
-          icon: LucideIcons.shieldCheck,
-          title: 'Review status is explicit',
-          description:
-              'The app uses the server publication manifest and never invents review status.',
-          onTap: () => context.push(AppRoutes.publicGuidelines),
-        ),
+        for (final publication in publications.take(4))
+          Card(
+            margin: const EdgeInsets.only(bottom: 8),
+            child: ListTile(
+              leading: const CircleAvatar(
+                child: Icon(LucideIcons.fileText, size: 20),
+              ),
+              title: Text(publication.title),
+              subtitle: Text(
+                [
+                      publication.sourceOrganization,
+                      publication.version.isEmpty
+                          ? null
+                          : 'v${publication.version}',
+                    ]
+                    .whereType<String>()
+                    .where((value) => value.isNotEmpty)
+                    .join(' • '),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+              trailing: const Icon(LucideIcons.chevronRight),
+              onTap: () =>
+                  context.push(AppRoutes.publicGuideline(publication.id)),
+            ),
+          ),
       ],
+    );
+  }
+}
+
+class _QuickActionGrid extends StatelessWidget {
+  const _QuickActionGrid({required this.actions});
+  final List<_QuickAction> actions;
+
+  @override
+  Widget build(BuildContext context) => GridView.builder(
+    shrinkWrap: true,
+    physics: const NeverScrollableScrollPhysics(),
+    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+      crossAxisCount: MediaQuery.sizeOf(context).width >= 600 ? 4 : 2,
+      mainAxisSpacing: 8,
+      crossAxisSpacing: 8,
+      childAspectRatio: 2.3,
+    ),
+    itemCount: actions.length,
+    itemBuilder: (context, index) {
+      final action = actions[index];
+      return Card(
+        margin: EdgeInsets.zero,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(12),
+          onTap: () => context.push(action.route),
+          child: Padding(
+            padding: const EdgeInsets.all(12),
+            child: Row(
+              children: [
+                Icon(action.icon),
+                const SizedBox(width: 8),
+                Expanded(child: Text(action.label)),
+              ],
+            ),
+          ),
+        ),
+      );
+    },
+  );
+}
+
+class _PublicationSkeleton extends StatelessWidget {
+  const _PublicationSkeleton();
+  @override
+  Widget build(BuildContext context) => Column(
+    children: [
+      for (var index = 0; index < 3; index++)
+        Card(
+          margin: const EdgeInsets.only(bottom: 8),
+          child: SizedBox(
+            height: 72,
+            child: Center(
+              child: LinearProgressIndicator(
+                color: Theme.of(context).colorScheme.primaryContainer,
+              ),
+            ),
+          ),
+        ),
+    ],
+  );
+}
+
+class _SectionError extends StatelessWidget {
+  const _SectionError({required this.onRetry});
+  final VoidCallback onRetry;
+  @override
+  Widget build(BuildContext context) => Card(
+    child: ListTile(
+      leading: const Icon(LucideIcons.cloudOff),
+      title: const Text('Latest guidance is unavailable'),
+      subtitle: const Text('Other sections remain available.'),
+      trailing: TextButton(onPressed: onRetry, child: const Text('Retry')),
     ),
   );
 }
 
-class _GuestFeatureCard extends StatelessWidget {
-  const _GuestFeatureCard({
-    required this.icon,
-    required this.title,
-    required this.description,
-    required this.onTap,
-  });
+class _QuickAction {
+  const _QuickAction(this.label, this.icon, this.route);
+  final String label;
   final IconData icon;
-  final String title;
-  final String description;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) => Card(
-    child: ListTile(
-      minVerticalPadding: AppSpacing.md,
-      leading: Icon(icon),
-      title: Text(title),
-      subtitle: Text(description),
-      trailing: const Icon(LucideIcons.chevronRight),
-      onTap: onTap,
-    ),
-  );
+  final String route;
 }

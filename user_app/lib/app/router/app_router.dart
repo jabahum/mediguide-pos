@@ -35,6 +35,9 @@ import 'package:user_app/features/guidelines/presentation/screens/read_guideline
 import 'package:user_app/features/guidelines/presentation/screens/publication_catalogue_page.dart';
 import 'package:user_app/features/guidelines/presentation/screens/publication_guideline_page.dart';
 import 'package:user_app/features/home/presentation/screens/home_page.dart';
+import 'package:user_app/features/search/presentation/screens/global_search_page.dart';
+import 'package:user_app/features/library/presentation/screens/my_library_page.dart';
+import 'package:user_app/features/navigation/presentation/screens/guest_more_page.dart';
 import 'package:user_app/features/navigation/presentation/screens/main_page.dart';
 import 'package:user_app/features/notifications/presentation/screens/notifications_page.dart';
 import 'package:user_app/features/profile/presentation/screens/profile_page.dart';
@@ -74,6 +77,15 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       // Main navigation
       GoRoute(path: AppRoutes.main, builder: (_, _) => const MainPage()),
       GoRoute(path: AppRoutes.home, builder: (_, _) => const HomePage()),
+      GoRoute(
+        path: AppRoutes.search,
+        builder: (_, _) => const GlobalSearchPage(),
+      ),
+      GoRoute(
+        path: AppRoutes.library,
+        builder: (_, _) => const MyLibraryPage(),
+      ),
+      GoRoute(path: AppRoutes.more, builder: (_, _) => const GuestMorePage()),
       GoRoute(path: AppRoutes.profile, builder: (_, _) => const ProfilePage()),
 
       // Guidelines

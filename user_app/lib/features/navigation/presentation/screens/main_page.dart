@@ -5,31 +5,50 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import 'package:user_app/features/navigation/presentation/controllers/main_navigation_controller.dart';
-import 'package:user_app/l10n/app_translations.dart';
-import 'package:user_app/features/all_actions/presentation/screens/all_actions_page.dart';
 import 'package:user_app/features/home/presentation/screens/home_page.dart';
 import 'package:user_app/features/home/presentation/screens/guest_home_page.dart';
 import 'package:user_app/features/guidelines/presentation/screens/publication_catalogue_page.dart';
 import 'package:user_app/features/authentication/presentation/controllers/auth_controller.dart';
-import 'package:user_app/features/authentication/presentation/screens/login_page.dart';
+import 'package:user_app/features/library/presentation/screens/my_library_page.dart';
+import 'package:user_app/features/navigation/presentation/screens/guest_more_page.dart';
 import 'package:user_app/features/profile/presentation/screens/profile_page.dart';
 import 'package:user_app/features/calculators/presentation/screens/tools_page.dart';
+import 'package:user_app/features/search/presentation/screens/global_search_page.dart';
 import 'package:user_app/core/constants/app_dimensions.dart';
 import 'package:user_app/core/widgets/offline_banner.dart';
 
-class MainPage extends ConsumerWidget {
+class MainPage extends ConsumerStatefulWidget {
   const MainPage({super.key});
 
+  @override
+  ConsumerState<MainPage> createState() => _MainPageState();
+}
+
+class _MainPageState extends ConsumerState<MainPage> {
   static const _authenticatedPages = <Widget>[
     HomePage(),
-    AllActionsPage(),
+    GlobalSearchPage(embedded: true),
+    MyLibraryPage(embedded: true),
     ToolsPage(),
     ProfilePage(),
   ];
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final currentIndex = ref.watch(mainNavigationIndexProvider);
+  Widget build(BuildContext context) {
+    ref.listen<bool>(
+      authControllerProvider.select(
+        (value) => value.valueOrNull?.isAuthenticated ?? false,
+      ),
+      (previous, next) {
+        if (previous == null || previous == next) return;
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) {
+            ref.read(mainNavigationIndexProvider.notifier).state = 0;
+          }
+        });
+      },
+    );
+    final requestedIndex = ref.watch(mainNavigationIndexProvider);
     final authenticated = ref.watch(
       authControllerProvider.select(
         (value) => value.valueOrNull?.isAuthenticated ?? false,
@@ -39,18 +58,24 @@ class MainPage extends ConsumerWidget {
         ? _authenticatedPages
         : const <Widget>[
             GuestHomePage(),
+            GlobalSearchPage(embedded: true),
             PublicationCataloguePage(embedded: true),
             ToolsPage(),
-            LoginPage(),
+            GuestMorePage(),
           ];
-    final destinations = [
-      (LucideIcons.house, AppTranslationKey.home),
+    final currentIndex = requestedIndex.clamp(0, pages.length - 1);
+    final destinations = <(IconData, String)>[
+      (LucideIcons.house, 'Home'),
+      (LucideIcons.search, 'Search'),
       (
-        authenticated ? LucideIcons.grid3x3 : LucideIcons.bookOpenText,
-        authenticated ? AppTranslationKey.moreInfo : 'Guidelines',
+        authenticated ? LucideIcons.library : LucideIcons.bookOpenText,
+        authenticated ? 'My Library' : 'Guidelines',
       ),
-      (LucideIcons.calculator, AppTranslationKey.tools),
-      (LucideIcons.user, authenticated ? AppTranslationKey.profile : 'Sign in'),
+      (LucideIcons.grid2x2, 'Tools'),
+      (
+        authenticated ? LucideIcons.user : LucideIcons.ellipsis,
+        authenticated ? 'Profile' : 'More',
+      ),
     ];
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: FlexColorScheme.themedSystemNavigationBar(
@@ -100,16 +125,16 @@ class MainPage extends ConsumerWidget {
                     ],
                   ),
             bottomNavigationBar: compact
-                ? BottomNavigationBar(
-                    type: BottomNavigationBarType.fixed,
-                    currentIndex: currentIndex,
-                    onTap: (index) =>
+                ? NavigationBar(
+                    selectedIndex: currentIndex,
+                    onDestinationSelected: (index) =>
                         ref.read(mainNavigationIndexProvider.notifier).state =
                             index,
-                    items: [
+                    destinations: [
                       for (final destination in destinations)
-                        BottomNavigationBarItem(
+                        NavigationDestination(
                           icon: Icon(destination.$1),
+                          selectedIcon: Icon(destination.$1, fill: 1),
                           label: destination.$2,
                         ),
                     ],

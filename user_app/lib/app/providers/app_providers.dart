@@ -23,6 +23,7 @@ import 'package:user_app/features/support/data/repositories/help_content_local_r
 import 'package:user_app/features/notifications/data/repositories/notification_repository.dart';
 import 'package:user_app/features/notifications/data/repositories/notification_local_repository.dart';
 import 'package:user_app/features/guidelines/data/repositories/progress_usage_repository.dart';
+import 'package:user_app/features/library/data/repositories/guideline_library_repository.dart';
 import 'package:user_app/features/ai_assistant/data/repositories/rag_repository.dart';
 import 'package:user_app/features/support/data/repositories/support_repository.dart';
 import 'package:user_app/features/support/data/repositories/support_local_repository.dart';
@@ -170,6 +171,13 @@ final languageRepositoryProvider = Provider<LanguageRepository>(
 
 final readingProgressRepositoryProvider = Provider<ReadingProgressRepository>(
   (ref) => ReadingProgressRepository(
+    ref.watch(backendApiServiceProvider),
+    ref.watch(localCacheServiceProvider),
+  ),
+);
+
+final guidelineLibraryRepositoryProvider = Provider<GuidelineLibraryRepository>(
+  (ref) => GuidelineLibraryRepository(
     ref.watch(backendApiServiceProvider),
     ref.watch(localCacheServiceProvider),
   ),

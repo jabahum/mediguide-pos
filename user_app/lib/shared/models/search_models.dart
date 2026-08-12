@@ -193,33 +193,6 @@ class SearchFilter {
     );
   }
 
-  /// Generate a compatibility-API filter string.
-  String toCompatibilityFilter() {
-    final List<String> filters = [];
-
-    if (category != SearchCategory.all) {
-      filters.add("category = '${category.value}'");
-    }
-
-    if (dateFrom != null) {
-      filters.add("created >= '$dateFrom'");
-    }
-
-    if (dateTo != null) {
-      filters.add("created <= '$dateTo'");
-    }
-
-    return filters.join(' && ');
-  }
-
-  /// Generate a compatibility-API sort string.
-  String toCompatibilitySort() {
-    if (sortBy == null) return '-created';
-
-    final prefix = sortAscending ? '+' : '-';
-    return '$prefix$sortBy';
-  }
-
   @override
   bool operator ==(Object other) {
     if (identical(this, other)) return true;

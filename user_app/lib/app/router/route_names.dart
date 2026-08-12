@@ -17,6 +17,9 @@ abstract final class AppRoutes {
   static const String publicGuidelines = '/public/guidelines';
   static const String tools = '/tools';
   static const String profile = '/profile';
+  static const String search = '/search';
+  static const String library = '/library';
+  static const String more = '/more';
   static const String outbreakHub = '/outbreak-hub';
   static const String situationReports = '/situation-reports';
 
@@ -66,6 +69,8 @@ abstract final class AppRoutes {
     forgotPassword,
     main,
     home,
+    search,
+    more,
     publicGuidelines,
     outbreakHub,
     situationReports,

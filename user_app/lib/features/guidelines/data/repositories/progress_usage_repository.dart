@@ -89,18 +89,19 @@ final class ReadingProgressRepository {
   }
 
   // =========================================================
-  // IN-PROGRESS GUIDELINES
+  // PROGRESS LIST
   // =========================================================
 
-  Future<PaginatedResponse<ReadingProgress>> inProgress(
+  Future<PaginatedResponse<ReadingProgress>> list(
     String userId, {
     int page = 1,
     int perPage = 20,
+    bool? bookmarked,
+    double? progressMin,
+    double? progressMax,
   }) async {
     final safePage = page < 1 ? 1 : page;
     final safePerPage = perPage < 1 ? 20 : perPage;
-
-    // Best-effort synchronization.
     await syncPending(userId);
 
     try {
@@ -110,15 +111,14 @@ final class ReadingProgressRepository {
         query: {
           'page': '$safePage',
           'per_page': '$safePerPage',
-          'progress_min': '0.000001',
-          'progress_max': '0.999999',
+          if (bookmarked != null) 'is_bookmarked': '$bookmarked',
+          if (progressMin != null) 'progress_min': '$progressMin',
+          if (progressMax != null) 'progress_max': '$progressMax',
           'sort': 'last_read_at',
           'order': 'desc',
         },
       );
-
       final data = _data(response);
-
       final rows = (data['items'] as List? ?? const [])
           .whereType<Map>()
           .map(
@@ -126,21 +126,14 @@ final class ReadingProgressRepository {
                 _normalize(Map<String, dynamic>.from(value), userId: userId),
           )
           .toList(growable: false);
-
-      // -------------------------------------------------------
-      // Persist all remote progress records.
-      // -------------------------------------------------------
-
       for (final row in rows) {
         try {
           await _saveRecord(row);
         } catch (_) {
-          // Cache writes are best effort for remote responses.
+          // A cache failure must not discard a valid server response.
         }
       }
-
       final items = rows.map(ReadingProgress.fromJson).toList(growable: false);
-
       return PaginatedResponse<ReadingProgress>(
         page: (data['page'] as num?)?.toInt() ?? safePage,
         perPage: (data['per_page'] as num?)?.toInt() ?? safePerPage,
@@ -151,8 +144,33 @@ final class ReadingProgressRepository {
         items: items,
       );
     } catch (_) {
-      return _localInProgress(userId, page: safePage, perPage: safePerPage);
+      return _localList(
+        userId,
+        page: safePage,
+        perPage: safePerPage,
+        bookmarked: bookmarked,
+        progressMin: progressMin,
+        progressMax: progressMax,
+      );
     }
+  }
+
+  // =========================================================
+  // IN-PROGRESS GUIDELINES
+  // =========================================================
+
+  Future<PaginatedResponse<ReadingProgress>> inProgress(
+    String userId, {
+    int page = 1,
+    int perPage = 20,
+  }) async {
+    return list(
+      userId,
+      page: page,
+      perPage: perPage,
+      progressMin: 0.000001,
+      progressMax: 0.999999,
+    );
   }
 
   // =========================================================
@@ -301,43 +319,35 @@ final class ReadingProgressRepository {
     );
   }
 
-  // =========================================================
-  // LOCAL IN-PROGRESS
-  // =========================================================
-
-  Future<PaginatedResponse<ReadingProgress>> _localInProgress(
+  Future<PaginatedResponse<ReadingProgress>> _localList(
     String userId, {
     required int page,
     required int perPage,
+    bool? bookmarked,
+    double? progressMin,
+    double? progressMax,
   }) async {
     final rows = await _readUserRecords(userId);
-
-    final filtered = rows.where((row) {
-      final progress = (row['progress_percentage'] as num?)?.toDouble() ?? 0;
-
-      return progress > 0 && progress < 1;
-    }).toList();
-
-    filtered.sort((a, b) {
-      final aDate = _date(a['last_read_at']);
-
-      final bDate = _date(b['last_read_at']);
-
-      return bDate.compareTo(aDate);
-    });
-
-    final paginated = _paginate(filtered, page: page, perPage: perPage);
-
-    final items = <ReadingProgress>[];
-
-    for (final row in paginated) {
-      try {
-        items.add(ReadingProgress.fromJson(row));
-      } catch (_) {
-        // Ignore malformed cache records.
-      }
-    }
-
+    final filtered =
+        rows.where((row) {
+          final progress =
+              (row['progress_percentage'] as num?)?.toDouble() ?? 0;
+          if (bookmarked != null &&
+              (row['is_bookmarked'] == true) != bookmarked) {
+            return false;
+          }
+          if (progressMin != null && progress < progressMin) return false;
+          if (progressMax != null && progress > progressMax) return false;
+          return true;
+        }).toList()..sort(
+          (a, b) =>
+              _date(b['last_read_at']).compareTo(_date(a['last_read_at'])),
+        );
+    final items = _paginate(
+      filtered,
+      page: page,
+      perPage: perPage,
+    ).map(ReadingProgress.fromJson).toList(growable: false);
     return PaginatedResponse<ReadingProgress>(
       page: page,
       perPage: perPage,

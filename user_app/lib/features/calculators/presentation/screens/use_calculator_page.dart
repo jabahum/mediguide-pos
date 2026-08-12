@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -108,11 +109,18 @@ class _UseCalculatorPageState extends ConsumerState<UseCalculatorPage> {
               InAppWebView(
                 initialSettings: InAppWebViewSettings(
                   javaScriptEnabled: true,
-
-                  // Consider disabling this for release
-                  // builds unless WebView inspection is
-                  // intentionally required.
-                  isInspectable: true,
+                  isInspectable: !kReleaseMode,
+                  useShouldOverrideUrlLoading: true,
+                  javaScriptCanOpenWindowsAutomatically: false,
+                  supportMultipleWindows: false,
+                  geolocationEnabled: false,
+                  allowContentAccess: false,
+                  allowFileAccess: false,
+                  allowFileAccessFromFileURLs: false,
+                  allowUniversalAccessFromFileURLs: false,
+                  thirdPartyCookiesEnabled: false,
+                  mediaPlaybackRequiresUserGesture: true,
+                  safeBrowsingEnabled: true,
                 ),
 
                 onWebViewCreated: (webViewController) async {
@@ -138,13 +146,13 @@ class _UseCalculatorPageState extends ConsumerState<UseCalculatorPage> {
 
                   controller.webViewFailed(error.description);
                 },
-
-                onConsoleMessage: (_, message) {
-                  debugPrint(
-                    'WebView Console '
-                    '[${message.messageLevel}]: '
-                    '${message.message}',
-                  );
+                shouldOverrideUrlLoading: (_, action) async {
+                  final requested = action.request.url?.toString();
+                  if (requested == null ||
+                      !calculatorNavigationAllowed(requested, state.baseUrl)) {
+                    return NavigationActionPolicy.CANCEL;
+                  }
+                  return NavigationActionPolicy.ALLOW;
                 },
               ),
 
@@ -236,4 +244,17 @@ class _UseCalculatorPageState extends ConsumerState<UseCalculatorPage> {
       controller.webViewFailed(error.toString());
     }
   }
+}
+
+@visibleForTesting
+bool calculatorNavigationAllowed(String requestedUrl, String baseUrl) {
+  final requested = Uri.tryParse(requestedUrl);
+  final base = Uri.tryParse(baseUrl);
+  if (requested == null || base == null) return false;
+  if (requested.scheme == 'about') return requestedUrl == 'about:blank';
+  if (requested.scheme == 'data' || requested.scheme == 'blob') return true;
+  if (requested.scheme != 'https' && requested.scheme != 'http') return false;
+  return requested.scheme == base.scheme &&
+      requested.host == base.host &&
+      requested.port == base.port;
 }

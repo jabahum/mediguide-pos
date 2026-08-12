@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"encoding/csv"
 	"encoding/json"
 	"fmt"
@@ -13,6 +14,7 @@ import (
 	"mediguide/internal/db"
 	"mediguide/internal/models"
 	"mediguide/internal/security"
+	"mediguide/internal/storage"
 
 	"github.com/google/uuid"
 	"github.com/rs/zerolog/log"
@@ -96,6 +98,13 @@ func main() {
 	}
 	if err := seedLegacyData(database, admin, clinician); err != nil {
 		log.Fatal().Err(err).Msg("seed legacy data failed")
+	}
+	store, err := storage.NewMinioStore(cfg)
+	if err != nil {
+		log.Fatal().Err(err).Msg("seed object storage connection failed")
+	}
+	if err := seedDemoData(context.Background(), database, store, admin, clinician); err != nil {
+		log.Fatal().Err(err).Msg("seed demo data failed")
 	}
 
 	log.Info().Msg("seed completed")
@@ -408,6 +417,10 @@ func seedLegacyData(database *gorm.DB, _ *models.User, _ *models.User) error {
 	// - seed facility hierarchy and health facilities from the master CSV
 	if err := harmonizeFacilityLevels(database); err != nil {
 		return err
+	}
+	if strings.EqualFold(strings.TrimSpace(os.Getenv("SEED_SKIP_MASTER_FACILITIES")), "true") {
+		log.Info().Msg("skipped master facility import by request")
+		return nil
 	}
 	return seedMasterFacilities(database)
 }

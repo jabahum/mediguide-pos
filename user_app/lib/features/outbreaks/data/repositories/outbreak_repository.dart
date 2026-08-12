@@ -31,19 +31,24 @@ final class OutbreakRepository {
       );
       final items = _maps(_data(response)['items'])
           .map(ModelsOutbreak.fromJson)
-          .map((value) => PublicOutbreak.fromJson(value.toJson()))
+          .map(
+            (value) =>
+                PublicOutbreak.fromJson(_normalizeMetrics(value.toJson())),
+          )
           .toList(growable: false);
-      await _cache.putMany(
-        type: _outbreakType,
-        scope: 'public',
-        ttl: _ttl,
-        entities: items.map(
-          (item) => CachedEntityInput(
-            id: item.id,
-            data: item.toJson(),
-            searchableText:
-                '${item.title} ${item.summary} ${item.diseaseType} ${item.geographicArea}',
-            remoteUpdatedAt: item.lastUpdate,
+      await _bestEffortCache(
+        () => _cache.putMany(
+          type: _outbreakType,
+          scope: 'public',
+          ttl: _ttl,
+          entities: items.map(
+            (item) => CachedEntityInput(
+              id: item.id,
+              data: item.toJson(),
+              searchableText:
+                  '${item.title} ${item.summary} ${item.diseaseType} ${item.geographicArea}',
+              remoteUpdatedAt: item.lastUpdate,
+            ),
           ),
         ),
       );
@@ -83,7 +88,9 @@ final class OutbreakRepository {
       ]);
       final value = PublicOutbreakDetail(
         outbreak: PublicOutbreak.fromJson(
-          ModelsOutbreak.fromJson(_data(responses[0])).toJson(),
+          _normalizeMetrics(
+            ModelsOutbreak.fromJson(_data(responses[0])).toJson(),
+          ),
         ),
         updates: _maps(_data(responses[1])['items'])
             .map(ModelsOutbreakUpdate.fromJson)
@@ -95,22 +102,28 @@ final class OutbreakRepository {
             .toList(),
         reports: _maps(_data(responses[3])['items'])
             .map(ModelsSituationReport.fromJson)
-            .map((item) => PublicSituationReport.fromJson(item.toJson()))
+            .map(
+              (item) => PublicSituationReport.fromJson(
+                _normalizeMetrics(item.toJson()),
+              ),
+            )
             .toList(),
       );
-      await _cache.put(
-        type: _detailType,
-        id: normalized,
-        scope: 'public',
-        ttl: _ttl,
-        data: {
-          'outbreak': value.outbreak.toJson(),
-          'updates': value.updates.map((item) => item.toJson()).toList(),
-          'resources': value.resources.map((item) => item.toJson()).toList(),
-          'reports': value.reports.map((item) => item.toJson()).toList(),
-        },
-        searchableText: value.outbreak.title,
-        remoteUpdatedAt: value.outbreak.lastUpdate,
+      await _bestEffortCache(
+        () => _cache.put(
+          type: _detailType,
+          id: normalized,
+          scope: 'public',
+          ttl: _ttl,
+          data: {
+            'outbreak': value.outbreak.toJson(),
+            'updates': value.updates.map((item) => item.toJson()).toList(),
+            'resources': value.resources.map((item) => item.toJson()).toList(),
+            'reports': value.reports.map((item) => item.toJson()).toList(),
+          },
+          searchableText: value.outbreak.title,
+          remoteUpdatedAt: value.outbreak.lastUpdate,
+        ),
       );
       return value;
     } catch (_) {
@@ -149,19 +162,25 @@ final class OutbreakRepository {
       );
       final items = _maps(_data(response)['items'])
           .map(ModelsSituationReport.fromJson)
-          .map((value) => PublicSituationReport.fromJson(value.toJson()))
+          .map(
+            (value) => PublicSituationReport.fromJson(
+              _normalizeMetrics(value.toJson()),
+            ),
+          )
           .toList(growable: false);
-      await _cache.putMany(
-        type: _reportType,
-        scope: 'public',
-        ttl: _ttl,
-        entities: items.map(
-          (item) => CachedEntityInput(
-            id: item.id,
-            data: item.toJson(),
-            searchableText:
-                '${item.title} ${item.summary} ${item.geographicArea}',
-            remoteUpdatedAt: item.publicationDate,
+      await _bestEffortCache(
+        () => _cache.putMany(
+          type: _reportType,
+          scope: 'public',
+          ttl: _ttl,
+          entities: items.map(
+            (item) => CachedEntityInput(
+              id: item.id,
+              data: item.toJson(),
+              searchableText:
+                  '${item.title} ${item.summary} ${item.geographicArea}',
+              remoteUpdatedAt: item.publicationDate,
+            ),
           ),
         ),
       );
@@ -185,16 +204,20 @@ final class OutbreakRepository {
         '/api/public/situation-reports/$normalized',
       );
       final value = PublicSituationReport.fromJson(
-        ModelsSituationReport.fromJson(_data(response)).toJson(),
+        _normalizeMetrics(
+          ModelsSituationReport.fromJson(_data(response)).toJson(),
+        ),
       );
-      await _cache.put(
-        type: _reportType,
-        id: normalized,
-        scope: 'public',
-        ttl: _ttl,
-        data: value.toJson(),
-        searchableText: '${value.title} ${value.summary}',
-        remoteUpdatedAt: value.publicationDate,
+      await _bestEffortCache(
+        () => _cache.put(
+          type: _reportType,
+          id: normalized,
+          scope: 'public',
+          ttl: _ttl,
+          data: value.toJson(),
+          searchableText: '${value.title} ${value.summary}',
+          remoteUpdatedAt: value.publicationDate,
+        ),
       );
       return value;
     } catch (_) {
@@ -228,4 +251,28 @@ final class OutbreakRepository {
           .whereType<Map>()
           .map((item) => Map<String, dynamic>.from(item))
           .toList(growable: false);
+}
+
+Map<String, dynamic> _normalizeMetrics(Map<String, dynamic> value) {
+  final normalized = Map<String, dynamic>.from(value);
+  final metrics = normalized['metrics'];
+  if (metrics is List) {
+    normalized['metrics'] = metrics
+        .whereType<Map>()
+        .map((metric) {
+          final row = Map<String, dynamic>.from(metric);
+          row['value'] = row['value']?.toString() ?? '';
+          return row;
+        })
+        .toList(growable: false);
+  }
+  return normalized;
+}
+
+Future<void> _bestEffortCache(Future<void> Function() write) async {
+  try {
+    await write();
+  } catch (_) {
+    // A cache migration or storage failure must not discard valid remote data.
+  }
 }

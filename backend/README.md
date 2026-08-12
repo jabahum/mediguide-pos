@@ -45,18 +45,31 @@ Run migrations manually:
 make migrate-up
 ```
 
-Seed admin:
+Seed development data:
 
 ```bash
 make seed
 ```
 
-Default seeded admin:
+The idempotent seed creates development users, imports the Ministry of Health
+facility registry, and adds representative guidelines, structured reader
+blocks, offline packages, outbreaks, situation reports, drugs, calculators,
+consultants, abbreviations, help content, directory contacts, and support data.
+After facilities have already been imported, set
+`SEED_SKIP_MASTER_FACILITIES=true` for a fast content-only rerun.
+
+Default development accounts:
 
 ```text
 email: admin@mediguide.local
 password: Admin123!
+
+email: clinician@mediguide.local
+password: Clinician123!
 ```
+
+The clinical records created by the seed are demonstration data and must not be
+treated as approved production guidance.
 
 ## Main endpoints
 

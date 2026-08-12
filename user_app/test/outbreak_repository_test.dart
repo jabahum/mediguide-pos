@@ -68,7 +68,7 @@ class FakeOutbreakApi extends BackendApiService {
       'last_update': '2026-08-03T00:00:00Z',
       'visual_tone': 'critical',
       'metrics': [
-        {'key': 'confirmed', 'label': 'Confirmed', 'value': '4'},
+        {'key': 'confirmed', 'label': 'Confirmed', 'value': 4},
       ],
     };
     if (path == '/api/public/outbreaks') {
@@ -107,6 +107,7 @@ void main() {
       final online = await repository.outbreaks(status: 'active');
       expect(online.single.title, 'Published response');
       expect(online.single.metrics.single.label, 'Confirmed');
+      expect(online.single.metrics.single.value, '4');
       expect(api.calls.single, '/api/public/outbreaks');
 
       api.offline = true;

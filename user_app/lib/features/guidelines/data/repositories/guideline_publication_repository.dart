@@ -36,18 +36,20 @@ final class GuidelinePublicationRepository {
       final items = _maps(
         data['items'],
       ).map(_publicationFromContract).toList(growable: false);
-      await _cache.putMany(
-        type: _publicationType,
-        scope: 'public',
-        ttl: _ttl,
-        entities: items.map(
-          (item) => CachedEntityInput(
-            id: item.id,
-            data: item.toJson(),
-            searchableText:
-                '${item.title} ${item.description} ${item.programArea}',
-            version: item.version,
-            remoteUpdatedAt: item.lastUpdated,
+      await _bestEffortCache(
+        () => _cache.putMany(
+          type: _publicationType,
+          scope: 'public',
+          ttl: _ttl,
+          entities: items.map(
+            (item) => CachedEntityInput(
+              id: item.id,
+              data: item.toJson(),
+              searchableText:
+                  '${item.title} ${item.description} ${item.programArea}',
+              version: item.version,
+              remoteUpdatedAt: item.lastUpdated,
+            ),
           ),
         ),
       );
@@ -262,6 +264,14 @@ final class GuidelinePublicationRepository {
     String path, {
     Map<String, String>? query,
   }) => _api.requestJson(path, method: 'GET', query: query, includeAuth: false);
+}
+
+Future<void> _bestEffortCache(Future<void> Function() write) async {
+  try {
+    await write();
+  } catch (_) {
+    // A cache migration or storage failure must not discard valid remote data.
+  }
 }
 
 final class GuidelineContentSearchResult {

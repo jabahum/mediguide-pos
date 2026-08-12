@@ -21,8 +21,7 @@ class SectionHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-
-    return Row(
+    final heading = Row(
       children: [
         // Icon if provided
         if (icon != null) ...[
@@ -62,36 +61,54 @@ class SectionHeader extends StatelessWidget {
             ],
           ),
         ),
-
-        // See all button
-        if (onSeeAll != null)
-          TextButton(
-            onPressed: onSeeAll,
-            style: TextButton.styleFrom(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              minimumSize: Size.zero,
-              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  AppTranslationKey.seeAll,
-                  style: theme.textTheme.labelMedium?.copyWith(
-                    color: theme.colorScheme.primary,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-                const SizedBox(width: 4),
-                Icon(
-                  LucideIcons.chevronRight,
-                  size: 16,
-                  color: theme.colorScheme.primary,
-                ),
-              ],
+      ],
+    );
+    if (onSeeAll == null) return heading;
+    final action = TextButton(
+      onPressed: onSeeAll,
+      style: TextButton.styleFrom(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        minimumSize: Size.zero,
+        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            AppTranslationKey.seeAll,
+            style: theme.textTheme.labelMedium?.copyWith(
+              color: theme.colorScheme.primary,
+              fontWeight: FontWeight.w500,
             ),
           ),
-      ],
+          const SizedBox(width: 4),
+          Icon(
+            LucideIcons.chevronRight,
+            size: 16,
+            color: theme.colorScheme.primary,
+          ),
+        ],
+      ),
+    );
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final largeText = MediaQuery.textScalerOf(context).scale(1) >= 1.5;
+        if (constraints.maxWidth < 360 || largeText) {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              heading,
+              Align(alignment: Alignment.centerRight, child: action),
+            ],
+          );
+        }
+        return Row(
+          children: [
+            Expanded(child: heading),
+            action,
+          ],
+        );
+      },
     );
   }
 }

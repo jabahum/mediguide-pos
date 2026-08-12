@@ -11,6 +11,7 @@ import 'package:user_app/core/constants/app_spacing.dart';
 import 'package:user_app/core/widgets/app_error_view.dart';
 import 'package:user_app/core/widgets/app_loading_view.dart';
 import 'package:user_app/features/outbreaks/data/models/outbreak_models.dart';
+import 'package:user_app/features/documents/presentation/screens/document_reader_page.dart';
 import 'package:user_app/shared/widgets/section_header.dart';
 
 final publicOutbreaksProvider = FutureProvider.autoDispose(
@@ -205,6 +206,7 @@ class _OutbreakCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final color = _tone(context, outbreak.visualTone);
+    final largeText = MediaQuery.textScalerOf(context).scale(1) >= 1.5;
     return Card(
       margin: EdgeInsets.zero,
       child: InkWell(
@@ -215,19 +217,38 @@ class _OutbreakCard extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Row(
-                children: [
-                  Icon(LucideIcons.siren, color: color),
-                  AppSpacing.gapSm,
-                  Expanded(
-                    child: Text(
-                      outbreak.title,
-                      style: Theme.of(context).textTheme.titleMedium,
+              if (largeText) ...[
+                Row(
+                  children: [
+                    Icon(LucideIcons.siren, color: color),
+                    AppSpacing.gapSm,
+                    Expanded(
+                      child: Text(
+                        outbreak.title,
+                        style: Theme.of(context).textTheme.titleMedium,
+                      ),
                     ),
-                  ),
-                  _StatusChip(status: outbreak.status, color: color),
-                ],
-              ),
+                  ],
+                ),
+                AppSpacing.gapSm,
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: _StatusChip(status: outbreak.status, color: color),
+                ),
+              ] else
+                Row(
+                  children: [
+                    Icon(LucideIcons.siren, color: color),
+                    AppSpacing.gapSm,
+                    Expanded(
+                      child: Text(
+                        outbreak.title,
+                        style: Theme.of(context).textTheme.titleMedium,
+                      ),
+                    ),
+                    _StatusChip(status: outbreak.status, color: color),
+                  ],
+                ),
               if (outbreak.geographicArea.isNotEmpty) ...[
                 AppSpacing.gapSm,
                 Text(outbreak.geographicArea),
@@ -394,7 +415,13 @@ class _SituationReportView extends StatelessWidget {
       if (report.reportAssetUrl.isNotEmpty) ...[
         AppSpacing.gapLg,
         FilledButton.icon(
-          onPressed: () => _open(report.reportAssetUrl),
+          onPressed: () => context.push(
+            AppRoutes.documentReader,
+            extra: DocumentReaderArgs(
+              title: report.title,
+              source: report.reportAssetUrl,
+            ),
+          ),
           icon: const Icon(LucideIcons.fileDown),
           label: const Text('View full report'),
         ),
@@ -408,36 +435,39 @@ class _MetricGrid extends StatelessWidget {
   final List<OutbreakMetric> metrics;
 
   @override
-  Widget build(BuildContext context) => GridView.builder(
-    shrinkWrap: true,
-    physics: const NeverScrollableScrollPhysics(),
-    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-      crossAxisCount: MediaQuery.sizeOf(context).width >= 600 ? 4 : 2,
-      crossAxisSpacing: 8,
-      mainAxisSpacing: 8,
-      childAspectRatio: 1.6,
-    ),
-    itemCount: metrics.length,
-    itemBuilder: (context, index) {
-      final metric = metrics[index];
-      return Card(
-        margin: EdgeInsets.zero,
-        child: Padding(
-          padding: const EdgeInsets.all(12),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Text(
-                '${metric.value}${metric.unit.isEmpty ? '' : ' ${metric.unit}'}',
-                style: Theme.of(context).textTheme.titleLarge,
-              ),
-              Text(metric.label, textAlign: TextAlign.center),
-            ],
+  Widget build(BuildContext context) {
+    final textScale = MediaQuery.textScalerOf(context).scale(1);
+    return GridView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: MediaQuery.sizeOf(context).width >= 600 ? 4 : 2,
+        crossAxisSpacing: 8,
+        mainAxisSpacing: 8,
+        mainAxisExtent: textScale >= 1.5 ? 200 : 136,
+      ),
+      itemCount: metrics.length,
+      itemBuilder: (context, index) {
+        final metric = metrics[index];
+        return Card(
+          margin: EdgeInsets.zero,
+          child: Padding(
+            padding: const EdgeInsets.all(12),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
+                  '${metric.value}${metric.unit.isEmpty ? '' : ' ${metric.unit}'}',
+                  style: Theme.of(context).textTheme.titleLarge,
+                ),
+                Text(metric.label, textAlign: TextAlign.center),
+              ],
+            ),
           ),
-        ),
-      );
-    },
-  );
+        );
+      },
+    );
+  }
 }
 
 class _StatusChip extends StatelessWidget {

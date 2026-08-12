@@ -5,7 +5,6 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
-import 'package:url_launcher/url_launcher.dart';
 import 'package:user_app/core/constants/app_spacing.dart';
 import 'package:user_app/core/utils/responsive.dart';
 import 'package:user_app/core/widgets/app_error_view.dart';
@@ -19,6 +18,7 @@ import 'package:user_app/features/guidelines/presentation/controllers/publicatio
 import 'package:user_app/features/guidelines/presentation/widgets/publication_block_view.dart';
 import 'package:user_app/features/downloads/data/models/offline_download.dart';
 import 'package:user_app/features/downloads/presentation/controllers/guideline_downloads_controller.dart';
+import 'package:user_app/features/documents/presentation/screens/document_reader_page.dart';
 
 class PublicationGuidelinePage extends ConsumerStatefulWidget {
   const PublicationGuidelinePage({
@@ -406,9 +406,14 @@ class _PublicationGuidelinePageState
         );
         return;
       }
-      await launchUrl(
-        Uri.parse(asset.url),
-        mode: LaunchMode.externalApplication,
+      context.push(
+        AppRoutes.documentReader,
+        extra: DocumentReaderArgs(
+          title: asset.originalFilename.isEmpty
+              ? 'Original guideline'
+              : asset.originalFilename,
+          source: asset.url,
+        ),
       );
     } catch (error) {
       if (!context.mounted) return;
@@ -923,25 +928,33 @@ class _Action extends StatelessWidget {
   final String label;
   final VoidCallback onTap;
   @override
-  Widget build(BuildContext context) => Semantics(
-    button: true,
-    label: label,
-    child: InkResponse(
-      onTap: onTap,
-      radius: 28,
-      child: SizedBox(
-        width: 56,
-        height: 52,
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(icon, size: 20),
-            Text(label, style: Theme.of(context).textTheme.labelSmall),
-          ],
+  Widget build(BuildContext context) {
+    final largeText = MediaQuery.textScalerOf(context).scale(1) >= 1.5;
+    return Semantics(
+      button: true,
+      label: label,
+      child: InkResponse(
+        onTap: onTap,
+        radius: 28,
+        child: SizedBox(
+          width: largeText ? 88 : 64,
+          height: largeText ? 88 : 56,
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(icon, size: 20),
+              Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: Theme.of(context).textTheme.labelSmall,
+              ),
+            ],
+          ),
         ),
       ),
-    ),
-  );
+    );
+  }
 }
 
 class _Overview extends StatelessWidget {

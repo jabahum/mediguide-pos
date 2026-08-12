@@ -205,13 +205,16 @@ class _ActiveOutbreakCard extends StatelessWidget {
               ),
             ],
             AppSpacing.gapSm,
-            const Row(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                Text('Open response hub'),
-                AppSpacing.gapXs,
-                Icon(LucideIcons.chevronRight, size: 18),
-              ],
+            const Align(
+              alignment: Alignment.centerRight,
+              child: Wrap(
+                crossAxisAlignment: WrapCrossAlignment.center,
+                children: [
+                  Text('Open response hub'),
+                  AppSpacing.gapXs,
+                  Icon(LucideIcons.chevronRight, size: 18),
+                ],
+              ),
             ),
           ],
         ),
@@ -308,37 +311,45 @@ class _QuickActionGrid extends StatelessWidget {
   final List<_QuickAction> actions;
 
   @override
-  Widget build(BuildContext context) => GridView.builder(
-    shrinkWrap: true,
-    physics: const NeverScrollableScrollPhysics(),
-    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-      crossAxisCount: MediaQuery.sizeOf(context).width >= 600 ? 4 : 2,
-      mainAxisSpacing: 8,
-      crossAxisSpacing: 8,
-      childAspectRatio: 2.3,
-    ),
-    itemCount: actions.length,
-    itemBuilder: (context, index) {
-      final action = actions[index];
-      return Card(
-        margin: EdgeInsets.zero,
-        child: InkWell(
-          borderRadius: BorderRadius.circular(12),
-          onTap: () => context.push(action.route),
-          child: Padding(
-            padding: const EdgeInsets.all(12),
-            child: Row(
-              children: [
-                Icon(action.icon),
-                const SizedBox(width: 8),
-                Expanded(child: Text(action.label)),
-              ],
+  Widget build(BuildContext context) {
+    final width = MediaQuery.sizeOf(context).width;
+    final narrow = width < 360;
+    return GridView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: narrow
+            ? 1
+            : width >= 600
+            ? 4
+            : 2,
+        mainAxisSpacing: 8,
+        crossAxisSpacing: 8,
+        childAspectRatio: narrow ? 4.5 : 2.3,
+      ),
+      itemCount: actions.length,
+      itemBuilder: (context, index) {
+        final action = actions[index];
+        return Card(
+          margin: EdgeInsets.zero,
+          child: InkWell(
+            borderRadius: BorderRadius.circular(12),
+            onTap: () => context.push(action.route),
+            child: Padding(
+              padding: const EdgeInsets.all(12),
+              child: Row(
+                children: [
+                  Icon(action.icon),
+                  const SizedBox(width: 8),
+                  Expanded(child: Text(action.label)),
+                ],
+              ),
             ),
           ),
-        ),
-      );
-    },
-  );
+        );
+      },
+    );
+  }
 }
 
 class _PublicationSkeleton extends StatelessWidget {

@@ -345,12 +345,38 @@ func demoOfflinePackage(g demoGuideline, markdown []byte) ([]byte, error) {
 }
 
 func seedDemoOutbreaks(database *gorm.DB) error {
-	now := time.Now().UTC().Truncate(time.Second)
-	ebolaID := demoID("outbreak", "ebola-kasese")
-	choleraID := demoID("outbreak", "cholera-kampala")
+	// This fixture mirrors the public WHO/MoH record available when the seed was
+	// authored. Keep the dates and figures fixed: using time.Now here would make
+	// historical surveillance data appear current after every seed run.
+	reportDate := time.Date(2026, time.July, 26, 12, 0, 0, 0, time.UTC)
+	publicationDate := time.Date(2026, time.May, 16, 12, 0, 0, 0, time.UTC)
+	startDate := time.Date(2026, time.May, 15, 0, 0, 0, 0, time.UTC)
+	ebolaID := demoID("outbreak", "bundibugyo-uganda-2026")
+	// Retire the earlier fictional fixtures when upgrading an existing local DB.
+	legacyOutbreakIDs := []uuid.UUID{
+		demoID("outbreak", "ebola-kasese"),
+		demoID("outbreak", "cholera-kampala"),
+	}
+	if err := database.Exec("DELETE FROM outbreak_updates WHERE outbreak_id IN ?", legacyOutbreakIDs).Error; err != nil {
+		return err
+	}
+	if err := database.Exec("DELETE FROM outbreak_resources WHERE outbreak_id IN ?", legacyOutbreakIDs).Error; err != nil {
+		return err
+	}
+	if err := database.Exec("DELETE FROM situation_reports WHERE outbreak_id IN ?", legacyOutbreakIDs).Error; err != nil {
+		return err
+	}
+	if err := database.Exec("DELETE FROM outbreaks WHERE id IN ?", legacyOutbreakIDs).Error; err != nil {
+		return err
+	}
 	rows := []map[string]any{
-		{"id": ebolaID, "title": "Ebola Virus Disease preparedness alert", "disease_type": "Ebola virus disease", "status": "active", "geographic_area": "Kasese District, Uganda", "summary": "Enhanced surveillance, IPC readiness and referral coordination are active. This is development demonstration data.", "start_date": now.AddDate(0, 0, -10), "last_update": now, "visual_tone": "critical", "source_organization": "Ministry of Health Uganda", "published_at": now.Add(-9 * 24 * time.Hour), "metrics": mustJSON(`[{"label":"Confirmed cases","value":0},{"label":"Contacts monitored","value":28},{"label":"Facilities alerted","value":12}]`)},
-		{"id": choleraID, "title": "Cholera prevention and monitoring update", "disease_type": "Cholera", "status": "monitoring", "geographic_area": "Kampala Metropolitan Area", "summary": "Water safety, case detection and community prevention activities are being monitored. This is development demonstration data.", "start_date": now.AddDate(0, 0, -18), "last_update": now.Add(-6 * time.Hour), "visual_tone": "warning", "source_organization": "Ministry of Health Uganda", "published_at": now.Add(-17 * 24 * time.Hour), "metrics": mustJSON(`[{"label":"Facilities reporting","value":16},{"label":"Samples tested","value":42}]`)},
+		{
+			"id": ebolaID, "title": "Bundibugyo virus disease response — Uganda", "disease_type": "Bundibugyo virus disease", "status": "monitoring",
+			"geographic_area": "Uganda and the Democratic Republic of the Congo border region",
+			"summary":         "Uganda entered the 42-day countdown toward ending its outbreak after the last confirmed patient was discharged. Cross-border surveillance and readiness remained necessary while transmission continued in the Democratic Republic of the Congo.",
+			"start_date":      startDate, "last_update": reportDate, "visual_tone": "warning", "source_organization": "Ministry of Health Uganda and WHO Regional Office for Africa", "published_at": publicationDate,
+			"metrics": mustJSON(`[{"key":"uganda_confirmed","label":"Confirmed cases in Uganda","value":20},{"key":"uganda_deaths","label":"Deaths in Uganda","value":2},{"key":"contacts_followed","label":"Contacts followed up","value":836},{"key":"high_risk_districts","label":"High-risk districts","value":36}]`),
+		},
 	}
 	for _, row := range rows {
 		if err := upsertByID(database, "outbreaks", row); err != nil {
@@ -358,9 +384,8 @@ func seedDemoOutbreaks(database *gorm.DB) error {
 		}
 	}
 	updates := []map[string]any{
-		{"id": demoID("outbreak-update", "ebola-1"), "outbreak_id": ebolaID, "title": "Preparedness teams activated", "summary": "District response teams reviewed isolation, specimen referral and IPC readiness.", "published_at": now.Add(-24 * time.Hour)},
-		{"id": demoID("outbreak-update", "ebola-2"), "outbreak_id": ebolaID, "title": "Surveillance update", "summary": "No confirmed case is included in this demonstration dataset; enhanced surveillance remains active.", "published_at": now},
-		{"id": demoID("outbreak-update", "cholera-1"), "outbreak_id": choleraID, "title": "Community prevention intensified", "summary": "Risk communication emphasizes safe water, sanitation and early care seeking.", "published_at": now.Add(-6 * time.Hour)},
+		{"id": demoID("outbreak-update", "uganda-countdown-2026-07-16"), "outbreak_id": ebolaID, "title": "Uganda begins 42-day countdown", "summary": "The last confirmed patient tested negative for a second time and was discharged; surveillance and rapid investigation of alerts continued.", "published_at": time.Date(2026, time.July, 16, 12, 0, 0, 0, time.UTC)},
+		{"id": demoID("outbreak-update", "who-sitrep-11-2026-07-26"), "outbreak_id": ebolaID, "title": "WHO publishes weekly external situation report 11", "summary": "WHO reported no new cases outside the Democratic Republic of the Congo while highlighting continued regional spread risk and the need for cross-border preparedness.", "published_at": reportDate},
 	}
 	for _, row := range updates {
 		if err := upsertByID(database, "outbreak_updates", row); err != nil {
@@ -368,8 +393,9 @@ func seedDemoOutbreaks(database *gorm.DB) error {
 		}
 	}
 	resources := []map[string]any{
-		{"id": demoID("outbreak-resource", "ebola-guideline"), "outbreak_id": ebolaID, "title": "Ebola and Marburg preparedness guideline", "resource_type": "guideline", "url": "/guidelines/" + demoID("guideline", "ebola-marburg").String(), "asset_url": "", "sort_order": 1},
-		{"id": demoID("outbreak-resource", "cholera-facts"), "outbreak_id": choleraID, "title": "Cholera prevention information", "resource_type": "link", "url": "https://www.health.go.ug/", "asset_url": "", "sort_order": 1},
+		{"id": demoID("outbreak-resource", "uganda-moh-press-statement-2026"), "outbreak_id": ebolaID, "title": "Uganda Ministry of Health press statement", "resource_type": "official_statement", "url": "https://health.go.ug/download/press-statement-ebola-bundibugyo-virus-disease-outbreak-2026/", "asset_url": "", "sort_order": 1},
+		{"id": demoID("outbreak-resource", "who-uganda-countdown-2026"), "outbreak_id": ebolaID, "title": "Uganda begins countdown to end of outbreak", "resource_type": "official_update", "url": "https://www.afro.who.int/countries/uganda/news/uganda-begins-countdown-end-ebola-outbreak", "asset_url": "", "sort_order": 2},
+		{"id": demoID("outbreak-resource", "local-ebola-guideline"), "outbreak_id": ebolaID, "title": "Ebola and Marburg preparedness guideline", "resource_type": "guideline", "url": "/public/guidelines/" + demoID("guideline", "ebola-marburg").String(), "asset_url": "", "sort_order": 3},
 	}
 	for _, row := range resources {
 		if err := upsertByID(database, "outbreak_resources", row); err != nil {
@@ -377,11 +403,11 @@ func seedDemoOutbreaks(database *gorm.DB) error {
 		}
 	}
 	if err := upsertByID(database, "situation_reports", map[string]any{
-		"id": demoID("situation-report", "ebola-1"), "outbreak_id": ebolaID, "title": "Ebola preparedness situation report — demonstration",
-		"geographic_area": "Kasese District", "summary": "Demonstration report showing the mobile situation-report experience.",
-		"source_organization": "Ministry of Health Uganda", "publication_date": now, "status": "published", "report_asset_url": "https://www.health.go.ug/",
-		"key_highlights": mustJSON(`["Response teams briefed","Referral pathways reviewed","PPE readiness assessed"]`),
-		"metrics":        mustJSON(`[{"label":"Contacts monitored","value":28},{"label":"Facilities alerted","value":12}]`),
+		"id": demoID("situation-report", "who-bvd-11-2026-07-26"), "outbreak_id": ebolaID, "title": "Bundibugyo virus disease weekly external situation report 11",
+		"geographic_area": "Democratic Republic of the Congo and Uganda", "summary": "WHO's weekly external situation report with data as of 26 July 2026. It documents continued transmission in the Democratic Republic of the Congo and continuing regional preparedness needs.",
+		"source_organization": "WHO Regional Office for Africa", "publication_date": reportDate, "status": "published", "report_asset_url": "https://iris.who.int/bitstreams/e5023872-6b1c-446e-992d-7c92810d730a/download",
+		"key_highlights": mustJSON(`["No new cases were reported outside the Democratic Republic of the Congo during the reporting period","Regional cross-border spread risk remained high","Sustained surveillance and preparedness remained necessary"]`),
+		"metrics":        mustJSON(`[{"key":"uganda_confirmed","label":"Confirmed cases in Uganda","value":20},{"key":"uganda_deaths","label":"Deaths in Uganda","value":2},{"key":"contacts_followed","label":"Contacts followed up","value":836}]`),
 	}); err != nil {
 		return err
 	}

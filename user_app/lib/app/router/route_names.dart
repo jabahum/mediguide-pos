@@ -20,6 +20,7 @@ abstract final class AppRoutes {
   static const String search = '/search';
   static const String library = '/library';
   static const String offlineContent = '/offline-content';
+  static const String documentReader = '/document-reader';
   static const String more = '/more';
   static const String outbreakHub = '/outbreak-hub';
   static const String situationReports = '/situation-reports';
@@ -82,6 +83,7 @@ abstract final class AppRoutes {
     more,
     publicGuidelines,
     offlineContent,
+    documentReader,
     outbreakHub,
     situationReports,
     drugIndex,

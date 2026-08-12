@@ -6,6 +6,7 @@
 !docs/guideline-publication-architecture.md
 !docs/markdown-authoring-workspace.md
 !docs/guideline-editor-permissions.md
+!docs/mobile-visual-regression.md
 !guidelines-platform/src/content/**/*.md
 backend/.env
 backend/.env.local

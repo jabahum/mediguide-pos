@@ -184,6 +184,12 @@ processes. Exercise one PDF and one Markdown job through `review_required`; a
 successful queue acknowledgement alone does not prove ingestion. Confirm an
 accepted publication is public while a newer draft stays private.
 
+The production Compose definition includes container health checks for the API,
+AI worker readiness, dashboard and Guidelines Platform. Validate newly built
+images under a separate Compose project name and alternate public ports so the
+test has isolated networks and volumes and does not restart development or
+production services.
+
 ## Rebuild, recovery, and rollback
 
 Generated contracts are build inputs. Run `make contracts`, review the Swagger

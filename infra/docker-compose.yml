@@ -156,6 +156,12 @@ services:
       ollama-pull-models:
         condition: service_completed_successfully
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "--silent", "http://127.0.0.1:8090/readyz"]
+      interval: 10s
+      timeout: 5s
+      start_period: 15s
+      retries: 6
 
   ai-worker-loop:
     image: "${AI_WORKER_IMAGE:-mediguide-ai-worker:production}"
@@ -221,6 +227,16 @@ services:
       api:
         condition: service_healthy
     restart: unless-stopped
+    healthcheck:
+      test:
+        - CMD
+        - bun
+        - -e
+        - "fetch('http://127.0.0.1:3000').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"
+      interval: 10s
+      timeout: 5s
+      start_period: 15s
+      retries: 6
 
   guidelines:
     image: "${GUIDELINES_IMAGE:-mediguide-guidelines:production}"

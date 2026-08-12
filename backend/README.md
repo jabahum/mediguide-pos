@@ -68,8 +68,13 @@ email: clinician@mediguide.local
 password: Clinician123!
 ```
 
-The clinical records created by the seed are demonstration data and must not be
-treated as approved production guidance.
+The guideline, medicine, calculator and account records created by the seed are
+demonstration data and must not be treated as approved production guidance.
+The Bundibugyo virus disease outbreak fixture is a dated public-information
+snapshot sourced from the Uganda Ministry of Health and WHO Regional Office for
+Africa publications of May–July 2026. Its dates and figures are deliberately
+fixed and its resource links retain the authoritative sources; rerunning the
+seed never makes historical surveillance figures appear current.
 
 ## Main endpoints
 

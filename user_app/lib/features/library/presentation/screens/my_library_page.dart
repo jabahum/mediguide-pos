@@ -11,7 +11,9 @@ import 'package:user_app/features/guidelines/data/models/guideline_publication.d
 import 'package:user_app/features/guidelines/data/models/reading_progress.dart';
 import 'package:user_app/features/library/data/models/guideline_library_models.dart';
 
-final _libraryProvider = FutureProvider.autoDispose<_LibraryData>((ref) async {
+final libraryDataProvider = FutureProvider.autoDispose<LibraryData>((
+  ref,
+) async {
   final user = ref.watch(authControllerProvider).valueOrNull?.user;
   if (user == null) throw StateError('Sign in to access My Library');
   final repository = ref.watch(readingProgressRepositoryProvider);
@@ -39,7 +41,7 @@ final _libraryProvider = FutureProvider.autoDispose<_LibraryData>((ref) async {
   final publications = (await publicationsFuture).items;
   final collections = await collectionsFuture;
   final downloads = await downloadsFuture;
-  return _LibraryData(
+  return LibraryData(
     bookmarks: bookmarks,
     history: history,
     publications: {for (final item in publications) item.id: item},
@@ -56,17 +58,17 @@ class MyLibraryPage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final body = SafeArea(
       child: ref
-          .watch(_libraryProvider)
+          .watch(libraryDataProvider)
           .when(
             loading: () => const Center(child: CircularProgressIndicator()),
             error: (error, _) => _LibraryError(
               message: error is StateError
                   ? 'Sign in to access bookmarks, reading history and offline content.'
                   : 'Your library could not be loaded.',
-              onRetry: () => ref.invalidate(_libraryProvider),
+              onRetry: () => ref.invalidate(libraryDataProvider),
             ),
             data: (data) => RefreshIndicator(
-              onRefresh: () async => ref.refresh(_libraryProvider.future),
+              onRefresh: () async => ref.refresh(libraryDataProvider.future),
               child: ListView(
                 padding: AppSpacing.pagePadding,
                 children: [
@@ -143,7 +145,7 @@ class MyLibraryPage extends ConsumerWidget {
 
 class _LibrarySummary extends StatelessWidget {
   const _LibrarySummary({required this.data});
-  final _LibraryData data;
+  final LibraryData data;
 
   @override
   Widget build(BuildContext context) => GridView.count(
@@ -280,8 +282,8 @@ class _LibraryError extends StatelessWidget {
   );
 }
 
-class _LibraryData {
-  const _LibraryData({
+final class LibraryData {
+  const LibraryData({
     required this.bookmarks,
     required this.history,
     required this.publications,

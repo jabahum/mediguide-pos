@@ -44,6 +44,7 @@ import 'package:user_app/features/outbreaks/presentation/screens/outbreak_screen
 import 'package:user_app/features/notifications/presentation/screens/notifications_page.dart';
 import 'package:user_app/features/profile/presentation/screens/profile_page.dart';
 import 'package:user_app/features/downloads/presentation/screens/offline_content_page.dart';
+import 'package:user_app/features/documents/presentation/screens/document_reader_page.dart';
 import 'package:user_app/features/support/presentation/screens/faq_page.dart';
 import 'package:user_app/features/support/presentation/screens/help_center_page.dart';
 
@@ -91,6 +92,18 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: AppRoutes.offlineContent,
         builder: (_, _) => const OfflineContentPage(),
+      ),
+      GoRoute(
+        path: AppRoutes.documentReader,
+        builder: (_, state) {
+          final args = state.extra;
+          if (args is! DocumentReaderArgs) {
+            return const Scaffold(
+              body: Center(child: Text('Document information is missing.')),
+            );
+          }
+          return DocumentReaderPage(args: args);
+        },
       ),
       GoRoute(path: AppRoutes.more, builder: (_, _) => const GuestMorePage()),
       GoRoute(path: AppRoutes.profile, builder: (_, _) => const ProfilePage()),

@@ -15,6 +15,7 @@ import 'package:user_app/features/drugs/data/repositories/drug_local_repository.
 import 'package:user_app/features/facilities/data/repositories/facility_repository.dart';
 import 'package:user_app/features/facilities/data/repositories/facility_local_repository.dart';
 import 'package:user_app/features/guidelines/data/repositories/guideline_content_repository.dart';
+import 'package:user_app/features/guidelines/data/repositories/guideline_publication_repository.dart';
 import 'package:user_app/features/guidelines/data/repositories/guildline_content_local_repository.dart';
 import 'package:user_app/features/abbreviations/data/repositories/abbreviation_local_repository.dart';
 import 'package:user_app/features/support/data/repositories/help_content_repository.dart';
@@ -97,6 +98,14 @@ final guidelineContentRepositoryProvider = Provider<GuidelineContentRepository>(
     ref.watch(abbreviationLocalRepositoryProvider),
   ),
 );
+
+final guidelinePublicationRepositoryProvider =
+    Provider<GuidelinePublicationRepository>(
+      (ref) => GuidelinePublicationRepository(
+        ref.watch(backendApiServiceProvider),
+        ref.watch(localCacheServiceProvider),
+      ),
+    );
 
 final facilityRepositoryProvider = Provider<FacilityRepository>(
   (ref) => FacilityRepository(

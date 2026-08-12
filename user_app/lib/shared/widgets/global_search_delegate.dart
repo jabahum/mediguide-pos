@@ -9,7 +9,7 @@ import 'package:user_app/features/abbreviations/data/models/abbreviation.dart';
 import 'package:user_app/features/calculators/data/models/calculator.dart';
 import 'package:user_app/features/consultants/data/models/consultant.dart';
 import 'package:user_app/features/drugs/data/models/drug.dart';
-import 'package:user_app/features/guidelines/data/models/guideline.dart';
+import 'package:user_app/features/guidelines/data/models/guideline_publication.dart';
 import 'package:user_app/features/facilities/data/models/health_facility.dart';
 import 'package:user_app/shared/models/search_models.dart';
 import 'package:user_app/features/search/presentation/controllers/global_search_controller.dart';
@@ -385,10 +385,10 @@ class GlobalSearchDelegate extends SearchDelegate<String?> {
         if (!appContext.mounted) return;
         await DrugDetailsBottomSheet.show(context: appContext, drug: drug);
       case SearchCategory.guidelines:
-        final guideline = result.getItem<Guideline>();
+        final guideline = result.getItem<GuidelinePublication>();
         if (guideline != null) {
           AppNavigator.push(
-            AppRoutes.guideline(guideline.id),
+            AppRoutes.publicGuideline(guideline.id),
             extra: guideline,
           );
         }

@@ -1,0 +1,414 @@
+import 'package:user_app/core/network/api_client.dart';
+import 'package:user_app/core/network/contracts/generated/backend_contracts.dart';
+import 'package:user_app/core/storage/local_cache_service.dart';
+import 'package:user_app/features/guidelines/data/models/guideline_publication.dart';
+import 'package:user_app/shared/models/paginated_response.dart';
+
+final class GuidelinePublicationRepository {
+  GuidelinePublicationRepository(this._api, this._cache);
+
+  static const _publicationType = 'guideline_publication';
+  static const _contentType = 'guideline_publication_content';
+  static const _ttl = Duration(hours: 24);
+
+  final BackendApiService _api;
+  final LocalCacheService _cache;
+
+  Future<PaginatedResponse<GuidelinePublication>> publications({
+    int page = 1,
+    int perPage = 20,
+    String search = '',
+    String programArea = '',
+  }) async {
+    try {
+      final response = await _api.requestJson(
+        '/api/public/guidelines',
+        method: 'GET',
+        includeAuth: false,
+        query: <String, String>{
+          'page': '$page',
+          'per_page': '$perPage',
+          if (search.trim().isNotEmpty) 'search': search.trim(),
+          if (programArea.trim().isNotEmpty) 'program_area': programArea.trim(),
+        },
+      );
+      final data = _data(response);
+      final items = _maps(
+        data['items'],
+      ).map(_publicationFromContract).toList(growable: false);
+      await _cache.putMany(
+        type: _publicationType,
+        scope: 'public',
+        ttl: _ttl,
+        entities: items.map(
+          (item) => CachedEntityInput(
+            id: item.id,
+            data: item.toJson(),
+            searchableText:
+                '${item.title} ${item.description} ${item.programArea}',
+            version: item.version,
+            remoteUpdatedAt: item.lastUpdated,
+          ),
+        ),
+      );
+      return PaginatedResponse<GuidelinePublication>(
+        items: items,
+        page: _integer(data['page'], page),
+        perPage: _integer(data['per_page'], perPage),
+        totalItems: _integer(data['total_items'], items.length),
+        totalPages: _integer(data['total_pages'], 1),
+      );
+    } catch (_) {
+      final cached = await _cache.list(
+        type: _publicationType,
+        scope: 'public',
+        search: search,
+        limit: perPage,
+        offset: (page - 1).clamp(0, 1 << 30) * perPage,
+      );
+      if (cached.isEmpty) rethrow;
+      return PaginatedResponse<GuidelinePublication>(
+        items: cached.map(GuidelinePublication.fromJson).toList(),
+        page: page,
+        perPage: perPage,
+        totalItems: cached.length,
+        totalPages: 1,
+      );
+    }
+  }
+
+  Future<GuidelinePublicationContent> content(String guidelineId) async {
+    final id = guidelineId.trim();
+    if (id.isEmpty) {
+      throw ArgumentError.value(guidelineId, 'guidelineId', 'is required');
+    }
+
+    try {
+      final results = await Future.wait<Map<String, dynamic>>([
+        _public('/api/public/guidelines/$id'),
+        _public('/api/public/guidelines/$id/manifest'),
+        _public(
+          '/api/public/guidelines/$id/sections',
+          query: {
+            'page': '1',
+            'per_page': '500',
+            'sort': 'sort_order',
+            'order': 'asc',
+          },
+        ),
+        _public(
+          '/api/public/guidelines/$id/figures',
+          query: {'page': '1', 'per_page': '500'},
+        ),
+      ]);
+      final publication = _publicationFromContract(_data(results[0]));
+      final manifest = _manifestFromContract(_data(results[1]));
+      final sections =
+          _maps(
+              _data(results[2])['items'],
+            ).map(_sectionFromContract).toList(growable: false)
+            ..sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
+      final figureAssets = <String, GuidelineAsset>{};
+      for (final row in _maps(_data(results[3])['items'])) {
+        final blockId = row['id']?.toString() ?? '';
+        final asset = _map(row['asset']);
+        if (blockId.isNotEmpty && asset.isNotEmpty) {
+          figureAssets[blockId] = _assetFromContract(asset);
+        }
+      }
+
+      final blocks = <GuidelineBlock>[];
+      for (final section in sections) {
+        final response = await _public(
+          '/api/public/guidelines/$id/sections/${section.id}',
+        );
+        for (final row in _maps(_data(response)['blocks'])) {
+          blocks.add(
+            _block(
+              ServicesPublicGuidelineBlock.fromJson(row),
+              figureAssets[row['id']?.toString()],
+            ),
+          );
+        }
+      }
+      blocks.sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
+
+      final value = GuidelinePublicationContent(
+        publication: publication,
+        manifest: manifest,
+        sections: sections,
+        blocks: blocks,
+      );
+      await _cache.put(
+        type: _contentType,
+        id: id,
+        scope: 'public',
+        ttl: _ttl,
+        version: manifest.version,
+        data: <String, dynamic>{
+          'publication': publication.toJson(),
+          'manifest': manifest.toJson(),
+          'sections': sections.map((item) => item.toJson()).toList(),
+          'blocks': blocks.map((item) => item.toJson()).toList(),
+        },
+        searchableText: publication.title,
+      );
+      return value;
+    } catch (_) {
+      final cached = await _cache.get(
+        type: _contentType,
+        id: id,
+        scope: 'public',
+      );
+      if (cached == null) rethrow;
+      return GuidelinePublicationContent(
+        publication: GuidelinePublication.fromJson(_map(cached['publication'])),
+        manifest: GuidelineManifest.fromJson(_map(cached['manifest'])),
+        sections: _maps(
+          cached['sections'],
+        ).map(PublicationSection.fromJson).toList(),
+        blocks: _maps(cached['blocks']).map(GuidelineBlock.fromJson).toList(),
+      );
+    }
+  }
+
+  Future<GuidelineAsset?> originalDocument(String guidelineId) =>
+      _asset('/api/public/guidelines/$guidelineId/original');
+
+  Future<GuidelineAsset?> offlinePackage(String guidelineId) =>
+      _asset('/api/public/guidelines/$guidelineId/offline-package');
+
+  Future<GuidelineAsset?> _asset(String path) async {
+    final response = await _public(path);
+    final data = _data(response);
+    return data.isEmpty ? null : _assetFromContract(data);
+  }
+
+  Future<Map<String, dynamic>> _public(
+    String path, {
+    Map<String, String>? query,
+  }) => _api.requestJson(path, method: 'GET', query: query, includeAuth: false);
+}
+
+GuidelinePublication _publicationFromContract(Map<String, dynamic> json) {
+  final dto = ServicesPublicGuideline.fromJson(json);
+  return GuidelinePublication(
+    id: dto.id ?? '',
+    slug: dto.slug ?? '',
+    title: dto.title ?? '',
+    description: dto.description ?? '',
+    country: dto.country ?? '',
+    sourceOrganization: dto.sourceOrg ?? '',
+    programArea: dto.programArea ?? '',
+    language: dto.language ?? '',
+    publicationDate: dto.publicationDate ?? '',
+    reviewDate: dto.reviewDate ?? '',
+    version: dto.version ?? '',
+    lastUpdated: DateTime.tryParse(dto.lastUpdated ?? ''),
+  );
+}
+
+GuidelineManifest _manifestFromContract(Map<String, dynamic> json) {
+  final dto = ServicesPublicGuidelineManifest.fromJson(json);
+  final mode = switch (dto.recommendedMode) {
+    'structured' => GuidelineReaderMode.structured,
+    'partial' => GuidelineReaderMode.partial,
+    _ => GuidelineReaderMode.originalDocument,
+  };
+  return GuidelineManifest(
+    guidelineId: dto.guidelineId ?? '',
+    versionId: dto.versionId ?? '',
+    version: dto.version ?? '',
+    schemaVersion: dto.schemaVersion ?? 1,
+    packageVersion: dto.packageVersion ?? 1,
+    extractionQuality: dto.extractionQuality ?? 'unreviewed',
+    recommendedMode: mode,
+    hasChapters: dto.hasChapters ?? false,
+    hasKeyPoints: dto.hasKeyPoints ?? false,
+    hasTables: dto.hasTables ?? false,
+    hasFigures: dto.hasFigures ?? false,
+    hasAlgorithms: dto.hasAlgorithms ?? false,
+    hasOriginalPdf: dto.hasOriginalPdf ?? false,
+    hasOfflinePackage: dto.hasOfflinePackage ?? false,
+    sectionCount: dto.sectionCount ?? 0,
+    blockCount: dto.blockCount ?? 0,
+    tableCount: dto.tableCount ?? 0,
+    figureCount: dto.figureCount ?? 0,
+    algorithmCount: dto.algorithmCount ?? 0,
+    checksum: dto.checksum ?? '',
+    etag: dto.etag ?? '',
+    generatedAt: DateTime.tryParse(dto.generatedAt ?? ''),
+  );
+}
+
+PublicationSection _sectionFromContract(Map<String, dynamic> json) {
+  final dto = ServicesPublicGuidelineSection.fromJson(json);
+  return PublicationSection(
+    id: dto.id ?? '',
+    parentId: dto.parentId,
+    title: dto.title ?? '',
+    slug: dto.slug ?? '',
+    level: dto.level ?? 1,
+    pageStart: dto.pageStart,
+    pageEnd: dto.pageEnd,
+    sortOrder: dto.sortOrder ?? 0,
+  );
+}
+
+GuidelineAsset _assetFromContract(Map<String, dynamic> json) {
+  final dto = ServicesPublicGuidelineAssetLink.fromJson(json);
+  return GuidelineAsset(
+    id: dto.assetId,
+    type: dto.type ?? '',
+    mimeType: dto.mimeType ?? '',
+    checksum: dto.checksum ?? '',
+    sizeBytes: dto.sizeBytes ?? 0,
+    originalFilename: dto.originalFilename ?? '',
+    url: dto.url ?? '',
+    expiresAt: DateTime.tryParse(dto.expiresAt ?? ''),
+  );
+}
+
+GuidelineBlock _block(ServicesPublicGuidelineBlock dto, GuidelineAsset? asset) {
+  final id = dto.id ?? '';
+  final sectionId = dto.sectionId;
+  final sortOrder = dto.sortOrder ?? 0;
+  final pageStart = dto.pageStart;
+  final pageEnd = dto.pageEnd;
+  final type = dto.type ?? 'unknown';
+  final content = dto.content;
+  switch (type) {
+    case 'paragraph':
+    case 'definition':
+      return GuidelineBlock.paragraph(
+        id: id,
+        sectionId: sectionId,
+        sortOrder: sortOrder,
+        text: content['text']?.toString() ?? '',
+        pageStart: pageStart,
+        pageEnd: pageEnd,
+      );
+    case 'heading':
+      return GuidelineBlock.heading(
+        id: id,
+        sectionId: sectionId,
+        sortOrder: sortOrder,
+        text: content['text']?.toString() ?? '',
+        level: _integer(content['level'], 2),
+        pageStart: pageStart,
+        pageEnd: pageEnd,
+      );
+    case 'ordered_list':
+    case 'unordered_list':
+      final items = _strings(content['items']);
+      return type == 'ordered_list'
+          ? GuidelineBlock.orderedList(
+              id: id,
+              sectionId: sectionId,
+              sortOrder: sortOrder,
+              items: items,
+              pageStart: pageStart,
+              pageEnd: pageEnd,
+            )
+          : GuidelineBlock.unorderedList(
+              id: id,
+              sectionId: sectionId,
+              sortOrder: sortOrder,
+              items: items,
+              pageStart: pageStart,
+              pageEnd: pageEnd,
+            );
+    case 'table':
+      return GuidelineBlock.table(
+        id: id,
+        sectionId: sectionId,
+        sortOrder: sortOrder,
+        payload: GuidelineTablePayload.fromJson(content),
+        pageStart: pageStart,
+        pageEnd: pageEnd,
+      );
+    case 'figure':
+      return GuidelineBlock.figure(
+        id: id,
+        sectionId: sectionId,
+        sortOrder: sortOrder,
+        payload: GuidelineFigurePayload.fromJson(content),
+        asset: asset,
+        pageStart: pageStart,
+        pageEnd: pageEnd,
+      );
+    case 'algorithm':
+      return GuidelineBlock.algorithm(
+        id: id,
+        sectionId: sectionId,
+        sortOrder: sortOrder,
+        payload: GuidelineAlgorithmPayload.fromJson(content),
+        pageStart: pageStart,
+        pageEnd: pageEnd,
+      );
+    case 'reference':
+      return GuidelineBlock.reference(
+        id: id,
+        sectionId: sectionId,
+        sortOrder: sortOrder,
+        citation: content['citation']?.toString() ?? '',
+        url: content['url']?.toString() ?? '',
+        pageStart: pageStart,
+        pageEnd: pageEnd,
+      );
+    case 'page_break':
+      return GuidelineBlock.pageBreak(
+        id: id,
+        sectionId: sectionId,
+        sortOrder: sortOrder,
+        page: _integer(content['page'], pageStart ?? 0),
+        pageStart: pageStart,
+        pageEnd: pageEnd,
+      );
+    case 'recommendation':
+    case 'warning':
+    case 'caution':
+    case 'key_point':
+    case 'contraindication':
+    case 'dosage':
+    case 'evidence':
+    case 'procedure':
+    case 'clinical_note':
+    case 'referral_criteria':
+    case 'algorithm_reference':
+      return GuidelineBlock.callout(
+        id: id,
+        sectionId: sectionId,
+        sortOrder: sortOrder,
+        blockType: type,
+        payload: GuidelineCalloutPayload.fromJson(content),
+        pageStart: pageStart,
+        pageEnd: pageEnd,
+      );
+    default:
+      return GuidelineBlock.unknown(
+        id: id,
+        sectionId: sectionId,
+        sortOrder: sortOrder,
+        rawType: type,
+        raw: dto.toJson(),
+        pageStart: pageStart,
+        pageEnd: pageEnd,
+      );
+  }
+}
+
+Map<String, dynamic> _data(Map<String, dynamic> response) =>
+    _map(response['data']).isEmpty ? response : _map(response['data']);
+Map<String, dynamic> _map(Object? value) =>
+    value is Map ? Map<String, dynamic>.from(value) : const <String, dynamic>{};
+List<Map<String, dynamic>> _maps(Object? value) => value is List
+    ? value
+          .whereType<Map>()
+          .map((item) => Map<String, dynamic>.from(item))
+          .toList()
+    : const <Map<String, dynamic>>[];
+List<String> _strings(Object? value) =>
+    value is List ? value.map((item) => item.toString()).toList() : const [];
+int _integer(Object? value, int fallback) =>
+    value is num ? value.toInt() : int.tryParse('$value') ?? fallback;

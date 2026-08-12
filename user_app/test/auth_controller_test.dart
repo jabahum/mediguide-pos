@@ -84,6 +84,7 @@ ProviderContainer createContainer(
     overrides: [
       backendApiServiceProvider.overrideWithValue(api),
       authSessionStoreProvider.overrideWithValue(store),
+      privateCacheCleanerProvider.overrideWithValue((_) async {}),
     ],
   );
   addTearDown(container.dispose);

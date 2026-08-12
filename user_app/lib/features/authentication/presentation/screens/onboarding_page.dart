@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:go_router/go_router.dart';
 import 'package:user_app/core/utils/app_extensions.dart';
 import 'package:user_app/app/router/app_navigator.dart';
 import 'package:introduction_screen/introduction_screen.dart';
@@ -110,8 +111,9 @@ class _OnboardingPageState extends State<OnboardingPage> {
   }
 
   Future<void> _completeOnboarding() async {
+    final redirect = GoRouterState.of(context).uri.queryParameters['redirect'];
     await PreferenceUtils.setBool(SharedPreferencesKeys.notFirstTime, true);
-    AppNavigator.go(AppRoutes.login);
+    AppNavigator.go(AppRoutes.safeDestination(redirect));
   }
 
   Widget _buildUgandaCoatOfArms() {

@@ -2969,12 +2969,18 @@ export interface ServicesPublicGuidelineManifest {
   has_original_pdf?: boolean;
   has_tables?: boolean;
   package_version?: number;
+  recommended_mode?: ServicesPublicGuidelineManifestRecommendedModeEnum;
   schema_version?: number;
   section_count?: number;
   table_count?: number;
   version?: string;
   version_id?: string;
 }
+
+export type ServicesPublicGuidelineManifestRecommendedModeEnum =
+  | "structured"
+  | "partial"
+  | "original_document";
 
 export interface ServicesPublicGuidelineSection {
   id?: string;

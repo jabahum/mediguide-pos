@@ -18848,6 +18848,14 @@ const docTemplate = `{
                 "package_version": {
                     "type": "integer"
                 },
+                "recommended_mode": {
+                    "type": "string",
+                    "enum": [
+                        "structured",
+                        "partial",
+                        "original_document"
+                    ]
+                },
                 "schema_version": {
                     "type": "integer"
                 },

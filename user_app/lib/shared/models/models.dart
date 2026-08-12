@@ -39,6 +39,7 @@ export 'package:user_app/features/guidelines/data/models/guideline.dart';
 export 'package:user_app/features/guidelines/data/models/guideline_category.dart';
 export 'package:user_app/features/guidelines/data/models/guideline_tag.dart';
 export 'package:user_app/features/guidelines/data/models/guideline_index.dart';
+export 'package:user_app/features/guidelines/data/models/guideline_publication.dart';
 
 // Calculator model
 export 'package:user_app/features/calculators/data/models/calculator.dart';

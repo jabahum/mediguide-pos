@@ -5,6 +5,7 @@ import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:form_builder_validators/form_builder_validators.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'package:go_router/go_router.dart';
 
 import 'package:user_app/app/router/app_navigator.dart';
 import 'package:user_app/app/router/app_router.dart';
@@ -69,7 +70,10 @@ class _LoginPageState extends ConsumerState<LoginPage> {
         return;
       }
 
-      AppNavigator.go(AppRoutes.main);
+      final redirect = GoRouterState.of(
+        context,
+      ).uri.queryParameters['redirect'];
+      AppNavigator.go(AppRoutes.safeDestination(redirect));
     } catch (error) {
       if (!mounted) {
         return;
@@ -154,6 +158,23 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           const AppLogo(logoSize: 180),
+
+                          if (GoRouterState.of(
+                                context,
+                              ).uri.queryParameters['reason'] ==
+                              'authentication_required') ...[
+                            AppSpacing.gapMd,
+                            Semantics(
+                              liveRegion: true,
+                              child: Text(
+                                'Sign in to use this private feature. You will return to it after authentication.',
+                                textAlign: TextAlign.center,
+                                style: theme.textTheme.bodyMedium?.copyWith(
+                                  color: cs.onSurfaceVariant,
+                                ),
+                              ),
+                            ),
+                          ],
 
                           AppSpacing.gapLg,
 

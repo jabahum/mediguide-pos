@@ -30,6 +30,7 @@ type PublicGuidelineManifest struct {
 	SchemaVersion     int                               `json:"schema_version"`
 	PackageVersion    int                               `json:"package_version"`
 	ExtractionQuality models.GuidelineExtractionQuality `json:"extraction_quality"`
+	RecommendedMode   string                            `json:"recommended_mode" enums:"structured,partial,original_document"`
 	HasChapters       bool                              `json:"has_chapters"`
 	HasKeyPoints      bool                              `json:"has_key_points"`
 	HasTables         bool                              `json:"has_tables"`
@@ -335,13 +336,28 @@ func publicManifest(row *models.GuidelineVersionManifest) *PublicGuidelineManife
 		GuidelineID: row.GuidelineID, VersionID: row.VersionID, Version: row.Version,
 		SchemaVersion: row.SchemaVersion, PackageVersion: row.PackageVersion,
 		ExtractionQuality: row.ExtractionQuality, HasChapters: row.HasChapters,
-		HasKeyPoints: row.HasKeyPoints, HasTables: row.HasTables, HasFigures: row.HasFigures,
+		RecommendedMode: recommendedGuidelineReaderMode(row),
+		HasKeyPoints:    row.HasKeyPoints, HasTables: row.HasTables, HasFigures: row.HasFigures,
 		HasAlgorithms: row.HasAlgorithms, HasOriginalPDF: row.HasOriginalPDF,
 		HasOfflinePackage: row.HasOfflinePackage, SectionCount: row.SectionCount,
 		BlockCount: row.BlockCount, TableCount: row.TableCount, FigureCount: row.FigureCount,
 		AlgorithmCount: row.AlgorithmCount, Checksum: row.Checksum, ETag: row.ETag,
 		GeneratedAt: row.GeneratedAt,
 	}
+}
+
+func recommendedGuidelineReaderMode(row *models.GuidelineVersionManifest) string {
+	switch row.ExtractionQuality {
+	case models.GuidelineExtractionReviewed:
+		return "structured"
+	case models.GuidelineExtractionPartiallyReviewed:
+		return "partial"
+	case models.GuidelineExtractionMarkdownFallback:
+		if row.SectionCount > 0 {
+			return "partial"
+		}
+	}
+	return "original_document"
 }
 
 func publicSection(row models.GuidelineSection) PublicGuidelineSection {

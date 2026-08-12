@@ -1,7 +1,10 @@
+import 'dart:async';
+
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import 'package:user_app/shared/models/models.dart';
 import 'package:user_app/core/network/api_client.dart';
+import 'package:user_app/core/storage/local_cache_service.dart';
 import 'package:user_app/app/providers/app_providers.dart';
 import 'package:user_app/features/authentication/data/datasources/auth_local_datasource.dart';
 import 'package:user_app/features/authentication/presentation/controllers/auth_state.dart';
@@ -12,6 +15,13 @@ final authSessionStoreProvider = Provider<AuthSessionStore>(
   (ref) => AuthServiceSessionStore(ref.watch(authServiceProvider)),
 );
 
+typedef PrivateCacheCleaner = Future<void> Function(String userId);
+
+final privateCacheCleanerProvider = Provider<PrivateCacheCleaner>((ref) {
+  final cache = ref.watch(localCacheServiceProvider);
+  return cache.clearPrivateScope;
+});
+
 @riverpod
 class AuthController extends _$AuthController {
   BackendApiService get _api => ref.read(backendApiServiceProvider);
@@ -20,6 +30,10 @@ class AuthController extends _$AuthController {
 
   @override
   Future<AuthState> build() async {
+    final api = _api;
+    void onSessionExpired() => unawaited(_expireSession());
+    api.sessionExpired.addListener(onSessionExpired);
+    ref.onDispose(() => api.sessionExpired.removeListener(onSessionExpired));
     final cachedUser = _store.currentUser;
 
     if (!_api.isAuthenticated) {
@@ -159,9 +173,30 @@ class AuthController extends _$AuthController {
     } finally {
       await _store.clearUser();
 
+      await _clearPrivateCache(user);
+
       state = const AsyncData(AuthState.unauthenticated());
 
       _invalidateUserScopedProviders();
+    }
+  }
+
+  Future<void> _expireSession() async {
+    final user = state.valueOrNull?.user ?? _store.currentUser;
+    await _store.clearUser();
+    await _clearPrivateCache(user);
+    state = const AsyncData(AuthState.unauthenticated());
+    _invalidateUserScopedProviders();
+  }
+
+  Future<void> _clearPrivateCache(User? user) async {
+    if (user == null) return;
+    try {
+      await ref.read(privateCacheCleanerProvider)(user.id);
+    } catch (_) {
+      // Authentication state must still be cleared when local storage is
+      // temporarily unavailable. The user scope remains inaccessible because
+      // every private read requires the current authenticated user id.
     }
   }
 

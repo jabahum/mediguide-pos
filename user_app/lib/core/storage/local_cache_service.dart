@@ -212,6 +212,25 @@ class LocalCacheService {
         .go();
   }
 
+  /// Deletes every cache, synchronization record and queued mutation owned by
+  /// one authenticated scope. Public content is intentionally retained.
+  Future<void> clearPrivateScope(String userId) async {
+    final normalized = userId.trim();
+    if (normalized.isEmpty) return;
+    final scope = 'user:$normalized';
+    await _database.transaction(() async {
+      await (_database.delete(
+        _database.cachedEntities,
+      )..where((table) => table.scope.equals(scope))).go();
+      await (_database.delete(
+        _database.cacheSyncStates,
+      )..where((table) => table.scope.equals(scope))).go();
+      await (_database.delete(
+        _database.pendingMutations,
+      )..where((table) => table.scope.equals(scope))).go();
+    });
+  }
+
   // =========================================================
   // CACHE EXISTS
   // =========================================================

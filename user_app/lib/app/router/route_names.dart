@@ -14,8 +14,11 @@ abstract final class AppRoutes {
   static const String main = '/main';
   static const String home = '/home';
   static const String guidelines = '/guidelines';
+  static const String publicGuidelines = '/public/guidelines';
   static const String tools = '/tools';
   static const String profile = '/profile';
+  static const String outbreakHub = '/outbreak-hub';
+  static const String situationReports = '/situation-reports';
 
   // Clinical content
   static const String drugIndex = '/drug-index';
@@ -46,6 +49,8 @@ abstract final class AppRoutes {
 
   // Parameterized route templates
   static const String guidelineDetails = '/guidelines/:guidelineId';
+  static const String publicGuidelineDetails =
+      '/public/guidelines/:guidelineId';
   static const String calculatorDetails = '/calculators/:calculatorId';
   static const String healthFacilityDetails = '/health-facilities/:facilityId';
   static const String consultantDetails = '/consultants/:consultantId';
@@ -59,19 +64,50 @@ abstract final class AppRoutes {
     register,
     onboarding,
     forgotPassword,
+    main,
+    home,
+    publicGuidelines,
+    outbreakHub,
+    situationReports,
+    drugIndex,
+    abbreviations,
+    helpCenter,
+    faq,
+    aboutUs,
     termsAndConditions,
   };
 
   static bool isPublic(String location) {
-    return publicRoutes.any(
-      (route) => location == route || location.startsWith('$route?'),
-    );
+    final path = Uri.tryParse(location)?.path ?? location;
+    return publicRoutes.contains(path) || path.startsWith('$publicGuidelines/');
+  }
+
+  /// Accepts only in-app absolute paths for post-authentication navigation.
+  /// This prevents external redirects and redirect loops from crafted links.
+  static String safeDestination(String? value, {String fallback = main}) {
+    if (value == null || value.isEmpty) return fallback;
+    final uri = Uri.tryParse(value);
+    if (uri == null ||
+        uri.hasScheme ||
+        uri.hasAuthority ||
+        !value.startsWith('/') ||
+        value.startsWith('//') ||
+        uri.path == login ||
+        uri.path == register ||
+        uri.path == onboarding) {
+      return fallback;
+    }
+    return value;
   }
 
   // Route builders
 
   static String guideline(String guidelineId) {
     return '/guidelines/${Uri.encodeComponent(guidelineId)}';
+  }
+
+  static String publicGuideline(String guidelineId) {
+    return '$publicGuidelines/${Uri.encodeComponent(guidelineId)}';
   }
 
   static String calculator(String calculatorId) {

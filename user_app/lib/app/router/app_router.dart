@@ -32,6 +32,8 @@ import 'package:user_app/features/facilities/presentation/screens/health_infrast
 import 'package:user_app/features/guidelines/presentation/screens/guidelines_indexer_page.dart';
 import 'package:user_app/features/guidelines/presentation/screens/guidelines_page.dart';
 import 'package:user_app/features/guidelines/presentation/screens/read_guideline_page.dart';
+import 'package:user_app/features/guidelines/presentation/screens/publication_catalogue_page.dart';
+import 'package:user_app/features/guidelines/presentation/screens/publication_guideline_page.dart';
 import 'package:user_app/features/home/presentation/screens/home_page.dart';
 import 'package:user_app/features/navigation/presentation/screens/main_page.dart';
 import 'package:user_app/features/notifications/presentation/screens/notifications_page.dart';
@@ -80,6 +82,25 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         builder: (_, state) {
           return GuidelinesPage(arguments: state.extra);
         },
+      ),
+      GoRoute(
+        path: AppRoutes.publicGuidelines,
+        builder: (_, _) => const PublicationCataloguePage(),
+      ),
+      GoRoute(
+        path: AppRoutes.publicGuidelineDetails,
+        builder: (_, state) => PublicationGuidelinePage(
+          guidelineId: state.pathParameters['guidelineId'] ?? '',
+        ),
+      ),
+      GoRoute(
+        path: AppRoutes.outbreakHub,
+        builder: (_, _) => const GenericViewerPage(pageKey: 'outbreak-hub'),
+      ),
+      GoRoute(
+        path: AppRoutes.situationReports,
+        builder: (_, _) =>
+            const GenericViewerPage(pageKey: 'situation-reports'),
       ),
       GoRoute(
         path: AppRoutes.guidelineDetails,

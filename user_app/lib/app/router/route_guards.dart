@@ -12,19 +12,23 @@ String? appRouteGuard(Ref ref, GoRouterState state) {
 
   final phase = auth.valueOrNull?.phase ?? AuthPhase.unauthenticated;
   final authenticated = auth.valueOrNull?.isAuthenticated ?? false;
-  final location = state.matchedLocation;
-  final publicRoute = AppRoutes.publicRoutes.contains(location);
+  final location = state.uri.toString();
+  final matchedLocation = state.matchedLocation;
+  final publicRoute = AppRoutes.isPublic(location);
 
   if (!PreferenceUtils.containsKey(SharedPreferencesKeys.notFirstTime) &&
-      location != AppRoutes.onboarding) {
-    return AppRoutes.onboarding;
+      matchedLocation != AppRoutes.onboarding) {
+    return '${AppRoutes.onboarding}?redirect=${Uri.encodeComponent(location)}';
   }
   if (!authenticated && !publicRoute && phase != AuthPhase.authenticating) {
-    return AppRoutes.login;
+    final destination = Uri.encodeComponent(location);
+    return '${AppRoutes.login}?redirect=$destination&reason=authentication_required';
   }
   if (authenticated &&
-      (location == AppRoutes.login || location == AppRoutes.register)) {
-    return AppRoutes.main;
+      (matchedLocation == AppRoutes.login ||
+          matchedLocation == AppRoutes.register)) {
+    final redirect = state.uri.queryParameters['redirect'];
+    return AppRoutes.safeDestination(redirect);
   }
   return null;
 }

@@ -9109,6 +9109,8 @@ final class ServicesPublicGuidelineManifest {
 
   int? get packageVersion => (value['package_version'] as num?)?.toInt();
 
+  String? get recommendedMode => value['recommended_mode']?.toString();
+
   int? get schemaVersion => (value['schema_version'] as num?)?.toInt();
 
   int? get sectionCount => (value['section_count'] as num?)?.toInt();

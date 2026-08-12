@@ -33,6 +33,7 @@ class BackendApiService {
   final SecureStorageService _secureStorage;
 
   final ValueNotifier<bool> schemaLoaded = ValueNotifier(false);
+  final ValueNotifier<int> sessionExpired = ValueNotifier<int>(0);
 
   late SharedPreferences _prefs;
   String _accessToken = '';
@@ -292,7 +293,15 @@ class BackendApiService {
         includeAuth &&
         retryAfterRefresh &&
         _refreshToken.isNotEmpty) {
-      await refreshAuth();
+      try {
+        await refreshAuth();
+      } on BackendApiException catch (error) {
+        if (error.statusCode == 401) {
+          await _clearLocalSession();
+          sessionExpired.value++;
+        }
+        rethrow;
+      }
       return _requestJson(
         path,
         method: method,
@@ -302,6 +311,11 @@ class BackendApiService {
         includeAuth: includeAuth,
         retryAfterRefresh: false,
       );
+    }
+
+    if (statusCode == 401 && includeAuth) {
+      await _clearLocalSession();
+      sessionExpired.value++;
     }
 
     if (statusCode >= 400 || map['success'] == false) {
@@ -366,6 +380,18 @@ class BackendApiService {
     if (userId != null && userId.isNotEmpty) {
       await _prefs.setString(SharedPreferencesKeys.userId, userId);
     }
+  }
+
+  Future<void> _clearLocalSession() async {
+    _accessToken = '';
+    _refreshToken = '';
+    _sessionId = '';
+    await Future.wait([
+      _secureStorage.delete(SharedPreferencesKeys.userToken),
+      _secureStorage.delete(_refreshTokenKey),
+      _secureStorage.delete(_sessionIdKey),
+    ]);
+    await _prefs.remove(SharedPreferencesKeys.userId);
   }
 
   Future<String> _readAndMigrateCredential(String key) async {

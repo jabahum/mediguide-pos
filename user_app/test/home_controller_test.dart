@@ -11,6 +11,7 @@ import 'package:user_app/features/calculators/data/repositories/calculator_local
 import 'package:user_app/features/calculators/data/repositories/calculator_repository.dart';
 import 'package:user_app/features/guidelines/data/repositories/guildline_content_local_repository.dart';
 import 'package:user_app/features/guidelines/data/repositories/guideline_content_repository.dart';
+import 'package:user_app/features/guidelines/data/repositories/guideline_publication_repository.dart';
 import 'helpers/test_local_store.dart';
 
 List<Override> offlineRepositoryOverrides(HomeApi api, TestLocalStore store) =>
@@ -24,6 +25,9 @@ List<Override> offlineRepositoryOverrides(HomeApi api, TestLocalStore store) =>
           GuidelineContentLocalRepository(store.cache),
           AbbreviationLocalRepository(store.cache),
         ),
+      ),
+      guidelinePublicationRepositoryProvider.overrideWithValue(
+        GuidelinePublicationRepository(api, store.cache),
       ),
     ];
 
@@ -68,16 +72,16 @@ final class HomeApi extends BackendApiService {
         },
       };
     }
-    if (path == '/api/v2/medical-guidelines') {
+    if (path == '/api/public/guidelines') {
       guidelineRequests++;
       return {
         'data': {
           'items': [
             {
               'id': 'guideline-1',
-              'name': 'Emergency care',
-              'condition_name': 'Emergency care',
-              'status': 'published',
+              'title': 'Emergency care',
+              'program_area': 'Emergency',
+              'version': '1',
             },
           ],
         },

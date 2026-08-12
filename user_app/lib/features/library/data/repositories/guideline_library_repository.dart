@@ -101,6 +101,23 @@ final class GuidelineLibraryRepository {
     }
   }
 
+  Future<GuidelineDownloadRecord> recordDownload({
+    required String guidelineId,
+    required String assetType,
+  }) async {
+    final response = await _api.requestJson(
+      '/api/v2/library/downloads',
+      method: 'POST',
+      body: ServicesGuidelineDownloadInput.fromJson({
+        'guideline_id': guidelineId,
+        'asset_type': assetType,
+      }).toJson(),
+    );
+    return GuidelineDownloadRecord.fromContract(
+      ServicesGuidelineDownloadDTO.fromJson(_data(response)),
+    );
+  }
+
   Map<String, dynamic> _data(Map<String, dynamic> response) {
     final value = response['data'];
     return value is Map ? Map<String, dynamic>.from(value) : response;

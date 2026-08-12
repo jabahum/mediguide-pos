@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_gen_ai_chat_ui/flutter_gen_ai_chat_ui.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'package:go_router/go_router.dart';
 
 import 'package:user_app/core/constants/app_spacing.dart';
 import 'package:user_app/core/utils/app_extensions.dart';
+import 'package:user_app/app/router/route_names.dart';
 
 import 'package:user_app/features/ai_assistant/data/models/ai_context.dart';
 import 'package:user_app/features/ai_assistant/data/models/rag_answer.dart';
@@ -101,6 +103,7 @@ class _AiAssistantPageState extends ConsumerState<AiAssistantPage> {
       ),
       body: Column(
         children: [
+          const _ClinicalSafetyBanner(),
           if (currentContext != null)
             _AssistantContextBanner(
               title: currentContext.title,
@@ -117,7 +120,10 @@ class _AiAssistantPageState extends ConsumerState<AiAssistantPage> {
             ),
 
           if (state.latestCitations.isNotEmpty)
-            _SourcesPanel(citations: state.latestCitations),
+            _SourcesPanel(
+              citations: state.latestCitations,
+              onCitation: (citation) => _openCitation(context, citation),
+            ),
 
           Expanded(
             child: AiChatWidget(
@@ -208,6 +214,65 @@ class _AiAssistantPageState extends ConsumerState<AiAssistantPage> {
       ),
     );
   }
+
+  void _openCitation(BuildContext context, RagCitation citation) {
+    if (citation.guidelineId.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('This source does not include a navigable guideline.'),
+        ),
+      );
+      return;
+    }
+    final base = AppRoutes.readPublicGuideline(citation.guidelineId);
+    final uri = citation.sectionId.isEmpty
+        ? base
+        : '$base?section=${Uri.encodeQueryComponent(citation.sectionId)}';
+    context.push(uri);
+  }
+}
+
+class _ClinicalSafetyBanner extends StatelessWidget {
+  const _ClinicalSafetyBanner();
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    return Semantics(
+      container: true,
+      label:
+          'Clinical safety notice. Do not enter patient-identifiable information. Verify answers against cited sources and clinical judgement.',
+      child: Container(
+        width: double.infinity,
+        margin: const EdgeInsets.fromLTRB(
+          AppSpacing.md,
+          AppSpacing.sm,
+          AppSpacing.md,
+          AppSpacing.xs,
+        ),
+        padding: const EdgeInsets.all(AppSpacing.sm),
+        decoration: BoxDecoration(
+          color: colors.tertiaryContainer,
+          borderRadius: BorderRadius.circular(14),
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(LucideIcons.shieldAlert, color: colors.onTertiaryContainer),
+            AppSpacing.sm.gap,
+            Expanded(
+              child: Text(
+                'Do not enter patient-identifiable information. Verify every answer against its cited source and clinical judgement.',
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: colors.onTertiaryContainer,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }
 
 class _AssistantErrorBanner extends StatelessWidget {
@@ -260,9 +325,10 @@ class _AssistantErrorBanner extends StatelessWidget {
 }
 
 class _SourcesPanel extends StatelessWidget {
-  const _SourcesPanel({required this.citations});
+  const _SourcesPanel({required this.citations, required this.onCitation});
 
   final List<RagCitation> citations;
+  final ValueChanged<RagCitation> onCitation;
 
   @override
   Widget build(BuildContext context) {
@@ -302,6 +368,15 @@ class _SourcesPanel extends StatelessWidget {
                 ),
               ),
               title: Text(citations[index].displayLabel),
+              subtitle: citations[index].guidelineId.isEmpty
+                  ? const Text('Source navigation unavailable')
+                  : const Text('Open cited guideline section'),
+              trailing: citations[index].guidelineId.isEmpty
+                  ? null
+                  : const Icon(LucideIcons.chevronRight),
+              onTap: citations[index].guidelineId.isEmpty
+                  ? null
+                  : () => onCitation(citations[index]),
             ),
         ],
       ),

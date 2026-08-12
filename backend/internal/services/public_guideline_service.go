@@ -45,18 +45,20 @@ type PublicGuidelineFilter struct {
 }
 
 type PublicGuideline struct {
-	ID              uuid.UUID `json:"id"`
-	Slug            string    `json:"slug"`
-	Title           string    `json:"title"`
-	Description     string    `json:"description"`
-	Country         string    `json:"country"`
-	SourceOrg       string    `json:"source_org"`
-	ProgramArea     string    `json:"program_area"`
-	Language        string    `json:"language"`
-	PublicationDate string    `json:"publication_date"`
-	ReviewDate      string    `json:"review_date"`
-	Version         string    `json:"version"`
-	LastUpdated     time.Time `json:"last_updated"`
+	ID                 uuid.UUID `json:"id"`
+	Slug               string    `json:"slug"`
+	Title              string    `json:"title"`
+	Description        string    `json:"description"`
+	Country            string    `json:"country"`
+	SourceOrg          string    `json:"source_org"`
+	ProgramArea        string    `json:"program_area"`
+	Language           string    `json:"language"`
+	PublicationDate    string    `json:"publication_date"`
+	ReviewDate         string    `json:"review_date"`
+	Version            string    `json:"version"`
+	LastUpdated        time.Time `json:"last_updated"`
+	IntendedPopulation string    `json:"intended_population"`
+	HealthcareLevel    string    `json:"healthcare_level"`
 }
 
 type PublicGuidelineMarkdown struct {
@@ -67,20 +69,22 @@ type PublicGuidelineMarkdown struct {
 }
 
 type publicGuidelineRow struct {
-	ID              uuid.UUID
-	Title           string
-	Description     string
-	Country         string
-	SourceOrg       string
-	ProgramArea     string
-	Language        string
-	PublicationDate string
-	ReviewDate      string
-	Version         string
-	VersionID       uuid.UUID
-	VersionUpdated  time.Time
-	MarkdownFileKey string
-	OriginalFileKey string
+	ID                 uuid.UUID
+	Title              string
+	Description        string
+	Country            string
+	SourceOrg          string
+	ProgramArea        string
+	Language           string
+	PublicationDate    string
+	ReviewDate         string
+	Version            string
+	VersionID          uuid.UUID
+	VersionUpdated     time.Time
+	MarkdownFileKey    string
+	OriginalFileKey    string
+	IntendedPopulation string
+	HealthcareLevel    string
 }
 
 func (s PublicGuidelineService) List(ctx context.Context, filter PublicGuidelineFilter) (*PageResult[PublicGuideline], error) {
@@ -226,18 +230,20 @@ func applyPublicGuidelineFilters(query *gorm.DB, filter PublicGuidelineFilter) *
 
 func (row publicGuidelineRow) public() PublicGuideline {
 	return PublicGuideline{
-		ID:              row.ID,
-		Slug:            slugify(row.Title),
-		Title:           row.Title,
-		Description:     row.Description,
-		Country:         row.Country,
-		SourceOrg:       row.SourceOrg,
-		ProgramArea:     row.ProgramArea,
-		Language:        row.Language,
-		PublicationDate: row.PublicationDate,
-		ReviewDate:      row.ReviewDate,
-		Version:         row.Version,
-		LastUpdated:     row.VersionUpdated.UTC(),
+		ID:                 row.ID,
+		Slug:               slugify(row.Title),
+		Title:              row.Title,
+		Description:        row.Description,
+		Country:            row.Country,
+		SourceOrg:          row.SourceOrg,
+		ProgramArea:        row.ProgramArea,
+		Language:           row.Language,
+		PublicationDate:    row.PublicationDate,
+		ReviewDate:         row.ReviewDate,
+		Version:            row.Version,
+		LastUpdated:        row.VersionUpdated.UTC(),
+		IntendedPopulation: row.IntendedPopulation,
+		HealthcareLevel:    row.HealthcareLevel,
 	}
 }
 
@@ -258,6 +264,8 @@ const publicGuidelineSelect = `
 	gd.source_org,
 	gd.program_area,
 	gd.language,
+	gd.intended_population,
+	gd.healthcare_level,
 	gv.publication_date,
 	gv.review_date,
 	gv.version,

@@ -522,6 +522,13 @@ definitions:
         example: true
         type: boolean
     type: object
+  handlers.OutbreakEnvelope:
+    properties:
+      data:
+        $ref: '#/definitions/models.Outbreak'
+      success:
+        type: boolean
+    type: object
   handlers.PaginatedAbbreviationsEnvelope:
     properties:
       data:
@@ -1029,6 +1036,27 @@ definitions:
         example: true
         type: boolean
     type: object
+  handlers.PaginatedOutbreakResourcesEnvelope:
+    properties:
+      data:
+        $ref: '#/definitions/services.PageResult-models_OutbreakResource'
+      success:
+        type: boolean
+    type: object
+  handlers.PaginatedOutbreakUpdatesEnvelope:
+    properties:
+      data:
+        $ref: '#/definitions/services.PageResult-models_OutbreakUpdate'
+      success:
+        type: boolean
+    type: object
+  handlers.PaginatedOutbreaksEnvelope:
+    properties:
+      data:
+        $ref: '#/definitions/services.PageResult-models_Outbreak'
+      success:
+        type: boolean
+    type: object
   handlers.PaginatedPublicGuidelineAlgorithms:
     properties:
       items:
@@ -1179,6 +1207,13 @@ definitions:
         $ref: '#/definitions/handlers.PaginatedSettings'
       success:
         example: true
+        type: boolean
+    type: object
+  handlers.PaginatedSituationReportsEnvelope:
+    properties:
+      data:
+        $ref: '#/definitions/services.PageResult-models_SituationReport'
+      success:
         type: boolean
     type: object
   handlers.PaginatedSupportRepliesEnvelope:
@@ -1457,6 +1492,13 @@ definitions:
         $ref: '#/definitions/models.Setting'
       success:
         example: true
+        type: boolean
+    type: object
+  handlers.SituationReportEnvelope:
+    properties:
+      data:
+        $ref: '#/definitions/models.SituationReport'
+      success:
         type: boolean
     type: object
   handlers.SupportReplyEnvelope:
@@ -2285,7 +2327,11 @@ definitions:
         type: string
       description:
         type: string
+      healthcare_level:
+        type: string
       id:
+        type: string
+      intended_population:
         type: string
       language:
         type: string
@@ -2953,6 +2999,77 @@ definitions:
       variables:
         type: object
     type: object
+  models.Outbreak:
+    properties:
+      created_at:
+        type: string
+      disease_type:
+        type: string
+      geographic_area:
+        type: string
+      id:
+        type: string
+      last_update:
+        type: string
+      metrics:
+        items:
+          type: object
+        type: array
+      published_at:
+        type: string
+      source_organization:
+        type: string
+      start_date:
+        type: string
+      status:
+        type: string
+      summary:
+        type: string
+      title:
+        type: string
+      updated_at:
+        type: string
+      visual_tone:
+        type: string
+    type: object
+  models.OutbreakResource:
+    properties:
+      asset_url:
+        type: string
+      created_at:
+        type: string
+      id:
+        type: string
+      outbreak_id:
+        type: string
+      resource_type:
+        type: string
+      sort_order:
+        type: integer
+      title:
+        type: string
+      updated_at:
+        type: string
+      url:
+        type: string
+    type: object
+  models.OutbreakUpdate:
+    properties:
+      created_at:
+        type: string
+      id:
+        type: string
+      outbreak_id:
+        type: string
+      published_at:
+        type: string
+      summary:
+        type: string
+      title:
+        type: string
+      updated_at:
+        type: string
+    type: object
   models.Permission:
     properties:
       code:
@@ -3036,6 +3153,39 @@ definitions:
         type: string
       value_json:
         type: object
+    type: object
+  models.SituationReport:
+    properties:
+      created_at:
+        type: string
+      geographic_area:
+        type: string
+      id:
+        type: string
+      key_highlights:
+        items:
+          type: string
+        type: array
+      metrics:
+        items:
+          type: object
+        type: array
+      outbreak_id:
+        type: string
+      publication_date:
+        type: string
+      report_asset_url:
+        type: string
+      source_organization:
+        type: string
+      status:
+        type: string
+      summary:
+        type: string
+      title:
+        type: string
+      updated_at:
+        type: string
     type: object
   models.SupportTicket:
     properties:
@@ -3247,12 +3397,18 @@ definitions:
     type: object
   services.Citation:
     properties:
+      block_id:
+        type: string
       chunk_id:
+        type: string
+      guideline_id:
         type: string
       page_end:
         type: integer
       page_start:
         type: integer
+      section_id:
+        type: string
       source_name:
         type: string
       source_version:
@@ -3524,6 +3680,10 @@ definitions:
       country:
         type: string
       description:
+        type: string
+      healthcare_level:
+        type: string
+      intended_population:
         type: string
       language:
         type: string
@@ -4867,11 +5027,71 @@ definitions:
       total_pages:
         type: integer
     type: object
+  services.PageResult-models_Outbreak:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/models.Outbreak'
+        type: array
+      page:
+        type: integer
+      per_page:
+        type: integer
+      total_items:
+        type: integer
+      total_pages:
+        type: integer
+    type: object
+  services.PageResult-models_OutbreakResource:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/models.OutbreakResource'
+        type: array
+      page:
+        type: integer
+      per_page:
+        type: integer
+      total_items:
+        type: integer
+      total_pages:
+        type: integer
+    type: object
+  services.PageResult-models_OutbreakUpdate:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/models.OutbreakUpdate'
+        type: array
+      page:
+        type: integer
+      per_page:
+        type: integer
+      total_items:
+        type: integer
+      total_pages:
+        type: integer
+    type: object
   services.PageResult-models_ReadingProgress:
     properties:
       items:
         items:
           $ref: '#/definitions/models.ReadingProgress'
+        type: array
+      page:
+        type: integer
+      per_page:
+        type: integer
+      total_items:
+        type: integer
+      total_pages:
+        type: integer
+    type: object
+  services.PageResult-models_SituationReport:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/models.SituationReport'
         type: array
       page:
         type: integer
@@ -5000,7 +5220,11 @@ definitions:
         type: string
       description:
         type: string
+      healthcare_level:
+        type: string
       id:
+        type: string
+      intended_population:
         type: string
       language:
         type: string
@@ -5316,12 +5540,20 @@ definitions:
     type: object
   services.SearchResult:
     properties:
+      block_id:
+        type: string
+      content_type:
+        type: string
+      guideline_id:
+        type: string
       id:
         type: string
       page_end:
         type: integer
       page_start:
         type: integer
+      section_id:
+        type: string
       snippet:
         type: string
       source_name:
@@ -5443,6 +5675,10 @@ definitions:
       country:
         type: string
       description:
+        type: string
+      healthcare_level:
+        type: string
+      intended_population:
         type: string
       language:
         type: string
@@ -5880,6 +6116,161 @@ paths:
       summary: List reviewed tables in a published guideline
       tags:
       - Public Guidelines
+  /api/public/outbreaks:
+    get:
+      parameters:
+      - description: Page
+        in: query
+        name: page
+        type: integer
+      - description: Items per page
+        in: query
+        name: per_page
+        type: integer
+      - description: Title, summary, or disease type
+        in: query
+        name: search
+        type: string
+      - description: active, monitoring, contained, or closed
+        in: query
+        name: status
+        type: string
+      - description: Geographic area
+        in: query
+        name: area
+        type: string
+      - description: title, status, start_date, last_update, or published_at
+        in: query
+        name: sort
+        type: string
+      - description: asc or desc
+        in: query
+        name: order
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.PaginatedOutbreaksEnvelope'
+      summary: List published public outbreaks
+      tags:
+      - public-outbreaks
+  /api/public/outbreaks/{id}:
+    get:
+      parameters:
+      - description: Outbreak UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.OutbreakEnvelope'
+      summary: Get a published public outbreak
+      tags:
+      - public-outbreaks
+  /api/public/outbreaks/{id}/resources:
+    get:
+      parameters:
+      - description: Outbreak UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.PaginatedOutbreakResourcesEnvelope'
+      summary: List a published outbreak's public resources
+      tags:
+      - public-outbreaks
+  /api/public/outbreaks/{id}/updates:
+    get:
+      parameters:
+      - description: Outbreak UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.PaginatedOutbreakUpdatesEnvelope'
+      summary: List a published outbreak's updates
+      tags:
+      - public-outbreaks
+  /api/public/search:
+    get:
+      parameters:
+      - description: Search query
+        in: query
+        minLength: 2
+        name: q
+        required: true
+        type: string
+      - description: Program area filter
+        in: query
+        name: program_area
+        type: string
+      - description: Maximum results
+        in: query
+        maximum: 50
+        minimum: 1
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.SearchResultsEnvelope'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+      summary: Search published approved guideline content
+      tags:
+      - public-guidelines
+  /api/public/situation-reports:
+    get:
+      parameters:
+      - description: Outbreak UUID
+        in: query
+        name: outbreak_id
+        type: string
+      - description: Title, summary, or area
+        in: query
+        name: search
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.PaginatedSituationReportsEnvelope'
+      summary: List published public situation reports
+      tags:
+      - public-outbreaks
+  /api/public/situation-reports/{id}:
+    get:
+      parameters:
+      - description: Situation report UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.SituationReportEnvelope'
+      summary: Get a published public situation report
+      tags:
+      - public-outbreaks
   /api/v1/consultants/tree:
     get:
       description: Legacy v1 endpoint that groups consultants by region, city, then

@@ -821,6 +821,36 @@ type PaginatedGuidelineDownloadsEnvelope struct {
 	Data    PaginatedGuidelineDownloads `json:"data"`
 }
 
+type OutbreakEnvelope struct {
+	Success bool            `json:"success"`
+	Data    models.Outbreak `json:"data"`
+}
+
+type PaginatedOutbreaksEnvelope struct {
+	Success bool                                 `json:"success"`
+	Data    services.PageResult[models.Outbreak] `json:"data"`
+}
+
+type PaginatedOutbreakUpdatesEnvelope struct {
+	Success bool                                       `json:"success"`
+	Data    services.PageResult[models.OutbreakUpdate] `json:"data"`
+}
+
+type PaginatedOutbreakResourcesEnvelope struct {
+	Success bool                                         `json:"success"`
+	Data    services.PageResult[models.OutbreakResource] `json:"data"`
+}
+
+type SituationReportEnvelope struct {
+	Success bool                   `json:"success"`
+	Data    models.SituationReport `json:"data"`
+}
+
+type PaginatedSituationReportsEnvelope struct {
+	Success bool                                        `json:"success"`
+	Data    services.PageResult[models.SituationReport] `json:"data"`
+}
+
 type MarkdownValidationEnvelope struct {
 	Success bool                              `json:"success"`
 	Data    services.MarkdownValidationResult `json:"data"`

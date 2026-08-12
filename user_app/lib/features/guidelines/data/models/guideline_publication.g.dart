@@ -23,6 +23,8 @@ _GuidelinePublication _$GuidelinePublicationFromJson(
   lastUpdated: json['last_updated'] == null
       ? null
       : DateTime.parse(json['last_updated'] as String),
+  intendedPopulation: json['intended_population'] as String? ?? '',
+  healthcareLevel: json['healthcare_level'] as String? ?? '',
 );
 
 Map<String, dynamic> _$GuidelinePublicationToJson(
@@ -40,6 +42,8 @@ Map<String, dynamic> _$GuidelinePublicationToJson(
   'review_date': instance.reviewDate,
   'version': instance.version,
   'last_updated': instance.lastUpdated?.toIso8601String(),
+  'intended_population': instance.intendedPopulation,
+  'healthcare_level': instance.healthcareLevel,
 };
 
 _GuidelineVersionSummary _$GuidelineVersionSummaryFromJson(

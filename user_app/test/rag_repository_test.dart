@@ -27,6 +27,8 @@ final class RagApi extends BackendApiService {
         'citations': [
           {
             'chunk_id': 'chunk-1',
+            'guideline_id': 'guideline-1',
+            'section_id': 'section-2',
             'title': 'Uganda Clinical Guidelines',
             'source_name': 'Ministry of Health',
             'source_version': '2023',
@@ -69,6 +71,8 @@ void main() {
     });
     expect(answer.answer, contains('malaria'));
     expect(answer.citations.single.chunkId, 'chunk-1');
+    expect(answer.citations.single.guidelineId, 'guideline-1');
+    expect(answer.citations.single.sectionId, 'section-2');
     expect(answer.answerWithSources, contains('pages 120–122'));
     expect(
       RagAnswer.fromJson(answer.toJson()),

@@ -2,13 +2,20 @@ import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:universal_image/universal_image.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:go_router/go_router.dart';
+import 'package:user_app/app/router/route_names.dart';
 import 'package:user_app/core/constants/app_spacing.dart';
 import 'package:user_app/features/guidelines/data/models/guideline_publication.dart';
 
 class PublicationBlockView extends StatelessWidget {
-  const PublicationBlockView({super.key, required this.block});
+  const PublicationBlockView({
+    super.key,
+    required this.block,
+    this.guidelineId,
+  });
 
   final GuidelineBlock block;
+  final String? guidelineId;
 
   @override
   Widget build(BuildContext context) => switch (block) {
@@ -35,7 +42,16 @@ class PublicationBlockView extends StatelessWidget {
       ordered: false,
     ),
     TableGuidelineBlock(:final payload, :final pageStart, :final pageEnd) =>
-      _TableBlock(payload: payload, pageStart: pageStart, pageEnd: pageEnd),
+      _TableBlock(
+        payload: payload,
+        pageStart: pageStart,
+        pageEnd: pageEnd,
+        onOpen: guidelineId == null
+            ? null
+            : () => context.push(
+                AppRoutes.publicGuidelineTableView(guidelineId!, block.id),
+              ),
+      ),
     FigureGuidelineBlock(:final payload, :final asset) => _FigureBlock(
       payload: payload,
       asset: asset,
@@ -45,7 +61,15 @@ class PublicationBlockView extends StatelessWidget {
       payload: payload,
     ),
     AlgorithmGuidelineBlock(:final payload, :final pageStart) =>
-      _AlgorithmBlock(payload: payload, pageStart: pageStart),
+      _AlgorithmBlock(
+        payload: payload,
+        pageStart: pageStart,
+        onOpen: guidelineId == null
+            ? null
+            : () => context.push(
+                AppRoutes.publicGuidelineAlgorithmView(guidelineId!, block.id),
+              ),
+      ),
     ReferenceGuidelineBlock(:final citation, :final url) => ListTile(
       contentPadding: EdgeInsets.zero,
       leading: const Icon(LucideIcons.bookMarked),
@@ -137,10 +161,16 @@ class _ListBlock extends StatelessWidget {
 }
 
 class _TableBlock extends StatelessWidget {
-  const _TableBlock({required this.payload, this.pageStart, this.pageEnd});
+  const _TableBlock({
+    required this.payload,
+    this.pageStart,
+    this.pageEnd,
+    this.onOpen,
+  });
   final GuidelineTablePayload payload;
   final int? pageStart;
   final int? pageEnd;
+  final VoidCallback? onOpen;
 
   @override
   Widget build(BuildContext context) => Semantics(
@@ -175,6 +205,15 @@ class _TableBlock extends StatelessWidget {
         ),
         for (final footnote in payload.footnotes)
           Text(footnote, style: Theme.of(context).textTheme.bodySmall),
+        if (onOpen != null)
+          Align(
+            alignment: Alignment.centerRight,
+            child: TextButton.icon(
+              onPressed: onOpen,
+              icon: const Icon(LucideIcons.maximize2),
+              label: const Text('Open full table'),
+            ),
+          ),
       ],
     ),
   );
@@ -272,9 +311,10 @@ class _CalloutBlock extends StatelessWidget {
 }
 
 class _AlgorithmBlock extends StatelessWidget {
-  const _AlgorithmBlock({required this.payload, this.pageStart});
+  const _AlgorithmBlock({required this.payload, this.pageStart, this.onOpen});
   final GuidelineAlgorithmPayload payload;
   final int? pageStart;
+  final VoidCallback? onOpen;
 
   @override
   Widget build(BuildContext context) => Card(
@@ -300,6 +340,15 @@ class _AlgorithmBlock extends StatelessWidget {
               subtitle: node.kind.isEmpty ? null : Text(node.kind),
             ),
           if (pageStart != null) Text('Source page $pageStart'),
+          if (onOpen != null)
+            Align(
+              alignment: Alignment.centerRight,
+              child: TextButton.icon(
+                onPressed: onOpen,
+                icon: const Icon(LucideIcons.maximize2),
+                label: const Text('Open algorithm'),
+              ),
+            ),
         ],
       ),
     ),

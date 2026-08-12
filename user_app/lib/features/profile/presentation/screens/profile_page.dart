@@ -80,6 +80,18 @@ class ProfilePage extends ConsumerWidget {
                 onTap: () => _showEditProfileDialog(ref),
               ),
               _SettingsTile(
+                icon: LucideIcons.hospital,
+                title: 'Facility & Role',
+                subtitle: 'View your professional context and facilities',
+                onTap: () => AppNavigator.push(AppRoutes.healthFacilities),
+              ),
+              _SettingsTile(
+                icon: LucideIcons.bell,
+                title: 'Notifications',
+                subtitle: 'Review alerts and notification history',
+                onTap: () => AppNavigator.push(AppRoutes.notifications),
+              ),
+              _SettingsTile(
                 icon: LucideIcons.lock,
                 title: AppTranslationKey.changePassword.tr,
                 subtitle: AppTranslationKey.updateSecurityCredentials.tr,
@@ -107,6 +119,18 @@ class ProfilePage extends ConsumerWidget {
           _SettingsSection(
             title: AppTranslationKey.appPreferences.tr,
             children: [
+              _SettingsTile(
+                icon: LucideIcons.cloudDownload,
+                title: 'Offline Content',
+                subtitle: 'Manage downloaded guidelines and storage',
+                onTap: () => AppNavigator.push(AppRoutes.offlineContent),
+              ),
+              _SettingsTile(
+                icon: LucideIcons.download,
+                title: 'Download Settings',
+                subtitle: 'Review storage and remove offline packages',
+                onTap: () => AppNavigator.push(AppRoutes.offlineContent),
+              ),
               _SettingsTile(
                 icon: LucideIcons.palette,
                 title: AppTranslationKey.theme.tr,
@@ -167,6 +191,12 @@ class ProfilePage extends ConsumerWidget {
                 icon: LucideIcons.fileText,
                 title: AppTranslationKey.termsAndPrivacy.tr,
                 subtitle: AppTranslationKey.legalInformation.tr,
+                onTap: () => AppNavigator.push(AppRoutes.termsAndConditions),
+              ),
+              _SettingsTile(
+                icon: LucideIcons.shieldCheck,
+                title: 'Privacy',
+                subtitle: 'Data handling, offline storage and AI safety',
                 onTap: () => AppNavigator.push(AppRoutes.termsAndConditions),
               ),
               _SettingsTile(

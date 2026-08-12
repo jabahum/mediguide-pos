@@ -363,6 +363,11 @@ export interface HandlersNotificationTemplateEnvelope {
   success?: boolean;
 }
 
+export interface HandlersOutbreakEnvelope {
+  data?: ModelsOutbreak;
+  success?: boolean;
+}
+
 export interface HandlersPaginatedAbbreviationsEnvelope {
   data?: ServicesPageResultModelsAbbreviation;
   success?: boolean;
@@ -691,6 +696,21 @@ export interface HandlersPaginatedNotificationsEnvelope {
   success?: boolean;
 }
 
+export interface HandlersPaginatedOutbreakResourcesEnvelope {
+  data?: ServicesPageResultModelsOutbreakResource;
+  success?: boolean;
+}
+
+export interface HandlersPaginatedOutbreakUpdatesEnvelope {
+  data?: ServicesPageResultModelsOutbreakUpdate;
+  success?: boolean;
+}
+
+export interface HandlersPaginatedOutbreaksEnvelope {
+  data?: ServicesPageResultModelsOutbreak;
+  success?: boolean;
+}
+
 export interface HandlersPaginatedPublicGuidelineAlgorithms {
   items?: ServicesPublicGuidelineAlgorithm[];
   page?: number;
@@ -782,6 +802,11 @@ export interface HandlersPaginatedSettings {
 export interface HandlersPaginatedSettingsEnvelope {
   data?: HandlersPaginatedSettings;
   /** @example true */
+  success?: boolean;
+}
+
+export interface HandlersPaginatedSituationReportsEnvelope {
+  data?: ServicesPageResultModelsSituationReport;
   success?: boolean;
 }
 
@@ -973,6 +998,11 @@ export interface HandlersSearchResultsEnvelope {
 export interface HandlersSettingEnvelope {
   data?: ModelsSetting;
   /** @example true */
+  success?: boolean;
+}
+
+export interface HandlersSituationReportEnvelope {
+  data?: ModelsSituationReport;
   success?: boolean;
 }
 
@@ -1439,7 +1469,9 @@ export interface ModelsGuidelineDocument {
   created_at?: string;
   current_version_id?: string;
   description?: string;
+  healthcare_level?: string;
   id?: string;
+  intended_population?: string;
   language?: string;
   program_area?: string;
   source_org?: string;
@@ -1787,6 +1819,45 @@ export interface ModelsNotificationTemplate {
   variables?: object;
 }
 
+export interface ModelsOutbreak {
+  created_at?: string;
+  disease_type?: string;
+  geographic_area?: string;
+  id?: string;
+  last_update?: string;
+  metrics?: object[];
+  published_at?: string;
+  source_organization?: string;
+  start_date?: string;
+  status?: string;
+  summary?: string;
+  title?: string;
+  updated_at?: string;
+  visual_tone?: string;
+}
+
+export interface ModelsOutbreakResource {
+  asset_url?: string;
+  created_at?: string;
+  id?: string;
+  outbreak_id?: string;
+  resource_type?: string;
+  sort_order?: number;
+  title?: string;
+  updated_at?: string;
+  url?: string;
+}
+
+export interface ModelsOutbreakUpdate {
+  created_at?: string;
+  id?: string;
+  outbreak_id?: string;
+  published_at?: string;
+  summary?: string;
+  title?: string;
+  updated_at?: string;
+}
+
 export interface ModelsPermission {
   code?: string;
   created_at?: string;
@@ -1832,6 +1903,22 @@ export interface ModelsSetting {
   key?: string;
   updated_at?: string;
   value_json?: object;
+}
+
+export interface ModelsSituationReport {
+  created_at?: string;
+  geographic_area?: string;
+  id?: string;
+  key_highlights?: string[];
+  metrics?: object[];
+  outbreak_id?: string;
+  publication_date?: string;
+  report_asset_url?: string;
+  source_organization?: string;
+  status?: string;
+  summary?: string;
+  title?: string;
+  updated_at?: string;
 }
 
 export interface ModelsSupportTicket {
@@ -1948,9 +2035,12 @@ export interface ServicesAssignGuidelineReviewerInput {
 }
 
 export interface ServicesCitation {
+  block_id?: string;
   chunk_id?: string;
+  guideline_id?: string;
   page_end?: number;
   page_start?: number;
+  section_id?: string;
   source_name?: string;
   source_version?: string;
   title?: string;
@@ -2096,6 +2186,8 @@ export interface ServicesCreateGuidelineEditorCommentInput {
 export interface ServicesCreateGuidelineInput {
   country?: string;
   description?: string;
+  healthcare_level?: string;
+  intended_population?: string;
   language?: string;
   program_area?: string;
   source_org?: string;
@@ -2831,8 +2923,40 @@ export interface ServicesPageResultModelsMinistryDirectoryEntry {
   total_pages?: number;
 }
 
+export interface ServicesPageResultModelsOutbreak {
+  items?: ModelsOutbreak[];
+  page?: number;
+  per_page?: number;
+  total_items?: number;
+  total_pages?: number;
+}
+
+export interface ServicesPageResultModelsOutbreakResource {
+  items?: ModelsOutbreakResource[];
+  page?: number;
+  per_page?: number;
+  total_items?: number;
+  total_pages?: number;
+}
+
+export interface ServicesPageResultModelsOutbreakUpdate {
+  items?: ModelsOutbreakUpdate[];
+  page?: number;
+  per_page?: number;
+  total_items?: number;
+  total_pages?: number;
+}
+
 export interface ServicesPageResultModelsReadingProgress {
   items?: ModelsReadingProgress[];
+  page?: number;
+  per_page?: number;
+  total_items?: number;
+  total_pages?: number;
+}
+
+export interface ServicesPageResultModelsSituationReport {
+  items?: ModelsSituationReport[];
   page?: number;
   per_page?: number;
   total_items?: number;
@@ -2900,7 +3024,9 @@ export interface ServicesProtocolStep {
 export interface ServicesPublicGuideline {
   country?: string;
   description?: string;
+  healthcare_level?: string;
   id?: string;
+  intended_population?: string;
   language?: string;
   last_updated?: string;
   program_area?: string;
@@ -3082,9 +3208,13 @@ export interface ServicesRunProtocolResult {
 }
 
 export interface ServicesSearchResult {
+  block_id?: string;
+  content_type?: string;
+  guideline_id?: string;
   id?: string;
   page_end?: number;
   page_start?: number;
+  section_id?: string;
   snippet?: string;
   source_name?: string;
   source_version?: string;
@@ -3157,6 +3287,8 @@ export interface ServicesUpdateGuidelineBlockInput {
 export interface ServicesUpdateGuidelineInput {
   country?: string;
   description?: string;
+  healthcare_level?: string;
+  intended_population?: string;
   language?: string;
   program_area?: string;
   source_org?: string;

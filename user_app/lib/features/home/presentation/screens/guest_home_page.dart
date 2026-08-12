@@ -8,6 +8,7 @@ import 'package:user_app/app/router/route_names.dart';
 import 'package:user_app/core/constants/app_spacing.dart';
 import 'package:user_app/core/utils/responsive.dart';
 import 'package:user_app/features/guidelines/data/models/guideline_publication.dart';
+import 'package:user_app/features/outbreaks/data/models/outbreak_models.dart';
 import 'package:user_app/shared/widgets/section_header.dart';
 
 final guestHomePublicationsProvider =
@@ -17,6 +18,10 @@ final guestHomePublicationsProvider =
           .publications(page: 1, perPage: 12);
       return page.items;
     });
+
+final guestHomeOutbreaksProvider = FutureProvider.autoDispose(
+  (ref) => ref.watch(outbreakRepositoryProvider).outbreaks(status: 'active'),
+);
 
 class GuestHomePage extends ConsumerWidget {
   const GuestHomePage({super.key});
@@ -69,6 +74,16 @@ class GuestHomePage extends ConsumerWidget {
                 onTap: () => context.push(AppRoutes.search),
               ),
             ),
+            AppSpacing.gapLg,
+            ref
+                .watch(guestHomeOutbreaksProvider)
+                .when(
+                  loading: () => const LinearProgressIndicator(),
+                  error: (_, _) => const SizedBox.shrink(),
+                  data: (items) => items.isEmpty
+                      ? const SizedBox.shrink()
+                      : _ActiveOutbreakCard(outbreak: items.first),
+                ),
             AppSpacing.gapLg,
             const SectionHeader(
               title: 'Emergency care',
@@ -144,6 +159,65 @@ class GuestHomePage extends ConsumerWidget {
       ),
     );
   }
+}
+
+class _ActiveOutbreakCard extends StatelessWidget {
+  const _ActiveOutbreakCard({required this.outbreak});
+  final PublicOutbreak outbreak;
+
+  @override
+  Widget build(BuildContext context) => Card(
+    color: Theme.of(context).colorScheme.errorContainer,
+    child: InkWell(
+      borderRadius: BorderRadius.circular(12),
+      onTap: () => context.push(AppRoutes.outbreak(outbreak.id)),
+      child: Padding(
+        padding: AppSpacing.cardPadding,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Icon(LucideIcons.siren),
+                AppSpacing.gapSm,
+                Expanded(
+                  child: Text(
+                    'Active public update',
+                    style: Theme.of(context).textTheme.labelLarge,
+                  ),
+                ),
+                Text(outbreak.status),
+              ],
+            ),
+            AppSpacing.gapSm,
+            Text(
+              outbreak.title,
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
+            if (outbreak.geographicArea.isNotEmpty)
+              Text(outbreak.geographicArea),
+            if (outbreak.summary.isNotEmpty) ...[
+              AppSpacing.gapSm,
+              Text(
+                outbreak.summary,
+                maxLines: 3,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
+            AppSpacing.gapSm,
+            const Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                Text('Open response hub'),
+                AppSpacing.gapXs,
+                Icon(LucideIcons.chevronRight, size: 18),
+              ],
+            ),
+          ],
+        ),
+      ),
+    ),
+  );
 }
 
 class _PublicationSections extends StatelessWidget {

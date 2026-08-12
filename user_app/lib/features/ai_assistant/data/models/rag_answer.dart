@@ -34,6 +34,9 @@ abstract class RagCitation with _$RagCitation {
 
   const factory RagCitation({
     @JsonKey(name: 'chunk_id') @Default('') String chunkId,
+    @JsonKey(name: 'guideline_id') @Default('') String guidelineId,
+    @JsonKey(name: 'section_id') @Default('') String sectionId,
+    @JsonKey(name: 'block_id') @Default('') String blockId,
     @Default('') String title,
     @JsonKey(name: 'source_name') @Default('') String sourceName,
     @JsonKey(name: 'source_version') @Default('') String sourceVersion,

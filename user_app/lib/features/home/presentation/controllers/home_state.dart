@@ -15,8 +15,8 @@ final class HomeState {
 
   final List<ReadingProgress> continueReadingItems;
   final List<Calculator> featuredCalculators;
-  final List<Guideline> pinnedGuidelines;
-  final List<Guideline> recentlyUpdatedGuidelines;
+  final List<GuidelinePublication> pinnedGuidelines;
+  final List<GuidelinePublication> recentlyUpdatedGuidelines;
   final List<GuidelineCategory> guidelineCategories;
 
   final int unreadMessagesCount;
@@ -32,8 +32,8 @@ final class HomeState {
   HomeState copyWith({
     List<ReadingProgress>? continueReadingItems,
     List<Calculator>? featuredCalculators,
-    List<Guideline>? pinnedGuidelines,
-    List<Guideline>? recentlyUpdatedGuidelines,
+    List<GuidelinePublication>? pinnedGuidelines,
+    List<GuidelinePublication>? recentlyUpdatedGuidelines,
     List<GuidelineCategory>? guidelineCategories,
     int? unreadMessagesCount,
     Map<String, int>? stats,

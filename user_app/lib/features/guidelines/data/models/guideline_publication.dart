@@ -27,6 +27,10 @@ abstract class GuidelinePublication with _$GuidelinePublication {
     @JsonKey(name: 'review_date') @Default('') String reviewDate,
     @Default('') String version,
     @JsonKey(name: 'last_updated') DateTime? lastUpdated,
+    @JsonKey(name: 'intended_population')
+    @Default('')
+    String intendedPopulation,
+    @JsonKey(name: 'healthcare_level') @Default('') String healthcareLevel,
   }) = _GuidelinePublication;
 
   factory GuidelinePublication.fromJson(Map<String, dynamic> json) =>

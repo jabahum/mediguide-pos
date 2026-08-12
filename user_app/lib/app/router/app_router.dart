@@ -34,13 +34,16 @@ import 'package:user_app/features/guidelines/presentation/screens/guidelines_pag
 import 'package:user_app/features/guidelines/presentation/screens/read_guideline_page.dart';
 import 'package:user_app/features/guidelines/presentation/screens/publication_catalogue_page.dart';
 import 'package:user_app/features/guidelines/presentation/screens/publication_guideline_page.dart';
+import 'package:user_app/features/guidelines/presentation/screens/publication_clinical_viewers.dart';
 import 'package:user_app/features/home/presentation/screens/home_page.dart';
 import 'package:user_app/features/search/presentation/screens/global_search_page.dart';
 import 'package:user_app/features/library/presentation/screens/my_library_page.dart';
 import 'package:user_app/features/navigation/presentation/screens/guest_more_page.dart';
 import 'package:user_app/features/navigation/presentation/screens/main_page.dart';
+import 'package:user_app/features/outbreaks/presentation/screens/outbreak_screens.dart';
 import 'package:user_app/features/notifications/presentation/screens/notifications_page.dart';
 import 'package:user_app/features/profile/presentation/screens/profile_page.dart';
+import 'package:user_app/features/downloads/presentation/screens/offline_content_page.dart';
 import 'package:user_app/features/support/presentation/screens/faq_page.dart';
 import 'package:user_app/features/support/presentation/screens/help_center_page.dart';
 
@@ -85,6 +88,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         path: AppRoutes.library,
         builder: (_, _) => const MyLibraryPage(),
       ),
+      GoRoute(
+        path: AppRoutes.offlineContent,
+        builder: (_, _) => const OfflineContentPage(),
+      ),
       GoRoute(path: AppRoutes.more, builder: (_, _) => const GuestMorePage()),
       GoRoute(path: AppRoutes.profile, builder: (_, _) => const ProfilePage()),
 
@@ -106,13 +113,45 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         ),
       ),
       GoRoute(
+        path: AppRoutes.publicGuidelineReader,
+        builder: (_, state) => PublicationGuidelinePage(
+          guidelineId: state.pathParameters['guidelineId'] ?? '',
+          readerOnly: true,
+        ),
+      ),
+      GoRoute(
+        path: AppRoutes.publicGuidelineTable,
+        builder: (_, state) => PublicationTablePage(
+          guidelineId: state.pathParameters['guidelineId'] ?? '',
+          blockId: state.pathParameters['blockId'] ?? '',
+        ),
+      ),
+      GoRoute(
+        path: AppRoutes.publicGuidelineAlgorithm,
+        builder: (_, state) => PublicationAlgorithmPage(
+          guidelineId: state.pathParameters['guidelineId'] ?? '',
+          blockId: state.pathParameters['blockId'] ?? '',
+        ),
+      ),
+      GoRoute(
         path: AppRoutes.outbreakHub,
-        builder: (_, _) => const GenericViewerPage(pageKey: 'outbreak-hub'),
+        builder: (_, _) => const OutbreakHubPage(),
+      ),
+      GoRoute(
+        path: AppRoutes.outbreakDetails,
+        builder: (_, state) => OutbreakDetailPage(
+          outbreakId: state.pathParameters['outbreakId'] ?? '',
+        ),
       ),
       GoRoute(
         path: AppRoutes.situationReports,
-        builder: (_, _) =>
-            const GenericViewerPage(pageKey: 'situation-reports'),
+        builder: (_, _) => const SituationReportsPage(),
+      ),
+      GoRoute(
+        path: AppRoutes.situationReportDetails,
+        builder: (_, state) => SituationReportDetailPage(
+          reportId: state.pathParameters['reportId'] ?? '',
+        ),
       ),
       GoRoute(
         path: AppRoutes.guidelineDetails,

@@ -274,15 +274,20 @@ final class RepositoryGlobalSearchDataSource implements GlobalSearchDataSource {
             .toList(growable: false);
 
       case SearchCategory.guidelines:
-        final response = await _publications.publications(
+        final publicationsFuture = _publications.publications(
           page: 1,
           perPage: 10,
           search: query,
         );
-
-        return response.items
-            .map((item) => _toSearchResult(item, category, query))
-            .toList(growable: false);
+        final contentFuture = _publications.searchContent(query, limit: 15);
+        await Future.wait<Object>([publicationsFuture, contentFuture]);
+        final publications = await publicationsFuture;
+        final content = await contentFuture;
+        return <SearchResult>[
+          for (final item in publications.items)
+            _toSearchResult(item, category, query),
+          for (final item in content) _contentSearchResult(item, query),
+        ];
 
       case SearchCategory.abbreviations:
         final response = await _guidelines.abbreviations(
@@ -488,6 +493,38 @@ final class RepositoryGlobalSearchDataSource implements GlobalSearchDataSource {
       case SearchCategory.faq:
         throw UnsupportedError('Unsupported search category: $category');
     }
+  }
+
+  SearchResult _contentSearchResult(
+    GuidelineContentSearchResult item,
+    String query,
+  ) {
+    final route = switch (item.contentType) {
+      'table' when item.blockId.isNotEmpty =>
+        AppRoutes.publicGuidelineTableView(item.guidelineId, item.blockId),
+      'algorithm' when item.blockId.isNotEmpty =>
+        AppRoutes.publicGuidelineAlgorithmView(item.guidelineId, item.blockId),
+      _ when item.sectionId.isNotEmpty =>
+        '${AppRoutes.readPublicGuideline(item.guidelineId)}?section=${Uri.encodeQueryComponent(item.sectionId)}',
+      _ => AppRoutes.publicGuideline(item.guidelineId),
+    };
+    final source = [
+      item.sourceName,
+      item.sourceVersion,
+      if (item.pageStart != null) 'page ${item.pageStart}',
+    ].where((value) => value.trim().isNotEmpty).join(' · ');
+    return _withRelevance(
+      SearchResult(
+        id: 'content:${item.id}',
+        title: item.title.isEmpty ? 'Guideline content' : item.title,
+        subtitle: source.isEmpty ? item.contentType : source,
+        description: item.snippet,
+        category: SearchCategory.guidelines,
+        route: route,
+        item: item,
+      ),
+      query,
+    );
   }
 
   // ======================================================

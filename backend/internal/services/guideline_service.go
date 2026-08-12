@@ -30,12 +30,14 @@ type GuidelineService struct {
 }
 
 type CreateGuidelineInput struct {
-	Title       string `json:"title"`
-	Country     string `json:"country"`
-	SourceOrg   string `json:"source_org"`
-	ProgramArea string `json:"program_area"`
-	Language    string `json:"language"`
-	Description string `json:"description"`
+	Title              string `json:"title"`
+	Country            string `json:"country"`
+	SourceOrg          string `json:"source_org"`
+	ProgramArea        string `json:"program_area"`
+	Language           string `json:"language"`
+	Description        string `json:"description"`
+	IntendedPopulation string `json:"intended_population"`
+	HealthcareLevel    string `json:"healthcare_level"`
 }
 
 type UpdateGuidelineInput = CreateGuidelineInput
@@ -63,7 +65,7 @@ var (
 )
 
 func (s GuidelineService) CreateDocument(in CreateGuidelineInput) (*models.GuidelineDocument, error) {
-	d := models.GuidelineDocument{Title: in.Title, Country: in.Country, SourceOrg: in.SourceOrg, ProgramArea: in.ProgramArea, Language: in.Language, Description: in.Description}
+	d := models.GuidelineDocument{Title: in.Title, Country: in.Country, SourceOrg: in.SourceOrg, ProgramArea: in.ProgramArea, Language: in.Language, Description: in.Description, IntendedPopulation: in.IntendedPopulation, HealthcareLevel: in.HealthcareLevel}
 	if d.Language == "" {
 		d.Language = "en"
 	}
@@ -100,12 +102,14 @@ func (s GuidelineService) UpdateDocument(id uuid.UUID, in UpdateGuidelineInput) 
 		language = "en"
 	}
 	if err := s.DB.Model(&document).Updates(map[string]any{
-		"title":        strings.TrimSpace(in.Title),
-		"country":      strings.TrimSpace(in.Country),
-		"source_org":   strings.TrimSpace(in.SourceOrg),
-		"program_area": strings.TrimSpace(in.ProgramArea),
-		"language":     language,
-		"description":  strings.TrimSpace(in.Description),
+		"title":               strings.TrimSpace(in.Title),
+		"country":             strings.TrimSpace(in.Country),
+		"source_org":          strings.TrimSpace(in.SourceOrg),
+		"program_area":        strings.TrimSpace(in.ProgramArea),
+		"language":            language,
+		"description":         strings.TrimSpace(in.Description),
+		"intended_population": strings.TrimSpace(in.IntendedPopulation),
+		"healthcare_level":    strings.TrimSpace(in.HealthcareLevel),
 	}).Error; err != nil {
 		return nil, err
 	}

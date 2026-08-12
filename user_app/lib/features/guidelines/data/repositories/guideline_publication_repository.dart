@@ -151,7 +151,12 @@ final class GuidelinePublicationRepository {
           'sections': sections.map((item) => item.toJson()).toList(),
           'blocks': blocks.map((item) => item.toJson()).toList(),
         },
-        searchableText: publication.title,
+        searchableText: [
+          publication.title,
+          publication.description,
+          ...sections.map((item) => item.title),
+          ...blocks.map(_blockText),
+        ].join(' '),
       );
       return value;
     } catch (_) {
@@ -178,6 +183,75 @@ final class GuidelinePublicationRepository {
   Future<GuidelineAsset?> offlinePackage(String guidelineId) =>
       _asset('/api/public/guidelines/$guidelineId/offline-package');
 
+  Future<List<GuidelineContentSearchResult>> searchContent(
+    String query, {
+    int limit = 20,
+  }) async {
+    final normalized = query.trim();
+    try {
+      final response = await _public(
+        '/api/public/search',
+        query: {'q': normalized, 'limit': '$limit'},
+      );
+      final data = response['data'];
+      final rows = data is List ? data : const [];
+      return rows
+          .whereType<Map>()
+          .map(
+            (row) =>
+                ServicesSearchResult.fromJson(Map<String, dynamic>.from(row)),
+          )
+          .map(GuidelineContentSearchResult.fromContract)
+          .toList(growable: false);
+    } catch (_) {
+      final cached = await _cache.list(
+        type: _contentType,
+        scope: 'public',
+        search: normalized,
+        limit: 100,
+      );
+      if (cached.isEmpty) rethrow;
+      final needle = normalized.toLowerCase();
+      final results = <GuidelineContentSearchResult>[];
+      for (final row in cached) {
+        final publication = GuidelinePublication.fromJson(
+          _map(row['publication']),
+        );
+        final sections = _maps(
+          row['sections'],
+        ).map(PublicationSection.fromJson).toList();
+        final sectionTitles = {
+          for (final item in sections) item.id: item.title,
+        };
+        for (final block in _maps(row['blocks']).map(GuidelineBlock.fromJson)) {
+          final text = _blockText(block);
+          final sectionTitle = sectionTitles[block.sectionId] ?? '';
+          if (!text.toLowerCase().contains(needle) &&
+              !sectionTitle.toLowerCase().contains(needle)) {
+            continue;
+          }
+          results.add(
+            GuidelineContentSearchResult(
+              id: block.id,
+              guidelineId: publication.id,
+              sectionId: block.sectionId ?? '',
+              blockId: block.id,
+              contentType: _blockType(block),
+              title: sectionTitle,
+              snippet: text,
+              sourceName: publication.sourceOrganization,
+              sourceVersion: publication.version,
+              pageStart: block.pageStart,
+              pageEnd: block.pageEnd,
+            ),
+          );
+          if (results.length >= limit) return results;
+        }
+      }
+      return results;
+    }
+  }
+
   Future<GuidelineAsset?> _asset(String path) async {
     final response = await _public(path);
     final data = _data(response);
@@ -188,6 +262,49 @@ final class GuidelinePublicationRepository {
     String path, {
     Map<String, String>? query,
   }) => _api.requestJson(path, method: 'GET', query: query, includeAuth: false);
+}
+
+final class GuidelineContentSearchResult {
+  const GuidelineContentSearchResult({
+    required this.id,
+    required this.guidelineId,
+    required this.sectionId,
+    required this.blockId,
+    required this.contentType,
+    required this.title,
+    required this.snippet,
+    required this.sourceName,
+    required this.sourceVersion,
+    this.pageStart,
+    this.pageEnd,
+  });
+
+  factory GuidelineContentSearchResult.fromContract(ServicesSearchResult dto) =>
+      GuidelineContentSearchResult(
+        id: dto.id ?? '',
+        guidelineId: dto.guidelineId ?? '',
+        sectionId: dto.sectionId ?? '',
+        blockId: dto.blockId ?? '',
+        contentType: dto.contentType ?? 'section',
+        title: dto.title ?? '',
+        snippet: dto.snippet ?? '',
+        sourceName: dto.sourceName ?? '',
+        sourceVersion: dto.sourceVersion ?? '',
+        pageStart: dto.pageStart,
+        pageEnd: dto.pageEnd,
+      );
+
+  final String id;
+  final String guidelineId;
+  final String sectionId;
+  final String blockId;
+  final String contentType;
+  final String title;
+  final String snippet;
+  final String sourceName;
+  final String sourceVersion;
+  final int? pageStart;
+  final int? pageEnd;
 }
 
 GuidelinePublication _publicationFromContract(Map<String, dynamic> json) {
@@ -205,6 +322,8 @@ GuidelinePublication _publicationFromContract(Map<String, dynamic> json) {
     reviewDate: dto.reviewDate ?? '',
     version: dto.version ?? '',
     lastUpdated: DateTime.tryParse(dto.lastUpdated ?? ''),
+    intendedPopulation: dto.intendedPopulation ?? '',
+    healthcareLevel: dto.healthcareLevel ?? '',
   );
 }
 
@@ -412,3 +531,33 @@ List<String> _strings(Object? value) =>
     value is List ? value.map((item) => item.toString()).toList() : const [];
 int _integer(Object? value, int fallback) =>
     value is num ? value.toInt() : int.tryParse('$value') ?? fallback;
+
+String _blockType(GuidelineBlock block) => switch (block) {
+  TableGuidelineBlock() => 'table',
+  AlgorithmGuidelineBlock() => 'algorithm',
+  FigureGuidelineBlock() => 'figure',
+  _ => 'section',
+};
+
+String _blockText(GuidelineBlock block) => switch (block) {
+  ParagraphGuidelineBlock(:final text) => text,
+  HeadingGuidelineBlock(:final text) => text,
+  OrderedListGuidelineBlock(:final items) => items.join(' '),
+  UnorderedListGuidelineBlock(:final items) => items.join(' '),
+  TableGuidelineBlock(:final payload) => [
+    payload.title,
+    ...payload.columns,
+    ...payload.rows.expand((row) => row),
+  ].join(' '),
+  FigureGuidelineBlock(:final payload) =>
+    '${payload.caption} ${payload.alternativeText}',
+  CalloutGuidelineBlock(:final payload) =>
+    '${payload.title} ${payload.content}',
+  AlgorithmGuidelineBlock(:final payload) => [
+    payload.title,
+    ...payload.nodes.map((item) => item.label),
+  ].join(' '),
+  ReferenceGuidelineBlock(:final citation) => citation,
+  PageBreakGuidelineBlock(:final page) => 'Page $page',
+  UnknownGuidelineBlock() => '',
+};

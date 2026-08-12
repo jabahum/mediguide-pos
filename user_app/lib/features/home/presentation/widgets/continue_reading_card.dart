@@ -11,9 +11,9 @@ import 'package:user_app/core/utils/responsive.dart';
 final _guidelineTitleProvider = FutureProvider.autoDispose
     .family<String, String>((ref, id) async {
       final guideline = await ref
-          .read(guidelineContentRepositoryProvider)
-          .guideline(id);
-      return guideline.conditionName;
+          .read(guidelinePublicationRepositoryProvider)
+          .content(id);
+      return guideline.publication.title;
     });
 
 class ContinueReadingCard extends ConsumerWidget {

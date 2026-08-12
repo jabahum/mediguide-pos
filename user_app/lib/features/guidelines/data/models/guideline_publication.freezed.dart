@@ -16,7 +16,7 @@ T _$identity<T>(T value) => value;
 /// @nodoc
 mixin _$GuidelinePublication {
 
- String get id; String get slug; String get title; String get description; String get country;@JsonKey(name: 'source_org') String get sourceOrganization;@JsonKey(name: 'program_area') String get programArea; String get language;@JsonKey(name: 'publication_date') String get publicationDate;@JsonKey(name: 'review_date') String get reviewDate; String get version;@JsonKey(name: 'last_updated') DateTime? get lastUpdated;
+ String get id; String get slug; String get title; String get description; String get country;@JsonKey(name: 'source_org') String get sourceOrganization;@JsonKey(name: 'program_area') String get programArea; String get language;@JsonKey(name: 'publication_date') String get publicationDate;@JsonKey(name: 'review_date') String get reviewDate; String get version;@JsonKey(name: 'last_updated') DateTime? get lastUpdated;@JsonKey(name: 'intended_population') String get intendedPopulation;@JsonKey(name: 'healthcare_level') String get healthcareLevel;
 /// Create a copy of GuidelinePublication
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -29,16 +29,16 @@ $GuidelinePublicationCopyWith<GuidelinePublication> get copyWith => _$GuidelineP
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is GuidelinePublication&&(identical(other.id, id) || other.id == id)&&(identical(other.slug, slug) || other.slug == slug)&&(identical(other.title, title) || other.title == title)&&(identical(other.description, description) || other.description == description)&&(identical(other.country, country) || other.country == country)&&(identical(other.sourceOrganization, sourceOrganization) || other.sourceOrganization == sourceOrganization)&&(identical(other.programArea, programArea) || other.programArea == programArea)&&(identical(other.language, language) || other.language == language)&&(identical(other.publicationDate, publicationDate) || other.publicationDate == publicationDate)&&(identical(other.reviewDate, reviewDate) || other.reviewDate == reviewDate)&&(identical(other.version, version) || other.version == version)&&(identical(other.lastUpdated, lastUpdated) || other.lastUpdated == lastUpdated));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is GuidelinePublication&&(identical(other.id, id) || other.id == id)&&(identical(other.slug, slug) || other.slug == slug)&&(identical(other.title, title) || other.title == title)&&(identical(other.description, description) || other.description == description)&&(identical(other.country, country) || other.country == country)&&(identical(other.sourceOrganization, sourceOrganization) || other.sourceOrganization == sourceOrganization)&&(identical(other.programArea, programArea) || other.programArea == programArea)&&(identical(other.language, language) || other.language == language)&&(identical(other.publicationDate, publicationDate) || other.publicationDate == publicationDate)&&(identical(other.reviewDate, reviewDate) || other.reviewDate == reviewDate)&&(identical(other.version, version) || other.version == version)&&(identical(other.lastUpdated, lastUpdated) || other.lastUpdated == lastUpdated)&&(identical(other.intendedPopulation, intendedPopulation) || other.intendedPopulation == intendedPopulation)&&(identical(other.healthcareLevel, healthcareLevel) || other.healthcareLevel == healthcareLevel));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,id,slug,title,description,country,sourceOrganization,programArea,language,publicationDate,reviewDate,version,lastUpdated);
+int get hashCode => Object.hash(runtimeType,id,slug,title,description,country,sourceOrganization,programArea,language,publicationDate,reviewDate,version,lastUpdated,intendedPopulation,healthcareLevel);
 
 @override
 String toString() {
-  return 'GuidelinePublication(id: $id, slug: $slug, title: $title, description: $description, country: $country, sourceOrganization: $sourceOrganization, programArea: $programArea, language: $language, publicationDate: $publicationDate, reviewDate: $reviewDate, version: $version, lastUpdated: $lastUpdated)';
+  return 'GuidelinePublication(id: $id, slug: $slug, title: $title, description: $description, country: $country, sourceOrganization: $sourceOrganization, programArea: $programArea, language: $language, publicationDate: $publicationDate, reviewDate: $reviewDate, version: $version, lastUpdated: $lastUpdated, intendedPopulation: $intendedPopulation, healthcareLevel: $healthcareLevel)';
 }
 
 
@@ -49,7 +49,7 @@ abstract mixin class $GuidelinePublicationCopyWith<$Res>  {
   factory $GuidelinePublicationCopyWith(GuidelinePublication value, $Res Function(GuidelinePublication) _then) = _$GuidelinePublicationCopyWithImpl;
 @useResult
 $Res call({
- String id, String slug, String title, String description, String country,@JsonKey(name: 'source_org') String sourceOrganization,@JsonKey(name: 'program_area') String programArea, String language,@JsonKey(name: 'publication_date') String publicationDate,@JsonKey(name: 'review_date') String reviewDate, String version,@JsonKey(name: 'last_updated') DateTime? lastUpdated
+ String id, String slug, String title, String description, String country,@JsonKey(name: 'source_org') String sourceOrganization,@JsonKey(name: 'program_area') String programArea, String language,@JsonKey(name: 'publication_date') String publicationDate,@JsonKey(name: 'review_date') String reviewDate, String version,@JsonKey(name: 'last_updated') DateTime? lastUpdated,@JsonKey(name: 'intended_population') String intendedPopulation,@JsonKey(name: 'healthcare_level') String healthcareLevel
 });
 
 
@@ -66,7 +66,7 @@ class _$GuidelinePublicationCopyWithImpl<$Res>
 
 /// Create a copy of GuidelinePublication
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? slug = null,Object? title = null,Object? description = null,Object? country = null,Object? sourceOrganization = null,Object? programArea = null,Object? language = null,Object? publicationDate = null,Object? reviewDate = null,Object? version = null,Object? lastUpdated = freezed,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? slug = null,Object? title = null,Object? description = null,Object? country = null,Object? sourceOrganization = null,Object? programArea = null,Object? language = null,Object? publicationDate = null,Object? reviewDate = null,Object? version = null,Object? lastUpdated = freezed,Object? intendedPopulation = null,Object? healthcareLevel = null,}) {
   return _then(_self.copyWith(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,slug: null == slug ? _self.slug : slug // ignore: cast_nullable_to_non_nullable
@@ -80,7 +80,9 @@ as String,publicationDate: null == publicationDate ? _self.publicationDate : pub
 as String,reviewDate: null == reviewDate ? _self.reviewDate : reviewDate // ignore: cast_nullable_to_non_nullable
 as String,version: null == version ? _self.version : version // ignore: cast_nullable_to_non_nullable
 as String,lastUpdated: freezed == lastUpdated ? _self.lastUpdated : lastUpdated // ignore: cast_nullable_to_non_nullable
-as DateTime?,
+as DateTime?,intendedPopulation: null == intendedPopulation ? _self.intendedPopulation : intendedPopulation // ignore: cast_nullable_to_non_nullable
+as String,healthcareLevel: null == healthcareLevel ? _self.healthcareLevel : healthcareLevel // ignore: cast_nullable_to_non_nullable
+as String,
   ));
 }
 
@@ -91,7 +93,7 @@ as DateTime?,
 @JsonSerializable()
 
 class _GuidelinePublication implements GuidelinePublication {
-  const _GuidelinePublication({required this.id, this.slug = '', this.title = '', this.description = '', this.country = '', @JsonKey(name: 'source_org') this.sourceOrganization = '', @JsonKey(name: 'program_area') this.programArea = '', this.language = '', @JsonKey(name: 'publication_date') this.publicationDate = '', @JsonKey(name: 'review_date') this.reviewDate = '', this.version = '', @JsonKey(name: 'last_updated') this.lastUpdated});
+  const _GuidelinePublication({required this.id, this.slug = '', this.title = '', this.description = '', this.country = '', @JsonKey(name: 'source_org') this.sourceOrganization = '', @JsonKey(name: 'program_area') this.programArea = '', this.language = '', @JsonKey(name: 'publication_date') this.publicationDate = '', @JsonKey(name: 'review_date') this.reviewDate = '', this.version = '', @JsonKey(name: 'last_updated') this.lastUpdated, @JsonKey(name: 'intended_population') this.intendedPopulation = '', @JsonKey(name: 'healthcare_level') this.healthcareLevel = ''});
   factory _GuidelinePublication.fromJson(Map<String, dynamic> json) => _$GuidelinePublicationFromJson(json);
 
 @override final  String id;
@@ -106,6 +108,8 @@ class _GuidelinePublication implements GuidelinePublication {
 @override@JsonKey(name: 'review_date') final  String reviewDate;
 @override@JsonKey() final  String version;
 @override@JsonKey(name: 'last_updated') final  DateTime? lastUpdated;
+@override@JsonKey(name: 'intended_population') final  String intendedPopulation;
+@override@JsonKey(name: 'healthcare_level') final  String healthcareLevel;
 
 /// Create a copy of GuidelinePublication
 /// with the given fields replaced by the non-null parameter values.
@@ -120,16 +124,16 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _GuidelinePublication&&(identical(other.id, id) || other.id == id)&&(identical(other.slug, slug) || other.slug == slug)&&(identical(other.title, title) || other.title == title)&&(identical(other.description, description) || other.description == description)&&(identical(other.country, country) || other.country == country)&&(identical(other.sourceOrganization, sourceOrganization) || other.sourceOrganization == sourceOrganization)&&(identical(other.programArea, programArea) || other.programArea == programArea)&&(identical(other.language, language) || other.language == language)&&(identical(other.publicationDate, publicationDate) || other.publicationDate == publicationDate)&&(identical(other.reviewDate, reviewDate) || other.reviewDate == reviewDate)&&(identical(other.version, version) || other.version == version)&&(identical(other.lastUpdated, lastUpdated) || other.lastUpdated == lastUpdated));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _GuidelinePublication&&(identical(other.id, id) || other.id == id)&&(identical(other.slug, slug) || other.slug == slug)&&(identical(other.title, title) || other.title == title)&&(identical(other.description, description) || other.description == description)&&(identical(other.country, country) || other.country == country)&&(identical(other.sourceOrganization, sourceOrganization) || other.sourceOrganization == sourceOrganization)&&(identical(other.programArea, programArea) || other.programArea == programArea)&&(identical(other.language, language) || other.language == language)&&(identical(other.publicationDate, publicationDate) || other.publicationDate == publicationDate)&&(identical(other.reviewDate, reviewDate) || other.reviewDate == reviewDate)&&(identical(other.version, version) || other.version == version)&&(identical(other.lastUpdated, lastUpdated) || other.lastUpdated == lastUpdated)&&(identical(other.intendedPopulation, intendedPopulation) || other.intendedPopulation == intendedPopulation)&&(identical(other.healthcareLevel, healthcareLevel) || other.healthcareLevel == healthcareLevel));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,id,slug,title,description,country,sourceOrganization,programArea,language,publicationDate,reviewDate,version,lastUpdated);
+int get hashCode => Object.hash(runtimeType,id,slug,title,description,country,sourceOrganization,programArea,language,publicationDate,reviewDate,version,lastUpdated,intendedPopulation,healthcareLevel);
 
 @override
 String toString() {
-  return 'GuidelinePublication(id: $id, slug: $slug, title: $title, description: $description, country: $country, sourceOrganization: $sourceOrganization, programArea: $programArea, language: $language, publicationDate: $publicationDate, reviewDate: $reviewDate, version: $version, lastUpdated: $lastUpdated)';
+  return 'GuidelinePublication(id: $id, slug: $slug, title: $title, description: $description, country: $country, sourceOrganization: $sourceOrganization, programArea: $programArea, language: $language, publicationDate: $publicationDate, reviewDate: $reviewDate, version: $version, lastUpdated: $lastUpdated, intendedPopulation: $intendedPopulation, healthcareLevel: $healthcareLevel)';
 }
 
 
@@ -140,7 +144,7 @@ abstract mixin class _$GuidelinePublicationCopyWith<$Res> implements $GuidelineP
   factory _$GuidelinePublicationCopyWith(_GuidelinePublication value, $Res Function(_GuidelinePublication) _then) = __$GuidelinePublicationCopyWithImpl;
 @override @useResult
 $Res call({
- String id, String slug, String title, String description, String country,@JsonKey(name: 'source_org') String sourceOrganization,@JsonKey(name: 'program_area') String programArea, String language,@JsonKey(name: 'publication_date') String publicationDate,@JsonKey(name: 'review_date') String reviewDate, String version,@JsonKey(name: 'last_updated') DateTime? lastUpdated
+ String id, String slug, String title, String description, String country,@JsonKey(name: 'source_org') String sourceOrganization,@JsonKey(name: 'program_area') String programArea, String language,@JsonKey(name: 'publication_date') String publicationDate,@JsonKey(name: 'review_date') String reviewDate, String version,@JsonKey(name: 'last_updated') DateTime? lastUpdated,@JsonKey(name: 'intended_population') String intendedPopulation,@JsonKey(name: 'healthcare_level') String healthcareLevel
 });
 
 
@@ -157,7 +161,7 @@ class __$GuidelinePublicationCopyWithImpl<$Res>
 
 /// Create a copy of GuidelinePublication
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? slug = null,Object? title = null,Object? description = null,Object? country = null,Object? sourceOrganization = null,Object? programArea = null,Object? language = null,Object? publicationDate = null,Object? reviewDate = null,Object? version = null,Object? lastUpdated = freezed,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? slug = null,Object? title = null,Object? description = null,Object? country = null,Object? sourceOrganization = null,Object? programArea = null,Object? language = null,Object? publicationDate = null,Object? reviewDate = null,Object? version = null,Object? lastUpdated = freezed,Object? intendedPopulation = null,Object? healthcareLevel = null,}) {
   return _then(_GuidelinePublication(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,slug: null == slug ? _self.slug : slug // ignore: cast_nullable_to_non_nullable
@@ -171,7 +175,9 @@ as String,publicationDate: null == publicationDate ? _self.publicationDate : pub
 as String,reviewDate: null == reviewDate ? _self.reviewDate : reviewDate // ignore: cast_nullable_to_non_nullable
 as String,version: null == version ? _self.version : version // ignore: cast_nullable_to_non_nullable
 as String,lastUpdated: freezed == lastUpdated ? _self.lastUpdated : lastUpdated // ignore: cast_nullable_to_non_nullable
-as DateTime?,
+as DateTime?,intendedPopulation: null == intendedPopulation ? _self.intendedPopulation : intendedPopulation // ignore: cast_nullable_to_non_nullable
+as String,healthcareLevel: null == healthcareLevel ? _self.healthcareLevel : healthcareLevel // ignore: cast_nullable_to_non_nullable
+as String,
   ));
 }
 

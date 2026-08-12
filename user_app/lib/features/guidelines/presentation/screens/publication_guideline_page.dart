@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -15,10 +17,17 @@ import 'package:user_app/features/authentication/presentation/controllers/auth_c
 import 'package:user_app/features/guidelines/data/models/guideline_publication.dart';
 import 'package:user_app/features/guidelines/presentation/controllers/publication_guideline_controller.dart';
 import 'package:user_app/features/guidelines/presentation/widgets/publication_block_view.dart';
+import 'package:user_app/features/downloads/data/models/offline_download.dart';
+import 'package:user_app/features/downloads/presentation/controllers/guideline_downloads_controller.dart';
 
 class PublicationGuidelinePage extends ConsumerStatefulWidget {
-  const PublicationGuidelinePage({super.key, required this.guidelineId});
+  const PublicationGuidelinePage({
+    super.key,
+    required this.guidelineId,
+    this.readerOnly = false,
+  });
   final String guidelineId;
+  final bool readerOnly;
 
   @override
   ConsumerState<PublicationGuidelinePage> createState() =>
@@ -28,7 +37,27 @@ class PublicationGuidelinePage extends ConsumerStatefulWidget {
 class _PublicationGuidelinePageState
     extends ConsumerState<PublicationGuidelinePage> {
   String? _selectedSectionId;
+  String? _currentSectionId;
   final Map<String, GlobalKey> _sectionKeys = {};
+  final ScrollController _readerScrollController = ScrollController();
+  bool _deepLinkApplied = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_deepLinkApplied) return;
+    _deepLinkApplied = true;
+    final section = GoRouterState.of(context).uri.queryParameters['section'];
+    if (section != null && section.trim().isNotEmpty) {
+      _selectedSectionId = section.trim();
+    }
+  }
+
+  @override
+  void dispose() {
+    _readerScrollController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -38,7 +67,9 @@ class _PublicationGuidelinePageState
         .valueOrNull;
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Clinical guideline'),
+        title: Text(
+          widget.readerOnly ? 'Guideline reader' : 'Guideline overview',
+        ),
         actions: [
           IconButton(
             tooltip: 'Search within guideline',
@@ -82,113 +113,285 @@ class _PublicationGuidelinePageState
           onRetry: () =>
               ref.invalidate(publicationGuidelineProvider(widget.guidelineId)),
         ),
-        data: (value) => _content(context, value),
+        data: (value) => widget.readerOnly
+            ? _content(context, value)
+            : _overviewPage(context, value, progress?.isBookmarked == true),
       ),
+      bottomNavigationBar: content.valueOrNull == null
+          ? null
+          : _ReaderActionBar(
+              isBookmarked: progress?.isBookmarked == true,
+              showRead: !widget.readerOnly,
+              onRead: () => context.push(
+                AppRoutes.readPublicGuideline(widget.guidelineId),
+              ),
+              onBookmark: () => _toggleBookmark(context),
+              onNotes: () => _editNotes(context, progress?.notes ?? ''),
+              onShare: () => _copyLink(context),
+              onOriginal: () => _openOriginal(context),
+              onDownload: () => _download(context, content.requireValue),
+            ),
     );
+  }
+
+  Widget _overviewPage(
+    BuildContext context,
+    GuidelinePublicationContent value,
+    bool isBookmarked,
+  ) => _GuidelineOverview(
+    content: value,
+    isBookmarked: isBookmarked,
+    onRead: () =>
+        context.push(AppRoutes.readPublicGuideline(widget.guidelineId)),
+    onSection: (sectionId) => context.push(
+      '${AppRoutes.readPublicGuideline(widget.guidelineId)}?section=${Uri.encodeQueryComponent(sectionId)}',
+    ),
+    onOriginal: () => _openOriginal(context),
+  );
+
+  Future<void> _download(
+    BuildContext context,
+    GuidelinePublicationContent content,
+  ) async {
+    final original =
+        !content.manifest.hasOfflinePackage && content.manifest.hasOriginalPdf;
+    if (!content.manifest.hasOfflinePackage &&
+        !content.manifest.hasOriginalPdf) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('This guideline has no downloadable asset.'),
+        ),
+      );
+      return;
+    }
+    try {
+      final result = await ref
+          .read(guidelineDownloadsControllerProvider.notifier)
+          .download(content, originalDocument: original);
+      if (!context.mounted) return;
+      final message = result.status == OfflineDownloadStatus.ready
+          ? 'Verified offline copy is ready.'
+          : 'Download ${result.status.name}.';
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(message)));
+    } catch (error) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Download failed: $error')));
+    }
   }
 
   Widget _content(BuildContext context, GuidelinePublicationContent value) {
     final mode = value.manifest.recommendedMode;
     if (mode == GuidelineReaderMode.originalDocument) {
+      final asset = ref
+          .watch(guidelineOriginalDocumentProvider(widget.guidelineId))
+          .valueOrNull;
       return _OriginalDocumentReader(
         publication: value.publication,
-        hasOriginal: value.manifest.hasOriginalPdf,
+        manifest: value.manifest,
+        asset: asset,
         onOpen: () => _openOriginal(context),
       );
     }
     final sections = value.sections;
     final selected = _selectedSectionId;
+    final selectedIds = selected == null
+        ? <String>{}
+        : _sectionAndDescendants(sections, selected);
     final visibleSections =
         mode == GuidelineReaderMode.structured && selected != null
-        ? sections.where((section) => section.id == selected).toList()
+        ? sections.where((section) => selectedIds.contains(section.id)).toList()
         : sections;
-    return CustomScrollView(
-      slivers: [
-        SliverToBoxAdapter(child: _Overview(content: value)),
-        if (sections.isNotEmpty)
-          SliverPersistentHeader(
-            pinned: true,
-            delegate: _SectionHeaderDelegate(
-              child: Material(
-                color: Theme.of(context).colorScheme.surface,
-                child: Semantics(
-                  label: 'Guideline chapters',
-                  child: ListView.separated(
-                    padding: EdgeInsets.symmetric(
-                      horizontal: Responsive.horizontalPadding(context),
-                      vertical: AppSpacing.sm,
-                    ),
-                    scrollDirection: Axis.horizontal,
-                    itemCount: sections.length,
-                    separatorBuilder: (_, _) => AppSpacing.gapSm,
-                    itemBuilder: (_, index) {
-                      final section = sections[index];
-                      return ChoiceChip(
-                        label: Text(section.title),
-                        selected: selected == section.id,
-                        onSelected: (_) => setState(() {
-                          _selectedSectionId = selected == section.id
-                              ? null
-                              : section.id;
-                        }),
-                      );
-                    },
+    final rootSections = sections
+        .where(
+          (section) => section.parentId == null || section.parentId!.isEmpty,
+        )
+        .toList(growable: false);
+    return NotificationListener<ScrollNotification>(
+      onNotification: (notification) {
+        if (notification is ScrollUpdateNotification ||
+            notification is ScrollEndNotification) {
+          WidgetsBinding.instance.addPostFrameCallback(
+            (_) => _trackVisibleSection(sections),
+          );
+        }
+        return false;
+      },
+      child: CustomScrollView(
+        controller: _readerScrollController,
+        slivers: [
+          SliverToBoxAdapter(child: _Overview(content: value)),
+          if (_currentSectionId != null)
+            SliverToBoxAdapter(
+              child: Semantics(
+                liveRegion: true,
+                label:
+                    'Current section ${sections.where((item) => item.id == _currentSectionId).map((item) => item.title).firstOrNull ?? ''}',
+                child: Padding(
+                  padding: EdgeInsets.symmetric(
+                    horizontal: Responsive.horizontalPadding(context),
+                  ),
+                  child: Text(
+                    'Current section: ${sections.where((item) => item.id == _currentSectionId).map((item) => item.title).firstOrNull ?? ''}',
+                    style: Theme.of(context).textTheme.labelMedium,
                   ),
                 ),
               ),
             ),
-          ),
-        SliverPadding(
-          padding: EdgeInsets.fromLTRB(
-            Responsive.horizontalPadding(context),
-            AppSpacing.md,
-            Responsive.horizontalPadding(context),
-            AppSpacing.xxxl,
-          ),
-          sliver: SliverList.builder(
-            itemCount: visibleSections.length,
-            itemBuilder: (_, index) {
-              final section = visibleSections[index];
-              final blocks = value.blocksFor(section.id);
-              _sectionKeys.putIfAbsent(section.id, GlobalKey.new);
-              return Semantics(
-                key: _sectionKeys[section.id],
-                container: true,
-                label: section.title,
-                child: Padding(
-                  padding: const EdgeInsets.only(bottom: AppSpacing.xl),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Semantics(
-                        header: true,
-                        child: Text(
-                          section.title,
-                          style: Theme.of(context).textTheme.headlineSmall,
-                        ),
+          if (sections.isNotEmpty)
+            SliverPersistentHeader(
+              pinned: true,
+              delegate: _SectionHeaderDelegate(
+                child: Material(
+                  color: Theme.of(context).colorScheme.surface,
+                  child: Semantics(
+                    label: 'Guideline chapters',
+                    child: ListView.separated(
+                      padding: EdgeInsets.symmetric(
+                        horizontal: Responsive.horizontalPadding(context),
+                        vertical: AppSpacing.sm,
                       ),
-                      if (section.pageLabel.isNotEmpty)
-                        Text(
-                          section.pageLabel,
-                          style: Theme.of(context).textTheme.labelMedium,
-                        ),
-                      AppSpacing.gapMd,
-                      if (blocks.isEmpty)
-                        const Text('No reviewed content is available here.')
-                      else
-                        for (final block in blocks) ...[
-                          PublicationBlockView(block: block),
-                          AppSpacing.gapLg,
-                        ],
-                    ],
+                      scrollDirection: Axis.horizontal,
+                      itemCount: rootSections.length,
+                      separatorBuilder: (_, _) => AppSpacing.gapSm,
+                      itemBuilder: (_, index) {
+                        final section = rootSections[index];
+                        return ChoiceChip(
+                          label: Text(section.title),
+                          selected: selected == section.id,
+                          onSelected: (_) {
+                            final next = selected == section.id
+                                ? null
+                                : section.id;
+                            setState(() => _selectedSectionId = next);
+                            if (next != null) {
+                              unawaited(_recordSectionProgress(sections, next));
+                            }
+                          },
+                        );
+                      },
+                    ),
                   ),
                 ),
-              );
-            },
+              ),
+            ),
+          SliverPadding(
+            padding: EdgeInsets.fromLTRB(
+              Responsive.horizontalPadding(context),
+              AppSpacing.md,
+              Responsive.horizontalPadding(context),
+              AppSpacing.xxxl,
+            ),
+            sliver: SliverList.builder(
+              itemCount: visibleSections.length,
+              itemBuilder: (_, index) {
+                final section = visibleSections[index];
+                final blocks = value.blocksFor(section.id);
+                _sectionKeys.putIfAbsent(section.id, GlobalKey.new);
+                return Semantics(
+                  key: _sectionKeys[section.id],
+                  container: true,
+                  label: section.title,
+                  child: Padding(
+                    padding: const EdgeInsets.only(bottom: AppSpacing.xl),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Semantics(
+                          header: true,
+                          child: Text(
+                            section.title,
+                            style: Theme.of(context).textTheme.headlineSmall,
+                          ),
+                        ),
+                        if (section.pageLabel.isNotEmpty)
+                          Text(
+                            section.pageLabel,
+                            style: Theme.of(context).textTheme.labelMedium,
+                          ),
+                        AppSpacing.gapMd,
+                        if (blocks.isEmpty)
+                          const Text('No reviewed content is available here.')
+                        else
+                          for (final block in blocks) ...[
+                            PublicationBlockView(
+                              block: block,
+                              guidelineId: widget.guidelineId,
+                            ),
+                            AppSpacing.gapLg,
+                          ],
+                      ],
+                    ),
+                  ),
+                );
+              },
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
+  }
+
+  void _trackVisibleSection(List<PublicationSection> sections) {
+    if (!mounted || sections.isEmpty) return;
+    String? nearest;
+    var distance = double.infinity;
+    for (final section in sections) {
+      final target = _sectionKeys[section.id]?.currentContext;
+      final box = target?.findRenderObject();
+      if (box is! RenderBox || !box.attached) continue;
+      final dy = box.localToGlobal(Offset.zero).dy;
+      final candidate = (dy - 120).abs();
+      if (candidate < distance) {
+        distance = candidate;
+        nearest = section.id;
+      }
+    }
+    if (nearest == null || nearest == _currentSectionId) return;
+    setState(() => _currentSectionId = nearest);
+    unawaited(_recordSectionProgress(sections, nearest));
+  }
+
+  Set<String> _sectionAndDescendants(
+    List<PublicationSection> sections,
+    String root,
+  ) {
+    final result = <String>{root};
+    var frontier = <String>{root};
+    while (frontier.isNotEmpty) {
+      final next = sections
+          .where(
+            (section) =>
+                section.parentId != null && frontier.contains(section.parentId),
+          )
+          .map((section) => section.id)
+          .where(result.add)
+          .toSet();
+      frontier = next;
+    }
+    return result;
+  }
+
+  Future<void> _recordSectionProgress(
+    List<PublicationSection> sections,
+    String sectionId,
+  ) async {
+    final user = ref.read(authControllerProvider).valueOrNull?.user;
+    if (user == null || sections.isEmpty) return;
+    final index = sections.indexWhere((section) => section.id == sectionId);
+    final progress = index < 0 ? 0.0 : (index + 1) / sections.length;
+    await ref
+        .read(readingProgressRepositoryProvider)
+        .upsert(user.id, widget.guidelineId, {
+          'current_section': sectionId,
+          'total_sections': sections.length,
+          'progress_percentage': progress.clamp(0.0, 1.0),
+          'last_read_at': DateTime.now().toUtc().toIso8601String(),
+        });
+    ref.invalidate(publicationReadingProgressProvider(widget.guidelineId));
   }
 
   Future<void> _openOriginal(BuildContext context) async {
@@ -424,6 +627,323 @@ String _searchableBlockText(GuidelineBlock block) => switch (block) {
   UnknownGuidelineBlock() => '',
 };
 
+class _GuidelineOverview extends StatelessWidget {
+  const _GuidelineOverview({
+    required this.content,
+    required this.isBookmarked,
+    required this.onRead,
+    required this.onSection,
+    required this.onOriginal,
+  });
+
+  final GuidelinePublicationContent content;
+  final bool isBookmarked;
+  final VoidCallback onRead;
+  final ValueChanged<String> onSection;
+  final VoidCallback onOriginal;
+
+  @override
+  Widget build(BuildContext context) {
+    final publication = content.publication;
+    final manifest = content.manifest;
+    final keyRecommendations = content.blocks
+        .whereType<CalloutGuidelineBlock>()
+        .where(
+          (block) => const {
+            'key_point',
+            'recommendation',
+            'important',
+          }.contains(block.blockType),
+        )
+        .take(6)
+        .toList(growable: false);
+    return ListView(
+      padding: EdgeInsets.fromLTRB(
+        Responsive.horizontalPadding(context),
+        AppSpacing.lg,
+        Responsive.horizontalPadding(context),
+        AppSpacing.xxxl,
+      ),
+      children: [
+        Text(
+          publication.title,
+          style: Theme.of(context).textTheme.headlineMedium,
+        ),
+        if (publication.description.isNotEmpty) ...[
+          AppSpacing.gapSm,
+          Text(publication.description),
+        ],
+        AppSpacing.gapMd,
+        _ReviewStatus(manifest: manifest),
+        AppSpacing.gapLg,
+        _MetadataGrid(publication: publication),
+        AppSpacing.gapLg,
+        Text(
+          'Available content',
+          style: Theme.of(context).textTheme.titleLarge,
+        ),
+        AppSpacing.gapSm,
+        _CapabilityWrap(manifest: manifest),
+        if (keyRecommendations.isNotEmpty) ...[
+          AppSpacing.gapLg,
+          Text(
+            'Key recommendations',
+            style: Theme.of(context).textTheme.titleLarge,
+          ),
+          AppSpacing.gapSm,
+          for (final block in keyRecommendations)
+            Card(
+              margin: const EdgeInsets.only(bottom: 8),
+              child: ListTile(
+                leading: const Icon(LucideIcons.circleCheck),
+                title: Text(
+                  block.payload.title.isEmpty
+                      ? 'Recommendation'
+                      : block.payload.title,
+                ),
+                subtitle: Text(block.payload.content),
+              ),
+            ),
+        ],
+        if (content.sections.isNotEmpty) ...[
+          AppSpacing.gapLg,
+          Text('Chapters', style: Theme.of(context).textTheme.titleLarge),
+          AppSpacing.gapSm,
+          for (final section in content.sections)
+            Padding(
+              padding: EdgeInsets.only(
+                left: ((section.level - 1).clamp(0, 5)) * 16.0,
+              ),
+              child: ListTile(
+                dense: true,
+                contentPadding: EdgeInsets.zero,
+                leading: Icon(
+                  section.level <= 1
+                      ? LucideIcons.bookOpen
+                      : LucideIcons.cornerDownRight,
+                  size: 18,
+                ),
+                title: Text(section.title),
+                subtitle: section.pageLabel.isEmpty
+                    ? null
+                    : Text(section.pageLabel),
+                trailing: const Icon(LucideIcons.chevronRight, size: 18),
+                onTap: () => onSection(section.id),
+              ),
+            ),
+        ],
+        AppSpacing.gapLg,
+        FilledButton.icon(
+          onPressed: onRead,
+          icon: const Icon(LucideIcons.bookOpenText),
+          label: const Text('Read guideline'),
+        ),
+        if (manifest.hasOriginalPdf) ...[
+          AppSpacing.gapSm,
+          OutlinedButton.icon(
+            onPressed: onOriginal,
+            icon: const Icon(LucideIcons.fileText),
+            label: const Text('Open original document'),
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+class _MetadataGrid extends StatelessWidget {
+  const _MetadataGrid({required this.publication});
+  final GuidelinePublication publication;
+
+  @override
+  Widget build(BuildContext context) {
+    final values = <(String, String, IconData)>[
+      ('Source', publication.sourceOrganization, LucideIcons.landmark),
+      ('Version', publication.version, LucideIcons.gitBranch),
+      ('Published', publication.publicationDate, LucideIcons.calendar),
+      ('Review date', publication.reviewDate, LucideIcons.calendarCheck),
+      ('Population', publication.intendedPopulation, LucideIcons.users),
+      ('Care level', publication.healthcareLevel, LucideIcons.hospital),
+      ('Language', publication.language, LucideIcons.languages),
+      ('Program area', publication.programArea, LucideIcons.tags),
+    ].where((item) => item.$2.trim().isNotEmpty).toList(growable: false);
+    if (values.isEmpty) return const SizedBox.shrink();
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: [
+        for (final item in values)
+          ConstrainedBox(
+            constraints: const BoxConstraints(minWidth: 150, maxWidth: 280),
+            child: Card(
+              margin: EdgeInsets.zero,
+              child: ListTile(
+                dense: true,
+                leading: Icon(item.$3, size: 20),
+                title: Text(item.$1),
+                subtitle: Text(item.$2),
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+class _ReviewStatus extends StatelessWidget {
+  const _ReviewStatus({required this.manifest});
+  final GuidelineManifest manifest;
+
+  @override
+  Widget build(BuildContext context) {
+    final (label, tone, icon) = switch (manifest.recommendedMode) {
+      GuidelineReaderMode.structured => (
+        'Reviewed structured content',
+        AppStatusTone.success,
+        LucideIcons.badgeCheck,
+      ),
+      GuidelineReaderMode.partial => (
+        'Partially structured; verify source pages',
+        AppStatusTone.warning,
+        LucideIcons.fileWarning,
+      ),
+      GuidelineReaderMode.originalDocument => (
+        'Original document is the clinical source',
+        AppStatusTone.neutral,
+        LucideIcons.fileText,
+      ),
+    };
+    return AppStatusBadge(icon: icon, tone: tone, label: label);
+  }
+}
+
+class _CapabilityWrap extends StatelessWidget {
+  const _CapabilityWrap({required this.manifest});
+  final GuidelineManifest manifest;
+
+  @override
+  Widget build(BuildContext context) {
+    final values = <(bool, String, IconData)>[
+      (manifest.hasChapters, 'Chapters', LucideIcons.listTree),
+      (manifest.hasKeyPoints, 'Key points', LucideIcons.circleCheck),
+      (manifest.hasTables, 'Tables', LucideIcons.table2),
+      (manifest.hasFigures, 'Figures', LucideIcons.image),
+      (manifest.hasAlgorithms, 'Algorithms', LucideIcons.workflow),
+      (manifest.hasOriginalPdf, 'Original PDF', LucideIcons.fileText),
+      (
+        manifest.hasOfflinePackage,
+        'Offline package',
+        LucideIcons.cloudDownload,
+      ),
+    ].where((item) => item.$1).toList(growable: false);
+    if (values.isEmpty) return const Text('Original document only');
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: [
+        for (final value in values)
+          Chip(avatar: Icon(value.$3, size: 18), label: Text(value.$2)),
+      ],
+    );
+  }
+}
+
+class _ReaderActionBar extends StatelessWidget {
+  const _ReaderActionBar({
+    required this.isBookmarked,
+    required this.showRead,
+    required this.onRead,
+    required this.onBookmark,
+    required this.onNotes,
+    required this.onShare,
+    required this.onOriginal,
+    required this.onDownload,
+  });
+  final bool isBookmarked;
+  final bool showRead;
+  final VoidCallback onRead;
+  final VoidCallback onBookmark;
+  final VoidCallback onNotes;
+  final VoidCallback onShare;
+  final VoidCallback onOriginal;
+  final VoidCallback onDownload;
+
+  @override
+  Widget build(BuildContext context) => SafeArea(
+    top: false,
+    child: Material(
+      elevation: 6,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        child: SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              if (showRead)
+                _Action(
+                  icon: LucideIcons.bookOpenText,
+                  label: 'Read',
+                  onTap: onRead,
+                ),
+              _Action(
+                icon: isBookmarked
+                    ? LucideIcons.bookmarkCheck
+                    : LucideIcons.bookmark,
+                label: 'Bookmark',
+                onTap: onBookmark,
+              ),
+              _Action(
+                icon: LucideIcons.notebookPen,
+                label: 'Notes',
+                onTap: onNotes,
+              ),
+              _Action(icon: LucideIcons.share2, label: 'Share', onTap: onShare),
+              _Action(
+                icon: LucideIcons.fileText,
+                label: 'Original',
+                onTap: onOriginal,
+              ),
+              _Action(
+                icon: LucideIcons.download,
+                label: 'Offline',
+                onTap: onDownload,
+              ),
+            ],
+          ),
+        ),
+      ),
+    ),
+  );
+}
+
+class _Action extends StatelessWidget {
+  const _Action({required this.icon, required this.label, required this.onTap});
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+  @override
+  Widget build(BuildContext context) => Semantics(
+    button: true,
+    label: label,
+    child: InkResponse(
+      onTap: onTap,
+      radius: 28,
+      child: SizedBox(
+        width: 56,
+        height: 52,
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, size: 20),
+            Text(label, style: Theme.of(context).textTheme.labelSmall),
+          ],
+        ),
+      ),
+    ),
+  );
+}
+
 class _Overview extends StatelessWidget {
   const _Overview({required this.content});
   final GuidelinePublicationContent content;
@@ -482,11 +1002,13 @@ class _Overview extends StatelessWidget {
 class _OriginalDocumentReader extends StatelessWidget {
   const _OriginalDocumentReader({
     required this.publication,
-    required this.hasOriginal,
+    required this.manifest,
+    required this.asset,
     required this.onOpen,
   });
   final GuidelinePublication publication;
-  final bool hasOriginal;
+  final GuidelineManifest manifest;
+  final GuidelineAsset? asset;
   final VoidCallback onOpen;
 
   @override
@@ -510,11 +1032,43 @@ class _OriginalDocumentReader extends StatelessWidget {
               textAlign: TextAlign.center,
             ),
             AppSpacing.gapLg,
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              alignment: WrapAlignment.center,
+              children: [
+                if (manifest.version.isNotEmpty)
+                  Chip(label: Text('Version ${manifest.version}')),
+                Chip(
+                  avatar: Icon(
+                    manifest.hasOfflinePackage
+                        ? LucideIcons.cloudDownload
+                        : LucideIcons.cloudOff,
+                    size: 18,
+                  ),
+                  label: Text(
+                    manifest.hasOfflinePackage
+                        ? 'Offline package available'
+                        : 'Online source only',
+                  ),
+                ),
+                if (asset?.sizeBytes != 0)
+                  Chip(label: Text(_fileSize(asset?.sizeBytes ?? 0))),
+                if (asset?.checksum.isNotEmpty == true)
+                  const Chip(
+                    avatar: Icon(LucideIcons.shieldCheck, size: 18),
+                    label: Text('Checksum supplied'),
+                  ),
+              ],
+            ),
+            AppSpacing.gapLg,
             FilledButton.icon(
-              onPressed: hasOriginal ? onOpen : null,
+              onPressed: manifest.hasOriginalPdf ? onOpen : null,
               icon: const Icon(LucideIcons.externalLink),
               label: Text(
-                hasOriginal ? 'Open original document' : 'Original unavailable',
+                manifest.hasOriginalPdf
+                    ? 'Open original document'
+                    : 'Original unavailable',
               ),
             ),
           ],
@@ -522,6 +1076,12 @@ class _OriginalDocumentReader extends StatelessWidget {
       ),
     ),
   );
+}
+
+String _fileSize(int bytes) {
+  if (bytes < 1024) return '$bytes B';
+  if (bytes < 1024 * 1024) return '${(bytes / 1024).toStringAsFixed(1)} KB';
+  return '${(bytes / (1024 * 1024)).toStringAsFixed(1)} MB';
 }
 
 class _SectionHeaderDelegate extends SliverPersistentHeaderDelegate {

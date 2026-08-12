@@ -25,6 +25,9 @@ Map<String, dynamic> _$RagAnswerToJson(_RagAnswer instance) =>
 
 _RagCitation _$RagCitationFromJson(Map<String, dynamic> json) => _RagCitation(
   chunkId: json['chunk_id'] as String? ?? '',
+  guidelineId: json['guideline_id'] as String? ?? '',
+  sectionId: json['section_id'] as String? ?? '',
+  blockId: json['block_id'] as String? ?? '',
   title: json['title'] as String? ?? '',
   sourceName: json['source_name'] as String? ?? '',
   sourceVersion: json['source_version'] as String? ?? '',
@@ -35,6 +38,9 @@ _RagCitation _$RagCitationFromJson(Map<String, dynamic> json) => _RagCitation(
 Map<String, dynamic> _$RagCitationToJson(_RagCitation instance) =>
     <String, dynamic>{
       'chunk_id': instance.chunkId,
+      'guideline_id': instance.guidelineId,
+      'section_id': instance.sectionId,
+      'block_id': instance.blockId,
       'title': instance.title,
       'source_name': instance.sourceName,
       'source_version': instance.sourceVersion,

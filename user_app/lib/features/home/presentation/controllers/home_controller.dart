@@ -53,7 +53,7 @@ class HomeController extends _$HomeController {
 
     final categories = results[2] as List<GuidelineCategory>;
 
-    final guidelines = results[3] as List<Guideline>;
+    final guidelines = results[3] as List<GuidelinePublication>;
 
     final stats = results[4] as Map<String, int>;
 
@@ -61,8 +61,10 @@ class HomeController extends _$HomeController {
       featuredCalculators: List<Calculator>.unmodifiable(featuredCalculators),
       continueReadingItems: List<ReadingProgress>.unmodifiable(continueReading),
       guidelineCategories: List<GuidelineCategory>.unmodifiable(categories),
-      pinnedGuidelines: List<Guideline>.unmodifiable(guidelines.take(5)),
-      recentlyUpdatedGuidelines: List<Guideline>.unmodifiable(
+      pinnedGuidelines: List<GuidelinePublication>.unmodifiable(
+        guidelines.take(5),
+      ),
+      recentlyUpdatedGuidelines: List<GuidelinePublication>.unmodifiable(
         guidelines.take(5),
       ),
       unreadMessagesCount: stats['unread_messages_count'] ?? 0,
@@ -156,11 +158,11 @@ class HomeController extends _$HomeController {
   // GUIDELINES
   // ======================================================
 
-  Future<List<Guideline>> _guidelines() async {
+  Future<List<GuidelinePublication>> _guidelines() async {
     try {
       final result = await ref
-          .read(guidelineContentRepositoryProvider)
-          .guidelines(perPage: 5, published: true, status: 'published');
+          .read(guidelinePublicationRepositoryProvider)
+          .publications(perPage: 5);
 
       return result.items;
     } catch (_) {

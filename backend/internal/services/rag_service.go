@@ -50,6 +50,9 @@ type workerChatMessage struct {
 
 type Citation struct {
 	ChunkID       string `json:"chunk_id"`
+	GuidelineID   string `json:"guideline_id,omitempty"`
+	SectionID     string `json:"section_id,omitempty"`
+	BlockID       string `json:"block_id,omitempty"`
 	Title         string `json:"title"`
 	SourceName    string `json:"source_name"`
 	SourceVersion string `json:"source_version"`
@@ -91,6 +94,7 @@ func (s RAGService) Ask(userID *uuid.UUID, req AskRequest) (*AskResponse, error)
 	}
 
 	res.SessionID = session.ID.String()
+	s.enrichCitations(res.Citations)
 	cjson, _ := json.Marshal(res.Citations)
 	if err := s.DB.Create(&models.ChatMessage{
 		SessionID:     session.ID,
@@ -114,6 +118,46 @@ func (s RAGService) Ask(userID *uuid.UUID, req AskRequest) (*AskResponse, error)
 		}
 	}
 	return res, nil
+}
+
+// enrichCitations attaches stable domain identifiers to worker citations. The
+// worker protocol intentionally remains retrieval-focused; navigation metadata
+// is resolved from the authoritative PostgreSQL chunk rows before responding.
+func (s RAGService) enrichCitations(citations []Citation) {
+	if len(citations) == 0 {
+		return
+	}
+	ids := make([]uuid.UUID, 0, len(citations))
+	for _, citation := range citations {
+		if id, err := uuid.Parse(citation.ChunkID); err == nil {
+			ids = append(ids, id)
+		}
+	}
+	if len(ids) == 0 {
+		return
+	}
+	var chunks []models.GuidelineChunk
+	if err := s.DB.Select("id", "document_id", "section_id", "block_id").Where("id IN ?", ids).Find(&chunks).Error; err != nil {
+		log.Warn().Err(err).Msg("failed to enrich RAG citation navigation")
+		return
+	}
+	byID := make(map[string]models.GuidelineChunk, len(chunks))
+	for _, chunk := range chunks {
+		byID[chunk.ID.String()] = chunk
+	}
+	for index := range citations {
+		chunk, ok := byID[citations[index].ChunkID]
+		if !ok {
+			continue
+		}
+		citations[index].GuidelineID = chunk.DocumentID.String()
+		if chunk.SectionID != nil {
+			citations[index].SectionID = chunk.SectionID.String()
+		}
+		if chunk.BlockID != nil {
+			citations[index].BlockID = chunk.BlockID.String()
+		}
+	}
 }
 
 func (s RAGService) askWithConfiguredProvider(req workerAskRequest) (*AskResponse, error) {

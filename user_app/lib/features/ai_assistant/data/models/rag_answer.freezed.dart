@@ -161,7 +161,7 @@ as String,
 /// @nodoc
 mixin _$RagCitation {
 
-@JsonKey(name: 'chunk_id') String get chunkId; String get title;@JsonKey(name: 'source_name') String get sourceName;@JsonKey(name: 'source_version') String get sourceVersion;@JsonKey(name: 'page_start') int? get pageStart;@JsonKey(name: 'page_end') int? get pageEnd;
+@JsonKey(name: 'chunk_id') String get chunkId;@JsonKey(name: 'guideline_id') String get guidelineId;@JsonKey(name: 'section_id') String get sectionId;@JsonKey(name: 'block_id') String get blockId; String get title;@JsonKey(name: 'source_name') String get sourceName;@JsonKey(name: 'source_version') String get sourceVersion;@JsonKey(name: 'page_start') int? get pageStart;@JsonKey(name: 'page_end') int? get pageEnd;
 /// Create a copy of RagCitation
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -174,16 +174,16 @@ $RagCitationCopyWith<RagCitation> get copyWith => _$RagCitationCopyWithImpl<RagC
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is RagCitation&&(identical(other.chunkId, chunkId) || other.chunkId == chunkId)&&(identical(other.title, title) || other.title == title)&&(identical(other.sourceName, sourceName) || other.sourceName == sourceName)&&(identical(other.sourceVersion, sourceVersion) || other.sourceVersion == sourceVersion)&&(identical(other.pageStart, pageStart) || other.pageStart == pageStart)&&(identical(other.pageEnd, pageEnd) || other.pageEnd == pageEnd));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is RagCitation&&(identical(other.chunkId, chunkId) || other.chunkId == chunkId)&&(identical(other.guidelineId, guidelineId) || other.guidelineId == guidelineId)&&(identical(other.sectionId, sectionId) || other.sectionId == sectionId)&&(identical(other.blockId, blockId) || other.blockId == blockId)&&(identical(other.title, title) || other.title == title)&&(identical(other.sourceName, sourceName) || other.sourceName == sourceName)&&(identical(other.sourceVersion, sourceVersion) || other.sourceVersion == sourceVersion)&&(identical(other.pageStart, pageStart) || other.pageStart == pageStart)&&(identical(other.pageEnd, pageEnd) || other.pageEnd == pageEnd));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,chunkId,title,sourceName,sourceVersion,pageStart,pageEnd);
+int get hashCode => Object.hash(runtimeType,chunkId,guidelineId,sectionId,blockId,title,sourceName,sourceVersion,pageStart,pageEnd);
 
 @override
 String toString() {
-  return 'RagCitation(chunkId: $chunkId, title: $title, sourceName: $sourceName, sourceVersion: $sourceVersion, pageStart: $pageStart, pageEnd: $pageEnd)';
+  return 'RagCitation(chunkId: $chunkId, guidelineId: $guidelineId, sectionId: $sectionId, blockId: $blockId, title: $title, sourceName: $sourceName, sourceVersion: $sourceVersion, pageStart: $pageStart, pageEnd: $pageEnd)';
 }
 
 
@@ -194,7 +194,7 @@ abstract mixin class $RagCitationCopyWith<$Res>  {
   factory $RagCitationCopyWith(RagCitation value, $Res Function(RagCitation) _then) = _$RagCitationCopyWithImpl;
 @useResult
 $Res call({
-@JsonKey(name: 'chunk_id') String chunkId, String title,@JsonKey(name: 'source_name') String sourceName,@JsonKey(name: 'source_version') String sourceVersion,@JsonKey(name: 'page_start') int? pageStart,@JsonKey(name: 'page_end') int? pageEnd
+@JsonKey(name: 'chunk_id') String chunkId,@JsonKey(name: 'guideline_id') String guidelineId,@JsonKey(name: 'section_id') String sectionId,@JsonKey(name: 'block_id') String blockId, String title,@JsonKey(name: 'source_name') String sourceName,@JsonKey(name: 'source_version') String sourceVersion,@JsonKey(name: 'page_start') int? pageStart,@JsonKey(name: 'page_end') int? pageEnd
 });
 
 
@@ -211,9 +211,12 @@ class _$RagCitationCopyWithImpl<$Res>
 
 /// Create a copy of RagCitation
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? chunkId = null,Object? title = null,Object? sourceName = null,Object? sourceVersion = null,Object? pageStart = freezed,Object? pageEnd = freezed,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? chunkId = null,Object? guidelineId = null,Object? sectionId = null,Object? blockId = null,Object? title = null,Object? sourceName = null,Object? sourceVersion = null,Object? pageStart = freezed,Object? pageEnd = freezed,}) {
   return _then(_self.copyWith(
 chunkId: null == chunkId ? _self.chunkId : chunkId // ignore: cast_nullable_to_non_nullable
+as String,guidelineId: null == guidelineId ? _self.guidelineId : guidelineId // ignore: cast_nullable_to_non_nullable
+as String,sectionId: null == sectionId ? _self.sectionId : sectionId // ignore: cast_nullable_to_non_nullable
+as String,blockId: null == blockId ? _self.blockId : blockId // ignore: cast_nullable_to_non_nullable
 as String,title: null == title ? _self.title : title // ignore: cast_nullable_to_non_nullable
 as String,sourceName: null == sourceName ? _self.sourceName : sourceName // ignore: cast_nullable_to_non_nullable
 as String,sourceVersion: null == sourceVersion ? _self.sourceVersion : sourceVersion // ignore: cast_nullable_to_non_nullable
@@ -230,10 +233,13 @@ as int?,
 @JsonSerializable()
 
 class _RagCitation extends RagCitation {
-  const _RagCitation({@JsonKey(name: 'chunk_id') this.chunkId = '', this.title = '', @JsonKey(name: 'source_name') this.sourceName = '', @JsonKey(name: 'source_version') this.sourceVersion = '', @JsonKey(name: 'page_start') this.pageStart, @JsonKey(name: 'page_end') this.pageEnd}): super._();
+  const _RagCitation({@JsonKey(name: 'chunk_id') this.chunkId = '', @JsonKey(name: 'guideline_id') this.guidelineId = '', @JsonKey(name: 'section_id') this.sectionId = '', @JsonKey(name: 'block_id') this.blockId = '', this.title = '', @JsonKey(name: 'source_name') this.sourceName = '', @JsonKey(name: 'source_version') this.sourceVersion = '', @JsonKey(name: 'page_start') this.pageStart, @JsonKey(name: 'page_end') this.pageEnd}): super._();
   factory _RagCitation.fromJson(Map<String, dynamic> json) => _$RagCitationFromJson(json);
 
 @override@JsonKey(name: 'chunk_id') final  String chunkId;
+@override@JsonKey(name: 'guideline_id') final  String guidelineId;
+@override@JsonKey(name: 'section_id') final  String sectionId;
+@override@JsonKey(name: 'block_id') final  String blockId;
 @override@JsonKey() final  String title;
 @override@JsonKey(name: 'source_name') final  String sourceName;
 @override@JsonKey(name: 'source_version') final  String sourceVersion;
@@ -253,16 +259,16 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _RagCitation&&(identical(other.chunkId, chunkId) || other.chunkId == chunkId)&&(identical(other.title, title) || other.title == title)&&(identical(other.sourceName, sourceName) || other.sourceName == sourceName)&&(identical(other.sourceVersion, sourceVersion) || other.sourceVersion == sourceVersion)&&(identical(other.pageStart, pageStart) || other.pageStart == pageStart)&&(identical(other.pageEnd, pageEnd) || other.pageEnd == pageEnd));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _RagCitation&&(identical(other.chunkId, chunkId) || other.chunkId == chunkId)&&(identical(other.guidelineId, guidelineId) || other.guidelineId == guidelineId)&&(identical(other.sectionId, sectionId) || other.sectionId == sectionId)&&(identical(other.blockId, blockId) || other.blockId == blockId)&&(identical(other.title, title) || other.title == title)&&(identical(other.sourceName, sourceName) || other.sourceName == sourceName)&&(identical(other.sourceVersion, sourceVersion) || other.sourceVersion == sourceVersion)&&(identical(other.pageStart, pageStart) || other.pageStart == pageStart)&&(identical(other.pageEnd, pageEnd) || other.pageEnd == pageEnd));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,chunkId,title,sourceName,sourceVersion,pageStart,pageEnd);
+int get hashCode => Object.hash(runtimeType,chunkId,guidelineId,sectionId,blockId,title,sourceName,sourceVersion,pageStart,pageEnd);
 
 @override
 String toString() {
-  return 'RagCitation(chunkId: $chunkId, title: $title, sourceName: $sourceName, sourceVersion: $sourceVersion, pageStart: $pageStart, pageEnd: $pageEnd)';
+  return 'RagCitation(chunkId: $chunkId, guidelineId: $guidelineId, sectionId: $sectionId, blockId: $blockId, title: $title, sourceName: $sourceName, sourceVersion: $sourceVersion, pageStart: $pageStart, pageEnd: $pageEnd)';
 }
 
 
@@ -273,7 +279,7 @@ abstract mixin class _$RagCitationCopyWith<$Res> implements $RagCitationCopyWith
   factory _$RagCitationCopyWith(_RagCitation value, $Res Function(_RagCitation) _then) = __$RagCitationCopyWithImpl;
 @override @useResult
 $Res call({
-@JsonKey(name: 'chunk_id') String chunkId, String title,@JsonKey(name: 'source_name') String sourceName,@JsonKey(name: 'source_version') String sourceVersion,@JsonKey(name: 'page_start') int? pageStart,@JsonKey(name: 'page_end') int? pageEnd
+@JsonKey(name: 'chunk_id') String chunkId,@JsonKey(name: 'guideline_id') String guidelineId,@JsonKey(name: 'section_id') String sectionId,@JsonKey(name: 'block_id') String blockId, String title,@JsonKey(name: 'source_name') String sourceName,@JsonKey(name: 'source_version') String sourceVersion,@JsonKey(name: 'page_start') int? pageStart,@JsonKey(name: 'page_end') int? pageEnd
 });
 
 
@@ -290,9 +296,12 @@ class __$RagCitationCopyWithImpl<$Res>
 
 /// Create a copy of RagCitation
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? chunkId = null,Object? title = null,Object? sourceName = null,Object? sourceVersion = null,Object? pageStart = freezed,Object? pageEnd = freezed,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? chunkId = null,Object? guidelineId = null,Object? sectionId = null,Object? blockId = null,Object? title = null,Object? sourceName = null,Object? sourceVersion = null,Object? pageStart = freezed,Object? pageEnd = freezed,}) {
   return _then(_RagCitation(
 chunkId: null == chunkId ? _self.chunkId : chunkId // ignore: cast_nullable_to_non_nullable
+as String,guidelineId: null == guidelineId ? _self.guidelineId : guidelineId // ignore: cast_nullable_to_non_nullable
+as String,sectionId: null == sectionId ? _self.sectionId : sectionId // ignore: cast_nullable_to_non_nullable
+as String,blockId: null == blockId ? _self.blockId : blockId // ignore: cast_nullable_to_non_nullable
 as String,title: null == title ? _self.title : title // ignore: cast_nullable_to_non_nullable
 as String,sourceName: null == sourceName ? _self.sourceName : sourceName // ignore: cast_nullable_to_non_nullable
 as String,sourceVersion: null == sourceVersion ? _self.sourceVersion : sourceVersion // ignore: cast_nullable_to_non_nullable

@@ -19,9 +19,12 @@ abstract final class AppRoutes {
   static const String profile = '/profile';
   static const String search = '/search';
   static const String library = '/library';
+  static const String offlineContent = '/offline-content';
   static const String more = '/more';
   static const String outbreakHub = '/outbreak-hub';
   static const String situationReports = '/situation-reports';
+  static const String outbreakDetails = '/outbreak-hub/:outbreakId';
+  static const String situationReportDetails = '/situation-reports/:reportId';
 
   // Clinical content
   static const String drugIndex = '/drug-index';
@@ -54,6 +57,12 @@ abstract final class AppRoutes {
   static const String guidelineDetails = '/guidelines/:guidelineId';
   static const String publicGuidelineDetails =
       '/public/guidelines/:guidelineId';
+  static const String publicGuidelineReader =
+      '/public/guidelines/:guidelineId/read';
+  static const String publicGuidelineTable =
+      '/public/guidelines/:guidelineId/tables/:blockId';
+  static const String publicGuidelineAlgorithm =
+      '/public/guidelines/:guidelineId/algorithms/:blockId';
   static const String calculatorDetails = '/calculators/:calculatorId';
   static const String healthFacilityDetails = '/health-facilities/:facilityId';
   static const String consultantDetails = '/consultants/:consultantId';
@@ -72,6 +81,7 @@ abstract final class AppRoutes {
     search,
     more,
     publicGuidelines,
+    offlineContent,
     outbreakHub,
     situationReports,
     drugIndex,
@@ -84,7 +94,10 @@ abstract final class AppRoutes {
 
   static bool isPublic(String location) {
     final path = Uri.tryParse(location)?.path ?? location;
-    return publicRoutes.contains(path) || path.startsWith('$publicGuidelines/');
+    return publicRoutes.contains(path) ||
+        path.startsWith('$publicGuidelines/') ||
+        path.startsWith('$outbreakHub/') ||
+        path.startsWith('$situationReports/');
   }
 
   /// Accepts only in-app absolute paths for post-authentication navigation.
@@ -113,6 +126,29 @@ abstract final class AppRoutes {
 
   static String publicGuideline(String guidelineId) {
     return '$publicGuidelines/${Uri.encodeComponent(guidelineId)}';
+  }
+
+  static String readPublicGuideline(String guidelineId) {
+    return '${publicGuideline(guidelineId)}/read';
+  }
+
+  static String publicGuidelineTableView(String guidelineId, String blockId) {
+    return '${publicGuideline(guidelineId)}/tables/${Uri.encodeComponent(blockId)}';
+  }
+
+  static String publicGuidelineAlgorithmView(
+    String guidelineId,
+    String blockId,
+  ) {
+    return '${publicGuideline(guidelineId)}/algorithms/${Uri.encodeComponent(blockId)}';
+  }
+
+  static String outbreak(String outbreakId) {
+    return '$outbreakHub/${Uri.encodeComponent(outbreakId)}';
+  }
+
+  static String situationReport(String reportId) {
+    return '$situationReports/${Uri.encodeComponent(reportId)}';
   }
 
   static String calculator(String calculatorId) {

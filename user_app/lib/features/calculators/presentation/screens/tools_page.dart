@@ -115,6 +115,63 @@ class _ToolsPageState extends ConsumerState<ToolsPage> {
                 0,
               ),
               sliver: SliverToBoxAdapter(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _DestinationGroup(
+                      title: 'References',
+                      items: [
+                        _Destination(
+                          icon: LucideIcons.pill,
+                          title: 'Drug Index',
+                          description: 'Reviewed medicine references',
+                          route: AppRoutes.drugIndex,
+                        ),
+                        _Destination(
+                          icon: LucideIcons.wholeWord,
+                          title: 'Abbreviations',
+                          description: 'Medical abbreviations and meanings',
+                          route: AppRoutes.abbreviations,
+                        ),
+                        _Destination(
+                          icon: LucideIcons.workflow,
+                          title: 'Clinical algorithms',
+                          description: 'Reviewed guideline algorithms',
+                          route: AppRoutes.publicGuidelines,
+                        ),
+                      ],
+                    ),
+                    AppSpacing.gapMd,
+                    _DestinationGroup(
+                      title: 'Other',
+                      items: [
+                        _Destination(
+                          icon: LucideIcons.hospital,
+                          title: 'Health Facilities',
+                          description: 'Find facilities and services',
+                          route: AppRoutes.healthFacilities,
+                        ),
+                        _Destination(
+                          icon: LucideIcons.landmark,
+                          title: 'Ministry Directory',
+                          description: 'Official contacts and departments',
+                          route: AppRoutes.ministryDirectory,
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+
+            SliverPadding(
+              padding: const EdgeInsets.fromLTRB(
+                AppSpacing.md,
+                AppSpacing.md,
+                AppSpacing.md,
+                0,
+              ),
+              sliver: SliverToBoxAdapter(
                 child: _ToolTypeFilterBar(
                   filters: _toolFilters,
                   selectedIndex: state.selectedTabIndex,
@@ -229,6 +286,53 @@ class _ToolsPageState extends ConsumerState<ToolsPage> {
       ),
     );
   }
+}
+
+class _Destination {
+  const _Destination({
+    required this.icon,
+    required this.title,
+    required this.description,
+    required this.route,
+  });
+  final IconData icon;
+  final String title;
+  final String description;
+  final String route;
+}
+
+class _DestinationGroup extends StatelessWidget {
+  const _DestinationGroup({required this.title, required this.items});
+  final String title;
+  final List<_Destination> items;
+
+  @override
+  Widget build(BuildContext context) => Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Text(title, style: Theme.of(context).textTheme.titleMedium),
+      AppSpacing.gapSm,
+      Card(
+        margin: EdgeInsets.zero,
+        clipBehavior: Clip.antiAlias,
+        child: Column(
+          children: [
+            for (var index = 0; index < items.length; index++) ...[
+              ListTile(
+                minTileHeight: 60,
+                leading: Icon(items[index].icon),
+                title: Text(items[index].title),
+                subtitle: Text(items[index].description),
+                trailing: const Icon(LucideIcons.chevronRight),
+                onTap: () => AppNavigator.push(items[index].route),
+              ),
+              if (index < items.length - 1) const Divider(height: 1),
+            ],
+          ],
+        ),
+      ),
+    ],
+  );
 }
 
 class _ToolsHeaderCard extends StatelessWidget {

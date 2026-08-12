@@ -426,6 +426,245 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/public/outbreaks": {
+            "get": {
+                "tags": [
+                    "public-outbreaks"
+                ],
+                "summary": "List published public outbreaks",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Page",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Items per page",
+                        "name": "per_page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Title, summary, or disease type",
+                        "name": "search",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "active, monitoring, contained, or closed",
+                        "name": "status",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Geographic area",
+                        "name": "area",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "title, status, start_date, last_update, or published_at",
+                        "name": "sort",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "asc or desc",
+                        "name": "order",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.PaginatedOutbreaksEnvelope"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/public/outbreaks/{id}": {
+            "get": {
+                "tags": [
+                    "public-outbreaks"
+                ],
+                "summary": "Get a published public outbreak",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Outbreak UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.OutbreakEnvelope"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/public/outbreaks/{id}/resources": {
+            "get": {
+                "tags": [
+                    "public-outbreaks"
+                ],
+                "summary": "List a published outbreak's public resources",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Outbreak UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.PaginatedOutbreakResourcesEnvelope"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/public/outbreaks/{id}/updates": {
+            "get": {
+                "tags": [
+                    "public-outbreaks"
+                ],
+                "summary": "List a published outbreak's updates",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Outbreak UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.PaginatedOutbreakUpdatesEnvelope"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/public/search": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "public-guidelines"
+                ],
+                "summary": "Search published approved guideline content",
+                "parameters": [
+                    {
+                        "minLength": 2,
+                        "type": "string",
+                        "description": "Search query",
+                        "name": "q",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Program area filter",
+                        "name": "program_area",
+                        "in": "query"
+                    },
+                    {
+                        "maximum": 50,
+                        "minimum": 1,
+                        "type": "integer",
+                        "description": "Maximum results",
+                        "name": "limit",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.SearchResultsEnvelope"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/public/situation-reports": {
+            "get": {
+                "tags": [
+                    "public-outbreaks"
+                ],
+                "summary": "List published public situation reports",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Outbreak UUID",
+                        "name": "outbreak_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Title, summary, or area",
+                        "name": "search",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.PaginatedSituationReportsEnvelope"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/public/situation-reports/{id}": {
+            "get": {
+                "tags": [
+                    "public-outbreaks"
+                ],
+                "summary": "Get a published public situation report",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Situation report UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.SituationReportEnvelope"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/consultants/tree": {
             "get": {
                 "description": "Legacy v1 endpoint that groups consultants by region, city, then specialty.",
@@ -11898,6 +12137,17 @@ const docTemplate = `{
                 }
             }
         },
+        "handlers.OutbreakEnvelope": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/models.Outbreak"
+                },
+                "success": {
+                    "type": "boolean"
+                }
+            }
+        },
         "handlers.PaginatedAbbreviationsEnvelope": {
             "type": "object",
             "properties": {
@@ -12658,6 +12908,39 @@ const docTemplate = `{
                 }
             }
         },
+        "handlers.PaginatedOutbreakResourcesEnvelope": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/services.PageResult-models_OutbreakResource"
+                },
+                "success": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "handlers.PaginatedOutbreakUpdatesEnvelope": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/services.PageResult-models_OutbreakUpdate"
+                },
+                "success": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "handlers.PaginatedOutbreaksEnvelope": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/services.PageResult-models_Outbreak"
+                },
+                "success": {
+                    "type": "boolean"
+                }
+            }
+        },
         "handlers.PaginatedPublicGuidelineAlgorithms": {
             "type": "object",
             "properties": {
@@ -12887,6 +13170,17 @@ const docTemplate = `{
                 "success": {
                     "type": "boolean",
                     "example": true
+                }
+            }
+        },
+        "handlers.PaginatedSituationReportsEnvelope": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/services.PageResult-models_SituationReport"
+                },
+                "success": {
+                    "type": "boolean"
                 }
             }
         },
@@ -13303,6 +13597,17 @@ const docTemplate = `{
                 "success": {
                     "type": "boolean",
                     "example": true
+                }
+            }
+        },
+        "handlers.SituationReportEnvelope": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/models.SituationReport"
+                },
+                "success": {
+                    "type": "boolean"
                 }
             }
         },
@@ -14530,7 +14835,13 @@ const docTemplate = `{
                 "description": {
                     "type": "string"
                 },
+                "healthcare_level": {
+                    "type": "string"
+                },
                 "id": {
+                    "type": "string"
+                },
+                "intended_population": {
                     "type": "string"
                 },
                 "language": {
@@ -15539,6 +15850,114 @@ const docTemplate = `{
                 }
             }
         },
+        "models.Outbreak": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "disease_type": {
+                    "type": "string"
+                },
+                "geographic_area": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "last_update": {
+                    "type": "string"
+                },
+                "metrics": {
+                    "type": "array",
+                    "items": {
+                        "type": "object"
+                    }
+                },
+                "published_at": {
+                    "type": "string"
+                },
+                "source_organization": {
+                    "type": "string"
+                },
+                "start_date": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "summary": {
+                    "type": "string"
+                },
+                "title": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                },
+                "visual_tone": {
+                    "type": "string"
+                }
+            }
+        },
+        "models.OutbreakResource": {
+            "type": "object",
+            "properties": {
+                "asset_url": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "outbreak_id": {
+                    "type": "string"
+                },
+                "resource_type": {
+                    "type": "string"
+                },
+                "sort_order": {
+                    "type": "integer"
+                },
+                "title": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                },
+                "url": {
+                    "type": "string"
+                }
+            }
+        },
+        "models.OutbreakUpdate": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "outbreak_id": {
+                    "type": "string"
+                },
+                "published_at": {
+                    "type": "string"
+                },
+                "summary": {
+                    "type": "string"
+                },
+                "title": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                }
+            }
+        },
         "models.Permission": {
             "type": "object",
             "properties": {
@@ -15664,6 +16083,56 @@ const docTemplate = `{
                 },
                 "value_json": {
                     "type": "object"
+                }
+            }
+        },
+        "models.SituationReport": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "geographic_area": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "key_highlights": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "metrics": {
+                    "type": "array",
+                    "items": {
+                        "type": "object"
+                    }
+                },
+                "outbreak_id": {
+                    "type": "string"
+                },
+                "publication_date": {
+                    "type": "string"
+                },
+                "report_asset_url": {
+                    "type": "string"
+                },
+                "source_organization": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "summary": {
+                    "type": "string"
+                },
+                "title": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
                 }
             }
         },
@@ -15987,7 +16456,13 @@ const docTemplate = `{
         "services.Citation": {
             "type": "object",
             "properties": {
+                "block_id": {
+                    "type": "string"
+                },
                 "chunk_id": {
+                    "type": "string"
+                },
+                "guideline_id": {
                     "type": "string"
                 },
                 "page_end": {
@@ -15995,6 +16470,9 @@ const docTemplate = `{
                 },
                 "page_start": {
                     "type": "integer"
+                },
+                "section_id": {
+                    "type": "string"
                 },
                 "source_name": {
                     "type": "string"
@@ -16407,6 +16885,12 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "description": {
+                    "type": "string"
+                },
+                "healthcare_level": {
+                    "type": "string"
+                },
+                "intended_population": {
                     "type": "string"
                 },
                 "language": {
@@ -18458,6 +18942,75 @@ const docTemplate = `{
                 }
             }
         },
+        "services.PageResult-models_Outbreak": {
+            "type": "object",
+            "properties": {
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.Outbreak"
+                    }
+                },
+                "page": {
+                    "type": "integer"
+                },
+                "per_page": {
+                    "type": "integer"
+                },
+                "total_items": {
+                    "type": "integer"
+                },
+                "total_pages": {
+                    "type": "integer"
+                }
+            }
+        },
+        "services.PageResult-models_OutbreakResource": {
+            "type": "object",
+            "properties": {
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.OutbreakResource"
+                    }
+                },
+                "page": {
+                    "type": "integer"
+                },
+                "per_page": {
+                    "type": "integer"
+                },
+                "total_items": {
+                    "type": "integer"
+                },
+                "total_pages": {
+                    "type": "integer"
+                }
+            }
+        },
+        "services.PageResult-models_OutbreakUpdate": {
+            "type": "object",
+            "properties": {
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.OutbreakUpdate"
+                    }
+                },
+                "page": {
+                    "type": "integer"
+                },
+                "per_page": {
+                    "type": "integer"
+                },
+                "total_items": {
+                    "type": "integer"
+                },
+                "total_pages": {
+                    "type": "integer"
+                }
+            }
+        },
         "services.PageResult-models_ReadingProgress": {
             "type": "object",
             "properties": {
@@ -18465,6 +19018,29 @@ const docTemplate = `{
                     "type": "array",
                     "items": {
                         "$ref": "#/definitions/models.ReadingProgress"
+                    }
+                },
+                "page": {
+                    "type": "integer"
+                },
+                "per_page": {
+                    "type": "integer"
+                },
+                "total_items": {
+                    "type": "integer"
+                },
+                "total_pages": {
+                    "type": "integer"
+                }
+            }
+        },
+        "services.PageResult-models_SituationReport": {
+            "type": "object",
+            "properties": {
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.SituationReport"
                     }
                 },
                 "page": {
@@ -18661,7 +19237,13 @@ const docTemplate = `{
                 "description": {
                     "type": "string"
                 },
+                "healthcare_level": {
+                    "type": "string"
+                },
                 "id": {
+                    "type": "string"
+                },
+                "intended_population": {
                     "type": "string"
                 },
                 "language": {
@@ -19144,6 +19726,15 @@ const docTemplate = `{
         "services.SearchResult": {
             "type": "object",
             "properties": {
+                "block_id": {
+                    "type": "string"
+                },
+                "content_type": {
+                    "type": "string"
+                },
+                "guideline_id": {
+                    "type": "string"
+                },
                 "id": {
                     "type": "string"
                 },
@@ -19152,6 +19743,9 @@ const docTemplate = `{
                 },
                 "page_start": {
                     "type": "integer"
+                },
+                "section_id": {
+                    "type": "string"
                 },
                 "snippet": {
                     "type": "string"
@@ -19338,6 +19932,12 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "description": {
+                    "type": "string"
+                },
+                "healthcare_level": {
+                    "type": "string"
+                },
+                "intended_population": {
                     "type": "string"
                 },
                 "language": {

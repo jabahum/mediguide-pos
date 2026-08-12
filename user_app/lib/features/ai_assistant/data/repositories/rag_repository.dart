@@ -71,6 +71,9 @@ final class RagRepository implements RagAssistant {
           .map(
             (citation) => citation.copyWith(
               chunkId: citation.chunkId.trim(),
+              guidelineId: citation.guidelineId.trim(),
+              sectionId: citation.sectionId.trim(),
+              blockId: citation.blockId.trim(),
               title: citation.title.trim(),
               sourceName: citation.sourceName.trim(),
               sourceVersion: citation.sourceVersion.trim(),

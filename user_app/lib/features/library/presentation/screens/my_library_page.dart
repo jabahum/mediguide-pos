@@ -88,6 +88,19 @@ class MyLibraryPage extends ConsumerWidget {
                   AppSpacing.gapMd,
                   _LibrarySummary(data: data),
                   AppSpacing.gapLg,
+                  Card(
+                    margin: EdgeInsets.zero,
+                    child: ListTile(
+                      leading: const Icon(LucideIcons.cloudDownload),
+                      title: const Text('Offline content'),
+                      subtitle: const Text(
+                        'Manage verified downloads and device storage',
+                      ),
+                      trailing: const Icon(LucideIcons.chevronRight),
+                      onTap: () => context.push(AppRoutes.offlineContent),
+                    ),
+                  ),
+                  AppSpacing.gapLg,
                   Text(
                     'Bookmarks',
                     style: Theme.of(context).textTheme.titleLarge,

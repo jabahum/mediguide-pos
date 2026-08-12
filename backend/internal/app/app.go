@@ -110,6 +110,7 @@ func New(cfg config.Config) (*App, error) {
 	authSvc := services.AuthService{DB: database, Cfg: cfg, Mailer: emailSender}
 	guidelineSvc := services.GuidelineService{DB: database, Store: store, Cache: cacheStore}
 	publicGuidelineSvc := services.PublicGuidelineService{DB: database, Store: store, Cache: cacheStore}
+	outbreakSvc := services.OutbreakService{DB: database}
 	searchSvc := services.SearchService{DB: database, Cache: cacheStore}
 	ragSvc := services.RAGService{DB: database, Search: searchSvc, Cfg: cfg}
 	protocolSvc := services.ProtocolService{DB: database}
@@ -132,6 +133,7 @@ func New(cfg config.Config) (*App, error) {
 	authH := handlers.AuthHandler{Service: authSvc}
 	guidelineH := handlers.GuidelineHandler{Service: guidelineSvc, MaxUploadMB: cfg.MaxUploadMB}
 	publicGuidelineH := handlers.PublicGuidelineHandler{Service: publicGuidelineSvc, Content: publicGuidelineSvc}
+	outbreakH := handlers.OutbreakHandler{Service: outbreakSvc}
 	searchH := handlers.SearchHandler{Service: searchSvc}
 	ragH := handlers.RAGHandler{Service: ragSvc}
 	protocolH := handlers.ProtocolHandler{Service: protocolSvc}
@@ -171,6 +173,7 @@ func New(cfg config.Config) (*App, error) {
 	public.Use(rateLimiter.Limit(middleware.Policy("public-guidelines", 120, time.Minute, 20), middleware.IPIdentity))
 	{
 		public.GET("/guidelines", publicGuidelineH.List)
+		public.GET("/search", rateLimiter.Limit(middleware.Policy("public-search", 60, time.Minute, 10), middleware.IPIdentity), searchH.PublicSearch)
 		public.GET("/guidelines/:id", publicGuidelineH.Get)
 		public.GET("/guidelines/:id/manifest", publicGuidelineH.Manifest)
 		public.GET("/guidelines/:id/sections", publicGuidelineH.Sections)
@@ -181,6 +184,12 @@ func New(cfg config.Config) (*App, error) {
 		public.GET("/guidelines/:id/original", rateLimiter.Limit(middleware.Policy("public-guideline-original", 30, time.Minute, 5), middleware.IPIdentity), publicGuidelineH.Original)
 		public.GET("/guidelines/:id/offline-package", rateLimiter.Limit(middleware.Policy("public-guideline-offline", 20, time.Minute, 3), middleware.IPIdentity), publicGuidelineH.OfflinePackage)
 		public.GET("/guidelines/:id/markdown", rateLimiter.Limit(middleware.Policy("public-markdown", 60, time.Minute, 10), middleware.IPIdentity), publicGuidelineH.Markdown)
+		public.GET("/outbreaks", outbreakH.List)
+		public.GET("/outbreaks/:id", outbreakH.Get)
+		public.GET("/outbreaks/:id/updates", outbreakH.Updates)
+		public.GET("/outbreaks/:id/resources", outbreakH.Resources)
+		public.GET("/situation-reports", outbreakH.ListReports)
+		public.GET("/situation-reports/:id", outbreakH.GetReport)
 	}
 
 	v2 := r.Group("/api/v2")

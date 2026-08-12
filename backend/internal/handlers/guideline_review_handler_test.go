@@ -12,11 +12,11 @@ import (
 	"github.com/google/uuid"
 )
 
-func TestGuidelineDraftReviewRequiresEditorialWritePermission(t *testing.T) {
+func TestGuidelineDraftReviewRequiresExplicitReviewPermission(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	router := gin.New()
 	router.Use(claimsForReviewTest([]string{"guideline.read"}))
-	router.GET("/review/:id", middleware.RequirePermission("guideline.write"), func(c *gin.Context) { c.Status(http.StatusOK) })
+	router.GET("/review/:id", middleware.RequirePermission("guideline.review"), func(c *gin.Context) { c.Status(http.StatusOK) })
 
 	response := httptest.NewRecorder()
 	router.ServeHTTP(response, httptest.NewRequest(http.MethodGet, "/review/"+uuid.NewString(), nil))
@@ -25,11 +25,11 @@ func TestGuidelineDraftReviewRequiresEditorialWritePermission(t *testing.T) {
 	}
 }
 
-func TestGuidelineBlockApprovalRequiresPublishPermission(t *testing.T) {
+func TestGuidelineBlockApprovalRequiresHighRiskPermission(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	router := gin.New()
 	router.Use(claimsForReviewTest([]string{"guideline.read", "guideline.write"}))
-	router.POST("/review/:id/blocks/:blockId", middleware.RequirePermission("guideline.publish"), func(c *gin.Context) { c.Status(http.StatusOK) })
+	router.POST("/review/:id/blocks/:blockId", middleware.RequirePermission("guideline.high_risk.approve"), func(c *gin.Context) { c.Status(http.StatusOK) })
 
 	response := httptest.NewRecorder()
 	router.ServeHTTP(response, httptest.NewRequest(http.MethodPost, "/review/"+uuid.NewString()+"/blocks/"+uuid.NewString(), nil))
@@ -38,11 +38,11 @@ func TestGuidelineBlockApprovalRequiresPublishPermission(t *testing.T) {
 	}
 }
 
-func TestRegenerationAcceptanceRequiresPublishPermission(t *testing.T) {
+func TestRegenerationAcceptanceRequiresHighRiskPermission(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	router := gin.New()
 	router.Use(claimsForReviewTest([]string{"guideline.read", "guideline.write"}))
-	router.POST("/review/:id/regeneration/:jobId/accept", middleware.RequirePermission("guideline.publish"), func(c *gin.Context) { c.Status(http.StatusOK) })
+	router.POST("/review/:id/regeneration/:jobId/accept", middleware.RequirePermission("guideline.high_risk.approve"), func(c *gin.Context) { c.Status(http.StatusOK) })
 
 	response := httptest.NewRecorder()
 	router.ServeHTTP(response, httptest.NewRequest(http.MethodPost, "/review/"+uuid.NewString()+"/regeneration/"+uuid.NewString()+"/accept", nil))

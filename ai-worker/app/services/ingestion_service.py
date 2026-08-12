@@ -124,6 +124,13 @@ class IngestionService:
                 if source_format == "markdown"
                 else extract_pdf(source_path)
             )
+            revision_id = str(payload.get("revision_id") or "").strip() or None
+            for block in extracted.blocks:
+                block.provenance = {
+                    **block.provenance,
+                    "markdown_revision_id": revision_id,
+                    "ingestion_job_id": job_id,
+                }
             markdown_bytes = extracted.markdown.encode("utf-8")
             markdown_checksum = hashlib.sha256(markdown_bytes).hexdigest()
             log.info(
@@ -261,9 +268,11 @@ class IngestionService:
                     "structured_block_count": len(extracted.blocks),
                     "asset_count": len(extracted.assets),
                     "unique_asset_count": len(uploaded_asset_keys) + (1 if source_format == "pdf" else 0),
+                    "markdown_revision_id": revision_id,
+                    "ingestion_job_id": job_id,
                 },
                 warnings=extracted.warnings,
-                markdown_revision_id=str(payload.get("revision_id") or "").strip() or None,
+                markdown_revision_id=revision_id,
                 ingestion_job_id=str(job["id"]),
             )
             self.jobs.set_progress(job_id, "review_required", 98)

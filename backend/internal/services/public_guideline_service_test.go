@@ -244,6 +244,9 @@ func publicGuidelineTestDB(t *testing.T) *gorm.DB {
 		&models.IngestionJob{},
 		&models.GuidelineRegenerationReview{},
 		&models.GuidelineReviewComment{},
+		&models.GuidelineReviewAssignment{},
+		&models.GuidelineEditorComment{},
+		&models.User{},
 		&models.AuditLog{},
 		&models.ClinicalProtocol{},
 	); err != nil {

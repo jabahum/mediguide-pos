@@ -179,6 +179,18 @@ class GuidelineRepository:
                 (version_id,),
             )
             before_snapshot = self._projection_snapshot(cur, version_id)
+            cur.execute(
+                """
+                SELECT source_fingerprint, provenance_json, page_start, page_end
+                FROM guideline_content_blocks
+                WHERE version_id=%s AND deleted_at IS NULL
+                  AND source_fingerprint <> '' AND page_start IS NOT NULL
+                """,
+                (version_id,),
+            )
+            previous_page_provenance = {
+                str(row["source_fingerprint"]): row for row in cur.fetchall()
+            }
             cur.execute("DELETE FROM guideline_chunks WHERE version_id = %s", (version_id,))
             cur.execute("DELETE FROM guideline_tables WHERE version_id = %s", (version_id,))
             cur.execute("DELETE FROM guideline_content_blocks WHERE version_id = %s", (version_id,))
@@ -256,6 +268,7 @@ class GuidelineRepository:
 
             block_id_by_order: dict[int, str] = {}
             block_rows: list[tuple[Any, ...]] = []
+            preserved_page_citations = 0
             for block in blocks:
                 block_id = str(uuid.uuid4())
                 block_id_by_order[block.sort_order] = block_id
@@ -277,6 +290,18 @@ class GuidelineRepository:
                         "Structured block references an asset outside this version: "
                         f"{direct_asset_id}"
                     )
+                page_start = block.page_start
+                page_end = block.page_end
+                provenance = dict(block.provenance)
+                previous = previous_page_provenance.get(str(block.source_fingerprint or ""))
+                if page_start is None and previous is not None:
+                    page_start = previous.get("page_start")
+                    page_end = previous.get("page_end")
+                    provenance.update({
+                        "pdf_mapping_preserved": True,
+                        "pdf_mapping_method": "unchanged_source_fingerprint",
+                    })
+                    preserved_page_citations += 1
                 block_rows.append(
                     (
                         block_id,
@@ -286,9 +311,9 @@ class GuidelineRepository:
                         block.sort_order,
                         json.dumps(content, ensure_ascii=False),
                         block.source_fingerprint,
-                        json.dumps(block.provenance, ensure_ascii=False),
-                        block.page_start,
-                        block.page_end,
+                        json.dumps(provenance, ensure_ascii=False),
+                        page_start,
+                        page_end,
                         block.extraction_confidence,
                         "draft",
                     )
@@ -305,6 +330,17 @@ class GuidelineRepository:
                     """,
                     block_rows,
                 )
+
+            if str(metadata.get("source_format") or "") == "markdown":
+                metadata["page_citations_available"] = preserved_page_citations > 0
+                metadata["preserved_pdf_page_citation_count"] = preserved_page_citations
+                warnings[:] = [item for item in warnings if "original-PDF access are unavailable" not in item]
+                if previous_page_provenance:
+                    warnings.append(
+                        f"PDF page provenance was retained for {preserved_page_citations} unchanged fingerprint-matched block(s); edited blocks have no page citation."
+                    )
+                else:
+                    warnings.append("Markdown source has no verified PDF page mappings; page citations are unavailable.")
 
             table_rows: list[tuple[Any, ...]] = []
             for table in tables:

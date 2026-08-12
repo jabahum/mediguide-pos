@@ -44,6 +44,28 @@ func TestDerivedRolePermissionsSeparateFacilityReadAndWrite(t *testing.T) {
 	}
 }
 
+func TestDerivedRolePermissionsSeparateGuidelineAuthorAndReviewerActions(t *testing.T) {
+	author := deriveRolePermissions("content_manager", "")
+	for _, permission := range []string{"guideline.markdown.read", "guideline.markdown.edit", "guideline.markdown.upload", "guideline.asset.manage", "guideline.structure.regenerate", "guideline.review", "guideline.revision.restore"} {
+		if !containsPermission(author, permission) {
+			t.Fatalf("content manager missing %s: %v", permission, author)
+		}
+	}
+	if containsPermission(author, "guideline.high_risk.approve") {
+		t.Fatalf("author must not receive high-risk approval: %v", author)
+	}
+
+	reviewer := deriveRolePermissions("reviewer", "")
+	for _, permission := range []string{"guideline.markdown.read", "guideline.review", "guideline.high_risk.approve", "guideline.publish"} {
+		if !containsPermission(reviewer, permission) {
+			t.Fatalf("reviewer missing %s: %v", permission, reviewer)
+		}
+	}
+	if containsPermission(reviewer, "guideline.markdown.edit") || containsPermission(reviewer, "guideline.structure.regenerate") {
+		t.Fatalf("reviewer received author mutation permissions: %v", reviewer)
+	}
+}
+
 func containsPermission(values []string, expected string) bool {
 	for _, value := range values {
 		if value == expected {

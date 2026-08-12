@@ -201,7 +201,7 @@ export function markdownStats(markdown: string): MarkdownStats {
     characters: markdown.length,
     lines: markdown ? markdown.split("\n").length : 0,
     headings: markdownHeadings(markdown).length,
-    tables: markdown.split("\n").filter((line) => /^\s*\|?.*\|.*\|?\s*$/u.test(line)).length,
+    tables: markdown.split("\n").filter((line) => /^\s*\|?\s*:?-{3,}:?\s*(?:\|\s*:?-{3,}:?\s*)+\|?\s*$/u.test(line)).length,
     images: (markdown.match(/!\[[^\]]*\]\([^)]*\)/gu) || []).length,
     callouts: (markdown.match(/^:::[a-z_-]+(?:\s+.*)?$/gimu) || []).length,
     readingMinutes: Math.max(1, Math.ceil(words / 220)),

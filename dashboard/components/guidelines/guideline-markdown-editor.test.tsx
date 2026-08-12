@@ -260,7 +260,7 @@ describe("GuidelineMarkdownEditor", () => {
     expect(screen.queryByRole("button", { name: "Save draft" })).not.toBeInTheDocument()
   })
 
-  it("provides rendered, public, structured, and print preview presentations", async () => {
+  it("provides production reader, retrieval, citation, contents, and print previews", async () => {
     const user = userEvent.setup()
     const print = vi.spyOn(window, "print").mockImplementation(() => undefined)
     render(
@@ -282,6 +282,21 @@ describe("GuidelineMarkdownEditor", () => {
     await user.selectOptions(presentation, "structured-reader")
     expect(screen.getByRole("region", { name: "Structured reader preview" })).toBeInTheDocument()
     expect(screen.getByRole("navigation", { name: "Structured preview contents" })).toBeInTheDocument()
+
+    await user.selectOptions(presentation, "mobile-reader")
+    expect(screen.getByRole("region", { name: "Flutter mobile reader preview" })).toBeInTheDocument()
+
+    await user.selectOptions(presentation, "search-result")
+    expect(screen.getByRole("region", { name: "Search result preview" })).toBeInTheDocument()
+
+    await user.selectOptions(presentation, "rag-chunks")
+    expect(screen.getByRole("region", { name: "RAG chunk preview" })).toBeInTheDocument()
+
+    await user.selectOptions(presentation, "citations")
+    expect(screen.getByRole("region", { name: "Citation preview" })).toHaveTextContent("Page citations are unavailable")
+
+    await user.selectOptions(presentation, "table-of-contents")
+    expect(screen.getByRole("navigation", { name: "Table of contents preview" })).toBeInTheDocument()
 
     await user.click(screen.getByRole("button", { name: "Print" }))
     await waitFor(() => expect(print).toHaveBeenCalled())

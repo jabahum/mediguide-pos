@@ -281,3 +281,47 @@ Markdown-only publications deliberately report that original-PDF access and PDF 
 unavailable. When an editor revises Markdown originally generated from a PDF, the immutable PDF is
 retained as the fidelity reference. The dashboard upload and create workflows expose both formats,
 and save feedback states that structured content and the AI index are regenerating.
+
+## Markdown authoring phases 15–22
+
+The dashboard now provides explicit draft previews for sanitized Markdown, the canonical
+structured-reader layout, the public reader, Flutter/mobile reader, responsive mobile/tablet/
+desktop widths, print, search results, deterministic draft RAG chunks, citations, table of
+contents, and original-PDF comparison. Original-PDF comparison is offered only when the draft
+asset manifest contains an original PDF. Search and RAG previews are labelled simulations and
+never write to or expose the production public/RAG indexes. Raw HTML remains disabled.
+
+Non-blocking document information reports word, character, line, heading, table, image and
+clinical-callout counts, reading time, current revision, save/editor/checksum state, structured
+status, regeneration/embedding information available from the current API, validation totals and
+review completion. Browser recovery records are isolated by authenticated user, document and
+version, include the base ETag, and are cleared only after a confirmed server save.
+
+Migrations `00022_guideline_editor_permissions.sql` and
+`00023_guideline_editor_collaboration.sql` add the explicit Markdown read/edit/upload, asset,
+regeneration, review, high-risk approval, publish and restore permission vocabulary; safe default
+role mappings; reviewer assignments; and revision/section/block comments with durable resolution
+state. The editor exposes assignments, comments and the audit timeline. Collaboration is
+asynchronous: ETags and immutable revisions prevent overwrites, while presence and live cursor
+sharing remain explicitly unsupported because no realtime transport or server-side presence
+system exists. Mentions are not implemented because there is no verified notification workflow.
+
+Private editorial endpoints remain authenticated and version-scoped. Draft writes, asset uploads
+and regeneration have rate and concurrency controls. Save, checkpoint, upload, restore, duplicate,
+regeneration, review and publication transitions emit audit events with actor identity derived from
+JWT claims. Public and mobile contracts remain publication-only: current published versions stay
+available while drafts are authored, and accepted revision IDs continue to gate publication.
+
+The AI worker processes the exact immutable revision from the job payload, stores the revision and
+job IDs in extraction metadata and block provenance, escapes unsafe HTML, produces deterministic
+typed blocks/chunks/embeddings, and refuses superseded persistence. For Markdown-only sources page
+citations remain unavailable. For a PDF-derived draft, page provenance is retained only for blocks
+whose source fingerprint is unchanged; edited or unmatched blocks never inherit guessed pages.
+All derived content remains review-required and a processing failure preserves the source revision.
+
+Validation for this slice includes backend unit/handler/service tests and build/vet, dashboard
+lint/typecheck/tests/production build, AI-worker tests, generated TypeScript/Dart contract analysis,
+and PostgreSQL migrations 22–23 up/down/up. Dashboard lint currently reports repository-existing
+warnings separately from errors. End-to-end publication still requires an authenticated seeded
+editor/reviewer workflow against a fully running local stack; it is not represented as complete by
+unit tests alone.

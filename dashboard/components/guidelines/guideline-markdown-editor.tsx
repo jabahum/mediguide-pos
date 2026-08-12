@@ -27,6 +27,7 @@ import {
   Settings2,
   ShieldAlert,
   Upload,
+  Users,
 } from "lucide-react"
 
 import {
@@ -84,6 +85,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { useUnsavedChanges } from "@/hooks/use-unsaved-changes"
+import { getBackendClient } from "@/lib/backend-client"
 import { showToast } from "@/lib/toast"
 import { cn } from "@/lib/utils"
 import {
@@ -95,9 +97,13 @@ import {
   RegenerationJobView,
   RegenerationReview,
   RegenerationReviewComment,
+  GuidelineReviewAssignment,
+  GuidelineEditorComment,
+  GuidelineActivityItem,
 } from "@/services/guideline-markdown.service"
 
 interface GuidelineMarkdownEditorProps {
+  documentId?: string
   versionId: string
   documentTitle: string
   versionLabel: string
@@ -131,7 +137,8 @@ const defaultPreferences: EditorPreferences = {
   scrollSync: true,
 }
 
-const recoveryKey = (versionId: string) => `mediguide.markdown.recovery.${versionId}`
+const recoveryKey = (userId: string, documentId: string, versionId: string) =>
+  `mediguide.markdown.recovery.${userId}.${documentId}.${versionId}`
 const preferencesKey = "mediguide.markdown.editor.preferences.v1"
 
 function selectionReplacement(
@@ -198,6 +205,7 @@ function reorderAnchorMetadata(metadata: ReturnType<typeof stableHeadingAnchors>
 }
 
 export function GuidelineMarkdownEditor({
+  documentId,
   versionId,
   documentTitle,
   versionLabel,
@@ -230,6 +238,15 @@ export function GuidelineMarkdownEditor({
   const [recovery, setRecovery] = React.useState<string | null>(null)
   const [preferences, setPreferences] = React.useState(defaultPreferences)
   const [settingsOpen, setSettingsOpen] = React.useState(false)
+  const [informationOpen, setInformationOpen] = React.useState(false)
+  const [collaborationOpen, setCollaborationOpen] = React.useState(false)
+  const [collaborationLoading, setCollaborationLoading] = React.useState(false)
+  const [assignments, setAssignments] = React.useState<GuidelineReviewAssignment[]>([])
+  const [editorComments, setEditorComments] = React.useState<GuidelineEditorComment[]>([])
+  const [activity, setActivity] = React.useState<GuidelineActivityItem[]>([])
+  const [reviewerId, setReviewerId] = React.useState("")
+  const [reviewDueAt, setReviewDueAt] = React.useState("")
+  const [editorComment, setEditorComment] = React.useState("")
   const [commandOpen, setCommandOpen] = React.useState(false)
   const [goToLine, setGoToLine] = React.useState("")
   const [templatesOpen, setTemplatesOpen] = React.useState(openTemplatesInitially && editable && !published && !initialContent.trim())
@@ -286,6 +303,10 @@ export function GuidelineMarkdownEditor({
   const [anchorMetadata, setAnchorMetadata] = React.useState(() => stableHeadingAnchors(initialContent, initialDraft?.revision.anchor_metadata))
 
   const canEdit = editable && !published
+  const recoveryStorageKey = React.useMemo(() => {
+    const userId = String(getBackendClient().authStore.model?.id || "anonymous")
+    return recoveryKey(userId, documentId || initialDraft?.revision.document_id || "unknown-document", versionId)
+  }, [documentId, initialDraft?.revision.document_id, versionId])
   const dirty = canEdit && content !== savedContent
   const headings = React.useMemo(() => markdownHeadings(content), [content])
   const localIssues = React.useMemo(() => validateMarkdown(content), [content])
@@ -353,8 +374,11 @@ export function GuidelineMarkdownEditor({
     try {
       const storedPreferences = localStorage.getItem(preferencesKey)
       if (storedPreferences) setPreferences({ ...defaultPreferences, ...JSON.parse(storedPreferences) })
-      const storedRecovery = localStorage.getItem(recoveryKey(versionId))
-      if (storedRecovery && storedRecovery !== initialContent) setRecovery(storedRecovery)
+      const storedRecovery = localStorage.getItem(recoveryStorageKey)
+      if (storedRecovery) {
+        const parsed = JSON.parse(storedRecovery) as { content?: string; etag?: string }
+        if (parsed.content && parsed.content !== initialContent && parsed.etag !== initialDraft?.etag) setRecovery(parsed.content)
+      }
     } catch {
       // Browser storage is optional; editing remains available without it.
     }
@@ -362,7 +386,7 @@ export function GuidelineMarkdownEditor({
       window.removeEventListener("online", onlineListener)
       window.removeEventListener("offline", offlineListener)
     }
-  }, [initialContent, versionId])
+  }, [initialContent, initialDraft?.etag, recoveryStorageKey])
 
   React.useEffect(() => {
     let active = true
@@ -381,11 +405,15 @@ export function GuidelineMarkdownEditor({
   React.useEffect(() => {
     if (!canEdit || !dirty) return
     try {
-      localStorage.setItem(recoveryKey(versionId), content)
+      localStorage.setItem(recoveryStorageKey, JSON.stringify({
+        content,
+        etag: draft?.etag || "",
+        saved_at: new Date().toISOString(),
+      }))
     } catch {
       // Recovery storage is best effort.
     }
-  }, [canEdit, content, dirty, versionId])
+  }, [canEdit, content, dirty, draft?.etag, recoveryStorageKey])
 
   const applySavedDraft = React.useCallback((result: MarkdownDraft) => {
     setDraft(result)
@@ -396,11 +424,11 @@ export function GuidelineMarkdownEditor({
     setPendingSourceType(null)
     setAnchorMetadata(result.revision.anchor_metadata || stableHeadingAnchors(result.content, anchorMetadata))
     try {
-      localStorage.removeItem(recoveryKey(versionId))
+      localStorage.removeItem(recoveryStorageKey)
     } catch {
       // Recovery storage is best effort.
     }
-  }, [anchorMetadata, versionId])
+  }, [anchorMetadata, recoveryStorageKey])
 
   const keepLocalAgainstServerRevision = React.useCallback((serverDraft: MarkdownDraft) => {
     setDraft(serverDraft)
@@ -583,6 +611,25 @@ export function GuidelineMarkdownEditor({
       showToast.error("History unavailable", error instanceof Error ? error.message : "Could not load revisions")
     } finally {
       setHistoryLoading(false)
+    }
+  }
+
+  const loadCollaboration = async () => {
+    setCollaborationLoading(true)
+    try {
+      const [nextAssignments, nextComments, nextActivity] = await Promise.all([
+        GuidelineMarkdownService.reviewAssignments(versionId),
+        GuidelineMarkdownService.editorComments(versionId),
+        GuidelineMarkdownService.activity(versionId),
+      ])
+      setAssignments(nextAssignments)
+      setEditorComments(nextComments)
+      setActivity(nextActivity)
+      setCollaborationOpen(true)
+    } catch (error) {
+      showToast.error("Review workspace unavailable", error instanceof Error ? error.message : "Could not load collaboration data")
+    } finally {
+      setCollaborationLoading(false)
     }
   }
 
@@ -855,6 +902,7 @@ export function GuidelineMarkdownEditor({
           <Button size="sm" variant="ghost" onClick={() => void compareSpecialRevision("regenerated")}><GitCompareArrows className="mr-2 h-4 w-4" />Compare regenerated</Button>
           <Button size="sm" variant="ghost" onClick={() => void copyMarkdown()}><Copy className="mr-2 h-4 w-4" />Copy</Button>
           <Button size="sm" variant="ghost" onClick={() => setSettingsOpen(true)}><Settings2 className="mr-2 h-4 w-4" />Editor settings</Button>
+          <Button size="sm" variant="ghost" disabled={collaborationLoading} onClick={() => void loadCollaboration()}><Users className="mr-2 h-4 w-4" />Review &amp; activity</Button>
           {(mode === "preview" || mode === "split") && (
             <>
               <Label className="sr-only" htmlFor="markdown-preview-presentation">Preview presentation</Label>
@@ -868,6 +916,12 @@ export function GuidelineMarkdownEditor({
                 <option value="rendered">Rendered Markdown</option>
                 <option value="public-reader">Public reader</option>
                 <option value="structured-reader">Structured reader</option>
+                <option value="mobile-reader">Flutter/mobile reader</option>
+                <option value="search-result">Search result</option>
+                <option value="rag-chunks">RAG chunks</option>
+                <option value="citations">Citations</option>
+                <option value="table-of-contents">Table of contents</option>
+                {assets.some((asset) => asset.type === "original_pdf") && <option value="original-pdf">Original PDF comparison</option>}
                 <option value="print">Print layout</option>
               </select>
               <Button size="sm" variant="ghost" onClick={openPrintPreview}><Printer className="mr-2 h-4 w-4" />Print</Button>
@@ -876,6 +930,7 @@ export function GuidelineMarkdownEditor({
           <Badge variant="outline">{stats.lines} lines</Badge>
           <Badge variant="outline">{stats.headings} headings</Badge>
           <Badge variant="outline">{stats.readingMinutes} min read</Badge>
+          <Button size="sm" variant="ghost" onClick={() => setInformationOpen(true)} aria-label="Document information">Document info</Button>
           {draft && <Badge variant="secondary">Revision {draft.revision.revision_number}</Badge>}
           {draft?.revision.id === structuredRevisionId && <Badge variant="outline">Current structured source</Badge>}
           {draft?.revision.id === publishedRevisionId && <Badge variant="secondary">Published revision</Badge>}
@@ -894,7 +949,7 @@ export function GuidelineMarkdownEditor({
             <AlertDescription className="flex flex-wrap items-center gap-2">
               A newer unsaved local draft was found.
               <Button size="sm" variant="outline" onClick={() => { setContent(recovery); setRecovery(null) }}>Restore local draft</Button>
-              <Button size="sm" variant="ghost" onClick={() => { localStorage.removeItem(recoveryKey(versionId)); setRecovery(null) }}>Discard</Button>
+              <Button size="sm" variant="ghost" onClick={() => { localStorage.removeItem(recoveryStorageKey); setRecovery(null) }}>Discard</Button>
             </AlertDescription>
           </Alert>
         )}
@@ -1081,6 +1136,49 @@ export function GuidelineMarkdownEditor({
 
       <Dialog open={settingsOpen} onOpenChange={setSettingsOpen}>
         <DialogContent><DialogHeader><DialogTitle>Editor settings</DialogTitle><DialogDescription>These preferences are stored only in this browser.</DialogDescription></DialogHeader><div className="space-y-5"><div className="flex items-center justify-between"><Label htmlFor="autosave">Autosave drafts</Label><Switch id="autosave" checked={preferences.autosave} onCheckedChange={(value) => setPreferences((current) => ({ ...current, autosave: value }))} /></div><div><Label htmlFor="autosave-delay">Autosave delay (milliseconds)</Label><Input id="autosave-delay" type="number" min={1000} max={30000} step={500} value={preferences.autosaveDelay} onChange={(event) => setPreferences((current) => ({ ...current, autosaveDelay: Math.min(30000, Math.max(1000, Number(event.target.value))) }))} /></div><div className="flex items-center justify-between"><Label htmlFor="line-wrap">Soft line wrapping</Label><Switch id="line-wrap" checked={preferences.lineWrapping} onCheckedChange={(value) => setPreferences((current) => ({ ...current, lineWrapping: value }))} /></div><div className="flex items-center justify-between"><Label htmlFor="scroll-sync">Synchronize editor and preview scrolling</Label><Switch id="scroll-sync" checked={preferences.scrollSync} onCheckedChange={(value) => setPreferences((current) => ({ ...current, scrollSync: value }))} /></div><div className="flex items-center justify-between"><Label htmlFor="distraction-free">Distraction-free mode</Label><Switch id="distraction-free" checked={preferences.distractionFree} onCheckedChange={(value) => setPreferences((current) => ({ ...current, distractionFree: value }))} /></div><div><Label htmlFor="font-size">Editor font size</Label><Input id="font-size" type="number" min={12} max={22} value={preferences.fontSize} onChange={(event) => setPreferences((current) => ({ ...current, fontSize: Math.min(22, Math.max(12, Number(event.target.value))) }))} /></div><div><Label htmlFor="preview-width">Preview width</Label><select id="preview-width" className="mt-1 h-9 w-full rounded-md border bg-background px-3" value={preferences.previewWidth} onChange={(event) => setPreferences((current) => ({ ...current, previewWidth: event.target.value as EditorPreferences["previewWidth"] }))}><option value="mobile">Mobile</option><option value="tablet">Tablet</option><option value="desktop">Desktop</option></select></div></div></DialogContent>
+      </Dialog>
+
+      <Dialog open={informationOpen} onOpenChange={setInformationOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader><DialogTitle>Document information</DialogTitle><DialogDescription>Statistics are calculated without blocking editing. Server-derived values reflect the latest loaded revision.</DialogDescription></DialogHeader>
+          <dl className="grid gap-3 text-sm sm:grid-cols-2">
+            {[
+              ["Words", stats.words.toLocaleString()], ["Characters", stats.characters.toLocaleString()],
+              ["Lines", stats.lines.toLocaleString()], ["Headings", stats.headings.toLocaleString()],
+              ["Tables", stats.tables.toLocaleString()], ["Images", stats.images.toLocaleString()],
+              ["Clinical callouts", stats.callouts.toLocaleString()], ["Estimated reading time", `${stats.readingMinutes} min`],
+              ["Current revision", draft ? String(draft.revision.revision_number) : "Unsaved draft"],
+              ["Last saved", lastSavedAt ? lastSavedAt.toLocaleString() : draft ? new Date(draft.revision.updated_at).toLocaleString() : "Not saved"],
+              ["Last editor", draft?.revision.created_by || "System / unavailable"],
+              ["Current checksum", draft?.revision.checksum || "Not calculated until save"],
+              ["Structured content", draft?.revision.structured_content_status.replaceAll("_", " ") || "not generated"],
+              ["Last regeneration", regenerationJob?.job.completed_at ? new Date(regenerationJob.job.completed_at).toLocaleString() : "No completed regeneration loaded"],
+              ["Last successful embeddings", draft?.revision.structured_content_status === "approved" && regenerationJob?.job.completed_at ? new Date(regenerationJob.job.completed_at).toLocaleString() : "Not reported by the current API"],
+              ["Validation", `${issues.filter((issue) => issue.severity === "error").length} errors · ${issues.filter((issue) => issue.severity === "warning").length} warnings`],
+              ["Review completion", regenerationReview?.status === "accepted" ? "100%" : regenerationReview?.status === "rejected" ? "0% · returned" : regenerationReview ? "Pending reviewer decision" : "Not started"],
+            ].map(([label, value]) => <div key={label} className="min-w-0 rounded border p-3"><dt className="text-xs font-medium text-muted-foreground">{label}</dt><dd className="mt-1 break-all font-medium">{value}</dd></div>)}
+          </dl>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={collaborationOpen} onOpenChange={setCollaborationOpen}>
+        <DialogContent className="max-w-4xl">
+          <DialogHeader><DialogTitle>Review and activity</DialogTitle><DialogDescription>Review is asynchronous and protected by immutable revisions and ETags. Live cursors and presence are not supported.</DialogDescription></DialogHeader>
+          <div className="grid max-h-[70vh] gap-5 overflow-y-auto lg:grid-cols-2">
+            <section className="space-y-3"><h3 className="font-medium">Reviewer assignments</h3>
+              <Input aria-label="Reviewer user UUID" placeholder="Reviewer user UUID" value={reviewerId} onChange={(event) => setReviewerId(event.target.value)} />
+              <Input aria-label="Review due date" type="date" value={reviewDueAt} onChange={(event) => setReviewDueAt(event.target.value)} />
+              <Button size="sm" disabled={!reviewerId.trim()} onClick={async () => { try { const row = await GuidelineMarkdownService.assignReviewer(versionId, reviewerId.trim(), reviewDueAt ? new Date(`${reviewDueAt}T23:59:59Z`).toISOString() : undefined); setAssignments((current) => [row, ...current]); setReviewerId(""); setReviewDueAt("") } catch (error) { showToast.error("Reviewer not assigned", error instanceof Error ? error.message : "Could not assign reviewer") } }}>Assign reviewer</Button>
+              {assignments.length === 0 ? <p className="text-sm text-muted-foreground">No reviewers assigned.</p> : assignments.map((assignment) => <div key={assignment.id} className="rounded border p-3 text-sm"><div className="font-medium">{assignment.reviewer_id}</div><div className="text-xs text-muted-foreground">{assignment.status}{assignment.due_at ? ` · due ${new Date(assignment.due_at).toLocaleDateString()}` : ""}</div>{assignment.status === "assigned" && <div className="mt-2 flex gap-2"><Button size="sm" variant="outline" onClick={async () => { const row = await GuidelineMarkdownService.updateReviewAssignment(versionId, assignment.id, "completed"); setAssignments((items) => items.map((item) => item.id === row.id ? row : item)) }}>Complete</Button><Button size="sm" variant="ghost" onClick={async () => { const row = await GuidelineMarkdownService.updateReviewAssignment(versionId, assignment.id, "dismissed"); setAssignments((items) => items.map((item) => item.id === row.id ? row : item)) }}>Dismiss</Button></div>}</div>)}
+            </section>
+            <section className="space-y-3"><h3 className="font-medium">Revision comments</h3>
+              <Textarea value={editorComment} onChange={(event) => setEditorComment(event.target.value)} placeholder="Comment on the current immutable revision" />
+              <Button size="sm" disabled={!editorComment.trim() || !draft} onClick={async () => { if (!draft) return; try { const row = await GuidelineMarkdownService.addEditorComment(versionId, editorComment.trim(), draft.revision.id); setEditorComments((items) => [...items, row]); setEditorComment("") } catch (error) { showToast.error("Comment not saved", error instanceof Error ? error.message : "Could not save comment") } }}>Add comment</Button>
+              {editorComments.length === 0 ? <p className="text-sm text-muted-foreground">No review comments.</p> : editorComments.map((comment) => <div key={comment.id} className="rounded border p-3 text-sm"><div className="text-xs text-muted-foreground">{comment.author_id} · {new Date(comment.created_at).toLocaleString()}</div><p className={cn("mt-1 whitespace-pre-wrap", comment.resolved && "line-through opacity-60")}>{comment.body}</p><Button className="mt-2" size="sm" variant="ghost" onClick={async () => { const row = await GuidelineMarkdownService.resolveEditorComment(versionId, comment.id, !comment.resolved); setEditorComments((items) => items.map((item) => item.id === row.id ? row : item)) }}>{comment.resolved ? "Reopen" : "Resolve"}</Button></div>)}
+            </section>
+            <section className="space-y-2 lg:col-span-2"><h3 className="font-medium">Activity timeline</h3>{activity.length === 0 ? <p className="text-sm text-muted-foreground">No editorial activity recorded.</p> : activity.map((item) => <div key={item.id} className="flex gap-3 border-l-2 pl-3 text-sm"><span className="min-w-0 flex-1"><strong>{item.action.replaceAll(".", " ")}</strong><span className="block text-xs text-muted-foreground">Actor {item.actor_id} · {item.entity_type}</span></span><time className="text-xs text-muted-foreground">{new Date(item.created_at).toLocaleString()}</time></div>)}</section>
+          </div>
+        </DialogContent>
       </Dialog>
 
       <Dialog open={commandOpen} onOpenChange={setCommandOpen}>

@@ -218,12 +218,25 @@ func (s GuidelineService) SaveMarkdownDraft(
 		if err := tx.Create(&revision).Error; err != nil {
 			return err
 		}
-		return tx.Model(&version).Updates(map[string]any{
+		if err := tx.Model(&version).Updates(map[string]any{
 			"current_markdown_revision_id": revision.ID,
 			"markdown_file_key":            key,
 			"structured_content_status":    "outdated",
 			"updated_at":                   time.Now().UTC(),
-		}).Error
+		}).Error; err != nil {
+			return err
+		}
+		action := "guideline.markdown.saved"
+		if revision.CheckpointName != "" {
+			action = "guideline.markdown.checkpointed"
+		}
+		if sourceType == "restored" {
+			action = "guideline.markdown.restored"
+		}
+		if sourceType == "uploaded_markdown" {
+			action = "guideline.markdown.uploaded"
+		}
+		return writeGuidelineAudit(tx, actorID, action, "guideline_markdown_revision", revision.ID, "", map[string]any{"version_id": versionID, "revision_number": revision.RevisionNumber})
 	})
 	if err != nil {
 		_ = s.Store.Delete(ctx, key)
@@ -448,7 +461,7 @@ func (s GuidelineService) DuplicateMarkdownVersion(
 			ETag:     markdownRevisionETag(&revision),
 			Saved:    true,
 		}
-		return nil
+		return writeGuidelineAudit(tx, actorID, "guideline.markdown.duplicated", "guideline_markdown_revision", revision.ID, "", map[string]any{"version_id": version.ID, "source_version_id": sourceVersionID})
 	})
 	if err != nil {
 		_ = s.Store.Delete(ctx, key)
@@ -560,7 +573,7 @@ func (s GuidelineService) RegenerateMarkdown(
 			Operations: operations,
 			QueuedAt:   job.CreatedAt,
 		}
-		return nil
+		return writeGuidelineAudit(tx, actorID, "guideline.regeneration.requested", "ingestion_job", job.ID, "", map[string]any{"version_id": versionID, "revision_id": revision.ID, "operations": operations})
 	})
 	return &result, err
 }

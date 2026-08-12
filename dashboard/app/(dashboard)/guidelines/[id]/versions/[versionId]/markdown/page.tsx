@@ -219,6 +219,7 @@ export default function GuidelineMarkdownPage() {
 
       <GuidelineMarkdownEditor
         key={data.version.id}
+        documentId={data.document.id}
         versionId={data.version.id}
         documentTitle={data.document.title}
         versionLabel={data.version.version}

@@ -598,6 +598,8 @@ func markdownError(c *gin.Context, err error) {
 		httpx.Error(c, http.StatusConflict, err.Error())
 	case errors.Is(err, services.ErrRegenerationJobConflict), errors.Is(err, services.ErrRegenerationReviewIncomplete):
 		httpx.Error(c, http.StatusConflict, err.Error())
+	case errors.Is(err, services.ErrGuidelineReviewConflict):
+		httpx.Error(c, http.StatusConflict, err.Error())
 	case errors.Is(err, services.ErrMarkdownValidationFailed):
 		httpx.Error(c, http.StatusUnprocessableEntity, err.Error())
 	case errors.Is(err, services.ErrMarkdownRevisionMissing),

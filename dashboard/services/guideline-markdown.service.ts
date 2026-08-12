@@ -60,6 +60,9 @@ export interface RegenerationReview {
   decision_comment?: string; reviewed_by?: string; reviewed_at?: string
 }
 export interface RegenerationReviewComment { id:string; job_id:string; block_id?:string; author_id:string; body:string; created_at:string }
+export interface GuidelineReviewAssignment { id:string; version_id:string; reviewer_id:string; assigned_by?:string; status:"assigned"|"completed"|"dismissed"; due_at?:string; completed_at?:string; created_at:string }
+export interface GuidelineEditorComment { id:string; version_id:string; revision_id?:string; section_id?:string; block_id?:string; author_id:string; body:string; resolved:boolean; resolved_by?:string; resolved_at?:string; created_at:string }
+export interface GuidelineActivityItem { id:string; actor_id:string; action:string; entity_type:string; entity_id:string; metadata_json:string; created_at:string }
 
 export interface MarkdownRevision {
   id: string
@@ -291,6 +294,13 @@ export class GuidelineMarkdownService {
   static async decideRegeneration(versionId:string,jobId:string,decision:"accept"|"reject",comment=""):Promise<RegenerationReview>{return getBackendClient().request<RegenerationReview>(`/api/v2/guideline-versions/${versionId}/regeneration-reviews/${jobId}/${decision}`,{method:"POST",body:JSON.stringify({comment})})}
   static async reviewComments(versionId:string,jobId:string):Promise<RegenerationReviewComment[]>{return getBackendClient().request<RegenerationReviewComment[]>(`/api/v2/guideline-versions/${versionId}/regeneration-reviews/${jobId}/comments`)}
   static async addReviewComment(versionId:string,jobId:string,body:string,blockId?:string):Promise<RegenerationReviewComment>{return getBackendClient().request<RegenerationReviewComment>(`/api/v2/guideline-versions/${versionId}/regeneration-reviews/${jobId}/comments`,{method:"POST",body:JSON.stringify({body,block_id:blockId})})}
+  static async reviewAssignments(versionId:string):Promise<GuidelineReviewAssignment[]>{return getBackendClient().request<GuidelineReviewAssignment[]>(`/api/v2/guideline-versions/${versionId}/reviewers`)}
+  static async assignReviewer(versionId:string,reviewerId:string,dueAt?:string):Promise<GuidelineReviewAssignment>{return getBackendClient().request<GuidelineReviewAssignment>(`/api/v2/guideline-versions/${versionId}/reviewers`,{method:"POST",body:JSON.stringify({reviewer_id:reviewerId,due_at:dueAt||undefined})})}
+  static async updateReviewAssignment(versionId:string,assignmentId:string,status:"completed"|"dismissed"):Promise<GuidelineReviewAssignment>{return getBackendClient().request<GuidelineReviewAssignment>(`/api/v2/guideline-versions/${versionId}/reviewers/${assignmentId}`,{method:"PATCH",body:JSON.stringify({status})})}
+  static async editorComments(versionId:string,resolved?:boolean):Promise<GuidelineEditorComment[]>{return getBackendClient().request<GuidelineEditorComment[]>(`/api/v2/guideline-versions/${versionId}/review-comments`,{query:{resolved}})}
+  static async addEditorComment(versionId:string,body:string,revisionId?:string,sectionId?:string,blockId?:string):Promise<GuidelineEditorComment>{return getBackendClient().request<GuidelineEditorComment>(`/api/v2/guideline-versions/${versionId}/review-comments`,{method:"POST",body:JSON.stringify({body,revision_id:revisionId,section_id:sectionId,block_id:blockId})})}
+  static async resolveEditorComment(versionId:string,commentId:string,resolved:boolean):Promise<GuidelineEditorComment>{return getBackendClient().request<GuidelineEditorComment>(`/api/v2/guideline-versions/${versionId}/review-comments/${commentId}`,{method:"PATCH",body:JSON.stringify({resolved})})}
+  static async activity(versionId:string):Promise<GuidelineActivityItem[]>{return getBackendClient().request<GuidelineActivityItem[]>(`/api/v2/guideline-versions/${versionId}/activity`,{query:{limit:100}})}
 
   static async load(versionId: string): Promise<string> {
     try {

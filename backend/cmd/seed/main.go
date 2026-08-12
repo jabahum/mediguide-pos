@@ -106,6 +106,14 @@ func seedSecurity(database *gorm.DB) (*models.User, *models.User, error) {
 		{Code: "guideline.read", Name: "Read guidelines"},
 		{Code: "guideline.write", Name: "Create/update guidelines"},
 		{Code: "guideline.publish", Name: "Publish guidelines"},
+		{Code: "guideline.markdown.read", Name: "Read private guideline Markdown drafts and revisions"},
+		{Code: "guideline.markdown.edit", Name: "Edit guideline Markdown drafts"},
+		{Code: "guideline.markdown.upload", Name: "Upload guideline Markdown and source documents"},
+		{Code: "guideline.asset.manage", Name: "Manage private guideline assets"},
+		{Code: "guideline.structure.regenerate", Name: "Regenerate structured guideline content"},
+		{Code: "guideline.review", Name: "Review guidelines"},
+		{Code: "guideline.high_risk.approve", Name: "Approve high-risk guideline content"},
+		{Code: "guideline.revision.restore", Name: "Restore guideline revisions"},
 		{Code: "protocol.read", Name: "Read protocols"},
 		{Code: "protocol.write", Name: "Create/update protocols"},
 		{Code: "chat.ask", Name: "Ask RAG chatbot"},
@@ -276,19 +284,30 @@ func deriveBackendPermissions(roleKey, permissionsJSON string) []string {
 			"guideline.publish",
 			"guideline.read",
 			"guideline.write",
+			"guideline.markdown.read", "guideline.markdown.edit", "guideline.markdown.upload",
+			"guideline.asset.manage", "guideline.structure.regenerate", "guideline.review",
+			"guideline.high_risk.approve", "guideline.revision.restore",
 			"protocol.read",
 			"protocol.write",
 			"sync.read",
 		}
-	case "content_manager", "reviewer":
+	case "content_manager":
 		return []string{
 			"chat.ask",
 			"guideline.publish",
 			"guideline.read",
 			"guideline.write",
+			"guideline.markdown.read", "guideline.markdown.edit", "guideline.markdown.upload",
+			"guideline.asset.manage", "guideline.structure.regenerate", "guideline.review",
+			"guideline.revision.restore",
 			"protocol.read",
 			"protocol.write",
 			"sync.read",
+		}
+	case "reviewer":
+		return []string{
+			"chat.ask", "guideline.publish", "guideline.read", "guideline.markdown.read",
+			"guideline.review", "guideline.high_risk.approve", "protocol.read", "sync.read",
 		}
 	case "healthcare_provider":
 		return []string{

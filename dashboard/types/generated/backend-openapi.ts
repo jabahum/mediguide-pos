@@ -1076,6 +1076,18 @@ export interface ModelsAbbreviation {
   usage_count?: number;
 }
 
+export interface ModelsAuditLog {
+  action?: string;
+  actor_id?: string;
+  created_at?: string;
+  entity_id?: string;
+  entity_type?: string;
+  id?: string;
+  ip_address?: string;
+  metadata_json?: string;
+  updated_at?: string;
+}
+
 export interface ModelsCalculator {
   added_by_user_id?: string;
   app_file_json?: object;
@@ -1436,6 +1448,21 @@ export interface ModelsGuidelineDocument {
   versions?: ModelsGuidelineVersion[];
 }
 
+export interface ModelsGuidelineEditorComment {
+  author_id?: string;
+  block_id?: string;
+  body?: string;
+  created_at?: string;
+  id?: string;
+  resolved?: boolean;
+  resolved_at?: string;
+  resolved_by?: string;
+  revision_id?: string;
+  section_id?: string;
+  updated_at?: string;
+  version_id?: string;
+}
+
 export type ModelsGuidelineExtractionQuality =
   | "reviewed"
   | "partially_reviewed"
@@ -1496,6 +1523,18 @@ export interface ModelsGuidelineRegenerationReview {
   reviewed_at?: string;
   reviewed_by?: string;
   revision_id?: string;
+  status?: string;
+  updated_at?: string;
+  version_id?: string;
+}
+
+export interface ModelsGuidelineReviewAssignment {
+  assigned_by?: string;
+  completed_at?: string;
+  created_at?: string;
+  due_at?: string;
+  id?: string;
+  reviewer_id?: string;
   status?: string;
   updated_at?: string;
   version_id?: string;
@@ -1903,6 +1942,11 @@ export interface ServicesAskResponse {
   session_id?: string;
 }
 
+export interface ServicesAssignGuidelineReviewerInput {
+  due_at?: string;
+  reviewer_id: string;
+}
+
 export interface ServicesCitation {
   chunk_id?: string;
   page_end?: number;
@@ -2040,6 +2084,13 @@ export interface ServicesCreateGuidelineBlockInput {
   section_id?: string;
   sort_order?: number;
   type: ModelsGuidelineBlockType;
+}
+
+export interface ServicesCreateGuidelineEditorCommentInput {
+  block_id?: string;
+  body: string;
+  revision_id?: string;
+  section_id?: string;
 }
 
 export interface ServicesCreateGuidelineInput {
@@ -2452,6 +2503,10 @@ export interface ServicesGuidelinePublicationValidation {
   errors?: ServicesGuidelineReviewIssue[];
   valid?: boolean;
   warnings?: ServicesGuidelineReviewIssue[];
+}
+
+export interface ServicesGuidelineReviewAssignmentStatusInput {
+  status: string;
 }
 
 export interface ServicesGuidelineReviewCommentInput {
@@ -2979,6 +3034,10 @@ export interface ServicesReorderGuidelineBlocksInput {
 
 export interface ServicesReorderGuidelineSectionsInput {
   sections: ServicesGuidelineSectionOrderInput[];
+}
+
+export interface ServicesResolveGuidelineEditorCommentInput {
+  resolved?: boolean;
 }
 
 export interface ServicesReviewGuidelineAssetInput {

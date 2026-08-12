@@ -489,11 +489,14 @@ func deriveRolePermissions(roleKey, permissionsJSON string) []string {
 			"guideline.publish",
 			"guideline.read",
 			"guideline.write",
+			"guideline.markdown.read", "guideline.markdown.edit", "guideline.markdown.upload",
+			"guideline.asset.manage", "guideline.structure.regenerate", "guideline.review",
+			"guideline.high_risk.approve", "guideline.revision.restore",
 			"protocol.read",
 			"protocol.write",
 			"sync.read",
 		}
-	case "content_manager", "reviewer":
+	case "content_manager":
 		return []string{
 			"chat.ask",
 			"calculator.read",
@@ -505,9 +508,18 @@ func deriveRolePermissions(roleKey, permissionsJSON string) []string {
 			"facility.write",
 			"guideline.read",
 			"guideline.write",
+			"guideline.markdown.read", "guideline.markdown.edit", "guideline.markdown.upload",
+			"guideline.asset.manage", "guideline.structure.regenerate", "guideline.review",
+			"guideline.revision.restore",
 			"protocol.read",
 			"protocol.write",
 			"sync.read",
+		}
+	case "reviewer":
+		return []string{
+			"chat.ask", "calculator.read", "drug.read", "facility.read", "guideline.read",
+			"guideline.markdown.read", "guideline.review", "guideline.high_risk.approve",
+			"guideline.publish", "protocol.read", "sync.read",
 		}
 	case "healthcare_provider":
 		return []string{

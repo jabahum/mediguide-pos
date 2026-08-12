@@ -4455,6 +4455,46 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/v2/guideline-versions/{id}/activity": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "guideline-review"
+                ],
+                "summary": "List the guideline editorial activity timeline",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "Guideline version ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Maximum events (1-200)",
+                        "name": "limit",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/models.AuditLog"
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/api/v2/guideline-versions/{id}/assets": {
             "get": {
                 "security": [
@@ -6442,6 +6482,252 @@ const docTemplate = `{
                         "description": "Not Found",
                         "schema": {
                             "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v2/guideline-versions/{id}/review-comments": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "guideline-review"
+                ],
+                "summary": "List revision, section, and block review comments",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "Guideline version ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "boolean",
+                        "description": "Filter by resolution state",
+                        "name": "resolved",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/models.GuidelineEditorComment"
+                            }
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "guideline-review"
+                ],
+                "summary": "Add a revision, section, block, or version review comment",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "Guideline version ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Review comment",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/services.CreateGuidelineEditorCommentInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/models.GuidelineEditorComment"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v2/guideline-versions/{id}/review-comments/{commentId}": {
+            "patch": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "guideline-review"
+                ],
+                "summary": "Resolve or reopen an editor review comment",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "Guideline version ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "Comment ID",
+                        "name": "commentId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Resolution state",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/services.ResolveGuidelineEditorCommentInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/models.GuidelineEditorComment"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v2/guideline-versions/{id}/reviewers": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "guideline-review"
+                ],
+                "summary": "List assigned reviewers for a guideline version",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "Guideline version ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/models.GuidelineReviewAssignment"
+                            }
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "guideline-review"
+                ],
+                "summary": "Assign a reviewer to a guideline version",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "Guideline version ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Reviewer assignment",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/services.AssignGuidelineReviewerInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/models.GuidelineReviewAssignment"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v2/guideline-versions/{id}/reviewers/{assignmentId}": {
+            "patch": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "guideline-review"
+                ],
+                "summary": "Complete or dismiss a reviewer assignment",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "Guideline version ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "Assignment ID",
+                        "name": "assignmentId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Assignment transition",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/services.GuidelineReviewAssignmentStatusInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/models.GuidelineReviewAssignment"
                         }
                     }
                 }
@@ -13240,6 +13526,38 @@ const docTemplate = `{
                 }
             }
         },
+        "models.AuditLog": {
+            "type": "object",
+            "properties": {
+                "action": {
+                    "type": "string"
+                },
+                "actor_id": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "entity_id": {
+                    "type": "string"
+                },
+                "entity_type": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "ip_address": {
+                    "type": "string"
+                },
+                "metadata_json": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                }
+            }
+        },
         "models.Calculator": {
             "type": "object",
             "properties": {
@@ -14238,6 +14556,47 @@ const docTemplate = `{
                 }
             }
         },
+        "models.GuidelineEditorComment": {
+            "type": "object",
+            "properties": {
+                "author_id": {
+                    "type": "string"
+                },
+                "block_id": {
+                    "type": "string"
+                },
+                "body": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "resolved": {
+                    "type": "boolean"
+                },
+                "resolved_at": {
+                    "type": "string"
+                },
+                "resolved_by": {
+                    "type": "string"
+                },
+                "revision_id": {
+                    "type": "string"
+                },
+                "section_id": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                },
+                "version_id": {
+                    "type": "string"
+                }
+            }
+        },
         "models.GuidelineExtractionQuality": {
             "type": "string",
             "enum": [
@@ -14401,6 +14760,38 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "revision_id": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                },
+                "version_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "models.GuidelineReviewAssignment": {
+            "type": "object",
+            "properties": {
+                "assigned_by": {
+                    "type": "string"
+                },
+                "completed_at": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "due_at": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "reviewer_id": {
                     "type": "string"
                 },
                 "status": {
@@ -15579,6 +15970,20 @@ const docTemplate = `{
                 }
             }
         },
+        "services.AssignGuidelineReviewerInput": {
+            "type": "object",
+            "required": [
+                "reviewer_id"
+            ],
+            "properties": {
+                "due_at": {
+                    "type": "string"
+                },
+                "reviewer_id": {
+                    "type": "string"
+                }
+            }
+        },
         "services.Citation": {
             "type": "object",
             "properties": {
@@ -15972,6 +16377,26 @@ const docTemplate = `{
                 },
                 "type": {
                     "$ref": "#/definitions/models.GuidelineBlockType"
+                }
+            }
+        },
+        "services.CreateGuidelineEditorCommentInput": {
+            "type": "object",
+            "required": [
+                "body"
+            ],
+            "properties": {
+                "block_id": {
+                    "type": "string"
+                },
+                "body": {
+                    "type": "string"
+                },
+                "revision_id": {
+                    "type": "string"
+                },
+                "section_id": {
+                    "type": "string"
                 }
             }
         },
@@ -17108,6 +17533,17 @@ const docTemplate = `{
                     "items": {
                         "$ref": "#/definitions/services.GuidelineReviewIssue"
                     }
+                }
+            }
+        },
+        "services.GuidelineReviewAssignmentStatusInput": {
+            "type": "object",
+            "required": [
+                "status"
+            ],
+            "properties": {
+                "status": {
+                    "type": "string"
                 }
             }
         },
@@ -18594,6 +19030,14 @@ const docTemplate = `{
                     "items": {
                         "$ref": "#/definitions/services.GuidelineSectionOrderInput"
                     }
+                }
+            }
+        },
+        "services.ResolveGuidelineEditorCommentInput": {
+            "type": "object",
+            "properties": {
+                "resolved": {
+                    "type": "boolean"
                 }
             }
         },

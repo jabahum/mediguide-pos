@@ -1,4 +1,3 @@
-import 'package:flex_color_scheme/flex_color_scheme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -77,11 +76,17 @@ class _MainPageState extends ConsumerState<MainPage> {
         authenticated ? 'Profile' : 'More',
       ),
     ];
+    final theme = Theme.of(context);
+    final overlayStyle = theme.brightness == Brightness.dark
+        ? SystemUiOverlayStyle.light
+        : SystemUiOverlayStyle.dark;
     return AnnotatedRegion<SystemUiOverlayStyle>(
-      value: FlexColorScheme.themedSystemNavigationBar(
-        context,
-        noAppBar: true,
-        systemNavBarStyle: FlexSystemNavBarStyle.navigationBar,
+      value: overlayStyle.copyWith(
+        systemNavigationBarColor: theme.colorScheme.surfaceContainerLowest,
+        systemNavigationBarDividerColor: theme.colorScheme.outlineVariant,
+        systemNavigationBarIconBrightness: theme.brightness == Brightness.dark
+            ? Brightness.light
+            : Brightness.dark,
       ),
       child: LayoutBuilder(
         builder: (context, constraints) {
@@ -125,19 +130,28 @@ class _MainPageState extends ConsumerState<MainPage> {
                     ],
                   ),
             bottomNavigationBar: compact
-                ? NavigationBar(
-                    selectedIndex: currentIndex,
-                    onDestinationSelected: (index) =>
-                        ref.read(mainNavigationIndexProvider.notifier).state =
-                            index,
-                    destinations: [
-                      for (final destination in destinations)
-                        NavigationDestination(
-                          icon: Icon(destination.$1),
-                          selectedIcon: Icon(destination.$1, fill: 1),
-                          label: destination.$2,
+                ? DecoratedBox(
+                    decoration: BoxDecoration(
+                      border: Border(
+                        top: BorderSide(
+                          color: theme.colorScheme.outlineVariant,
                         ),
-                    ],
+                      ),
+                    ),
+                    child: NavigationBar(
+                      selectedIndex: currentIndex,
+                      onDestinationSelected: (index) =>
+                          ref.read(mainNavigationIndexProvider.notifier).state =
+                              index,
+                      destinations: [
+                        for (final destination in destinations)
+                          NavigationDestination(
+                            icon: Icon(destination.$1),
+                            selectedIcon: Icon(destination.$1, fill: 1),
+                            label: destination.$2,
+                          ),
+                      ],
+                    ),
                   )
                 : null,
           );

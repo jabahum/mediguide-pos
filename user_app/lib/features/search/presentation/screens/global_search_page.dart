@@ -7,6 +7,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import 'package:user_app/core/constants/app_spacing.dart';
 import 'package:user_app/features/search/presentation/controllers/global_search_controller.dart';
+import 'package:user_app/shared/widgets/clinical_icon_tile.dart';
 import 'package:user_app/shared/models/search_models.dart';
 
 class GlobalSearchPage extends ConsumerStatefulWidget {
@@ -220,7 +221,7 @@ class _SearchResultTile extends StatelessWidget {
   Widget build(BuildContext context) => Card(
     margin: EdgeInsets.zero,
     child: ListTile(
-      leading: CircleAvatar(child: Icon(_icon(result.category), size: 20)),
+      leading: ClinicalIconTile(icon: _icon(result.category)),
       title: _HighlightedText(text: result.title, query: query),
       subtitle: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

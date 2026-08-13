@@ -17,6 +17,7 @@ import 'package:user_app/features/calculators/presentation/widgets/calculator_ca
 import 'package:user_app/shared/models/models.dart';
 import 'package:user_app/shared/widgets/filter_button.dart';
 import 'package:user_app/shared/widgets/pagination_indicators.dart';
+import 'package:user_app/shared/widgets/clinical_icon_tile.dart';
 
 class ToolsPage extends ConsumerStatefulWidget {
   const ToolsPage({super.key, this.arguments});
@@ -320,7 +321,7 @@ class _DestinationGroup extends StatelessWidget {
             for (var index = 0; index < items.length; index++) ...[
               ListTile(
                 minTileHeight: 60,
-                leading: Icon(items[index].icon),
+                leading: ClinicalIconTile(icon: items[index].icon),
                 title: Text(items[index].title),
                 subtitle: Text(items[index].description),
                 trailing: const Icon(LucideIcons.chevronRight),

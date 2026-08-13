@@ -10,6 +10,7 @@ import 'package:user_app/core/widgets/app_error_view.dart';
 import 'package:user_app/core/widgets/app_skeleton.dart';
 import 'package:user_app/core/widgets/empty_state.dart';
 import 'package:user_app/features/guidelines/data/models/guideline_publication.dart';
+import 'package:user_app/shared/widgets/clinical_icon_tile.dart';
 
 final _publicationCatalogueProvider = FutureProvider.autoDispose
     .family<List<GuidelinePublication>, String>((ref, search) async {
@@ -83,7 +84,9 @@ class _PublicationCataloguePageState
                     child: Card(
                       child: ListTile(
                         minVerticalPadding: AppSpacing.md,
-                        leading: const Icon(LucideIcons.bookOpenText),
+                        leading: const ClinicalIconTile(
+                          icon: LucideIcons.bookOpenText,
+                        ),
                         title: Text(item.title),
                         subtitle: Text(
                           [

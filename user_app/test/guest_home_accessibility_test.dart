@@ -51,7 +51,8 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(find.text('Trusted clinical guidance'), findsOneWidget);
+      expect(find.text('MediGuide'), findsOneWidget);
+      expect(find.text('Emergency care'), findsOneWidget);
       await tester.scrollUntilVisible(
         find.text('Example published clinical guideline'),
         250,

@@ -1,107 +1,100 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
-import 'package:user_app/core/utils/app_extensions.dart';
-import 'package:user_app/app/router/app_navigator.dart';
-import 'package:introduction_screen/introduction_screen.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
-import 'package:universal_image/universal_image.dart';
-import 'package:flex_color_scheme/flex_color_scheme.dart';
+
 import 'package:user_app/app/router/app_router.dart';
 import 'package:user_app/core/constants/app_constants.dart';
+import 'package:user_app/core/constants/app_spacing.dart';
 import 'package:user_app/core/storage/local_storage_service.dart';
-import 'package:user_app/core/utils/responsive.dart';
 
-class OnboardingPage extends StatefulWidget {
+/// A focused first-run screen that explains trust, offline access and update
+/// behavior before allowing either guest exploration or authentication.
+class OnboardingPage extends StatelessWidget {
   const OnboardingPage({super.key});
 
   @override
-  State<OnboardingPage> createState() => _OnboardingPageState();
-}
-
-class _OnboardingPageState extends State<OnboardingPage> {
-  final _introKey = GlobalKey<IntroductionScreenState>();
-
-  @override
   Widget build(BuildContext context) {
-    final theme = context.theme;
-    final primaryColor = theme.colorScheme.primary;
-
+    final theme = Theme.of(context);
+    final colors = theme.colorScheme;
     return AnnotatedRegion<SystemUiOverlayStyle>(
-      value: FlexColorScheme.themedSystemNavigationBar(context, noAppBar: true),
+      value: theme.brightness == Brightness.dark
+          ? SystemUiOverlayStyle.light
+          : SystemUiOverlayStyle.dark,
       child: Scaffold(
         body: SafeArea(
-          child: IntroductionScreen(
-            key: _introKey,
-            pages: [
-              PageViewModel(
-                title: AppTranslationKey.welcomeToMediGuide,
-                body: AppTranslationKey.welcomeBody,
-                image: _buildUgandaCoatOfArms(),
-                decoration: _pageDecoration(theme, context),
-              ),
-              PageViewModel(
-                title: AppTranslationKey.clinicalGuidelines,
-                body: AppTranslationKey.clinicalGuidelinesBody,
-                image: _buildIcon(
-                  LucideIcons.bookOpen,
-                  theme.colorScheme.secondary,
+          child: LayoutBuilder(
+            builder: (context, constraints) => SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(24, 24, 24, 20),
+              child: ConstrainedBox(
+                constraints: BoxConstraints(
+                  minHeight: (constraints.maxHeight - 44)
+                      .clamp(0, double.infinity)
+                      .toDouble(),
                 ),
-                decoration: _pageDecoration(theme, context),
-              ),
-              PageViewModel(
-                title: AppTranslationKey.worksOffline,
-                body: AppTranslationKey.worksOfflineBody,
-                image: _buildIcon(
-                  LucideIcons.download,
-                  theme.colorScheme.tertiary,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    const _BrandLockup(),
+                    const SizedBox(height: 28),
+                    const _ClinicalIllustration(),
+                    const SizedBox(height: 28),
+                    const _Benefit(
+                      icon: LucideIcons.shieldCheck,
+                      title: 'Trusted',
+                      description:
+                          'Official, reviewed clinical guidance for healthcare teams.',
+                    ),
+                    const SizedBox(height: 16),
+                    const _Benefit(
+                      icon: LucideIcons.mapPin,
+                      title: 'Accessible',
+                      description: 'Use essential content online or offline.',
+                    ),
+                    const SizedBox(height: 16),
+                    const _Benefit(
+                      icon: LucideIcons.bellRing,
+                      title: 'Always updated',
+                      description:
+                          'Receive the latest guideline and situation-report updates.',
+                    ),
+                    const SizedBox(height: 32),
+                    FilledButton(
+                      onPressed: () => _complete(context, AppRoutes.home),
+                      child: const Text('Explore as Guest'),
+                    ),
+                    const SizedBox(height: 10),
+                    OutlinedButton(
+                      onPressed: () => _complete(context, AppRoutes.login),
+                      child: const Text('Sign In / Register'),
+                    ),
+                    const SizedBox(height: 20),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Container(
+                          width: 18,
+                          height: 6,
+                          decoration: BoxDecoration(
+                            color: colors.primary,
+                            borderRadius: BorderRadius.circular(99),
+                          ),
+                        ),
+                        for (var index = 0; index < 3; index++) ...[
+                          const SizedBox(width: 6),
+                          Container(
+                            width: 6,
+                            height: 6,
+                            decoration: BoxDecoration(
+                              color: colors.outlineVariant,
+                              shape: BoxShape.circle,
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ],
                 ),
-                decoration: _pageDecoration(theme, context),
-              ),
-              PageViewModel(
-                title: AppTranslationKey.decisionSupportTools,
-                body: AppTranslationKey.decisionSupportToolsBody,
-                image: _buildIcon(LucideIcons.calculator, primaryColor),
-                decoration: _pageDecoration(theme, context),
-              ),
-              PageViewModel(
-                title: AppTranslationKey.readyToTransformCare,
-                body: AppTranslationKey.readyToTransformCareBody,
-                image: _buildIcon(
-                  LucideIcons.check,
-                  theme.colorScheme.secondary,
-                ),
-                decoration: _pageDecoration(theme, context),
-              ),
-            ],
-            onDone: _completeOnboarding,
-            onSkip: _completeOnboarding,
-            showSkipButton: true,
-            showBackButton: true,
-            back: Icon(LucideIcons.chevronLeft, color: primaryColor),
-            skip: Text(
-              AppTranslationKey.skip,
-              style: TextStyle(
-                fontWeight: FontWeight.w600,
-                color: primaryColor,
-              ),
-            ),
-            next: Icon(LucideIcons.chevronRight, color: primaryColor),
-            done: Text(
-              AppTranslationKey.getStarted,
-              style: TextStyle(
-                fontWeight: FontWeight.w600,
-                color: primaryColor,
-              ),
-            ),
-            dotsDecorator: DotsDecorator(
-              size: const Size.square(10.0),
-              activeSize: const Size(22.0, 10.0),
-              color: theme.colorScheme.outline,
-              activeColor: primaryColor,
-              spacing: const EdgeInsets.symmetric(horizontal: 3.0),
-              activeShape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(25.0),
               ),
             ),
           ),
@@ -110,107 +103,170 @@ class _OnboardingPageState extends State<OnboardingPage> {
     );
   }
 
-  Future<void> _completeOnboarding() async {
-    final redirect = GoRouterState.of(context).uri.queryParameters['redirect'];
+  Future<void> _complete(BuildContext context, String fallback) async {
+    final requested = GoRouterState.of(context).uri.queryParameters['redirect'];
     await PreferenceUtils.setBool(SharedPreferencesKeys.notFirstTime, true);
-    AppNavigator.go(AppRoutes.safeDestination(redirect));
-  }
-
-  Widget _buildUgandaCoatOfArms() {
-    return Builder(
-      builder: (context) {
-        final size = Responsive.doubleValue(
-          context,
-          mobile: 120.0,
-          tablet: 140.0,
-          desktop: 160.0,
-        );
-        return UniversalImage(
-          'assets/Coat_of_arms_of_Uganda.svg.png',
-          width: size,
-          height: size,
-          fit: BoxFit.contain,
-        );
-      },
+    if (!context.mounted) return;
+    context.go(
+      requested == null ? fallback : AppRoutes.safeDestination(requested),
     );
   }
+}
 
-  Widget _buildIcon(IconData icon, Color color) {
-    return Builder(
-      builder: (context) {
-        final padding = Responsive.doubleValue(
-          context,
-          mobile: 24.0,
-          tablet: 32.0,
-          desktop: 40.0,
-        );
-        final iconSize = Responsive.doubleValue(
-          context,
-          mobile: 80.0,
-          tablet: 96.0,
-          desktop: 112.0,
-        );
-        return Container(
-          padding: EdgeInsets.all(padding),
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: color.withValues(alpha: 0.1),
+class _BrandLockup extends StatelessWidget {
+  const _BrandLockup();
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    final stacked = MediaQuery.textScalerOf(context).scale(1) >= 1.5;
+    final mark = Container(
+      width: 44,
+      height: 44,
+      decoration: BoxDecoration(
+        color: colors.primary,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Icon(LucideIcons.bookOpenText, color: colors.onPrimary, size: 25),
+    );
+    final title = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('MediGuide', style: Theme.of(context).textTheme.headlineSmall),
+        Text(
+          'Official Uganda Clinical\nGuidelines App',
+          style: Theme.of(
+            context,
+          ).textTheme.bodySmall?.copyWith(color: colors.onSurfaceVariant),
+        ),
+      ],
+    );
+    if (stacked) {
+      return Column(
+        children: [
+          mark,
+          AppSpacing.gapSm,
+          DefaultTextStyle.merge(textAlign: TextAlign.center, child: title),
+        ],
+      );
+    }
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        mark,
+        AppSpacing.gapSm,
+        Flexible(child: title),
+      ],
+    );
+  }
+}
+
+class _ClinicalIllustration extends StatelessWidget {
+  const _ClinicalIllustration();
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    return SizedBox(
+      height: 180,
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          Container(
+            width: 164,
+            height: 164,
+            decoration: BoxDecoration(
+              color: colors.primaryContainer,
+              shape: BoxShape.circle,
+            ),
           ),
-          child: Icon(icon, size: iconSize, color: color),
-        );
-      },
+          Icon(LucideIcons.stethoscope, size: 82, color: colors.primary),
+          const _OrbitIcon(
+            alignment: Alignment.topLeft,
+            icon: LucideIcons.bookOpen,
+          ),
+          const _OrbitIcon(
+            alignment: Alignment.topRight,
+            icon: LucideIcons.shieldCheck,
+          ),
+          const _OrbitIcon(
+            alignment: Alignment.bottomLeft,
+            icon: LucideIcons.heartPulse,
+          ),
+          const _OrbitIcon(
+            alignment: Alignment.bottomRight,
+            icon: LucideIcons.hospital,
+          ),
+        ],
+      ),
     );
   }
+}
 
-  PageDecoration _pageDecoration(ThemeData theme, BuildContext context) {
-    final titleFontSize = Responsive.fontSize(
-      context,
-      mobile: 28.0,
-      tablet: 32.0,
-      desktop: 36.0,
-    );
-    final bodyFontSize = Responsive.fontSize(
-      context,
-      mobile: 16.0,
-      tablet: 18.0,
-      desktop: 20.0,
-    );
-    final imagePadding = Responsive.doubleValue(
-      context,
-      mobile: 24.0,
-      tablet: 32.0,
-      desktop: 40.0,
-    );
-    final horizontalPadding = context.responsiveHorizontalPadding;
-    final verticalPadding = context.responsiveVerticalPadding;
+class _OrbitIcon extends StatelessWidget {
+  const _OrbitIcon({required this.alignment, required this.icon});
+  final Alignment alignment;
+  final IconData icon;
 
-    return PageDecoration(
-      titleTextStyle: TextStyle(
-        fontSize: titleFontSize,
-        fontWeight: FontWeight.bold,
-        color: theme.colorScheme.onSurface,
+  @override
+  Widget build(BuildContext context) => Align(
+    alignment: alignment,
+    child: Container(
+      width: 46,
+      height: 46,
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surfaceContainerLowest,
+        border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
+        borderRadius: BorderRadius.circular(14),
       ),
-      bodyTextStyle: TextStyle(
-        fontSize: bodyFontSize,
-        color: theme.colorScheme.onSurfaceVariant,
-        height: 1.5,
-      ),
-      imagePadding: EdgeInsets.all(imagePadding),
-      pageColor: theme.colorScheme.surface,
-      bodyPadding: EdgeInsets.fromLTRB(
-        horizontalPadding,
-        0.0,
-        horizontalPadding,
-        verticalPadding,
-      ),
-      titlePadding: EdgeInsets.fromLTRB(
-        horizontalPadding,
-        0.0,
-        horizontalPadding,
-        verticalPadding,
-      ),
-      imageFlex: context.isMobile ? 3 : 2,
-      bodyFlex: context.isMobile ? 2 : 3,
+      child: Icon(icon, color: Theme.of(context).colorScheme.primary, size: 22),
+    ),
+  );
+}
+
+class _Benefit extends StatelessWidget {
+  const _Benefit({
+    required this.icon,
+    required this.title,
+    required this.description,
+  });
+  final IconData icon;
+  final String title;
+  final String description;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          width: 42,
+          height: 42,
+          decoration: BoxDecoration(
+            color: colors.primaryContainer,
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Icon(icon, color: colors.primary, size: 21),
+        ),
+        const SizedBox(width: 14),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(title, style: Theme.of(context).textTheme.titleSmall),
+              const SizedBox(height: 2),
+              Text(
+                description,
+                style: Theme.of(
+                  context,
+                ).textTheme.bodySmall?.copyWith(color: colors.onSurfaceVariant),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }

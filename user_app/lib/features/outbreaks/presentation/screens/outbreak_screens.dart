@@ -13,6 +13,7 @@ import 'package:user_app/core/widgets/app_loading_view.dart';
 import 'package:user_app/features/outbreaks/data/models/outbreak_models.dart';
 import 'package:user_app/features/documents/presentation/screens/document_reader_page.dart';
 import 'package:user_app/shared/widgets/section_header.dart';
+import 'package:user_app/shared/widgets/clinical_icon_tile.dart';
 
 final publicOutbreaksProvider = FutureProvider.autoDispose(
   (ref) => ref.watch(outbreakRepositoryProvider).outbreaks(),
@@ -140,8 +141,8 @@ class SituationReportsPage extends ConsumerWidget {
                       return Card(
                         margin: EdgeInsets.zero,
                         child: ListTile(
-                          leading: const CircleAvatar(
-                            child: Icon(LucideIcons.fileChartColumn, size: 20),
+                          leading: const ClinicalIconTile(
+                            icon: LucideIcons.fileChartColumn,
                           ),
                           title: Text(report.title),
                           subtitle: Text(

@@ -409,84 +409,62 @@ class _ProfileHeaderCard extends ConsumerWidget {
       authControllerProvider.select((value) => value.valueOrNull?.user),
     );
     final name = user?.name ?? AppTranslationKey.user.tr;
-    final specialization = user?.specialization ?? '';
+    final professionalDetails = <String>[
+      if (user?.jobTitle.trim().isNotEmpty == true) user!.jobTitle.trim(),
+      if (user?.specialization.trim().isNotEmpty == true)
+        user!.specialization.trim(),
+      if (user?.organization.trim().isNotEmpty == true)
+        user!.organization.trim(),
+    ];
     final avatarUrl = user?.avatar.isNotEmpty == true
         ? ref.read(backendApiServiceProvider).getFileUrl(filename: user!.avatar)
         : null;
 
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(AppSpacing.lg),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(28),
-        color: cs.primaryContainer.withValues(alpha: 0.35),
-        border: Border.all(color: cs.primary.withValues(alpha: 0.08)),
-      ),
-      child: Column(
-        children: [
-          Stack(
-            alignment: Alignment.bottomRight,
-            children: [
-              UserAvatar(
-                name: name,
-                avatarUrl: avatarUrl,
-                radius: Responsive.doubleValue(
-                  context,
-                  mobile: 42.0,
-                  tablet: 52.0,
-                  desktop: 60.0,
-                ),
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(AppSpacing.md),
+        child: Row(
+          children: [
+            UserAvatar(
+              name: name,
+              avatarUrl: avatarUrl,
+              radius: Responsive.doubleValue(
+                context,
+                mobile: 34.0,
+                tablet: 40.0,
+                desktop: 44.0,
               ),
-              Material(
-                color: cs.primary,
-                shape: const CircleBorder(),
-                child: InkWell(
-                  customBorder: const CircleBorder(),
-                  onTap: onEditProfile,
-                  child: Padding(
-                    padding: const EdgeInsets.all(8),
-                    child: Icon(
-                      LucideIcons.pencil,
-                      color: cs.onPrimary,
-                      size: 16,
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-
-          AppSpacing.md.gap,
-
-          Text(
-            name,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: context.textTheme.titleLarge?.copyWith(
-              fontWeight: FontWeight.w800,
             ),
-            textAlign: TextAlign.center,
-          ),
-
-          if (specialization.trim().isNotEmpty) ...[
-            const SizedBox(height: 6),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-              decoration: BoxDecoration(
-                color: cs.primary.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(999),
+            AppSpacing.md.gap,
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    name,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: context.textTheme.titleLarge,
+                  ),
+                  for (final detail in professionalDetails.take(2))
+                    Text(
+                      detail,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: context.textTheme.bodySmall?.copyWith(
+                        color: cs.onSurfaceVariant,
+                      ),
+                    ),
+                ],
               ),
-              child: Text(
-                specialization,
-                style: context.textTheme.labelMedium?.copyWith(
-                  color: cs.primary,
-                  fontWeight: FontWeight.w700,
-                ),
-                textAlign: TextAlign.center,
-              ),
+            ),
+            IconButton.filledTonal(
+              onPressed: onEditProfile,
+              tooltip: 'Edit profile',
+              icon: const Icon(LucideIcons.pencil, size: 18),
             ),
           ],
-        ],
+        ),
       ),
     );
   }

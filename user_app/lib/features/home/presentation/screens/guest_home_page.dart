@@ -10,6 +10,7 @@ import 'package:user_app/core/utils/responsive.dart';
 import 'package:user_app/features/guidelines/data/models/guideline_publication.dart';
 import 'package:user_app/features/outbreaks/data/models/outbreak_models.dart';
 import 'package:user_app/shared/widgets/section_header.dart';
+import 'package:user_app/shared/widgets/clinical_icon_tile.dart';
 
 final guestHomePublicationsProvider =
     FutureProvider.autoDispose<List<GuidelinePublication>>((ref) async {
@@ -35,9 +36,9 @@ class GuestHomePage extends ConsumerWidget {
         title: const Text('MediGuide'),
         actions: [
           IconButton(
-            tooltip: 'About MediGuide',
-            onPressed: () => context.push(AppRoutes.aboutUs),
-            icon: const Icon(LucideIcons.info),
+            tooltip: 'Sign in to view notifications',
+            onPressed: () => context.push(AppRoutes.login),
+            icon: const Icon(LucideIcons.bell),
           ),
         ],
       ),
@@ -51,19 +52,6 @@ class GuestHomePage extends ConsumerWidget {
             vertical: AppSpacing.md,
           ),
           children: [
-            Semantics(
-              header: true,
-              child: Text(
-                'Trusted clinical guidance',
-                style: Theme.of(context).textTheme.headlineMedium,
-              ),
-            ),
-            AppSpacing.gapXs,
-            Text(
-              'Search published guidance and clinical reference tools. Sign in to sync private bookmarks, notes and reading progress.',
-              style: Theme.of(context).textTheme.bodyMedium,
-            ),
-            AppSpacing.gapMd,
             Semantics(
               button: true,
               label: 'Search MediGuide clinical content',
@@ -85,19 +73,29 @@ class GuestHomePage extends ConsumerWidget {
                       : _ActiveOutbreakCard(outbreak: items.first),
                 ),
             AppSpacing.gapLg,
-            const SectionHeader(
-              title: 'Emergency care',
-              subtitle: 'Fast access to essential clinical references',
-              icon: LucideIcons.siren,
-            ),
+            const SectionHeader(title: 'Emergency care'),
             AppSpacing.gapSm,
             _QuickActionGrid(
               actions: [
                 _QuickAction(
-                  'Guidelines',
-                  LucideIcons.bookOpenText,
+                  'Sepsis',
+                  LucideIcons.heartPulse,
+                  AppRoutes.search,
+                ),
+                _QuickAction('Stroke', LucideIcons.brain, AppRoutes.search),
+                _QuickAction('DKA', LucideIcons.droplets, AppRoutes.tools),
+                _QuickAction(
+                  'CPR',
+                  LucideIcons.activity,
                   AppRoutes.publicGuidelines,
                 ),
+              ],
+            ),
+            AppSpacing.gapLg,
+            const SectionHeader(title: 'Quick access'),
+            AppSpacing.gapSm,
+            _QuickActionGrid(
+              actions: [
                 _QuickAction(
                   'Drug index',
                   LucideIcons.pill,
@@ -109,9 +107,14 @@ class GuestHomePage extends ConsumerWidget {
                   AppRoutes.tools,
                 ),
                 _QuickAction(
-                  'Facilities',
-                  LucideIcons.hospital,
-                  AppRoutes.healthFacilities,
+                  'Algorithms',
+                  LucideIcons.gitBranch,
+                  AppRoutes.publicGuidelines,
+                ),
+                _QuickAction(
+                  'Procedures',
+                  LucideIcons.clipboardList,
+                  AppRoutes.publicGuidelines,
                 ),
               ],
             ),
@@ -168,6 +171,12 @@ class _ActiveOutbreakCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Card(
     color: Theme.of(context).colorScheme.errorContainer,
+    shape: RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(16),
+      side: BorderSide(
+        color: Theme.of(context).colorScheme.error.withValues(alpha: 0.35),
+      ),
+    ),
     child: InkWell(
       borderRadius: BorderRadius.circular(12),
       onTap: () => context.push(AppRoutes.outbreak(outbreak.id)),
@@ -178,15 +187,37 @@ class _ActiveOutbreakCard extends StatelessWidget {
           children: [
             Row(
               children: [
-                const Icon(LucideIcons.siren),
+                Icon(
+                  LucideIcons.siren,
+                  color: Theme.of(context).colorScheme.error,
+                ),
                 AppSpacing.gapSm,
                 Expanded(
                   child: Text(
-                    'Active public update',
-                    style: Theme.of(context).textTheme.labelLarge,
+                    'ACTIVE OUTBREAK',
+                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                      color: Theme.of(context).colorScheme.error,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 0.5,
+                    ),
                   ),
                 ),
-                Text(outbreak.status),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.surface.withValues(alpha: 0.7),
+                    borderRadius: BorderRadius.circular(99),
+                  ),
+                  child: Text(
+                    outbreak.status,
+                    style: Theme.of(context).textTheme.labelSmall,
+                  ),
+                ),
               ],
             ),
             AppSpacing.gapSm,
@@ -279,9 +310,7 @@ class _PublicationSections extends StatelessWidget {
           Card(
             margin: const EdgeInsets.only(bottom: 8),
             child: ListTile(
-              leading: const CircleAvatar(
-                child: Icon(LucideIcons.fileText, size: 20),
-              ),
+              leading: const ClinicalIconTile(icon: LucideIcons.fileText),
               title: Text(publication.title),
               subtitle: Text(
                 [
@@ -314,18 +343,19 @@ class _QuickActionGrid extends StatelessWidget {
   Widget build(BuildContext context) {
     final width = MediaQuery.sizeOf(context).width;
     final narrow = width < 360;
+    final largeText = MediaQuery.textScalerOf(context).scale(1) >= 1.5;
     return GridView.builder(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
       gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: narrow
-            ? 1
-            : width >= 600
-            ? 4
-            : 2,
+        crossAxisCount: width >= 600 ? 6 : 4,
         mainAxisSpacing: 8,
         crossAxisSpacing: 8,
-        childAspectRatio: narrow ? 4.5 : 2.3,
+        mainAxisExtent: largeText
+            ? 154
+            : narrow
+            ? 108
+            : 104,
       ),
       itemCount: actions.length,
       itemBuilder: (context, index) {
@@ -333,15 +363,34 @@ class _QuickActionGrid extends StatelessWidget {
         return Card(
           margin: EdgeInsets.zero,
           child: InkWell(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(16),
             onTap: () => context.push(action.route),
             child: Padding(
-              padding: const EdgeInsets.all(12),
-              child: Row(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 10),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(action.icon),
-                  const SizedBox(width: 8),
-                  Expanded(child: Text(action.label)),
+                  Container(
+                    width: 38,
+                    height: 38,
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).colorScheme.primaryContainer,
+                      borderRadius: BorderRadius.circular(11),
+                    ),
+                    child: Icon(
+                      action.icon,
+                      size: 19,
+                      color: Theme.of(context).colorScheme.primary,
+                    ),
+                  ),
+                  const SizedBox(height: 7),
+                  Text(
+                    action.label,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    textAlign: TextAlign.center,
+                    style: Theme.of(context).textTheme.labelSmall,
+                  ),
                 ],
               ),
             ),

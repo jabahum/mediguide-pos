@@ -7,6 +7,7 @@ import 'package:user_app/app/router/route_names.dart';
 import 'package:user_app/core/constants/app_spacing.dart';
 import 'package:user_app/features/downloads/data/models/offline_download.dart';
 import 'package:user_app/features/downloads/presentation/controllers/guideline_downloads_controller.dart';
+import 'package:user_app/shared/widgets/clinical_icon_tile.dart';
 
 class OfflineContentPage extends ConsumerWidget {
   const OfflineContentPage({super.key, this.embedded = false});
@@ -159,8 +160,14 @@ class _DownloadTile extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 10),
       child: ListTile(
         isThreeLine: active || item.error.isNotEmpty,
-        leading: CircleAvatar(
-          child: Icon(ready ? LucideIcons.check : _icon(item.status)),
+        leading: ClinicalIconTile(
+          icon: ready ? LucideIcons.check : _icon(item.status),
+          color: ready
+              ? Theme.of(context).colorScheme.tertiary
+              : Theme.of(context).colorScheme.primary,
+          backgroundColor: ready
+              ? Theme.of(context).colorScheme.tertiaryContainer
+              : Theme.of(context).colorScheme.primaryContainer,
         ),
         title: Text(item.title.isEmpty ? 'Downloaded guideline' : item.title),
         subtitle: Column(

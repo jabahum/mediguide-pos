@@ -9,6 +9,24 @@ by the mobile redesign:
 - authenticated home, My Library, AI assistant, Tools and Profile
 - algorithm, table and offline-content viewers
 
+## Visual direction
+
+The supplied MediGuide mobile reference is the visual source of truth. The
+implementation applies its design language to complete screens—not only the
+navigation shell:
+
+- clinical blue is used for navigation, links, primary actions and icon tiles
+- red is reserved for urgent outbreak and destructive states
+- content sits on white or quiet slate surfaces with subtle neutral borders
+- cards are flat, compact and consistently rounded instead of elevated
+- headings use a dense, high-contrast Geist hierarchy suitable for scanning
+- search, filters, tabs, chips, fields and buttons share the same geometry
+- list destinations use blue-tinted rounded-square icons and restrained chevrons
+- dark mode preserves semantic color roles rather than inverting fixed colors
+
+The onboarding, guest home, library and profile layouts deliberately mirror
+the reference's information hierarchy while continuing to use live typed data.
+
 Every screen is captured using deterministic typed fixtures in five viewport
 configurations:
 

@@ -10,6 +10,7 @@ import 'package:user_app/features/authentication/presentation/controllers/auth_c
 import 'package:user_app/features/guidelines/data/models/guideline_publication.dart';
 import 'package:user_app/features/guidelines/data/models/reading_progress.dart';
 import 'package:user_app/features/library/data/models/guideline_library_models.dart';
+import 'package:user_app/shared/widgets/clinical_icon_tile.dart';
 
 final libraryDataProvider = FutureProvider.autoDispose<LibraryData>((
   ref,
@@ -90,19 +91,6 @@ class MyLibraryPage extends ConsumerWidget {
                   AppSpacing.gapMd,
                   _LibrarySummary(data: data),
                   AppSpacing.gapLg,
-                  Card(
-                    margin: EdgeInsets.zero,
-                    child: ListTile(
-                      leading: const Icon(LucideIcons.cloudDownload),
-                      title: const Text('Offline content'),
-                      subtitle: const Text(
-                        'Manage verified downloads and device storage',
-                      ),
-                      trailing: const Icon(LucideIcons.chevronRight),
-                      onTap: () => context.push(AppRoutes.offlineContent),
-                    ),
-                  ),
-                  AppSpacing.gapLg,
                   Text(
                     'Bookmarks',
                     style: Theme.of(context).textTheme.titleLarge,
@@ -148,74 +136,92 @@ class _LibrarySummary extends StatelessWidget {
   final LibraryData data;
 
   @override
-  Widget build(BuildContext context) => GridView.count(
-    crossAxisCount: MediaQuery.sizeOf(context).width >= 600 ? 4 : 2,
-    shrinkWrap: true,
-    physics: const NeverScrollableScrollPhysics(),
-    mainAxisSpacing: 10,
-    crossAxisSpacing: 10,
-    childAspectRatio: 2.2,
-    children: [
-      _SummaryCard(
-        icon: LucideIcons.bookmark,
-        label: 'Bookmarks',
-        count: data.bookmarks.length,
-      ),
-      _SummaryCard(
-        icon: LucideIcons.history,
-        label: 'History',
-        count: data.history.length,
-      ),
-      _SummaryCard(
-        icon: LucideIcons.notebookPen,
-        label: 'Notes',
-        count: data.history
-            .where((item) => item.notes.trim().isNotEmpty)
-            .length,
-      ),
-      _SummaryCard(
-        icon: LucideIcons.download,
-        label: 'Downloads',
-        count: data.downloads.length,
-      ),
-      _SummaryCard(
-        icon: LucideIcons.folder,
-        label: 'Collections',
-        count: data.collections.length,
-      ),
-      _SummaryCard(
-        icon: LucideIcons.refreshCw,
-        label: 'Pending sync',
-        count: data.history.where((item) => item.pendingSync).length,
-      ),
-    ],
+  Widget build(BuildContext context) => Card(
+    child: Column(
+      children: [
+        _LibraryMenuTile(
+          icon: LucideIcons.bookmark,
+          label: 'Bookmarks',
+          count: data.bookmarks.length,
+        ),
+        const Divider(height: 1, indent: 64),
+        _LibraryMenuTile(
+          icon: LucideIcons.notebookPen,
+          label: 'Notes',
+          count: data.history
+              .where((item) => item.notes.trim().isNotEmpty)
+              .length,
+        ),
+        const Divider(height: 1, indent: 64),
+        _LibraryMenuTile(
+          icon: LucideIcons.download,
+          label: 'Downloads',
+          count: data.downloads.length,
+          onTap: () => context.push(AppRoutes.offlineContent),
+        ),
+        const Divider(height: 1, indent: 64),
+        _LibraryMenuTile(
+          icon: LucideIcons.history,
+          label: 'History',
+          count: data.history.length,
+        ),
+        const Divider(height: 1, indent: 64),
+        _LibraryMenuTile(
+          icon: LucideIcons.folder,
+          label: 'Collections',
+          count: data.collections.length,
+        ),
+        const Divider(height: 1, indent: 64),
+        _LibraryMenuTile(
+          icon: LucideIcons.refreshCw,
+          label: 'Offline updates',
+          count: data.history.where((item) => item.pendingSync).length,
+          onTap: () => context.push(AppRoutes.offlineContent),
+        ),
+        const Divider(height: 1, indent: 64),
+        _LibraryMenuTile(
+          icon: LucideIcons.sparkles,
+          label: 'AI Assistant history',
+          onTap: () => context.push(AppRoutes.chatList),
+        ),
+      ],
+    ),
   );
 }
 
-class _SummaryCard extends StatelessWidget {
-  const _SummaryCard({
+class _LibraryMenuTile extends StatelessWidget {
+  const _LibraryMenuTile({
     required this.icon,
     required this.label,
-    required this.count,
+    this.count,
+    this.onTap,
   });
   final IconData icon;
   final String label;
-  final int count;
+  final int? count;
+  final VoidCallback? onTap;
 
   @override
-  Widget build(BuildContext context) => Card(
-    margin: EdgeInsets.zero,
-    child: Padding(
-      padding: const EdgeInsets.all(12),
-      child: Row(
-        children: [
-          Icon(icon),
-          const SizedBox(width: 10),
-          Expanded(child: Text('$label\n$count', maxLines: 2)),
-        ],
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    return ListTile(
+      onTap: onTap,
+      leading: Container(
+        width: 38,
+        height: 38,
+        decoration: BoxDecoration(
+          color: colors.primaryContainer,
+          borderRadius: BorderRadius.circular(11),
+        ),
+        child: Icon(icon, color: colors.primary, size: 19),
       ),
-    ),
-  );
+      title: Text(label),
+      subtitle: count == null
+          ? null
+          : Text('$count ${count == 1 ? 'item' : 'items'}'),
+      trailing: const Icon(LucideIcons.chevronRight, size: 19),
+    );
+  }
 }
 
 class _ProgressTile extends StatelessWidget {
@@ -227,9 +233,7 @@ class _ProgressTile extends StatelessWidget {
   Widget build(BuildContext context) => Card(
     margin: const EdgeInsets.only(bottom: 8),
     child: ListTile(
-      leading: const CircleAvatar(
-        child: Icon(LucideIcons.bookOpenText, size: 20),
-      ),
+      leading: const ClinicalIconTile(icon: LucideIcons.bookOpenText),
       title: Text(publication?.title ?? 'Saved guideline'),
       subtitle: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

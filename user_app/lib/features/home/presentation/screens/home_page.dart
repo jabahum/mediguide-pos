@@ -51,6 +51,7 @@ class HomePage extends ConsumerWidget {
       if (user?.organization.trim().isNotEmpty == true)
         user!.organization.trim(),
     ].join(' · ');
+    final greeting = _greetingFor(DateTime.now().hour);
 
     return Scaffold(
       backgroundColor: cs.surface,
@@ -66,8 +67,8 @@ class HomePage extends ConsumerWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Hello,',
-              style: context.textTheme.titleMedium?.copyWith(
+              greeting,
+              style: context.textTheme.bodyMedium?.copyWith(
                 fontWeight: FontWeight.w600,
                 color: cs.onSurfaceVariant,
               ),
@@ -137,6 +138,12 @@ class HomePage extends ConsumerWidget {
     );
   }
 
+  static String _greetingFor(int hour) {
+    if (hour < 12) return 'Good morning,';
+    if (hour < 17) return 'Good afternoon,';
+    return 'Good evening,';
+  }
+
   Widget _buildBody({
     required BuildContext context,
     required WidgetRef ref,
@@ -204,20 +211,36 @@ class HomePage extends ConsumerWidget {
           AppSpacing.lg.gap,
 
           // =================================================
-          // GUIDELINES
+          // CONTINUE READING
           // =================================================
-          SectionHeader(
-            title: AppTranslationKey.guidelines,
-            subtitle: 'Recently added and updated clinical guidance',
-            icon: LucideIcons.bookOpenText,
-            onSeeAll: _openAllGuidelines,
-          ),
+          if (data.continueReadingItems.isNotEmpty) ...[
+            SectionHeader(
+              title: AppTranslationKey.continueReading,
+              onSeeAll: () => AppNavigator.push(AppRoutes.library),
+            ),
 
-          AppSpacing.md.gap,
+            AppSpacing.sm.gap,
+
+            ContinueReadingCard(
+              compact: true,
+              progress: data.continueReadingItems.first,
+              onTap: () =>
+                  _continueReading(ref, data.continueReadingItems.first),
+            ),
+
+            AppSpacing.lg.gap,
+          ],
+
+          // =================================================
+          // RECENT UPDATES
+          // =================================================
+          SectionHeader(title: 'Recent updates', onSeeAll: _openAllGuidelines),
+
+          AppSpacing.sm.gap,
 
           if (data.recentlyUpdatedGuidelines.isNotEmpty) ...[
             _GuidelinesPreviewList(
-              guidelines: data.recentlyUpdatedGuidelines,
+              guidelines: data.recentlyUpdatedGuidelines.take(3).toList(),
               onOpenGuideline: _openGuideline,
             ),
           ] else ...[
@@ -226,47 +249,8 @@ class HomePage extends ConsumerWidget {
 
           AppSpacing.lg.gap,
 
-          // =================================================
-          // CONTINUE READING
-          // =================================================
-          if (data.continueReadingItems.isNotEmpty) ...[
-            SectionHeader(
-              title: AppTranslationKey.continueReading,
-              subtitle: AppTranslationKey.resumeWhereYouLeftOff,
-              icon: LucideIcons.bookOpen,
-            ),
-
-            AppSpacing.md.gap,
-
-            SizedBox(
-              height: 220,
-              child: ListView.separated(
-                scrollDirection: Axis.horizontal,
-                itemCount: data.continueReadingItems.length,
-                separatorBuilder: (_, _) => AppSpacing.md.gap,
-                itemBuilder: (context, index) {
-                  final progress = data.continueReadingItems[index];
-
-                  return ContinueReadingCard(
-                    progress: progress,
-                    onTap: () {
-                      _continueReading(ref, progress);
-                    },
-                  );
-                },
-              ),
-            ),
-
-            AppSpacing.lg.gap,
-          ],
-
-          SectionHeader(
-            title: 'Quick actions',
-            subtitle: 'Frequently used clinical references and tools',
-            icon: LucideIcons.layoutGrid,
-            onSeeAll: () => AppNavigator.push(AppRoutes.tools),
-          ),
-          AppSpacing.md.gap,
+          SectionHeader(title: 'Quick actions'),
+          AppSpacing.sm.gap,
           _QuickActionGrid(
             actions: [
               _HomeQuickAction(
@@ -548,47 +532,58 @@ class _QuickActionGrid extends StatelessWidget {
   final List<_HomeQuickAction> actions;
 
   @override
-  Widget build(BuildContext context) => GridView.builder(
-    shrinkWrap: true,
-    physics: const NeverScrollableScrollPhysics(),
-    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-      crossAxisCount: MediaQuery.sizeOf(context).width >= 700 ? 4 : 2,
-      mainAxisSpacing: AppSpacing.sm,
-      crossAxisSpacing: AppSpacing.sm,
-      childAspectRatio: 1.65,
-    ),
-    itemCount: actions.length,
-    itemBuilder: (context, index) {
-      final action = actions[index];
-      return Card(
-        margin: EdgeInsets.zero,
-        clipBehavior: Clip.antiAlias,
-        child: InkWell(
-          onTap: action.onTap,
-          child: Padding(
-            padding: const EdgeInsets.all(AppSpacing.sm),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(action.icon, color: action.color),
-                const SizedBox(height: 6),
-                Text(
-                  action.title,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: Theme.of(context).textTheme.labelLarge,
-                ),
-                Text(
-                  action.subtitle,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: Theme.of(context).textTheme.bodySmall,
-                ),
-              ],
-            ),
-          ),
+  Widget build(BuildContext context) => LayoutBuilder(
+    builder: (context, constraints) {
+      final columns = constraints.maxWidth >= 340 ? 4 : 2;
+      return GridView.builder(
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
+        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: columns,
+          mainAxisSpacing: AppSpacing.sm,
+          crossAxisSpacing: AppSpacing.sm,
+          childAspectRatio: columns == 4 ? 0.86 : 1.45,
         ),
+        itemCount: actions.length,
+        itemBuilder: (context, index) {
+          final action = actions[index];
+          return Semantics(
+            button: true,
+            label: '${action.title}. ${action.subtitle}',
+            child: Card(
+              margin: EdgeInsets.zero,
+              clipBehavior: Clip.antiAlias,
+              child: InkWell(
+                onTap: action.onTap,
+                child: Padding(
+                  padding: const EdgeInsets.all(AppSpacing.xs),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Container(
+                        width: 38,
+                        height: 38,
+                        decoration: BoxDecoration(
+                          color: action.color.withValues(alpha: 0.10),
+                          borderRadius: BorderRadius.circular(11),
+                        ),
+                        child: Icon(action.icon, color: action.color, size: 20),
+                      ),
+                      const SizedBox(height: 7),
+                      Text(
+                        action.title,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        textAlign: TextAlign.center,
+                        style: Theme.of(context).textTheme.labelMedium,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          );
+        },
       );
     },
   );

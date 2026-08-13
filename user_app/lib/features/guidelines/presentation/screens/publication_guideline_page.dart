@@ -68,16 +68,12 @@ class _PublicationGuidelinePageState
     return Scaffold(
       appBar: AppBar(
         title: Text(
-          widget.readerOnly ? 'Guideline reader' : 'Guideline overview',
+          content.valueOrNull?.publication.title ??
+              (widget.readerOnly ? 'Guideline reader' : 'Guideline overview'),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
         ),
         actions: [
-          IconButton(
-            tooltip: 'Search within guideline',
-            onPressed: content.valueOrNull == null
-                ? null
-                : () => _searchWithin(context, content.requireValue),
-            icon: const Icon(LucideIcons.search),
-          ),
           IconButton(
             tooltip: progress?.isBookmarked == true
                 ? 'Remove bookmark'
@@ -89,20 +85,44 @@ class _PublicationGuidelinePageState
                   : LucideIcons.bookmark,
             ),
           ),
-          IconButton(
-            tooltip: 'Reading notes',
-            onPressed: () => _editNotes(context, progress?.notes ?? ''),
-            icon: const Icon(LucideIcons.notebookPen),
-          ),
-          IconButton(
-            tooltip: 'Copy link',
-            onPressed: () => _copyLink(context),
-            icon: const Icon(LucideIcons.share2),
-          ),
-          IconButton(
-            tooltip: 'Open original document',
-            onPressed: () => _openOriginal(context),
-            icon: const Icon(LucideIcons.fileText),
+          PopupMenuButton<_GuidelineMenuAction>(
+            tooltip: 'More guideline actions',
+            onSelected: (action) => _handleMenuAction(
+              context,
+              action,
+              content.valueOrNull,
+              progress?.notes ?? '',
+            ),
+            itemBuilder: (_) => const [
+              PopupMenuItem(
+                value: _GuidelineMenuAction.search,
+                child: ListTile(
+                  leading: Icon(LucideIcons.search),
+                  title: Text('Search guideline'),
+                ),
+              ),
+              PopupMenuItem(
+                value: _GuidelineMenuAction.notes,
+                child: ListTile(
+                  leading: Icon(LucideIcons.notebookPen),
+                  title: Text('Reading notes'),
+                ),
+              ),
+              PopupMenuItem(
+                value: _GuidelineMenuAction.share,
+                child: ListTile(
+                  leading: Icon(LucideIcons.share2),
+                  title: Text('Copy link'),
+                ),
+              ),
+              PopupMenuItem(
+                value: _GuidelineMenuAction.original,
+                child: ListTile(
+                  leading: Icon(LucideIcons.fileText),
+                  title: Text('Open original document'),
+                ),
+              ),
+            ],
           ),
         ],
       ),
@@ -132,6 +152,24 @@ class _PublicationGuidelinePageState
               onDownload: () => _download(context, content.requireValue),
             ),
     );
+  }
+
+  Future<void> _handleMenuAction(
+    BuildContext context,
+    _GuidelineMenuAction action,
+    GuidelinePublicationContent? content,
+    String notes,
+  ) async {
+    switch (action) {
+      case _GuidelineMenuAction.search:
+        if (content != null) await _searchWithin(context, content);
+      case _GuidelineMenuAction.notes:
+        await _editNotes(context, notes);
+      case _GuidelineMenuAction.share:
+        await _copyLink(context);
+      case _GuidelineMenuAction.original:
+        await _openOriginal(context);
+    }
   }
 
   Widget _overviewPage(
@@ -538,6 +576,8 @@ class _PublicationGuidelinePageState
     }
   }
 }
+
+enum _GuidelineMenuAction { search, notes, share, original }
 
 class _GuidelineContentSearchDelegate extends SearchDelegate<String?> {
   _GuidelineContentSearchDelegate(this.content);

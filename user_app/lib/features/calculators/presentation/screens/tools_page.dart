@@ -95,22 +95,6 @@ class _ToolsPageState extends ConsumerState<ToolsPage> {
             SliverPadding(
               padding: const EdgeInsets.fromLTRB(
                 AppSpacing.md,
-                AppSpacing.sm,
-                AppSpacing.md,
-                0,
-              ),
-              sliver: SliverToBoxAdapter(
-                child: _ToolsHeaderCard(
-                  onOpenFilters: () {
-                    controller.showFilterModal(context);
-                  },
-                ),
-              ),
-            ),
-
-            SliverPadding(
-              padding: const EdgeInsets.fromLTRB(
-                AppSpacing.md,
                 AppSpacing.md,
                 AppSpacing.md,
                 0,
@@ -119,46 +103,15 @@ class _ToolsPageState extends ConsumerState<ToolsPage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    _DestinationGroup(
-                      title: 'References',
-                      items: [
-                        _Destination(
-                          icon: LucideIcons.pill,
-                          title: 'Drug Index',
-                          description: 'Reviewed medicine references',
-                          route: AppRoutes.drugIndex,
-                        ),
-                        _Destination(
-                          icon: LucideIcons.wholeWord,
-                          title: 'Abbreviations',
-                          description: 'Medical abbreviations and meanings',
-                          route: AppRoutes.abbreviations,
-                        ),
-                        _Destination(
-                          icon: LucideIcons.workflow,
-                          title: 'Clinical algorithms',
-                          description: 'Reviewed guideline algorithms',
-                          route: AppRoutes.publicGuidelines,
-                        ),
-                      ],
+                    Text(
+                      'Clinical tools',
+                      style: context.textTheme.titleMedium,
                     ),
-                    AppSpacing.gapMd,
-                    _DestinationGroup(
-                      title: 'Other',
-                      items: [
-                        _Destination(
-                          icon: LucideIcons.hospital,
-                          title: 'Health Facilities',
-                          description: 'Find facilities and services',
-                          route: AppRoutes.healthFacilities,
-                        ),
-                        _Destination(
-                          icon: LucideIcons.landmark,
-                          title: 'Ministry Directory',
-                          description: 'Official contacts and departments',
-                          route: AppRoutes.ministryDirectory,
-                        ),
-                      ],
+                    AppSpacing.gapSm,
+                    _ToolTypeFilterBar(
+                      filters: _toolFilters,
+                      selectedIndex: state.selectedTabIndex,
+                      onChanged: controller.onTabChanged,
                     ),
                   ],
                 ),
@@ -170,23 +123,7 @@ class _ToolsPageState extends ConsumerState<ToolsPage> {
                 AppSpacing.md,
                 AppSpacing.md,
                 AppSpacing.md,
-                0,
-              ),
-              sliver: SliverToBoxAdapter(
-                child: _ToolTypeFilterBar(
-                  filters: _toolFilters,
-                  selectedIndex: state.selectedTabIndex,
-                  onChanged: controller.onTabChanged,
-                ),
-              ),
-            ),
-
-            SliverPadding(
-              padding: const EdgeInsets.fromLTRB(
                 AppSpacing.md,
-                AppSpacing.md,
-                AppSpacing.md,
-                AppSpacing.xxxl,
               ),
               sliver: PagingListener<int, Calculator>(
                 controller: controller.pagingController,
@@ -282,6 +219,62 @@ class _ToolsPageState extends ConsumerState<ToolsPage> {
                 },
               ),
             ),
+            SliverPadding(
+              padding: const EdgeInsets.fromLTRB(
+                AppSpacing.md,
+                0,
+                AppSpacing.md,
+                AppSpacing.xxxl,
+              ),
+              sliver: SliverToBoxAdapter(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _DestinationGroup(
+                      title: 'References',
+                      items: [
+                        _Destination(
+                          icon: LucideIcons.pill,
+                          title: 'Drug Index',
+                          description: 'Reviewed medicine references',
+                          route: AppRoutes.drugIndex,
+                        ),
+                        _Destination(
+                          icon: LucideIcons.wholeWord,
+                          title: 'Abbreviations',
+                          description: 'Medical abbreviations and meanings',
+                          route: AppRoutes.abbreviations,
+                        ),
+                        _Destination(
+                          icon: LucideIcons.workflow,
+                          title: 'Clinical algorithms',
+                          description: 'Reviewed guideline algorithms',
+                          route: AppRoutes.publicGuidelines,
+                        ),
+                      ],
+                    ),
+                    AppSpacing.gapMd,
+                    _DestinationGroup(
+                      title: 'Other',
+                      items: [
+                        _Destination(
+                          icon: LucideIcons.hospital,
+                          title: 'Health Facilities',
+                          description: 'Find facilities and services',
+                          route: AppRoutes.healthFacilities,
+                        ),
+                        _Destination(
+                          icon: LucideIcons.landmark,
+                          title: 'Ministry Directory',
+                          description: 'Official contacts and departments',
+                          route: AppRoutes.ministryDirectory,
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
           ],
         ),
       ),
@@ -334,67 +327,6 @@ class _DestinationGroup extends StatelessWidget {
       ),
     ],
   );
-}
-
-class _ToolsHeaderCard extends StatelessWidget {
-  const _ToolsHeaderCard({required this.onOpenFilters});
-
-  final VoidCallback onOpenFilters;
-
-  @override
-  Widget build(BuildContext context) {
-    final cs = context.theme.colorScheme;
-
-    return Container(
-      padding: const EdgeInsets.all(AppSpacing.lg),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(24),
-        color: cs.primaryContainer.withValues(alpha: 0.35),
-        border: Border.all(color: cs.primary.withValues(alpha: 0.08)),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 54,
-            height: 54,
-            decoration: BoxDecoration(
-              color: cs.primary.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(18),
-            ),
-            child: Icon(LucideIcons.calculator, color: cs.primary, size: 28),
-          ),
-          AppSpacing.md.gap,
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Clinical Tools',
-                  style: context.textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  'Use calculators, decision tools and checklists to support clinical care.',
-                  style: context.textTheme.bodySmall?.copyWith(
-                    color: cs.onSurfaceVariant,
-                    height: 1.4,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          AppSpacing.sm.gap,
-          IconButton.filledTonal(
-            onPressed: onOpenFilters,
-            icon: const Icon(LucideIcons.slidersHorizontal),
-            tooltip: 'Filter tools',
-          ),
-        ],
-      ),
-    );
-  }
 }
 
 class _ToolTypeFilterBar extends StatelessWidget {

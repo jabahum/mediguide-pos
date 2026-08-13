@@ -20,17 +20,26 @@ class ContinueReadingCard extends ConsumerWidget {
   final ReadingProgress progress;
   final VoidCallback onTap;
   final VoidCallback? onBookmark;
+  final bool compact;
 
   const ContinueReadingCard({
     super.key,
     required this.progress,
     required this.onTap,
     this.onBookmark,
+    this.compact = false,
   });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final title = ref.watch(_guidelineTitleProvider(progress.guidelineId));
+    if (compact) {
+      return _CompactContinueReadingCard(
+        progress: progress,
+        title: title,
+        onTap: onTap,
+      );
+    }
     return SizedBox(
       width: 280,
       child: Card(
@@ -253,6 +262,93 @@ class ContinueReadingCard extends ConsumerWidget {
                   ),
                 ),
               ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _CompactContinueReadingCard extends StatelessWidget {
+  const _CompactContinueReadingCard({
+    required this.progress,
+    required this.title,
+    required this.onTap,
+  });
+
+  final ReadingProgress progress;
+  final AsyncValue<String> title;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.theme.colorScheme;
+    return Card(
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.all(AppSpacing.md),
+          child: Row(
+            children: [
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: colors.primaryContainer,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(
+                  LucideIcons.bookOpenText,
+                  color: colors.primary,
+                  size: 21,
+                ),
+              ),
+              AppSpacing.md.gap,
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      title.valueOrNull ?? 'Medical guideline',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: context.textTheme.titleSmall,
+                    ),
+                    const SizedBox(height: 3),
+                    Text(
+                      progress.currentSection.trim().isEmpty
+                          ? 'Resume reading'
+                          : progress.currentSection.replaceAll('_', ' '),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: context.textTheme.bodySmall?.copyWith(
+                        color: colors.onSurfaceVariant,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(99),
+                      child: LinearProgressIndicator(
+                        value: progress.progressPercentage.clamp(0, 1),
+                        minHeight: 4,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              AppSpacing.sm.gap,
+              Text(
+                progress.progressText,
+                style: context.textTheme.labelSmall?.copyWith(
+                  color: colors.primary,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const SizedBox(width: 2),
+              const Icon(LucideIcons.chevronRight, size: 19),
             ],
           ),
         ),

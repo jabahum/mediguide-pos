@@ -47,7 +47,7 @@ class ProfilePage extends ConsumerWidget {
       appBar: AppBar(
         automaticallyImplyLeading: false,
         title: Text(
-          AppTranslationKey.profile.tr,
+          'Profile & Settings',
           style: TextStyle(
             fontSize: Responsive.fontSize(
               context,
@@ -559,13 +559,13 @@ class _SettingsTile extends StatelessWidget {
         vertical: AppSpacing.xs,
       ),
       leading: Container(
-        width: 40,
-        height: 40,
+        width: 34,
+        height: 34,
         decoration: BoxDecoration(
-          color: effectiveIconColor.withValues(alpha: 0.1),
-          borderRadius: BorderRadius.circular(14),
+          color: effectiveIconColor.withValues(alpha: 0.07),
+          borderRadius: BorderRadius.circular(10),
         ),
-        child: Icon(icon, color: effectiveIconColor, size: 21),
+        child: Icon(icon, color: effectiveIconColor, size: 18),
       ),
       title: Text(
         title,

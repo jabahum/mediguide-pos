@@ -86,42 +86,31 @@ class MyLibraryPage extends ConsumerWidget {
                         onPressed: () => context.push(AppRoutes.search),
                         icon: const Icon(LucideIcons.search),
                       ),
+                      IconButton(
+                        tooltip: 'Library options',
+                        onPressed: () => _showLibraryOptions(context),
+                        icon: const Icon(LucideIcons.listFilter),
+                      ),
                     ],
                   ),
                   AppSpacing.gapMd,
-                  _LibrarySummary(data: data),
-                  AppSpacing.gapLg,
-                  Text(
-                    'Bookmarks',
-                    style: Theme.of(context).textTheme.titleLarge,
+                  _LibrarySummary(
+                    data: data,
+                    onBookmarks: () => _showProgressItems(
+                      context,
+                      title: 'Bookmarks',
+                      emptyMessage: 'Bookmark a guideline to find it here.',
+                      items: data.bookmarks,
+                      publications: data.publications,
+                    ),
+                    onHistory: () => _showProgressItems(
+                      context,
+                      title: 'Reading history',
+                      emptyMessage: 'Guidelines you read will appear here.',
+                      items: data.history,
+                      publications: data.publications,
+                    ),
                   ),
-                  AppSpacing.gapSm,
-                  if (data.bookmarks.isEmpty)
-                    const _EmptyLibrarySection(
-                      message: 'Bookmark a guideline to find it here.',
-                    )
-                  else
-                    for (final progress in data.bookmarks.take(6))
-                      _ProgressTile(
-                        progress: progress,
-                        publication: data.publications[progress.guidelineId],
-                      ),
-                  AppSpacing.gapLg,
-                  Text(
-                    'Reading history',
-                    style: Theme.of(context).textTheme.titleLarge,
-                  ),
-                  AppSpacing.gapSm,
-                  if (data.history.isEmpty)
-                    const _EmptyLibrarySection(
-                      message: 'Guidelines you read will appear here.',
-                    )
-                  else
-                    for (final progress in data.history.take(12))
-                      _ProgressTile(
-                        progress: progress,
-                        publication: data.publications[progress.guidelineId],
-                      ),
                 ],
               ),
             ),
@@ -129,11 +118,98 @@ class MyLibraryPage extends ConsumerWidget {
     );
     return embedded ? body : Scaffold(body: body);
   }
+
+  static Future<void> _showLibraryOptions(BuildContext context) {
+    return showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      builder: (sheetContext) => SafeArea(
+        child: Padding(
+          padding: AppSpacing.pagePadding,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Library options',
+                style: Theme.of(context).textTheme.titleLarge,
+              ),
+              AppSpacing.gapMd,
+              ListTile(
+                leading: const Icon(LucideIcons.download),
+                title: const Text('Manage offline content'),
+                onTap: () {
+                  Navigator.pop(sheetContext);
+                  context.push(AppRoutes.offlineContent);
+                },
+              ),
+              ListTile(
+                leading: const Icon(LucideIcons.messageCircle),
+                title: const Text('AI Assistant history'),
+                onTap: () {
+                  Navigator.pop(sheetContext);
+                  context.push(AppRoutes.chatList);
+                },
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  static Future<void> _showProgressItems(
+    BuildContext context, {
+    required String title,
+    required String emptyMessage,
+    required List<ReadingProgress> items,
+    required Map<String, GuidelinePublication> publications,
+  }) {
+    return showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      isScrollControlled: true,
+      builder: (_) => SafeArea(
+        child: FractionallySizedBox(
+          heightFactor: 0.82,
+          child: Padding(
+            padding: AppSpacing.pagePadding,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(title, style: Theme.of(context).textTheme.titleLarge),
+                AppSpacing.gapMd,
+                Expanded(
+                  child: items.isEmpty
+                      ? _EmptyLibrarySection(message: emptyMessage)
+                      : ListView(
+                          children: [
+                            for (final progress in items)
+                              _ProgressTile(
+                                progress: progress,
+                                publication: publications[progress.guidelineId],
+                              ),
+                          ],
+                        ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 class _LibrarySummary extends StatelessWidget {
-  const _LibrarySummary({required this.data});
+  const _LibrarySummary({
+    required this.data,
+    required this.onBookmarks,
+    required this.onHistory,
+  });
   final LibraryData data;
+  final VoidCallback onBookmarks;
+  final VoidCallback onHistory;
 
   @override
   Widget build(BuildContext context) => Card(
@@ -143,6 +219,7 @@ class _LibrarySummary extends StatelessWidget {
           icon: LucideIcons.bookmark,
           label: 'Bookmarks',
           count: data.bookmarks.length,
+          onTap: onBookmarks,
         ),
         const Divider(height: 1, indent: 64),
         _LibraryMenuTile(
@@ -164,6 +241,7 @@ class _LibrarySummary extends StatelessWidget {
           icon: LucideIcons.history,
           label: 'History',
           count: data.history.length,
+          onTap: onHistory,
         ),
         const Divider(height: 1, indent: 64),
         _LibraryMenuTile(

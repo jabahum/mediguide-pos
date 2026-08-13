@@ -60,16 +60,6 @@ class _AiAssistantPageState extends ConsumerState<AiAssistantPage> {
         elevation: 0,
         title: Row(
           children: [
-            Container(
-              width: 38,
-              height: 38,
-              decoration: BoxDecoration(
-                color: cs.primary.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(14),
-              ),
-              child: Icon(LucideIcons.sparkles, color: cs.primary, size: 20),
-            ),
-            AppSpacing.sm.gap,
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -77,7 +67,7 @@ class _AiAssistantPageState extends ConsumerState<AiAssistantPage> {
                   Text(
                     currentContext != null
                         ? currentContext.title
-                        : AppTranslationKey.aiChatAssistant.tr,
+                        : 'MediGuide Assistant',
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: context.textTheme.titleMedium?.copyWith(
@@ -100,6 +90,26 @@ class _AiAssistantPageState extends ConsumerState<AiAssistantPage> {
             ),
           ],
         ),
+        actions: [
+          IconButton(
+            tooltip: 'Assistant history',
+            onPressed: () => context.push(AppRoutes.chatList),
+            icon: const Icon(LucideIcons.history),
+          ),
+          PopupMenuButton<String>(
+            tooltip: 'Assistant options',
+            onSelected: (value) {
+              if (value == 'clear-context') controller.clearContext();
+            },
+            itemBuilder: (_) => [
+              PopupMenuItem(
+                value: 'clear-context',
+                enabled: currentContext != null,
+                child: const Text('Clear guideline context'),
+              ),
+            ],
+          ),
+        ],
       ),
       body: Column(
         children: [

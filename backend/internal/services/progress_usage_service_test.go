@@ -17,7 +17,7 @@ func progressUsageTestService(t *testing.T) ProgressUsageService {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := db.AutoMigrate(&models.MedicalGuideline{}, &models.ReadingProgress{}, &models.GuidelineUsageLog{}, &models.AbbreviationUsageLog{}, &models.ConsultantUsageLog{}, &models.AIUsageLog{}); err != nil {
+	if err := db.AutoMigrate(&models.GuidelineDocument{}, &models.ReadingProgress{}, &models.GuidelineUsageLog{}, &models.AbbreviationUsageLog{}, &models.ConsultantUsageLog{}, &models.AIUsageLog{}); err != nil {
 		t.Fatal(err)
 	}
 	return ProgressUsageService{DB: db}
@@ -25,7 +25,7 @@ func progressUsageTestService(t *testing.T) ProgressUsageService {
 
 func createProgressTestGuideline(t *testing.T, s ProgressUsageService) uuid.UUID {
 	t.Helper()
-	guideline := models.MedicalGuideline{ConditionName: "Test guideline", Status: "published", IsPublished: true}
+	guideline := models.GuidelineDocument{Title: "Test guideline"}
 	if err := s.DB.Create(&guideline).Error; err != nil {
 		t.Fatal(err)
 	}
@@ -80,7 +80,7 @@ func TestProgressUsageEventsAreIdempotentAndServerOwned(t *testing.T) {
 	}
 }
 
-func TestProgressUsageRejectsUnknownMedicalGuideline(t *testing.T) {
+func TestProgressUsageRejectsUnknownGuidelineDocument(t *testing.T) {
 	s := progressUsageTestService(t)
 	owner, missing := uuid.New(), uuid.New()
 	progress := 0.5

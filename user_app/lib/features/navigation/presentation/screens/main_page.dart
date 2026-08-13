@@ -5,6 +5,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import 'package:user_app/features/navigation/presentation/controllers/main_navigation_controller.dart';
 import 'package:user_app/features/home/presentation/screens/home_page.dart';
+import 'package:user_app/features/home/presentation/controllers/home_controller.dart';
 import 'package:user_app/features/home/presentation/screens/guest_home_page.dart';
 import 'package:user_app/features/guidelines/presentation/screens/publication_catalogue_page.dart';
 import 'package:user_app/features/authentication/presentation/controllers/auth_controller.dart';
@@ -63,6 +64,13 @@ class _MainPageState extends ConsumerState<MainPage> {
             GuestMorePage(),
           ];
     final currentIndex = requestedIndex.clamp(0, pages.length - 1);
+    void selectDestination(int index) {
+      if (index == 0 && currentIndex != 0) {
+        ref.invalidate(homeControllerProvider);
+      }
+      ref.read(mainNavigationIndexProvider.notifier).state = index;
+    }
+
     final destinations = <(IconData, String)>[
       (LucideIcons.house, 'Home'),
       (LucideIcons.search, 'Search'),
@@ -109,13 +117,7 @@ class _MainPageState extends ConsumerState<MainPage> {
                         child: NavigationRail(
                           selectedIndex: currentIndex,
                           labelType: NavigationRailLabelType.all,
-                          onDestinationSelected: (index) =>
-                              ref
-                                      .read(
-                                        mainNavigationIndexProvider.notifier,
-                                      )
-                                      .state =
-                                  index,
+                          onDestinationSelected: selectDestination,
                           destinations: [
                             for (final destination in destinations)
                               NavigationRailDestination(
@@ -140,9 +142,7 @@ class _MainPageState extends ConsumerState<MainPage> {
                     ),
                     child: NavigationBar(
                       selectedIndex: currentIndex,
-                      onDestinationSelected: (index) =>
-                          ref.read(mainNavigationIndexProvider.notifier).state =
-                              index,
+                      onDestinationSelected: selectDestination,
                       destinations: [
                         for (final destination in destinations)
                           NavigationDestination(

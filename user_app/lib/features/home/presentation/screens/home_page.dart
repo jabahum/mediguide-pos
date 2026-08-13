@@ -241,7 +241,7 @@ class HomePage extends ConsumerWidget {
           if (data.recentlyUpdatedGuidelines.isNotEmpty) ...[
             _GuidelinesPreviewList(
               guidelines: data.recentlyUpdatedGuidelines.take(3).toList(),
-              onOpenGuideline: _openGuideline,
+              onOpenGuideline: (guideline) => _openGuideline(ref, guideline),
             ),
           ] else ...[
             _NoRecentGuidelinesCard(onBrowse: _openAllGuidelines),
@@ -370,18 +370,30 @@ class HomePage extends ConsumerWidget {
     AppNavigator.push(AppRoutes.publicGuidelines);
   }
 
-  static void _openGuideline(GuidelinePublication guideline) {
-    AppNavigator.push(AppRoutes.publicGuideline(guideline.id));
+  static Future<void> _openGuideline(
+    WidgetRef ref,
+    GuidelinePublication guideline,
+  ) async {
+    await AppNavigator.push(AppRoutes.publicGuideline(guideline.id));
+    ref.invalidate(homeControllerProvider);
   }
 
   static Future<void> _continueReading(
     WidgetRef ref,
     ReadingProgress progress,
   ) async {
+    final guidelineId = progress.guidelineId.trim();
+    if (guidelineId.isEmpty) return;
+
     try {
-      AppNavigator.push(
-        '${AppRoutes.readPublicGuideline(progress.guidelineId)}?section=${Uri.encodeQueryComponent(progress.currentSection)}',
+      final section = progress.currentSection.trim();
+      final location = AppRoutes.readPublicGuideline(guidelineId);
+      await AppNavigator.push(
+        section.isEmpty
+            ? location
+            : '$location?section=${Uri.encodeQueryComponent(section)}',
       );
+      ref.invalidate(homeControllerProvider);
     } catch (_) {
       // The existing progress card remains available.
       // Offline/network errors should not remove it.

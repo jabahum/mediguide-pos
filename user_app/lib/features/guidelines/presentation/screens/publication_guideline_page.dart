@@ -41,6 +41,7 @@ class _PublicationGuidelinePageState
   final Map<String, GlobalKey> _sectionKeys = {};
   final ScrollController _readerScrollController = ScrollController();
   bool _deepLinkApplied = false;
+  bool _initialProgressScheduled = false;
 
   @override
   void didChangeDependencies() {
@@ -235,6 +236,7 @@ class _PublicationGuidelinePageState
       );
     }
     final sections = value.sections;
+    _scheduleInitialProgress(sections);
     final selected = _selectedSectionId;
     final selectedIds = selected == null
         ? <String>{}
@@ -371,6 +373,23 @@ class _PublicationGuidelinePageState
         ],
       ),
     );
+  }
+
+  void _scheduleInitialProgress(List<PublicationSection> sections) {
+    if (_initialProgressScheduled || sections.isEmpty) return;
+    final user = ref.read(authControllerProvider).valueOrNull?.user;
+    if (user == null) return;
+
+    final requested = _selectedSectionId;
+    final sectionId =
+        requested != null && sections.any((section) => section.id == requested)
+        ? requested
+        : sections.first.id;
+    _initialProgressScheduled = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      unawaited(_recordSectionProgress(sections, sectionId));
+    });
   }
 
   void _trackVisibleSection(List<PublicationSection> sections) {

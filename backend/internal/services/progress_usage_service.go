@@ -70,7 +70,7 @@ func (s ProgressUsageService) GetProgress(userID, guidelineID uuid.UUID) (*model
 }
 
 func (s ProgressUsageService) UpsertProgress(userID, guidelineID uuid.UUID, in ReadingProgressInput) (*models.ReadingProgress, error) {
-	if err := s.requireMedicalGuideline(guidelineID); err != nil {
+	if err := s.requireGuidelineDocument(guidelineID); err != nil {
 		return nil, err
 	}
 	var value models.ReadingProgress
@@ -153,7 +153,7 @@ func (s ProgressUsageService) RecordUsage(userID uuid.UUID, eventType string, in
 	}
 	switch eventType {
 	case "guideline":
-		if err := s.requireMedicalGuideline(resourceID); err != nil {
+		if err := s.requireGuidelineDocument(resourceID); err != nil {
 			return nil, err
 		}
 		return createUsage(s.DB, &models.GuidelineUsageLog{}, models.GuidelineUsageLog{UserID: userID, GuidelineDocumentID: resourceID, IdempotencyKey: &key}, userID, key)
@@ -183,9 +183,9 @@ func createUsage[T any](db *gorm.DB, model *T, value T, userID uuid.UUID, key st
 	return &value, nil
 }
 
-func (s ProgressUsageService) requireMedicalGuideline(id uuid.UUID) error {
+func (s ProgressUsageService) requireGuidelineDocument(id uuid.UUID) error {
 	var count int64
-	if err := s.DB.Model(&models.MedicalGuideline{}).
+	if err := s.DB.Model(&models.GuidelineDocument{}).
 		Where("id = ? AND deleted_at IS NULL", id).
 		Count(&count).Error; err != nil {
 		return err

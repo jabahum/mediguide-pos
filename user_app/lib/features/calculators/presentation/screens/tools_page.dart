@@ -58,6 +58,114 @@ class _ToolsPageState extends ConsumerState<ToolsPage> {
 
   @override
   Widget build(BuildContext context) {
+    if (_isHub) {
+      return _buildHub(context);
+    }
+
+    return _buildCatalogue(context);
+  }
+
+  bool get _isHub {
+    final arguments = _routeArguments;
+    return arguments is! Map || arguments['initialTab'] is! int;
+  }
+
+  Widget _buildHub(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        automaticallyImplyLeading: false,
+        titleSpacing: AppSpacing.md,
+        title: Text(
+          'Tools'.tr,
+          style: context.textTheme.headlineSmall?.copyWith(
+            fontWeight: FontWeight.w800,
+          ),
+        ),
+        actions: [
+          IconButton(
+            tooltip: 'Search',
+            onPressed: () => AppNavigator.push(AppRoutes.search),
+            icon: const Icon(LucideIcons.search),
+          ),
+          AppSpacing.hGapSm,
+        ],
+      ),
+      body: ListView(
+        padding: const EdgeInsets.fromLTRB(
+          AppSpacing.md,
+          AppSpacing.sm,
+          AppSpacing.md,
+          AppSpacing.xxxl,
+        ),
+        children: const [
+          _DestinationGroup(
+            title: 'Clinical Tools',
+            items: [
+              _Destination(
+                icon: LucideIcons.calculator,
+                title: 'Calculators',
+                description: 'Doses, scores, conversions',
+                route: AppRoutes.tools,
+                arguments: {'initialTab': 1},
+              ),
+              _Destination(
+                icon: LucideIcons.gitBranch,
+                title: 'Decision Tools',
+                description: 'Algorithms & decision support',
+                route: AppRoutes.tools,
+                arguments: {'initialTab': 2},
+              ),
+              _Destination(
+                icon: LucideIcons.listChecks,
+                title: 'Checklists',
+                description: 'Clinical & procedural checklists',
+                route: AppRoutes.tools,
+                arguments: {'initialTab': 3},
+              ),
+            ],
+          ),
+          AppSpacing.gapLg,
+          _DestinationGroup(
+            title: 'References',
+            items: [
+              _Destination(
+                icon: LucideIcons.pill,
+                title: 'Drug Index',
+                description: 'WHO essential medicines',
+                route: AppRoutes.drugIndex,
+              ),
+              _Destination(
+                icon: LucideIcons.wholeWord,
+                title: 'Abbreviations',
+                description: 'Medical terms & abbreviations',
+                route: AppRoutes.abbreviations,
+              ),
+            ],
+          ),
+          AppSpacing.gapLg,
+          _DestinationGroup(
+            title: 'Other',
+            items: [
+              _Destination(
+                icon: LucideIcons.hospital,
+                title: 'Health Facilities',
+                description: 'Find facilities & services',
+                route: AppRoutes.healthFacilities,
+              ),
+              _Destination(
+                icon: LucideIcons.landmark,
+                title: 'Ministry Directory',
+                description: 'Contacts & departments',
+                route: AppRoutes.ministryDirectory,
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCatalogue(BuildContext context) {
     final state = ref.watch(toolsControllerProvider(_routeArguments));
 
     final controller = ref.read(
@@ -66,10 +174,9 @@ class _ToolsPageState extends ConsumerState<ToolsPage> {
 
     return Scaffold(
       appBar: AppBar(
-        automaticallyImplyLeading: false,
         titleSpacing: AppSpacing.md,
         title: Text(
-          'Tools'.tr,
+          _catalogueTitle(state.selectedTabIndex),
           style: context.textTheme.titleLarge?.copyWith(
             fontWeight: FontWeight.w800,
           ),
@@ -280,6 +387,13 @@ class _ToolsPageState extends ConsumerState<ToolsPage> {
       ),
     );
   }
+
+  String _catalogueTitle(int tabIndex) => switch (tabIndex) {
+    1 => 'Calculators',
+    2 => 'Decision Tools',
+    3 => 'Checklists',
+    _ => 'Clinical Tools',
+  };
 }
 
 class _Destination {
@@ -288,11 +402,13 @@ class _Destination {
     required this.title,
     required this.description,
     required this.route,
+    this.arguments,
   });
   final IconData icon;
   final String title;
   final String description;
   final String route;
+  final Object? arguments;
 }
 
 class _DestinationGroup extends StatelessWidget {
@@ -304,23 +420,60 @@ class _DestinationGroup extends StatelessWidget {
   Widget build(BuildContext context) => Column(
     crossAxisAlignment: CrossAxisAlignment.start,
     children: [
-      Text(title, style: Theme.of(context).textTheme.titleMedium),
+      Padding(
+        padding: const EdgeInsets.only(left: AppSpacing.xs),
+        child: Text(
+          title,
+          style: Theme.of(
+            context,
+          ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
+        ),
+      ),
       AppSpacing.gapSm,
       Card(
         margin: EdgeInsets.zero,
+        elevation: 0,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+          side: BorderSide(
+            color: Theme.of(
+              context,
+            ).colorScheme.outlineVariant.withValues(alpha: 0.6),
+          ),
+        ),
         clipBehavior: Clip.antiAlias,
         child: Column(
           children: [
             for (var index = 0; index < items.length; index++) ...[
               ListTile(
-                minTileHeight: 60,
+                minTileHeight: 68,
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.md,
+                  vertical: AppSpacing.xs,
+                ),
                 leading: ClinicalIconTile(icon: items[index].icon),
-                title: Text(items[index].title),
-                subtitle: Text(items[index].description),
-                trailing: const Icon(LucideIcons.chevronRight),
-                onTap: () => AppNavigator.push(items[index].route),
+                title: Text(
+                  items[index].title,
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.w700),
+                ),
+                subtitle: Text(
+                  items[index].description,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                trailing: const Icon(LucideIcons.chevronRight, size: 18),
+                onTap: () => AppNavigator.push(
+                  items[index].route,
+                  extra: items[index].arguments,
+                ),
               ),
-              if (index < items.length - 1) const Divider(height: 1),
+              if (index < items.length - 1)
+                const Divider(
+                  height: 1,
+                  indent: AppSpacing.md + 40 + AppSpacing.md,
+                ),
             ],
           ],
         ),

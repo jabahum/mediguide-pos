@@ -8,6 +8,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"strings"
 	"time"
 
 	"mediguide/internal/models"
@@ -34,9 +35,11 @@ type demoGuideline struct {
 }
 
 type demoSection struct {
-	Title  string
-	Slug   string
-	Blocks []demoBlock
+	Title      string
+	Slug       string
+	ParentSlug string
+	Level      int
+	Blocks     []demoBlock
 }
 
 type demoBlock struct {
@@ -169,27 +172,50 @@ func seedDemoDrugs(database *gorm.DB) error {
 }
 
 func seedDemoGuidelines(ctx context.Context, database *gorm.DB, store storage.ObjectStore, reviewerID uuid.UUID) error {
-	guidelines := []demoGuideline{
-		{Key: "malaria-adults", Title: "Malaria in Adults", Description: "Diagnosis and management of uncomplicated and severe malaria in adults.", ProgramArea: "Malaria", Population: "Adults (18 years and older)", Healthcare: "All healthcare levels", Version: "1.4", Publication: "2026-05-21", Review: "2028-05-21", Sections: []demoSection{
-			{Title: "Overview", Slug: "overview", Blocks: []demoBlock{{Type: "paragraph", Payload: map[string]any{"type": "paragraph", "text": "Malaria is a potentially life-threatening febrile illness. Test suspected cases promptly and assess every patient for danger signs."}}, {Type: "key_point", Payload: map[string]any{"type": "key_point", "title": "Key point", "content": "Confirm suspected malaria with parasitological testing before treatment whenever testing is available.", "severity": "info"}}}},
-			{Title: "Diagnosis and assessment", Slug: "diagnosis-and-assessment", Blocks: []demoBlock{{Type: "recommendation", Payload: map[string]any{"type": "recommendation", "title": "Recommendation", "content": "Use a quality-assured RDT or microscopy and assess for severe disease before choosing treatment.", "evidence_grade": "National guidance"}}, {Type: "table", Payload: map[string]any{"type": "table", "title": "Diagnostic test comparison", "columns": []string{"Test", "Typical setting", "Result"}, "rows": [][]string{{"RDT", "Point of care", "Antigen detected or not detected"}, {"Microscopy", "Laboratory", "Parasite detection and density"}}, "footnotes": []string{"Follow current national testing algorithms."}}}, {Type: "algorithm", Payload: map[string]any{"type": "algorithm", "title": "Severe malaria triage", "nodes": []map[string]any{{"id": "start", "label": "Suspected malaria", "kind": "start", "next": []string{"test"}}, {"id": "test", "label": "Test and assess danger signs", "kind": "decision", "next": []string{"treat", "refer"}}, {"id": "treat", "label": "Treat uncomplicated malaria", "kind": "action"}, {"id": "refer", "label": "Urgent severe-malaria management and referral", "kind": "warning"}}}}}},
-		}},
-		{Key: "ebola-marburg", Title: "Ebola and Marburg Disease Preparedness", Description: "Recognition, isolation, notification and safe initial management of suspected viral haemorrhagic fever.", ProgramArea: "Emergency preparedness", Population: "All ages", Healthcare: "All facilities and community response teams", Version: "2.0", Publication: "2026-05-28", Review: "2027-05-28", Sections: []demoSection{
-			{Title: "Recognition and immediate action", Slug: "recognition", Blocks: []demoBlock{{Type: "warning", Payload: map[string]any{"type": "warning", "title": "Immediate action", "content": "Isolate a suspected case, apply appropriate IPC precautions and notify the designated surveillance authority immediately.", "severity": "critical"}}, {Type: "unordered_list", Payload: map[string]any{"type": "unordered_list", "items": []string{"Avoid unnecessary contact", "Use appropriate PPE", "Record exposure history", "Arrange safe referral"}}}}},
-			{Title: "Infection prevention and control", Slug: "infection-prevention", Blocks: []demoBlock{{Type: "recommendation", Payload: map[string]any{"type": "recommendation", "title": "IPC recommendation", "content": "Use trained donning and doffing observers and maintain a clear separation between clean and contaminated zones.", "evidence_grade": "Operational guidance"}}}},
-		}},
-		{Key: "hypertension", Title: "Hypertension Screening and Management", Description: "Practical screening, cardiovascular risk assessment and longitudinal management guidance.", ProgramArea: "Non-communicable diseases", Population: "Adults", Healthcare: "Primary care and referral facilities", Version: "1.1", Publication: "2026-04-12", Review: "2028-04-12", Sections: []demoSection{
-			{Title: "Screening", Slug: "screening", Blocks: []demoBlock{{Type: "paragraph", Payload: map[string]any{"type": "paragraph", "text": "Measure blood pressure with validated equipment after appropriate rest, and confirm persistent elevation using repeat readings."}}, {Type: "key_point", Payload: map[string]any{"type": "key_point", "title": "Measurement", "content": "Use the correct cuff size and document repeat measurements.", "severity": "info"}}}},
-			{Title: "Management", Slug: "management", Blocks: []demoBlock{{Type: "ordered_list", Payload: map[string]any{"type": "ordered_list", "items": []string{"Assess cardiovascular risk and target-organ damage", "Support lifestyle measures", "Initiate medicines when indicated", "Schedule monitoring and adherence review"}}}}},
-		}},
-	}
-
-	for _, guideline := range guidelines {
+	for _, guideline := range demoGuidelines() {
 		if err := seedDemoGuideline(ctx, database, store, reviewerID, guideline); err != nil {
 			return err
 		}
 	}
 	return nil
+}
+
+func demoGuidelines() []demoGuideline {
+	return []demoGuideline{
+		{Key: "malaria-adults", Title: "Malaria in Adults", Description: "Diagnosis and management of uncomplicated and severe malaria in adults.", ProgramArea: "Malaria", Population: "Adults (18 years and older)", Healthcare: "All healthcare levels", Version: "1.4", Publication: "2026-05-21", Review: "2028-05-21", Sections: []demoSection{
+			{Title: "1. Overview", Slug: "overview", Level: 1, Blocks: []demoBlock{{Type: "paragraph", Payload: map[string]any{"type": "paragraph", "text": "Malaria is a potentially life-threatening febrile illness. Test suspected cases promptly and assess every patient for danger signs."}}, {Type: "key_point", Payload: map[string]any{"type": "key_point", "title": "Confirm infection", "content": "Confirm suspected malaria with parasitological testing before treatment whenever testing is available.", "severity": "standard"}}}},
+			{Title: "2. Diagnosis and assessment", Slug: "diagnosis-and-assessment", Level: 1, Blocks: []demoBlock{{Type: "paragraph", Payload: map[string]any{"type": "paragraph", "text": "Take a focused history, measure vital signs, assess hydration and consciousness, and look actively for severe-malaria features."}}}},
+			{Title: "2.1 Clinical assessment", Slug: "clinical-assessment", ParentSlug: "diagnosis-and-assessment", Level: 2, Blocks: []demoBlock{{Type: "unordered_list", Payload: map[string]any{"type": "unordered_list", "items": []string{"Document fever history and prior antimalarial use", "Assess mental state, respiratory distress and ability to drink", "Check pregnancy status and important comorbidities", "Identify signs requiring urgent referral"}}}, {Type: "warning", Payload: map[string]any{"type": "warning", "title": "Danger signs", "content": "Altered consciousness, repeated convulsions, respiratory distress, shock, severe anaemia or inability to take oral treatment require urgent severe-malaria management.", "severity": "critical"}}}},
+			{Title: "2.2 Parasitological testing", Slug: "parasitological-testing", ParentSlug: "diagnosis-and-assessment", Level: 2, Blocks: []demoBlock{{Type: "recommendation", Payload: map[string]any{"type": "recommendation", "title": "Testing recommendation", "content": "Use a quality-assured RDT or microscopy and assess for severe disease before choosing treatment.", "evidence_grade": "National guidance"}}, {Type: "table", Payload: map[string]any{"type": "table", "title": "Diagnostic test comparison", "columns": []string{"Test", "Typical setting", "Result"}, "rows": [][]string{{"RDT", "Point of care", "Antigen detected or not detected"}, {"Microscopy", "Laboratory", "Parasite detection and density"}}, "footnotes": []string{"Follow current national testing algorithms."}}}}},
+			{Title: "3. Treatment", Slug: "treatment", Level: 1, Blocks: []demoBlock{{Type: "key_point", Payload: map[string]any{"type": "key_point", "title": "Treatment principle", "content": "Classify uncomplicated versus severe disease before selecting the regimen and route.", "severity": "high"}}}},
+			{Title: "3.1 Uncomplicated malaria", Slug: "uncomplicated-malaria", ParentSlug: "treatment", Level: 2, Blocks: []demoBlock{{Type: "procedure", Payload: map[string]any{"type": "procedure", "title": "Initial management", "content": "Treat confirmed uncomplicated malaria using the current nationally recommended first-line ACT, with weight-based dosing and adherence counselling.", "severity": "standard"}}, {Type: "clinical_note", Payload: map[string]any{"type": "clinical_note", "title": "Follow-up", "content": "Advise the patient to return promptly for deterioration, persistent vomiting or failure to improve.", "severity": "standard"}}}},
+			{Title: "3.2 Severe malaria", Slug: "severe-malaria", ParentSlug: "treatment", Level: 2, Blocks: []demoBlock{{Type: "referral_criteria", Payload: map[string]any{"type": "referral_criteria", "title": "Urgent escalation", "content": "Start emergency management without delaying referral, correct hypoglycaemia when present and arrange monitored transfer.", "severity": "critical"}}, {Type: "algorithm", Payload: map[string]any{"type": "algorithm", "title": "Severe malaria triage", "nodes": []map[string]any{{"id": "start", "label": "Suspected malaria", "kind": "start", "next": []string{"test"}}, {"id": "test", "label": "Test and assess danger signs", "kind": "decision", "next": []string{"treat", "refer"}}, {"id": "treat", "label": "Treat uncomplicated malaria", "kind": "action"}, {"id": "refer", "label": "Urgent severe-malaria management and referral", "kind": "warning"}}}}}},
+			{Title: "4. Special populations", Slug: "special-populations", Level: 1, Blocks: []demoBlock{{Type: "paragraph", Payload: map[string]any{"type": "paragraph", "text": "Pregnancy, renal or hepatic impairment and significant comorbidity require regimen and referral decisions consistent with the approved national guideline."}}}},
+			{Title: "5. Follow-up and prevention", Slug: "follow-up-prevention", Level: 1, Blocks: []demoBlock{{Type: "ordered_list", Payload: map[string]any{"type": "ordered_list", "items": []string{"Confirm clinical improvement", "Reassess adherence and vomiting", "Investigate persistent or recurrent symptoms", "Reinforce insecticide-treated net use and prevention advice"}}}}},
+		}},
+		{Key: "ebola-marburg", Title: "Ebola and Marburg Disease Preparedness", Description: "Recognition, isolation, notification and safe initial management of suspected viral haemorrhagic fever.", ProgramArea: "Emergency preparedness", Population: "All ages", Healthcare: "All facilities and community response teams", Version: "2.0", Publication: "2026-05-28", Review: "2027-05-28", Sections: []demoSection{
+			{Title: "1. Purpose and scope", Slug: "purpose-scope", Level: 1, Blocks: []demoBlock{{Type: "paragraph", Payload: map[string]any{"type": "paragraph", "text": "This preparedness guide supports early recognition and safe initial action while the designated surveillance and treatment system is activated."}}}},
+			{Title: "2. Recognition and immediate action", Slug: "recognition", Level: 1, Blocks: []demoBlock{{Type: "warning", Payload: map[string]any{"type": "warning", "title": "Immediate action", "content": "Isolate a suspected case, apply appropriate IPC precautions and notify the designated surveillance authority immediately.", "severity": "critical"}}, {Type: "unordered_list", Payload: map[string]any{"type": "unordered_list", "items": []string{"Avoid unnecessary contact", "Use appropriate PPE", "Record exposure history", "Arrange safe referral"}}}}},
+			{Title: "2.1 Case recognition", Slug: "case-recognition", ParentSlug: "recognition", Level: 2, Blocks: []demoBlock{{Type: "definition", Payload: map[string]any{"type": "definition", "title": "Suspected case", "content": "Apply the current surveillance case definition and evaluate symptoms together with travel, contact and exposure history.", "severity": "high"}}, {Type: "key_point", Payload: map[string]any{"type": "key_point", "title": "Do not delay notification", "content": "A suspected case should trigger immediate notification and IPC precautions; laboratory confirmation is coordinated through the response system.", "severity": "critical"}}}},
+			{Title: "2.2 Notification and referral", Slug: "notification-referral", ParentSlug: "recognition", Level: 2, Blocks: []demoBlock{{Type: "procedure", Payload: map[string]any{"type": "procedure", "title": "Notification sequence", "content": "Contact the designated district surveillance focal person, document essential details, restrict movement and follow instructions for safe transfer.", "severity": "critical"}}}},
+			{Title: "3. Infection prevention and control", Slug: "infection-prevention", Level: 1, Blocks: []demoBlock{{Type: "recommendation", Payload: map[string]any{"type": "recommendation", "title": "IPC recommendation", "content": "Use trained donning and doffing observers and maintain a clear separation between clean and contaminated zones.", "evidence_grade": "Operational guidance"}}}},
+			{Title: "3.1 PPE and hand hygiene", Slug: "ppe-hand-hygiene", ParentSlug: "infection-prevention", Level: 2, Blocks: []demoBlock{{Type: "ordered_list", Payload: map[string]any{"type": "ordered_list", "items": []string{"Select PPE for the assessed exposure risk", "Use a trained observer for donning and doffing", "Perform hand hygiene at every indicated step", "Report and manage breaches immediately"}}}}},
+			{Title: "3.2 Environmental controls", Slug: "environmental-controls", ParentSlug: "infection-prevention", Level: 2, Blocks: []demoBlock{{Type: "table", Payload: map[string]any{"type": "table", "title": "Control zones", "columns": []string{"Zone", "Access", "Core control"}, "rows": [][]string{{"Clean", "Authorized staff", "Keep supplies uncontaminated"}, {"Transition", "Trained staff", "Supervised PPE change"}, {"Patient care", "Essential staff only", "Exposure-based PPE and waste control"}}, "footnotes": []string{"Follow the activated response team's current IPC instructions."}}}}},
+			{Title: "4. Supportive care", Slug: "supportive-care", Level: 1, Blocks: []demoBlock{{Type: "clinical_note", Payload: map[string]any{"type": "clinical_note", "title": "Safe supportive care", "content": "Provide clinically indicated supportive care only within the available isolation, IPC and staff-competency controls.", "severity": "high"}}}},
+			{Title: "5. Exposure management", Slug: "exposure-management", Level: 1, Blocks: []demoBlock{{Type: "referral_criteria", Payload: map[string]any{"type": "referral_criteria", "title": "Occupational exposure", "content": "Stop work safely, wash the exposed site as appropriate, report immediately and follow the designated exposure-management pathway.", "severity": "critical"}}}},
+		}},
+		{Key: "hypertension", Title: "Hypertension Screening and Management", Description: "Practical screening, cardiovascular risk assessment and longitudinal management guidance.", ProgramArea: "Non-communicable diseases", Population: "Adults", Healthcare: "Primary care and referral facilities", Version: "1.1", Publication: "2026-04-12", Review: "2028-04-12", Sections: []demoSection{
+			{Title: "1. Introduction", Slug: "introduction", Level: 1, Blocks: []demoBlock{{Type: "paragraph", Payload: map[string]any{"type": "paragraph", "text": "Hypertension care combines accurate blood-pressure measurement, assessment of total cardiovascular risk, appropriate treatment and sustained follow-up."}}}},
+			{Title: "2. Screening and diagnosis", Slug: "screening", Level: 1, Blocks: []demoBlock{{Type: "paragraph", Payload: map[string]any{"type": "paragraph", "text": "Measure blood pressure with validated equipment after appropriate rest, and confirm persistent elevation using repeat readings."}}, {Type: "key_point", Payload: map[string]any{"type": "key_point", "title": "Measurement", "content": "Use the correct cuff size and document repeat measurements.", "severity": "standard"}}}},
+			{Title: "2.1 Accurate measurement", Slug: "accurate-measurement", ParentSlug: "screening", Level: 2, Blocks: []demoBlock{{Type: "procedure", Payload: map[string]any{"type": "procedure", "title": "Measurement steps", "content": "Seat the patient appropriately, support the arm, select the correct cuff, allow rest and repeat an elevated measurement.", "severity": "standard"}}}},
+			{Title: "2.2 Confirming hypertension", Slug: "confirming-hypertension", ParentSlug: "screening", Level: 2, Blocks: []demoBlock{{Type: "table", Payload: map[string]any{"type": "table", "title": "Assessment plan", "columns": []string{"Finding", "Next action", "Timing"}, "rows": [][]string{{"Normal reading", "Continue routine screening", "At recommended interval"}, {"Elevated reading without emergency features", "Repeat and confirm", "According to clinical risk"}, {"Severe elevation or emergency features", "Urgent clinical assessment", "Immediately"}}, "footnotes": []string{"Use approved national thresholds and pathways."}}}}},
+			{Title: "3. Cardiovascular risk assessment", Slug: "risk-assessment", Level: 1, Blocks: []demoBlock{{Type: "unordered_list", Payload: map[string]any{"type": "unordered_list", "items": []string{"Assess smoking, diabetes and lipid risk", "Look for renal and cardiovascular disease", "Review medicines and secondary causes", "Document target-organ damage"}}}}},
+			{Title: "4. Management", Slug: "management", Level: 1, Blocks: []demoBlock{{Type: "ordered_list", Payload: map[string]any{"type": "ordered_list", "items": []string{"Assess cardiovascular risk and target-organ damage", "Support lifestyle measures", "Initiate medicines when indicated", "Schedule monitoring and adherence review"}}}}},
+			{Title: "4.1 Lifestyle support", Slug: "lifestyle-support", ParentSlug: "management", Level: 2, Blocks: []demoBlock{{Type: "recommendation", Payload: map[string]any{"type": "recommendation", "title": "Lifestyle measures", "content": "Support reduced dietary salt, regular appropriate physical activity, healthy weight, tobacco cessation and moderation of alcohol.", "evidence_grade": "National guidance"}}}},
+			{Title: "4.2 Medicines", Slug: "medicines", ParentSlug: "management", Level: 2, Blocks: []demoBlock{{Type: "clinical_note", Payload: map[string]any{"type": "clinical_note", "title": "Individualize therapy", "content": "Select and titrate medicines according to cardiovascular risk, comorbidity, contraindications, pregnancy potential and response.", "severity": "high"}}}},
+			{Title: "5. Follow-up", Slug: "follow-up", Level: 1, Blocks: []demoBlock{{Type: "key_point", Payload: map[string]any{"type": "key_point", "title": "Continuity of care", "content": "At each review assess blood pressure, adherence, adverse effects, lifestyle goals and new target-organ symptoms.", "severity": "standard"}}}},
+		}},
+	}
 }
 
 func seedDemoGuideline(ctx context.Context, database *gorm.DB, store storage.ObjectStore, reviewerID uuid.UUID, guideline demoGuideline) error {
@@ -223,11 +249,40 @@ func seedDemoGuideline(ctx context.Context, database *gorm.DB, store storage.Obj
 		return err
 	}
 
+	// A development fixture owns the complete structured representation for its
+	// deterministic version. Rebuild it on every run so renamed or removed demo
+	// chapters do not survive as stale rows.
+	if err := database.Unscoped().Where("version_id = ?", versionID).Delete(&models.GuidelineChunk{}).Error; err != nil {
+		return err
+	}
+	if err := database.Unscoped().Where("version_id = ?", versionID).Delete(&models.GuidelineContentBlock{}).Error; err != nil {
+		return err
+	}
+	if err := database.Unscoped().Where("version_id = ?", versionID).Delete(&models.GuidelineSection{}).Error; err != nil {
+		return err
+	}
+
 	blockCount, tableCount, algorithmCount := 0, 0, 0
+	sectionIDs := make(map[string]uuid.UUID, len(guideline.Sections))
+	for _, section := range guideline.Sections {
+		sectionIDs[section.Slug] = demoID("guideline-section", guideline.Key+"-"+section.Slug)
+	}
 	for sectionIndex, section := range guideline.Sections {
-		sectionID := demoID("guideline-section", guideline.Key+"-"+section.Slug)
+		sectionID := sectionIDs[section.Slug]
+		level := section.Level
+		if level < 1 {
+			level = 1
+		}
+		var parentID any
+		if section.ParentSlug != "" {
+			resolved, ok := sectionIDs[section.ParentSlug]
+			if !ok {
+				return fmt.Errorf("demo guideline %q section %q has unknown parent %q", guideline.Key, section.Slug, section.ParentSlug)
+			}
+			parentID = resolved
+		}
 		page := sectionIndex + 1
-		if err := upsertByID(database, "guideline_sections", map[string]any{"id": sectionID, "version_id": versionID, "title": section.Title, "slug": section.Slug, "level": 1, "text": section.Title, "page_start": page, "page_end": page, "sort_order": sectionIndex}); err != nil {
+		if err := upsertByID(database, "guideline_sections", map[string]any{"id": sectionID, "version_id": versionID, "parent_id": parentID, "title": section.Title, "slug": section.Slug, "level": level, "text": section.Title, "page_start": page, "page_end": page, "sort_order": sectionIndex}); err != nil {
 			return err
 		}
 		for blockIndex, block := range section.Blocks {
@@ -301,9 +356,13 @@ func demoMarkdown(g demoGuideline) []byte {
 	var buffer bytes.Buffer
 	fmt.Fprintf(&buffer, "# %s\n\n%s\n\n> Development demonstration content. Verify all clinical decisions against the approved source.\n\n", g.Title, g.Description)
 	for _, section := range g.Sections {
-		fmt.Fprintf(&buffer, "## %s\n\n", section.Title)
+		level := section.Level
+		if level < 1 {
+			level = 1
+		}
+		fmt.Fprintf(&buffer, "%s %s\n\n", strings.Repeat("#", level+1), section.Title)
 		for _, block := range section.Blocks {
-			if text := demoBlockText(block.Payload); text != "" {
+			if text := demoBlockMarkdown(block.Payload); text != "" {
 				fmt.Fprintf(&buffer, "%s\n\n", text)
 			}
 		}
@@ -311,20 +370,73 @@ func demoMarkdown(g demoGuideline) []byte {
 	return buffer.Bytes()
 }
 
+func demoBlockMarkdown(payload map[string]any) string {
+	if columns, ok := payload["columns"].([]string); ok && len(columns) > 0 {
+		var buffer bytes.Buffer
+		if title, ok := payload["title"].(string); ok && title != "" {
+			fmt.Fprintf(&buffer, "**%s**\n\n", title)
+		}
+		fmt.Fprintf(&buffer, "| %s |\n", strings.Join(columns, " | "))
+		separators := make([]string, len(columns))
+		for index := range separators {
+			separators[index] = "---"
+		}
+		fmt.Fprintf(&buffer, "| %s |\n", strings.Join(separators, " | "))
+		if rows, ok := payload["rows"].([][]string); ok {
+			for _, row := range rows {
+				fmt.Fprintf(&buffer, "| %s |\n", strings.Join(row, " | "))
+			}
+		}
+		return strings.TrimSpace(buffer.String())
+	}
+	if items, ok := payload["items"].([]string); ok {
+		ordered := payload["type"] == "ordered_list"
+		var buffer bytes.Buffer
+		for index, item := range items {
+			if ordered {
+				fmt.Fprintf(&buffer, "%d. %s\n", index+1, item)
+			} else {
+				fmt.Fprintf(&buffer, "- %s\n", item)
+			}
+		}
+		return strings.TrimSpace(buffer.String())
+	}
+	if content, ok := payload["content"].(string); ok && content != "" {
+		title, _ := payload["title"].(string)
+		if title != "" {
+			return fmt.Sprintf("> **%s:** %s", title, content)
+		}
+		return "> " + content
+	}
+	return demoBlockText(payload)
+}
+
 func demoBlockText(payload map[string]any) string {
-	for _, key := range []string{"text", "content", "title"} {
+	parts := make([]string, 0, 8)
+	for _, key := range []string{"title", "text", "content"} {
 		if value, ok := payload[key].(string); ok && value != "" {
-			return value
+			parts = append(parts, value)
 		}
 	}
 	if items, ok := payload["items"].([]string); ok {
-		var buffer bytes.Buffer
-		for _, item := range items {
-			fmt.Fprintf(&buffer, "- %s\n", item)
-		}
-		return buffer.String()
+		parts = append(parts, items...)
 	}
-	return ""
+	if columns, ok := payload["columns"].([]string); ok {
+		parts = append(parts, columns...)
+	}
+	if rows, ok := payload["rows"].([][]string); ok {
+		for _, row := range rows {
+			parts = append(parts, row...)
+		}
+	}
+	if nodes, ok := payload["nodes"].([]map[string]any); ok {
+		for _, node := range nodes {
+			if label, ok := node["label"].(string); ok && label != "" {
+				parts = append(parts, label)
+			}
+		}
+	}
+	return strings.Join(parts, " ")
 }
 
 func demoOfflinePackage(g demoGuideline, markdown []byte) ([]byte, error) {

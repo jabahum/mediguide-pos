@@ -10,13 +10,13 @@ Use one SemVer tag in the form `vMAJOR.MINOR.PATCH`. The tag must match the
 SemVer part of `user_app/pubspec.yaml`; the Flutter build number remains after
 the `+` and must increase for every store upload.
 
-For example, the current mobile version `2.0.14+41` is released with Git tag
-`v2.0.14`. That tag produces these immutable container tags:
+For example, the current mobile version `2.0.15+42` is released with Git tag
+`v2.0.15`. That tag produces these immutable container tags:
 
-- `ghcr.io/<owner>/mediguide-pos-api:2.0.14`
-- `ghcr.io/<owner>/mediguide-pos-ai-worker:2.0.14`
-- `ghcr.io/<owner>/mediguide-pos-dashboard:2.0.14`
-- `ghcr.io/<owner>/mediguide-pos-guidelines:2.0.14`
+- `ghcr.io/<owner>/mediguide-pos-api:2.0.15`
+- `ghcr.io/<owner>/mediguide-pos-ai-worker:2.0.15`
+- `ghcr.io/<owner>/mediguide-pos-dashboard:2.0.15`
+- `ghcr.io/<owner>/mediguide-pos-guidelines:2.0.15`
 
 The AI HTTP service and background loop intentionally use the same AI-worker
 image. PostgreSQL, Redis, MinIO, Ollama, and the Ollama model-pull helper are
@@ -70,7 +70,7 @@ describe it as an installable iOS release.
 
 1. Choose the version and bump `user_app/pubspec.yaml`. Increment both the
    SemVer and build number as appropriate. For the current candidate, keep
-   `version: 2.0.14+41` and use `v2.0.14`.
+   `version: 2.0.15+42` and use `v2.0.15`.
 2. Update user-facing release notes and any migration or operational notes.
 3. Merge the release commit into the canonical `main` branch.
 4. Fetch `main` and all existing tags from the canonical remote. This checkout
@@ -81,7 +81,7 @@ git fetch upstream main --tags --prune
 git switch main
 git pull --ff-only upstream main
 git status --short
-make release-check RELEASE_TAG=v2.0.14
+make release-check RELEASE_TAG=v2.0.15
 ```
 
 The final status command must be empty. The release check validates the mobile
@@ -135,10 +135,10 @@ Create the tag only from the verified `main` commit. A signed tag is preferred;
 use an annotated tag only when signing is not configured.
 
 ```bash
-git tag -s v2.0.14 -m 'MediGuide v2.0.14'
-# Fallback: git tag -a v2.0.14 -m 'MediGuide v2.0.14'
-git show --no-patch --decorate v2.0.14
-git push upstream refs/tags/v2.0.14
+git tag -s v2.0.15 -m 'MediGuide v2.0.15'
+# Fallback: git tag -a v2.0.15 -m 'MediGuide v2.0.15'
+git show --no-patch --decorate v2.0.15
+git push upstream refs/tags/v2.0.15
 ```
 
 Never move, delete, or reuse a published release tag. Fix a bad release with a
@@ -147,7 +147,7 @@ new patch version and a higher Flutter build number.
 The tag starts two workflows:
 
 - `Build and publish container images` tests the platform and publishes four
-  GHCR packages with `2.0.14`, `2.0`, `2`, and `sha-*` tags, provenance, and an
+  GHCR packages with `2.0.15`, `2.0`, `2`, and `sha-*` tags, provenance, and an
   SBOM.
 - `Test and build mobile release` verifies generated code, analyzes and tests
   Flutter, builds signed Android APK/AAB, Flutter web, unsigned iOS, and macOS,
@@ -156,10 +156,10 @@ The tag starts two workflows:
 Monitor both workflows and do not deploy while either is incomplete:
 
 ```bash
-release_sha="$(git rev-list -n 1 v2.0.14)"
+release_sha="$(git rev-list -n 1 v2.0.15)"
 gh run list --commit "${release_sha}" --limit 10
 gh run watch <run-id> --exit-status
-gh release view v2.0.14
+gh release view v2.0.15
 ```
 
 Confirm all four immutable images exist. GHCR SemVer tags omit the leading `v`:
@@ -168,16 +168,16 @@ Confirm all four immutable images exist. GHCR SemVer tags omit the leading `v`:
 owner='<lowercase-github-owner>'
 for image in api ai-worker dashboard guidelines; do
   docker buildx imagetools inspect \
-    "ghcr.io/${owner}/mediguide-pos-${image}:2.0.14"
+    "ghcr.io/${owner}/mediguide-pos-${image}:2.0.15"
 done
 ```
 
 Download the release, then verify its checksums before distribution:
 
 ```bash
-mkdir -p /tmp/mediguide-v2.0.14
-gh release download v2.0.14 --dir /tmp/mediguide-v2.0.14
-(cd /tmp/mediguide-v2.0.14 && sha256sum --check SHA256SUMS)
+mkdir -p /tmp/mediguide-v2.0.15
+gh release download v2.0.15 --dir /tmp/mediguide-v2.0.15
+(cd /tmp/mediguide-v2.0.15 && sha256sum --check SHA256SUMS)
 ```
 
 On macOS, use `shasum -a 256 -c SHA256SUMS` if GNU `sha256sum` is unavailable.
@@ -188,11 +188,11 @@ Prepare `infra/production.env` outside Git. Replace every placeholder and pin
 the four first-party images to the exact released version, never `latest`:
 
 ```dotenv
-API_IMAGE=ghcr.io/<owner>/mediguide-pos-api:2.0.14
-AI_WORKER_IMAGE=ghcr.io/<owner>/mediguide-pos-ai-worker:2.0.14
-DASHBOARD_IMAGE=ghcr.io/<owner>/mediguide-pos-dashboard:2.0.14
-GUIDELINES_IMAGE=ghcr.io/<owner>/mediguide-pos-guidelines:2.0.14
-BUILD_VERSION=v2.0.14
+API_IMAGE=ghcr.io/<owner>/mediguide-pos-api:2.0.15
+AI_WORKER_IMAGE=ghcr.io/<owner>/mediguide-pos-ai-worker:2.0.15
+DASHBOARD_IMAGE=ghcr.io/<owner>/mediguide-pos-dashboard:2.0.15
+GUIDELINES_IMAGE=ghcr.io/<owner>/mediguide-pos-guidelines:2.0.15
+BUILD_VERSION=v2.0.15
 BUILD_REVISION=<full-tagged-git-sha>
 ```
 

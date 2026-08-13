@@ -33,6 +33,14 @@ class AppErrorView extends StatelessWidget {
       return 'An unexpected error occurred.';
     }
 
+    final normalized = value.toLowerCase();
+    if (normalized.contains('sqliteexception') ||
+        normalized.contains('no such table') ||
+        normalized.contains('sql logic error')) {
+      return 'Offline content could not be prepared on this device. '
+          'Please try again. If the problem continues, restart the app.';
+    }
+
     return value;
   }
 }

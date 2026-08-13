@@ -99,18 +99,6 @@ class HomePage extends ConsumerWidget {
         actions: [
           IconButton(
             onPressed: () {
-              _showQuickActionsMenu(context);
-            },
-            tooltip: AppTranslationKey.quickActions,
-            icon: const Icon(LucideIcons.layoutGrid),
-          ),
-          IconButton(
-            onPressed: () => AppNavigator.push(AppRoutes.search),
-            tooltip: 'Search',
-            icon: const Icon(LucideIcons.search),
-          ),
-          IconButton(
-            onPressed: () {
               AppNavigator.push(AppRoutes.notifications);
             },
             tooltip: AppTranslationKey.notifications,

@@ -741,7 +741,7 @@ String _searchableBlockText(GuidelineBlock block) => switch (block) {
   UnknownGuidelineBlock() => '',
 };
 
-class _GuidelineOverview extends StatelessWidget {
+class _GuidelineOverview extends StatefulWidget {
   const _GuidelineOverview({
     required this.content,
     required this.isBookmarked,
@@ -757,10 +757,17 @@ class _GuidelineOverview extends StatelessWidget {
   final VoidCallback onOriginal;
 
   @override
+  State<_GuidelineOverview> createState() => _GuidelineOverviewState();
+}
+
+class _GuidelineOverviewState extends State<_GuidelineOverview> {
+  int _selectedTab = 0;
+
+  @override
   Widget build(BuildContext context) {
-    final publication = content.publication;
-    final manifest = content.manifest;
-    final keyRecommendations = content.blocks
+    final publication = widget.content.publication;
+    final manifest = widget.content.manifest;
+    final keyRecommendations = widget.content.blocks
         .whereType<CalloutGuidelineBlock>()
         .where(
           (block) => const {
@@ -771,10 +778,13 @@ class _GuidelineOverview extends StatelessWidget {
         )
         .take(6)
         .toList(growable: false);
+    final tables = widget.content.blocks
+        .whereType<TableGuidelineBlock>()
+        .toList(growable: false);
     return ListView(
       padding: EdgeInsets.fromLTRB(
         Responsive.horizontalPadding(context),
-        AppSpacing.lg,
+        AppSpacing.md,
         Responsive.horizontalPadding(context),
         AppSpacing.xxxl,
       ),
@@ -785,77 +795,58 @@ class _GuidelineOverview extends StatelessWidget {
         ),
         if (publication.description.isNotEmpty) ...[
           AppSpacing.gapSm,
-          Text(publication.description),
+          Text(
+            publication.description,
+            style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+            ),
+          ),
         ],
+        AppSpacing.gapSm,
+        Text(
+          [
+            if (publication.sourceOrganization.isNotEmpty)
+              publication.sourceOrganization,
+            if (publication.publicationDate.isNotEmpty)
+              'Last updated ${publication.publicationDate}',
+            if (publication.version.isNotEmpty) 'v${publication.version}',
+          ].join('  •  '),
+          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
+          ),
+        ),
         AppSpacing.gapMd,
         _ReviewStatus(manifest: manifest),
-        AppSpacing.gapLg,
-        _MetadataGrid(publication: publication),
-        AppSpacing.gapLg,
-        Text(
-          'Available content',
-          style: Theme.of(context).textTheme.titleLarge,
+        AppSpacing.gapMd,
+        _GuidelineTabs(
+          selectedIndex: _selectedTab,
+          hasKeyPoints: keyRecommendations.isNotEmpty,
+          hasTables: tables.isNotEmpty,
+          onSelected: (index) => setState(() => _selectedTab = index),
         ),
-        AppSpacing.gapSm,
-        _CapabilityWrap(manifest: manifest),
-        if (keyRecommendations.isNotEmpty) ...[
-          AppSpacing.gapLg,
-          Text(
-            'Key recommendations',
-            style: Theme.of(context).textTheme.titleLarge,
+        AppSpacing.gapMd,
+        switch (_selectedTab) {
+          1 => _ChapterList(
+            sections: widget.content.sections,
+            onSection: widget.onSection,
           ),
-          AppSpacing.gapSm,
-          for (final block in keyRecommendations)
-            Card(
-              margin: const EdgeInsets.only(bottom: 8),
-              child: ListTile(
-                leading: const Icon(LucideIcons.circleCheck),
-                title: Text(
-                  block.payload.title.isEmpty
-                      ? 'Recommendation'
-                      : block.payload.title,
-                ),
-                subtitle: Text(block.payload.content),
-              ),
-            ),
-        ],
-        if (content.sections.isNotEmpty) ...[
-          AppSpacing.gapLg,
-          Text('Chapters', style: Theme.of(context).textTheme.titleLarge),
-          AppSpacing.gapSm,
-          for (final section in content.sections)
-            Padding(
-              padding: EdgeInsets.only(
-                left: ((section.level - 1).clamp(0, 5)) * 16.0,
-              ),
-              child: ListTile(
-                dense: true,
-                contentPadding: EdgeInsets.zero,
-                leading: Icon(
-                  section.level <= 1
-                      ? LucideIcons.bookOpen
-                      : LucideIcons.cornerDownRight,
-                  size: 18,
-                ),
-                title: Text(section.title),
-                subtitle: section.pageLabel.isEmpty
-                    ? null
-                    : Text(section.pageLabel),
-                trailing: const Icon(LucideIcons.chevronRight, size: 18),
-                onTap: () => onSection(section.id),
-              ),
-            ),
-        ],
-        AppSpacing.gapLg,
+          2 => _KeyPointList(blocks: keyRecommendations),
+          3 => _TableList(tables: tables),
+          _ => _GuidelineAbout(
+            publication: publication,
+            recommendations: keyRecommendations,
+          ),
+        },
+        AppSpacing.gapMd,
         FilledButton.icon(
-          onPressed: onRead,
+          onPressed: widget.onRead,
           icon: const Icon(LucideIcons.bookOpenText),
           label: const Text('Read guideline'),
         ),
         if (manifest.hasOriginalPdf) ...[
           AppSpacing.gapSm,
           OutlinedButton.icon(
-            onPressed: onOriginal,
+            onPressed: widget.onOriginal,
             icon: const Icon(LucideIcons.fileText),
             label: const Text('Open original document'),
           ),
@@ -865,43 +856,224 @@ class _GuidelineOverview extends StatelessWidget {
   }
 }
 
-class _MetadataGrid extends StatelessWidget {
-  const _MetadataGrid({required this.publication});
-  final GuidelinePublication publication;
+class _GuidelineTabs extends StatelessWidget {
+  const _GuidelineTabs({
+    required this.selectedIndex,
+    required this.hasKeyPoints,
+    required this.hasTables,
+    required this.onSelected,
+  });
+  final int selectedIndex;
+  final bool hasKeyPoints;
+  final bool hasTables;
+  final ValueChanged<int> onSelected;
 
   @override
   Widget build(BuildContext context) {
-    final values = <(String, String, IconData)>[
-      ('Source', publication.sourceOrganization, LucideIcons.landmark),
-      ('Version', publication.version, LucideIcons.gitBranch),
-      ('Published', publication.publicationDate, LucideIcons.calendar),
-      ('Review date', publication.reviewDate, LucideIcons.calendarCheck),
-      ('Population', publication.intendedPopulation, LucideIcons.users),
-      ('Care level', publication.healthcareLevel, LucideIcons.hospital),
-      ('Language', publication.language, LucideIcons.languages),
-      ('Program area', publication.programArea, LucideIcons.tags),
-    ].where((item) => item.$2.trim().isNotEmpty).toList(growable: false);
-    if (values.isEmpty) return const SizedBox.shrink();
-    return Wrap(
-      spacing: 8,
-      runSpacing: 8,
-      children: [
-        for (final item in values)
-          ConstrainedBox(
-            constraints: const BoxConstraints(minWidth: 150, maxWidth: 280),
-            child: Card(
-              margin: EdgeInsets.zero,
-              child: ListTile(
-                dense: true,
-                leading: Icon(item.$3, size: 20),
-                title: Text(item.$1),
-                subtitle: Text(item.$2),
+    final tabs = <(String, bool)>[
+      ('Overview', true),
+      ('Chapters', true),
+      ('Key Points', hasKeyPoints),
+      ('Tables', hasTables),
+    ];
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        border: Border(
+          bottom: BorderSide(color: Theme.of(context).dividerColor),
+        ),
+      ),
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: Row(
+          children: [
+            for (var index = 0; index < tabs.length; index++)
+              InkWell(
+                onTap: tabs[index].$2 ? () => onSelected(index) : null,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 12,
+                  ),
+                  decoration: BoxDecoration(
+                    border: Border(
+                      bottom: BorderSide(
+                        width: 2,
+                        color: selectedIndex == index
+                            ? Theme.of(context).colorScheme.primary
+                            : Colors.transparent,
+                      ),
+                    ),
+                  ),
+                  child: Text(
+                    tabs[index].$1,
+                    style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                      color: !tabs[index].$2
+                          ? Theme.of(context).disabledColor
+                          : selectedIndex == index
+                          ? Theme.of(context).colorScheme.primary
+                          : null,
+                    ),
+                  ),
+                ),
               ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _GuidelineAbout extends StatelessWidget {
+  const _GuidelineAbout({
+    required this.publication,
+    required this.recommendations,
+  });
+  final GuidelinePublication publication;
+  final List<CalloutGuidelineBlock> recommendations;
+
+  @override
+  Widget build(BuildContext context) {
+    final facts = <(String, String)>[
+      ('Purpose', publication.description),
+      ('Target users', publication.intendedPopulation),
+      ('Applies to', publication.healthcareLevel),
+      ('Language', publication.language),
+      ('Program area', publication.programArea),
+      ('Review date', publication.reviewDate),
+    ].where((item) => item.$2.trim().isNotEmpty).toList(growable: false);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'About this guideline',
+          style: Theme.of(context).textTheme.titleMedium,
+        ),
+        AppSpacing.gapMd,
+        for (final fact in facts) ...[
+          Text(
+            fact.$1,
+            style: Theme.of(context).textTheme.labelLarge?.copyWith(
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
             ),
           ),
+          const SizedBox(height: 2),
+          Text(fact.$2, style: Theme.of(context).textTheme.bodyMedium),
+          AppSpacing.gapMd,
+        ],
+        if (recommendations.isNotEmpty) ...[
+          Text(
+            'Key recommendations',
+            style: Theme.of(context).textTheme.titleMedium,
+          ),
+          AppSpacing.gapSm,
+          for (final block in recommendations)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(
+                    LucideIcons.check,
+                    size: 18,
+                    color: Theme.of(context).colorScheme.primary,
+                  ),
+                  AppSpacing.hGapSm,
+                  Expanded(child: Text(block.payload.content)),
+                ],
+              ),
+            ),
+        ],
       ],
     );
   }
+}
+
+class _ChapterList extends StatelessWidget {
+  const _ChapterList({required this.sections, required this.onSection});
+  final List<PublicationSection> sections;
+  final ValueChanged<String> onSection;
+
+  @override
+  Widget build(BuildContext context) => Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Text('Chapters', style: Theme.of(context).textTheme.titleMedium),
+      AppSpacing.gapSm,
+      if (sections.isEmpty) const Text('No structured chapters available.'),
+      for (final section in sections)
+        Padding(
+          padding: EdgeInsets.only(
+            left: ((section.level - 1).clamp(0, 5)) * 12.0,
+          ),
+          child: ListTile(
+            dense: true,
+            contentPadding: EdgeInsets.zero,
+            title: Text(section.title),
+            subtitle: section.pageLabel.isEmpty
+                ? null
+                : Text(section.pageLabel),
+            trailing: const Icon(LucideIcons.chevronRight, size: 18),
+            onTap: () => onSection(section.id),
+          ),
+        ),
+    ],
+  );
+}
+
+class _KeyPointList extends StatelessWidget {
+  const _KeyPointList({required this.blocks});
+  final List<CalloutGuidelineBlock> blocks;
+
+  @override
+  Widget build(BuildContext context) => Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Text('Key points', style: Theme.of(context).textTheme.titleMedium),
+      AppSpacing.gapSm,
+      if (blocks.isEmpty) const Text('No reviewed key points available.'),
+      for (final block in blocks)
+        Card(
+          margin: const EdgeInsets.only(bottom: 8),
+          child: ListTile(
+            leading: const Icon(LucideIcons.circleCheck),
+            title: Text(
+              block.payload.title.isEmpty ? 'Key point' : block.payload.title,
+            ),
+            subtitle: Text(block.payload.content),
+          ),
+        ),
+    ],
+  );
+}
+
+class _TableList extends StatelessWidget {
+  const _TableList({required this.tables});
+  final List<TableGuidelineBlock> tables;
+
+  @override
+  Widget build(BuildContext context) => Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Text('Tables', style: Theme.of(context).textTheme.titleMedium),
+      AppSpacing.gapSm,
+      if (tables.isEmpty) const Text('No reviewed tables available.'),
+      for (final table in tables)
+        Card(
+          margin: const EdgeInsets.only(bottom: 8),
+          child: ListTile(
+            leading: const Icon(LucideIcons.table2),
+            title: Text(
+              table.payload.title.isEmpty
+                  ? 'Clinical table'
+                  : table.payload.title,
+            ),
+            subtitle: Text(
+              '${table.payload.rows.length} rows • ${table.payload.columns.length} columns',
+            ),
+          ),
+        ),
+    ],
+  );
 }
 
 class _ReviewStatus extends StatelessWidget {
@@ -931,37 +1103,6 @@ class _ReviewStatus extends StatelessWidget {
   }
 }
 
-class _CapabilityWrap extends StatelessWidget {
-  const _CapabilityWrap({required this.manifest});
-  final GuidelineManifest manifest;
-
-  @override
-  Widget build(BuildContext context) {
-    final values = <(bool, String, IconData)>[
-      (manifest.hasChapters, 'Chapters', LucideIcons.listTree),
-      (manifest.hasKeyPoints, 'Key points', LucideIcons.circleCheck),
-      (manifest.hasTables, 'Tables', LucideIcons.table2),
-      (manifest.hasFigures, 'Figures', LucideIcons.image),
-      (manifest.hasAlgorithms, 'Algorithms', LucideIcons.workflow),
-      (manifest.hasOriginalPdf, 'Original PDF', LucideIcons.fileText),
-      (
-        manifest.hasOfflinePackage,
-        'Offline package',
-        LucideIcons.cloudDownload,
-      ),
-    ].where((item) => item.$1).toList(growable: false);
-    if (values.isEmpty) return const Text('Original document only');
-    return Wrap(
-      spacing: 8,
-      runSpacing: 8,
-      children: [
-        for (final value in values)
-          Chip(avatar: Icon(value.$3, size: 18), label: Text(value.$2)),
-      ],
-    );
-  }
-}
-
 class _ReaderActionBar extends StatelessWidget {
   const _ReaderActionBar({
     required this.isBookmarked,
@@ -985,57 +1126,36 @@ class _ReaderActionBar extends StatelessWidget {
   final VoidCallback onDownload;
 
   @override
-  Widget build(BuildContext context) => SafeArea(
-    top: false,
-    child: Material(
-      elevation: 6,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-        child: SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
+  Widget build(BuildContext context) {
+    final actions = <_Action>[
+      if (showRead)
+        _Action(icon: LucideIcons.bookOpenText, label: 'Read', onTap: onRead),
+      _Action(icon: LucideIcons.sparkles, label: 'Ask AI', onTap: onAskAi),
+      _Action(
+        icon: isBookmarked ? LucideIcons.bookmarkCheck : LucideIcons.bookmark,
+        label: 'Bookmark',
+        onTap: onBookmark,
+      ),
+      if (!showRead)
+        _Action(icon: LucideIcons.notebookPen, label: 'Notes', onTap: onNotes),
+      if (!showRead)
+        _Action(icon: LucideIcons.share2, label: 'Share', onTap: onShare),
+      _Action(icon: LucideIcons.fileText, label: 'Original', onTap: onOriginal),
+      _Action(icon: LucideIcons.download, label: 'Offline', onTap: onDownload),
+    ];
+    return SafeArea(
+      top: false,
+      child: Material(
+        elevation: 6,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
           child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              if (showRead)
-                _Action(
-                  icon: LucideIcons.bookOpenText,
-                  label: 'Read',
-                  onTap: onRead,
-                ),
-              _Action(
-                icon: LucideIcons.sparkles,
-                label: 'Ask AI',
-                onTap: onAskAi,
-              ),
-              _Action(
-                icon: isBookmarked
-                    ? LucideIcons.bookmarkCheck
-                    : LucideIcons.bookmark,
-                label: 'Bookmark',
-                onTap: onBookmark,
-              ),
-              _Action(
-                icon: LucideIcons.notebookPen,
-                label: 'Notes',
-                onTap: onNotes,
-              ),
-              _Action(icon: LucideIcons.share2, label: 'Share', onTap: onShare),
-              _Action(
-                icon: LucideIcons.fileText,
-                label: 'Original',
-                onTap: onOriginal,
-              ),
-              _Action(
-                icon: LucideIcons.download,
-                label: 'Offline',
-                onTap: onDownload,
-              ),
-            ],
+            children: [for (final action in actions) Expanded(child: action)],
           ),
         ),
       ),
-    ),
-  );
+    );
+  }
 }
 
 class _Action extends StatelessWidget {
@@ -1045,7 +1165,6 @@ class _Action extends StatelessWidget {
   final VoidCallback onTap;
   @override
   Widget build(BuildContext context) {
-    final largeText = MediaQuery.textScalerOf(context).scale(1) >= 1.5;
     return Semantics(
       button: true,
       label: label,
@@ -1053,17 +1172,18 @@ class _Action extends StatelessWidget {
         onTap: onTap,
         radius: 28,
         child: SizedBox(
-          width: largeText ? 88 : 64,
-          height: largeText ? 88 : 56,
+          height: 58,
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(icon, size: 20),
-              Text(
-                label,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: Theme.of(context).textTheme.labelSmall,
+              Icon(icon, size: 21),
+              FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(
+                  label,
+                  maxLines: 1,
+                  style: Theme.of(context).textTheme.labelSmall,
+                ),
               ),
             ],
           ),

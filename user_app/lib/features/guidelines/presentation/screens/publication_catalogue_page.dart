@@ -110,7 +110,7 @@ class _PublicationCataloguePageState
     return widget.embedded
         ? body
         : Scaffold(
-            appBar: AppBar(title: const Text('Guidelines')),
+            appBar: AppBar(title: const Text('All Guidelines')),
             body: body,
           );
   }

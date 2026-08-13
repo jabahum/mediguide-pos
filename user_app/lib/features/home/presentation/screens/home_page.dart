@@ -367,10 +367,7 @@ class HomePage extends ConsumerWidget {
   // =======================================================
 
   static void _openAllGuidelines() {
-    AppNavigator.push(
-      AppRoutes.guidelines,
-      extra: const {'filterType': 'all', 'title': 'All Guidelines'},
-    );
+    AppNavigator.push(AppRoutes.publicGuidelines);
   }
 
   static void _openGuideline(GuidelinePublication guideline) {

@@ -148,7 +148,7 @@ class AllActionsController extends _$AllActionsController {
         color: Colors.green,
         category: ActionCategory.clinicalTools,
         onTap: () {
-          AppNavigator.push(AppRoutes.guidelines);
+          AppNavigator.push(AppRoutes.publicGuidelines);
         },
       ),
     ];

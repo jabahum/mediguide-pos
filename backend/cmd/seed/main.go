@@ -91,6 +91,19 @@ func main() {
 	if err != nil {
 		log.Fatal().Err(err).Msg("db connect failed")
 	}
+	if strings.EqualFold(strings.TrimSpace(os.Getenv("SEED_SCOPE")), "notifications") {
+		var clinician models.User
+		if err := database.Where("email = ?", "clinician@mediguide.local").First(&clinician).Error; err != nil {
+			log.Fatal().Err(err).Msg("notification seed user lookup failed")
+		}
+		if err := database.Transaction(func(tx *gorm.DB) error {
+			return seedDemoNotifications(tx, clinician.ID)
+		}); err != nil {
+			log.Fatal().Err(err).Msg("seed notification data failed")
+		}
+		log.Info().Msg("notification seed completed")
+		return
+	}
 
 	admin, clinician, err := seedSecurity(database)
 	if err != nil {
@@ -98,6 +111,11 @@ func main() {
 	}
 	if err := seedLegacyData(database, admin, clinician); err != nil {
 		log.Fatal().Err(err).Msg("seed legacy data failed")
+	}
+	if err := database.Transaction(func(tx *gorm.DB) error {
+		return seedDemoNotifications(tx, clinician.ID)
+	}); err != nil {
+		log.Fatal().Err(err).Msg("seed notification data failed")
 	}
 	store, err := storage.NewMinioStore(cfg)
 	if err != nil {

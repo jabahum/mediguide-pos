@@ -468,3 +468,56 @@ func seedDemoPeopleAndHelp(database *gorm.DB, adminID, clinicianID uuid.UUID) er
 	}
 	return nil
 }
+
+func seedDemoNotifications(database *gorm.DB, clinicianID uuid.UUID) error {
+	rows := []map[string]any{
+		{
+			"id": notificationID, "title": "New malaria guideline available",
+			"message": "Malaria in Adults version 1.4 is published and ready to read or download.",
+			"type":    "success", "priority": "high",
+			"action_url": "/public/guidelines/" + demoID("guideline", "malaria-adults").String(),
+			"created_at": time.Date(2026, time.May, 28, 9, 0, 0, 0, time.UTC),
+		},
+		{
+			"id": demoID("notification", "outbreak-update"), "title": "Outbreak situation report updated",
+			"message": "The latest Bundibugyo virus disease situation report is now available.",
+			"type":    "warning", "priority": "urgent", "action_url": "/outbreak-hub",
+			"created_at": time.Date(2026, time.July, 26, 14, 30, 0, 0, time.UTC),
+		},
+		{
+			"id": demoID("notification", "offline-reminder"), "user_id": clinicianID,
+			"title":   "Prepare guidelines for offline use",
+			"message": "Download the guidance you need before working in an area with limited connectivity.",
+			"type":    "info", "priority": "normal", "action_url": "/offline-content",
+			"created_at": time.Date(2026, time.July, 27, 8, 15, 0, 0, time.UTC),
+		},
+		{
+			"id": demoID("notification", "system-ready"), "title": "MediGuide is ready",
+			"message": "Clinical references, calculators and offline content are available from the Tools screen.",
+			"type":    "info", "priority": "low", "action_url": "/tools",
+			"created_at": time.Date(2026, time.July, 28, 7, 45, 0, 0, time.UTC),
+		},
+	}
+	for _, row := range rows {
+		if err := upsertByID(database, "notifications", row); err != nil {
+			return err
+		}
+	}
+
+	if err := upsertByID(database, "notification_templates", map[string]any{
+		"id": notificationTemplateID, "name": "Clinical content published",
+		"type": "in-app", "category": "Content Updates", "status": "active",
+		"subject":  "New clinical guidance is available",
+		"content":  "{{title}} version {{version}} is now published.",
+		"audience": "all", "variables_json": mustJSON(`{"title":"string","version":"string"}`),
+	}); err != nil {
+		return err
+	}
+
+	return upsertByID(database, "notification_campaigns", map[string]any{
+		"id": notificationCampaignID, "name": "Development content announcements",
+		"type": "in-app", "status": "draft", "channels_json": mustJSON(`["in-app"]`),
+		"audience_countries_json": mustJSON(`["Uganda"]`),
+		"audience_roles_json":     mustJSON(`["clinician"]`),
+	})
+}

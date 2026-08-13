@@ -88,6 +88,8 @@ abstract final class AppRoutes {
     situationReports,
     drugIndex,
     abbreviations,
+    healthInfrastructure,
+    healthFacilities,
     helpCenter,
     faq,
     aboutUs,
@@ -99,7 +101,8 @@ abstract final class AppRoutes {
     return publicRoutes.contains(path) ||
         path.startsWith('$publicGuidelines/') ||
         path.startsWith('$outbreakHub/') ||
-        path.startsWith('$situationReports/');
+        path.startsWith('$situationReports/') ||
+        path.startsWith('$healthFacilities/');
   }
 
   /// Accepts only in-app absolute paths for post-authentication navigation.

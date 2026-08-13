@@ -262,13 +262,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: AppRoutes.healthFacilities,
-        builder: (_, state) {
-          return HealthFacilityDetailPage(
-            facility: state.extra is HealthFacility
-                ? state.extra as HealthFacility
-                : null,
-          );
-        },
+        builder: (_, state) => HealthInfrastructurePage(arguments: state.extra),
       ),
       GoRoute(
         path: AppRoutes.healthFacilityDetails,
@@ -282,6 +276,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           }
 
           return HealthFacilityDetailPage(
+            facilityId: facilityId,
             facility: state.extra is HealthFacility
                 ? state.extra as HealthFacility
                 : null,

@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:user_app/features/consultants/data/repositories/consultant_repository.dart';
@@ -7,6 +8,7 @@ import 'package:user_app/features/facilities/data/repositories/facility_local_re
 import 'package:user_app/core/network/api_client.dart';
 import 'package:user_app/features/consultants/presentation/controllers/consultants_controller.dart';
 import 'package:user_app/features/facilities/presentation/controllers/health_infrastructure_controller.dart';
+import 'package:user_app/features/facilities/presentation/screens/health_facility_detail_page.dart';
 import 'package:user_app/app/providers/app_providers.dart';
 import 'helpers/test_local_store.dart';
 
@@ -82,6 +84,17 @@ final class DirectoryApi extends BackendApiService {
           'items': [
             {'id': 'facility-1', 'name': 'City Hospital'},
           ],
+        },
+      };
+    }
+    if (path == '/api/v2/facilities/facility-1') {
+      return {
+        'data': {
+          'id': 'facility-1',
+          'name': 'City Hospital',
+          'district_name': 'Kampala',
+          'facility_level_name': 'Hospital',
+          'ownership_type_name': 'Public',
         },
       };
     }
@@ -168,6 +181,33 @@ void main() {
     await repository.recordUsage('facility-1');
     expect(api.lastPath, '/api/v2/facilities/facility-1/usage');
   });
+
+  testWidgets(
+    'facility detail resolves its route ID without navigation extra',
+    (tester) async {
+      final api = DirectoryApi();
+      final store = TestLocalStore();
+      addTearDown(store.close);
+      final repository = FacilityRepository(
+        api,
+        FacilityLocalRepository(store.cache),
+      );
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [facilityRepositoryProvider.overrideWithValue(repository)],
+          child: const MaterialApp(
+            home: HealthFacilityDetailPage(facilityId: 'facility-1'),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(api.lastPath, '/api/v2/facilities/facility-1');
+      expect(find.text('City Hospital'), findsWidgets);
+      expect(find.text('Facility unavailable'), findsNothing);
+    },
+  );
 
   test('consultant usage uses its dedicated endpoint', () async {
     final api = DirectoryApi();

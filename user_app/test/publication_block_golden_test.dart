@@ -3,6 +3,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:user_app/features/guidelines/data/models/guideline_publication.dart';
 import 'package:user_app/features/guidelines/presentation/widgets/publication_block_view.dart';
 
+import 'golden_test_support.dart';
+
 void main() {
   testWidgets('unknown guideline content remains legible at 200% text scale', (
     tester,
@@ -38,7 +40,7 @@ void main() {
 
     await expectLater(
       find.byType(MaterialApp),
-      matchesGoldenFile('goldens/publication_block_unknown_200.png'),
+      matchesGoldenFile(platformGolden('publication_block_unknown_200.png')),
     );
   });
 }

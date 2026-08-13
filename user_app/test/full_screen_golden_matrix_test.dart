@@ -40,6 +40,8 @@ import 'package:user_app/features/search/presentation/screens/global_search_page
 import 'package:user_app/features/settings/presentation/controllers/app_update_controller.dart';
 import 'package:user_app/features/settings/presentation/controllers/language_controller.dart';
 
+import 'golden_test_support.dart';
+
 final class _GoldenAuthController extends AuthController {
   @override
   Future<AuthState> build() async => const AuthState.authenticated(
@@ -506,7 +508,7 @@ void main() {
         await expectLater(
           find.byType(MaterialApp),
           matchesGoldenFile(
-            'goldens/full_screen/${scenario.name}_${viewport.name}.png',
+            platformGolden('full_screen/${scenario.name}_${viewport.name}.png'),
           ),
         );
       });

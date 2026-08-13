@@ -1,5 +1,9 @@
 # MediGuide infrastructure
 
+For versioning, tag creation, mobile signing, GHCR publication, production
+deployment, verification, and rollback, see
+[`docs/release-process.md`](../docs/release-process.md).
+
 The `infra` directory is the single deployment entry point for the MediGuide
 backend, AI workers, dashboard, data services, Ollama, and public Clinical
 Guidelines Platform.

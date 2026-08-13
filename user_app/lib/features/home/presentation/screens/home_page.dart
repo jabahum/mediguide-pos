@@ -25,7 +25,11 @@ import 'package:user_app/shared/widgets/glass_card.dart';
 import 'package:user_app/shared/widgets/section_header.dart';
 
 class HomePage extends ConsumerWidget {
-  const HomePage({super.key});
+  const HomePage({super.key, this.greetingHour})
+    : assert(greetingHour == null || (greetingHour >= 0 && greetingHour <= 23));
+
+  /// Overrides the local clock only for deterministic previews and tests.
+  final int? greetingHour;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -51,7 +55,7 @@ class HomePage extends ConsumerWidget {
       if (user?.organization.trim().isNotEmpty == true)
         user!.organization.trim(),
     ].join(' · ');
-    final greeting = _greetingFor(DateTime.now().hour);
+    final greeting = _greetingFor(greetingHour ?? DateTime.now().hour);
 
     return Scaffold(
       backgroundColor: cs.surface,

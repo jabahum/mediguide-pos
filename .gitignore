@@ -1,4 +1,5 @@
 *.md
+!docs/release-process.md
 !README.md
 !**/README.md
 !docs/pocketbase-removal.md

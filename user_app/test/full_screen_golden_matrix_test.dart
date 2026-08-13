@@ -410,7 +410,7 @@ void main() {
         ),
       ],
     ),
-    const _Scenario('authenticated_home', HomePage()),
+    const _Scenario('authenticated_home', HomePage(greetingHour: 9)),
     const _Scenario('my_library', MyLibraryPage()),
     const _Scenario('ai_assistant', AiAssistantPage()),
     const _Scenario('tools', ToolsPage()),

@@ -39,6 +39,7 @@ help:
 		"  swagger          Generate backend Swagger JSON/YAML docs" \
 		"  contracts        Regenerate Go, TypeScript, and Dart API contracts" \
 		"  contracts-check  Verify committed API contracts have no drift" \
+		"  release-check    Validate RELEASE_TAG metadata, Git state, and Compose" \
 		"  migrate-up       Apply backend migrations" \
 		"  migrate-down     Roll back backend migrations" \
 		"  migrate-status   Show backend migration status" \
@@ -147,6 +148,12 @@ contracts:
 .PHONY: contracts-check
 contracts-check:
 	bash scripts/check-generated-contracts.sh
+
+RELEASE_TAG ?=
+
+.PHONY: release-check
+release-check:
+	bash scripts/check-release-readiness.sh "$(RELEASE_TAG)"
 
 .PHONY: migrate-up
 migrate-up:

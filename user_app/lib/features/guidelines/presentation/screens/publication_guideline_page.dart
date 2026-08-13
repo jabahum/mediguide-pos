@@ -19,6 +19,7 @@ import 'package:user_app/features/guidelines/presentation/widgets/publication_bl
 import 'package:user_app/features/downloads/data/models/offline_download.dart';
 import 'package:user_app/features/downloads/presentation/controllers/guideline_downloads_controller.dart';
 import 'package:user_app/features/documents/presentation/screens/document_reader_page.dart';
+import 'package:user_app/features/ai_assistant/data/models/ai_context.dart';
 
 class PublicationGuidelinePage extends ConsumerStatefulWidget {
   const PublicationGuidelinePage({
@@ -146,6 +147,7 @@ class _PublicationGuidelinePageState
               onRead: () => context.push(
                 AppRoutes.readPublicGuideline(widget.guidelineId),
               ),
+              onAskAi: () => _openAiAssistant(context, content.requireValue),
               onBookmark: () => _toggleBookmark(context),
               onNotes: () => _editNotes(context, progress?.notes ?? ''),
               onShare: () => _copyLink(context),
@@ -220,6 +222,54 @@ class _PublicationGuidelinePageState
         context,
       ).showSnackBar(SnackBar(content: Text('Download failed: $error')));
     }
+  }
+
+  void _openAiAssistant(
+    BuildContext context,
+    GuidelinePublicationContent content,
+  ) {
+    final publication = content.publication;
+    final sectionId = _currentSectionId ?? _selectedSectionId;
+    final selectedSection = sectionId == null
+        ? null
+        : content.sections
+              .where((section) => section.id == sectionId)
+              .firstOrNull;
+    final relevantBlocks = selectedSection == null
+        ? content.blocks
+        : content.blocksFor(selectedSection.id);
+    final referenceContent = <String>[
+      publication.description,
+      if (publication.sourceOrganization.isNotEmpty)
+        'Source: ${publication.sourceOrganization}',
+      if (publication.version.isNotEmpty) 'Version: ${publication.version}',
+      if (selectedSection != null) 'Current section: ${selectedSection.title}',
+      ...relevantBlocks.map(_searchableBlockText),
+    ].where((value) => value.trim().isNotEmpty).join('\n\n');
+
+    final aiContext = AiContext.guideline(
+      title: selectedSection == null
+          ? publication.title
+          : '${publication.title} — ${selectedSection.title}',
+      content: referenceContent.isEmpty
+          ? 'Use approved MediGuide sources and cite the supporting guideline.'
+          : referenceContent,
+      guidelineId: widget.guidelineId,
+      metadata: <String, dynamic>{
+        'guideline_id': widget.guidelineId,
+        'program_area': publication.programArea,
+        'country': publication.country,
+        'version': publication.version,
+        if (selectedSection != null) 'section_id': selectedSection.id,
+        'reviewed_content':
+            content.manifest.recommendedMode == GuidelineReaderMode.structured,
+      },
+    );
+
+    context.push(
+      AppRoutes.aiAssistant,
+      extra: <String, dynamic>{'aiContext': aiContext.toJson()},
+    );
   }
 
   Widget _content(BuildContext context, GuidelinePublicationContent value) {
@@ -917,6 +967,7 @@ class _ReaderActionBar extends StatelessWidget {
     required this.isBookmarked,
     required this.showRead,
     required this.onRead,
+    required this.onAskAi,
     required this.onBookmark,
     required this.onNotes,
     required this.onShare,
@@ -926,6 +977,7 @@ class _ReaderActionBar extends StatelessWidget {
   final bool isBookmarked;
   final bool showRead;
   final VoidCallback onRead;
+  final VoidCallback onAskAi;
   final VoidCallback onBookmark;
   final VoidCallback onNotes;
   final VoidCallback onShare;
@@ -950,6 +1002,11 @@ class _ReaderActionBar extends StatelessWidget {
                   label: 'Read',
                   onTap: onRead,
                 ),
+              _Action(
+                icon: LucideIcons.sparkles,
+                label: 'Ask AI',
+                onTap: onAskAi,
+              ),
               _Action(
                 icon: isBookmarked
                     ? LucideIcons.bookmarkCheck

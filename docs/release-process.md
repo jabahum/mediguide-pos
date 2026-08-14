@@ -1,8 +1,9 @@
 # MediGuide platform release process
 
 This runbook releases the backend, AI worker, dashboard, public guidelines
-site, and Flutter clients from one immutable Git tag. It does not restart or
-modify production by itself.
+site, and Flutter clients from one immutable Git tag. Once production
+deployment secrets are configured, a release tag also replaces the production
+Compose stack after all immutable container images have passed verification.
 
 ## Release model
 
@@ -34,8 +35,9 @@ container workflow uses its scoped `GITHUB_TOKEN` for GHCR. Set these repository
 variables to real public endpoints before tagging:
 
 ```bash
-gh variable set PUBLIC_API_BASE_URL --body 'https://api.example.org'
-gh variable set MOBILE_API_BASE_URL --body 'https://api.example.org'
+gh variable set PUBLIC_API_BASE_URL --body 'https://mediguide.example.org'
+gh variable set MOBILE_API_BASE_URL --body 'https://mediguide.example.org'
+gh variable set DASHBOARD_BASE_PATH --body '/admin'
 ```
 
 Create a long-lived Android upload key once, store it outside the repository,
@@ -60,6 +62,88 @@ printf '%s' '<key-password>' | gh secret set ANDROID_UPLOAD_KEY_PASSWORD
 Never commit the keystore or `android/key.properties`; both are ignored. Tag
 builds fail closed when any Android signing secret is absent. Manual dispatches
 may still create a debug-signed internal build.
+
+### Production deployment secrets
+
+Create a protected GitHub Environment named `production`. Require approval for
+that environment when releases should pause for an operator before server
+mutation. Store every connection credential and production setting as a GitHub
+Environment or repository Actions secret:
+
+| Secret | Purpose |
+|---|---|
+| `DEPLOY_HOST` | Production SSH hostname or IP address |
+| `DEPLOY_PORT` | SSH port, normally `22` |
+| `DEPLOY_USER` | Dedicated non-root deployment account |
+| `DEPLOY_PATH` | Absolute server directory, for example `/opt/mediguide` |
+| `DEPLOY_SSH_PRIVATE_KEY` | Private key dedicated to GitHub Actions deployment |
+| `DEPLOY_KNOWN_HOSTS` | Pinned host-key line for strict SSH verification |
+| `PRODUCTION_ENV_FILE` | Complete contents of the production Compose environment file |
+
+The workflow uses the job-scoped `GITHUB_TOKEN` to pull this repository's GHCR
+packages. It streams that token over verified SSH into a temporary Docker
+configuration and deletes the configuration after deployment; no registry PAT
+is stored on the server or in the repository.
+
+Create a dedicated key and install only its public half in the deployment
+account's `authorized_keys` file. Run these commands from a secure operator
+machine, replacing the example host and values:
+
+```bash
+ssh-keygen -t ed25519 -N '' -f mediguide-deploy -C mediguide-github-actions
+ssh-copy-id -i mediguide-deploy.pub deploy@production.example.org
+
+gh secret set DEPLOY_HOST --env production --body 'production.example.org'
+gh secret set DEPLOY_PORT --env production --body '22'
+gh secret set DEPLOY_USER --env production --body 'deploy'
+gh secret set DEPLOY_PATH --env production --body '/opt/mediguide'
+gh secret set DEPLOY_SSH_PRIVATE_KEY --env production < mediguide-deploy
+ssh-keyscan -H production.example.org | \
+  gh secret set DEPLOY_KNOWN_HOSTS --env production
+gh secret set PRODUCTION_ENV_FILE --env production < infra/production.env
+```
+
+Verify the host key through the hosting provider or server console before
+storing it; do not trust an unverified `ssh-keyscan` result. Restrict the
+private key file and remove it from the operator machine after backing it up in
+the approved secret manager.
+
+The production server must provide Bash, tar, Docker Engine, and Docker Compose
+v2. The deployment user needs access to Docker without an interactive password.
+The default production listeners are `127.0.0.1:8080` for the API,
+`127.0.0.1:3000` for the dashboard, and `127.0.0.1:5000` for guidelines. Route
+`/api` to the API, `/admin` to the dashboard, and `/` to Guidelines through a
+same-host TLS reverse proxy. The checked-in example is
+[`../infra/nginx/mediguide.conf.example`](../infra/nginx/mediguide.conf.example).
+PostgreSQL, Redis, MinIO, Ollama,
+and both AI-worker ports must not be published by production Compose.
+Prepare the target directory once without placing credentials in the checkout:
+
+```bash
+sudo install -d -o deploy -g deploy -m 0750 /opt/mediguide
+sudo usermod -aG docker deploy
+docker compose version
+```
+
+The `PRODUCTION_ENV_FILE` secret uses the same keys documented in
+`infra/production.env.example`, but it must contain real passwords, URLs, SMTP,
+JWT, MinIO, CORS, proxy, and runtime values. Image tags and build metadata in
+that secret are ignored during automated deployment: the workflow creates a
+second environment file that pins all first-party images to the requested
+release version and revision.
+
+For one public domain, use these values (replace the hostname):
+
+```dotenv
+PUBLIC_API_BASE_URL=https://mediguide.example.org
+ALLOWED_ORIGINS=https://mediguide.example.org
+DASHBOARD_BASE_PATH=/admin
+DASHBOARD_PUBLIC_URL=https://mediguide.example.org/admin
+GUIDELINES_PUBLIC_PORT=5000
+```
+
+`PUBLIC_API_BASE_URL` intentionally has no `/api` suffix because clients append
+typed `/api/v2/...` routes. CORS origins must never contain a path.
 
 Apple artifacts are currently compile-verified but unsigned. A distributable
 iOS IPA still requires an Apple Distribution certificate, provisioning profile,
@@ -186,8 +270,12 @@ The tag starts two workflows:
   release is created only after every mobile build succeeds. Mobile artifact
   filenames and the manifest include both the SemVer and Flutter build number,
   for example `mediguide-2.0.17+44-android.aab`.
+- After the container workflow verifies all four immutable image tags, it calls
+  `Deploy production`. The protected `production` environment supplies SSH and
+  Compose secrets and can require operator approval.
 
-Monitor both workflows and do not deploy while either is incomplete:
+Monitor both workflows. The production deployment job begins only after the
+container image set is complete:
 
 ```bash
 release_sha="$(git rev-list -n 1 v2.0.17)"
@@ -217,6 +305,39 @@ gh release download v2.0.17 --dir /tmp/mediguide-v2.0.17
 On macOS, use `shasum -a 256 -c SHA256SUMS` if GNU `sha256sum` is unavailable.
 
 ## Deploy immutable images
+
+### Automated release deployment
+
+For a release tag, no operator should copy credentials or Compose files by
+hand. The deployment workflow performs this sequence:
+
+1. Check out and validate the immutable release tag and full Git revision.
+2. Materialize `infra/production.env` from `PRODUCTION_ENV_FILE` without logging
+   it, archive the complete `infra` directory, and copy it over pinned SSH.
+3. Preserve the existing server configuration as
+   `<DEPLOY_PATH>/infra.previous` and replace `<DEPLOY_PATH>/infra`.
+4. Render and validate the production Compose configuration.
+5. Capture the currently deployed first-party image references, run Compose
+   `down --remove-orphans` without `--volumes`, and remove those captured
+   MediGuide images. Unrelated containers, images, and volumes are untouched.
+6. Pull the requested immutable GHCR release images, run database migrations,
+   start with `--no-build`, and wait for health checks.
+
+To redeploy an existing release or perform an approved manual deployment:
+
+```bash
+gh workflow run deploy-production.yml \
+  --ref main \
+  -f release_tag=v2.0.17
+gh run list --workflow deploy-production.yml --limit 5
+gh run watch <run-id> --exit-status
+```
+
+Do not enter an arbitrary branch in `release_tag`; the workflow accepts a tag
+whose checked-out metadata matches the release version. A supplied `revision`
+must exactly match the tag commit.
+
+### Operator-led deployment
 
 Prepare `infra/production.env` outside Git. Replace every placeholder and pin
 the four first-party images to the exact released version, never `latest`:
@@ -276,6 +397,28 @@ Do not roll database migrations down automatically: first determine whether the
 migration is backward compatible and restore from the verified backup when it
 is not. Retain failed release logs, digests, migration output, and health-check
 evidence. Publish the fix under a new patch tag.
+
+Automated deployments retain the immediately previous configuration at
+`<DEPLOY_PATH>/infra.previous`. If a deployment fails after containers have
+been removed, inspect its logs before acting. For a compatible application-only
+rollback, restore that directory and run its Compose configuration. Never roll
+database migrations down automatically:
+
+```bash
+cd /opt/mediguide
+mv infra infra.failed
+mv infra.previous infra
+docker compose \
+  --env-file infra/production.env \
+  --env-file infra/release.env \
+  -f infra/docker-compose.yml \
+  pull
+docker compose \
+  --env-file infra/production.env \
+  --env-file infra/release.env \
+  -f infra/docker-compose.yml \
+  up --no-build -d --remove-orphans --wait --wait-timeout 600
+```
 
 ## Current readiness snapshot (2026-08-13)
 

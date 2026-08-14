@@ -92,7 +92,7 @@ make prod-config
 make prod-up
 ```
 
-Open <http://localhost:8081>. Port 8081 avoids the backend API's default 8080
+Open <http://localhost:5000>. Port 5000 avoids the backend API's default 8080
 port. The container includes:
 
 - a non-root Nginx runtime;
@@ -124,9 +124,9 @@ docker build \
   -f guidelines-platform/Dockerfile.prod \
   -t mediguide-guidelines:production .
 
-docker run --rm -p 8081:8080 \
-  -e MEDIGUIDE_POS_URL=https://app.example.org \
-  -e MEDIGUIDE_API_URL=https://api.example.org \
+docker run --rm -p 5000:8080 \
+  -e MEDIGUIDE_POS_URL=https://mediguide.example.org/admin \
+  -e MEDIGUIDE_API_URL=https://mediguide.example.org \
   --read-only \
   --tmpfs /tmp:rw,noexec,nosuid,size=16m \
   mediguide-guidelines:production

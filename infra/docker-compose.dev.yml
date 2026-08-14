@@ -1,12 +1,19 @@
 services:
+  api:
+    build:
+      target: development
+    command: ["sh", "-c", "/app/migrate up && /app/api"]
+    volumes:
+      - ../dashboard/samples:/app/dashboard/samples:ro
+
   postgres:
     ports:
-      - "${POSTGRES_PUBLIC_PORT:-5433}:5432"
+      - "${DEV_DATA_BIND_ADDRESS:-127.0.0.1}:${POSTGRES_PUBLIC_PORT:-5433}:5432"
 
   minio:
     ports:
-      - "${MINIO_PUBLIC_PORT:-9000}:9000"
-      - "${MINIO_CONSOLE_PUBLIC_PORT:-9001}:9001"
+      - "${DEV_DATA_BIND_ADDRESS:-127.0.0.1}:${MINIO_PUBLIC_PORT:-9000}:9000"
+      - "${DEV_DATA_BIND_ADDRESS:-127.0.0.1}:${MINIO_CONSOLE_PUBLIC_PORT:-9001}:9001"
 
   guidelines:
     image: "${GUIDELINES_DEV_IMAGE:-mediguide-guidelines:development}"

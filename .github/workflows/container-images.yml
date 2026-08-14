@@ -98,7 +98,12 @@ jobs:
         run: docker compose --env-file infra/development.env -f infra/docker-compose.yml -f infra/docker-compose.dev.yml config --quiet
 
       - name: Validate production Compose
-        run: docker compose --env-file infra/production.env.example -f infra/docker-compose.yml config --quiet
+        run: |
+          bash -n infra/deploy-production.sh
+          docker compose --env-file infra/production.env.example -f infra/docker-compose.yml config --quiet
+          python3 infra/check-production-ports.py \
+            --env-file infra/production.env.example \
+            --compose-file infra/docker-compose.yml
 
   build:
     name: Build ${{ matrix.name }}
@@ -113,18 +118,22 @@ jobs:
             package: mediguide-pos-api
             context: ./backend
             dockerfile: ./backend/Dockerfile
+            target: production
           - name: AI worker
             package: mediguide-pos-ai-worker
             context: ./ai-worker
             dockerfile: ./ai-worker/Dockerfile
+            target: production
           - name: Dashboard
             package: mediguide-pos-dashboard
             context: ./dashboard
             dockerfile: ./dashboard/Dockerfile
+            target: production
           - name: Guidelines
             package: mediguide-pos-guidelines
             context: .
             dockerfile: ./guidelines-platform/Dockerfile.prod
+            target: runtime
 
     steps:
       - name: Check out repository
@@ -147,6 +156,7 @@ jobs:
         env:
           IMAGE_NAME: ${{ matrix.package }}
           PUBLIC_API_BASE_URL: ${{ vars.PUBLIC_API_BASE_URL }}
+          DASHBOARD_BASE_PATH: ${{ vars.DASHBOARD_BASE_PATH }}
         run: |
           {
             echo "value<<EOF"
@@ -154,6 +164,7 @@ jobs:
             echo "BUILD_REVISION=${GITHUB_SHA}"
             if [ "${IMAGE_NAME}" = mediguide-pos-dashboard ]; then
               echo "NEXT_PUBLIC_API_BASE_URL=${PUBLIC_API_BASE_URL:-http://localhost:8080}"
+              echo "NEXT_PUBLIC_DASHBOARD_BASE_PATH=${DASHBOARD_BASE_PATH:-/admin}"
             fi
             echo "EOF"
           } >> "${GITHUB_OUTPUT}"
@@ -188,6 +199,7 @@ jobs:
         with:
           context: ${{ matrix.context }}
           file: ${{ matrix.dockerfile }}
+          target: ${{ matrix.target }}
           build-args: ${{ steps.build-args.outputs.value }}
           platforms: linux/amd64
           pull: true
@@ -227,3 +239,13 @@ jobs:
             mediguide-pos-guidelines; do
             docker buildx imagetools inspect "ghcr.io/${owner}/${package}:${version}"
           done
+
+  deploy-production:
+    name: Deploy released stack
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: release-images
+    uses: ./.github/workflows/deploy-production.yml
+    with:
+      release_tag: ${{ github.ref_name }}
+      revision: ${{ github.sha }}
+    secrets: inherit

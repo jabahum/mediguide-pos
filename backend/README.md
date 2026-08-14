@@ -14,7 +14,7 @@ This service provides:
 - Offline sync package metadata and download APIs
 - Audit logs
 - MinIO/S3-compatible object storage support
-- Docker Compose for local development
+- Repository-wide Docker Compose orchestration from `infra`
 
 ## Stack
 
@@ -29,14 +29,17 @@ This service provides:
 ## Quick start
 
 ```bash
-cp .env.example .env
-docker compose up --build
+make up
+make ps
 ```
+
+Infrastructure and host-port ownership live only in `infra`. Extend
+`infra/docker-compose.dev.yml` instead of adding a component Compose file.
 
 API health:
 
 ```bash
-curl http://localhost:8080/api/healthz
+curl http://127.0.0.1:8080/api/healthz
 ```
 
 Run migrations manually:

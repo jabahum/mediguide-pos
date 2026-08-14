@@ -16,6 +16,7 @@ import {
 
 import { consultantService } from "@/services/consultant.service"
 import { showToast } from "@/lib/toast"
+import { withDashboardBasePath } from "@/lib/dashboard-path"
 import { RowAction, BulkAction } from "@/types/data-table"
 import { Consultant } from "./columns"
 
@@ -102,7 +103,7 @@ export const createConsultantRowActions = (navigate: (path: string) => void): Ro
 // Backward compatibility - will be deprecated
 export const consultantRowActions: RowAction<Consultant>[] = createConsultantRowActions((path) => {
   // Fallback to window.location for components not yet updated
-  window.location.href = path
+  window.location.href = withDashboardBasePath(path)
 })
 
 // Bulk actions for multiple consultants - focused on administrative tasks

@@ -2,7 +2,16 @@
 .gitignore
 .next
 node_modules
+.env
+.env.*
 npm-debug.log
+*.log
+coverage
+tsconfig.tsbuildinfo
+**/*.test.ts
+**/*.test.tsx
+vitest.config.ts
+vitest.setup.ts
 Dockerfile
 README.md
 package-lock.json

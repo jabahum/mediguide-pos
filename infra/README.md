@@ -65,14 +65,19 @@ make guidelines-logs
 
 Default local endpoints:
 
-| Service | URL |
-|---|---|
-| Guidelines Platform | <http://localhost:5173> |
-| Dashboard | <http://localhost:3000> |
-| API | <http://localhost:8080> |
-| MinIO | <http://localhost:9000> |
-| MinIO console | <http://localhost:9001> |
-| PostgreSQL | `localhost:5433` |
+| Service | Host binding | Container port |
+|---|---:|---:|
+| Guidelines Platform | `127.0.0.1:5173` | `8080` |
+| Dashboard | `127.0.0.1:3000` | `3000` |
+| API | `127.0.0.1:8080` | `8080` |
+| MinIO | `127.0.0.1:9000` | `9000` |
+| MinIO console | `127.0.0.1:9001` | `9001` |
+| PostgreSQL | `127.0.0.1:5433` | `5432` |
+
+Redis (`6379`), Ollama (`11434`), the AI HTTP API (`8090`), and AI gRPC
+(`50051`) are private Compose-network ports in both environments. Development
+data ports use `DEV_DATA_BIND_ADDRESS`; keep it on loopback unless a deliberate,
+firewalled remote-development setup requires otherwise.
 
 `make down` preserves named data volumes. Use `make reset` only when the local
 PostgreSQL, MinIO, Ollama, and frontend dependency volumes should be deleted.
@@ -93,22 +98,84 @@ make prod-up
 make prod-ps
 ```
 
-The production stack does not publish PostgreSQL or MinIO directly to the host.
-The API, dashboard, and guidelines ports remain configurable for connection to
-the deployment's reverse proxy.
+The production stack publishes only API `8080`, dashboard `3000`, and
+guidelines `5000`, all on `127.0.0.1` by default. PostgreSQL, Redis, MinIO,
+Ollama, AI HTTP, and AI gRPC are reachable only inside the Compose network.
+Place a same-host TLS reverse proxy in front of the three loopback listeners.
+The supported single-domain layout is `/` for Guidelines, `/admin` for the
+dashboard, and `/api` for the backend. Start from
+[`nginx/mediguide.conf.example`](nginx/mediguide.conf.example). The dashboard
+image must be built with `NEXT_PUBLIC_DASHBOARD_BASE_PATH=/admin`, and Nginx
+must preserve—not strip—the `/admin` prefix.
 
-Set `PUBLIC_API_BASE_URL` to the browser-reachable production API and include
-the public Guidelines hostname in `ALLOWED_ORIGINS`. The Guidelines startup
+| Public route | Loopback upstream | Service |
+|---|---|---|
+| `/` | `127.0.0.1:5000` | Guidelines UI |
+| `/admin` and `/admin/*` | `127.0.0.1:3000` | Dashboard |
+| `/api` and `/api/*` | `127.0.0.1:8080` | Backend API |
+
+On an Nginx host, install and verify the example after replacing its hostname
+and TLS certificate paths:
+
+```bash
+sudo install -m 0644 \
+  /opt/mediguide/infra/nginx/mediguide.conf.example \
+  /etc/nginx/conf.d/mediguide.conf
+sudoedit /etc/nginx/conf.d/mediguide.conf
+sudo nginx -t
+sudo systemctl reload nginx
+
+curl --fail https://mediguide.example.org/healthz
+curl --fail https://mediguide.example.org/admin
+curl --fail https://mediguide.example.org/api/readyz
+```
+Do not change `PUBLIC_BIND_ADDRESS` to `0.0.0.0` without an explicit firewall,
+TLS, and access-control review. A reverse proxy running in another Compose
+project should instead share an intentionally managed Docker network.
+
+CI runs `infra/check-production-ports.py` against the rendered production
+definition and fails if a data or worker service is published, a public service
+targets the wrong container port, or a listener is not bound to loopback.
+
+For the single-domain layout, set `PUBLIC_API_BASE_URL` to the HTTPS origin
+without an `/api` suffix, `DASHBOARD_PUBLIC_URL` to the same origin plus
+`/admin`, and `ALLOWED_ORIGINS` to the origin only. The Guidelines startup
 script injects `MEDIGUIDE_API_URL` at runtime, so an immutable image can move
 between environments without a rebuild. No token or secret belongs in public
 frontend configuration.
 
-`make prod-up` pulls the configured first-party images from GHCR before
-starting the stack with builds disabled. To pull without starting:
+`make prod-up` pulls the configured images, applies migrations through the
+production API image, and starts the stack with builds disabled while waiting
+for health checks. `make prod-migrate` runs only the migration job. To pull
+without starting:
 
 ```bash
 make prod-pull
 ```
+
+## Automated production deployment
+
+Every `v*` release tag deploys automatically only after the platform quality
+gate has passed, all four immutable GHCR images have been published, and their
+release tags have been verified. The same release can be redeployed through the
+`Deploy production` workflow's manual dispatch.
+
+The workflow checks out the requested immutable tag, builds a restricted bundle
+containing this `infra` directory and the production environment secret,
+transfers it over verified SSH, and atomically replaces the server's previous
+infra directory. The remote
+script validates Compose before mutation, removes the existing `mediguide`
+Compose containers without deleting named volumes, removes only the previous
+first-party MediGuide images, pulls the immutable release images, applies
+migrations, starts the stack, and waits up to ten minutes for Compose health
+checks. It never runs a global container or image prune and never removes
+PostgreSQL, MinIO, or Ollama volumes.
+
+Configure the `production` GitHub Environment with approval protection and the
+secrets documented in [`../docs/release-process.md`](../docs/release-process.md).
+The production host needs Bash, tar, Docker Engine, Docker Compose v2, and a
+deployment user with Docker access. `<DEPLOY_PATH>/infra.previous` retains the
+immediately preceding deployment configuration for an operator-led rollback.
 
 ## Container image publishing
 
@@ -127,10 +194,19 @@ publish `main`, `sha-<commit>`, and `latest` tags. Tags matching `v*` publish
 semantic-version tags such as `1.2.3`, `1.2`, and `1`.
 
 Publishing uses the workflow's `GITHUB_TOKEN`; no registry password is needed.
-Set the repository Actions variable `PUBLIC_API_BASE_URL` to the production API
-URL embedded in dashboard builds. After the first publish, configure package
+Set the repository Actions variable `PUBLIC_API_BASE_URL` to the production
+origin and `DASHBOARD_BASE_PATH` to `/admin`; both are embedded in dashboard
+builds. After the first publish, configure package
 visibility in GitHub and place the desired immutable version or SHA tags in
 `infra/production.env`.
+
+Production Dockerfiles use explicit build targets and non-root runtime users.
+The API, dashboard, AI worker, and guidelines containers run with read-only root
+filesystems, dropped Linux capabilities, `no-new-privileges`, and bounded
+temporary filesystems. Language/runtime bases and third-party Compose images
+are pinned to exact release tags. Update those pins through a reviewed change,
+rebuild all images, and repeat Compose and health validation; do not introduce
+mutable `latest` tags into an immutable release environment.
 
 Public GHCR packages can be pulled anonymously. Before deploying private
 packages, authenticate the production host with a token that has
@@ -146,7 +222,7 @@ printf '%s' "$GHCR_TOKEN" | docker login ghcr.io \
 Production exposes a dedicated endpoint:
 
 ```bash
-curl --fail http://localhost:8081/healthz
+curl --fail http://localhost:5000/healthz
 ```
 
 The Nginx service provides immutable asset caching, no-cache HTML and runtime

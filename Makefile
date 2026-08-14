@@ -24,7 +24,8 @@ help:
 		"  logs             Tail development stack logs" \
 		"  guidelines-logs  Tail the integrated guidelines service" \
 		"  config           Render the merged development configuration" \
-		"  prod-up          Pull and start the published production images" \
+		"  prod-up          Pull, migrate, and start production with health waiting" \
+		"  prod-migrate     Apply migrations with the configured production API image" \
 		"  prod-down        Stop the production stack and preserve data" \
 		"  prod-build       Build production images" \
 		"  prod-pull        Pull production images" \
@@ -88,7 +89,12 @@ guidelines-logs:
 .PHONY: prod-up
 prod-up: production-env-check
 	$(PRODUCTION_COMPOSE) pull
-	$(PRODUCTION_COMPOSE) up --no-build -d
+	$(PRODUCTION_COMPOSE) run --rm api /app/migrate up
+	$(PRODUCTION_COMPOSE) up --no-build -d --wait --wait-timeout 600
+
+.PHONY: prod-migrate
+prod-migrate: production-env-check
+	$(PRODUCTION_COMPOSE) run --rm api /app/migrate up
 
 .PHONY: prod-down
 prod-down: production-env-check

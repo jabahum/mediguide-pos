@@ -1,0 +1,13 @@
+.git
+.gitignore
+.env
+.env.*
+!.env.example
+.DS_Store
+*.log
+coverage/
+tmp/
+bin/
+Dockerfile.import
+README.md
+**/*_test.go

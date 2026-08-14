@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1.7
 
-FROM node:22.18-alpine AS dependencies
+FROM node:22.18.0-alpine3.22 AS dependencies
 
 WORKDIR /app
 COPY guidelines-platform/package.json guidelines-platform/package-lock.json ./
@@ -12,7 +12,7 @@ FROM dependencies AS build
 COPY guidelines-platform/ ./
 RUN npm run build
 
-FROM nginxinc/nginx-unprivileged:1.27-alpine AS runtime
+FROM nginxinc/nginx-unprivileged:1.29.4-alpine AS runtime
 
 ARG BUILD_VERSION=development
 ARG BUILD_REVISION=unknown
@@ -27,7 +27,8 @@ COPY guidelines-platform/docker/runtime-config.js.template /etc/clinical-guideli
 COPY --chmod=755 guidelines-platform/docker/40-runtime-config.sh /docker-entrypoint.d/40-runtime-config.sh
 COPY --from=build /app/dist /usr/share/nginx/html
 
-ENV MEDIGUIDE_POS_URL=http://localhost:3000
+ENV MEDIGUIDE_POS_URL=http://localhost:3000 \
+    MEDIGUIDE_API_URL=http://localhost:8080
 
 EXPOSE 8080
 

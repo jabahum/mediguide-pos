@@ -13,6 +13,7 @@ import {
 
 import { usersService } from "@/services/user-management.service"
 import { showToast } from "@/lib/toast"
+import { withDashboardBasePath } from "@/lib/dashboard-path"
 import { RowAction, BulkAction } from "@/types/data-table"
 import { User as UserType } from "./columns"
 
@@ -87,7 +88,7 @@ export const createUserRowActions = (navigate: (path: string) => void): RowActio
 // Backward compatibility - will be deprecated
 export const userRowActions: RowAction<UserType>[] = createUserRowActions((path) => {
   // Fallback to window.location for components not yet updated
-  window.location.href = path
+  window.location.href = withDashboardBasePath(path)
 })
 
 // Bulk actions for multiple users - focused on administrative tasks

@@ -17,4 +17,7 @@ guidelines-docs
 .vscode/
 *.g.dart
 *.freezed.dart
+__pycache__/
+*.pyc
 infra/production.env
+infra/release.env

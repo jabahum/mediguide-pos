@@ -6,6 +6,7 @@ import { ExternalLink } from "lucide-react"
 import { DataTableColumnHeader } from "@/components/ui/datatable-column-header"
 import { ExtendedColumnDef } from "@/types/data-table"
 import { AuthoritiesWithOwnershipType } from "@/types/expanded"
+import { withDashboardBasePath } from "@/lib/dashboard-path"
 
 export const authoritiesColumns: ExtendedColumnDef<AuthoritiesWithOwnershipType>[] = [
   {
@@ -85,7 +86,7 @@ export const authoritiesColumns: ExtendedColumnDef<AuthoritiesWithOwnershipType>
           className="h-auto p-0 text-left justify-start"
           onClick={(e) => {
             e.stopPropagation()
-            window.location.href = `/health-facilities/ownership-types/${ownershipType.id}`
+            window.location.href = withDashboardBasePath(`/health-facilities/ownership-types/${ownershipType.id}`)
           }}
         >
           <Badge variant={getVariant(ownershipType.code)} className="text-xs">

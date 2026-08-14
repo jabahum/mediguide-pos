@@ -6,6 +6,7 @@ import { ExternalLink } from "lucide-react"
 import { DataTableColumnHeader } from "@/components/ui/datatable-column-header"
 import { SubcountiesWithExpanded } from "@/types/expanded"
 import { ExtendedColumnDef } from "@/types/data-table"
+import { withDashboardBasePath } from "@/lib/dashboard-path"
 
 export const subcountiesColumns: ExtendedColumnDef<SubcountiesWithExpanded>[] = [
   {
@@ -55,7 +56,7 @@ export const subcountiesColumns: ExtendedColumnDef<SubcountiesWithExpanded>[] = 
           className="h-auto p-0 text-left justify-start"
           onClick={(e) => {
             e.stopPropagation()
-            window.location.href = `/health-facilities/counties/${county.id}`
+            window.location.href = withDashboardBasePath(`/health-facilities/counties/${county.id}`)
           }}
         >
           {county.name}
@@ -95,7 +96,7 @@ export const subcountiesColumns: ExtendedColumnDef<SubcountiesWithExpanded>[] = 
           className="h-auto p-0 text-left justify-start"
           onClick={(e) => {
             e.stopPropagation()
-            window.location.href = `/health-facilities/districts/${district.id}`
+            window.location.href = withDashboardBasePath(`/health-facilities/districts/${district.id}`)
           }}
         >
           {district.name}

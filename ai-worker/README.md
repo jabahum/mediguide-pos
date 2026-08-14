@@ -76,8 +76,12 @@ pytest
 From the repo root:
 
 ```bash
-docker compose -f backend/docker-compose.yml -f ai-worker/docker-compose.override.yml up --build
+make up
+make ps
 ```
+
+The AI HTTP (`8090`) and gRPC (`50051`) ports remain internal to the Compose
+network. Infrastructure and host-port ownership live only in `infra`.
 
 ## Integration with Go backend
 

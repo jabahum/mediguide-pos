@@ -1,0 +1,195 @@
+name: Deploy production
+
+on:
+  workflow_call:
+    inputs:
+      release_tag:
+        description: Existing immutable release tag to deploy
+        required: true
+        type: string
+      revision:
+        description: Full Git revision associated with the release tag
+        required: true
+        type: string
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: Existing immutable release tag to deploy, for example v2.0.18
+        required: true
+        type: string
+      revision:
+        description: Optional full Git SHA; defaults to the tag commit
+        required: false
+        type: string
+
+permissions:
+  contents: read
+  packages: read
+
+concurrency:
+  group: mediguide-production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Replace production stack
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    environment: production
+
+    steps:
+      - name: Check out immutable release
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.release_tag }}
+
+      - name: Validate release inputs
+        id: release
+        env:
+          RELEASE_TAG: ${{ inputs.release_tag }}
+          REQUESTED_REVISION: ${{ inputs.revision }}
+          GHCR_OWNER_INPUT: ${{ github.repository_owner }}
+        run: |
+          set -euo pipefail
+          bash scripts/check-release-readiness.sh "${RELEASE_TAG}" --metadata-only
+          actual_revision="$(git rev-parse HEAD)"
+          if [ -n "${REQUESTED_REVISION}" ] && [ "${REQUESTED_REVISION}" != "${actual_revision}" ]; then
+            echo "Requested revision does not match ${RELEASE_TAG}." >&2
+            exit 1
+          fi
+          owner="$(printf '%s' "${GHCR_OWNER_INPUT}" | tr '[:upper:]' '[:lower:]')"
+          {
+            echo "version=${RELEASE_TAG#v}"
+            echo "revision=${actual_revision}"
+            echo "owner=${owner}"
+          } >> "${GITHUB_OUTPUT}"
+
+      - name: Validate deployment secrets
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
+          DEPLOY_SSH_PRIVATE_KEY: ${{ secrets.DEPLOY_SSH_PRIVATE_KEY }}
+          DEPLOY_KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+          PRODUCTION_ENV_FILE: ${{ secrets.PRODUCTION_ENV_FILE }}
+        run: |
+          set -euo pipefail
+          for name in \
+            DEPLOY_HOST DEPLOY_PORT DEPLOY_USER DEPLOY_PATH \
+            DEPLOY_SSH_PRIVATE_KEY DEPLOY_KNOWN_HOSTS PRODUCTION_ENV_FILE; do
+            if [ -z "${!name:-}" ]; then
+              echo "Required GitHub secret ${name} is missing." >&2
+              exit 1
+            fi
+          done
+          [[ "${DEPLOY_HOST}" =~ ^[A-Za-z0-9.-]+$ ]] || { echo "DEPLOY_HOST is invalid." >&2; exit 1; }
+          [[ "${DEPLOY_PORT}" =~ ^[0-9]{1,5}$ ]] || { echo "DEPLOY_PORT is invalid." >&2; exit 1; }
+          (( 10#${DEPLOY_PORT} >= 1 && 10#${DEPLOY_PORT} <= 65535 )) || { echo "DEPLOY_PORT is out of range." >&2; exit 1; }
+          [[ "${DEPLOY_USER}" =~ ^[A-Za-z_][A-Za-z0-9_-]*$ ]] || { echo "DEPLOY_USER is invalid." >&2; exit 1; }
+          [[ "${DEPLOY_PATH}" =~ ^/[A-Za-z0-9._/-]+$ ]] || { echo "DEPLOY_PATH must be a safe absolute path." >&2; exit 1; }
+          [[ "${DEPLOY_PATH}" != "/" && "${DEPLOY_PATH}" != *"/../"* && "${DEPLOY_PATH}" != *"/.." && "${DEPLOY_PATH}" != *"/./"* && "${DEPLOY_PATH}" != *"/." ]] || {
+            echo "DEPLOY_PATH cannot be root or contain relative path components." >&2
+            exit 1
+          }
+
+      - name: Prepare deployment bundle
+        env:
+          PRODUCTION_ENV_FILE: ${{ secrets.PRODUCTION_ENV_FILE }}
+        run: |
+          set -euo pipefail
+          umask 077
+          printf '%s\n' "${PRODUCTION_ENV_FILE}" > infra/production.env
+          tar -czf "${RUNNER_TEMP}/mediguide-infra.tar.gz" infra
+
+      - name: Configure verified SSH access
+        env:
+          DEPLOY_SSH_PRIVATE_KEY: ${{ secrets.DEPLOY_SSH_PRIVATE_KEY }}
+          DEPLOY_KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+        run: |
+          set -euo pipefail
+          umask 077
+          mkdir -p "${HOME}/.ssh"
+          printf '%s\n' "${DEPLOY_SSH_PRIVATE_KEY}" > "${HOME}/.ssh/mediguide_deploy"
+          printf '%s\n' "${DEPLOY_KNOWN_HOSTS}" > "${HOME}/.ssh/known_hosts"
+
+      - name: Copy infra and deploy immutable images
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
+          GHCR_TOKEN: ${{ github.token }}
+          GHCR_USERNAME: ${{ github.actor }}
+          RELEASE_VERSION: ${{ steps.release.outputs.version }}
+          RELEASE_REVISION: ${{ steps.release.outputs.revision }}
+          GHCR_OWNER: ${{ steps.release.outputs.owner }}
+        run: |
+          set -euo pipefail
+          [[ "${GHCR_USERNAME}" =~ ^[A-Za-z0-9-]+$ ]] || { echo "GitHub actor is invalid for registry login." >&2; exit 1; }
+          ssh_key="${HOME}/.ssh/mediguide_deploy"
+          target="${DEPLOY_USER}@${DEPLOY_HOST}"
+          remote_stage="${DEPLOY_PATH}/.deploy-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          ssh_options=(
+            -i "${ssh_key}"
+            -p "${DEPLOY_PORT}"
+            -o BatchMode=yes
+            -o IdentitiesOnly=yes
+            -o StrictHostKeyChecking=yes
+          )
+
+          ssh "${ssh_options[@]}" "${target}" \
+            "mkdir -p '${DEPLOY_PATH}' '${remote_stage}/docker-config'"
+          scp -i "${ssh_key}" -P "${DEPLOY_PORT}" \
+            -o BatchMode=yes -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes \
+            "${RUNNER_TEMP}/mediguide-infra.tar.gz" \
+            "${target}:${remote_stage}/infra.tar.gz"
+
+          printf '%s' "${GHCR_TOKEN}" | ssh "${ssh_options[@]}" "${target}" \
+            "DOCKER_CONFIG='${remote_stage}/docker-config' docker login ghcr.io --username '${GHCR_USERNAME}' --password-stdin"
+
+          ssh "${ssh_options[@]}" "${target}" bash -s -- \
+            "${DEPLOY_PATH}" "${remote_stage}" "${RELEASE_VERSION}" \
+            "${RELEASE_REVISION}" "${GHCR_OWNER}" <<'REMOTE'
+          set -Eeuo pipefail
+          deploy_path="$1"
+          remote_stage="$2"
+          release_version="$3"
+          release_revision="$4"
+          ghcr_owner="$5"
+
+          [[ "${deploy_path}" =~ ^/[A-Za-z0-9._/-]+$ ]] || { echo "Unsafe deployment path." >&2; exit 1; }
+          [[ "${deploy_path}" != "/" && "${deploy_path}" != *"/../"* && "${deploy_path}" != *"/.." && "${deploy_path}" != *"/./"* && "${deploy_path}" != *"/." ]] || {
+            echo "Unsafe deployment path components." >&2
+            exit 1
+          }
+
+          case "${remote_stage}" in
+            "${deploy_path}"/.deploy-*) ;;
+            *) echo "Unsafe remote staging path." >&2; exit 1 ;;
+          esac
+
+          cleanup() {
+            rm -rf -- "${remote_stage}"
+          }
+          trap cleanup EXIT
+
+          extracted="${remote_stage}/extracted"
+          mkdir -p "${extracted}"
+          tar -xzf "${remote_stage}/infra.tar.gz" -C "${extracted}"
+          test -f "${extracted}/infra/docker-compose.yml"
+          test -f "${extracted}/infra/deploy-production.sh"
+          test -s "${extracted}/infra/production.env"
+
+          previous="${deploy_path}/infra.previous"
+          rm -rf -- "${previous}"
+          if [ -d "${deploy_path}/infra" ]; then
+            mv "${deploy_path}/infra" "${previous}"
+          fi
+          mv "${extracted}/infra" "${deploy_path}/infra"
+          chmod 600 "${deploy_path}/infra/production.env"
+
+          export DOCKER_CONFIG="${remote_stage}/docker-config"
+          bash "${deploy_path}/infra/deploy-production.sh" \
+            "${release_version}" "${release_revision}" "${ghcr_owner}"
+          REMOTE

@@ -13,6 +13,7 @@ import {
 } from "lucide-react"
 
 import { showToast } from "@/lib/toast"
+import { withDashboardBasePath } from "@/lib/dashboard-path"
 import { RowAction, BulkAction } from "@/types/data-table"
 import { HealthFacility } from "./columns"
 import { healthFacilitiesService } from "@/services/health-facilities.service"
@@ -101,7 +102,7 @@ export const createFacilityRowActions = (navigate: (path: string) => void): RowA
 // Backward compatibility - will be deprecated
 export const facilityRowActions: RowAction<HealthFacility>[] = createFacilityRowActions((path) => {
   // Fallback to window.location for components not yet updated
-  window.location.href = path
+  window.location.href = withDashboardBasePath(path)
 })
 
 // Bulk actions for multiple facilities

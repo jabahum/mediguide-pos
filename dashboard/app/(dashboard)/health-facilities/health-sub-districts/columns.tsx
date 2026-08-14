@@ -6,6 +6,7 @@ import { ExternalLink } from "lucide-react"
 import { DataTableColumnHeader } from "@/components/ui/datatable-column-header"
 import { ExtendedColumnDef } from "@/types/data-table"
 import { HealthSubDistrictsWithDistrict } from "@/types/expanded"
+import { withDashboardBasePath } from "@/lib/dashboard-path"
 
 export const healthSubDistrictsColumns: ExtendedColumnDef<HealthSubDistrictsWithDistrict>[] = [
   {
@@ -42,7 +43,7 @@ export const healthSubDistrictsColumns: ExtendedColumnDef<HealthSubDistrictsWith
           className="h-auto p-0 text-left justify-start"
           onClick={(e) => {
             e.stopPropagation()
-            window.location.href = `/health-facilities/districts/${district.id}`
+            window.location.href = withDashboardBasePath(`/health-facilities/districts/${district.id}`)
           }}
         >
           {district.name}

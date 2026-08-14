@@ -1,4 +1,4 @@
-FROM golang:1.25-alpine AS build
+FROM golang:1.25.7-alpine3.23 AS build
 WORKDIR /src
 RUN apk add --no-cache git ca-certificates
 COPY go.mod go.sum* ./
@@ -6,8 +6,11 @@ RUN go mod download
 COPY . .
 RUN CGO_ENABLED=0 GOOS=linux go build -o /out/import-pocketbase ./cmd/importpb
 
-FROM alpine:3.20
+FROM alpine:3.23
 WORKDIR /app
-RUN apk add --no-cache ca-certificates tzdata
-COPY --from=build /out/import-pocketbase /app/import-pocketbase
+RUN apk add --no-cache ca-certificates tzdata && \
+    addgroup -S -g 10001 mediguide && \
+    adduser -S -D -H -u 10001 -G mediguide mediguide
+COPY --from=build --chown=mediguide:mediguide /out/import-pocketbase /app/import-pocketbase
+USER 10001:10001
 ENTRYPOINT ["/app/import-pocketbase"]

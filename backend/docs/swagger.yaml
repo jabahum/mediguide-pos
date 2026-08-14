@@ -5852,7 +5852,7 @@ info:
     name: Proprietary
   termsOfService: https://mediguide.local/terms
   title: MediGuide Backend API
-  version: 2.0.17
+  version: 2.0.18
 paths:
   /api/public/guidelines:
     get:

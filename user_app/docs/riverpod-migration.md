@@ -71,10 +71,14 @@ widget state without a nested imperative navigator.
 ## Typed model boundary
 
 Application and request models use `freezed_annotation` and
-`json_annotation`; generated `*.freezed.dart` and `*.g.dart` files are checked
-in and must only be changed through `build_runner`. Repositories deserialize
-each v2 endpoint directly into its domain model and return
-`PaginatedResponse<T>` for paginated data.
+`json_annotation`. Generated `*.g.dart` and `*.freezed.dart` files are build
+outputs and must never be committed. Local development generates them with
+`dart run build_runner build
+--delete-conflicting-outputs`. Every CI packaging job runs the same generation
+step before compiling Android, Web, iOS, or macOS, so ignored generated sources
+remain available to the application bundle. Repositories deserialize each v2
+endpoint directly into its domain model and return `PaginatedResponse<T>` for
+paginated data.
 
 The former `ApiRecord`, `BaseModel`, dynamic model registry, relationship
 expansion helpers, and record-based constructors have been removed. New code

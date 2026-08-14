@@ -42,8 +42,6 @@ migrate_working_dir/
 # Generated files
 *.g.dart
 *.freezed.dart
-!lib/**/*.g.dart
-!lib/**/*.freezed.dart
 
 # Symbolication related
 app.*.symbols

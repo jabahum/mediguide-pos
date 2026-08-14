@@ -62,6 +62,13 @@ assert_version "backend Swagger source" "$(sed -n 's|^// @version[[:space:]]*||p
 assert_version "backend generated Swagger JSON" "$(json_version "${repository_root}/backend/docs/swagger.json")"
 assert_version "backend generated Swagger YAML" "$(sed -n 's/^  version:[[:space:]]*"\{0,1\}\([^"[:space:]]*\)"\{0,1\}.*/\1/p' "${repository_root}/backend/docs/swagger.yaml" | head -n 1)"
 
+tracked_generated_dart_files="$(git -C "${repository_root}" ls-files '*.g.dart' '*.freezed.dart')"
+if [[ -n "${tracked_generated_dart_files}" ]]; then
+  echo "Generated *.g.dart and *.freezed.dart files must not be committed:" >&2
+  printf '%s\n' "${tracked_generated_dart_files}" >&2
+  exit 1
+fi
+
 echo "Release metadata is consistent: ${release_tag} / mobile ${mobile_version} / all services ${platform_version}."
 
 if [[ "${mode}" == "--metadata-only" ]]; then

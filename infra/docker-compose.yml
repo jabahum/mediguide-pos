@@ -84,6 +84,7 @@ services:
       AI_WORKER_URL: http://ai-worker:8090
       AI_WORKER_GRPC_ADDR: ai-worker:50051
       AI_WORKER_TIMEOUT_SECONDS: ${AI_WORKER_TIMEOUT_SECONDS:-120}
+      DEFAULT_ADMIN_NAME: "${DEFAULT_ADMIN_NAME:-MediGuide Administrator}"
       DEFAULT_ADMIN_EMAIL: "${DEFAULT_ADMIN_EMAIL:-admin@mediguide.local}"
       DEFAULT_ADMIN_PASSWORD: "${DEFAULT_ADMIN_PASSWORD:-Admin123!}"
       ALLOWED_ORIGINS: "${ALLOWED_ORIGINS:-http://localhost:3000,http://localhost:5000,http://localhost:5173}"

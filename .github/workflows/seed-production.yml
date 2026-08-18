@@ -1,0 +1,93 @@
+name: Seed production
+
+on:
+  workflow_dispatch:
+    inputs:
+      scope:
+        description: Production-safe seed scope
+        required: true
+        type: choice
+        options:
+          - admin
+          - facilities
+      reset_admin_password:
+        description: Reset an existing admin password and revoke its sessions
+        required: true
+        default: false
+        type: boolean
+      confirmation:
+        description: Type SEED_PRODUCTION
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mediguide-production
+  cancel-in-progress: false
+
+jobs:
+  seed:
+    name: Seed ${{ inputs.scope }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    environment: production
+
+    steps:
+      - name: Validate request and deployment secrets
+        env:
+          SCOPE: ${{ inputs.scope }}
+          RESET_ADMIN_PASSWORD: ${{ inputs.reset_admin_password }}
+          CONFIRMATION: ${{ inputs.confirmation }}
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
+          DEPLOY_SSH_PRIVATE_KEY: ${{ secrets.DEPLOY_SSH_PRIVATE_KEY }}
+          DEPLOY_KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+        run: |
+          set -euo pipefail
+          [[ "${SCOPE}" == "admin" || "${SCOPE}" == "facilities" ]] || { echo "Unsupported seed scope." >&2; exit 1; }
+          [[ "${CONFIRMATION}" == "SEED_PRODUCTION" ]] || { echo "Confirmation must be SEED_PRODUCTION." >&2; exit 1; }
+          if [[ "${SCOPE}" != "admin" && "${RESET_ADMIN_PASSWORD}" == "true" ]]; then
+            echo "Password reset is valid only for the admin scope." >&2
+            exit 1
+          fi
+          for name in DEPLOY_HOST DEPLOY_PORT DEPLOY_USER DEPLOY_PATH DEPLOY_SSH_PRIVATE_KEY DEPLOY_KNOWN_HOSTS; do
+            [[ -n "${!name:-}" ]] || { echo "Required production secret ${name} is missing." >&2; exit 1; }
+          done
+          [[ "${DEPLOY_HOST}" =~ ^[A-Za-z0-9.-]+$ ]]
+          [[ "${DEPLOY_PORT}" =~ ^[0-9]{1,5}$ ]]
+          [[ "${DEPLOY_USER}" =~ ^[A-Za-z_][A-Za-z0-9_-]*$ ]]
+          [[ "${DEPLOY_PATH}" =~ ^/[A-Za-z0-9._/-]+$ ]]
+          [[ "${DEPLOY_PATH}" != "/" && "${DEPLOY_PATH}" != *"/../"* && "${DEPLOY_PATH}" != *"/.." ]]
+
+      - name: Configure verified SSH access
+        env:
+          DEPLOY_SSH_PRIVATE_KEY: ${{ secrets.DEPLOY_SSH_PRIVATE_KEY }}
+          DEPLOY_KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+        run: |
+          set -euo pipefail
+          umask 077
+          mkdir -p "${HOME}/.ssh"
+          printf '%s\n' "${DEPLOY_SSH_PRIVATE_KEY}" > "${HOME}/.ssh/mediguide_deploy"
+          printf '%s\n' "${DEPLOY_KNOWN_HOSTS}" > "${HOME}/.ssh/known_hosts"
+
+      - name: Back up and seed production
+        env:
+          SCOPE: ${{ inputs.scope }}
+          RESET_ADMIN_PASSWORD: ${{ inputs.reset_admin_password }}
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
+        run: |
+          set -euo pipefail
+          ssh_key="${HOME}/.ssh/mediguide_deploy"
+          target="${DEPLOY_USER}@${DEPLOY_HOST}"
+          ssh -i "${ssh_key}" -p "${DEPLOY_PORT}" \
+            -o BatchMode=yes -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes \
+            -o ServerAliveInterval=30 -o ServerAliveCountMax=20 \
+            "${target}" \
+            "CONFIRM_PRODUCTION_SEED=SEED_PRODUCTION bash '${DEPLOY_PATH}/infra/seed-production.sh' '${SCOPE}' '${RESET_ADMIN_PASSWORD}'"

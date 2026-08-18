@@ -21,3 +21,4 @@ __pycache__/
 *.pyc
 infra/production.env
 infra/release.env
+infra/backups/

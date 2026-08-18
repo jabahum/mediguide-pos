@@ -150,7 +150,7 @@ GUIDELINES_PUBLIC_PORT=5000
 typed `/api/v2/...` routes. CORS origins must never contain a path.
 
 Deployment succeeds only after Compose health checks and browser-visible
-checks for `/healthz`, `/admin`, and `/api/readyz` all pass. The queue-only AI
+checks for `/healthz`, `/admin/login`, and `/api/readyz` all pass. The queue-only AI
 worker uses a process-liveness probe; it does not use the HTTP health endpoint
 exposed by the separate AI HTTP service.
 
@@ -397,6 +397,52 @@ Perform smoke tests for login/session refresh, a public guideline, dashboard
 CRUD, PDF/Markdown reading, AI retrieval, object upload, background ingestion,
 and one signed Android installation. Confirm that the deployed image digests
 match those inspected in GHCR.
+
+## Bootstrap a production administrator
+
+The general `/app/seed` command contains development fixtures and is blocked
+when `APP_ENV=production`. Production supports only the explicit `admin` and
+`facilities` scopes. Configure these values inside the `PRODUCTION_ENV_FILE`
+GitHub environment secret before deploying:
+
+```dotenv
+DEFAULT_ADMIN_NAME=MediGuide Administrator
+DEFAULT_ADMIN_EMAIL=admin@mediguide.example.org
+DEFAULT_ADMIN_PASSWORD=replace-with-a-unique-strong-password
+```
+
+After deploying a release that contains the production seed workflow, create
+or promote the configured account with:
+
+```bash
+gh workflow run seed-production.yml \
+  --repo mohuganda/mediguide-pos \
+  --ref main \
+  -f scope=admin \
+  -f reset_admin_password=false \
+  -f confirmation=SEED_PRODUCTION
+```
+
+The operation first writes a timestamped PostgreSQL backup under
+`infra/backups/`. A new account receives the configured password and the
+system `admin` role. Re-running the command preserves an existing password.
+For deliberate account recovery, set `reset_admin_password=true`; this changes
+the password and revokes all active refresh sessions for that user.
+
+To import the idempotent Ministry of Health facility hierarchy and facility
+master file without any demo users or demo clinical content:
+
+```bash
+gh workflow run seed-production.yml \
+  --repo mohuganda/mediguide-pos \
+  --ref main \
+  -f scope=facilities \
+  -f reset_admin_password=false \
+  -f confirmation=SEED_PRODUCTION
+```
+
+Watch the operation with `gh run watch --repo mohuganda/mediguide-pos`. Never
+set `SEED_ALLOW_DEMO=true` in production.
 
 ## Rollback and incident handling
 

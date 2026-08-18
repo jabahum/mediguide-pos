@@ -4,11 +4,15 @@ import (
 	"context"
 	"encoding/csv"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"net/mail"
 	"os"
 	"path/filepath"
 	"sort"
 	"strings"
+	"time"
+	"unicode"
 
 	"mediguide/internal/config"
 	"mediguide/internal/db"
@@ -91,7 +95,33 @@ func main() {
 	if err != nil {
 		log.Fatal().Err(err).Msg("db connect failed")
 	}
-	if strings.EqualFold(strings.TrimSpace(os.Getenv("SEED_SCOPE")), "notifications") {
+
+	scope := strings.ToLower(strings.TrimSpace(os.Getenv("SEED_SCOPE")))
+	switch scope {
+	case "admin":
+		input, err := productionAdminInputFromEnv()
+		if err != nil {
+			log.Fatal().Err(err).Msg("invalid production admin configuration")
+		}
+		if err := database.Transaction(func(tx *gorm.DB) error {
+			return seedProductionAdmin(tx, input)
+		}); err != nil {
+			log.Fatal().Err(err).Msg("production admin seed failed")
+		}
+		log.Info().Str("email", input.Email).Msg("production admin seed completed")
+		return
+	case "facilities":
+		if err := database.Transaction(func(tx *gorm.DB) error {
+			return seedLegacyData(tx, nil, nil)
+		}); err != nil {
+			log.Fatal().Err(err).Msg("facility reference seed failed")
+		}
+		log.Info().Msg("facility reference seed completed")
+		return
+	case "notifications":
+		if strings.EqualFold(cfg.AppEnv, "production") {
+			log.Fatal().Msg("demo notification seeding is disabled in production")
+		}
 		var clinician models.User
 		if err := database.Where("email = ?", "clinician@mediguide.local").First(&clinician).Error; err != nil {
 			log.Fatal().Err(err).Msg("notification seed user lookup failed")
@@ -103,6 +133,12 @@ func main() {
 		}
 		log.Info().Msg("notification seed completed")
 		return
+	case "", "demo":
+		if strings.EqualFold(cfg.AppEnv, "production") && !strings.EqualFold(strings.TrimSpace(os.Getenv("SEED_ALLOW_DEMO")), "true") {
+			log.Fatal().Msg("demo seeding is disabled in production; use SEED_SCOPE=admin or SEED_SCOPE=facilities")
+		}
+	default:
+		log.Fatal().Str("scope", scope).Msg("unsupported seed scope")
 	}
 
 	admin, clinician, err := seedSecurity(database)
@@ -128,7 +164,65 @@ func main() {
 	log.Info().Msg("seed completed")
 }
 
-func seedSecurity(database *gorm.DB) (*models.User, *models.User, error) {
+type productionAdminInput struct {
+	Name          string
+	Email         string
+	Password      string
+	ResetPassword bool
+}
+
+func productionAdminInputFromEnv() (productionAdminInput, error) {
+	input := productionAdminInput{
+		Name:          strings.TrimSpace(os.Getenv("DEFAULT_ADMIN_NAME")),
+		Email:         strings.ToLower(strings.TrimSpace(os.Getenv("DEFAULT_ADMIN_EMAIL"))),
+		Password:      os.Getenv("DEFAULT_ADMIN_PASSWORD"),
+		ResetPassword: strings.EqualFold(strings.TrimSpace(os.Getenv("SEED_ADMIN_RESET_PASSWORD")), "true"),
+	}
+	if input.Name == "" {
+		input.Name = "MediGuide Administrator"
+	}
+	if input.Email == "" || input.Password == "" {
+		return productionAdminInput{}, fmt.Errorf("DEFAULT_ADMIN_EMAIL and DEFAULT_ADMIN_PASSWORD are required")
+	}
+	parsed, err := mail.ParseAddress(input.Email)
+	if err != nil || !strings.EqualFold(parsed.Address, input.Email) {
+		return productionAdminInput{}, fmt.Errorf("DEFAULT_ADMIN_EMAIL is invalid")
+	}
+	if err := validateBootstrapPassword(input.Password); err != nil {
+		return productionAdminInput{}, err
+	}
+	return input, nil
+}
+
+func validateBootstrapPassword(password string) error {
+	if len(password) < 12 {
+		return fmt.Errorf("DEFAULT_ADMIN_PASSWORD must contain at least 12 characters")
+	}
+	var upper, lower, digit, symbol bool
+	for _, character := range password {
+		switch {
+		case unicode.IsUpper(character):
+			upper = true
+		case unicode.IsLower(character):
+			lower = true
+		case unicode.IsDigit(character):
+			digit = true
+		case unicode.IsPunct(character) || unicode.IsSymbol(character):
+			symbol = true
+		}
+	}
+	if !upper || !lower || !digit || !symbol {
+		return fmt.Errorf("DEFAULT_ADMIN_PASSWORD must include uppercase, lowercase, numeric, and symbol characters")
+	}
+	return nil
+}
+
+type seedAuthorizationState struct {
+	AdminRole     models.Role
+	ClinicianRole models.Role
+}
+
+func seedAuthorization(database *gorm.DB) (seedAuthorizationState, error) {
 	permissions := []models.Permission{
 		{Code: "guideline.read", Name: "Read guidelines"},
 		{Code: "guideline.write", Name: "Create/update guidelines"},
@@ -149,7 +243,7 @@ func seedSecurity(database *gorm.DB) (*models.User, *models.User, error) {
 	}
 	for i := range permissions {
 		if err := database.Where(models.Permission{Code: permissions[i].Code}).Assign(permissions[i]).FirstOrCreate(&permissions[i]).Error; err != nil {
-			return nil, nil, err
+			return seedAuthorizationState{}, err
 		}
 	}
 	permissionByCode := make(map[string]models.Permission, len(permissions))
@@ -165,10 +259,10 @@ func seedSecurity(database *gorm.DB) (*models.User, *models.User, error) {
 		IsActive:    true,
 	})
 	if err != nil {
-		return nil, nil, err
+		return seedAuthorizationState{}, err
 	}
 	if err := database.Model(&adminRole).Association("Permissions").Replace(&permissions); err != nil {
-		return nil, nil, err
+		return seedAuthorizationState{}, err
 	}
 
 	clinicianRoleKey := "healthcare_provider"
@@ -179,7 +273,7 @@ func seedSecurity(database *gorm.DB) (*models.User, *models.User, error) {
 		IsActive:    true,
 	})
 	if err != nil {
-		return nil, nil, err
+		return seedAuthorizationState{}, err
 	}
 	clinicianPerms := []models.Permission{
 		permissions[0],
@@ -188,17 +282,80 @@ func seedSecurity(database *gorm.DB) (*models.User, *models.User, error) {
 		permissions[6],
 	}
 	if err := database.Model(&clinicianRole).Association("Permissions").Replace(&clinicianPerms); err != nil {
-		return nil, nil, err
+		return seedAuthorizationState{}, err
 	}
 	if err := syncImportedRolePermissions(database, permissionByCode); err != nil {
+		return seedAuthorizationState{}, err
+	}
+	return seedAuthorizationState{AdminRole: adminRole, ClinicianRole: clinicianRole}, nil
+}
+
+func seedProductionAdmin(database *gorm.DB, input productionAdminInput) error {
+	authorization, err := seedAuthorization(database)
+	if err != nil {
+		return err
+	}
+
+	var user models.User
+	err = database.Where("LOWER(email) = ?", input.Email).First(&user).Error
+	switch {
+	case errors.Is(err, gorm.ErrRecordNotFound):
+		hash, hashErr := security.HashPassword(input.Password)
+		if hashErr != nil {
+			return hashErr
+		}
+		user = models.User{
+			Name:         input.Name,
+			Email:        input.Email,
+			PasswordHash: hash,
+			IsActive:     true,
+			Verified:     true,
+			Status:       "active",
+		}
+		if err := database.Create(&user).Error; err != nil {
+			return err
+		}
+	case err != nil:
+		return err
+	default:
+		updates := map[string]any{"is_active": true, "verified": true, "status": "active"}
+		if strings.TrimSpace(user.Name) == "" {
+			updates["name"] = input.Name
+		}
+		if input.ResetPassword {
+			hash, hashErr := security.HashPassword(input.Password)
+			if hashErr != nil {
+				return hashErr
+			}
+			updates["password_hash"] = hash
+			now := time.Now().UTC()
+			if err := database.Model(&models.AuthSession{}).
+				Where("user_id = ? AND revoked_at IS NULL", user.ID).
+				Update("revoked_at", now).Error; err != nil {
+				return err
+			}
+		}
+		if err := database.Model(&user).Updates(updates).Error; err != nil {
+			return err
+		}
+	}
+
+	return database.Model(&user).Association("Roles").Append(&authorization.AdminRole)
+}
+
+func seedSecurity(database *gorm.DB) (*models.User, *models.User, error) {
+	authorization, err := seedAuthorization(database)
+	if err != nil {
 		return nil, nil, err
 	}
+	adminRole := authorization.AdminRole
+	clinicianRole := authorization.ClinicianRole
 
 	adminHash, err := security.HashPassword("Admin123!")
 	if err != nil {
 		return nil, nil, err
 	}
-	admin := models.User{Email: "admin@mediguide.local"}
+	admin := models.User{Email: "admin@mediguide.health.go.ug"}
 	if err := database.Where(models.User{Email: admin.Email}).Assign(models.User{
 		Name:         "MediGuide Admin",
 		Email:        admin.Email,
@@ -218,7 +375,7 @@ func seedSecurity(database *gorm.DB) (*models.User, *models.User, error) {
 	if err != nil {
 		return nil, nil, err
 	}
-	clinician := models.User{Email: "clinician@mediguide.local"}
+	clinician := models.User{Email: "clinician@mediguide.health.go.ug"}
 	preferredLanguage := "English"
 	organization := "Kampala Central Health Centre III"
 	specialization := "General Practice"
@@ -244,7 +401,7 @@ func seedSecurity(database *gorm.DB) (*models.User, *models.User, error) {
 	if err != nil {
 		return nil, nil, err
 	}
-	assistant := models.User{Email: "assistant@mediguide.local"}
+	assistant := models.User{Email: "assistant@mediguide.health.go.ug"}
 	assistantOrg := "MediGuide"
 	if err := database.Where(models.User{Email: assistant.Email}).Assign(models.User{
 		Name:         "MediGuide AI",

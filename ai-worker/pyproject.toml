@@ -1,6 +1,6 @@
 [project]
 name = "mediguide-ai-worker"
-version = "2.0.23"
+version = "2.0.24"
 description = "AI/document-processing worker for MediGuide"
 requires-python = ">=3.11"
 dependencies = [

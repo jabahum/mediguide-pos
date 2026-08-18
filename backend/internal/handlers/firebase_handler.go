@@ -18,10 +18,24 @@ import (
 
 type FirebaseHandler struct{ Service *services.FirebaseService }
 
+// Status godoc
+// @Summary Get Firebase integration status
+// @Tags firebase
+// @Security BearerAuth
+// @Success 200 {object} handlers.FirebaseStatusEnvelope
+// @Router /api/v2/firebase/status [get]
 func (h FirebaseHandler) Status(c *gin.Context) {
 	httpx.OK(c, gin.H{"enabled": h.Service != nil && h.Service.Enabled()})
 }
 
+// RegisterDevice godoc
+// @Summary Register or refresh the current user's mobile installation
+// @Tags firebase
+// @Security BearerAuth
+// @Param payload body services.FirebaseDeviceInput true "Firebase device registration"
+// @Success 201 {object} handlers.FirebaseDeviceEnvelope
+// @Failure 400 {object} handlers.ErrorResponse
+// @Router /api/v2/firebase/devices [post]
 func (h FirebaseHandler) RegisterDevice(c *gin.Context) {
 	var input services.FirebaseDeviceInput
 	if c.ShouldBindJSON(&input) != nil {
@@ -37,6 +51,14 @@ func (h FirebaseHandler) RegisterDevice(c *gin.Context) {
 	httpx.Created(c, device)
 }
 
+// DeleteDevice godoc
+// @Summary Remove one of the current user's Firebase installations
+// @Tags firebase
+// @Security BearerAuth
+// @Param id path string true "Firebase device UUID"
+// @Success 200 {object} handlers.DeletedEnvelope
+// @Failure 404 {object} handlers.ErrorResponse
+// @Router /api/v2/firebase/devices/{id} [delete]
 func (h FirebaseHandler) DeleteDevice(c *gin.Context) {
 	id, err := uuid.Parse(c.Param("id"))
 	if err != nil {
@@ -51,6 +73,14 @@ func (h FirebaseHandler) DeleteDevice(c *gin.Context) {
 	httpx.OK(c, gin.H{"deleted": true})
 }
 
+// SendTestPush godoc
+// @Summary Send or validate a Firebase push notification for a user
+// @Tags firebase-administration
+// @Security BearerAuth
+// @Param payload body services.FirebasePushInput true "Push notification"
+// @Success 200 {object} handlers.FirebasePushResultEnvelope
+// @Failure 503 {object} handlers.ErrorResponse
+// @Router /api/v2/firebase/push/test [post]
 func (h FirebaseHandler) SendTestPush(c *gin.Context) {
 	var input services.FirebasePushInput
 	if c.ShouldBindJSON(&input) != nil {
@@ -65,6 +95,13 @@ func (h FirebaseHandler) SendTestPush(c *gin.Context) {
 	httpx.OK(c, result)
 }
 
+// GetRemoteConfig godoc
+// @Summary Get the active Firebase Remote Config template
+// @Tags firebase-administration
+// @Security BearerAuth
+// @Success 200 {object} handlers.FirebaseRemoteConfigEnvelope
+// @Failure 503 {object} handlers.ErrorResponse
+// @Router /api/v2/firebase/remote-config [get]
 func (h FirebaseHandler) GetRemoteConfig(c *gin.Context) {
 	template, etag, err := h.Service.GetRemoteConfig(c.Request.Context())
 	if err != nil {
@@ -75,6 +112,15 @@ func (h FirebaseHandler) GetRemoteConfig(c *gin.Context) {
 	httpx.OK(c, gin.H{"template": json.RawMessage(template), "etag": etag})
 }
 
+// PutRemoteConfig godoc
+// @Summary Validate or publish a Firebase Remote Config template
+// @Tags firebase-administration
+// @Security BearerAuth
+// @Param If-Match header string true "Current Firebase template ETag"
+// @Param payload body handlers.FirebaseRemoteConfigUpdateRequest true "Remote Config update"
+// @Success 200 {object} handlers.FirebaseRemoteConfigEnvelope
+// @Failure 400 {object} handlers.ErrorResponse
+// @Router /api/v2/firebase/remote-config [put]
 func (h FirebaseHandler) PutRemoteConfig(c *gin.Context) {
 	etag := strings.TrimSpace(c.GetHeader("If-Match"))
 	var body struct {

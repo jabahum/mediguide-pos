@@ -41,12 +41,29 @@ final class MediGuideFirebaseService {
   StreamSubscription<RemoteMessage>? _foregroundSubscription;
   StreamSubscription<RemoteMessage>? _openedSubscription;
   VoidCallback? _authListener;
+  RemoteMessage? _initialMessage;
   bool _enabled = false;
 
   bool get enabled => _enabled;
-  Stream<RemoteMessage> get openedMessages => _openedMessages.stream;
+  Stream<RemoteMessage> get openedMessages async* {
+    final initial = _initialMessage;
+    _initialMessage = null;
+    if (initial != null) yield initial;
+    yield* _openedMessages.stream;
+  }
+
   FirebaseRemoteConfig? get remoteConfig =>
       _enabled ? FirebaseRemoteConfig.instance : null;
+  bool get aiAssistantEnabled =>
+      !_enabled || FirebaseRemoteConfig.instance.getBool('enable_ai_assistant');
+  bool get outbreakBannerEnabled =>
+      !_enabled ||
+      FirebaseRemoteConfig.instance.getBool('outbreak_banner_enabled');
+  bool get maintenanceMode =>
+      _enabled && FirebaseRemoteConfig.instance.getBool('maintenance_mode');
+  String get maintenanceMessage => _enabled
+      ? FirebaseRemoteConfig.instance.getString('maintenance_message')
+      : '';
 
   Future<MediGuideFirebaseService> init() async {
     if (!MediGuideFirebaseConfig.isConfigured ||
@@ -154,7 +171,7 @@ final class MediGuideFirebaseService {
       _openedMessages.add,
     );
     final initial = await messaging.getInitialMessage();
-    if (initial != null) _openedMessages.add(initial);
+    if (initial != null) _initialMessage = initial;
   }
 
   Future<void> _showForegroundMessage(RemoteMessage message) async {

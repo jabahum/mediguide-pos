@@ -8,6 +8,7 @@
 !docs/markdown-authoring-workspace.md
 !docs/guideline-editor-permissions.md
 !docs/mobile-visual-regression.md
+!docs/firebase-mobile-distribution.md
 !guidelines-platform/src/content/**/*.md
 backend/.env
 backend/.env.local
@@ -22,3 +23,14 @@ __pycache__/
 infra/production.env
 infra/release.env
 infra/backups/
+user_app/.env
+user_app/firebase-dart-defines.json
+user_app/fastlane/report.xml
+user_app/fastlane/README.md
+user_app/fastlane/test_output/
+user_app/android/key.properties
+user_app/android/app/*.jks
+user_app/ios/*.p12
+user_app/ios/*.mobileprovision
+user_app/ios/AuthKey_*.p8
+user_app/ios/ExportOptions*.plist

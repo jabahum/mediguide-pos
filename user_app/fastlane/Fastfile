@@ -1,0 +1,154 @@
+require "fileutils"
+
+opt_out_usage
+default_platform(:android)
+
+def require_environment!(*names)
+  missing = names.select { |name| ENV[name].to_s.strip.empty? }
+  UI.user_error!("Missing required environment variables: #{missing.join(', ')}") unless missing.empty?
+end
+
+def release_notes
+  explicit = ENV["RELEASE_NOTES"].to_s.strip
+  return explicit unless explicit.empty?
+
+  tag = ENV.fetch("GITHUB_REF_NAME", "local build")
+  revision = ENV.fetch("GITHUB_SHA", "unknown")[0, 12]
+  "MediGuide #{tag} (#{revision})"
+end
+
+def flutter_defines
+  defines = ["--dart-define=MEDIGUIDE_API_BASE_URL=#{ENV.fetch('MOBILE_API_BASE_URL')}" ]
+  config_file = ENV["FIREBASE_DART_DEFINES_FILE"].to_s.strip
+  defines << "--dart-define-from-file=#{config_file}" unless config_file.empty?
+  defines
+end
+
+def firebase_distribution(binary:, app_id:)
+  require_environment!("GOOGLE_APPLICATION_CREDENTIALS")
+
+  firebase_app_distribution(
+    app: app_id,
+    firebase_cli_token: nil,
+    service_credentials_file: ENV.fetch("GOOGLE_APPLICATION_CREDENTIALS"),
+    groups: ENV.fetch("FIREBASE_TESTER_GROUPS", "mediguide-testers"),
+    testers: ENV["FIREBASE_TESTERS"],
+    release_notes: release_notes,
+    android_artifact_path: binary.end_with?(".apk", ".aab") ? binary : nil,
+    ipa_path: binary.end_with?(".ipa") ? binary : nil
+  )
+end
+
+platform :android do
+  desc "Build a signed Android APK and AAB"
+  lane :build_release do
+    require_environment!("MOBILE_API_BASE_URL")
+    sh("dart", "run", "build_runner", "build", "--delete-conflicting-outputs")
+    sh("flutter", "build", "apk", "--release", *flutter_defines)
+    sh("flutter", "build", "appbundle", "--release", *flutter_defines)
+  end
+
+  desc "Upload an existing signed Android APK to Firebase App Distribution"
+  lane :firebase do |options|
+    require_environment!("FIREBASE_ANDROID_APP_ID")
+    apk = options[:apk] || ENV.fetch("ANDROID_APK_PATH", "build/app/outputs/flutter-apk/app-release.apk")
+    UI.user_error!("Android APK not found at #{apk}") unless File.file?(apk)
+    firebase_distribution(binary: apk, app_id: ENV.fetch("FIREBASE_ANDROID_APP_ID"))
+  end
+
+  desc "Build Android and upload the APK to Firebase App Distribution"
+  lane :firebase_release do
+    build_release
+    firebase
+  end
+end
+
+platform :ios do
+  private_lane :build_ipa do |options|
+    require_environment!("MOBILE_API_BASE_URL")
+    export_options = options[:export_options]
+    output_directory = options[:output_directory]
+    require_environment!("APPLE_TEAM_ID")
+    UI.user_error!("Export options plist not found at #{export_options}") unless File.file?(export_options)
+
+    sh("dart", "run", "build_runner", "build", "--delete-conflicting-outputs")
+    FileUtils.rm_rf("build/ios/ipa")
+    sh(
+      "flutter", "build", "ipa", "--release",
+      "--export-options-plist=#{File.expand_path(export_options)}",
+      "--build-number=#{ENV.fetch('MOBILE_BUILD_NUMBER')}",
+      *flutter_defines
+    )
+
+    ipa = Dir["build/ios/ipa/*.ipa"].first
+    UI.user_error!("Flutter did not produce an IPA") unless ipa
+    FileUtils.mkdir_p(output_directory)
+    destination = File.join(output_directory, File.basename(ipa))
+    FileUtils.cp(ipa, destination)
+    destination
+  end
+
+  desc "Build an Ad Hoc IPA for Firebase App Distribution"
+  lane :build_firebase do
+    require_environment!("IOS_FIREBASE_EXPORT_OPTIONS_PLIST", "MOBILE_BUILD_NUMBER")
+    build_ipa(
+      export_options: ENV.fetch("IOS_FIREBASE_EXPORT_OPTIONS_PLIST"),
+      output_directory: "build/ios/firebase"
+    )
+  end
+
+  desc "Upload an existing Ad Hoc IPA to Firebase App Distribution"
+  lane :firebase do |options|
+    require_environment!("FIREBASE_IOS_APP_ID")
+    ipa = options[:ipa] || ENV["IOS_FIREBASE_IPA_PATH"] || Dir["build/ios/firebase/*.ipa"].first
+    UI.user_error!("No Firebase iOS IPA was provided or built") unless ipa && File.file?(ipa)
+    firebase_distribution(binary: ipa, app_id: ENV.fetch("FIREBASE_IOS_APP_ID"))
+  end
+
+  desc "Build and distribute an Ad Hoc IPA with Firebase App Distribution"
+  lane :firebase_release do
+    ipa = build_firebase
+    firebase(ipa: ipa)
+  end
+
+  desc "Build an App Store IPA for TestFlight"
+  lane :build_testflight do
+    require_environment!("IOS_TESTFLIGHT_EXPORT_OPTIONS_PLIST", "MOBILE_BUILD_NUMBER")
+    build_ipa(
+      export_options: ENV.fetch("IOS_TESTFLIGHT_EXPORT_OPTIONS_PLIST"),
+      output_directory: "build/ios/testflight"
+    )
+  end
+
+  desc "Upload an existing App Store IPA to TestFlight"
+  lane :upload_testflight do |options|
+    require_environment!(
+      "APP_STORE_CONNECT_KEY_ID",
+      "APP_STORE_CONNECT_ISSUER_ID",
+      "APP_STORE_CONNECT_KEY_FILE"
+    )
+    ipa = options[:ipa] || ENV["IOS_TESTFLIGHT_IPA_PATH"] || Dir["build/ios/testflight/*.ipa"].first
+    UI.user_error!("No TestFlight IPA was provided or built") unless ipa && File.file?(ipa)
+
+    api_key = app_store_connect_api_key(
+      key_id: ENV.fetch("APP_STORE_CONNECT_KEY_ID"),
+      issuer_id: ENV.fetch("APP_STORE_CONNECT_ISSUER_ID"),
+      key_filepath: ENV.fetch("APP_STORE_CONNECT_KEY_FILE"),
+      duration: 1_200,
+      in_house: false
+    )
+    upload_to_testflight(
+      api_key: api_key,
+      ipa: ipa,
+      changelog: release_notes,
+      skip_waiting_for_build_processing: true,
+      distribute_external: false
+    )
+  end
+
+  desc "Build and upload an App Store IPA to TestFlight"
+  lane :testflight_release do
+    ipa = build_testflight
+    upload_testflight(ipa: ipa)
+  end
+end

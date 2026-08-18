@@ -7,6 +7,7 @@ on:
     paths:
       - "user_app/**"
       - ".github/workflows/mobile-release.yml"
+      - ".github/workflows/mobile-distribution.yml"
   push:
     branches:
       - main
@@ -15,6 +16,7 @@ on:
     paths:
       - "user_app/**"
       - ".github/workflows/mobile-release.yml"
+      - ".github/workflows/mobile-distribution.yml"
   workflow_dispatch:
     inputs:
       api_base_url:
@@ -111,6 +113,7 @@ jobs:
     if: github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/v')
     needs: quality
     runs-on: ubuntu-latest
+    environment: testing
     # Release builds compile both an APK and an app bundle. A cold hosted
     # runner can exceed one hour while Gradle warms its caches.
     timeout-minutes: 90
@@ -139,6 +142,19 @@ jobs:
 
       - name: Install dependencies
         run: flutter pub get
+
+      - name: Configure Firebase client identifiers
+        env:
+          FIREBASE_MOBILE_CONFIG_JSON: ${{ secrets.FIREBASE_MOBILE_CONFIG_JSON }}
+        run: |
+          set -euo pipefail
+          if [ -z "${FIREBASE_MOBILE_CONFIG_JSON}" ]; then
+            echo "FIREBASE_MOBILE_CONFIG_JSON is required for a mobile release build." >&2
+            exit 1
+          fi
+          printf '%s' "${FIREBASE_MOBILE_CONFIG_JSON}" > firebase-dart-defines.json
+          test -s firebase-dart-defines.json
+          echo "FIREBASE_BUILD_ARGS=--dart-define-from-file=${GITHUB_WORKSPACE}/user_app/firebase-dart-defines.json" >> "${GITHUB_ENV}"
 
       - name: Generate Dart sources for bundle
         run: dart run build_runner build --delete-conflicting-outputs
@@ -187,11 +203,13 @@ jobs:
         run: >-
           flutter build apk --release
           --dart-define=MEDIGUIDE_API_BASE_URL="${MOBILE_API_BASE_URL}"
+          ${FIREBASE_BUILD_ARGS}
 
       - name: Build release app bundle
         run: >-
           flutter build appbundle --release
           --dart-define=MEDIGUIDE_API_BASE_URL="${MOBILE_API_BASE_URL}"
+          ${FIREBASE_BUILD_ARGS}
 
       - name: Upload Android artifacts
         uses: actions/upload-artifact@v7
@@ -203,6 +221,10 @@ jobs:
           if-no-files-found: error
           retention-days: 30
           compression-level: 0
+
+      - name: Remove Firebase build configuration
+        if: always()
+        run: rm -f firebase-dart-defines.json
 
   web:
     name: Build web artifact
@@ -252,6 +274,7 @@ jobs:
     if: github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/v')
     needs: quality
     runs-on: macos-latest
+    environment: testing
     timeout-minutes: 75
     defaults:
       run:
@@ -272,6 +295,19 @@ jobs:
       - name: Install dependencies
         run: flutter pub get
 
+      - name: Configure Firebase client identifiers
+        env:
+          FIREBASE_MOBILE_CONFIG_JSON: ${{ secrets.FIREBASE_MOBILE_CONFIG_JSON }}
+        run: |
+          set -euo pipefail
+          if [ -z "${FIREBASE_MOBILE_CONFIG_JSON}" ]; then
+            echo "FIREBASE_MOBILE_CONFIG_JSON is required for a mobile release build." >&2
+            exit 1
+          fi
+          printf '%s' "${FIREBASE_MOBILE_CONFIG_JSON}" > firebase-dart-defines.json
+          test -s firebase-dart-defines.json
+          echo "FIREBASE_BUILD_ARGS=--dart-define-from-file=${GITHUB_WORKSPACE}/user_app/firebase-dart-defines.json" >> "${GITHUB_ENV}"
+
       - name: Generate Dart sources for bundle
         run: dart run build_runner build --delete-conflicting-outputs
 
@@ -279,6 +315,7 @@ jobs:
         run: >-
           flutter build ios --release --no-codesign
           --dart-define=MEDIGUIDE_API_BASE_URL="${MOBILE_API_BASE_URL}"
+          ${FIREBASE_BUILD_ARGS}
 
       - name: Archive unsigned iOS app
         run: >-
@@ -308,6 +345,20 @@ jobs:
           retention-days: 30
           compression-level: 0
 
+      - name: Remove Firebase build configuration
+        if: always()
+        run: rm -f firebase-dart-defines.json
+
+  distribution:
+    name: Distribute Firebase and TestFlight betas
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: quality
+    uses: ./.github/workflows/mobile-distribution.yml
+    with:
+      destination: all
+      api_base_url: ${{ inputs.api_base_url || vars.MOBILE_API_BASE_URL || 'https://mediguide.health.go.ug' }}
+    secrets: inherit
+
   release:
     name: Publish GitHub release
     if: startsWith(github.ref, 'refs/tags/v')
@@ -315,6 +366,7 @@ jobs:
       - android
       - web
       - apple
+      - distribution
     runs-on: ubuntu-latest
     permissions:
       contents: write

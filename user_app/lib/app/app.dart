@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:responsive_framework/responsive_framework.dart';
 import 'package:toastification/toastification.dart';
 import 'package:user_app/app/router/app_router.dart';
+import 'package:user_app/app/providers/app_providers.dart';
 import 'package:user_app/app/theme/app_theme.dart';
 import 'package:user_app/core/utils/common.dart';
 import 'package:user_app/features/authentication/presentation/controllers/auth_controller.dart';
@@ -19,6 +20,12 @@ class MediGuideApp extends ConsumerWidget {
     ref.watch(authControllerProvider);
     ref.watch(backendReconnectProvider);
     final router = ref.watch(appRouterProvider);
+    ref.listen(firebaseOpenedMessageProvider, (_, message) {
+      final rawLocation = message.valueOrNull?.data['action_url'];
+      if (rawLocation == null || rawLocation.isEmpty) return;
+      final location = AppRoutes.safeDestination(rawLocation, fallback: '');
+      if (location.isNotEmpty) router.push(location);
+    });
     final languageCode =
         ref.watch(languageControllerProvider).valueOrNull?.currentCode ?? 'en';
     AppTranslation.setLocale(Locale(languageCode));

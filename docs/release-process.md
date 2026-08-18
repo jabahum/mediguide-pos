@@ -154,11 +154,13 @@ checks for `/healthz`, `/admin/login`, and `/api/readyz` all pass. The queue-onl
 worker uses a process-liveness probe; it does not use the HTTP health endpoint
 exposed by the separate AI HTTP service.
 
-Apple artifacts are currently compile-verified but unsigned. A distributable
-iOS IPA still requires an Apple Distribution certificate, provisioning profile,
-App Store Connect API credentials, an export-options file, and a dedicated
-signed/notarized workflow. Do not submit the unsigned ZIP to the App Store or
-describe it as an installable iOS release.
+The normal mobile build retains unsigned Apple compile-verification artifacts.
+The separate `Distribute mobile betas` workflow creates signed iOS IPAs and
+publishes them to Firebase App Distribution and TestFlight. Its protected
+signing, Firebase, and App Store Connect setup is documented in
+[`firebase-mobile-distribution.md`](firebase-mobile-distribution.md). Never
+submit the unsigned verification ZIP to the App Store or describe it as an
+installable iOS release.
 
 ## Prepare the release
 
@@ -268,7 +270,8 @@ git push upstream refs/tags/v2.0.17
 Never move, delete, or reuse a published release tag. Fix a bad release with a
 new patch version and a higher Flutter build number.
 
-The tag starts two workflows:
+The tag starts a release pipeline with two top-level workflows and one reusable
+mobile-distribution stage:
 
 - `Build and publish container images` tests the platform and publishes four
   GHCR packages with `2.0.17`, `2.0`, `2`, and `sha-*` tags, provenance, and an
@@ -279,11 +282,17 @@ The tag starts two workflows:
   release is created only after every mobile build succeeds. Mobile artifact
   filenames and the manifest include both the SemVer and Flutter build number,
   for example `mediguide-2.0.17+44-android.aab`.
+- After its quality gate, `Test and build mobile release` calls `Distribute
+  mobile betas`, which builds signed Android and iOS binaries with
+  Fastlane, publishes Android and an Ad Hoc iOS build to Firebase App
+  Distribution, and uploads an App Store-signed iOS build to TestFlight. This
+  workflow fails closed when any protected signing or distribution credential
+  is missing.
 - After the container workflow verifies all four immutable image tags, it calls
   `Deploy production`. The protected `production` environment supplies SSH and
   Compose secrets and can require operator approval.
 
-Monitor both workflows. The production deployment job begins only after the
+Monitor all workflows. The production deployment job begins only after the
 container image set is complete:
 
 ```bash

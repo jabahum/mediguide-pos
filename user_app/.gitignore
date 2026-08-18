@@ -55,6 +55,7 @@ app.*.map.json
 /android/app/release
 .mcp.json
 .android
+.bundle/
 
 # FVM Version Cache
 .fvm/

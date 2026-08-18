@@ -65,7 +65,7 @@ type FirebasePushResult struct {
 
 func NewFirebaseService(database *gorm.DB, cfg config.Config) (*FirebaseService, error) {
 	service := &FirebaseService{DB: database, Project: strings.TrimSpace(cfg.FirebaseProjectID)}
-	if service.Project == "" || strings.TrimSpace(cfg.FirebaseCredentials) == "" {
+	if strings.TrimSpace(cfg.FirebaseCredentials) == "" {
 		return service, nil
 	}
 	client, project, err := newFirebaseHTTPClient(cfg.FirebaseCredentials)
@@ -74,6 +74,8 @@ func NewFirebaseService(database *gorm.DB, cfg config.Config) (*FirebaseService,
 	}
 	if service.Project == "" {
 		service.Project = project
+	} else if service.Project != project {
+		return nil, errors.New("firebase project does not match service account")
 	}
 	service.Client = client
 	return service, nil
@@ -108,6 +110,10 @@ func (s FirebaseService) RegisterDevice(userID uuid.UUID, in FirebaseDeviceInput
 	if err != nil {
 		return nil, err
 	}
+	// On conflict, PostgreSQL updates the existing row and does not replace the
+	// in-memory ID generated for the attempted insert. Clear it before loading
+	// the canonical registration or GORM adds the stale ID to the query.
+	device = models.FirebaseDevice{}
 	if err := s.DB.Where("user_id = ? AND installation_id = ?", userID, installationID).First(&device).Error; err != nil {
 		return nil, err
 	}

@@ -137,6 +137,42 @@ final class HandlersConversationEnvelope {
   Map<String, dynamic> toJson() => Map.of(value);
 }
 
+final class HandlersDeletedEnvelope {
+  HandlersDeletedEnvelope(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory HandlersDeletedEnvelope.fromJson(Map<String, dynamic> json) =>
+      HandlersDeletedEnvelope(json);
+
+  static const schemaName = 'handlers.DeletedEnvelope';
+  final Map<String, dynamic> value;
+
+  HandlersDeletedResult? get data {
+    final raw = value['data'];
+    if (raw is! Map) return null;
+    return HandlersDeletedResult.fromJson(_jsonMap(raw));
+  }
+
+  bool? get success => value['success'] as bool?;
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
+final class HandlersDeletedResult {
+  HandlersDeletedResult(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory HandlersDeletedResult.fromJson(Map<String, dynamic> json) =>
+      HandlersDeletedResult(json);
+
+  static const schemaName = 'handlers.DeletedResult';
+  final Map<String, dynamic> value;
+
+  bool? get deleted => value['deleted'] as bool?;
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
 final class HandlersDocumentationEnvelope {
   HandlersDocumentationEnvelope(Map<String, dynamic> value)
     : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
@@ -430,6 +466,151 @@ final class HandlersFAQTagEnvelope {
   }
 
   bool? get success => value['success'] as bool?;
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
+final class HandlersFirebaseDeviceEnvelope {
+  HandlersFirebaseDeviceEnvelope(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory HandlersFirebaseDeviceEnvelope.fromJson(Map<String, dynamic> json) =>
+      HandlersFirebaseDeviceEnvelope(json);
+
+  static const schemaName = 'handlers.FirebaseDeviceEnvelope';
+  final Map<String, dynamic> value;
+
+  ModelsFirebaseDevice? get data {
+    final raw = value['data'];
+    if (raw is! Map) return null;
+    return ModelsFirebaseDevice.fromJson(_jsonMap(raw));
+  }
+
+  bool? get success => value['success'] as bool?;
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
+final class HandlersFirebasePushResultEnvelope {
+  HandlersFirebasePushResultEnvelope(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory HandlersFirebasePushResultEnvelope.fromJson(
+    Map<String, dynamic> json,
+  ) => HandlersFirebasePushResultEnvelope(json);
+
+  static const schemaName = 'handlers.FirebasePushResultEnvelope';
+  final Map<String, dynamic> value;
+
+  ServicesFirebasePushResult? get data {
+    final raw = value['data'];
+    if (raw is! Map) return null;
+    return ServicesFirebasePushResult.fromJson(_jsonMap(raw));
+  }
+
+  bool? get success => value['success'] as bool?;
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
+final class HandlersFirebaseRemoteConfigEnvelope {
+  HandlersFirebaseRemoteConfigEnvelope(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory HandlersFirebaseRemoteConfigEnvelope.fromJson(
+    Map<String, dynamic> json,
+  ) => HandlersFirebaseRemoteConfigEnvelope(json);
+
+  static const schemaName = 'handlers.FirebaseRemoteConfigEnvelope';
+  final Map<String, dynamic> value;
+
+  HandlersFirebaseRemoteConfigResult? get data {
+    final raw = value['data'];
+    if (raw is! Map) return null;
+    return HandlersFirebaseRemoteConfigResult.fromJson(_jsonMap(raw));
+  }
+
+  bool? get success => value['success'] as bool?;
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
+final class HandlersFirebaseRemoteConfigResult {
+  HandlersFirebaseRemoteConfigResult(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory HandlersFirebaseRemoteConfigResult.fromJson(
+    Map<String, dynamic> json,
+  ) => HandlersFirebaseRemoteConfigResult(json);
+
+  static const schemaName = 'handlers.FirebaseRemoteConfigResult';
+  final Map<String, dynamic> value;
+
+  String? get etag => value['etag']?.toString();
+
+  HandlersJSONMap? get template {
+    final raw = value['template'];
+    if (raw is! Map) return null;
+    return HandlersJSONMap.fromJson(_jsonMap(raw));
+  }
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
+final class HandlersFirebaseRemoteConfigUpdateRequest {
+  HandlersFirebaseRemoteConfigUpdateRequest(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory HandlersFirebaseRemoteConfigUpdateRequest.fromJson(
+    Map<String, dynamic> json,
+  ) => HandlersFirebaseRemoteConfigUpdateRequest(json);
+
+  static const schemaName = 'handlers.FirebaseRemoteConfigUpdateRequest';
+  final Map<String, dynamic> value;
+
+  HandlersJSONMap? get template {
+    final raw = value['template'];
+    if (raw is! Map) return null;
+    return HandlersJSONMap.fromJson(_jsonMap(raw));
+  }
+
+  bool? get validateOnly => value['validate_only'] as bool?;
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
+final class HandlersFirebaseStatusEnvelope {
+  HandlersFirebaseStatusEnvelope(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory HandlersFirebaseStatusEnvelope.fromJson(Map<String, dynamic> json) =>
+      HandlersFirebaseStatusEnvelope(json);
+
+  static const schemaName = 'handlers.FirebaseStatusEnvelope';
+  final Map<String, dynamic> value;
+
+  HandlersFirebaseStatusResult? get data {
+    final raw = value['data'];
+    if (raw is! Map) return null;
+    return HandlersFirebaseStatusResult.fromJson(_jsonMap(raw));
+  }
+
+  bool? get success => value['success'] as bool?;
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
+final class HandlersFirebaseStatusResult {
+  HandlersFirebaseStatusResult(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory HandlersFirebaseStatusResult.fromJson(Map<String, dynamic> json) =>
+      HandlersFirebaseStatusResult(json);
+
+  static const schemaName = 'handlers.FirebaseStatusResult';
+  final Map<String, dynamic> value;
+
+  bool? get enabled => value['enabled'] as bool?;
 
   Map<String, dynamic> toJson() => Map.of(value);
 }
@@ -4359,6 +4540,39 @@ final class ModelsFacilityUsageLog {
   Map<String, dynamic> toJson() => Map.of(value);
 }
 
+final class ModelsFirebaseDevice {
+  ModelsFirebaseDevice(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory ModelsFirebaseDevice.fromJson(Map<String, dynamic> json) =>
+      ModelsFirebaseDevice(json);
+
+  static const schemaName = 'models.FirebaseDevice';
+  final Map<String, dynamic> value;
+
+  String? get appVersion => value['app_version']?.toString();
+
+  String? get createdAt => value['created_at']?.toString();
+
+  String? get id => value['id']?.toString();
+
+  String? get installationId => value['installation_id']?.toString();
+
+  String? get lastSeenAt => value['last_seen_at']?.toString();
+
+  String? get locale => value['locale']?.toString();
+
+  bool? get notificationsEnabled => value['notifications_enabled'] as bool?;
+
+  String? get platform => value['platform']?.toString();
+
+  String? get updatedAt => value['updated_at']?.toString();
+
+  String? get userId => value['user_id']?.toString();
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
 final class ModelsGenericPage {
   ModelsGenericPage(Map<String, dynamic> value)
     : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
@@ -7395,6 +7609,75 @@ final class ServicesFinishCalculatorUsageInput {
   final Map<String, dynamic> value;
 
   String? get sessionEnd => value['session_end']?.toString();
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
+final class ServicesFirebaseDeviceInput {
+  ServicesFirebaseDeviceInput(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory ServicesFirebaseDeviceInput.fromJson(Map<String, dynamic> json) =>
+      ServicesFirebaseDeviceInput(json);
+
+  static const schemaName = 'services.FirebaseDeviceInput';
+  final Map<String, dynamic> value;
+
+  String? get appVersion => value['app_version']?.toString();
+
+  String? get installationId => value['installation_id']?.toString();
+
+  String? get locale => value['locale']?.toString();
+
+  bool? get notificationsEnabled => value['notifications_enabled'] as bool?;
+
+  String? get platform => value['platform']?.toString();
+
+  String? get registrationToken => value['registration_token']?.toString();
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
+final class ServicesFirebasePushInput {
+  ServicesFirebasePushInput(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory ServicesFirebasePushInput.fromJson(Map<String, dynamic> json) =>
+      ServicesFirebasePushInput(json);
+
+  static const schemaName = 'services.FirebasePushInput';
+  final Map<String, dynamic> value;
+
+  String? get actionUrl => value['action_url']?.toString();
+
+  String? get body => value['body']?.toString();
+
+  Map<String, dynamic> get data => _jsonMap(value['data']);
+
+  bool? get dryRun => value['dry_run'] as bool?;
+
+  String? get title => value['title']?.toString();
+
+  String? get userId => value['user_id']?.toString();
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
+final class ServicesFirebasePushResult {
+  ServicesFirebasePushResult(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory ServicesFirebasePushResult.fromJson(Map<String, dynamic> json) =>
+      ServicesFirebasePushResult(json);
+
+  static const schemaName = 'services.FirebasePushResult';
+  final Map<String, dynamic> value;
+
+  int? get attempted => (value['attempted'] as num?)?.toInt();
+
+  int? get failed => (value['failed'] as num?)?.toInt();
+
+  int? get sent => (value['sent'] as num?)?.toInt();
 
   Map<String, dynamic> toJson() => Map.of(value);
 }

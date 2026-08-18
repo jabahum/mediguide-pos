@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:dio/dio.dart';
 
@@ -61,6 +62,10 @@ final aiContextServiceProvider = Provider<AiContextService>(
 
 final firebaseServiceProvider = Provider<MediGuideFirebaseService>(
   (ref) => throw StateError('Firebase service must be overridden at startup'),
+);
+
+final firebaseOpenedMessageProvider = StreamProvider<RemoteMessage>(
+  (ref) => ref.watch(firebaseServiceProvider).openedMessages,
 );
 
 final ragRepositoryProvider = Provider.autoDispose<RagAssistant>(

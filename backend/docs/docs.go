@@ -4191,6 +4191,209 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/v2/firebase/devices": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "firebase"
+                ],
+                "summary": "Register or refresh the current user's mobile installation",
+                "parameters": [
+                    {
+                        "description": "Firebase device registration",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/services.FirebaseDeviceInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.FirebaseDeviceEnvelope"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v2/firebase/devices/{id}": {
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "firebase"
+                ],
+                "summary": "Remove one of the current user's Firebase installations",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Firebase device UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.DeletedEnvelope"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v2/firebase/push/test": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "firebase-administration"
+                ],
+                "summary": "Send or validate a Firebase push notification for a user",
+                "parameters": [
+                    {
+                        "description": "Push notification",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/services.FirebasePushInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.FirebasePushResultEnvelope"
+                        }
+                    },
+                    "503": {
+                        "description": "Service Unavailable",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v2/firebase/remote-config": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "firebase-administration"
+                ],
+                "summary": "Get the active Firebase Remote Config template",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.FirebaseRemoteConfigEnvelope"
+                        }
+                    },
+                    "503": {
+                        "description": "Service Unavailable",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "firebase-administration"
+                ],
+                "summary": "Validate or publish a Firebase Remote Config template",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Current Firebase template ETag",
+                        "name": "If-Match",
+                        "in": "header",
+                        "required": true
+                    },
+                    {
+                        "description": "Remote Config update",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handlers.FirebaseRemoteConfigUpdateRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.FirebaseRemoteConfigEnvelope"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v2/firebase/status": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "firebase"
+                ],
+                "summary": "Get Firebase integration status",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.FirebaseStatusEnvelope"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v2/guideline-categories": {
             "get": {
                 "security": [
@@ -11418,6 +11621,27 @@ const docTemplate = `{
                 }
             }
         },
+        "handlers.DeletedEnvelope": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/handlers.DeletedResult"
+                },
+                "success": {
+                    "type": "boolean",
+                    "example": true
+                }
+            }
+        },
+        "handlers.DeletedResult": {
+            "type": "object",
+            "properties": {
+                "deleted": {
+                    "type": "boolean",
+                    "example": true
+                }
+            }
+        },
         "handlers.DocumentationEnvelope": {
             "type": "object",
             "properties": {
@@ -11582,6 +11806,87 @@ const docTemplate = `{
                 },
                 "success": {
                     "type": "boolean"
+                }
+            }
+        },
+        "handlers.FirebaseDeviceEnvelope": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/models.FirebaseDevice"
+                },
+                "success": {
+                    "type": "boolean",
+                    "example": true
+                }
+            }
+        },
+        "handlers.FirebasePushResultEnvelope": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/services.FirebasePushResult"
+                },
+                "success": {
+                    "type": "boolean",
+                    "example": true
+                }
+            }
+        },
+        "handlers.FirebaseRemoteConfigEnvelope": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/handlers.FirebaseRemoteConfigResult"
+                },
+                "success": {
+                    "type": "boolean",
+                    "example": true
+                }
+            }
+        },
+        "handlers.FirebaseRemoteConfigResult": {
+            "type": "object",
+            "properties": {
+                "etag": {
+                    "type": "string",
+                    "example": "etag-123"
+                },
+                "template": {
+                    "$ref": "#/definitions/handlers.JSONMap"
+                }
+            }
+        },
+        "handlers.FirebaseRemoteConfigUpdateRequest": {
+            "type": "object",
+            "properties": {
+                "template": {
+                    "$ref": "#/definitions/handlers.JSONMap"
+                },
+                "validate_only": {
+                    "type": "boolean",
+                    "example": true
+                }
+            }
+        },
+        "handlers.FirebaseStatusEnvelope": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/handlers.FirebaseStatusResult"
+                },
+                "success": {
+                    "type": "boolean",
+                    "example": true
+                }
+            }
+        },
+        "handlers.FirebaseStatusResult": {
+            "type": "object",
+            "properties": {
+                "enabled": {
+                    "type": "boolean",
+                    "example": true
                 }
             }
         },
@@ -14434,6 +14739,41 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "id": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                },
+                "user_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "models.FirebaseDevice": {
+            "type": "object",
+            "properties": {
+                "app_version": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "installation_id": {
+                    "type": "string"
+                },
+                "last_seen_at": {
+                    "type": "string"
+                },
+                "locale": {
+                    "type": "string"
+                },
+                "notifications_enabled": {
+                    "type": "boolean"
+                },
+                "platform": {
                     "type": "string"
                 },
                 "updated_at": {
@@ -17624,6 +17964,69 @@ const docTemplate = `{
             "properties": {
                 "session_end": {
                     "type": "string"
+                }
+            }
+        },
+        "services.FirebaseDeviceInput": {
+            "type": "object",
+            "properties": {
+                "app_version": {
+                    "type": "string"
+                },
+                "installation_id": {
+                    "type": "string"
+                },
+                "locale": {
+                    "type": "string"
+                },
+                "notifications_enabled": {
+                    "type": "boolean"
+                },
+                "platform": {
+                    "type": "string"
+                },
+                "registration_token": {
+                    "type": "string"
+                }
+            }
+        },
+        "services.FirebasePushInput": {
+            "type": "object",
+            "properties": {
+                "action_url": {
+                    "type": "string"
+                },
+                "body": {
+                    "type": "string"
+                },
+                "data": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "string"
+                    }
+                },
+                "dry_run": {
+                    "type": "boolean"
+                },
+                "title": {
+                    "type": "string"
+                },
+                "user_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "services.FirebasePushResult": {
+            "type": "object",
+            "properties": {
+                "attempted": {
+                    "type": "integer"
+                },
+                "failed": {
+                    "type": "integer"
+                },
+                "sent": {
+                    "type": "integer"
                 }
             }
         },

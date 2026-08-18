@@ -117,6 +117,49 @@ type ErrorResponse struct {
 	Error   string `json:"error" example:"invalid request"`
 }
 
+type FirebaseStatusResult struct {
+	Enabled bool `json:"enabled" example:"true"`
+}
+
+type FirebaseStatusEnvelope struct {
+	Success bool                 `json:"success" example:"true"`
+	Data    FirebaseStatusResult `json:"data"`
+}
+
+type FirebaseDeviceEnvelope struct {
+	Success bool                  `json:"success" example:"true"`
+	Data    models.FirebaseDevice `json:"data"`
+}
+
+type DeletedResult struct {
+	Deleted bool `json:"deleted" example:"true"`
+}
+
+type DeletedEnvelope struct {
+	Success bool          `json:"success" example:"true"`
+	Data    DeletedResult `json:"data"`
+}
+
+type FirebasePushResultEnvelope struct {
+	Success bool                        `json:"success" example:"true"`
+	Data    services.FirebasePushResult `json:"data"`
+}
+
+type FirebaseRemoteConfigResult struct {
+	Template JSONMap `json:"template"`
+	ETag     string  `json:"etag" example:"etag-123"`
+}
+
+type FirebaseRemoteConfigEnvelope struct {
+	Success bool                       `json:"success" example:"true"`
+	Data    FirebaseRemoteConfigResult `json:"data"`
+}
+
+type FirebaseRemoteConfigUpdateRequest struct {
+	Template     JSONMap `json:"template"`
+	ValidateOnly bool    `json:"validate_only" example:"true"`
+}
+
 type SupportTicketEnvelope struct {
 	Success bool                 `json:"success"`
 	Data    models.SupportTicket `json:"data"`

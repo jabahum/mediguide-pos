@@ -1,0 +1,4 @@
+package_name(ENV.fetch("ANDROID_PACKAGE_NAME", "com.mediguide.ug"))
+app_identifier(ENV.fetch("IOS_BUNDLE_IDENTIFIER", "com.omarsoft.mediguide"))
+
+team_id(ENV["APPLE_TEAM_ID"]) if ENV["APPLE_TEAM_ID"]

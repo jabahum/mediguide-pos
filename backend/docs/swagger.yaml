@@ -46,6 +46,20 @@ definitions:
       success:
         type: boolean
     type: object
+  handlers.DeletedEnvelope:
+    properties:
+      data:
+        $ref: '#/definitions/handlers.DeletedResult'
+      success:
+        example: true
+        type: boolean
+    type: object
+  handlers.DeletedResult:
+    properties:
+      deleted:
+        example: true
+        type: boolean
+    type: object
   handlers.DocumentationEnvelope:
     properties:
       data:
@@ -154,6 +168,60 @@ definitions:
       data:
         $ref: '#/definitions/models.FAQTag'
       success:
+        type: boolean
+    type: object
+  handlers.FirebaseDeviceEnvelope:
+    properties:
+      data:
+        $ref: '#/definitions/models.FirebaseDevice'
+      success:
+        example: true
+        type: boolean
+    type: object
+  handlers.FirebasePushResultEnvelope:
+    properties:
+      data:
+        $ref: '#/definitions/services.FirebasePushResult'
+      success:
+        example: true
+        type: boolean
+    type: object
+  handlers.FirebaseRemoteConfigEnvelope:
+    properties:
+      data:
+        $ref: '#/definitions/handlers.FirebaseRemoteConfigResult'
+      success:
+        example: true
+        type: boolean
+    type: object
+  handlers.FirebaseRemoteConfigResult:
+    properties:
+      etag:
+        example: etag-123
+        type: string
+      template:
+        $ref: '#/definitions/handlers.JSONMap'
+    type: object
+  handlers.FirebaseRemoteConfigUpdateRequest:
+    properties:
+      template:
+        $ref: '#/definitions/handlers.JSONMap'
+      validate_only:
+        example: true
+        type: boolean
+    type: object
+  handlers.FirebaseStatusEnvelope:
+    properties:
+      data:
+        $ref: '#/definitions/handlers.FirebaseStatusResult'
+      success:
+        example: true
+        type: boolean
+    type: object
+  handlers.FirebaseStatusResult:
+    properties:
+      enabled:
+        example: true
         type: boolean
     type: object
   handlers.GenericPageEnvelope:
@@ -2044,6 +2112,29 @@ definitions:
       facility_id:
         type: string
       id:
+        type: string
+      updated_at:
+        type: string
+      user_id:
+        type: string
+    type: object
+  models.FirebaseDevice:
+    properties:
+      app_version:
+        type: string
+      created_at:
+        type: string
+      id:
+        type: string
+      installation_id:
+        type: string
+      last_seen_at:
+        type: string
+      locale:
+        type: string
+      notifications_enabled:
+        type: boolean
+      platform:
         type: string
       updated_at:
         type: string
@@ -4166,6 +4257,47 @@ definitions:
     properties:
       session_end:
         type: string
+    type: object
+  services.FirebaseDeviceInput:
+    properties:
+      app_version:
+        type: string
+      installation_id:
+        type: string
+      locale:
+        type: string
+      notifications_enabled:
+        type: boolean
+      platform:
+        type: string
+      registration_token:
+        type: string
+    type: object
+  services.FirebasePushInput:
+    properties:
+      action_url:
+        type: string
+      body:
+        type: string
+      data:
+        additionalProperties:
+          type: string
+        type: object
+      dry_run:
+        type: boolean
+      title:
+        type: string
+      user_id:
+        type: string
+    type: object
+  services.FirebasePushResult:
+    properties:
+      attempted:
+        type: integer
+      failed:
+        type: integer
+      sent:
+        type: integer
     type: object
   services.GenericPageInput:
     properties:
@@ -8496,6 +8628,129 @@ paths:
       summary: Replace editable FAQ fields
       tags:
       - help-content
+  /api/v2/firebase/devices:
+    post:
+      parameters:
+      - description: Firebase device registration
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/services.FirebaseDeviceInput'
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/handlers.FirebaseDeviceEnvelope'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Register or refresh the current user's mobile installation
+      tags:
+      - firebase
+  /api/v2/firebase/devices/{id}:
+    delete:
+      parameters:
+      - description: Firebase device UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.DeletedEnvelope'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Remove one of the current user's Firebase installations
+      tags:
+      - firebase
+  /api/v2/firebase/push/test:
+    post:
+      parameters:
+      - description: Push notification
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/services.FirebasePushInput'
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.FirebasePushResultEnvelope'
+        "503":
+          description: Service Unavailable
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Send or validate a Firebase push notification for a user
+      tags:
+      - firebase-administration
+  /api/v2/firebase/remote-config:
+    get:
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.FirebaseRemoteConfigEnvelope'
+        "503":
+          description: Service Unavailable
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get the active Firebase Remote Config template
+      tags:
+      - firebase-administration
+    put:
+      parameters:
+      - description: Current Firebase template ETag
+        in: header
+        name: If-Match
+        required: true
+        type: string
+      - description: Remote Config update
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.FirebaseRemoteConfigUpdateRequest'
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.FirebaseRemoteConfigEnvelope'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Validate or publish a Firebase Remote Config template
+      tags:
+      - firebase-administration
+  /api/v2/firebase/status:
+    get:
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.FirebaseStatusEnvelope'
+      security:
+      - BearerAuth: []
+      summary: Get Firebase integration status
+      tags:
+      - firebase
   /api/v2/guideline-categories:
     get:
       parameters:

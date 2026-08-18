@@ -1,0 +1,360 @@
+name: Distribute mobile betas
+
+on:
+  workflow_call:
+    inputs:
+      destination:
+        required: false
+        default: all
+        type: string
+      api_base_url:
+        required: false
+        type: string
+      release_notes:
+        required: false
+        type: string
+  workflow_dispatch:
+    inputs:
+      destination:
+        description: Distribution destination
+        required: true
+        default: all
+        type: choice
+        options:
+          - all
+          - firebase-android
+          - firebase-ios
+          - testflight
+      api_base_url:
+        description: API URL embedded in the mobile builds
+        required: false
+        type: string
+      release_notes:
+        description: Optional tester release notes
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mobile-distribution-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  FLUTTER_VERSION: 3.44.8
+  RUBY_VERSION: "3.3"
+  MOBILE_API_BASE_URL: ${{ inputs.api_base_url || vars.MOBILE_API_BASE_URL || 'https://mediguide.health.go.ug' }}
+  RELEASE_NOTES: ${{ inputs.release_notes }}
+  FIREBASE_TESTER_GROUPS: ${{ vars.FIREBASE_TESTER_GROUPS || 'mediguide-testers' }}
+  FIREBASE_TESTERS: ${{ vars.FIREBASE_TESTERS }}
+  FIREBASE_ANDROID_APP_ID: ${{ vars.FIREBASE_ANDROID_APP_ID }}
+  FIREBASE_IOS_APP_ID: ${{ vars.FIREBASE_IOS_APP_ID }}
+  ANDROID_PACKAGE_NAME: com.mediguide.ug
+  IOS_BUNDLE_IDENTIFIER: com.omarsoft.mediguide
+
+jobs:
+  android-firebase:
+    name: Android to Firebase App Distribution
+    if: >-
+      startsWith(github.ref, 'refs/tags/v') ||
+      inputs.destination == 'all' ||
+      inputs.destination == 'firebase-android'
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    environment: testing
+    defaults:
+      run:
+        working-directory: user_app
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Verify tag and mobile version
+        if: startsWith(github.ref, 'refs/tags/v')
+        working-directory: ${{ github.workspace }}
+        run: bash scripts/check-release-readiness.sh "${GITHUB_REF_NAME}" --metadata-only
+
+      - name: Set up Java
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "17"
+          cache: gradle
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+          pub-cache: true
+
+      - name: Set up Ruby and Fastlane
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: ${{ env.RUBY_VERSION }}
+          bundler-cache: true
+          working-directory: user_app
+
+      - name: Install Flutter dependencies
+        run: flutter pub get
+
+      - name: Validate distribution configuration
+        env:
+          FIREBASE_MOBILE_CONFIG_JSON: ${{ secrets.FIREBASE_MOBILE_CONFIG_JSON }}
+          FIREBASE_APP_DISTRIBUTION_SERVICE_ACCOUNT_BASE64: ${{ secrets.FIREBASE_APP_DISTRIBUTION_SERVICE_ACCOUNT_BASE64 }}
+          ANDROID_UPLOAD_KEYSTORE_BASE64: ${{ secrets.ANDROID_UPLOAD_KEYSTORE_BASE64 }}
+          ANDROID_UPLOAD_STORE_PASSWORD: ${{ secrets.ANDROID_UPLOAD_STORE_PASSWORD }}
+          ANDROID_UPLOAD_KEY_ALIAS: ${{ secrets.ANDROID_UPLOAD_KEY_ALIAS }}
+          ANDROID_UPLOAD_KEY_PASSWORD: ${{ secrets.ANDROID_UPLOAD_KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          missing=()
+          for name in \
+            FIREBASE_MOBILE_CONFIG_JSON \
+            FIREBASE_APP_DISTRIBUTION_SERVICE_ACCOUNT_BASE64 \
+            FIREBASE_ANDROID_APP_ID \
+            ANDROID_UPLOAD_KEYSTORE_BASE64 \
+            ANDROID_UPLOAD_STORE_PASSWORD \
+            ANDROID_UPLOAD_KEY_ALIAS \
+            ANDROID_UPLOAD_KEY_PASSWORD; do
+            [ -n "${!name:-}" ] || missing+=("${name}")
+          done
+          if [ "${#missing[@]}" -gt 0 ]; then
+            printf 'Missing Android distribution configuration: %s\n' "${missing[*]}" >&2
+            exit 1
+          fi
+          printf '%s' "${FIREBASE_MOBILE_CONFIG_JSON}" > firebase-dart-defines.json
+          printf '%s' "${FIREBASE_APP_DISTRIBUTION_SERVICE_ACCOUNT_BASE64}" | base64 --decode > firebase-app-distribution.json
+          printf '%s' "${ANDROID_UPLOAD_KEYSTORE_BASE64}" | base64 --decode > android/app/upload-keystore.jks
+          test -s firebase-dart-defines.json
+          test -s firebase-app-distribution.json
+          test -s android/app/upload-keystore.jks
+          chmod 600 firebase-app-distribution.json android/app/upload-keystore.jks
+          {
+            echo "storeFile=upload-keystore.jks"
+            echo "storePassword=${ANDROID_UPLOAD_STORE_PASSWORD}"
+            echo "keyAlias=${ANDROID_UPLOAD_KEY_ALIAS}"
+            echo "keyPassword=${ANDROID_UPLOAD_KEY_PASSWORD}"
+          } > android/key.properties
+          chmod 600 android/key.properties
+          keytool -list \
+            -keystore android/app/upload-keystore.jks \
+            -storepass "${ANDROID_UPLOAD_STORE_PASSWORD}" \
+            -alias "${ANDROID_UPLOAD_KEY_ALIAS}" >/dev/null
+
+      - name: Build and distribute Android beta
+        env:
+          GOOGLE_APPLICATION_CREDENTIALS: ${{ github.workspace }}/user_app/firebase-app-distribution.json
+          FIREBASE_DART_DEFINES_FILE: ${{ github.workspace }}/user_app/firebase-dart-defines.json
+        run: bundle exec fastlane android firebase_release
+
+      - name: Upload signed Android artifacts
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: mediguide-firebase-android-${{ github.run_id }}
+          path: |
+            user_app/build/app/outputs/flutter-apk/app-release.apk
+            user_app/build/app/outputs/bundle/release/app-release.aab
+          if-no-files-found: ignore
+          retention-days: 30
+          compression-level: 0
+
+      - name: Remove generated credentials
+        if: always()
+        run: |
+          rm -f firebase-dart-defines.json firebase-app-distribution.json
+          rm -f android/key.properties android/app/upload-keystore.jks
+
+  ios-distribution:
+    name: iOS to Firebase and TestFlight
+    if: >-
+      startsWith(github.ref, 'refs/tags/v') ||
+      inputs.destination == 'all' ||
+      inputs.destination == 'firebase-ios' ||
+      inputs.destination == 'testflight'
+    runs-on: macos-latest
+    timeout-minutes: 120
+    environment: testing
+    defaults:
+      run:
+        working-directory: user_app
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Verify tag and mobile version
+        if: startsWith(github.ref, 'refs/tags/v')
+        working-directory: ${{ github.workspace }}
+        run: bash scripts/check-release-readiness.sh "${GITHUB_REF_NAME}" --metadata-only
+
+      - name: Read Flutter build number
+        id: mobile-version
+        run: |
+          set -euo pipefail
+          version="$(sed -n 's/^version:[[:space:]]*//p' pubspec.yaml | head -n 1)"
+          build_number="${version##*+}"
+          if [ -z "${build_number}" ] || [ "${build_number}" = "${version}" ]; then
+            echo "pubspec.yaml must contain a Flutter build number." >&2
+            exit 1
+          fi
+          echo "build_number=${build_number}" >> "${GITHUB_OUTPUT}"
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+          pub-cache: true
+
+      - name: Set up Ruby and Fastlane
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: ${{ env.RUBY_VERSION }}
+          bundler-cache: true
+          working-directory: user_app
+
+      - name: Install Flutter dependencies
+        run: flutter pub get
+
+      - name: Validate and materialize iOS credentials
+        env:
+          DESTINATION: ${{ inputs.destination || 'all' }}
+          FIREBASE_MOBILE_CONFIG_JSON: ${{ secrets.FIREBASE_MOBILE_CONFIG_JSON }}
+          FIREBASE_APP_DISTRIBUTION_SERVICE_ACCOUNT_BASE64: ${{ secrets.FIREBASE_APP_DISTRIBUTION_SERVICE_ACCOUNT_BASE64 }}
+          IOS_DISTRIBUTION_CERTIFICATE_BASE64: ${{ secrets.IOS_DISTRIBUTION_CERTIFICATE_BASE64 }}
+          IOS_DISTRIBUTION_CERTIFICATE_PASSWORD: ${{ secrets.IOS_DISTRIBUTION_CERTIFICATE_PASSWORD }}
+          IOS_FIREBASE_PROVISIONING_PROFILE_BASE64: ${{ secrets.IOS_FIREBASE_PROVISIONING_PROFILE_BASE64 }}
+          IOS_FIREBASE_EXPORT_OPTIONS_PLIST_BASE64: ${{ secrets.IOS_FIREBASE_EXPORT_OPTIONS_PLIST_BASE64 }}
+          IOS_TESTFLIGHT_PROVISIONING_PROFILE_BASE64: ${{ secrets.IOS_TESTFLIGHT_PROVISIONING_PROFILE_BASE64 }}
+          IOS_TESTFLIGHT_EXPORT_OPTIONS_PLIST_BASE64: ${{ secrets.IOS_TESTFLIGHT_EXPORT_OPTIONS_PLIST_BASE64 }}
+          APP_STORE_CONNECT_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
+          APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+          APP_STORE_CONNECT_PRIVATE_KEY_BASE64: ${{ secrets.APP_STORE_CONNECT_PRIVATE_KEY_BASE64 }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          set -euo pipefail
+          required=(
+            FIREBASE_MOBILE_CONFIG_JSON
+            IOS_DISTRIBUTION_CERTIFICATE_BASE64
+            IOS_DISTRIBUTION_CERTIFICATE_PASSWORD
+            APPLE_TEAM_ID
+          )
+          if [ "${DESTINATION}" = "all" ] || [ "${DESTINATION}" = "firebase-ios" ]; then
+            required+=(
+              FIREBASE_APP_DISTRIBUTION_SERVICE_ACCOUNT_BASE64
+              FIREBASE_IOS_APP_ID
+              IOS_FIREBASE_PROVISIONING_PROFILE_BASE64
+              IOS_FIREBASE_EXPORT_OPTIONS_PLIST_BASE64
+            )
+          fi
+          if [ "${DESTINATION}" = "all" ] || [ "${DESTINATION}" = "testflight" ]; then
+            required+=(
+              IOS_TESTFLIGHT_PROVISIONING_PROFILE_BASE64
+              IOS_TESTFLIGHT_EXPORT_OPTIONS_PLIST_BASE64
+              APP_STORE_CONNECT_KEY_ID
+              APP_STORE_CONNECT_ISSUER_ID
+              APP_STORE_CONNECT_PRIVATE_KEY_BASE64
+            )
+          fi
+          missing=()
+          for name in "${required[@]}"; do
+            [ -n "${!name:-}" ] || missing+=("${name}")
+          done
+          if [ "${#missing[@]}" -gt 0 ]; then
+            printf 'Missing iOS distribution configuration: %s\n' "${missing[*]}" >&2
+            exit 1
+          fi
+
+          printf '%s' "${FIREBASE_MOBILE_CONFIG_JSON}" > firebase-dart-defines.json
+          printf '%s' "${IOS_DISTRIBUTION_CERTIFICATE_BASE64}" | base64 -D > ios/distribution.p12
+          if [ -n "${FIREBASE_APP_DISTRIBUTION_SERVICE_ACCOUNT_BASE64:-}" ]; then
+            printf '%s' "${FIREBASE_APP_DISTRIBUTION_SERVICE_ACCOUNT_BASE64}" | base64 -D > firebase-app-distribution.json
+          fi
+          if [ -n "${IOS_FIREBASE_PROVISIONING_PROFILE_BASE64:-}" ]; then
+            printf '%s' "${IOS_FIREBASE_PROVISIONING_PROFILE_BASE64}" | base64 -D > ios/firebase.mobileprovision
+            printf '%s' "${IOS_FIREBASE_EXPORT_OPTIONS_PLIST_BASE64}" | base64 -D > ios/ExportOptions-Firebase.plist
+          fi
+          if [ -n "${IOS_TESTFLIGHT_PROVISIONING_PROFILE_BASE64:-}" ]; then
+            printf '%s' "${IOS_TESTFLIGHT_PROVISIONING_PROFILE_BASE64}" | base64 -D > ios/testflight.mobileprovision
+            printf '%s' "${IOS_TESTFLIGHT_EXPORT_OPTIONS_PLIST_BASE64}" | base64 -D > ios/ExportOptions-TestFlight.plist
+            printf '%s' "${APP_STORE_CONNECT_PRIVATE_KEY_BASE64}" | base64 -D > ios/AuthKey.p8
+          fi
+          test -s firebase-dart-defines.json
+          test -s ios/distribution.p12
+          chmod 600 ios/distribution.p12 ios/AuthKey.p8 2>/dev/null || true
+
+      - name: Install Apple certificate and profiles
+        env:
+          IOS_DISTRIBUTION_CERTIFICATE_PASSWORD: ${{ secrets.IOS_DISTRIBUTION_CERTIFICATE_PASSWORD }}
+          KEYCHAIN_PASSWORD: ${{ github.run_id }}-${{ github.run_attempt }}
+        run: |
+          set -euo pipefail
+          keychain="${RUNNER_TEMP}/mediguide-signing.keychain-db"
+          security create-keychain -p "${KEYCHAIN_PASSWORD}" "${keychain}"
+          security set-keychain-settings -lut 21600 "${keychain}"
+          security unlock-keychain -p "${KEYCHAIN_PASSWORD}" "${keychain}"
+          security import ios/distribution.p12 \
+            -P "${IOS_DISTRIBUTION_CERTIFICATE_PASSWORD}" \
+            -A -t cert -f pkcs12 -k "${keychain}"
+          security set-key-partition-list \
+            -S apple-tool:,apple: \
+            -k "${KEYCHAIN_PASSWORD}" \
+            "${keychain}"
+          security list-keychains -d user -s "${keychain}" login.keychain-db
+
+          profiles="${HOME}/Library/MobileDevice/Provisioning Profiles"
+          mkdir -p "${profiles}"
+          for profile in ios/*.mobileprovision; do
+            [ -f "${profile}" ] || continue
+            decoded="${RUNNER_TEMP}/$(basename "${profile}").plist"
+            security cms -D -i "${profile}" > "${decoded}"
+            uuid="$(/usr/libexec/PlistBuddy -c 'Print UUID' "${decoded}")"
+            cp "${profile}" "${profiles}/${uuid}.mobileprovision"
+          done
+
+      - name: Build and distribute iOS beta with Firebase
+        if: startsWith(github.ref, 'refs/tags/v') || inputs.destination == 'all' || inputs.destination == 'firebase-ios'
+        env:
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          GOOGLE_APPLICATION_CREDENTIALS: ${{ github.workspace }}/user_app/firebase-app-distribution.json
+          FIREBASE_DART_DEFINES_FILE: ${{ github.workspace }}/user_app/firebase-dart-defines.json
+          IOS_FIREBASE_EXPORT_OPTIONS_PLIST: ${{ github.workspace }}/user_app/ios/ExportOptions-Firebase.plist
+          MOBILE_BUILD_NUMBER: ${{ steps.mobile-version.outputs.build_number }}
+        run: bundle exec fastlane ios firebase_release
+
+      - name: Build and upload iOS beta to TestFlight
+        if: startsWith(github.ref, 'refs/tags/v') || inputs.destination == 'all' || inputs.destination == 'testflight'
+        env:
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          APP_STORE_CONNECT_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
+          APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+          APP_STORE_CONNECT_KEY_FILE: ${{ github.workspace }}/user_app/ios/AuthKey.p8
+          FIREBASE_DART_DEFINES_FILE: ${{ github.workspace }}/user_app/firebase-dart-defines.json
+          IOS_TESTFLIGHT_EXPORT_OPTIONS_PLIST: ${{ github.workspace }}/user_app/ios/ExportOptions-TestFlight.plist
+          MOBILE_BUILD_NUMBER: ${{ steps.mobile-version.outputs.build_number }}
+        run: bundle exec fastlane ios testflight_release
+
+      - name: Upload signed iOS artifacts
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: mediguide-signed-ios-${{ github.run_id }}
+          path: |
+            user_app/build/ios/firebase/*.ipa
+            user_app/build/ios/testflight/*.ipa
+          if-no-files-found: ignore
+          retention-days: 30
+          compression-level: 0
+
+      - name: Remove signing credentials and temporary keychain
+        if: always()
+        run: |
+          security delete-keychain "${RUNNER_TEMP}/mediguide-signing.keychain-db" 2>/dev/null || true
+          rm -f firebase-dart-defines.json firebase-app-distribution.json
+          rm -f ios/distribution.p12 ios/*.mobileprovision ios/AuthKey.p8 ios/ExportOptions-*.plist

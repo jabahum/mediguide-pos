@@ -44,6 +44,17 @@ export interface HandlersConversationEnvelope {
   success?: boolean;
 }
 
+export interface HandlersDeletedEnvelope {
+  data?: HandlersDeletedResult;
+  /** @example true */
+  success?: boolean;
+}
+
+export interface HandlersDeletedResult {
+  /** @example true */
+  deleted?: boolean;
+}
+
 export interface HandlersDocumentationEnvelope {
   data?: ModelsDocumentation;
   success?: boolean;
@@ -125,6 +136,47 @@ export interface HandlersFAQEnvelope {
 export interface HandlersFAQTagEnvelope {
   data?: ModelsFAQTag;
   success?: boolean;
+}
+
+export interface HandlersFirebaseDeviceEnvelope {
+  data?: ModelsFirebaseDevice;
+  /** @example true */
+  success?: boolean;
+}
+
+export interface HandlersFirebasePushResultEnvelope {
+  data?: ServicesFirebasePushResult;
+  /** @example true */
+  success?: boolean;
+}
+
+export interface HandlersFirebaseRemoteConfigEnvelope {
+  data?: HandlersFirebaseRemoteConfigResult;
+  /** @example true */
+  success?: boolean;
+}
+
+export interface HandlersFirebaseRemoteConfigResult {
+  /** @example "etag-123" */
+  etag?: string;
+  template?: HandlersJSONMap;
+}
+
+export interface HandlersFirebaseRemoteConfigUpdateRequest {
+  template?: HandlersJSONMap;
+  /** @example true */
+  validate_only?: boolean;
+}
+
+export interface HandlersFirebaseStatusEnvelope {
+  data?: HandlersFirebaseStatusResult;
+  /** @example true */
+  success?: boolean;
+}
+
+export interface HandlersFirebaseStatusResult {
+  /** @example true */
+  enabled?: boolean;
 }
 
 export interface HandlersGenericPageEnvelope {
@@ -1322,6 +1374,19 @@ export interface ModelsFacilityUsageLog {
   user_id?: string;
 }
 
+export interface ModelsFirebaseDevice {
+  app_version?: string;
+  created_at?: string;
+  id?: string;
+  installation_id?: string;
+  last_seen_at?: string;
+  locale?: string;
+  notifications_enabled?: boolean;
+  platform?: string;
+  updated_at?: string;
+  user_id?: string;
+}
+
 export interface ModelsGenericPage {
   content?: object;
   created_at?: string;
@@ -2454,6 +2519,30 @@ export interface ServicesFacilityView {
 
 export interface ServicesFinishCalculatorUsageInput {
   session_end?: string;
+}
+
+export interface ServicesFirebaseDeviceInput {
+  app_version?: string;
+  installation_id?: string;
+  locale?: string;
+  notifications_enabled?: boolean;
+  platform?: string;
+  registration_token?: string;
+}
+
+export interface ServicesFirebasePushInput {
+  action_url?: string;
+  body?: string;
+  data?: Record<string, string>;
+  dry_run?: boolean;
+  title?: string;
+  user_id?: string;
+}
+
+export interface ServicesFirebasePushResult {
+  attempted?: number;
+  failed?: number;
+  sent?: number;
 }
 
 export interface ServicesGenericPageInput {

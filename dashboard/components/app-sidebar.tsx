@@ -220,6 +220,7 @@ const data: { navMain: NavItem[] } = {
       permission: { resource: "system_settings", action: "read:any" },
       items: [
         { title: "Notifications", url: "/settings/notifications" },
+        { title: "Firebase", url: "/settings/firebase" },
         { title: "Backup", url: "/settings/backup" },
       ],
     },

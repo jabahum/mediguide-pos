@@ -142,6 +142,10 @@ func New(cfg config.Config) (*App, error) {
 	consultantSvc := services.ConsultantService{DB: database}
 	legacyAPISvc := services.LegacyAPIService{DB: database, Cache: cacheStore}
 	facilitySvc := services.FacilityService{DB: database, Cache: cacheStore}
+	firebaseSvc, err := services.NewFirebaseService(database, cfg)
+	if err != nil {
+		return nil, err
+	}
 
 	authH := handlers.AuthHandler{Service: authSvc}
 	guidelineH := handlers.GuidelineHandler{Service: guidelineSvc, MaxUploadMB: cfg.MaxUploadMB}
@@ -168,6 +172,7 @@ func New(cfg config.Config) (*App, error) {
 	consultantH := handlers.ConsultantHandler{Service: consultantSvc}
 	legacyAPIH := handlers.LegacyAPIHandler{Service: legacyAPISvc, Cfg: cfg}
 	facilityH := handlers.NewFacilityHandler(facilitySvc)
+	firebaseH := handlers.FirebaseHandler{Service: firebaseSvc}
 
 	legacyV1 := r.Group("/api/v1")
 	legacyV1.GET("/stats", rateLimiter.Limit(middleware.Policy("legacy-public", 60, time.Minute, 10), middleware.IPIdentity), legacyAPIH.Stats)
@@ -277,6 +282,12 @@ func New(cfg config.Config) (*App, error) {
 		protected.POST("/notifications/read-all", notificationH.MarkAllRead)
 		protected.POST("/notifications/:id/read", notificationH.MarkRead)
 		protected.POST("/notifications/:id/unread", notificationH.MarkUnread)
+		protected.GET("/firebase/status", firebaseH.Status)
+		protected.POST("/firebase/devices", firebaseH.RegisterDevice)
+		protected.DELETE("/firebase/devices/:id", firebaseH.DeleteDevice)
+		protected.POST("/firebase/push/test", middleware.RequirePermission("admin.all"), rateLimiter.Limit(middleware.Policy("firebase-test-push", 10, time.Hour, 0), middleware.UserIdentity), firebaseH.SendTestPush)
+		protected.GET("/firebase/remote-config", middleware.RequirePermission("admin.all"), firebaseH.GetRemoteConfig)
+		protected.PUT("/firebase/remote-config", middleware.RequirePermission("admin.all"), rateLimiter.Limit(middleware.Policy("firebase-remote-config-write", 10, time.Hour, 0), middleware.UserIdentity), firebaseH.PutRemoteConfig)
 
 		protected.GET("/notification-templates", middleware.RequirePermission("admin.all"), notificationH.ListTemplates)
 		protected.GET("/notification-templates/:id", middleware.RequirePermission("admin.all"), notificationH.GetTemplate)

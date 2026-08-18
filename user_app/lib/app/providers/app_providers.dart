@@ -39,6 +39,7 @@ import 'package:user_app/core/storage/local_cache_service.dart';
 import 'package:user_app/core/services/download_service.dart';
 import 'package:user_app/features/content/data/repositories/generic_page_local_repository.dart';
 import 'package:user_app/features/content/data/repositories/ministry_directory_local_repository.dart';
+import 'package:user_app/core/services/firebase_service.dart';
 
 /// Core dependency graph. Runtime services are constructed once during
 /// bootstrap and injected through ProviderScope overrides.
@@ -56,6 +57,10 @@ final authServiceProvider = Provider<AuthService>(
 
 final aiContextServiceProvider = Provider<AiContextService>(
   (ref) => throw StateError('AiContextService must be overridden at startup'),
+);
+
+final firebaseServiceProvider = Provider<MediGuideFirebaseService>(
+  (ref) => throw StateError('Firebase service must be overridden at startup'),
 );
 
 final ragRepositoryProvider = Provider.autoDispose<RagAssistant>(

@@ -78,6 +78,7 @@
 	<array>
 		<string>background-fetch</string>
 		<string>background-processing</string>
+		<string>remote-notification</string>
 	</array>
 	<key>UILaunchStoryboardName</key>
 	<string>LaunchScreen</string>

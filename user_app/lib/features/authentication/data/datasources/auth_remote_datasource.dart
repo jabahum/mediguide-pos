@@ -15,6 +15,10 @@ class AuthService {
 
   final LocalAuthentication _localAuth = LocalAuthentication();
 
+  /// Optional lifecycle hook used by private device integrations to remove
+  /// server registrations before the authentication session is revoked.
+  Future<void> Function()? beforeLogout;
+
   /// Reactive user state
   final ValueNotifier<User?> currentUser = ValueNotifier(null);
 
@@ -124,6 +128,7 @@ class AuthService {
   /// Logout - clear user data and session
   Future<void> logout() async {
     try {
+      await beforeLogout?.call();
       // Clear all authentication-related shared preferences
       await _api.logout();
     } catch (_) {

@@ -51,6 +51,8 @@ type Config struct {
 	CacheDefaultTTL     int
 	CacheMaxItemBytes   int
 	TrustedProxies      []string
+	FirebaseProjectID   string
+	FirebaseCredentials string
 }
 
 func Load() Config {
@@ -96,6 +98,8 @@ func Load() Config {
 		CacheDefaultTTL:      getInt("CACHE_DEFAULT_TTL_SECONDS", 300),
 		CacheMaxItemBytes:    getInt("CACHE_MAX_ITEM_BYTES", 1_048_576),
 		TrustedProxies:       getCSV("TRUSTED_PROXIES"),
+		FirebaseProjectID:    get("FIREBASE_PROJECT_ID", ""),
+		FirebaseCredentials:  get("FIREBASE_SERVICE_ACCOUNT_BASE64", ""),
 	}
 }
 

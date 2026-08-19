@@ -228,7 +228,8 @@ ai-worker: ai-deps
 .PHONY: run-cfdp-ios-simulator
 run-cfdp-ios-simulator:
 	cd user_app && \
-	flutter run --dart-define=MEDIGUIDE_API_BASE_URL=https://mediguide.health.go.ug
+	flutter run --flavor development --target lib/main_development.dart \
+		--dart-define=MEDIGUIDE_API_BASE_URL=http://127.0.0.1:8080
 
 ANDROID_DEVICE ?= emulator-5554
 ANDROID_API_BASE_URL ?= http://localhost:8080
@@ -238,4 +239,6 @@ run-cfdp-android:
 	cd user_app && \
 	flutter run \
 		-d $(ANDROID_DEVICE) \
+		--flavor development \
+		--target lib/main_development.dart \
 		--dart-define=MEDIGUIDE_API_BASE_URL=$(ANDROID_API_BASE_URL)

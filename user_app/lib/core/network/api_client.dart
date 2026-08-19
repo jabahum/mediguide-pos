@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:user_app/core/constants/app_constants.dart';
 import 'package:user_app/core/network/api_exception.dart';
 import 'package:user_app/core/network/auth_interceptor.dart';
+import 'package:user_app/core/debug/network_inspector.dart';
 import 'package:user_app/core/storage/secure_storage_service.dart';
 
 import 'package:user_app/shared/models/models.dart';
@@ -11,18 +12,24 @@ import 'package:user_app/shared/models/models.dart';
 export 'api_exception.dart';
 
 class BackendApiService {
-  BackendApiService({Dio? dio, SecureStorageService? secureStorage})
-    : _dio =
-          dio ??
-          Dio(
-            BaseOptions(
-              baseUrl: mediguideApiBaseUrl,
-              connectTimeout: const Duration(seconds: 20),
-              receiveTimeout: const Duration(seconds: 45),
-              validateStatus: (_) => true,
-            ),
-          ),
-      _secureStorage = secureStorage ?? SecureStorageService() {
+  BackendApiService({
+    Dio? dio,
+    SecureStorageService? secureStorage,
+    NetworkInspectorStore? networkInspector,
+  }) : _dio =
+           dio ??
+           Dio(
+             BaseOptions(
+               baseUrl: mediguideApiBaseUrl,
+               connectTimeout: const Duration(seconds: 20),
+               receiveTimeout: const Duration(seconds: 45),
+               validateStatus: (_) => true,
+             ),
+           ),
+       _secureStorage = secureStorage ?? SecureStorageService() {
+    if (networkInspector != null) {
+      _dio.interceptors.add(NetworkInspectorInterceptor(networkInspector));
+    }
     _dio.interceptors.add(AuthInterceptor(accessToken: () => _accessToken));
   }
 

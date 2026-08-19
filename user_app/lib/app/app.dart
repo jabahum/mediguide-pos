@@ -11,6 +11,7 @@ import 'package:user_app/features/settings/presentation/controllers/app_settings
 import 'package:user_app/shared/providers/connectivity_provider.dart';
 import 'package:user_app/features/settings/presentation/controllers/language_controller.dart';
 import 'package:user_app/l10n/app_translations.dart';
+import 'package:user_app/core/debug/debug_tools_overlay.dart';
 
 class MediGuideApp extends ConsumerWidget {
   const MediGuideApp({super.key});
@@ -45,14 +46,16 @@ class MediGuideApp extends ConsumerWidget {
           themeMode: themeMode,
           locale: AppTranslation.locale,
           debugShowCheckedModeBanner: false,
-          builder: (context, child) => ResponsiveBreakpoints.builder(
-            child: child!,
-            breakpoints: const [
-              Breakpoint(start: 0, end: 450, name: MOBILE),
-              Breakpoint(start: 451, end: 800, name: TABLET),
-              Breakpoint(start: 801, end: 1920, name: DESKTOP),
-              Breakpoint(start: 1921, end: double.infinity, name: '4K'),
-            ],
+          builder: (context, child) => DebugToolsOverlay(
+            child: ResponsiveBreakpoints.builder(
+              child: child!,
+              breakpoints: const [
+                Breakpoint(start: 0, end: 450, name: MOBILE),
+                Breakpoint(start: 451, end: 800, name: TABLET),
+                Breakpoint(start: 801, end: 1920, name: DESKTOP),
+                Breakpoint(start: 1921, end: double.infinity, name: '4K'),
+              ],
+            ),
           ),
         ),
       ),

@@ -9,6 +9,7 @@
 !docs/guideline-editor-permissions.md
 !docs/mobile-visual-regression.md
 !docs/firebase-mobile-distribution.md
+!docs/mobile-environments.md
 !guidelines-platform/src/content/**/*.md
 backend/.env
 backend/.env.local

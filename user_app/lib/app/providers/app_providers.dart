@@ -41,6 +41,7 @@ import 'package:user_app/core/services/download_service.dart';
 import 'package:user_app/features/content/data/repositories/generic_page_local_repository.dart';
 import 'package:user_app/features/content/data/repositories/ministry_directory_local_repository.dart';
 import 'package:user_app/core/services/firebase_service.dart';
+import 'package:user_app/core/debug/network_inspector.dart';
 
 /// Core dependency graph. Runtime services are constructed once during
 /// bootstrap and injected through ProviderScope overrides.
@@ -62,6 +63,10 @@ final aiContextServiceProvider = Provider<AiContextService>(
 
 final firebaseServiceProvider = Provider<MediGuideFirebaseService>(
   (ref) => throw StateError('Firebase service must be overridden at startup'),
+);
+
+final networkInspectorProvider = Provider<NetworkInspectorStore>(
+  (ref) => throw StateError('Network inspector must be overridden at startup'),
 );
 
 final firebaseOpenedMessageProvider = StreamProvider<RemoteMessage>(

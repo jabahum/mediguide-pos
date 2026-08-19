@@ -65,6 +65,18 @@ final class MediGuideFirebaseService {
       ? FirebaseRemoteConfig.instance.getString('maintenance_message')
       : '';
 
+  Map<String, RemoteConfigValue> get remoteConfigValues =>
+      _enabled ? FirebaseRemoteConfig.instance.getAll() : const {};
+  DateTime? get remoteConfigLastFetchTime =>
+      _enabled ? FirebaseRemoteConfig.instance.lastFetchTime : null;
+  RemoteConfigFetchStatus? get remoteConfigLastFetchStatus =>
+      _enabled ? FirebaseRemoteConfig.instance.lastFetchStatus : null;
+
+  Future<bool> refreshRemoteConfig() async {
+    if (!_enabled) return false;
+    return FirebaseRemoteConfig.instance.fetchAndActivate();
+  }
+
   Future<MediGuideFirebaseService> init() async {
     if (!MediGuideFirebaseConfig.isConfigured ||
         !(Platform.isAndroid || Platform.isIOS)) {

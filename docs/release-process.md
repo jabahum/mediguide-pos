@@ -162,6 +162,10 @@ signing, Firebase, and App Store Connect setup is documented in
 submit the unsigned verification ZIP to the App Store or describe it as an
 installable iOS release.
 
+Native application IDs, Xcode schemes, local run commands, and the protected
+non-production inspectors are documented in
+[`mobile-environments.md`](mobile-environments.md).
+
 ## Prepare the release
 
 1. Choose the new tag and synchronize every component version. Moving to a new
@@ -238,6 +242,10 @@ make contracts-check
   fvm flutter analyze && \
   fvm flutter test && \
   fvm flutter build appbundle --release \
+    --flavor production \
+    --target lib/main_production.dart \
+    --dart-define=MEDIGUIDE_FLAVOR=production \
+    --dart-define=MEDIGUIDE_DEBUG_TOOLS_ENABLED=false \
     --dart-define=MEDIGUIDE_API_BASE_URL=https://api.example.org)
 
 docker compose \

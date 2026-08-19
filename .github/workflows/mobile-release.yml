@@ -202,13 +202,21 @@ jobs:
       - name: Build release APK
         run: >-
           flutter build apk --release
+          --flavor production
+          --target lib/main_production.dart
           --dart-define=MEDIGUIDE_API_BASE_URL="${MOBILE_API_BASE_URL}"
+          --dart-define=MEDIGUIDE_FLAVOR=production
+          --dart-define=MEDIGUIDE_DEBUG_TOOLS_ENABLED=false
           ${FIREBASE_BUILD_ARGS}
 
       - name: Build release app bundle
         run: >-
           flutter build appbundle --release
+          --flavor production
+          --target lib/main_production.dart
           --dart-define=MEDIGUIDE_API_BASE_URL="${MOBILE_API_BASE_URL}"
+          --dart-define=MEDIGUIDE_FLAVOR=production
+          --dart-define=MEDIGUIDE_DEBUG_TOOLS_ENABLED=false
           ${FIREBASE_BUILD_ARGS}
 
       - name: Upload Android artifacts
@@ -216,8 +224,8 @@ jobs:
         with:
           name: mediguide-android-${{ github.run_id }}
           path: |
-            user_app/build/app/outputs/flutter-apk/app-release.apk
-            user_app/build/app/outputs/bundle/release/app-release.aab
+            user_app/build/app/outputs/flutter-apk/app-production-release.apk
+            user_app/build/app/outputs/bundle/productionRelease/app-production-release.aab
           if-no-files-found: error
           retention-days: 30
           compression-level: 0
@@ -314,7 +322,11 @@ jobs:
       - name: Build unsigned iOS app
         run: >-
           flutter build ios --release --no-codesign
+          --flavor production
+          --target lib/main_production.dart
           --dart-define=MEDIGUIDE_API_BASE_URL="${MOBILE_API_BASE_URL}"
+          --dart-define=MEDIGUIDE_FLAVOR=production
+          --dart-define=MEDIGUIDE_DEBUG_TOOLS_ENABLED=false
           ${FIREBASE_BUILD_ARGS}
 
       - name: Archive unsigned iOS app
@@ -434,8 +446,8 @@ jobs:
           mobile_artifact_version="${mobile_version}+${mobile_build_number}"
           owner="$(printf '%s' "${REPOSITORY_OWNER}" | tr '[:upper:]' '[:lower:]')"
 
-          apk="$(find release-artifacts -name app-release.apk -print -quit)"
-          aab="$(find release-artifacts -name app-release.aab -print -quit)"
+          apk="$(find release-artifacts -name app-production-release.apk -print -quit)"
+          aab="$(find release-artifacts -name app-production-release.aab -print -quit)"
           ios="$(find release-artifacts -name mediguide-ios-unsigned.zip -print -quit)"
           macos="$(find release-artifacts -name mediguide-macos.zip -print -quit)"
           web="$(find release-artifacts -type d -name 'mediguide-web-*' -print -quit)"

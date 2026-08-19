@@ -42,6 +42,24 @@ android {
         versionName = flutter.versionName
     }
 
+    flavorDimensions += "environment"
+    productFlavors {
+        create("development") {
+            dimension = "environment"
+            applicationIdSuffix = ".dev"
+            manifestPlaceholders["appName"] = "MediGuide Dev"
+        }
+        create("staging") {
+            dimension = "environment"
+            applicationIdSuffix = ".staging"
+            manifestPlaceholders["appName"] = "MediGuide Staging"
+        }
+        create("production") {
+            dimension = "environment"
+            manifestPlaceholders["appName"] = "MediGuide"
+        }
+    }
+
     signingConfigs {
         if (hasReleaseSigning) {
             create("release") {

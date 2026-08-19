@@ -45,6 +45,7 @@ env:
   FLUTTER_VERSION: 3.44.8
   RUBY_VERSION: "3.3"
   MOBILE_API_BASE_URL: ${{ inputs.api_base_url || vars.MOBILE_API_BASE_URL || 'https://mediguide.health.go.ug' }}
+  MOBILE_FLAVOR: production
   RELEASE_NOTES: ${{ inputs.release_notes }}
   FIREBASE_TESTER_GROUPS: ${{ vars.FIREBASE_TESTER_GROUPS || 'mediguide-testers' }}
   FIREBASE_TESTERS: ${{ vars.FIREBASE_TESTERS }}
@@ -157,8 +158,8 @@ jobs:
         with:
           name: mediguide-firebase-android-${{ github.run_id }}
           path: |
-            user_app/build/app/outputs/flutter-apk/app-release.apk
-            user_app/build/app/outputs/bundle/release/app-release.aab
+            user_app/build/app/outputs/flutter-apk/app-production-release.apk
+            user_app/build/app/outputs/bundle/productionRelease/app-production-release.aab
           if-no-files-found: ignore
           retention-days: 30
           compression-level: 0

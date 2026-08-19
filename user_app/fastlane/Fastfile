@@ -18,10 +18,22 @@ def release_notes
 end
 
 def flutter_defines
-  defines = ["--dart-define=MEDIGUIDE_API_BASE_URL=#{ENV.fetch('MOBILE_API_BASE_URL')}" ]
+  defines = [
+    "--dart-define=MEDIGUIDE_API_BASE_URL=#{ENV.fetch('MOBILE_API_BASE_URL')}",
+    "--dart-define=MEDIGUIDE_FLAVOR=#{mobile_flavor}",
+    "--dart-define=MEDIGUIDE_DEBUG_TOOLS_ENABLED=#{mobile_flavor != 'production'}"
+  ]
   config_file = ENV["FIREBASE_DART_DEFINES_FILE"].to_s.strip
   defines << "--dart-define-from-file=#{config_file}" unless config_file.empty?
   defines
+end
+
+def mobile_flavor
+  ENV.fetch("MOBILE_FLAVOR", "production")
+end
+
+def flutter_target
+  "lib/main_#{mobile_flavor}.dart"
 end
 
 def firebase_distribution(binary:, app_id:)
@@ -44,14 +56,14 @@ platform :android do
   lane :build_release do
     require_environment!("MOBILE_API_BASE_URL")
     sh("dart", "run", "build_runner", "build", "--delete-conflicting-outputs")
-    sh("flutter", "build", "apk", "--release", *flutter_defines)
-    sh("flutter", "build", "appbundle", "--release", *flutter_defines)
+    sh("flutter", "build", "apk", "--release", "--flavor", mobile_flavor, "--target", flutter_target, *flutter_defines)
+    sh("flutter", "build", "appbundle", "--release", "--flavor", mobile_flavor, "--target", flutter_target, *flutter_defines)
   end
 
   desc "Upload an existing signed Android APK to Firebase App Distribution"
   lane :firebase do |options|
     require_environment!("FIREBASE_ANDROID_APP_ID")
-    apk = options[:apk] || ENV.fetch("ANDROID_APK_PATH", "build/app/outputs/flutter-apk/app-release.apk")
+    apk = options[:apk] || ENV.fetch("ANDROID_APK_PATH", "build/app/outputs/flutter-apk/app-#{mobile_flavor}-release.apk")
     UI.user_error!("Android APK not found at #{apk}") unless File.file?(apk)
     firebase_distribution(binary: apk, app_id: ENV.fetch("FIREBASE_ANDROID_APP_ID"))
   end
@@ -75,6 +87,8 @@ platform :ios do
     FileUtils.rm_rf("build/ios/ipa")
     sh(
       "flutter", "build", "ipa", "--release",
+      "--flavor", mobile_flavor,
+      "--target", flutter_target,
       "--export-options-plist=#{File.expand_path(export_options)}",
       "--build-number=#{ENV.fetch('MOBILE_BUILD_NUMBER')}",
       *flutter_defines

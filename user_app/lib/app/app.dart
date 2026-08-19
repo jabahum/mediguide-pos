@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:responsive_framework/responsive_framework.dart';
@@ -12,6 +14,8 @@ import 'package:user_app/shared/providers/connectivity_provider.dart';
 import 'package:user_app/features/settings/presentation/controllers/language_controller.dart';
 import 'package:user_app/l10n/app_translations.dart';
 import 'package:user_app/core/debug/debug_tools_overlay.dart';
+import 'package:user_app/features/notifications/domain/notification_action_resolver.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class MediGuideApp extends ConsumerWidget {
   const MediGuideApp({super.key});
@@ -22,10 +26,14 @@ class MediGuideApp extends ConsumerWidget {
     ref.watch(backendReconnectProvider);
     final router = ref.watch(appRouterProvider);
     ref.listen(firebaseOpenedMessageProvider, (_, message) {
-      final rawLocation = message.valueOrNull?.data['action_url'];
-      if (rawLocation == null || rawLocation.isEmpty) return;
-      final location = AppRoutes.safeDestination(rawLocation, fallback: '');
-      if (location.isNotEmpty) router.push(location);
+      final data = message.valueOrNull?.data;
+      if (data == null) return;
+      final target = NotificationActionResolver.fromPushData(data);
+      if (target?.location case final location?) {
+        router.push(location);
+      } else if (target?.externalUri case final uri?) {
+        unawaited(launchUrl(uri, mode: LaunchMode.externalApplication));
+      }
     });
     final languageCode =
         ref.watch(languageControllerProvider).valueOrNull?.currentCode ?? 'en';

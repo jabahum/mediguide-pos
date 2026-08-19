@@ -1,8 +1,14 @@
 import { getBackendClient } from "@/lib/backend-client"
 import type { NotificationCampaignsResponse, NotificationTemplatesResponse } from "@/types/backend-types"
+import type { ModelsNotificationAction, ServicesNotificationActionTypeEnum } from "@/types/generated/backend-openapi"
 
 export type NotificationType = "info" | "success" | "warning" | "error"
 export type NotificationPriority = "low" | "normal" | "high" | "urgent"
+export type NotificationActionType = ServicesNotificationActionTypeEnum
+export type NotificationAction = Omit<ModelsNotificationAction, "type" | "parameters"> & {
+  type: NotificationActionType
+  parameters: Record<string, string>
+}
 
 export interface NotificationDto {
   id: string
@@ -11,6 +17,8 @@ export interface NotificationDto {
   message: string
   type: NotificationType
   priority: NotificationPriority
+  action: NotificationAction
+  /** Compatibility field for clients predating typed actions. */
   action_url?: string
   is_read: boolean
   created_at: string
@@ -52,6 +60,8 @@ export interface CreateNotificationInput {
   message: string
   type: NotificationType
   priority: NotificationPriority
+  action: NotificationAction
+  /** Compatibility field for clients predating typed actions. */
   action_url?: string
 }
 

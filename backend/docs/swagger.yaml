@@ -2995,6 +2995,8 @@ definitions:
     type: object
   models.Notification:
     properties:
+      action:
+        $ref: '#/definitions/models.NotificationAction'
       action_url:
         type: string
       created_at:
@@ -3014,6 +3016,30 @@ definitions:
       updated_at:
         type: string
       user_id:
+        type: string
+    type: object
+  models.NotificationAction:
+    properties:
+      parameters:
+        additionalProperties:
+          type: string
+        type: object
+      resource_id:
+        type: string
+      route:
+        type: string
+      type:
+        enum:
+        - none
+        - guideline
+        - outbreak
+        - situation_report
+        - drug
+        - calculator
+        - facility
+        - support_ticket
+        - internal_route
+        - approved_external_url
         type: string
     type: object
   models.NotificationCampaign:
@@ -4275,6 +4301,8 @@ definitions:
     type: object
   services.FirebasePushInput:
     properties:
+      action:
+        $ref: '#/definitions/services.NotificationAction'
       action_url:
         type: string
       body:
@@ -4934,6 +4962,30 @@ definitions:
       title:
         type: string
     type: object
+  services.NotificationAction:
+    properties:
+      parameters:
+        additionalProperties:
+          type: string
+        type: object
+      resource_id:
+        type: string
+      route:
+        type: string
+      type:
+        enum:
+        - none
+        - guideline
+        - outbreak
+        - situation_report
+        - drug
+        - calculator
+        - facility
+        - support_ticket
+        - internal_route
+        - approved_external_url
+        type: string
+    type: object
   services.NotificationCampaignInput:
     properties:
       audience_countries:
@@ -4961,6 +5013,8 @@ definitions:
     type: object
   services.NotificationInput:
     properties:
+      action:
+        $ref: '#/definitions/services.NotificationAction'
       action_url:
         type: string
       message:

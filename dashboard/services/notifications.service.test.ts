@@ -38,6 +38,7 @@ describe("notificationsService", () => {
       message: "A new guideline version is available.",
       type: "info" as const,
       priority: "normal" as const,
+      action: { type: "none" as const, parameters: {} },
     }
 
     await notificationsService.create(input)

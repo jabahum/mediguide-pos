@@ -40,6 +40,7 @@ describe("firebaseService", () => {
       user_id: "7d2f83ea-e80c-4904-83f4-22d637aef51d",
       title: "Test",
       body: "MediGuide",
+      action: { type: "none" as const, parameters: {} },
       dry_run: true,
     }
 

@@ -34,9 +34,10 @@ var (
 )
 
 type FirebaseService struct {
-	DB      *gorm.DB
-	Project string
-	Client  *firebaseHTTPClient
+	DB                 *gorm.DB
+	Project            string
+	Client             *firebaseHTTPClient
+	AllowedActionHosts []string
 }
 
 type FirebaseDeviceInput struct {
@@ -49,12 +50,13 @@ type FirebaseDeviceInput struct {
 }
 
 type FirebasePushInput struct {
-	UserID    string            `json:"user_id"`
-	Title     string            `json:"title"`
-	Body      string            `json:"body"`
-	ActionURL *string           `json:"action_url"`
-	Data      map[string]string `json:"data"`
-	DryRun    bool              `json:"dry_run"`
+	UserID    string              `json:"user_id"`
+	Title     string              `json:"title"`
+	Body      string              `json:"body"`
+	Action    *NotificationAction `json:"action"`
+	ActionURL *string             `json:"action_url"`
+	Data      map[string]string   `json:"data"`
+	DryRun    bool                `json:"dry_run"`
 }
 
 type FirebasePushResult struct {
@@ -64,7 +66,7 @@ type FirebasePushResult struct {
 }
 
 func NewFirebaseService(database *gorm.DB, cfg config.Config) (*FirebaseService, error) {
-	service := &FirebaseService{DB: database, Project: strings.TrimSpace(cfg.FirebaseProjectID)}
+	service := &FirebaseService{DB: database, Project: strings.TrimSpace(cfg.FirebaseProjectID), AllowedActionHosts: cfg.NotificationActionExternalHosts}
 	if strings.TrimSpace(cfg.FirebaseCredentials) == "" {
 		return service, nil
 	}
@@ -139,6 +141,14 @@ func (s FirebaseService) SendToUser(ctx context.Context, in FirebasePushInput) (
 	if err != nil || strings.TrimSpace(in.Title) == "" || strings.TrimSpace(in.Body) == "" || len(in.Title) > 200 || len(in.Body) > 4000 {
 		return nil, ErrFirebaseInvalid
 	}
+	action, compatibilityURL, err := (NotificationService{DB: s.DB, AllowedActionHosts: s.AllowedActionHosts}).ResolveAction(in.Action, in.ActionURL, &userID)
+	if err != nil {
+		return nil, ErrFirebaseInvalid
+	}
+	actionParameters, err := json.Marshal(action.Parameters)
+	if err != nil {
+		return nil, ErrFirebaseInvalid
+	}
 	var devices []models.FirebaseDevice
 	if err := s.DB.Where("user_id = ? AND notifications_enabled = ?", userID, true).Find(&devices).Error; err != nil {
 		return nil, err
@@ -151,8 +161,16 @@ func (s FirebaseService) SendToUser(ctx context.Context, in FirebasePushInput) (
 				data[key] = value
 			}
 		}
-		if in.ActionURL != nil && strings.TrimSpace(*in.ActionURL) != "" {
-			data["action_url"] = strings.TrimSpace(*in.ActionURL)
+		data["action_type"] = action.Type
+		data["action_parameters"] = string(actionParameters)
+		if action.ResourceID != nil {
+			data["resource_id"] = *action.ResourceID
+		}
+		if action.Route != nil {
+			data["route"] = *action.Route
+		}
+		if compatibilityURL != nil {
+			data["action_url"] = *compatibilityURL
 		}
 		payload := map[string]any{"message": map[string]any{"token": device.RegistrationToken, "notification": map[string]string{"title": strings.TrimSpace(in.Title), "body": strings.TrimSpace(in.Body)}, "data": data}, "validate_only": in.DryRun}
 		if _, _, err := s.Client.doJSON(ctx, http.MethodPost, "https://fcm.googleapis.com/v1/projects/"+url.PathEscape(s.Project)+"/messages:send", "", payload); err != nil {

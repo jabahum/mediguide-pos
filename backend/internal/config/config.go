@@ -33,73 +33,75 @@ type Config struct {
 	// Shared secret sent as X-Worker-Secret to the ai-worker API.
 	AIWorkerSecret string
 	// Comma-separated list of allowed CORS origins (use "*" for local dev only).
-	AllowedOrigins      string
-	PublicAppURL        string
-	MailDriver          string
-	MailFrom            string
-	SMTPHost            string
-	SMTPPort            int
-	SMTPUsername        string
-	SMTPPassword        string
-	RedisURL            string
-	RedisKeyPrefix      string
-	RedisConnectTimeout int
-	RedisReadTimeout    int
-	RedisWriteTimeout   int
-	RateLimitEnabled    bool
-	CacheEnabled        bool
-	CacheDefaultTTL     int
-	CacheMaxItemBytes   int
-	TrustedProxies      []string
-	FirebaseProjectID   string
-	FirebaseCredentials string
+	AllowedOrigins                  string
+	PublicAppURL                    string
+	MailDriver                      string
+	MailFrom                        string
+	SMTPHost                        string
+	SMTPPort                        int
+	SMTPUsername                    string
+	SMTPPassword                    string
+	RedisURL                        string
+	RedisKeyPrefix                  string
+	RedisConnectTimeout             int
+	RedisReadTimeout                int
+	RedisWriteTimeout               int
+	RateLimitEnabled                bool
+	CacheEnabled                    bool
+	CacheDefaultTTL                 int
+	CacheMaxItemBytes               int
+	TrustedProxies                  []string
+	FirebaseProjectID               string
+	FirebaseCredentials             string
+	NotificationActionExternalHosts []string
 }
 
 func Load() Config {
 	_ = godotenv.Load()
 	return Config{
-		AppName:              get("APP_NAME", "mediguide-api"),
-		AppEnv:               get("APP_ENV", "development"),
-		Port:                 getAny([]string{"PORT", "HTTP_PORT"}, "8080"),
-		StaticSamplesDir:     get("STATIC_SAMPLES_DIR", "../dashboard/samples"),
-		DatabaseURL:          get("DATABASE_URL", "postgres://mediguide:mediguide@localhost:5432/mediguide?sslmode=disable"),
-		JWTSecret:            get("JWT_SECRET", "change-this-secret-ernrjtjtpckrmcjwieutalldjjr8373n1y1y2n2y3y4bdnzmzmz2u"),
-		JWTIssuer:            get("JWT_ISSUER", "mediguide"),
-		JWTTTLMinutes:        getIntAny([]string{"JWT_TTL_MINUTES", "JWT_ACCESS_TTL_MINUTES"}, 1440),
-		JWTRefreshTTLMinutes: getInt("JWT_REFRESH_TTL_MINUTES", 43200),
-		StorageDriver:        get("STORAGE_DRIVER", "minio"),
-		S3Endpoint:           get("S3_ENDPOINT", "localhost:9000"),
-		S3AccessKey:          get("S3_ACCESS_KEY", "mediguide"),
-		S3SecretKey:          get("S3_SECRET_KEY", "mediguide123"),
-		S3Bucket:             get("S3_BUCKET", "mediguide"),
-		S3UseSSL:             getBool("S3_USE_SSL", false),
-		S3PresignMinutes:     getInt("S3_PRESIGN_MINUTES", 60),
-		MaxUploadMB:          int64(getInt("MAX_UPLOAD_MB", 100)),
-		AIRAGProvider:        get("AI_RAG_PROVIDER", "local"),
-		AIWorkerWebhook:      getAny([]string{"AI_WORKER_WEBHOOK_URL", "AI_WORKER_URL"}, ""),
-		AIWorkerGRPCAddr:     get("AI_WORKER_GRPC_ADDR", ""),
-		AIWorkerTimeoutSecs:  getInt("AI_WORKER_TIMEOUT_SECONDS", 120),
-		AIWorkerSecret:       get("AI_WORKER_SECRET", ""),
-		AllowedOrigins:       get("ALLOWED_ORIGINS", "http://localhost:3000,*"), // Adjust for production domains
-		PublicAppURL:         get("PUBLIC_APP_URL", "http://localhost:3000"),
-		MailDriver:           get("MAIL_DRIVER", "disabled"),
-		MailFrom:             get("MAIL_FROM", ""),
-		SMTPHost:             get("SMTP_HOST", ""),
-		SMTPPort:             getInt("SMTP_PORT", 587),
-		SMTPUsername:         get("SMTP_USERNAME", ""),
-		SMTPPassword:         get("SMTP_PASSWORD", ""),
-		RedisURL:             get("REDIS_URL", "redis://localhost:6379"),
-		RedisKeyPrefix:       get("REDIS_KEY_PREFIX", "mediguide:"+get("APP_ENV", "development")),
-		RedisConnectTimeout:  getInt("REDIS_CONNECT_TIMEOUT_MS", 2000),
-		RedisReadTimeout:     getInt("REDIS_READ_TIMEOUT_MS", 1000),
-		RedisWriteTimeout:    getInt("REDIS_WRITE_TIMEOUT_MS", 1000),
-		RateLimitEnabled:     getBool("RATE_LIMIT_ENABLED", true),
-		CacheEnabled:         getBool("CACHE_ENABLED", true),
-		CacheDefaultTTL:      getInt("CACHE_DEFAULT_TTL_SECONDS", 300),
-		CacheMaxItemBytes:    getInt("CACHE_MAX_ITEM_BYTES", 1_048_576),
-		TrustedProxies:       getCSV("TRUSTED_PROXIES"),
-		FirebaseProjectID:    get("FIREBASE_PROJECT_ID", ""),
-		FirebaseCredentials:  get("FIREBASE_SERVICE_ACCOUNT_BASE64", ""),
+		AppName:                         get("APP_NAME", "mediguide-api"),
+		AppEnv:                          get("APP_ENV", "development"),
+		Port:                            getAny([]string{"PORT", "HTTP_PORT"}, "8080"),
+		StaticSamplesDir:                get("STATIC_SAMPLES_DIR", "../dashboard/samples"),
+		DatabaseURL:                     get("DATABASE_URL", "postgres://mediguide:mediguide@localhost:5432/mediguide?sslmode=disable"),
+		JWTSecret:                       get("JWT_SECRET", "change-this-secret-ernrjtjtpckrmcjwieutalldjjr8373n1y1y2n2y3y4bdnzmzmz2u"),
+		JWTIssuer:                       get("JWT_ISSUER", "mediguide"),
+		JWTTTLMinutes:                   getIntAny([]string{"JWT_TTL_MINUTES", "JWT_ACCESS_TTL_MINUTES"}, 1440),
+		JWTRefreshTTLMinutes:            getInt("JWT_REFRESH_TTL_MINUTES", 43200),
+		StorageDriver:                   get("STORAGE_DRIVER", "minio"),
+		S3Endpoint:                      get("S3_ENDPOINT", "localhost:9000"),
+		S3AccessKey:                     get("S3_ACCESS_KEY", "mediguide"),
+		S3SecretKey:                     get("S3_SECRET_KEY", "mediguide123"),
+		S3Bucket:                        get("S3_BUCKET", "mediguide"),
+		S3UseSSL:                        getBool("S3_USE_SSL", false),
+		S3PresignMinutes:                getInt("S3_PRESIGN_MINUTES", 60),
+		MaxUploadMB:                     int64(getInt("MAX_UPLOAD_MB", 100)),
+		AIRAGProvider:                   get("AI_RAG_PROVIDER", "local"),
+		AIWorkerWebhook:                 getAny([]string{"AI_WORKER_WEBHOOK_URL", "AI_WORKER_URL"}, ""),
+		AIWorkerGRPCAddr:                get("AI_WORKER_GRPC_ADDR", ""),
+		AIWorkerTimeoutSecs:             getInt("AI_WORKER_TIMEOUT_SECONDS", 120),
+		AIWorkerSecret:                  get("AI_WORKER_SECRET", ""),
+		AllowedOrigins:                  get("ALLOWED_ORIGINS", "http://localhost:3000,*"), // Adjust for production domains
+		PublicAppURL:                    get("PUBLIC_APP_URL", "http://localhost:3000"),
+		MailDriver:                      get("MAIL_DRIVER", "disabled"),
+		MailFrom:                        get("MAIL_FROM", ""),
+		SMTPHost:                        get("SMTP_HOST", ""),
+		SMTPPort:                        getInt("SMTP_PORT", 587),
+		SMTPUsername:                    get("SMTP_USERNAME", ""),
+		SMTPPassword:                    get("SMTP_PASSWORD", ""),
+		RedisURL:                        get("REDIS_URL", "redis://localhost:6379"),
+		RedisKeyPrefix:                  get("REDIS_KEY_PREFIX", "mediguide:"+get("APP_ENV", "development")),
+		RedisConnectTimeout:             getInt("REDIS_CONNECT_TIMEOUT_MS", 2000),
+		RedisReadTimeout:                getInt("REDIS_READ_TIMEOUT_MS", 1000),
+		RedisWriteTimeout:               getInt("REDIS_WRITE_TIMEOUT_MS", 1000),
+		RateLimitEnabled:                getBool("RATE_LIMIT_ENABLED", true),
+		CacheEnabled:                    getBool("CACHE_ENABLED", true),
+		CacheDefaultTTL:                 getInt("CACHE_DEFAULT_TTL_SECONDS", 300),
+		CacheMaxItemBytes:               getInt("CACHE_MAX_ITEM_BYTES", 1_048_576),
+		TrustedProxies:                  getCSV("TRUSTED_PROXIES"),
+		FirebaseProjectID:               get("FIREBASE_PROJECT_ID", ""),
+		FirebaseCredentials:             get("FIREBASE_SERVICE_ACCOUNT_BASE64", ""),
+		NotificationActionExternalHosts: getCSVWithFallback("NOTIFICATION_ACTION_EXTERNAL_HOSTS", "mediguide.health.go.ug,health.go.ug,www.health.go.ug,who.int,www.who.int"),
 	}
 }
 
@@ -143,6 +145,17 @@ func getCSV(key string) []string {
 	values := []string{}
 	for _, value := range strings.Split(get(key, ""), ",") {
 		if trimmed := strings.TrimSpace(value); trimmed != "" {
+			values = append(values, trimmed)
+		}
+	}
+	return values
+}
+
+func getCSVWithFallback(key, fallback string) []string {
+	value := get(key, fallback)
+	values := []string{}
+	for _, item := range strings.Split(value, ",") {
+		if trimmed := strings.TrimSpace(item); trimmed != "" {
 			values = append(values, trimmed)
 		}
 	}

@@ -1,21 +1,48 @@
 package models
 
 import (
+	"encoding/json"
 	"time"
 
 	"github.com/google/uuid"
 	"gorm.io/datatypes"
+	"gorm.io/gorm"
 )
+
+type NotificationAction struct {
+	Type       string            `json:"type" enums:"none,guideline,outbreak,situation_report,drug,calculator,facility,support_ticket,internal_route,approved_external_url"`
+	ResourceID *string           `json:"resource_id,omitempty"`
+	Route      *string           `json:"route,omitempty"`
+	Parameters map[string]string `json:"parameters"`
+}
 
 type Notification struct {
 	Base
-	UserID    *uuid.UUID `json:"user_id,omitempty"`
-	Title     string     `json:"title"`
-	Message   string     `json:"message"`
-	Type      string     `json:"type"`
-	Priority  string     `json:"priority"`
-	ActionURL *string    `json:"action_url,omitempty"`
-	IsRead    bool       `gorm:"->" json:"is_read"`
+	UserID     *uuid.UUID         `json:"user_id,omitempty"`
+	Title      string             `json:"title"`
+	Message    string             `json:"message"`
+	Type       string             `json:"type"`
+	Priority   string             `json:"priority"`
+	ActionURL  *string            `json:"action_url,omitempty"`
+	ActionJSON datatypes.JSON     `gorm:"column:action_json;type:jsonb" json:"-" swaggerignore:"true"`
+	Action     NotificationAction `gorm:"-" json:"action"`
+	IsRead     bool               `gorm:"->" json:"is_read"`
+}
+
+func (n *Notification) AfterFind(*gorm.DB) error {
+	return n.decodeAction()
+}
+
+func (n *Notification) AfterCreate(*gorm.DB) error {
+	return n.decodeAction()
+}
+
+func (n *Notification) decodeAction() error {
+	n.Action = NotificationAction{Type: "none", Parameters: map[string]string{}}
+	if len(n.ActionJSON) == 0 {
+		return nil
+	}
+	return json.Unmarshal(n.ActionJSON, &n.Action)
 }
 
 type NotificationRead struct {

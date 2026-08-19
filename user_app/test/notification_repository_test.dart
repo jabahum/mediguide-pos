@@ -33,6 +33,11 @@ class FakeNotificationApi extends BackendApiService {
               'message': 'Tonight',
               'type': 'warning',
               'priority': 'high',
+              'action': {
+                'type': 'internal_route',
+                'route': '/tools',
+                'parameters': <String, String>{},
+              },
               'is_read': false,
             },
           ],
@@ -76,6 +81,8 @@ void main() {
       expect(api.requestedSearch, 'maintenance');
       expect(result.items.single.title, 'Maintenance');
       expect(result.items.single.isRead, isFalse);
+      expect(result.items.single.action?['type'], 'internal_route');
+      expect(result.items.single.action?['route'], '/tools');
     },
   );
 

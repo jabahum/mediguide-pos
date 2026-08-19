@@ -128,8 +128,12 @@ For Apple applications:
 
 The mobile app requests permission, listens for token refresh, registers the
 authenticated installation at `POST /api/v2/firebase/devices`, handles
-foreground notifications locally, and forwards notification `action_url` data
-through the safe application router.
+foreground notifications locally, and resolves the same typed notification
+action for in-app notices and FCM opens. Supported actions are `none`, verified
+resource destinations, allowlisted internal screens, and approved HTTPS hosts.
+The backend verifies resource existence and derives resource routes; clients do
+not trust a submitted route for a resource action. Legacy `action_url` values
+are accepted only for the documented migration allowlist.
 
 ## Remote Config parameters
 
@@ -175,7 +179,13 @@ Set the resulting value in the protected runtime environment:
 ```dotenv
 FIREBASE_PROJECT_ID=mediguide-production
 FIREBASE_SERVICE_ACCOUNT_BASE64=BASE64_JSON_HERE
+NOTIFICATION_ACTION_EXTERNAL_HOSTS=mediguide.health.go.ug,health.go.ug,www.health.go.ug,who.int,www.who.int
 ```
+
+External action hosts use exact, case-insensitive hostname matching and require
+HTTPS. Adding a backend host does not automatically approve it in an already
+released mobile app; update the mobile resolver allowlist and release the app at
+the same time. Never add wildcard or user-controlled redirect destinations.
 
 For Compose, these values belong in the ignored `infra/production.env` or the
 encrypted `PRODUCTION_ENV_FILE` GitHub secret used by deployment. Redeploy or
@@ -197,9 +207,10 @@ curl --fail \
   https://mediguide.example.org/api/v2/firebase/status
 ```
 
-The dashboard Firebase page exposes the same status plus dry-run/test push and
-Remote Config controls. Test-push and Remote Config writes are permission
-protected and rate limited.
+The dashboard Firebase page exposes the same status plus dry-run/test push,
+typed action selection, and Remote Config controls. Notification administration
+uses the same typed selector for database-backed notices. Test-push and Remote
+Config writes are permission protected and rate limited.
 
 ## App Distribution and GitHub testing environment
 

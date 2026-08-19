@@ -133,7 +133,7 @@ func New(cfg config.Config) (*App, error) {
 	drugSvc := services.DrugService{DB: database}
 	drugReferenceSvc := services.DrugReferenceService{DB: database, Cache: cacheStore}
 	userSvc := services.UserService{DB: database}
-	notificationSvc := services.NotificationService{DB: database}
+	notificationSvc := services.NotificationService{DB: database, AllowedActionHosts: cfg.NotificationActionExternalHosts}
 	supportSvc := services.SupportService{DB: database}
 	helpContentSvc := services.HelpContentService{DB: database, Cache: cacheStore}
 	guidelineContentSvc := services.GuidelineContentService{DB: database, Cache: cacheStore}

@@ -1,4 +1,5 @@
 import { getBackendClient } from "@/lib/backend-client"
+import type { NotificationAction } from "@/services/notifications.service"
 
 export type FirebaseStatus = { enabled: boolean }
 export type RemoteConfigDocument = {
@@ -9,6 +10,8 @@ export type TestPushInput = {
   user_id: string
   title: string
   body: string
+  action: NotificationAction
+  /** Compatibility field for clients predating typed actions. */
   action_url?: string
   data?: Record<string, string>
   dry_run: boolean

@@ -1,6 +1,7 @@
 package services
 
 import (
+	"encoding/json"
 	"testing"
 
 	"mediguide/internal/models"
@@ -16,10 +17,105 @@ func notificationTestService(t *testing.T) NotificationService {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := db.AutoMigrate(&models.Notification{}, &models.NotificationRead{}, &models.NotificationTemplate{}, &models.NotificationCampaign{}); err != nil {
+	if err := db.AutoMigrate(
+		&models.Notification{}, &models.NotificationRead{}, &models.NotificationTemplate{},
+		&models.NotificationCampaign{}, &models.GuidelineDocument{}, &models.SupportTicket{},
+	); err != nil {
 		t.Fatal(err)
 	}
 	return NotificationService{DB: db}
+}
+
+func TestNotificationTypedActionDerivesResourceRoute(t *testing.T) {
+	service := notificationTestService(t)
+	document := models.GuidelineDocument{Title: "Malaria in adults"}
+	if err := service.DB.Create(&document).Error; err != nil {
+		t.Fatal(err)
+	}
+	resourceID := document.ID.String()
+	clientRoute := "https://attacker.test/ignored"
+	item, err := service.Create(NotificationInput{
+		Title: "Guideline updated", Message: "Review the new version", Type: "info", Priority: "normal",
+		Action: &NotificationAction{Type: NotificationActionGuideline, ResourceID: &resourceID, Route: &clientRoute},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if item.ActionURL == nil || *item.ActionURL != "/public/guidelines/"+resourceID {
+		t.Fatalf("expected server-derived compatibility route, got %v", item.ActionURL)
+	}
+	var action NotificationAction
+	if err := json.Unmarshal(item.ActionJSON, &action); err != nil {
+		t.Fatal(err)
+	}
+	if action.Type != NotificationActionGuideline || action.Route == nil || *action.Route != *item.ActionURL {
+		t.Fatalf("unexpected typed action: %#v", action)
+	}
+}
+
+func TestNotificationTypedActionRejectsMissingResourcesAndHostileRoutes(t *testing.T) {
+	service := notificationTestService(t)
+	missing := uuid.New().String()
+	hostileRoutes := []string{
+		"javascript:alert(1)", "data:text/html,bad", "//attacker.test/path",
+		"/guidelines/../../profile", "/login", "/tools?redirect=https://attacker.test",
+	}
+	for _, route := range hostileRoutes {
+		if _, err := service.Create(NotificationInput{
+			Title: "Unsafe", Message: "Unsafe route", Type: "warning", Priority: "high",
+			Action: &NotificationAction{Type: NotificationActionInternalRoute, Route: &route},
+		}); err != ErrNotificationInvalid {
+			t.Fatalf("route %q should be rejected, got %v", route, err)
+		}
+	}
+	unsafeParameterRoute := "/tools"
+	if _, err := service.Create(NotificationInput{
+		Title: "Unsafe", Message: "Unsafe parameter", Type: "warning", Priority: "high",
+		Action: &NotificationAction{Type: NotificationActionInternalRoute, Route: &unsafeParameterRoute, Parameters: map[string]string{"redirect": "https://attacker.test"}},
+	}); err != ErrNotificationInvalid {
+		t.Fatalf("redirect parameter should be rejected, got %v", err)
+	}
+	if _, err := service.Create(NotificationInput{
+		Title: "Missing", Message: "Missing guideline", Type: "info", Priority: "normal",
+		Action: &NotificationAction{Type: NotificationActionGuideline, ResourceID: &missing},
+	}); err != ErrNotificationInvalid {
+		t.Fatalf("missing resource should be rejected, got %v", err)
+	}
+}
+
+func TestNotificationExternalActionUsesExplicitHostAllowlist(t *testing.T) {
+	service := notificationTestService(t)
+	service.AllowedActionHosts = []string{"who.int"}
+	approved := "https://who.int/publications/example"
+	if _, err := service.Create(NotificationInput{
+		Title: "Reference", Message: "Open reference", Type: "info", Priority: "low",
+		Action: &NotificationAction{Type: NotificationActionExternalURL, Route: &approved},
+	}); err != nil {
+		t.Fatalf("approved external URL rejected: %v", err)
+	}
+	notApproved := "https://attacker.test/who.int"
+	if _, err := service.Create(NotificationInput{
+		Title: "Reference", Message: "Open reference", Type: "info", Priority: "low",
+		Action: &NotificationAction{Type: NotificationActionExternalURL, Route: &notApproved},
+	}); err != ErrNotificationInvalid {
+		t.Fatalf("unapproved external URL should be rejected, got %v", err)
+	}
+}
+
+func TestSupportTicketActionMustTargetTicketOwner(t *testing.T) {
+	service := notificationTestService(t)
+	owner, other := uuid.New(), uuid.New()
+	ticket := models.SupportTicket{UserID: owner, Subject: "Help", Description: "Request", Status: "open", Priority: "normal"}
+	if err := service.DB.Create(&ticket).Error; err != nil {
+		t.Fatal(err)
+	}
+	ticketID, otherText := ticket.ID.String(), other.String()
+	if _, err := service.Create(NotificationInput{
+		UserID: &otherText, Title: "Ticket update", Message: "Reply", Type: "info", Priority: "normal",
+		Action: &NotificationAction{Type: NotificationActionSupportTicket, ResourceID: &ticketID},
+	}); err != ErrNotificationInvalid {
+		t.Fatalf("ticket action should not target another user, got %v", err)
+	}
 }
 
 func TestNotificationListEnforcesOwnershipAndReadState(t *testing.T) {

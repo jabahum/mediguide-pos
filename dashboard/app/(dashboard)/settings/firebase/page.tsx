@@ -9,9 +9,11 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { PageHeader } from "@/components/ui/page-header"
 import { Textarea } from "@/components/ui/textarea"
+import { emptyNotificationAction, NotificationActionFields } from "@/components/notifications/notification-action-fields"
 import { showToast } from "@/lib/toast"
 import { hasBackendPermission } from "@/lib/backend-client"
 import { firebaseService } from "@/services/firebase.service"
+import type { NotificationAction } from "@/services/notifications.service"
 
 export default function FirebaseSettingsPage() {
   const canReadStatus = hasBackendPermission("firebase.status.read")
@@ -27,6 +29,7 @@ export default function FirebaseSettingsPage() {
   const [userId, setUserId] = useState("")
   const [title, setTitle] = useState("MediGuide test notification")
   const [body, setBody] = useState("Firebase Cloud Messaging is configured correctly.")
+  const [action, setAction] = useState<NotificationAction>(emptyNotificationAction)
 
   const load = useCallback(async () => {
     if (!canAdminister) {
@@ -69,7 +72,13 @@ export default function FirebaseSettingsPage() {
   async function sendPush(dryRun: boolean) {
     setSending(true)
     try {
-      const result = await firebaseService.sendTestPush({ user_id: userId, title, body, dry_run: dryRun })
+      const result = await firebaseService.sendTestPush({
+        user_id: userId,
+        title,
+        body,
+        action,
+        dry_run: dryRun,
+      })
       showToast.success(
         dryRun ? "Push validation completed" : "Push request completed",
         dryRun
@@ -122,6 +131,7 @@ export default function FirebaseSettingsPage() {
               <div className="space-y-2"><Label htmlFor="firebase-user">User UUID</Label><Input id="firebase-user" value={userId} onChange={(event) => setUserId(event.target.value)} /></div>
               <div className="space-y-2"><Label htmlFor="firebase-title">Title</Label><Input id="firebase-title" value={title} onChange={(event) => setTitle(event.target.value)} /></div>
               <div className="space-y-2"><Label htmlFor="firebase-body">Message</Label><Textarea id="firebase-body" value={body} onChange={(event) => setBody(event.target.value)} /></div>
+              <NotificationActionFields value={action} onChange={setAction} />
               <div className="flex gap-2">
                 <Button variant="outline" disabled={sending || !userId} onClick={() => void sendPush(true)}>Validate delivery</Button>
                 <Button disabled={sending || !userId} onClick={() => {

@@ -16046,6 +16046,9 @@ const docTemplate = `{
         "models.Notification": {
             "type": "object",
             "properties": {
+                "action": {
+                    "$ref": "#/definitions/models.NotificationAction"
+                },
                 "action_url": {
                     "type": "string"
                 },
@@ -16075,6 +16078,38 @@ const docTemplate = `{
                 },
                 "user_id": {
                     "type": "string"
+                }
+            }
+        },
+        "models.NotificationAction": {
+            "type": "object",
+            "properties": {
+                "parameters": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "string"
+                    }
+                },
+                "resource_id": {
+                    "type": "string"
+                },
+                "route": {
+                    "type": "string"
+                },
+                "type": {
+                    "type": "string",
+                    "enum": [
+                        "none",
+                        "guideline",
+                        "outbreak",
+                        "situation_report",
+                        "drug",
+                        "calculator",
+                        "facility",
+                        "support_ticket",
+                        "internal_route",
+                        "approved_external_url"
+                    ]
                 }
             }
         },
@@ -17993,6 +18028,9 @@ const docTemplate = `{
         "services.FirebasePushInput": {
             "type": "object",
             "properties": {
+                "action": {
+                    "$ref": "#/definitions/services.NotificationAction"
+                },
                 "action_url": {
                     "type": "string"
                 },
@@ -19001,6 +19039,38 @@ const docTemplate = `{
                 }
             }
         },
+        "services.NotificationAction": {
+            "type": "object",
+            "properties": {
+                "parameters": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "string"
+                    }
+                },
+                "resource_id": {
+                    "type": "string"
+                },
+                "route": {
+                    "type": "string"
+                },
+                "type": {
+                    "type": "string",
+                    "enum": [
+                        "none",
+                        "guideline",
+                        "outbreak",
+                        "situation_report",
+                        "drug",
+                        "calculator",
+                        "facility",
+                        "support_ticket",
+                        "internal_route",
+                        "approved_external_url"
+                    ]
+                }
+            }
+        },
         "services.NotificationCampaignInput": {
             "type": "object",
             "properties": {
@@ -19042,6 +19112,9 @@ const docTemplate = `{
         "services.NotificationInput": {
             "type": "object",
             "properties": {
+                "action": {
+                    "$ref": "#/definitions/services.NotificationAction"
+                },
                 "action_url": {
                     "type": "string"
                 },

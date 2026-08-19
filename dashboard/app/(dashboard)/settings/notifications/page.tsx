@@ -15,11 +15,12 @@ import { PageHeader } from "@/components/ui/page-header"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Textarea } from "@/components/ui/textarea"
+import { emptyNotificationAction, NotificationActionFields } from "@/components/notifications/notification-action-fields"
 import { hasBackendPermission } from "@/lib/backend-client"
 import { usePermissionContext } from "@/lib/permission-context"
 import { showToast } from "@/lib/toast"
 import { firebaseService } from "@/services/firebase.service"
-import { notificationsService, type NotificationPriority, type NotificationType } from "@/services/notifications.service"
+import { notificationsService, type NotificationAction, type NotificationPriority, type NotificationType } from "@/services/notifications.service"
 import type { NotificationCampaignsResponse, NotificationTemplatesResponse } from "@/types/backend-types"
 
 type FirebaseState = "configured" | "disabled" | "unavailable"
@@ -48,6 +49,7 @@ export default function NotificationAdministrationPage() {
   const [composerOpen, setComposerOpen] = React.useState(false)
   const [savingNotice, setSavingNotice] = React.useState(false)
   const [notice, setNotice] = React.useState({ title: "", message: "", type: "info" as NotificationType, priority: "normal" as NotificationPriority })
+  const [noticeAction, setNoticeAction] = React.useState<NotificationAction>(emptyNotificationAction)
 
   const load = React.useCallback(async () => {
     if (!canAdminister) { setLoading(false); return }
@@ -86,8 +88,14 @@ export default function NotificationAdministrationPage() {
     if (!window.confirm("Save this in-app notice for all users? This does not send a device push.")) return
     setSavingNotice(true)
     try {
-      await notificationsService.create({ ...notice, title, message })
+      await notificationsService.create({
+        ...notice,
+        title,
+        message,
+        action: noticeAction,
+      })
       setNotice({ title: "", message: "", type: "info", priority: "normal" })
+      setNoticeAction(emptyNotificationAction())
       setComposerOpen(false)
       showToast.success("In-app notice saved", "The notice will appear when mobile clients synchronize. No device push was sent.")
     } catch (error) {
@@ -142,6 +150,7 @@ export default function NotificationAdministrationPage() {
                   <div className="space-y-2"><Label htmlFor="notice-type">Type</Label><Select value={notice.type} onValueChange={(type: NotificationType) => setNotice((value) => ({ ...value, type }))}><SelectTrigger id="notice-type"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="info">Info</SelectItem><SelectItem value="success">Success</SelectItem><SelectItem value="warning">Warning</SelectItem><SelectItem value="error">Error</SelectItem></SelectContent></Select></div>
                   <div className="space-y-2"><Label htmlFor="notice-priority">Priority</Label><Select value={notice.priority} onValueChange={(priority: NotificationPriority) => setNotice((value) => ({ ...value, priority }))}><SelectTrigger id="notice-priority"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="low">Low</SelectItem><SelectItem value="normal">Normal</SelectItem><SelectItem value="high">High</SelectItem><SelectItem value="urgent">Urgent</SelectItem></SelectContent></Select></div>
                 </div>
+                <NotificationActionFields value={noticeAction} onChange={setNoticeAction} allowSupportTicket={false} />
                 <DialogFooter><Button type="button" variant="outline" disabled={savingNotice} onClick={() => setComposerOpen(false)}>Cancel</Button><Button type="submit" disabled={savingNotice}>{savingNotice ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FileText className="mr-2 h-4 w-4" />}Save in-app notice</Button></DialogFooter>
               </form>
             </DialogContent>

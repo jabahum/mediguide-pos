@@ -3,7 +3,6 @@ package services
 import (
 	"encoding/json"
 	"errors"
-	"net/url"
 	"strings"
 	"time"
 
@@ -17,7 +16,10 @@ import (
 
 var ErrNotificationInvalid = errors.New("invalid notification payload")
 
-type NotificationService struct{ DB *gorm.DB }
+type NotificationService struct {
+	DB                 *gorm.DB
+	AllowedActionHosts []string
+}
 
 type NotificationListInput struct {
 	Page                                PageInput
@@ -27,12 +29,13 @@ type NotificationListInput struct {
 }
 
 type NotificationInput struct {
-	UserID    *string `json:"user_id"`
-	Title     string  `json:"title"`
-	Message   string  `json:"message"`
-	Type      string  `json:"type"`
-	Priority  string  `json:"priority"`
-	ActionURL *string `json:"action_url"`
+	UserID    *string             `json:"user_id"`
+	Title     string              `json:"title"`
+	Message   string              `json:"message"`
+	Type      string              `json:"type"`
+	Priority  string              `json:"priority"`
+	Action    *NotificationAction `json:"action"`
+	ActionURL *string             `json:"action_url"`
 }
 
 type NotificationTemplateInput struct {
@@ -127,11 +130,8 @@ func (s NotificationService) Get(userID, id uuid.UUID) (*models.Notification, er
 }
 
 func (s NotificationService) Create(in NotificationInput) (*models.Notification, error) {
-	item := models.Notification{Title: strings.TrimSpace(in.Title), Message: strings.TrimSpace(in.Message), Type: in.Type, Priority: in.Priority, ActionURL: cleanOptional(in.ActionURL)}
+	item := models.Notification{Title: strings.TrimSpace(in.Title), Message: strings.TrimSpace(in.Message), Type: in.Type, Priority: in.Priority}
 	if item.Title == "" || item.Message == "" || !oneOf(item.Type, "info", "success", "warning", "error") || !oneOf(item.Priority, "low", "normal", "high", "urgent") {
-		return nil, ErrNotificationInvalid
-	}
-	if !validOptionalHTTPURL(item.ActionURL) {
 		return nil, ErrNotificationInvalid
 	}
 	if in.UserID != nil && strings.TrimSpace(*in.UserID) != "" {
@@ -141,6 +141,17 @@ func (s NotificationService) Create(in NotificationInput) (*models.Notification,
 		}
 		item.UserID = &id
 	}
+	action, compatibilityURL, err := s.ResolveAction(in.Action, in.ActionURL, item.UserID)
+	if err != nil {
+		return nil, err
+	}
+	actionJSON, err := EncodeNotificationAction(action)
+	if err != nil {
+		return nil, ErrNotificationInvalid
+	}
+	item.ActionJSON = datatypes.JSON(actionJSON)
+	item.Action = action
+	item.ActionURL = compatibilityURL
 	if err := s.DB.Create(&item).Error; err != nil {
 		return nil, err
 	}
@@ -345,14 +356,6 @@ func cleanOptional(value *string) *string {
 		return nil
 	}
 	return &v
-}
-
-func validOptionalHTTPURL(value *string) bool {
-	if value == nil {
-		return true
-	}
-	parsed, err := url.ParseRequestURI(*value)
-	return err == nil && (parsed.Scheme == "http" || parsed.Scheme == "https") && parsed.Host != ""
 }
 
 func validSchedule(start, end *string) bool {

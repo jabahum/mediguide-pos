@@ -97,6 +97,7 @@ services:
       SMTP_PASSWORD: "${SMTP_PASSWORD:-}"
       FIREBASE_PROJECT_ID: "${FIREBASE_PROJECT_ID:-}"
       FIREBASE_SERVICE_ACCOUNT_BASE64: "${FIREBASE_SERVICE_ACCOUNT_BASE64:-}"
+      NOTIFICATION_ACTION_EXTERNAL_HOSTS: "${NOTIFICATION_ACTION_EXTERNAL_HOSTS:-mediguide.health.go.ug,health.go.ug,www.health.go.ug,who.int,www.who.int}"
     ports:
       - "${PUBLIC_BIND_ADDRESS:-127.0.0.1}:${API_PUBLIC_PORT:-8080}:8080"
     depends_on:

@@ -5715,6 +5715,12 @@ final class ModelsNotification {
   static const schemaName = 'models.Notification';
   final Map<String, dynamic> value;
 
+  ModelsNotificationAction? get action {
+    final raw = value['action'];
+    if (raw is! Map) return null;
+    return ModelsNotificationAction.fromJson(_jsonMap(raw));
+  }
+
   String? get actionUrl => value['action_url']?.toString();
 
   String? get createdAt => value['created_at']?.toString();
@@ -5734,6 +5740,27 @@ final class ModelsNotification {
   String? get updatedAt => value['updated_at']?.toString();
 
   String? get userId => value['user_id']?.toString();
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
+final class ModelsNotificationAction {
+  ModelsNotificationAction(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory ModelsNotificationAction.fromJson(Map<String, dynamic> json) =>
+      ModelsNotificationAction(json);
+
+  static const schemaName = 'models.NotificationAction';
+  final Map<String, dynamic> value;
+
+  Map<String, dynamic> get parameters => _jsonMap(value['parameters']);
+
+  String? get resourceId => value['resource_id']?.toString();
+
+  String? get route => value['route']?.toString();
+
+  String? get type => value['type']?.toString();
 
   Map<String, dynamic> toJson() => Map.of(value);
 }
@@ -7648,6 +7675,12 @@ final class ServicesFirebasePushInput {
   static const schemaName = 'services.FirebasePushInput';
   final Map<String, dynamic> value;
 
+  ServicesNotificationAction? get action {
+    final raw = value['action'];
+    if (raw is! Map) return null;
+    return ServicesNotificationAction.fromJson(_jsonMap(raw));
+  }
+
   String? get actionUrl => value['action_url']?.toString();
 
   String? get body => value['body']?.toString();
@@ -8801,6 +8834,27 @@ final class ServicesMinistryDirectoryInput {
   Map<String, dynamic> toJson() => Map.of(value);
 }
 
+final class ServicesNotificationAction {
+  ServicesNotificationAction(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory ServicesNotificationAction.fromJson(Map<String, dynamic> json) =>
+      ServicesNotificationAction(json);
+
+  static const schemaName = 'services.NotificationAction';
+  final Map<String, dynamic> value;
+
+  Map<String, dynamic> get parameters => _jsonMap(value['parameters']);
+
+  String? get resourceId => value['resource_id']?.toString();
+
+  String? get route => value['route']?.toString();
+
+  String? get type => value['type']?.toString();
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
 final class ServicesNotificationCampaignInput {
   ServicesNotificationCampaignInput(Map<String, dynamic> value)
     : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
@@ -8852,6 +8906,12 @@ final class ServicesNotificationInput {
 
   static const schemaName = 'services.NotificationInput';
   final Map<String, dynamic> value;
+
+  ServicesNotificationAction? get action {
+    final raw = value['action'];
+    if (raw is! Map) return null;
+    return ServicesNotificationAction.fromJson(_jsonMap(raw));
+  }
 
   String? get actionUrl => value['action_url']?.toString();
 

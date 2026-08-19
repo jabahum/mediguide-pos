@@ -1835,6 +1835,7 @@ export interface ModelsMinistryDirectoryEntry {
 }
 
 export interface ModelsNotification {
+  action?: ModelsNotificationAction;
   action_url?: string;
   created_at?: string;
   id?: string;
@@ -1846,6 +1847,25 @@ export interface ModelsNotification {
   updated_at?: string;
   user_id?: string;
 }
+
+export interface ModelsNotificationAction {
+  parameters?: Record<string, string>;
+  resource_id?: string;
+  route?: string;
+  type?: ModelsNotificationActionTypeEnum;
+}
+
+export type ModelsNotificationActionTypeEnum =
+  | "none"
+  | "guideline"
+  | "outbreak"
+  | "situation_report"
+  | "drug"
+  | "calculator"
+  | "facility"
+  | "support_ticket"
+  | "internal_route"
+  | "approved_external_url";
 
 export interface ModelsNotificationCampaign {
   audience_countries?: string[];
@@ -2531,6 +2551,7 @@ export interface ServicesFirebaseDeviceInput {
 }
 
 export interface ServicesFirebasePushInput {
+  action?: ServicesNotificationAction;
   action_url?: string;
   body?: string;
   data?: Record<string, string>;
@@ -2893,6 +2914,25 @@ export interface ServicesMinistryDirectoryInput {
   title?: string;
 }
 
+export interface ServicesNotificationAction {
+  parameters?: Record<string, string>;
+  resource_id?: string;
+  route?: string;
+  type?: ServicesNotificationActionTypeEnum;
+}
+
+export type ServicesNotificationActionTypeEnum =
+  | "none"
+  | "guideline"
+  | "outbreak"
+  | "situation_report"
+  | "drug"
+  | "calculator"
+  | "facility"
+  | "support_ticket"
+  | "internal_route"
+  | "approved_external_url";
+
 export interface ServicesNotificationCampaignInput {
   audience_countries?: string[];
   audience_roles?: string[];
@@ -2905,6 +2945,7 @@ export interface ServicesNotificationCampaignInput {
 }
 
 export interface ServicesNotificationInput {
+  action?: ServicesNotificationAction;
   action_url?: string;
   message?: string;
   priority?: string;

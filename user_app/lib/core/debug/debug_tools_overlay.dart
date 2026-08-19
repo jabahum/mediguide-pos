@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:user_app/app/providers/app_providers.dart';
+import 'package:user_app/app/router/app_navigator.dart';
 import 'package:user_app/core/config/app_config.dart';
 import 'package:user_app/core/config/firebase_config.dart';
 import 'package:user_app/core/debug/network_inspector.dart';
@@ -118,18 +119,29 @@ final class _DebugToolsOverlayState extends ConsumerState<DebugToolsOverlay> {
     );
   }
 
-  Future<void> _showDebugTools(BuildContext context) =>
-      showModalBottomSheet<void>(
-        context: context,
-        useSafeArea: true,
-        isScrollControlled: true,
-        showDragHandle: true,
-        constraints: BoxConstraints(
-          maxWidth: 720,
-          maxHeight: MediaQuery.sizeOf(context).height * .9,
-        ),
-        builder: (_) => const _DebugToolsSheet(),
-      );
+  Future<void> _showDebugTools(BuildContext context) {
+    // MaterialApp.router.builder is outside the Router's Navigator. Resolve a
+    // local Navigator for standalone use, then fall back to GoRouter's root
+    // navigator and present from its overlay-owned context.
+    final navigator =
+        Navigator.maybeOf(context, rootNavigator: true) ??
+        AppNavigator.navigatorKey.currentState;
+    final navigatorContext = navigator?.overlay?.context;
+    if (navigatorContext == null) return Future<void>.value();
+
+    return showModalBottomSheet<void>(
+      context: navigatorContext,
+      useRootNavigator: true,
+      useSafeArea: true,
+      isScrollControlled: true,
+      showDragHandle: true,
+      constraints: BoxConstraints(
+        maxWidth: 720,
+        maxHeight: MediaQuery.sizeOf(navigatorContext).height * .9,
+      ),
+      builder: (_) => const _DebugToolsSheet(),
+    );
+  }
 }
 
 final class _DebugToolsSheet extends ConsumerStatefulWidget {

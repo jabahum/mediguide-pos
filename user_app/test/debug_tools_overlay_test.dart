@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:user_app/app/providers/app_providers.dart';
+import 'package:user_app/app/router/app_navigator.dart';
 import 'package:user_app/core/config/app_config.dart';
 import 'package:user_app/core/config/flavor.dart';
 import 'package:user_app/core/debug/debug_tools_overlay.dart';
@@ -47,6 +48,30 @@ void main() {
     expect(find.text('Network Inspector'), findsOneWidget);
     expect(find.text('Remote Config Inspector'), findsOneWidget);
     expect(find.text('Build Config'), findsOneWidget);
+  });
+
+  testWidgets('badge opens when mounted by MaterialApp builder', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          networkInspectorProvider.overrideWithValue(NetworkInspectorStore()),
+        ],
+        child: MaterialApp(
+          navigatorKey: AppNavigator.navigatorKey,
+          builder: (context, child) => DebugToolsOverlay(child: child!),
+          home: const Scaffold(body: Text('Application')),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('STAGING'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Debug Tools'), findsOneWidget);
+    expect(find.text('Network Inspector'), findsOneWidget);
   });
 
   testWidgets('production never renders the debug badge', (tester) async {

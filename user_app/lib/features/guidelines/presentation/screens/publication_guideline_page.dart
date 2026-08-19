@@ -548,57 +548,71 @@ class _PublicationGuidelinePageState
 
   Future<void> _editNotes(BuildContext context, String current) async {
     final user = ref.read(authControllerProvider).valueOrNull?.user;
+
     if (user == null) {
       _requireSignIn(context, 'Sign in to create private reading notes.');
       return;
     }
-    final controller = TextEditingController(text: current);
+
+    var noteText = current;
+
     final note = await showModalBottomSheet<String>(
       context: context,
       isScrollControlled: true,
-      builder: (sheetContext) => SafeArea(
-        child: Padding(
-          padding: EdgeInsets.fromLTRB(
-            AppSpacing.md,
-            AppSpacing.md,
-            AppSpacing.md,
-            MediaQuery.viewInsetsOf(sheetContext).bottom + AppSpacing.md,
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Text(
-                'Reading notes',
-                style: Theme.of(context).textTheme.titleLarge,
-              ),
-              AppSpacing.gapMd,
-              TextField(
-                controller: controller,
-                minLines: 3,
-                maxLines: 8,
-                autofocus: true,
-                decoration: const InputDecoration(
-                  hintText: 'Add a private note about this guideline',
+      builder: (sheetContext) {
+        return SafeArea(
+          child: Padding(
+            padding: EdgeInsets.fromLTRB(
+              AppSpacing.md,
+              AppSpacing.md,
+              AppSpacing.md,
+              MediaQuery.viewInsetsOf(sheetContext).bottom + AppSpacing.md,
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text(
+                  'Reading notes',
+                  style: Theme.of(sheetContext).textTheme.titleLarge,
                 ),
-              ),
-              AppSpacing.gapMd,
-              FilledButton(
-                onPressed: () => Navigator.pop(sheetContext, controller.text),
-                child: const Text('Save note'),
-              ),
-            ],
+                AppSpacing.gapMd,
+                TextFormField(
+                  initialValue: current,
+                  minLines: 3,
+                  maxLines: 8,
+                  autofocus: true,
+                  onChanged: (value) {
+                    noteText = value;
+                  },
+                  decoration: const InputDecoration(
+                    hintText: 'Add a private note about this guideline',
+                  ),
+                ),
+                AppSpacing.gapMd,
+                FilledButton(
+                  onPressed: () {
+                    Navigator.of(sheetContext).pop(noteText);
+                  },
+                  child: const Text('Save note'),
+                ),
+              ],
+            ),
           ),
-        ),
-      ),
+        );
+      },
     );
-    controller.dispose();
-    if (note == null) return;
+
+    if (!mounted || note == null) return;
+
     await ref.read(readingProgressRepositoryProvider).upsert(
       user.id,
       widget.guidelineId,
       {'notes': note.trim()},
     );
+
+    if (!mounted) return;
+
     ref.invalidate(publicationReadingProgressProvider(widget.guidelineId));
   }
 

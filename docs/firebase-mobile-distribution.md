@@ -6,9 +6,9 @@ MediGuide has two beta-delivery channels:
   signed iOS Ad Hoc IPA to the `mediguide-testers` group.
 - Apple TestFlight publishes an App Store-signed IPA through App Store Connect.
 
-For internal alpha releases, use the dedicated workflow documented in
-[`mobile-alpha-release.md`](mobile-alpha-release.md). It adds quality gates,
-unique per-run store build numbers, and the `mediguide-alpha-testers` group
+Alpha, beta and protected production store delivery are documented in
+[`mobile-alpha-release.md`](mobile-alpha-release.md). Prerelease workflows add
+quality gates, unique per-run build numbers and channel-specific tester groups
 without creating a platform tag or deploying production services.
 
 Pushing a `v*` tag starts the normal mobile release quality gate, which then

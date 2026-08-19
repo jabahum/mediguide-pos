@@ -9,6 +9,8 @@ on:
       - ".github/workflows/mobile-release.yml"
       - ".github/workflows/mobile-distribution.yml"
       - ".github/workflows/mobile-alpha.yml"
+      - ".github/workflows/mobile-beta.yml"
+      - ".github/workflows/mobile-production.yml"
   push:
     branches:
       - main
@@ -19,6 +21,8 @@ on:
       - ".github/workflows/mobile-release.yml"
       - ".github/workflows/mobile-distribution.yml"
       - ".github/workflows/mobile-alpha.yml"
+      - ".github/workflows/mobile-beta.yml"
+      - ".github/workflows/mobile-production.yml"
   workflow_dispatch:
     inputs:
       api_base_url:

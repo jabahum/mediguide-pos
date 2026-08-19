@@ -1,6 +1,22 @@
-name: Release mobile alpha
+name: Release mobile prerelease
 
 on:
+  workflow_call:
+    inputs:
+      channel:
+        required: false
+        default: alpha
+        type: string
+      destination:
+        required: false
+        default: all
+        type: string
+      sequence_number:
+        required: false
+        type: string
+      release_notes:
+        required: false
+        type: string
   workflow_dispatch:
     inputs:
       destination:
@@ -26,7 +42,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: mobile-alpha-${{ github.ref }}
+  group: mobile-${{ inputs.channel || 'alpha' }}-${{ github.ref }}
   cancel-in-progress: false
 
 env:
@@ -34,13 +50,15 @@ env:
 
 jobs:
   metadata:
-    name: Allocate alpha metadata
+    name: Allocate prerelease metadata
     runs-on: ubuntu-latest
     outputs:
       app_version: ${{ steps.metadata.outputs.app_version }}
       alpha_number: ${{ steps.metadata.outputs.alpha_number }}
       build_number: ${{ steps.metadata.outputs.build_number }}
       release_notes: ${{ steps.metadata.outputs.release_notes }}
+      channel: ${{ steps.metadata.outputs.channel }}
+      tester_groups: ${{ steps.metadata.outputs.tester_groups }}
     steps:
       - name: Require canonical main branch
         if: github.ref != 'refs/heads/main'
@@ -51,10 +69,11 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v6
 
-      - name: Derive unique alpha version
+      - name: Derive unique prerelease version
         id: metadata
         env:
-          REQUESTED_ALPHA_NUMBER: ${{ inputs.alpha_number }}
+          RELEASE_CHANNEL: ${{ inputs.channel || 'alpha' }}
+          REQUESTED_SEQUENCE_NUMBER: ${{ inputs.sequence_number || inputs.alpha_number }}
           EXTRA_RELEASE_NOTES: ${{ inputs.release_notes }}
         working-directory: user_app
         run: |
@@ -62,55 +81,70 @@ jobs:
           full_version="$(sed -n 's/^version:[[:space:]]*//p' pubspec.yaml | head -n 1)"
           app_version="${full_version%%+*}"
           current_build="${full_version##*+}"
-          alpha_number="${REQUESTED_ALPHA_NUMBER:-${GITHUB_RUN_NUMBER}}"
+          channel="${RELEASE_CHANNEL:-alpha}"
+          sequence_number="${REQUESTED_SEQUENCE_NUMBER:-${GITHUB_RUN_NUMBER}}"
 
+          if [ "${channel}" != "alpha" ] && [ "${channel}" != "beta" ]; then
+            echo "Prerelease channel must be alpha or beta." >&2
+            exit 1
+          fi
           if ! [[ "${app_version}" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-            echo "Alpha builds require a numeric Flutter app version; found ${app_version}." >&2
+            echo "Prerelease builds require a numeric Flutter app version; found ${app_version}." >&2
             exit 1
           fi
           if ! [[ "${current_build}" =~ ^[1-9][0-9]*$ ]]; then
             echo "pubspec.yaml must contain a positive Flutter build number." >&2
             exit 1
           fi
-          if ! [[ "${alpha_number}" =~ ^[1-9][0-9]*$ ]]; then
-            echo "alpha_number must be a positive integer." >&2
+          if ! [[ "${sequence_number}" =~ ^[1-9][0-9]*$ ]]; then
+            echo "The prerelease sequence number must be a positive integer." >&2
             exit 1
           fi
 
           # Include the checked-in store build plus the workflow run/attempt.
           # This remains monotonic across alpha runs and gives a rerun a new
           # value instead of resubmitting a rejected TestFlight build.
-          allocated_build=$((current_build + GITHUB_RUN_NUMBER * 100 + GITHUB_RUN_ATTEMPT))
+          channel_offset=0
+          if [ "${channel}" = "beta" ]; then
+            # Alpha and beta are separate caller workflows and therefore have
+            # independent run-number sequences. Reserve a beta range so their
+            # store builds cannot collide.
+            channel_offset=100000
+          fi
+          allocated_build=$((current_build + channel_offset + GITHUB_RUN_NUMBER * 100 + GITHUB_RUN_ATTEMPT))
           if [ "${allocated_build}" -gt 2100000000 ]; then
             echo "Allocated build number exceeds the Android versionCode limit." >&2
             exit 1
           fi
 
-          notes="MediGuide ${app_version} alpha.${alpha_number} (build ${allocated_build}, ${GITHUB_SHA::12})"
-          if [ -n "${EXTRA_RELEASE_NOTES}" ]; then
-            notes="${notes}. ${EXTRA_RELEASE_NOTES}"
+          notes="MediGuide ${app_version} ${channel}.${sequence_number} (build ${allocated_build}, ${GITHUB_SHA::12})"
+          extra_notes="$(printf '%s' "${EXTRA_RELEASE_NOTES}" | tr '\r\n' '  ')"
+          if [ -n "${extra_notes}" ]; then
+            notes="${notes}. ${extra_notes}"
           fi
 
           {
             echo "app_version=${app_version}"
-            echo "alpha_number=${alpha_number}"
+            echo "alpha_number=${sequence_number}"
             echo "build_number=${allocated_build}"
+            echo "channel=${channel}"
+            echo "tester_groups=mediguide-${channel}-testers"
             echo "release_notes=${notes}"
           } >> "${GITHUB_OUTPUT}"
 
           {
-            echo "## Mobile alpha.${alpha_number}"
+            echo "## Mobile ${channel}.${sequence_number}"
             echo
             echo "- App version: ${app_version}"
             echo "- Store build: ${allocated_build}"
             echo "- Commit: ${GITHUB_SHA}"
             echo "- Destination: ${{ inputs.destination }}"
-            echo "- Firebase group: mediguide-alpha-testers"
+            echo "- Firebase group: mediguide-${channel}-testers"
             echo "- Production deployment: not triggered"
           } >> "${GITHUB_STEP_SUMMARY}"
 
   quality:
-    name: Test and analyze alpha
+    name: Test and analyze prerelease
     needs: metadata
     runs-on: ubuntu-latest
     timeout-minutes: 35
@@ -148,13 +182,13 @@ jobs:
         if: failure()
         uses: actions/upload-artifact@v7
         with:
-          name: mobile-alpha-golden-failures-${{ github.run_id }}
+          name: mobile-prerelease-golden-failures-${{ github.run_id }}
           path: user_app/test/failures
           if-no-files-found: ignore
           retention-days: 14
 
   distribute:
-    name: Distribute alpha to testers
+    name: Distribute prerelease to testers
     needs:
       - metadata
       - quality
@@ -164,5 +198,5 @@ jobs:
       api_base_url: ${{ vars.MOBILE_API_BASE_URL || 'https://mediguide.health.go.ug' }}
       release_notes: ${{ needs.metadata.outputs.release_notes }}
       build_number: ${{ needs.metadata.outputs.build_number }}
-      tester_groups: mediguide-alpha-testers
+      tester_groups: ${{ needs.metadata.outputs.tester_groups }}
     secrets: inherit

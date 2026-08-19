@@ -64,6 +64,21 @@ def firebase_distribution(binary:, app_id:)
   )
 end
 
+def app_store_api_key
+  require_environment!(
+    "APP_STORE_CONNECT_KEY_ID",
+    "APP_STORE_CONNECT_ISSUER_ID",
+    "APP_STORE_CONNECT_KEY_FILE"
+  )
+  app_store_connect_api_key(
+    key_id: ENV.fetch("APP_STORE_CONNECT_KEY_ID"),
+    issuer_id: ENV.fetch("APP_STORE_CONNECT_ISSUER_ID"),
+    key_filepath: ENV.fetch("APP_STORE_CONNECT_KEY_FILE"),
+    duration: 1_200,
+    in_house: false
+  )
+end
+
 platform :android do
   desc "Build a signed Android APK and AAB"
   lane :build_release do
@@ -85,6 +100,31 @@ platform :android do
   lane :firebase_release do
     build_release
     firebase
+  end
+
+  desc "Upload an existing Android App Bundle as a draft production release"
+  lane :play_store do |options|
+    require_environment!("GOOGLE_PLAY_SERVICE_ACCOUNT_FILE")
+    aab = options[:aab] || ENV["ANDROID_AAB_PATH"] || "build/app/outputs/bundle/#{mobile_flavor}Release/app-#{mobile_flavor}-release.aab"
+    UI.user_error!("Android App Bundle not found at #{aab}") unless File.file?(aab)
+
+    upload_to_play_store(
+      json_key: ENV.fetch("GOOGLE_PLAY_SERVICE_ACCOUNT_FILE"),
+      package_name: ENV.fetch("ANDROID_PACKAGE_NAME", "com.mediguide.ug"),
+      aab: aab,
+      track: "production",
+      release_status: "draft",
+      skip_upload_metadata: true,
+      skip_upload_changelogs: true,
+      skip_upload_images: true,
+      skip_upload_screenshots: true
+    )
+  end
+
+  desc "Build Android and upload a draft production release to Google Play"
+  lane :play_store_release do
+    build_release
+    play_store
   end
 end
 
@@ -149,23 +189,11 @@ platform :ios do
 
   desc "Upload an existing App Store IPA to TestFlight"
   lane :upload_testflight do |options|
-    require_environment!(
-      "APP_STORE_CONNECT_KEY_ID",
-      "APP_STORE_CONNECT_ISSUER_ID",
-      "APP_STORE_CONNECT_KEY_FILE"
-    )
     ipa = options[:ipa] || ENV["IOS_TESTFLIGHT_IPA_PATH"] || Dir["build/ios/testflight/*.ipa"].first
     UI.user_error!("No TestFlight IPA was provided or built") unless ipa && File.file?(ipa)
 
-    api_key = app_store_connect_api_key(
-      key_id: ENV.fetch("APP_STORE_CONNECT_KEY_ID"),
-      issuer_id: ENV.fetch("APP_STORE_CONNECT_ISSUER_ID"),
-      key_filepath: ENV.fetch("APP_STORE_CONNECT_KEY_FILE"),
-      duration: 1_200,
-      in_house: false
-    )
     upload_to_testflight(
-      api_key: api_key,
+      api_key: app_store_api_key,
       ipa: ipa,
       changelog: release_notes,
       skip_waiting_for_build_processing: true,
@@ -177,5 +205,33 @@ platform :ios do
   lane :testflight_release do
     ipa = build_testflight
     upload_testflight(ipa: ipa)
+  end
+
+
+  desc "Upload an existing IPA to App Store Connect without public release"
+  lane :app_store do |options|
+    ipa = options[:ipa] || ENV["IOS_APP_STORE_IPA_PATH"] || Dir["build/ios/app-store/*.ipa"].first
+    UI.user_error!("No App Store IPA was provided or built") unless ipa && File.file?(ipa)
+
+    upload_to_app_store(
+      api_key: app_store_api_key,
+      ipa: ipa,
+      app_identifier: ENV.fetch("IOS_BUNDLE_IDENTIFIER", "com.omarsoft.mediguide"),
+      submit_for_review: false,
+      automatic_release: false,
+      skip_metadata: true,
+      skip_screenshots: true,
+      force: true
+    )
+  end
+
+  desc "Build and upload an App Store production candidate"
+  lane :app_store_release do
+    require_environment!("IOS_APP_STORE_EXPORT_OPTIONS_PLIST", "MOBILE_BUILD_NUMBER")
+    ipa = build_ipa(
+      export_options: ENV.fetch("IOS_APP_STORE_EXPORT_OPTIONS_PLIST"),
+      output_directory: "build/ios/app-store"
+    )
+    app_store(ipa: ipa)
   end
 end

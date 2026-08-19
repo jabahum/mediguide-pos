@@ -1,0 +1,37 @@
+name: Release mobile beta
+
+on:
+  workflow_dispatch:
+    inputs:
+      destination:
+        description: Beta distribution destination
+        required: true
+        default: all
+        type: choice
+        options:
+          - all
+          - firebase-android
+          - firebase-ios
+          - testflight
+      beta_number:
+        description: Optional human-facing beta sequence (defaults to workflow run number)
+        required: false
+        type: string
+      release_notes:
+        description: Optional notes appended to the generated beta metadata
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  release:
+    name: Validate and distribute beta
+    uses: ./.github/workflows/mobile-alpha.yml
+    with:
+      channel: beta
+      destination: ${{ inputs.destination }}
+      sequence_number: ${{ inputs.beta_number }}
+      release_notes: ${{ inputs.release_notes }}
+    secrets: inherit

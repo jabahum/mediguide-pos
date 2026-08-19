@@ -13,6 +13,12 @@ on:
       release_notes:
         required: false
         type: string
+      build_number:
+        required: false
+        type: string
+      tester_groups:
+        required: false
+        type: string
   workflow_dispatch:
     inputs:
       destination:
@@ -33,6 +39,14 @@ on:
         description: Optional tester release notes
         required: false
         type: string
+      build_number:
+        description: Optional unique Android/iOS store build number
+        required: false
+        type: string
+      tester_groups:
+        description: Firebase App Distribution group aliases
+        required: false
+        type: string
 
 permissions:
   contents: read
@@ -47,7 +61,8 @@ env:
   MOBILE_API_BASE_URL: ${{ inputs.api_base_url || vars.MOBILE_API_BASE_URL || 'https://mediguide.health.go.ug' }}
   MOBILE_FLAVOR: production
   RELEASE_NOTES: ${{ inputs.release_notes }}
-  FIREBASE_TESTER_GROUPS: ${{ vars.FIREBASE_TESTER_GROUPS || 'mediguide-testers' }}
+  MOBILE_BUILD_NUMBER: ${{ inputs.build_number }}
+  FIREBASE_TESTER_GROUPS: ${{ inputs.tester_groups || vars.FIREBASE_TESTER_GROUPS || 'mediguide-testers' }}
   FIREBASE_TESTERS: ${{ vars.FIREBASE_TESTERS }}
   FIREBASE_ANDROID_APP_ID: ${{ vars.FIREBASE_ANDROID_APP_ID }}
   FIREBASE_IOS_APP_ID: ${{ vars.FIREBASE_IOS_APP_ID }}
@@ -198,9 +213,13 @@ jobs:
         run: |
           set -euo pipefail
           version="$(sed -n 's/^version:[[:space:]]*//p' pubspec.yaml | head -n 1)"
-          build_number="${version##*+}"
+          build_number="${MOBILE_BUILD_NUMBER:-${version##*+}}"
           if [ -z "${build_number}" ] || [ "${build_number}" = "${version}" ]; then
             echo "pubspec.yaml must contain a Flutter build number." >&2
+            exit 1
+          fi
+          if ! [[ "${build_number}" =~ ^[1-9][0-9]*$ ]]; then
+            echo "The mobile build number must be a positive integer." >&2
             exit 1
           fi
           echo "build_number=${build_number}" >> "${GITHUB_OUTPUT}"

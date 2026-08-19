@@ -10,6 +10,7 @@
 !docs/mobile-visual-regression.md
 !docs/firebase-mobile-distribution.md
 !docs/mobile-environments.md
+!docs/mobile-alpha-release.md
 !guidelines-platform/src/content/**/*.md
 backend/.env
 backend/.env.local

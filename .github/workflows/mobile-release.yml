@@ -8,6 +8,7 @@ on:
       - "user_app/**"
       - ".github/workflows/mobile-release.yml"
       - ".github/workflows/mobile-distribution.yml"
+      - ".github/workflows/mobile-alpha.yml"
   push:
     branches:
       - main
@@ -17,6 +18,7 @@ on:
       - "user_app/**"
       - ".github/workflows/mobile-release.yml"
       - ".github/workflows/mobile-distribution.yml"
+      - ".github/workflows/mobile-alpha.yml"
   workflow_dispatch:
     inputs:
       api_base_url:

@@ -36,6 +36,19 @@ def flutter_target
   "lib/main_#{mobile_flavor}.dart"
 end
 
+def flutter_version_args
+  build_name = ENV["MOBILE_BUILD_NAME"].to_s.strip
+  build_number = ENV["MOBILE_BUILD_NUMBER"].to_s.strip
+  unless build_number.empty? || build_number.match?(/\A[1-9][0-9]*\z/)
+    UI.user_error!("MOBILE_BUILD_NUMBER must be a positive integer")
+  end
+
+  args = []
+  args << "--build-name=#{build_name}" unless build_name.empty?
+  args << "--build-number=#{build_number}" unless build_number.empty?
+  args
+end
+
 def firebase_distribution(binary:, app_id:)
   require_environment!("GOOGLE_APPLICATION_CREDENTIALS")
 
@@ -56,8 +69,8 @@ platform :android do
   lane :build_release do
     require_environment!("MOBILE_API_BASE_URL")
     sh("dart", "run", "build_runner", "build", "--delete-conflicting-outputs")
-    sh("flutter", "build", "apk", "--release", "--flavor", mobile_flavor, "--target", flutter_target, *flutter_defines)
-    sh("flutter", "build", "appbundle", "--release", "--flavor", mobile_flavor, "--target", flutter_target, *flutter_defines)
+    sh("flutter", "build", "apk", "--release", "--flavor", mobile_flavor, "--target", flutter_target, *flutter_version_args, *flutter_defines)
+    sh("flutter", "build", "appbundle", "--release", "--flavor", mobile_flavor, "--target", flutter_target, *flutter_version_args, *flutter_defines)
   end
 
   desc "Upload an existing signed Android APK to Firebase App Distribution"

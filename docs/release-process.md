@@ -166,6 +166,10 @@ Native application IDs, Xcode schemes, local run commands, and the protected
 non-production inspectors are documented in
 [`mobile-environments.md`](mobile-environments.md).
 
+Internal mobile-only alpha delivery is intentionally separate from unified
+platform releases. See [`mobile-alpha-release.md`](mobile-alpha-release.md) for
+the quality-gated Firebase and internal TestFlight process.
+
 ## Prepare the release
 
 1. Choose the new tag and synchronize every component version. Moving to a new

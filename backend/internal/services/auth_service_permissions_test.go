@@ -66,6 +66,30 @@ func TestDerivedRolePermissionsSeparateGuidelineAuthorAndReviewerActions(t *test
 	}
 }
 
+func TestDerivedRolePermissionsSeparateNotificationAuthorAndApprover(t *testing.T) {
+	author := deriveRolePermissions("content_manager", "")
+	for _, permission := range []string{
+		"notification.read", "notification.compose", "notification.template.read",
+		"notification.template.manage", "notification.campaign.read",
+		"notification.campaign.manage", "firebase.status.read",
+	} {
+		if !containsPermission(author, permission) {
+			t.Fatalf("content manager missing %s: %v", permission, author)
+		}
+	}
+	if containsPermission(author, "notification.campaign.approve") || containsPermission(author, "notification.publish") {
+		t.Fatalf("notification author received approval or direct-publish permission: %v", author)
+	}
+
+	reviewer := deriveRolePermissions("reviewer", "")
+	if !containsPermission(reviewer, "notification.campaign.approve") {
+		t.Fatalf("reviewer missing campaign approval: %v", reviewer)
+	}
+	if containsPermission(reviewer, "notification.campaign.manage") || containsPermission(reviewer, "notification.template.manage") {
+		t.Fatalf("reviewer received notification authoring permissions: %v", reviewer)
+	}
+}
+
 func containsPermission(values []string, expected string) bool {
 	for _, value := range values {
 		if value == expected {

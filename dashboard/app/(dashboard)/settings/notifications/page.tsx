@@ -1,756 +1,208 @@
-'use client'
+"use client"
 
-import { useState, useEffect, useCallback } from "react"
-import { useRouter } from "next/navigation"
-import { usePermissionContext } from "@/lib/permission-context"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import * as React from "react"
+import Link from "next/link"
+import { AlertTriangle, Bell, CheckCircle, CloudCog, FileText, Loader2, LockKeyhole, Plus, RefreshCw, Send, Settings, type LucideIcon } from "lucide-react"
+
+import { Alert, AlertDescription } from "@/components/ui/alert"
+import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Badge } from "@/components/ui/badge"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Textarea } from "@/components/ui/textarea"
-import { Switch } from "@/components/ui/switch"
-import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Separator } from "@/components/ui/separator"
 import { PageHeader } from "@/components/ui/page-header"
-import {
-  Bell,
-  Send,
-  Mail,
-  Smartphone,
-  MessageCircle,
-  Users,
-  Settings,
-  Plus,
-  Filter,
-  Calendar,
-  Clock,
-  CheckCircle,
-  AlertTriangle,
-  Target,
-  Zap,
-  Eye,
-  Edit,
-  Copy,
-  Trash2,
-  Play,
-  Pause,
-  BarChart3,
-  TrendingUp,
-  RefreshCw,
-  Loader2
-} from "lucide-react"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Textarea } from "@/components/ui/textarea"
+import { hasBackendPermission } from "@/lib/backend-client"
+import { usePermissionContext } from "@/lib/permission-context"
 import { showToast } from "@/lib/toast"
-import { notificationsService } from "@/services/notifications.service"
-import type {
-  NotificationTemplatesResponse,
-  NotificationCampaignsResponse,
-  NotificationTemplatesTypeOptions,
-  NotificationTemplatesStatusOptions,
-  NotificationTemplatesCategoryOptions,
-  NotificationCampaignsTypeOptions,
-  NotificationCampaignsStatusOptions
-} from "@/types/backend-types"
+import { firebaseService } from "@/services/firebase.service"
+import { notificationsService, type NotificationPriority, type NotificationType } from "@/services/notifications.service"
+import type { NotificationCampaignsResponse, NotificationTemplatesResponse } from "@/types/backend-types"
 
-export default function NotificationsPage() {
-  const router = useRouter()
-  const { hasPermission, loading: permLoading } = usePermissionContext()
-  const [testMode, setTestMode] = useState(false)
-  const [templates, setTemplates] = useState<NotificationTemplatesResponse[]>([])
-  const [campaigns, setCampaigns] = useState<NotificationCampaignsResponse[]>([])
-  const [stats, setStats] = useState({
-    totalSent: 0,
-    deliveryRate: 0,
-    openRate: 0,
-    activeTemplates: 0
-  })
-  const [loading, setLoading] = useState(true)
+type FirebaseState = "configured" | "disabled" | "unavailable"
 
-  useEffect(() => {
-    if (permLoading) return
-    if (!hasPermission("system_settings", "read:any")) {
-      router.replace("/")
+export default function NotificationAdministrationPage() {
+  const { loading: permissionsLoading } = usePermissionContext()
+  const canPublish = hasBackendPermission("notification.publish")
+  const canReadTemplates = hasBackendPermission("notification.template.read")
+  const canManageTemplates = hasBackendPermission("notification.template.manage")
+  const canReadCampaigns = hasBackendPermission("notification.campaign.read")
+  const canReadFirebase = hasBackendPermission("firebase.status.read")
+  const canAdminister = [
+    canPublish,
+    canReadTemplates,
+    canReadCampaigns,
+    canReadFirebase,
+  ].some(Boolean)
+  const [templates, setTemplates] = React.useState<NotificationTemplatesResponse[]>([])
+  const [campaigns, setCampaigns] = React.useState<NotificationCampaignsResponse[]>([])
+  const [templateTotal, setTemplateTotal] = React.useState(0)
+  const [campaignTotal, setCampaignTotal] = React.useState(0)
+  const [firebaseState, setFirebaseState] = React.useState<FirebaseState>("unavailable")
+  const [loading, setLoading] = React.useState(true)
+  const [loadError, setLoadError] = React.useState("")
+  const [updatingId, setUpdatingId] = React.useState<string | null>(null)
+  const [composerOpen, setComposerOpen] = React.useState(false)
+  const [savingNotice, setSavingNotice] = React.useState(false)
+  const [notice, setNotice] = React.useState({ title: "", message: "", type: "info" as NotificationType, priority: "normal" as NotificationPriority })
+
+  const load = React.useCallback(async () => {
+    if (!canAdminister) { setLoading(false); return }
+    setLoading(true)
+    setLoadError("")
+    const [notificationResult, firebaseResult] = await Promise.allSettled([
+      Promise.all([
+        canReadTemplates ? notificationsService.listTemplates({ page: 1, per_page: 50 }) : Promise.resolve({ items: [], page: 1, per_page: 50, total_items: 0, total_pages: 0 }),
+        canReadCampaigns ? notificationsService.listCampaigns({ page: 1, per_page: 50 }) : Promise.resolve({ items: [], page: 1, per_page: 50, total_items: 0, total_pages: 0 }),
+      ]),
+      canReadFirebase ? firebaseService.status() : Promise.resolve({ enabled: false }),
+    ])
+
+    if (notificationResult.status === "fulfilled") {
+      const [templatePage, campaignPage] = notificationResult.value
+      setTemplates(templatePage.items)
+      setCampaigns(campaignPage.items)
+      setTemplateTotal(templatePage.total_items)
+      setCampaignTotal(campaignPage.total_items)
+    } else {
+      setLoadError(notificationResult.reason instanceof Error ? notificationResult.reason.message : "Unable to load notification administration")
     }
-  }, [permLoading, hasPermission, router])
+    setFirebaseState(firebaseResult.status === "fulfilled" ? (firebaseResult.value.enabled ? "configured" : "disabled") : "unavailable")
+    setLoading(false)
+  }, [canAdminister, canReadCampaigns, canReadFirebase, canReadTemplates])
 
-  const fetchData = useCallback(async () => {
+  React.useEffect(() => {
+    if (!permissionsLoading) void load()
+  }, [load, permissionsLoading])
+
+  async function saveInAppNotice(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    const title = notice.title.trim()
+    const message = notice.message.trim()
+    if (!title || !message) { showToast.warning("Missing details", "Enter a title and message"); return }
+    if (!window.confirm("Save this in-app notice for all users? This does not send a device push.")) return
+    setSavingNotice(true)
     try {
-      const [templatesResult, campaignsResult] = await Promise.all([
-        notificationsService.listTemplates({ page: 1, per_page: 50 }),
-        notificationsService.listCampaigns({ page: 1, per_page: 50 })
-      ])
-
-      setTemplates(templatesResult.items as NotificationTemplatesResponse[])
-      setCampaigns(campaignsResult.items as NotificationCampaignsResponse[])
-
-      // Calculate stats
-      const totalSent = templatesResult.items.reduce((sum, t) => sum + (t.sent_count || 0), 0)
-      const totalOpened = templatesResult.items.reduce((sum, t) => sum + (t.opened_count || 0), 0)
-      const totalDelivered = campaignsResult.items.reduce((sum, c) => sum + (c.metrics_delivered || 0), 0)
-      const activeTemplates = templatesResult.items.filter(t => t.status === "active").length
-
-      const deliveryRate = totalSent > 0 ? (totalDelivered / totalSent) * 100 : 0
-      const openRate = totalSent > 0 ? (totalOpened / totalSent) * 100 : 0
-
-      setStats({
-        totalSent,
-        deliveryRate: parseFloat(deliveryRate.toFixed(1)),
-        openRate: parseFloat(openRate.toFixed(1)),
-        activeTemplates
-      })
+      await notificationsService.create({ ...notice, title, message })
+      setNotice({ title: "", message: "", type: "info", priority: "normal" })
+      setComposerOpen(false)
+      showToast.success("In-app notice saved", "The notice will appear when mobile clients synchronize. No device push was sent.")
     } catch (error) {
-      console.error("Failed to fetch notification data:", error)
-      showToast.error("Error", "Failed to load notification data")
-    } finally {
-      setLoading(false)
-    }
-  }, [])
-
-  useEffect(() => {
-    fetchData()
-  }, [fetchData])
-
-  const getStatusBadge = (status: NotificationTemplatesStatusOptions | NotificationCampaignsStatusOptions | string) => {
-    switch (status) {
-      case "active":
-        return <Badge variant="default" className="bg-green-500"><CheckCircle className="w-3 h-3 mr-1" />Active</Badge>
-      case "inactive":
-        return <Badge variant="secondary">Inactive</Badge>
-      case "draft":
-        return <Badge variant="outline">Draft</Badge>
-      case "scheduled":
-        return <Badge variant="outline"><Clock className="w-3 h-3 mr-1" />Scheduled</Badge>
-      case "running":
-        return <Badge variant="default" className="bg-blue-500"><Play className="w-3 h-3 mr-1" />Running</Badge>
-      case "completed":
-        return <Badge variant="default" className="bg-green-500"><CheckCircle className="w-3 h-3 mr-1" />Completed</Badge>
-      case "paused":
-        return <Badge variant="secondary"><Pause className="w-3 h-3 mr-1" />Paused</Badge>
-      default:
-        return <Badge variant="outline">{status}</Badge>
-    }
+      showToast.error("In-app notice", error instanceof Error ? error.message : "Unable to save the notice")
+    } finally { setSavingNotice(false) }
   }
 
-  const getTypeBadge = (type: NotificationTemplatesTypeOptions | NotificationCampaignsTypeOptions | string) => {
-    switch (type) {
-      case "push":
-        return <Badge variant="default"><Bell className="w-3 h-3 mr-1" />Push</Badge>
-      case "email":
-        return <Badge variant="secondary"><Mail className="w-3 h-3 mr-1" />Email</Badge>
-      case "sms":
-        return <Badge variant="outline"><Smartphone className="w-3 h-3 mr-1" />SMS</Badge>
-      case "in-app":
-        return <Badge variant="outline"><MessageCircle className="w-3 h-3 mr-1" />In-App</Badge>
-      case "emergency":
-        return <Badge variant="destructive"><AlertTriangle className="w-3 h-3 mr-1" />Emergency</Badge>
-      case "update":
-        return <Badge variant="default"><RefreshCw className="w-3 h-3 mr-1" />Update</Badge>
-      case "reminder":
-        return <Badge variant="secondary"><Clock className="w-3 h-3 mr-1" />Reminder</Badge>
-      case "marketing":
-        return <Badge variant="outline"><Target className="w-3 h-3 mr-1" />Marketing</Badge>
-      default:
-        return <Badge variant="outline">{type}</Badge>
-    }
-  }
-
-  const handleSendTest = (templateId: string) => {
-    showToast.loading("Sending test notification...")
-    setTimeout(() => {
-      showToast.success("Test sent", `Test notification for template ${templateId} sent successfully`)
-    }, 2000)
-  }
-
-  const handleToggleTemplate = async (templateId: string, currentStatus: string) => {
-    const newStatus = currentStatus === "active" ? "inactive" : "active"
+  async function toggleTemplate(template: NotificationTemplatesResponse) {
+    const nextStatus = template.status === "active" ? "inactive" : "active"
+    if (!window.confirm(`${nextStatus === "active" ? "Activate" : "Deactivate"} ${template.name}? This changes template availability but does not send a notification.`)) return
+    setUpdatingId(template.id)
     try {
-      await notificationsService.updateTemplateStatus(templateId, newStatus as "active" | "inactive")
-      showToast.success(
-        newStatus === "active" ? "Template activated" : "Template deactivated",
-        `Notification template has been ${newStatus === "active" ? 'activated' : 'deactivated'}`
-      )
-      fetchData()
+      await notificationsService.updateTemplateStatus(template.id, nextStatus)
+      showToast.success("Template updated", `Template is now ${nextStatus}. No notification was sent.`)
+      await load()
     } catch (error) {
-      showToast.error("Error", "Failed to update template status")
-    }
+      showToast.error("Template", error instanceof Error ? error.message : "Unable to update template")
+    } finally { setUpdatingId(null) }
   }
 
-  const handleCampaignAction = async (campaignId: string, action: string) => {
-    try {
-      let newStatus = "running"
-      if (action === "pause") newStatus = "paused"
-      if (action === "resume") newStatus = "running"
-      if (action === "stop") newStatus = "completed"
-
-      await notificationsService.updateCampaignStatus(campaignId, newStatus as "running" | "paused" | "completed")
-      showToast.success(`Campaign ${action}ed`, `Campaign has been ${action}ed`)
-      fetchData()
-    } catch (error) {
-      showToast.error("Error", `Failed to ${action} campaign`)
-    }
+  if (permissionsLoading || loading) {
+    return <div className="space-y-6"><PageHeader title="Notification Administration" description="Loading notification configuration…" /><div className="flex h-64 items-center justify-center text-muted-foreground"><Loader2 className="mr-2 h-6 w-6 animate-spin" />Loading…</div></div>
   }
-
-  if (loading) {
+  if (!canAdminister) {
     return (
       <div className="space-y-6">
-        <PageHeader
-          title="Notification Management"
-          description="Manage push notifications, emails, and communication campaigns"
-        />
-        <div className="flex items-center justify-center h-64">
-          <Loader2 className="h-8 w-8 animate-spin" />
-        </div>
+        <PageHeader title="Notification Administration" description="Manage notification operations" />
+        <Alert variant="destructive">
+          <LockKeyhole className="h-4 w-4" />
+          <AlertDescription>You do not have permission to administer notifications.</AlertDescription>
+        </Alert>
       </div>
     )
   }
 
   return (
     <div className="space-y-6">
-      <PageHeader
-        title="Notification Management"
-        description="Manage push notifications, emails, and communication campaigns"
-      />
-
-      <div className="flex flex-wrap items-center gap-3">
-        <div className="flex items-center gap-2">
-          <Label htmlFor="test-mode" className="text-sm">Test Mode</Label>
-          <Switch id="test-mode" checked={testMode} onCheckedChange={setTestMode} />
-        </div>
-        <Button variant="outline">
-          <Settings className="mr-2 h-4 w-4" />
-          Settings
-        </Button>
-        <Dialog>
-          <DialogTrigger asChild>
-            <Button>
-              <Plus className="mr-2 h-4 w-4" />
-              New Campaign
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="sm:max-w-[500px]">
-            <DialogHeader>
-              <DialogTitle>Create Campaign</DialogTitle>
-              <DialogDescription>
-                Set up a new notification campaign
-              </DialogDescription>
-            </DialogHeader>
-            <div className="grid gap-4 py-4">
-              <div className="grid gap-2">
-                <Label htmlFor="campaign-name">Campaign Name</Label>
-                <Input id="campaign-name" placeholder="e.g., Monthly Health Update" />
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="campaign-type">Campaign Type</Label>
-                <Select>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select type" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="emergency">Emergency</SelectItem>
-                    <SelectItem value="update">Update</SelectItem>
-                    <SelectItem value="reminder">Reminder</SelectItem>
-                    <SelectItem value="marketing">Marketing</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="grid gap-2">
-                <Label>Notification Channels</Label>
-                <div className="flex flex-wrap gap-2">
-                  <div className="flex items-center space-x-2">
-                    <Switch id="push" defaultChecked />
-                    <Label htmlFor="push" className="text-sm">Push</Label>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <Switch id="email" />
-                    <Label htmlFor="email" className="text-sm">Email</Label>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <Switch id="sms" />
-                    <Label htmlFor="sms" className="text-sm">SMS</Label>
-                  </div>
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <PageHeader title="Notification Administration" description="Manage in-app notices and notification metadata. Campaign push delivery is not enabled yet." />
+        <div className="flex flex-wrap gap-2">
+          <Button variant="outline" onClick={() => void load()}><RefreshCw className="mr-2 h-4 w-4" />Refresh</Button>
+          {canReadFirebase ? <Button variant="outline" asChild><Link href="/settings/firebase"><Settings className="mr-2 h-4 w-4" />Firebase settings</Link></Button> : null}
+          {canPublish ? <Dialog open={composerOpen} onOpenChange={setComposerOpen}>
+            <DialogTrigger asChild><Button><Plus className="mr-2 h-4 w-4" />New in-app notice</Button></DialogTrigger>
+            <DialogContent className="sm:max-w-[560px]">
+              <DialogHeader><DialogTitle>Create an in-app notice</DialogTitle><DialogDescription>This saves a global notice in MediGuide. It does not send an FCM push notification.</DialogDescription></DialogHeader>
+              <form className="space-y-4" onSubmit={saveInAppNotice}>
+                <Alert><Bell className="h-4 w-4" /><AlertDescription>Audience: all authenticated app users. Delivery occurs when the app synchronizes.</AlertDescription></Alert>
+                <div className="space-y-2"><Label htmlFor="notice-title">Title</Label><Input id="notice-title" required maxLength={200} value={notice.title} onChange={(event) => setNotice((value) => ({ ...value, title: event.target.value }))} /></div>
+                <div className="space-y-2"><Label htmlFor="notice-message">Message</Label><Textarea id="notice-message" required rows={5} value={notice.message} onChange={(event) => setNotice((value) => ({ ...value, message: event.target.value }))} /></div>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="space-y-2"><Label htmlFor="notice-type">Type</Label><Select value={notice.type} onValueChange={(type: NotificationType) => setNotice((value) => ({ ...value, type }))}><SelectTrigger id="notice-type"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="info">Info</SelectItem><SelectItem value="success">Success</SelectItem><SelectItem value="warning">Warning</SelectItem><SelectItem value="error">Error</SelectItem></SelectContent></Select></div>
+                  <div className="space-y-2"><Label htmlFor="notice-priority">Priority</Label><Select value={notice.priority} onValueChange={(priority: NotificationPriority) => setNotice((value) => ({ ...value, priority }))}><SelectTrigger id="notice-priority"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="low">Low</SelectItem><SelectItem value="normal">Normal</SelectItem><SelectItem value="high">High</SelectItem><SelectItem value="urgent">Urgent</SelectItem></SelectContent></Select></div>
                 </div>
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="campaign-message">Message</Label>
-                <Textarea id="campaign-message" placeholder="Enter your message..." />
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="campaign-schedule">Schedule</Label>
-                <Input id="campaign-schedule" type="datetime-local" />
-              </div>
-            </div>
-            <div className="flex justify-end space-x-2">
-              <Button variant="outline">Cancel</Button>
-              <Button>Create Campaign</Button>
-            </div>
-          </DialogContent>
-        </Dialog>
+                <DialogFooter><Button type="button" variant="outline" disabled={savingNotice} onClick={() => setComposerOpen(false)}>Cancel</Button><Button type="submit" disabled={savingNotice}>{savingNotice ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FileText className="mr-2 h-4 w-4" />}Save in-app notice</Button></DialogFooter>
+              </form>
+            </DialogContent>
+          </Dialog> : null}
+        </div>
       </div>
 
-      {testMode && (
-        <Alert>
-          <Zap className="h-4 w-4" />
-          <AlertDescription>
-            Test Mode is enabled. All notifications will be sent to test recipients only.
-          </AlertDescription>
-        </Alert>
-      )}
+      <Alert><AlertTriangle className="h-4 w-4" /><AlertDescription>Templates and campaigns are currently metadata only. Scheduling, audience resolution and push dispatch will remain unavailable until the durable delivery worker is implemented.</AlertDescription></Alert>
+      {loadError ? <Alert variant="destructive"><AlertTriangle className="h-4 w-4" /><AlertDescription className="flex flex-wrap items-center justify-between gap-3"><span>{loadError}</span><Button variant="outline" size="sm" onClick={() => void load()}>Try again</Button></AlertDescription></Alert> : null}
 
-      {/* Overview Stats */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 backendClient-2">
-            <CardTitle className="text-sm font-medium">Total Sent</CardTitle>
-            <Send className="h-4 w-4 text-blue-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.totalSent.toLocaleString()}</div>
-            <p className="text-xs text-muted-foreground">
-              All time
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 backendClient-2">
-            <CardTitle className="text-sm font-medium">Delivery Rate</CardTitle>
-            <CheckCircle className="h-4 w-4 text-green-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.deliveryRate}%</div>
-            <p className="text-xs text-muted-foreground">
-              Based on campaign metrics
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 backendClient-2">
-            <CardTitle className="text-sm font-medium">Open Rate</CardTitle>
-            <Eye className="h-4 w-4 text-orange-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.openRate}%</div>
-            <p className="text-xs text-muted-foreground">
-              Template open rate
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 backendClient-2">
-            <CardTitle className="text-sm font-medium">Active Templates</CardTitle>
-            <Bell className="h-4 w-4 text-purple-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.activeTemplates}</div>
-            <p className="text-xs text-muted-foreground">
-              {campaigns.filter(c => c.status === "running").length} campaigns running
-            </p>
-          </CardContent>
-        </Card>
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <Summary title="Templates" value={templateTotal} detail="Stored template records" />
+        <Summary title="Active templates" value={templates.filter((item) => item.status === "active").length} detail="Available metadata; not delivery" />
+        <Summary title="Campaigns" value={campaignTotal} detail="Stored campaign records" />
+        <Summary title="Firebase" value={firebaseState === "configured" ? "Configured" : firebaseState === "disabled" ? "Disabled" : "Unavailable"} detail="Live backend status" />
       </div>
 
       <Tabs defaultValue="templates" className="space-y-4">
-        <TabsList>
-          <TabsTrigger value="templates">Templates</TabsTrigger>
-          <TabsTrigger value="campaigns">Campaigns</TabsTrigger>
-          <TabsTrigger value="analytics">Analytics</TabsTrigger>
-          <TabsTrigger value="channels">Channels</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="templates" className="space-y-4">
+        <TabsList><TabsTrigger value="templates">Templates</TabsTrigger><TabsTrigger value="campaigns">Campaigns</TabsTrigger><TabsTrigger value="channels">Channels</TabsTrigger></TabsList>
+        <TabsContent value="templates">
           <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle>Notification Templates</CardTitle>
-                  <CardDescription>Manage reusable notification templates</CardDescription>
+            <CardHeader className="flex-row items-start justify-between gap-4"><div><CardTitle>Templates</CardTitle><CardDescription>Reusable metadata records. Rendering and campaign test delivery are not connected yet.</CardDescription></div><Button disabled title="Template authoring will be enabled with versioned template APIs"><Plus className="mr-2 h-4 w-4" />New template</Button></CardHeader>
+            <CardContent className="space-y-3">
+              {templates.length === 0 ? <Empty message="No templates found" /> : templates.map((template) => (
+                <div key={template.id} className="flex flex-col gap-3 rounded-lg border p-4 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="space-y-1"><div className="flex flex-wrap items-center gap-2"><span className="font-medium">{template.name}</span><Badge variant="outline">{template.type}</Badge><Badge variant={template.status === "active" ? "default" : "secondary"}>{template.status}</Badge></div><p className="text-sm text-muted-foreground">{template.subject || template.category}</p></div>
+                  <div className="flex flex-wrap gap-2"><Button variant="outline" size="sm" disabled title="Template test rendering is not implemented">Test unavailable</Button><Button variant="outline" size="sm" disabled={!canManageTemplates || updatingId !== null} onClick={() => void toggleTemplate(template)}>{updatingId === template.id ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}{template.status === "active" ? "Deactivate" : "Activate"}</Button></div>
                 </div>
-                <div className="flex space-x-2">
-                  <Button variant="outline" size="sm">
-                    <Filter className="mr-2 h-4 w-4" />
-                    Filter
-                  </Button>
-                  <Dialog>
-                    <DialogTrigger asChild>
-                      <Button size="sm">
-                        <Plus className="mr-2 h-4 w-4" />
-                        New Template
-                      </Button>
-                    </DialogTrigger>
-                    <DialogContent className="sm:max-w-[600px]">
-                      <DialogHeader>
-                        <DialogTitle>Create Template</DialogTitle>
-                        <DialogDescription>
-                          Create a new notification template
-                        </DialogDescription>
-                      </DialogHeader>
-                      <div className="grid gap-4 py-4">
-                        <div className="grid gap-2">
-                          <Label htmlFor="template-name">Template Name</Label>
-                          <Input id="template-name" placeholder="e.g., New Guideline Alert" />
-                        </div>
-                        <div className="grid grid-cols-2 gap-4">
-                          <div className="grid gap-2">
-                            <Label htmlFor="template-type">Type</Label>
-                            <Select>
-                              <SelectTrigger>
-                                <SelectValue placeholder="Select type" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="push">Push</SelectItem>
-                                <SelectItem value="email">Email</SelectItem>
-                                <SelectItem value="sms">SMS</SelectItem>
-                                <SelectItem value="in-app">In-App</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          </div>
-                          <div className="grid gap-2">
-                            <Label htmlFor="template-category">Category</Label>
-                            <Select>
-                              <SelectTrigger>
-                                <SelectValue placeholder="Select category" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="Content Updates">Content Updates</SelectItem>
-                                <SelectItem value="Emergency">Emergency</SelectItem>
-                                <SelectItem value="Training">Training</SelectItem>
-                                <SelectItem value="System">System</SelectItem>
-                                <SelectItem value="Marketing">Marketing</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          </div>
-                        </div>
-                        <div className="grid gap-2">
-                          <Label htmlFor="template-subject">Subject</Label>
-                          <Input id="template-subject" placeholder="Notification subject line" />
-                        </div>
-                        <div className="grid gap-2">
-                          <Label htmlFor="template-content">Content</Label>
-                          <Textarea id="template-content" placeholder="Enter template content... Use {{variable}} for dynamic content" />
-                        </div>
-                        <div className="grid gap-2">
-                          <Label htmlFor="template-audience">Target Audience</Label>
-                          <Input id="template-audience" placeholder="e.g., All Users, Doctors, Nurses" />
-                        </div>
-                      </div>
-                      <div className="flex justify-end space-x-2">
-                        <Button variant="outline">Cancel</Button>
-                        <Button>Create Template</Button>
-                      </div>
-                    </DialogContent>
-                  </Dialog>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {templates.length === 0 ? (
-                  <div className="text-center py-8">
-                    <p className="text-muted-foreground">No notification templates found</p>
-                    <Button variant="outline" className="mt-4">Create Template</Button>
-                  </div>
-                ) : (
-                  templates.map((template) => (
-                    <div key={template.id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors">
-                      <div className="flex items-start space-x-4">
-                        <div className="mt-1">
-                          {template.type === "push" && <Bell className="h-5 w-5 text-blue-500" />}
-                          {template.type === "email" && <Mail className="h-5 w-5 text-green-500" />}
-                          {template.type === "sms" && <Smartphone className="h-5 w-5 text-purple-500" />}
-                          {template.type === "in-app" && <MessageCircle className="h-5 w-5 text-orange-500" />}
-                        </div>
-                        <div className="space-y-1">
-                          <div className="flex items-center space-x-2">
-                            <h4 className="font-semibold">{template.name}</h4>
-                            {getTypeBadge(template.type)}
-                            {getStatusBadge(template.status)}
-                            <Badge variant="outline">{template.category}</Badge>
-                          </div>
-                          <p className="text-sm text-muted-foreground">{template.subject}</p>
-                          <p className="text-xs text-muted-foreground">
-                            Audience: {template.audience}
-                          </p>
-                          {template.sent_count ? (
-                            <div className="flex items-center space-x-3 text-xs text-muted-foreground">
-                              <span>Sent: {template.sent_count.toLocaleString()}</span>
-                              {template.opened_count ? <span>Opened: {template.opened_count.toLocaleString()}</span> : null}
-                              {template.clicked_count ? <span>Clicked: {template.clicked_count.toLocaleString()}</span> : null}
-                            </div>
-                          ) : null}
-                          {template.last_sent ? (
-                            <p className="text-xs text-muted-foreground">
-                              Last sent: {new Date(template.last_sent).toLocaleString()}
-                            </p>
-                          ) : (
-                            <p className="text-xs text-muted-foreground italic">Never sent</p>
-                          )}
-                        </div>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleSendTest(template.id)}
-                        >
-                          <Zap className="h-4 w-4 mr-1" />
-                          Test
-                        </Button>
-                        <Switch
-                          checked={template.status === "active"}
-                          onCheckedChange={() => handleToggleTemplate(template.id, template.status)}
-                        />
-                        <Button variant="ghost" size="icon">
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button variant="ghost" size="icon">
-                          <Copy className="h-4 w-4" />
-                        </Button>
-                        <Button variant="ghost" size="icon">
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </div>
-                  ))
-                )}
-              </div>
+              ))}
             </CardContent>
           </Card>
         </TabsContent>
-
-        <TabsContent value="campaigns" className="space-y-4">
+        <TabsContent value="campaigns">
           <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle>Active Campaigns</CardTitle>
-                  <CardDescription>Manage notification campaigns and broadcasts</CardDescription>
-                </div>
-                <Button size="sm">
-                  <Plus className="mr-2 h-4 w-4" />
-                  New Campaign
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {campaigns.length === 0 ? (
-                  <div className="text-center py-8">
-                    <p className="text-muted-foreground">No campaigns found</p>
-                    <Button variant="outline" className="mt-4">Create Campaign</Button>
-                  </div>
-                ) : (
-                  campaigns.map((campaign) => (
-                    <div key={campaign.id} className="p-4 border rounded-lg hover:bg-muted/50 transition-colors">
-                      <div className="flex items-start justify-between">
-                        <div className="space-y-1 flex-1">
-                          <div className="flex items-center space-x-2">
-                            <h4 className="font-semibold">{campaign.name}</h4>
-                            {getTypeBadge(campaign.type)}
-                            {getStatusBadge(campaign.status)}
-                          </div>
-                          <div className="flex items-center space-x-4 text-sm text-muted-foreground">
-                            <span className="flex items-center">
-                              <Users className="w-4 h-4 mr-1" />
-                              {campaign.audience_total?.toLocaleString() || 0} recipients
-                            </span>
-                            <span className="flex items-center">
-                              <Bell className="w-4 h-4 mr-1" />
-                              {(campaign.channels as string[])?.join(", ") || "N/A"}
-                            </span>
-                            <span className="flex items-center">
-                              <Calendar className="w-4 h-4 mr-1" />
-                              {campaign.schedule_start ? new Date(campaign.schedule_start).toLocaleDateString() : "Not scheduled"}
-                            </span>
-                          </div>
-                          <div className="mt-3 grid grid-cols-4 gap-4 p-3 bg-muted rounded-lg">
-                            <div className="text-center">
-                              <div className="text-lg font-bold">{campaign.metrics_sent?.toLocaleString() || 0}</div>
-                              <div className="text-xs text-muted-foreground">Sent</div>
-                            </div>
-                            <div className="text-center">
-                              <div className="text-lg font-bold">{campaign.metrics_delivered?.toLocaleString() || 0}</div>
-                              <div className="text-xs text-muted-foreground">Delivered</div>
-                            </div>
-                            <div className="text-center">
-                              <div className="text-lg font-bold">{campaign.metrics_opened?.toLocaleString() || 0}</div>
-                              <div className="text-xs text-muted-foreground">Opened</div>
-                            </div>
-                            <div className="text-center">
-                              <div className="text-lg font-bold">{campaign.metrics_clicked?.toLocaleString() || 0}</div>
-                              <div className="text-xs text-muted-foreground">Clicked</div>
-                            </div>
-                          </div>
-                        </div>
-                        <div className="flex items-center space-x-2 ml-4">
-                          {campaign.status === "running" && (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleCampaignAction(campaign.id, "pause")}
-                            >
-                              <Pause className="h-4 w-4 mr-1" />
-                              Pause
-                            </Button>
-                          )}
-                          {campaign.status === "paused" && (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleCampaignAction(campaign.id, "resume")}
-                            >
-                              <Play className="h-4 w-4 mr-1" />
-                              Resume
-                            </Button>
-                          )}
-                          {(campaign.status === "running" || campaign.status === "paused") && (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleCampaignAction(campaign.id, "stop")}
-                            >
-                              Stop
-                            </Button>
-                          )}
-                          <Button variant="ghost" size="icon">
-                            <BarChart3 className="h-4 w-4" />
-                          </Button>
-                          <Button variant="ghost" size="icon">
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          <Button variant="ghost" size="icon">
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </div>
-                    </div>
-                  ))
-                )}
-              </div>
+            <CardHeader className="flex-row items-start justify-between gap-4"><div><CardTitle>Campaign records</CardTitle><CardDescription>These records do not currently schedule or send notifications.</CardDescription></div><Button disabled title="Campaign delivery requires the notification outbox worker"><Plus className="mr-2 h-4 w-4" />New campaign</Button></CardHeader>
+            <CardContent className="space-y-3">
+              {campaigns.length === 0 ? <Empty message="No campaigns found" /> : campaigns.map((campaign) => (
+                <div key={campaign.id} className="flex flex-col gap-2 rounded-lg border p-4 sm:flex-row sm:items-center sm:justify-between"><div><p className="font-medium">{campaign.name}</p><p className="text-sm text-muted-foreground">{campaign.type} · {(campaign.channels as string[])?.join(", ") || "No channels"}</p></div><div className="flex items-center gap-2"><Badge variant="outline">{campaign.status}</Badge><Button size="sm" variant="outline" disabled>Delivery unavailable</Button></div></div>
+              ))}
             </CardContent>
           </Card>
         </TabsContent>
-
-        <TabsContent value="analytics" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Notification Analytics</CardTitle>
-              <CardDescription>Track performance metrics and user engagement</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-6">
-                <div className="grid gap-4 md:grid-cols-3">
-                  <Card>
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 backendClient-2">
-                      <CardTitle className="text-sm font-medium">Delivery Trends</CardTitle>
-                      <TrendingUp className="h-4 w-4 text-muted-foreground" />
-                    </CardHeader>
-                    <CardContent>
-                      <div className="text-2xl font-bold">{stats.deliveryRate}%</div>
-                      <p className="text-xs text-muted-foreground">Avg. delivery rate</p>
-                    </CardContent>
-                  </Card>
-                  <Card>
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 backendClient-2">
-                      <CardTitle className="text-sm font-medium">Engagement</CardTitle>
-                      <Eye className="h-4 w-4 text-muted-foreground" />
-                    </CardHeader>
-                    <CardContent>
-                      <div className="text-2xl font-bold">{stats.openRate}%</div>
-                      <p className="text-xs text-muted-foreground">Avg. open rate</p>
-                    </CardContent>
-                  </Card>
-                  <Card>
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 backendClient-2">
-                      <CardTitle className="text-sm font-medium">Total Reach</CardTitle>
-                      <Users className="h-4 w-4 text-muted-foreground" />
-                    </CardHeader>
-                    <CardContent>
-                      <div className="text-2xl font-bold">{stats.totalSent.toLocaleString()}</div>
-                      <p className="text-xs text-muted-foreground">Notifications sent</p>
-                    </CardContent>
-                  </Card>
-                </div>
-                <div className="h-[300px] flex items-center justify-center border rounded-lg bg-muted/50">
-                  <div className="text-center">
-                    <BarChart3 className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-                    <p className="text-muted-foreground">Analytics dashboard coming soon</p>
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="channels" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Channel Configuration</CardTitle>
-              <CardDescription>Configure notification channels and providers</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <div className="flex items-center justify-between p-4 border rounded-lg">
-                  <div className="flex items-center space-x-4">
-                    <Bell className="h-8 w-8 text-blue-500" />
-                    <div>
-                      <h4 className="font-semibold">Push Notifications</h4>
-                      <p className="text-sm text-muted-foreground">Firebase Cloud Messaging</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <Badge variant="default" className="bg-green-500">Active</Badge>
-                    <Button variant="outline" size="sm">Configure</Button>
-                  </div>
-                </div>
-                <div className="flex items-center justify-between p-4 border rounded-lg">
-                  <div className="flex items-center space-x-4">
-                    <Mail className="h-8 w-8 text-green-500" />
-                    <div>
-                      <h4 className="font-semibold">Email</h4>
-                      <p className="text-sm text-muted-foreground">SendGrid / SMTP</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <Badge variant="default" className="bg-green-500">Active</Badge>
-                    <Button variant="outline" size="sm">Configure</Button>
-                  </div>
-                </div>
-                <div className="flex items-center justify-between p-4 border rounded-lg">
-                  <div className="flex items-center space-x-4">
-                    <Smartphone className="h-8 w-8 text-purple-500" />
-                    <div>
-                      <h4 className="font-semibold">SMS</h4>
-                      <p className="text-sm text-muted-foreground">Twilio / Africa&apos;s Talking</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <Badge variant="secondary">Setup Required</Badge>
-                    <Button variant="outline" size="sm">Configure</Button>
-                  </div>
-                </div>
-                <div className="flex items-center justify-between p-4 border rounded-lg">
-                  <div className="flex items-center space-x-4">
-                    <MessageCircle className="h-8 w-8 text-orange-500" />
-                    <div>
-                      <h4 className="font-semibold">In-App</h4>
-                      <p className="text-sm text-muted-foreground">Native notifications</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <Badge variant="default" className="bg-green-500">Active</Badge>
-                    <Button variant="outline" size="sm">Configure</Button>
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+        <TabsContent value="channels">
+          <Card><CardHeader><CardTitle>Delivery channels</CardTitle><CardDescription>Status reflects implemented backend capabilities.</CardDescription></CardHeader><CardContent className="space-y-3">
+            <Channel icon={Bell} title="Firebase push" description="Targeted test delivery only" state={firebaseState === "configured" ? "Configured" : firebaseState === "disabled" ? "Not configured" : "Status unavailable"} configured={firebaseState === "configured"} href="/settings/firebase" />
+            <Channel icon={FileText} title="In-app" description="Database-backed notices and mobile synchronization" state="Available" configured />
+            <Channel icon={Send} title="Email" description="No production delivery provider is connected" state="Unsupported" />
+            <Channel icon={Send} title="SMS" description="No production delivery provider is connected" state="Unsupported" />
+          </CardContent></Card>
         </TabsContent>
       </Tabs>
     </div>
   )
+}
+
+function Summary({ title, value, detail }: { title: string; value: string | number; detail: string }) {
+  return <Card><CardHeader className="pb-2"><CardTitle className="text-sm">{title}</CardTitle></CardHeader><CardContent><p className="text-2xl font-bold">{value}</p><p className="text-xs text-muted-foreground">{detail}</p></CardContent></Card>
+}
+
+function Empty({ message }: { message: string }) { return <div className="py-10 text-center text-sm text-muted-foreground">{message}</div> }
+
+function Channel({ icon: Icon, title, description, state, configured = false, href }: { icon: LucideIcon; title: string; description: string; state: string; configured?: boolean; href?: string }) {
+  return <div className="flex flex-col gap-3 rounded-lg border p-4 sm:flex-row sm:items-center sm:justify-between"><div className="flex items-center gap-3"><Icon className="h-6 w-6 text-muted-foreground" /><div><p className="font-medium">{title}</p><p className="text-sm text-muted-foreground">{description}</p></div></div><div className="flex items-center gap-2"><Badge variant={configured ? "default" : "secondary"}>{configured ? <CheckCircle className="mr-1 h-3 w-3" /> : <CloudCog className="mr-1 h-3 w-3" />}{state}</Badge>{href ? <Button asChild size="sm" variant="outline"><Link href={href}>Configure</Link></Button> : null}</div></div>
 }

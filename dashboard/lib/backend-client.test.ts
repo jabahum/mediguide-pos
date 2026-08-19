@@ -1,10 +1,32 @@
 import { afterEach, describe, expect, it, vi } from "vitest"
 
-import { BackendAuthStore, BackendClient, BackendRequestError } from "./backend-client"
+import { BackendAuthStore, BackendClient, BackendRequestError, getBackendClient, hasBackendPermission } from "./backend-client"
 
 describe("BackendClient authentication", () => {
   afterEach(() => {
+    getBackendClient().authStore.clear()
     vi.unstubAllGlobals()
+  })
+
+  it("checks focused backend permissions from the authenticated role snapshot", () => {
+    getBackendClient().authStore.save("Bearer access-token", {
+      id: "user-id",
+      status: "active",
+      roles: [{ permissions: [{ code: "notification.template.read" }] }],
+    })
+
+    expect(hasBackendPermission("notification.template.read")).toBe(true)
+    expect(hasBackendPermission("notification.template.manage")).toBe(false)
+  })
+
+  it("treats admin.all as a backend permission wildcard", () => {
+    getBackendClient().authStore.save("Bearer access-token", {
+      id: "user-id",
+      status: "active",
+      roles: [{ permissions: [{ code: "admin.all" }] }],
+    })
+
+    expect(hasBackendPermission("firebase.config.manage")).toBe(true)
   })
 
   it("logs in through the typed v2 endpoint and persists the session", async () => {

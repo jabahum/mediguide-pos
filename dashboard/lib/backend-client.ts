@@ -351,6 +351,22 @@ export function hasAnyRole(roles: string[]): boolean {
   return userRole ? roles.includes(userRole) : false
 }
 
+export function hasBackendPermission(permission: string): boolean {
+  const user = getCurrentUser()
+  if (!user) return false
+
+  const codes = new Set<string>()
+  collectPermissionCodes(user.permissions, codes)
+  if (Array.isArray(user.roles)) {
+    for (const role of user.roles) {
+      if (role && typeof role === "object") {
+        collectPermissionCodes((role as JsonRecord).permissions, codes)
+      }
+    }
+  }
+  return codes.has(permission) || codes.has("admin.all") || codes.has("*")
+}
+
 export function canAccessDashboard(): boolean {
   const allowedRoles = [
     "super_admin",
@@ -439,6 +455,17 @@ function normalizeRecord(collection: string, raw: JsonRecord) {
   }
 
   return normalized
+}
+
+function collectPermissionCodes(value: unknown, codes: Set<string>) {
+  if (!Array.isArray(value)) return
+  for (const entry of value) {
+    if (typeof entry === "string") {
+      codes.add(entry)
+    } else if (entry && typeof entry === "object" && typeof (entry as JsonRecord).code === "string") {
+      codes.add((entry as JsonRecord).code)
+    }
+  }
 }
 
 function parseJSONValue(value: unknown) {

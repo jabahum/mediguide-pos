@@ -239,6 +239,18 @@ func seedAuthorization(database *gorm.DB) (seedAuthorizationState, error) {
 		{Code: "protocol.write", Name: "Create/update protocols"},
 		{Code: "chat.ask", Name: "Ask RAG chatbot"},
 		{Code: "sync.read", Name: "Read sync packages"},
+		{Code: "notification.read", Name: "Read own and global notifications"},
+		{Code: "notification.compose", Name: "Compose notification drafts"},
+		{Code: "notification.publish", Name: "Publish in-app notifications"},
+		{Code: "notification.template.read", Name: "Read notification templates"},
+		{Code: "notification.template.manage", Name: "Manage notification templates"},
+		{Code: "notification.campaign.read", Name: "Read notification campaigns"},
+		{Code: "notification.campaign.manage", Name: "Manage notification campaigns"},
+		{Code: "notification.campaign.approve", Name: "Approve notification campaigns"},
+		{Code: "notification.analytics.read", Name: "Read notification analytics"},
+		{Code: "firebase.status.read", Name: "Read Firebase integration status"},
+		{Code: "firebase.push.test", Name: "Send Firebase test pushes"},
+		{Code: "firebase.config.manage", Name: "Manage Firebase Remote Config"},
 		{Code: "admin.all", Name: "All administration permissions"},
 	}
 	for i := range permissions {
@@ -474,6 +486,11 @@ func deriveBackendPermissions(roleKey, permissionsJSON string) []string {
 			"protocol.read",
 			"protocol.write",
 			"sync.read",
+			"notification.read", "notification.compose", "notification.publish",
+			"notification.template.read", "notification.template.manage",
+			"notification.campaign.read", "notification.campaign.manage",
+			"notification.campaign.approve", "notification.analytics.read",
+			"firebase.status.read", "firebase.push.test", "firebase.config.manage",
 		}
 	case "content_manager":
 		return []string{
@@ -487,11 +504,17 @@ func deriveBackendPermissions(roleKey, permissionsJSON string) []string {
 			"protocol.read",
 			"protocol.write",
 			"sync.read",
+			"notification.read", "notification.compose",
+			"notification.template.read", "notification.template.manage",
+			"notification.campaign.read", "notification.campaign.manage",
+			"firebase.status.read",
 		}
 	case "reviewer":
 		return []string{
 			"chat.ask", "guideline.publish", "guideline.read", "guideline.markdown.read",
 			"guideline.review", "guideline.high_risk.approve", "protocol.read", "sync.read",
+			"notification.read", "notification.template.read", "notification.campaign.read",
+			"notification.campaign.approve", "notification.analytics.read", "firebase.status.read",
 		}
 	case "healthcare_provider":
 		return []string{
@@ -499,12 +522,14 @@ func deriveBackendPermissions(roleKey, permissionsJSON string) []string {
 			"guideline.read",
 			"protocol.read",
 			"sync.read",
+			"notification.read",
 		}
 	case "observer":
 		return []string{
 			"guideline.read",
 			"protocol.read",
 			"sync.read",
+			"notification.read",
 		}
 	}
 

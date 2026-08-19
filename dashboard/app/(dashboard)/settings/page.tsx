@@ -16,7 +16,7 @@ type SettingSection = {
 const sections: SettingSection[] = [
   {
     title: "Notifications",
-    description: "Configure push notifications, templates, and delivery channels",
+    description: "Manage in-app notices and inspect notification channel configuration",
     icon: Bell,
     href: "/settings/notifications",
   },

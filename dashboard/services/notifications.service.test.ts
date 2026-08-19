@@ -31,6 +31,23 @@ describe("notificationsService", () => {
     expect(send).toHaveBeenNthCalledWith(2, "/api/v2/notifications/read-all", { method: "POST" })
   })
 
+  it("creates an in-app notification explicitly", async () => {
+    send.mockResolvedValue({ id: "notice-1" })
+    const input = {
+      title: "Guideline updated",
+      message: "A new guideline version is available.",
+      type: "info" as const,
+      priority: "normal" as const,
+    }
+
+    await notificationsService.create(input)
+
+    expect(send).toHaveBeenCalledWith("/api/v2/notifications", {
+      method: "POST",
+      body: JSON.stringify(input),
+    })
+  })
+
   it("routes template and campaign status changes through admin endpoints", async () => {
     send.mockResolvedValue({})
 

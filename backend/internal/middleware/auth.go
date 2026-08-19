@@ -11,6 +11,7 @@ import (
 	"mediguide/internal/security"
 
 	"github.com/gin-gonic/gin"
+	"github.com/rs/zerolog/log"
 	"gorm.io/gorm"
 )
 
@@ -58,6 +59,9 @@ func RequirePermission(permission string) gin.HandlerFunc {
 		}
 		claims := v.(*security.Claims)
 		if !security.HasPerm(claims, permission) {
+			log.Warn().Str("event", "authorization_denied").Str("permission", permission).
+				Str("user_id", claims.UserID.String()).Str("method", c.Request.Method).
+				Str("path", c.FullPath()).Str("ip", c.ClientIP()).Msg("administrative operation denied")
 			httpx.Error(c, http.StatusForbidden, "forbidden")
 			c.Abort()
 			return
@@ -81,6 +85,9 @@ func RequireAnyPermission(permissions ...string) gin.HandlerFunc {
 				return
 			}
 		}
+		log.Warn().Str("event", "authorization_denied").Strs("permissions", permissions).
+			Str("user_id", claims.UserID.String()).Str("method", c.Request.Method).
+			Str("path", c.FullPath()).Str("ip", c.ClientIP()).Msg("administrative operation denied")
 		httpx.Error(c, http.StatusForbidden, "forbidden")
 		c.Abort()
 	}

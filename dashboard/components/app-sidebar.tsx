@@ -37,6 +37,7 @@ import {
   SidebarRail,
 } from "@/components/ui/sidebar"
 import { usePermissionContext } from "@/lib/permission-context"
+import { hasBackendPermission } from "@/lib/backend-client"
 import type { PermissionAction } from "@/types/permissions"
 
 // Utility function to find if current pathname belongs to a menu item
@@ -78,6 +79,7 @@ type NavSubItem = {
   title: string
   url: string
   permission?: { resource: string; action: PermissionAction }
+  backendPermissions?: string[]
 }
 
 type NavItem = {
@@ -85,6 +87,7 @@ type NavItem = {
   url: string
   icon: React.ComponentType<{ className?: string }>
   permission?: { resource: string; action: PermissionAction }
+  backendPermissions?: string[]
   items?: NavSubItem[]
 }
 
@@ -217,11 +220,10 @@ const data: { navMain: NavItem[] } = {
       title: "Settings",
       url: "#",
       icon: Settings,
-      permission: { resource: "system_settings", action: "read:any" },
       items: [
-        { title: "Notifications", url: "/settings/notifications" },
-        { title: "Firebase", url: "/settings/firebase" },
-        { title: "Backup", url: "/settings/backup" },
+        { title: "Notifications", url: "/settings/notifications", backendPermissions: ["notification.publish", "notification.template.read", "notification.campaign.read", "firebase.status.read"] },
+        { title: "Firebase", url: "/settings/firebase", backendPermissions: ["firebase.status.read", "firebase.push.test", "firebase.config.manage"] },
+        { title: "Backup", url: "/settings/backup", permission: { resource: "system_settings", action: "read:any" } },
       ],
     },
   ],
@@ -234,11 +236,18 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const visibleNav = React.useMemo<NavItem[]>(() => {
     if (loading) return []
     return data.navMain
-      .filter(item => !item.permission || hasPermission(item.permission.resource, item.permission.action))
+      .filter(item =>
+        (!item.permission || hasPermission(item.permission.resource, item.permission.action)) &&
+        (!item.backendPermissions || item.backendPermissions.some(hasBackendPermission)),
+      )
       .map(item => ({
         ...item,
-        items: item.items?.filter(sub => !sub.permission || hasPermission(sub.permission.resource, sub.permission.action)),
+        items: item.items?.filter(sub =>
+          (!sub.permission || hasPermission(sub.permission.resource, sub.permission.action)) &&
+          (!sub.backendPermissions || sub.backendPermissions.some(hasBackendPermission)),
+        ),
       }))
+      .filter(item => item.url !== "#" || !item.items || item.items.length > 0)
   }, [loading, hasPermission])
 
   // Find which menu item should be active/open based on current pathname

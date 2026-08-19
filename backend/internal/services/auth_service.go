@@ -495,6 +495,11 @@ func deriveRolePermissions(roleKey, permissionsJSON string) []string {
 			"protocol.read",
 			"protocol.write",
 			"sync.read",
+			"notification.read", "notification.compose", "notification.publish",
+			"notification.template.read", "notification.template.manage",
+			"notification.campaign.read", "notification.campaign.manage",
+			"notification.campaign.approve", "notification.analytics.read",
+			"firebase.status.read", "firebase.push.test", "firebase.config.manage",
 		}
 	case "content_manager":
 		return []string{
@@ -514,12 +519,18 @@ func deriveRolePermissions(roleKey, permissionsJSON string) []string {
 			"protocol.read",
 			"protocol.write",
 			"sync.read",
+			"notification.read", "notification.compose",
+			"notification.template.read", "notification.template.manage",
+			"notification.campaign.read", "notification.campaign.manage",
+			"firebase.status.read",
 		}
 	case "reviewer":
 		return []string{
 			"chat.ask", "calculator.read", "drug.read", "facility.read", "guideline.read",
 			"guideline.markdown.read", "guideline.review", "guideline.high_risk.approve",
-			"guideline.publish", "protocol.read", "sync.read",
+			"guideline.publish", "protocol.read", "sync.read", "notification.read",
+			"notification.template.read", "notification.campaign.read",
+			"notification.campaign.approve", "notification.analytics.read", "firebase.status.read",
 		}
 	case "healthcare_provider":
 		return []string{
@@ -530,6 +541,7 @@ func deriveRolePermissions(roleKey, permissionsJSON string) []string {
 			"guideline.read",
 			"protocol.read",
 			"sync.read",
+			"notification.read",
 		}
 	case "observer":
 		return []string{
@@ -539,6 +551,7 @@ func deriveRolePermissions(roleKey, permissionsJSON string) []string {
 			"guideline.read",
 			"protocol.read",
 			"sync.read",
+			"notification.read",
 		}
 	}
 

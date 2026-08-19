@@ -622,18 +622,38 @@ func seedDemoNotifications(database *gorm.DB, clinicianID uuid.UUID) error {
 
 	if err := upsertByID(database, "notification_templates", map[string]any{
 		"id": notificationTemplateID, "name": "Clinical content published",
-		"type": "in-app", "category": "Content Updates", "status": "active",
+		"template_key": "clinical-content-published", "current_version": 1, "locale": "en",
+		"type": "in-app", "category": "Content Updates", "status": "published",
 		"subject":  "New clinical guidance is available",
 		"content":  "{{title}} version {{version}} is now published.",
 		"audience": "all", "variables_json": mustJSON(`{"title":"string","version":"string"}`),
 	}); err != nil {
 		return err
 	}
+	templateVersionID := demoID("notification-template-version", "clinical-content-published-v1")
+	if err := upsertByID(database, "notification_template_versions", map[string]any{
+		"id": templateVersionID, "template_id": notificationTemplateID, "version": 1,
+		"channel": "in-app", "title_template": "New clinical guidance is available",
+		"body_template":        "{{title}} version {{version}} is now published.",
+		"action_template_json": mustJSON(`{"type":"none","parameters":{}}`),
+		"variable_schema_json": mustJSON(`{"title":{"type":"string","required":true,"sample_value":"Malaria in Adults"},"version":{"type":"string","required":true,"sample_value":"1.4"}}`),
+		"category":             "Content Updates", "locale": "en", "status": "published",
+	}); err != nil {
+		return err
+	}
 
 	return upsertByID(database, "notification_campaigns", map[string]any{
 		"id": notificationCampaignID, "name": "Development content announcements",
-		"type": "in-app", "status": "draft", "channels_json": mustJSON(`["in-app"]`),
-		"audience_countries_json": mustJSON(`["Uganda"]`),
-		"audience_roles_json":     mustJSON(`["clinician"]`),
+		"type": "announcement", "status": "draft", "channels_json": mustJSON(`["in-app"]`),
+		"audience_countries_json":  mustJSON(`["Uganda"]`),
+		"audience_roles_json":      mustJSON(`["clinician"]`),
+		"template_version_id":      templateVersionID,
+		"rendered_title":           "New clinical guidance is available",
+		"rendered_body":            "Malaria in Adults version 1.4 is now published.",
+		"action_snapshot_json":     mustJSON(`{"type":"none","parameters":{}}`),
+		"audience_definition_json": mustJSON(`{"all_eligible":false,"countries":["Uganda"]}`),
+		"requested_channels_json":  mustJSON(`["in-app"]`),
+		"timezone":                 "Africa/Kampala", "priority": "normal",
+		"idempotency_key": "demo:development-content-announcements", "lock_version": 1,
 	})
 }

@@ -20,8 +20,7 @@ import { hasBackendPermission } from "@/lib/backend-client"
 import { usePermissionContext } from "@/lib/permission-context"
 import { showToast } from "@/lib/toast"
 import { firebaseService } from "@/services/firebase.service"
-import { notificationsService, type NotificationAction, type NotificationPriority, type NotificationType } from "@/services/notifications.service"
-import type { NotificationCampaignsResponse, NotificationTemplatesResponse } from "@/types/backend-types"
+import { notificationsService, type NotificationAction, type NotificationCampaignDto, type NotificationCampaignInput, type NotificationPriority, type NotificationTemplateDto, type NotificationTemplateInput, type NotificationType } from "@/services/notifications.service"
 
 type FirebaseState = "configured" | "disabled" | "unavailable"
 
@@ -31,6 +30,8 @@ export default function NotificationAdministrationPage() {
   const canReadTemplates = hasBackendPermission("notification.template.read")
   const canManageTemplates = hasBackendPermission("notification.template.manage")
   const canReadCampaigns = hasBackendPermission("notification.campaign.read")
+  const canManageCampaigns = hasBackendPermission("notification.campaign.manage")
+  const canApproveCampaigns = hasBackendPermission("notification.campaign.approve")
   const canReadFirebase = hasBackendPermission("firebase.status.read")
   const canAdminister = [
     canPublish,
@@ -38,8 +39,8 @@ export default function NotificationAdministrationPage() {
     canReadCampaigns,
     canReadFirebase,
   ].some(Boolean)
-  const [templates, setTemplates] = React.useState<NotificationTemplatesResponse[]>([])
-  const [campaigns, setCampaigns] = React.useState<NotificationCampaignsResponse[]>([])
+  const [templates, setTemplates] = React.useState<NotificationTemplateDto[]>([])
+  const [campaigns, setCampaigns] = React.useState<NotificationCampaignDto[]>([])
   const [templateTotal, setTemplateTotal] = React.useState(0)
   const [campaignTotal, setCampaignTotal] = React.useState(0)
   const [firebaseState, setFirebaseState] = React.useState<FirebaseState>("unavailable")
@@ -50,6 +51,11 @@ export default function NotificationAdministrationPage() {
   const [savingNotice, setSavingNotice] = React.useState(false)
   const [notice, setNotice] = React.useState({ title: "", message: "", type: "info" as NotificationType, priority: "normal" as NotificationPriority })
   const [noticeAction, setNoticeAction] = React.useState<NotificationAction>(emptyNotificationAction)
+  const [templateOpen, setTemplateOpen] = React.useState(false)
+  const [campaignOpen, setCampaignOpen] = React.useState(false)
+  const [templateForm, setTemplateForm] = React.useState({ name: "", templateKey: "", channel: "in-app" as NotificationTemplateInput["channel"], title: "", body: "", category: "Content Updates", locale: "en", schema: "{}" })
+  const [templateAction, setTemplateAction] = React.useState<NotificationAction>(emptyNotificationAction)
+  const [campaignForm, setCampaignForm] = React.useState({ name: "", type: "announcement" as NotificationCampaignInput["type"], templateVersionId: "", variables: "{}", priority: "normal" as NotificationPriority, channels: ["in-app"] as NotificationCampaignInput["requested_channels"], timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC", scheduledAt: "", expiresAt: "" })
 
   const load = React.useCallback(async () => {
     if (!canAdminister) { setLoading(false); return }
@@ -103,9 +109,9 @@ export default function NotificationAdministrationPage() {
     } finally { setSavingNotice(false) }
   }
 
-  async function toggleTemplate(template: NotificationTemplatesResponse) {
-    const nextStatus = template.status === "active" ? "inactive" : "active"
-    if (!window.confirm(`${nextStatus === "active" ? "Activate" : "Deactivate"} ${template.name}? This changes template availability but does not send a notification.`)) return
+  async function toggleTemplate(template: NotificationTemplateDto) {
+    const nextStatus = template.status === "published" ? "archived" : "published"
+    if (!window.confirm(`${nextStatus === "published" ? "Publish" : "Archive"} ${template.name}? Published versions cannot be edited.`)) return
     setUpdatingId(template.id)
     try {
       await notificationsService.updateTemplateStatus(template.id, nextStatus)
@@ -114,6 +120,40 @@ export default function NotificationAdministrationPage() {
     } catch (error) {
       showToast.error("Template", error instanceof Error ? error.message : "Unable to update template")
     } finally { setUpdatingId(null) }
+  }
+
+  async function saveTemplate(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    try {
+      const variable_schema = JSON.parse(templateForm.schema) as NotificationTemplateInput["variable_schema"]
+      setUpdatingId("template-create")
+      await notificationsService.createTemplate({ name: templateForm.name.trim(), template_key: templateForm.templateKey.trim(), channel: templateForm.channel, title_template: templateForm.title.trim() || undefined, body_template: templateForm.body, action_template: templateAction, variable_schema, category: templateForm.category, locale: templateForm.locale })
+      setTemplateOpen(false); showToast.success("Draft template created", "Review its rendered preview before publishing."); await load()
+    } catch (error) { showToast.error("Template", error instanceof Error ? error.message : "Unable to create template") } finally { setUpdatingId(null) }
+  }
+
+  async function previewTemplate(template: NotificationTemplateDto) {
+    const variables = Object.fromEntries(Object.entries(template.version.variable_schema).map(([key, rule]) => [key, rule.sample_value ?? (rule.type === "number" ? 1 : rule.type === "boolean" ? true : key)]))
+    try { const preview = await notificationsService.previewTemplateVersion(template.version.id, variables); window.alert(`${preview.title}\n\n${preview.body}\n\nAction: ${preview.action.type}`) }
+    catch (error) { showToast.error("Template preview", error instanceof Error ? error.message : "Unable to render preview") }
+  }
+
+  async function saveCampaign(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    try {
+      setUpdatingId("campaign-create")
+      await notificationsService.createCampaign({ name: campaignForm.name.trim(), type: campaignForm.type, template_version_id: campaignForm.templateVersionId, variables: JSON.parse(campaignForm.variables) as Record<string, unknown>, audience: { all_eligible: true }, timezone: campaignForm.timezone, scheduled_at: campaignForm.scheduledAt ? new Date(campaignForm.scheduledAt).toISOString() : undefined, expires_at: campaignForm.expiresAt ? new Date(campaignForm.expiresAt).toISOString() : undefined, priority: campaignForm.priority, requested_channels: campaignForm.channels, idempotency_key: crypto.randomUUID() })
+      setCampaignOpen(false); showToast.success("Campaign draft created", "Submit it for independent review when ready."); await load()
+    } catch (error) { showToast.error("Campaign", error instanceof Error ? error.message : "Unable to create campaign") } finally { setUpdatingId(null) }
+  }
+
+  async function transitionCampaign(campaign: NotificationCampaignDto, action: "submit" | "approve" | "reject" | "schedule" | "cancel") {
+    const reason = action === "reject" || action === "cancel" ? window.prompt(`Reason to ${action} this campaign`) ?? "" : undefined
+    if ((action === "reject" || action === "cancel") && !reason?.trim()) return
+    if (!window.confirm(`${action[0].toUpperCase()}${action.slice(1)} ${campaign.name}?`)) return
+    setUpdatingId(campaign.id)
+    try { await notificationsService.transitionCampaign(campaign.id, action, { lock_version: campaign.lock_version, scheduled_at: action === "schedule" ? campaign.scheduled_at : undefined, timezone: action === "schedule" ? campaign.timezone : undefined, reason }); showToast.success("Campaign updated", `Campaign ${action} completed.`); await load() }
+    catch (error) { showToast.error("Campaign workflow", error instanceof Error ? error.message : "Unable to update campaign") } finally { setUpdatingId(null) }
   }
 
   if (permissionsLoading || loading) {
@@ -158,12 +198,12 @@ export default function NotificationAdministrationPage() {
         </div>
       </div>
 
-      <Alert><AlertTriangle className="h-4 w-4" /><AlertDescription>Templates and campaigns are currently metadata only. Scheduling, audience resolution and push dispatch will remain unavailable until the durable delivery worker is implemented.</AlertDescription></Alert>
+      <Alert><AlertTriangle className="h-4 w-4" /><AlertDescription>Template versioning and campaign review are active. Audience resolution and provider fan-out are completed by the later delivery phases; approving a campaign freezes its dispatch snapshot but does not claim that a provider accepted it.</AlertDescription></Alert>
       {loadError ? <Alert variant="destructive"><AlertTriangle className="h-4 w-4" /><AlertDescription className="flex flex-wrap items-center justify-between gap-3"><span>{loadError}</span><Button variant="outline" size="sm" onClick={() => void load()}>Try again</Button></AlertDescription></Alert> : null}
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <Summary title="Templates" value={templateTotal} detail="Stored template records" />
-        <Summary title="Active templates" value={templates.filter((item) => item.status === "active").length} detail="Available metadata; not delivery" />
+        <Summary title="Published templates" value={templates.filter((item) => item.status === "published").length} detail="Immutable approved versions" />
         <Summary title="Campaigns" value={campaignTotal} detail="Stored campaign records" />
         <Summary title="Firebase" value={firebaseState === "configured" ? "Configured" : firebaseState === "disabled" ? "Disabled" : "Unavailable"} detail="Live backend status" />
       </div>
@@ -172,12 +212,12 @@ export default function NotificationAdministrationPage() {
         <TabsList><TabsTrigger value="templates">Templates</TabsTrigger><TabsTrigger value="campaigns">Campaigns</TabsTrigger><TabsTrigger value="channels">Channels</TabsTrigger></TabsList>
         <TabsContent value="templates">
           <Card>
-            <CardHeader className="flex-row items-start justify-between gap-4"><div><CardTitle>Templates</CardTitle><CardDescription>Reusable metadata records. Rendering and campaign test delivery are not connected yet.</CardDescription></div><Button disabled title="Template authoring will be enabled with versioned template APIs"><Plus className="mr-2 h-4 w-4" />New template</Button></CardHeader>
+            <CardHeader className="flex-row items-start justify-between gap-4"><div><CardTitle>Templates</CardTitle><CardDescription>Versioned, validated content. Publishing makes the current version immutable.</CardDescription></div>{canManageTemplates ? <Dialog open={templateOpen} onOpenChange={setTemplateOpen}><DialogTrigger asChild><Button><Plus className="mr-2 h-4 w-4" />New template</Button></DialogTrigger><DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-[680px]"><DialogHeader><DialogTitle>New notification template</DialogTitle><DialogDescription>Only declared variables using double-brace placeholders are accepted.</DialogDescription></DialogHeader><form className="space-y-4" onSubmit={saveTemplate}><div className="grid gap-4 sm:grid-cols-2"><Field label="Name"><Input required value={templateForm.name} onChange={(e) => setTemplateForm((v) => ({ ...v, name: e.target.value }))} /></Field><Field label="Stable key"><Input required pattern="[A-Za-z][A-Za-z0-9_.-]{0,63}" value={templateForm.templateKey} onChange={(e) => setTemplateForm((v) => ({ ...v, templateKey: e.target.value }))} /></Field><Field label="Channel"><Select value={templateForm.channel} onValueChange={(channel: NotificationTemplateInput["channel"]) => setTemplateForm((v) => ({ ...v, channel }))}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{["in-app", "push", "email", "sms"].map((value) => <SelectItem key={value} value={value}>{value}</SelectItem>)}</SelectContent></Select></Field><Field label="Category"><Select value={templateForm.category} onValueChange={(category) => setTemplateForm((v) => ({ ...v, category }))}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{["Content Updates", "Emergency", "Training", "System", "Marketing", "Reminder"].map((value) => <SelectItem key={value} value={value}>{value}</SelectItem>)}</SelectContent></Select></Field></div><Field label="Title template"><Input value={templateForm.title} onChange={(e) => setTemplateForm((v) => ({ ...v, title: e.target.value }))} /></Field><Field label="Body template"><Textarea required rows={5} value={templateForm.body} onChange={(e) => setTemplateForm((v) => ({ ...v, body: e.target.value }))} /></Field><Field label="Variable schema (JSON)"><Textarea className="font-mono" rows={5} value={templateForm.schema} onChange={(e) => setTemplateForm((v) => ({ ...v, schema: e.target.value }))} /><p className="text-xs text-muted-foreground">Example: {`{"name":{"type":"string","required":true,"sample_value":"Malaria"}}`}</p></Field><NotificationActionFields value={templateAction} onChange={setTemplateAction} allowSupportTicket={false} /><DialogFooter><Button type="button" variant="outline" onClick={() => setTemplateOpen(false)}>Cancel</Button><Button type="submit" disabled={updatingId !== null}>{updatingId === "template-create" ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}Create draft</Button></DialogFooter></form></DialogContent></Dialog> : null}</CardHeader>
             <CardContent className="space-y-3">
               {templates.length === 0 ? <Empty message="No templates found" /> : templates.map((template) => (
                 <div key={template.id} className="flex flex-col gap-3 rounded-lg border p-4 sm:flex-row sm:items-center sm:justify-between">
-                  <div className="space-y-1"><div className="flex flex-wrap items-center gap-2"><span className="font-medium">{template.name}</span><Badge variant="outline">{template.type}</Badge><Badge variant={template.status === "active" ? "default" : "secondary"}>{template.status}</Badge></div><p className="text-sm text-muted-foreground">{template.subject || template.category}</p></div>
-                  <div className="flex flex-wrap gap-2"><Button variant="outline" size="sm" disabled title="Template test rendering is not implemented">Test unavailable</Button><Button variant="outline" size="sm" disabled={!canManageTemplates || updatingId !== null} onClick={() => void toggleTemplate(template)}>{updatingId === template.id ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}{template.status === "active" ? "Deactivate" : "Activate"}</Button></div>
+                  <div className="space-y-1"><div className="flex flex-wrap items-center gap-2"><span className="font-medium">{template.name}</span><Badge variant="outline">{template.version.channel}</Badge><Badge variant={template.status === "published" ? "default" : "secondary"}>{template.status}</Badge><Badge variant="outline">v{template.current_version}</Badge></div><p className="text-sm text-muted-foreground">{template.version.title_template || template.version.category}</p></div>
+                  <div className="flex flex-wrap gap-2"><Button variant="outline" size="sm" onClick={() => void previewTemplate(template)}>Preview sample</Button><Button variant="outline" size="sm" disabled={!canManageTemplates || updatingId !== null || template.status === "archived"} onClick={() => void toggleTemplate(template)}>{updatingId === template.id ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}{template.status === "published" ? "Archive" : "Publish"}</Button></div>
                 </div>
               ))}
             </CardContent>
@@ -185,10 +225,10 @@ export default function NotificationAdministrationPage() {
         </TabsContent>
         <TabsContent value="campaigns">
           <Card>
-            <CardHeader className="flex-row items-start justify-between gap-4"><div><CardTitle>Campaign records</CardTitle><CardDescription>These records do not currently schedule or send notifications.</CardDescription></div><Button disabled title="Campaign delivery requires the notification outbox worker"><Plus className="mr-2 h-4 w-4" />New campaign</Button></CardHeader>
+            <CardHeader className="flex-row items-start justify-between gap-4"><div><CardTitle>Campaign workflow</CardTitle><CardDescription>Draft, review, approve and schedule against an immutable dispatch snapshot.</CardDescription></div>{canManageCampaigns ? <Dialog open={campaignOpen} onOpenChange={setCampaignOpen}><DialogTrigger asChild><Button disabled={templates.every((item) => item.status !== "published")}><Plus className="mr-2 h-4 w-4" />New campaign</Button></DialogTrigger><DialogContent className="sm:max-w-[620px]"><DialogHeader><DialogTitle>New campaign draft</DialogTitle><DialogDescription>Recipients are resolved in the delivery phase. This step freezes rendered content and audience intent.</DialogDescription></DialogHeader><form className="space-y-4" onSubmit={saveCampaign}><Field label="Name"><Input required value={campaignForm.name} onChange={(e) => setCampaignForm((v) => ({ ...v, name: e.target.value }))} /></Field><div className="grid gap-4 sm:grid-cols-2"><Field label="Published template"><Select required value={campaignForm.templateVersionId} onValueChange={(templateVersionId) => setCampaignForm((v) => ({ ...v, templateVersionId }))}><SelectTrigger><SelectValue placeholder="Choose template" /></SelectTrigger><SelectContent>{templates.filter((item) => item.status === "published").map((item) => <SelectItem key={item.version.id} value={item.version.id}>{item.name} · v{item.current_version}</SelectItem>)}</SelectContent></Select></Field><Field label="Priority"><Select value={campaignForm.priority} onValueChange={(priority: NotificationPriority) => setCampaignForm((v) => ({ ...v, priority }))}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{["low", "normal", "high", "urgent"].map((value) => <SelectItem key={value} value={value}>{value}</SelectItem>)}</SelectContent></Select></Field></div><Field label="Template variables (JSON)"><Textarea className="font-mono" rows={5} value={campaignForm.variables} onChange={(e) => setCampaignForm((v) => ({ ...v, variables: e.target.value }))} /></Field><Field label="Expiry (optional)"><Input type="datetime-local" value={campaignForm.expiresAt} onChange={(e) => setCampaignForm((v) => ({ ...v, expiresAt: e.target.value }))} /></Field><Alert><AlertTriangle className="h-4 w-4" /><AlertDescription>Audience: all eligible users. Urgent, emergency, and national campaigns require approval by another authorized person.</AlertDescription></Alert><DialogFooter><Button type="button" variant="outline" onClick={() => setCampaignOpen(false)}>Cancel</Button><Button type="submit" disabled={updatingId !== null || !campaignForm.templateVersionId}>{updatingId === "campaign-create" ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}Create draft</Button></DialogFooter></form></DialogContent></Dialog> : null}</CardHeader>
             <CardContent className="space-y-3">
               {campaigns.length === 0 ? <Empty message="No campaigns found" /> : campaigns.map((campaign) => (
-                <div key={campaign.id} className="flex flex-col gap-2 rounded-lg border p-4 sm:flex-row sm:items-center sm:justify-between"><div><p className="font-medium">{campaign.name}</p><p className="text-sm text-muted-foreground">{campaign.type} · {(campaign.channels as string[])?.join(", ") || "No channels"}</p></div><div className="flex items-center gap-2"><Badge variant="outline">{campaign.status}</Badge><Button size="sm" variant="outline" disabled>Delivery unavailable</Button></div></div>
+                <div key={campaign.id} className="flex flex-col gap-3 rounded-lg border p-4 lg:flex-row lg:items-center lg:justify-between"><div><p className="font-medium">{campaign.name}</p><p className="text-sm text-muted-foreground">{campaign.type} · {campaign.requested_channels.join(", ")} · {campaign.timezone} · lock {campaign.lock_version}</p><p className="mt-1 line-clamp-1 text-sm">{campaign.rendered_title}</p></div><div className="flex flex-wrap items-center gap-2"><Badge variant="outline">{campaign.status}</Badge>{campaign.status === "draft" && canManageCampaigns ? <Button size="sm" variant="outline" disabled={updatingId !== null} onClick={() => void transitionCampaign(campaign, "submit")}>Submit</Button> : null}{campaign.status === "pending_review" && canApproveCampaigns ? <><Button size="sm" disabled={updatingId !== null} onClick={() => void transitionCampaign(campaign, "approve")}>Approve</Button><Button size="sm" variant="outline" disabled={updatingId !== null} onClick={() => void transitionCampaign(campaign, "reject")}>Reject</Button></> : null}{campaign.status === "approved" && canManageCampaigns ? <Button size="sm" disabled={updatingId !== null} onClick={() => void transitionCampaign(campaign, "schedule")}>Queue now</Button> : null}{["draft", "pending_review", "approved", "scheduled", "queued"].includes(campaign.status) && canManageCampaigns ? <Button size="sm" variant="destructive" disabled={updatingId !== null} onClick={() => void transitionCampaign(campaign, "cancel")}>Cancel</Button> : null}</div></div>
               ))}
             </CardContent>
           </Card>
@@ -211,6 +251,8 @@ function Summary({ title, value, detail }: { title: string; value: string | numb
 }
 
 function Empty({ message }: { message: string }) { return <div className="py-10 text-center text-sm text-muted-foreground">{message}</div> }
+
+function Field({ label, children }: { label: string; children: React.ReactNode }) { return <div className="space-y-2"><Label>{label}</Label>{children}</div> }
 
 function Channel({ icon: Icon, title, description, state, configured = false, href }: { icon: LucideIcon; title: string; description: string; state: string; configured?: boolean; href?: string }) {
   return <div className="flex flex-col gap-3 rounded-lg border p-4 sm:flex-row sm:items-center sm:justify-between"><div className="flex items-center gap-3"><Icon className="h-6 w-6 text-muted-foreground" /><div><p className="font-medium">{title}</p><p className="text-sm text-muted-foreground">{description}</p></div></div><div className="flex items-center gap-2"><Badge variant={configured ? "default" : "secondary"}>{configured ? <CheckCircle className="mr-1 h-3 w-3" /> : <CloudCog className="mr-1 h-3 w-3" />}{state}</Badge>{href ? <Button asChild size="sm" variant="outline"><Link href={href}>Configure</Link></Button> : null}</div></div>

@@ -92,7 +92,7 @@ func (h NotificationHandler) Create(c *gin.Context) {
 		httpx.Error(c, http.StatusBadRequest, "invalid request body")
 		return
 	}
-	item, err := h.Service.Create(in)
+	item, err := h.Service.CreateForActor(in, notificationClaims(c).UserID)
 	h.writeResult(c, item, err, http.StatusCreated)
 }
 
@@ -186,7 +186,7 @@ func (h NotificationHandler) CreateTemplate(c *gin.Context) {
 	if !notificationBind(c, &in) {
 		return
 	}
-	item, err := h.Service.SaveTemplate(nil, in)
+	item, err := h.Service.SaveTemplate(nil, in, notificationClaims(c).UserID, c.ClientIP())
 	h.writeResult(c, item, err, http.StatusCreated)
 }
 
@@ -206,7 +206,7 @@ func (h NotificationHandler) UpdateTemplate(c *gin.Context) {
 	if !notificationBind(c, &in) {
 		return
 	}
-	item, err := h.Service.SaveTemplate(&id, in)
+	item, err := h.Service.SaveTemplate(&id, in, notificationClaims(c).UserID, c.ClientIP())
 	h.writeResult(c, item, err, http.StatusOK)
 }
 
@@ -226,7 +226,42 @@ func (h NotificationHandler) UpdateTemplateStatus(c *gin.Context) {
 	if !notificationBind(c, &in) {
 		return
 	}
-	item, err := h.Service.UpdateTemplateStatus(id, in.Status)
+	item, err := h.Service.UpdateTemplateStatus(id, in.Status, notificationClaims(c).UserID, c.ClientIP())
+	h.writeResult(c, item, err, http.StatusOK)
+}
+
+// ListTemplateVersions godoc
+// @Summary List immutable versions for a notification template
+// @Tags notification-administration
+// @Security BearerAuth
+// @Success 200 {object} handlers.NotificationTemplateVersionsEnvelope
+// @Router /api/v2/notification-templates/{id}/versions [get]
+func (h NotificationHandler) ListTemplateVersions(c *gin.Context) {
+	id, ok := notificationID(c)
+	if !ok {
+		return
+	}
+	items, err := h.Service.ListTemplateVersions(id)
+	h.writeResult(c, items, err, http.StatusOK)
+}
+
+// PreviewTemplateVersion godoc
+// @Summary Render a notification-template version with sample variables
+// @Tags notification-administration
+// @Security BearerAuth
+// @Param payload body services.NotificationTemplatePreviewInput true "Variables"
+// @Success 200 {object} handlers.NotificationTemplatePreviewEnvelope
+// @Router /api/v2/notification-template-versions/{id}/preview [post]
+func (h NotificationHandler) PreviewTemplateVersion(c *gin.Context) {
+	id, ok := notificationID(c)
+	if !ok {
+		return
+	}
+	var in services.NotificationTemplatePreviewInput
+	if !notificationBind(c, &in) {
+		return
+	}
+	item, err := h.Service.PreviewTemplateVersion(id, in.Variables)
 	h.writeResult(c, item, err, http.StatusOK)
 }
 
@@ -284,7 +319,7 @@ func (h NotificationHandler) CreateCampaign(c *gin.Context) {
 	if !notificationBind(c, &in) {
 		return
 	}
-	item, err := h.Service.SaveCampaign(nil, in)
+	item, err := h.Service.SaveCampaign(nil, in, notificationClaims(c).UserID, c.ClientIP())
 	h.writeResult(c, item, err, http.StatusCreated)
 }
 
@@ -304,27 +339,40 @@ func (h NotificationHandler) UpdateCampaign(c *gin.Context) {
 	if !notificationBind(c, &in) {
 		return
 	}
-	item, err := h.Service.SaveCampaign(&id, in)
+	item, err := h.Service.SaveCampaign(&id, in, notificationClaims(c).UserID, c.ClientIP())
 	h.writeResult(c, item, err, http.StatusOK)
 }
 
-// UpdateCampaignStatus godoc
-// @Summary Change notification-campaign status
+// TransitionCampaign godoc
+// @Summary Apply a guarded notification-campaign workflow transition
 // @Tags notification-administration
 // @Security BearerAuth
-// @Param payload body handlers.NotificationStatusInput true "Status"
+// @Param id path string true "Campaign UUID"
+// @Param action path string true "submit, approve, reject, schedule, or cancel"
+// @Param payload body services.NotificationCampaignTransitionInput true "Transition"
 // @Success 200 {object} handlers.NotificationCampaignEnvelope
-// @Router /api/v2/notification-campaigns/{id}/status [patch]
-func (h NotificationHandler) UpdateCampaignStatus(c *gin.Context) {
+// @Failure 409 {object} handlers.ErrorResponse
+// @Router /api/v2/notification-campaigns/{id}/{action} [post]
+func (h NotificationHandler) TransitionCampaign(c *gin.Context) {
+	h.transitionCampaign(c, c.Param("action"))
+}
+
+func (h NotificationHandler) transitionCampaign(c *gin.Context, action string) {
+	if action == "" {
+		parts := strings.Split(strings.Trim(c.FullPath(), "/"), "/")
+		if len(parts) > 0 {
+			action = parts[len(parts)-1]
+		}
+	}
 	id, ok := notificationID(c)
 	if !ok {
 		return
 	}
-	var in NotificationStatusInput
+	var in services.NotificationCampaignTransitionInput
 	if !notificationBind(c, &in) {
 		return
 	}
-	item, err := h.Service.UpdateCampaignStatus(id, in.Status)
+	item, err := h.Service.TransitionCampaign(id, action, in, notificationClaims(c).UserID, c.ClientIP())
 	h.writeResult(c, item, err, http.StatusOK)
 }
 
@@ -362,6 +410,12 @@ func (h NotificationHandler) writeError(c *gin.Context, err error) {
 	switch {
 	case errors.Is(err, services.ErrNotificationInvalid):
 		httpx.Error(c, http.StatusBadRequest, "invalid notification payload")
+	case errors.Is(err, services.ErrNotificationConflict):
+		httpx.Error(c, http.StatusConflict, "notification record changed; refresh and try again")
+	case errors.Is(err, services.ErrNotificationTransition):
+		httpx.Error(c, http.StatusUnprocessableEntity, "notification workflow transition is not allowed")
+	case errors.Is(err, services.ErrNotificationApproval):
+		httpx.Error(c, http.StatusForbidden, "this campaign requires approval by another authorized user")
 	case errors.Is(err, gorm.ErrRecordNotFound):
 		httpx.Error(c, http.StatusNotFound, "notification not found")
 	default:

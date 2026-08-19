@@ -41,13 +41,13 @@ describe("NotificationAdministrationPage", () => {
     vi.clearAllMocks()
   })
 
-  it("states unsupported delivery behavior instead of presenting placeholder success controls", async () => {
+  it("enables authoring while honestly separating workflow from delivery fan-out", async () => {
     const user = userEvent.setup()
     render(<NotificationAdministrationPage />)
 
     await waitFor(() => expect(screen.getByText("Notification Administration")).toBeInTheDocument())
-    expect(screen.getByText(/Scheduling, audience resolution and push dispatch will remain unavailable/)).toBeInTheDocument()
-    expect(screen.getByRole("button", { name: "New template" })).toBeDisabled()
+    expect(screen.getByText(/approving a campaign freezes its dispatch snapshot but does not claim/)).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "New template" })).toBeEnabled()
     await user.click(screen.getByRole("tab", { name: "Campaigns" }))
     expect(screen.getByRole("button", { name: "New campaign" })).toBeDisabled()
     expect(screen.queryByText(/Test Mode/i)).not.toBeInTheDocument()

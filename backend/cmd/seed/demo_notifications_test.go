@@ -21,6 +21,7 @@ func TestSeedDemoNotificationsIsIdempotentAndUserScoped(t *testing.T) {
 	if err := database.AutoMigrate(
 		&models.Notification{},
 		&models.NotificationTemplate{},
+		&models.NotificationTemplateVersion{},
 		&models.NotificationCampaign{},
 	); err != nil {
 		t.Fatal(err)
@@ -52,10 +53,11 @@ func TestSeedDemoNotificationsIsIdempotentAndUserScoped(t *testing.T) {
 		t.Fatalf("expected three global and one clinician notification, got %d and %d", global, owned)
 	}
 
-	var templates, campaigns int64
+	var templates, versions, campaigns int64
 	database.Model(&models.NotificationTemplate{}).Count(&templates)
+	database.Model(&models.NotificationTemplateVersion{}).Count(&versions)
 	database.Model(&models.NotificationCampaign{}).Count(&campaigns)
-	if templates != 1 || campaigns != 1 {
-		t.Fatalf("expected one template and campaign, got %d and %d", templates, campaigns)
+	if templates != 1 || versions != 1 || campaigns != 1 {
+		t.Fatalf("expected one template version and campaign, got %d, %d and %d", templates, versions, campaigns)
 	}
 }

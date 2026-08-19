@@ -565,7 +565,7 @@ definitions:
   handlers.NotificationCampaignEnvelope:
     properties:
       data:
-        $ref: '#/definitions/models.NotificationCampaign'
+        $ref: '#/definitions/services.NotificationCampaignDTO'
       success:
         type: boolean
     type: object
@@ -585,9 +585,25 @@ definitions:
   handlers.NotificationTemplateEnvelope:
     properties:
       data:
-        $ref: '#/definitions/models.NotificationTemplate'
+        $ref: '#/definitions/services.NotificationTemplateDTO'
       success:
         example: true
+        type: boolean
+    type: object
+  handlers.NotificationTemplatePreviewEnvelope:
+    properties:
+      data:
+        $ref: '#/definitions/services.NotificationTemplatePreview'
+      success:
+        type: boolean
+    type: object
+  handlers.NotificationTemplateVersionsEnvelope:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/services.NotificationTemplateVersionDTO'
+        type: array
+      success:
         type: boolean
     type: object
   handlers.OutbreakEnvelope:
@@ -1037,7 +1053,7 @@ definitions:
     properties:
       items:
         items:
-          $ref: '#/definitions/models.NotificationCampaign'
+          $ref: '#/definitions/services.NotificationCampaignDTO'
         type: array
       page:
         type: integer
@@ -1059,7 +1075,7 @@ definitions:
     properties:
       items:
         items:
-          $ref: '#/definitions/models.NotificationTemplate'
+          $ref: '#/definitions/services.NotificationTemplateDTO'
         type: array
       page:
         type: integer
@@ -2999,7 +3015,15 @@ definitions:
         $ref: '#/definitions/models.NotificationAction'
       action_url:
         type: string
+      campaign_id:
+        type: string
       created_at:
+        type: string
+      created_by:
+        type: string
+      deduplication_key:
+        type: string
+      expires_at:
         type: string
       id:
         type: string
@@ -3008,6 +3032,14 @@ definitions:
       message:
         type: string
       priority:
+        type: string
+      publish_at:
+        type: string
+      published_by:
+        type: string
+      source_id:
+        type: string
+      source_type:
         type: string
       title:
         type: string
@@ -3041,80 +3073,6 @@ definitions:
         - internal_route
         - approved_external_url
         type: string
-    type: object
-  models.NotificationCampaign:
-    properties:
-      audience_countries:
-        items:
-          type: string
-        type: array
-      audience_roles:
-        items:
-          type: string
-        type: array
-      audience_total:
-        type: integer
-      channels:
-        items:
-          type: string
-        type: array
-      created_at:
-        type: string
-      id:
-        type: string
-      metrics_clicked:
-        type: integer
-      metrics_delivered:
-        type: integer
-      metrics_opened:
-        type: integer
-      metrics_sent:
-        type: integer
-      name:
-        type: string
-      schedule_end:
-        type: string
-      schedule_start:
-        type: string
-      status:
-        type: string
-      type:
-        type: string
-      updated_at:
-        type: string
-    type: object
-  models.NotificationTemplate:
-    properties:
-      audience:
-        type: string
-      category:
-        type: string
-      clicked_count:
-        type: integer
-      content:
-        type: string
-      created_at:
-        type: string
-      id:
-        type: string
-      last_sent:
-        type: string
-      name:
-        type: string
-      opened_count:
-        type: integer
-      sent_count:
-        type: integer
-      status:
-        type: string
-      subject:
-        type: string
-      type:
-        type: string
-      updated_at:
-        type: string
-      variables:
-        type: object
     type: object
   models.Outbreak:
     properties:
@@ -4986,29 +4944,138 @@ definitions:
         - approved_external_url
         type: string
     type: object
-  services.NotificationCampaignInput:
+  services.NotificationAudienceDefinition:
     properties:
-      audience_countries:
+      all_eligible:
+        type: boolean
+      countries:
         items:
           type: string
         type: array
-      audience_roles:
+      regions:
         items:
           type: string
         type: array
-      channels:
+      role_ids:
         items:
           type: string
         type: array
+      user_ids:
+        items:
+          type: string
+        type: array
+    type: object
+  services.NotificationCampaignDTO:
+    properties:
+      action_snapshot:
+        $ref: '#/definitions/services.NotificationAction'
+      approved_at:
+        type: string
+      approved_by:
+        type: string
+      audience:
+        $ref: '#/definitions/services.NotificationAudienceDefinition'
+      cancelled_at:
+        type: string
+      collapse_key:
+        type: string
+      completed_at:
+        type: string
+      created_at:
+        type: string
+      created_by:
+        type: string
+      dispatch_snapshot:
+        additionalProperties: {}
+        type: object
+      expires_at:
+        type: string
+      failure_reason:
+        type: string
+      id:
+        type: string
+      idempotency_key:
+        type: string
+      lock_version:
+        type: integer
       name:
         type: string
-      schedule_end:
+      priority:
         type: string
-      schedule_start:
+      rendered_body:
+        type: string
+      rendered_title:
+        type: string
+      requested_channels:
+        items:
+          type: string
+        type: array
+      resolved_recipient_count:
+        type: integer
+      reviewed_at:
+        type: string
+      reviewed_by:
+        type: string
+      scheduled_at:
+        type: string
+      started_at:
         type: string
       status:
         type: string
+      template_version_id:
+        type: string
+      timezone:
+        type: string
+      ttl_seconds:
+        type: integer
       type:
+        type: string
+      updated_at:
+        type: string
+    type: object
+  services.NotificationCampaignInput:
+    properties:
+      audience:
+        $ref: '#/definitions/services.NotificationAudienceDefinition'
+      collapse_key:
+        type: string
+      expires_at:
+        type: string
+      idempotency_key:
+        type: string
+      lock_version:
+        type: integer
+      name:
+        type: string
+      priority:
+        type: string
+      requested_channels:
+        items:
+          type: string
+        type: array
+      scheduled_at:
+        type: string
+      template_version_id:
+        type: string
+      timezone:
+        type: string
+      ttl_seconds:
+        type: integer
+      type:
+        type: string
+      variables:
+        additionalProperties: {}
+        type: object
+    type: object
+  services.NotificationCampaignTransitionInput:
+    properties:
+      lock_version:
+        type: integer
+      reason:
+        type: string
+      scheduled_at:
+        type: string
+      timezone:
         type: string
     type: object
   services.NotificationInput:
@@ -5017,9 +5084,19 @@ definitions:
         $ref: '#/definitions/services.NotificationAction'
       action_url:
         type: string
+      deduplication_key:
+        type: string
+      expires_at:
+        type: string
       message:
         type: string
       priority:
+        type: string
+      publish_at:
+        type: string
+      source_id:
+        type: string
+      source_type:
         type: string
       title:
         type: string
@@ -5028,25 +5105,103 @@ definitions:
       user_id:
         type: string
     type: object
-  services.NotificationTemplateInput:
+  services.NotificationTemplateDTO:
     properties:
-      audience:
+      created_at:
         type: string
-      category:
+      created_by:
         type: string
-      content:
+      current_version:
+        type: integer
+      id:
+        type: string
+      locale:
         type: string
       name:
         type: string
+      reviewed_by:
+        type: string
       status:
         type: string
-      subject:
+      template_key:
         type: string
-      type:
+      updated_at:
         type: string
+      version:
+        $ref: '#/definitions/services.NotificationTemplateVersionDTO'
+    type: object
+  services.NotificationTemplateInput:
+    properties:
+      action_template:
+        $ref: '#/definitions/services.NotificationAction'
+      body_template:
+        type: string
+      category:
+        type: string
+      channel:
+        type: string
+      locale:
+        type: string
+      name:
+        type: string
+      template_key:
+        type: string
+      title_template:
+        type: string
+      variable_schema:
+        additionalProperties:
+          $ref: '#/definitions/services.TemplateVariableRule'
+        type: object
+    type: object
+  services.NotificationTemplatePreview:
+    properties:
+      action:
+        $ref: '#/definitions/services.NotificationAction'
+      body:
+        type: string
+      title:
+        type: string
+    type: object
+  services.NotificationTemplatePreviewInput:
+    properties:
       variables:
         additionalProperties: {}
         type: object
+    type: object
+  services.NotificationTemplateVersionDTO:
+    properties:
+      action_template:
+        $ref: '#/definitions/services.NotificationAction'
+      body_template:
+        type: string
+      category:
+        type: string
+      channel:
+        type: string
+      created_at:
+        type: string
+      created_by:
+        type: string
+      id:
+        type: string
+      locale:
+        type: string
+      published_at:
+        type: string
+      reviewed_by:
+        type: string
+      status:
+        type: string
+      template_id:
+        type: string
+      title_template:
+        type: string
+      variable_schema:
+        additionalProperties:
+          $ref: '#/definitions/services.TemplateVariableRule'
+        type: object
+      version:
+        type: integer
     type: object
   services.PageResult-models_Abbreviation:
     properties:
@@ -5801,6 +5956,14 @@ definitions:
       status:
         type: string
       subject:
+        type: string
+    type: object
+  services.TemplateVariableRule:
+    properties:
+      required:
+        type: boolean
+      sample_value: {}
+      type:
         type: string
     type: object
   services.TreeNode:
@@ -11720,23 +11883,56 @@ paths:
       summary: Replace editable notification-campaign fields
       tags:
       - notification-administration
-  /api/v2/notification-campaigns/{id}/status:
-    patch:
+  /api/v2/notification-campaigns/{id}/{action}:
+    post:
       parameters:
-      - description: Status
+      - description: Campaign UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: submit, approve, reject, schedule, or cancel
+        in: path
+        name: action
+        required: true
+        type: string
+      - description: Transition
         in: body
         name: payload
         required: true
         schema:
-          $ref: '#/definitions/handlers.NotificationStatusInput'
+          $ref: '#/definitions/services.NotificationCampaignTransitionInput'
       responses:
         "200":
           description: OK
           schema:
             $ref: '#/definitions/handlers.NotificationCampaignEnvelope'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
       security:
       - BearerAuth: []
-      summary: Change notification-campaign status
+      summary: Apply a guarded notification-campaign workflow transition
+      tags:
+      - notification-administration
+  /api/v2/notification-template-versions/{id}/preview:
+    post:
+      parameters:
+      - description: Variables
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/services.NotificationTemplatePreviewInput'
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.NotificationTemplatePreviewEnvelope'
+      security:
+      - BearerAuth: []
+      summary: Render a notification-template version with sample variables
       tags:
       - notification-administration
   /api/v2/notification-templates:
@@ -11825,6 +12021,18 @@ paths:
       security:
       - BearerAuth: []
       summary: Change notification-template status
+      tags:
+      - notification-administration
+  /api/v2/notification-templates/{id}/versions:
+    get:
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.NotificationTemplateVersionsEnvelope'
+      security:
+      - BearerAuth: []
+      summary: List immutable versions for a notification template
       tags:
       - notification-administration
   /api/v2/notifications:

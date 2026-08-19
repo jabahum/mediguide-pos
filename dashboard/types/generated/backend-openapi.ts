@@ -395,7 +395,7 @@ export interface HandlersMinistryDirectoryEnvelope {
 }
 
 export interface HandlersNotificationCampaignEnvelope {
-  data?: ModelsNotificationCampaign;
+  data?: ServicesNotificationCampaignDTO;
   success?: boolean;
 }
 
@@ -410,8 +410,18 @@ export interface HandlersNotificationStatusInput {
 }
 
 export interface HandlersNotificationTemplateEnvelope {
-  data?: ModelsNotificationTemplate;
+  data?: ServicesNotificationTemplateDTO;
   /** @example true */
+  success?: boolean;
+}
+
+export interface HandlersNotificationTemplatePreviewEnvelope {
+  data?: ServicesNotificationTemplatePreview;
+  success?: boolean;
+}
+
+export interface HandlersNotificationTemplateVersionsEnvelope {
+  data?: ServicesNotificationTemplateVersionDTO[];
   success?: boolean;
 }
 
@@ -705,7 +715,7 @@ export interface HandlersPaginatedMinistryDirectoryEnvelope {
 }
 
 export interface HandlersPaginatedNotificationCampaigns {
-  items?: ModelsNotificationCampaign[];
+  items?: ServicesNotificationCampaignDTO[];
   page?: number;
   per_page?: number;
   total_items?: number;
@@ -718,7 +728,7 @@ export interface HandlersPaginatedNotificationCampaignsEnvelope {
 }
 
 export interface HandlersPaginatedNotificationTemplates {
-  items?: ModelsNotificationTemplate[];
+  items?: ServicesNotificationTemplateDTO[];
   page?: number;
   per_page?: number;
   total_items?: number;
@@ -1837,11 +1847,19 @@ export interface ModelsMinistryDirectoryEntry {
 export interface ModelsNotification {
   action?: ModelsNotificationAction;
   action_url?: string;
+  campaign_id?: string;
   created_at?: string;
+  created_by?: string;
+  deduplication_key?: string;
+  expires_at?: string;
   id?: string;
   is_read?: boolean;
   message?: string;
   priority?: string;
+  publish_at?: string;
+  published_by?: string;
+  source_id?: string;
+  source_type?: string;
   title?: string;
   type?: string;
   updated_at?: string;
@@ -1866,43 +1884,6 @@ export type ModelsNotificationActionTypeEnum =
   | "support_ticket"
   | "internal_route"
   | "approved_external_url";
-
-export interface ModelsNotificationCampaign {
-  audience_countries?: string[];
-  audience_roles?: string[];
-  audience_total?: number;
-  channels?: string[];
-  created_at?: string;
-  id?: string;
-  metrics_clicked?: number;
-  metrics_delivered?: number;
-  metrics_opened?: number;
-  metrics_sent?: number;
-  name?: string;
-  schedule_end?: string;
-  schedule_start?: string;
-  status?: string;
-  type?: string;
-  updated_at?: string;
-}
-
-export interface ModelsNotificationTemplate {
-  audience?: string;
-  category?: string;
-  clicked_count?: number;
-  content?: string;
-  created_at?: string;
-  id?: string;
-  last_sent?: string;
-  name?: string;
-  opened_count?: number;
-  sent_count?: number;
-  status?: string;
-  subject?: string;
-  type?: string;
-  updated_at?: string;
-  variables?: object;
-}
 
 export interface ModelsOutbreak {
   created_at?: string;
@@ -2933,36 +2914,139 @@ export type ServicesNotificationActionTypeEnum =
   | "internal_route"
   | "approved_external_url";
 
-export interface ServicesNotificationCampaignInput {
-  audience_countries?: string[];
-  audience_roles?: string[];
-  channels?: string[];
+export interface ServicesNotificationAudienceDefinition {
+  all_eligible?: boolean;
+  countries?: string[];
+  regions?: string[];
+  role_ids?: string[];
+  user_ids?: string[];
+}
+
+export interface ServicesNotificationCampaignDTO {
+  action_snapshot?: ServicesNotificationAction;
+  approved_at?: string;
+  approved_by?: string;
+  audience?: ServicesNotificationAudienceDefinition;
+  cancelled_at?: string;
+  collapse_key?: string;
+  completed_at?: string;
+  created_at?: string;
+  created_by?: string;
+  dispatch_snapshot?: Record<string, any>;
+  expires_at?: string;
+  failure_reason?: string;
+  id?: string;
+  idempotency_key?: string;
+  lock_version?: number;
   name?: string;
-  schedule_end?: string;
-  schedule_start?: string;
+  priority?: string;
+  rendered_body?: string;
+  rendered_title?: string;
+  requested_channels?: string[];
+  resolved_recipient_count?: number;
+  reviewed_at?: string;
+  reviewed_by?: string;
+  scheduled_at?: string;
+  started_at?: string;
   status?: string;
+  template_version_id?: string;
+  timezone?: string;
+  ttl_seconds?: number;
   type?: string;
+  updated_at?: string;
+}
+
+export interface ServicesNotificationCampaignInput {
+  audience?: ServicesNotificationAudienceDefinition;
+  collapse_key?: string;
+  expires_at?: string;
+  idempotency_key?: string;
+  lock_version?: number;
+  name?: string;
+  priority?: string;
+  requested_channels?: string[];
+  scheduled_at?: string;
+  template_version_id?: string;
+  timezone?: string;
+  ttl_seconds?: number;
+  type?: string;
+  variables?: Record<string, any>;
+}
+
+export interface ServicesNotificationCampaignTransitionInput {
+  lock_version?: number;
+  reason?: string;
+  scheduled_at?: string;
+  timezone?: string;
 }
 
 export interface ServicesNotificationInput {
   action?: ServicesNotificationAction;
   action_url?: string;
+  deduplication_key?: string;
+  expires_at?: string;
   message?: string;
   priority?: string;
+  publish_at?: string;
+  source_id?: string;
+  source_type?: string;
   title?: string;
   type?: string;
   user_id?: string;
 }
 
-export interface ServicesNotificationTemplateInput {
-  audience?: string;
-  category?: string;
-  content?: string;
+export interface ServicesNotificationTemplateDTO {
+  created_at?: string;
+  created_by?: string;
+  current_version?: number;
+  id?: string;
+  locale?: string;
   name?: string;
+  reviewed_by?: string;
   status?: string;
-  subject?: string;
-  type?: string;
+  template_key?: string;
+  updated_at?: string;
+  version?: ServicesNotificationTemplateVersionDTO;
+}
+
+export interface ServicesNotificationTemplateInput {
+  action_template?: ServicesNotificationAction;
+  body_template?: string;
+  category?: string;
+  channel?: string;
+  locale?: string;
+  name?: string;
+  template_key?: string;
+  title_template?: string;
+  variable_schema?: Record<string, ServicesTemplateVariableRule>;
+}
+
+export interface ServicesNotificationTemplatePreview {
+  action?: ServicesNotificationAction;
+  body?: string;
+  title?: string;
+}
+
+export interface ServicesNotificationTemplatePreviewInput {
   variables?: Record<string, any>;
+}
+
+export interface ServicesNotificationTemplateVersionDTO {
+  action_template?: ServicesNotificationAction;
+  body_template?: string;
+  category?: string;
+  channel?: string;
+  created_at?: string;
+  created_by?: string;
+  id?: string;
+  locale?: string;
+  published_at?: string;
+  reviewed_by?: string;
+  status?: string;
+  template_id?: string;
+  title_template?: string;
+  variable_schema?: Record<string, ServicesTemplateVariableRule>;
+  version?: number;
 }
 
 export interface ServicesPageResultModelsAbbreviation {
@@ -3382,6 +3466,12 @@ export interface ServicesSupportTicketUpdate {
   priority?: string;
   status?: string;
   subject?: string;
+}
+
+export interface ServicesTemplateVariableRule {
+  required?: boolean;
+  sample_value?: any;
+  type?: string;
 }
 
 export interface ServicesTreeNode {

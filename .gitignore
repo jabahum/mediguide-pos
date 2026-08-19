@@ -11,6 +11,7 @@
 !docs/firebase-mobile-distribution.md
 !docs/mobile-environments.md
 !docs/mobile-alpha-release.md
+!docs/notification-templates-and-campaigns.md
 !guidelines-platform/src/content/**/*.md
 backend/.env
 backend/.env.local

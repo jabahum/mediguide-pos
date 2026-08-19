@@ -49,19 +49,19 @@ describe("notificationsService", () => {
     })
   })
 
-  it("routes template and campaign status changes through admin endpoints", async () => {
+  it("routes version publishing and guarded campaign transitions through admin endpoints", async () => {
     send.mockResolvedValue({})
 
-    await notificationsService.updateTemplateStatus("template-1", "inactive")
-    await notificationsService.updateCampaignStatus("campaign-1", "paused")
+    await notificationsService.updateTemplateStatus("template-1", "published")
+    await notificationsService.transitionCampaign("campaign-1", "approve", { lock_version: 3 })
 
     expect(send).toHaveBeenNthCalledWith(1, "/api/v2/notification-templates/template-1/status", {
       method: "PATCH",
-      body: JSON.stringify({ status: "inactive" }),
+      body: JSON.stringify({ status: "published" }),
     })
-    expect(send).toHaveBeenNthCalledWith(2, "/api/v2/notification-campaigns/campaign-1/status", {
-      method: "PATCH",
-      body: JSON.stringify({ status: "paused" }),
+    expect(send).toHaveBeenNthCalledWith(2, "/api/v2/notification-campaigns/campaign-1/approve", {
+      method: "POST",
+      body: JSON.stringify({ lock_version: 3 }),
     })
   })
 })

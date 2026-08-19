@@ -22,16 +22,19 @@ cd user_app
 
 flutter run \
   --flavor development \
-  --target lib/main_development.dart
+  --target lib/main_development.dart \
+  --dart-define=MEDIGUIDE_FLAVOR=development
 
 flutter run \
   --flavor staging \
   --target lib/main_staging.dart \
+  --dart-define=MEDIGUIDE_FLAVOR=staging \
   --dart-define-from-file=config/firebase-staging.json
 
 flutter run \
   --flavor production \
   --target lib/main_production.dart \
+  --dart-define=MEDIGUIDE_FLAVOR=production \
   --dart-define-from-file=config/firebase-production.json
 ```
 

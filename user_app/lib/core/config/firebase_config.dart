@@ -6,6 +6,10 @@ import 'package:firebase_core/firebase_core.dart';
 /// They are not Admin credentials and must never be confused with the
 /// backend-only service account.
 abstract final class MediGuideFirebaseConfig {
+  static const flavor = String.fromEnvironment(
+    'MEDIGUIDE_FLAVOR',
+    defaultValue: 'development',
+  );
   static const projectId = String.fromEnvironment('FIREBASE_PROJECT_ID');
   static const apiKey = String.fromEnvironment('FIREBASE_API_KEY');
   static const messagingSenderId = String.fromEnvironment(
@@ -13,6 +17,12 @@ abstract final class MediGuideFirebaseConfig {
   );
   static const androidAppId = String.fromEnvironment('FIREBASE_ANDROID_APP_ID');
   static const iosAppId = String.fromEnvironment('FIREBASE_IOS_APP_ID');
+
+  static String get iosBundleId => switch (flavor) {
+    'development' => 'com.omarsoft.mediguide.dev',
+    'staging' => 'com.omarsoft.mediguide.staging',
+    _ => 'com.omarsoft.mediguide',
+  };
 
   static bool get isConfigured =>
       projectId.isNotEmpty &&
@@ -34,12 +44,12 @@ abstract final class MediGuideFirebaseConfig {
       );
     }
     if (Platform.isIOS) {
-      return const FirebaseOptions(
+      return FirebaseOptions(
         apiKey: apiKey,
         appId: iosAppId,
         messagingSenderId: messagingSenderId,
         projectId: projectId,
-        iosBundleId: 'com.omarsoft.mediguide',
+        iosBundleId: iosBundleId,
       );
     }
     throw UnsupportedError('Firebase is enabled only for Android and iOS');

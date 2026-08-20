@@ -56,17 +56,36 @@ class _MinistryDirectoryPageState extends ConsumerState<MinistryDirectoryPage> {
 
     final controller = ref.read(ministryDirectoryControllerProvider.notifier);
 
-    final cs = context.theme.colorScheme;
+    final colors = Theme.of(context).colorScheme;
 
     return Scaffold(
-      backgroundColor: cs.surface,
+      backgroundColor: colors.surface,
+
+      // =====================================================================
+      // APP BAR
+      // =====================================================================
       appBar: AppBar(
         titleSpacing: AppSpacing.md,
-        title: Text(
-          'ministryDirectory'.tr,
-          style: context.textTheme.titleLarge?.copyWith(
-            fontWeight: FontWeight.w800,
-          ),
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'ministryDirectory'.tr,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: Theme.of(
+                context,
+              ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
+            ),
+            Text(
+              'Official contacts and departments',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: Theme.of(
+                context,
+              ).textTheme.bodySmall?.copyWith(color: colors.onSurfaceVariant),
+            ),
+          ],
         ),
         actions: [
           FilterButton(
@@ -77,35 +96,88 @@ class _MinistryDirectoryPageState extends ConsumerState<MinistryDirectoryPage> {
             onReset: state.hasActiveFilters ? controller.resetFilters : null,
             tooltip: 'filterDirectory'.tr,
           ),
-          AppSpacing.xs.gap,
+          AppSpacing.hGapXs,
         ],
       ),
+
+      // =====================================================================
+      // BODY
+      // =====================================================================
       body: RefreshIndicator(
         onRefresh: () async {
           controller.refresh();
         },
         child: CustomScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
+          keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
           slivers: [
-            SliverPadding(
-              padding: const EdgeInsets.fromLTRB(
-                AppSpacing.md,
-                AppSpacing.sm,
-                AppSpacing.md,
-                0,
-              ),
-              sliver: SliverToBoxAdapter(
-                child: _DirectoryHeaderCard(
-                  onOpenFilters: () {
-                    controller.showAdvancedFilter(context);
-                  },
+            // =================================================================
+            // DIRECTORY CONTEXT
+            // =================================================================
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(
+                  AppSpacing.md,
+                  AppSpacing.md,
+                  AppSpacing.md,
+                  0,
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _DirectoryBrowseCard(
+                      hasActiveFilters: state.hasActiveFilters,
+                      onOpenFilters: () {
+                        controller.showAdvancedFilter(context);
+                      },
+                    ),
+
+                    if (state.hasActiveFilters) ...[
+                      AppSpacing.gapMd,
+
+                      _ActiveDirectoryFiltersBanner(
+                        onEdit: () {
+                          controller.showAdvancedFilter(context);
+                        },
+                        onClear: controller.resetFilters,
+                      ),
+                    ],
+
+                    AppSpacing.gapLg,
+
+                    Text(
+                      state.hasActiveFilters
+                          ? 'Matching directory entries'
+                          : 'Directory',
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+
+                    const SizedBox(height: 3),
+
+                    Text(
+                      state.hasActiveFilters
+                          ? 'Showing ministry contacts matching your current filters.'
+                          : 'Browse official departments, contacts and support offices.',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: colors.onSurfaceVariant,
+                      ),
+                    ),
+
+                    AppSpacing.gapSm,
+                  ],
                 ),
               ),
             ),
+
+            // =================================================================
+            // DIRECTORY LIST
+            // =================================================================
             SliverPadding(
               padding: const EdgeInsets.fromLTRB(
                 AppSpacing.md,
-                AppSpacing.md,
+                0,
                 AppSpacing.md,
                 AppSpacing.xxxl,
               ),
@@ -115,8 +187,11 @@ class _MinistryDirectoryPageState extends ConsumerState<MinistryDirectoryPage> {
                   return PagedSliverList<int, MinistryDirectory>.separated(
                     state: pagingState,
                     fetchNextPage: fetchNextPage,
-                    separatorBuilder: (context, index) => AppSpacing.sm.gap,
+                    separatorBuilder: (_, _) => AppSpacing.sm.gap,
                     builderDelegate: PagedChildBuilderDelegate<MinistryDirectory>(
+                      // =====================================================
+                      // ITEM
+                      // =====================================================
                       itemBuilder: (context, entry, index) {
                         return _DirectoryCardShell(
                           child: MinistryDirectoryCard(
@@ -126,25 +201,25 @@ class _MinistryDirectoryPageState extends ConsumerState<MinistryDirectoryPage> {
                         );
                       },
 
-                      // =========================
+                      // =====================================================
                       // FIRST PAGE LOADING
-                      // =========================
+                      // =====================================================
                       firstPageProgressIndicatorBuilder: (_) {
                         return const AppLoadingView(
                           message: 'Loading ministry directory...',
                         );
                       },
 
-                      // =========================
+                      // =====================================================
                       // NEXT PAGE LOADING
-                      // =========================
+                      // =====================================================
                       newPageProgressIndicatorBuilder: (_) {
                         return PaginationIndicators.newPageProgress();
                       },
 
-                      // =========================
+                      // =====================================================
                       // FIRST PAGE ERROR
-                      // =========================
+                      // =====================================================
                       firstPageErrorIndicatorBuilder: (_) {
                         return AppErrorView(
                           error:
@@ -157,20 +232,20 @@ class _MinistryDirectoryPageState extends ConsumerState<MinistryDirectoryPage> {
                         );
                       },
 
-                      // =========================
+                      // =====================================================
                       // NEXT PAGE ERROR
-                      // =========================
+                      // =====================================================
                       newPageErrorIndicatorBuilder: (_) {
                         return PaginationIndicators.newPageError(
                           onRetry: fetchNextPage,
                           title: 'Failed to load more entries',
-                          icon: LucideIcons.phone,
+                          icon: LucideIcons.landmark,
                         );
                       },
 
-                      // =========================
+                      // =====================================================
                       // EMPTY
-                      // =========================
+                      // =====================================================
                       noItemsFoundIndicatorBuilder: (_) {
                         if (state.hasActiveFilters) {
                           return EmptyState.noResults(
@@ -189,11 +264,14 @@ class _MinistryDirectoryPageState extends ConsumerState<MinistryDirectoryPage> {
                         );
                       },
 
-                      // =========================
+                      // =====================================================
                       // END
-                      // =========================
+                      // =====================================================
                       noMoreItemsIndicatorBuilder: (_) {
-                        return PaginationIndicators.noMoreItems();
+                        return Padding(
+                          padding: AppSpacing.vPaddingMd,
+                          child: PaginationIndicators.noMoreItems(),
+                        );
                       },
                     ),
                   );
@@ -207,66 +285,155 @@ class _MinistryDirectoryPageState extends ConsumerState<MinistryDirectoryPage> {
   }
 }
 
-class _DirectoryHeaderCard extends StatelessWidget {
-  const _DirectoryHeaderCard({required this.onOpenFilters});
+// ===========================================================================
+// BROWSE CARD
+// ===========================================================================
 
+class _DirectoryBrowseCard extends StatelessWidget {
+  const _DirectoryBrowseCard({
+    required this.hasActiveFilters,
+    required this.onOpenFilters,
+  });
+
+  final bool hasActiveFilters;
   final VoidCallback onOpenFilters;
 
   @override
   Widget build(BuildContext context) {
-    final cs = context.theme.colorScheme;
+    final colors = Theme.of(context).colorScheme;
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onOpenFilters,
+        borderRadius: BorderRadius.circular(16),
+        child: Ink(
+          padding: const EdgeInsets.all(AppSpacing.md),
+          decoration: BoxDecoration(
+            color: colors.surfaceContainerLow,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: colors.outlineVariant),
+          ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: 42,
+                height: 42,
+                decoration: BoxDecoration(
+                  color: colors.primaryContainer,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(
+                  LucideIcons.landmark,
+                  color: colors.primary,
+                  size: 21,
+                ),
+              ),
+
+              AppSpacing.hGapMd,
+
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Find a ministry contact',
+                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+
+                    const SizedBox(height: 3),
+
+                    Text(
+                      hasActiveFilters
+                          ? 'Filters are applied. Tap to adjust them.'
+                          : 'Filter by department, office or other available directory fields.',
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: colors.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              AppSpacing.hGapSm,
+
+              Icon(
+                LucideIcons.slidersHorizontal,
+                color: colors.primary,
+                size: 20,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ===========================================================================
+// ACTIVE FILTERS
+// ===========================================================================
+
+class _ActiveDirectoryFiltersBanner extends StatelessWidget {
+  const _ActiveDirectoryFiltersBanner({
+    required this.onEdit,
+    required this.onClear,
+  });
+
+  final VoidCallback onEdit;
+  final VoidCallback onClear;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
 
     return Container(
-      padding: const EdgeInsets.all(AppSpacing.lg),
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.md,
+        vertical: AppSpacing.sm,
+      ),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(24),
-        color: cs.primaryContainer.withValues(alpha: 0.35),
-        border: Border.all(color: cs.primary.withValues(alpha: 0.08)),
+        color: colors.secondaryContainer,
+        borderRadius: BorderRadius.circular(14),
       ),
       child: Row(
         children: [
-          Container(
-            width: 54,
-            height: 54,
-            decoration: BoxDecoration(
-              color: cs.primary.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(18),
-            ),
-            child: Icon(LucideIcons.phone, color: cs.primary, size: 28),
+          Icon(
+            LucideIcons.listFilter,
+            size: 18,
+            color: colors.onSecondaryContainer,
           ),
-          AppSpacing.md.gap,
+
+          AppSpacing.hGapSm,
+
           Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'ministryDirectory'.tr,
-                  style: context.textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  'Find ministry contacts, emergency numbers and support offices.',
-                  style: context.textTheme.bodySmall?.copyWith(
-                    color: cs.onSurfaceVariant,
-                    height: 1.4,
-                  ),
-                ),
-              ],
+            child: Text(
+              'Directory filters applied',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: colors.onSecondaryContainer,
+                fontWeight: FontWeight.w700,
+              ),
             ),
           ),
-          AppSpacing.sm.gap,
-          IconButton.filledTonal(
-            onPressed: onOpenFilters,
-            icon: const Icon(LucideIcons.slidersHorizontal),
-            tooltip: 'filterDirectory'.tr,
-          ),
+
+          TextButton(onPressed: onEdit, child: const Text('Edit')),
+
+          TextButton(onPressed: onClear, child: const Text('Clear')),
         ],
       ),
     );
   }
 }
+
+// ===========================================================================
+// CARD SHELL
+// ===========================================================================
 
 class _DirectoryCardShell extends StatelessWidget {
   const _DirectoryCardShell({required this.child});
@@ -275,13 +442,13 @@ class _DirectoryCardShell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final cs = context.theme.colorScheme;
+    final colors = Theme.of(context).colorScheme;
 
     return Container(
       decoration: BoxDecoration(
-        color: cs.surfaceContainerLowest,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: cs.outlineVariant.withValues(alpha: 0.35)),
+        color: colors.surfaceContainerLowest,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: colors.outlineVariant),
       ),
       clipBehavior: Clip.antiAlias,
       child: child,

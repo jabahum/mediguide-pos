@@ -53,6 +53,7 @@ abstract final class AppRoutes {
   static const String aboutUs = '/about-us';
   static const String helpCenter = '/help-center';
   static const String faq = '/faq';
+  static const String editProfile = '/profile/edit';
 
   // Parameterized route templates
   static const String guidelineDetails = '/guidelines/:guidelineId';

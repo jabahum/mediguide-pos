@@ -25,17 +25,38 @@ class FaqPage extends ConsumerWidget {
 
     final controller = ref.read(faqControllerProvider.notifier);
 
-    final cs = context.theme.colorScheme;
+    final colors = Theme.of(context).colorScheme;
+
+    final hasSearch = state.searchQuery.trim().isNotEmpty;
 
     return Scaffold(
-      backgroundColor: cs.surface,
+      backgroundColor: colors.surface,
+
+      // =====================================================================
+      // APP BAR
+      // =====================================================================
       appBar: AppBar(
         titleSpacing: AppSpacing.md,
-        title: Text(
-          AppTranslationKey.frequentlyAskedQuestions.tr,
-          style: context.textTheme.titleLarge?.copyWith(
-            fontWeight: FontWeight.w800,
-          ),
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              AppTranslationKey.frequentlyAskedQuestions.tr,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: Theme.of(
+                context,
+              ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
+            ),
+            Text(
+              'Help and common questions',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: Theme.of(
+                context,
+              ).textTheme.bodySmall?.copyWith(color: colors.onSurfaceVariant),
+            ),
+          ],
         ),
         actions: [
           FilterButton(
@@ -45,49 +66,96 @@ class FaqPage extends ConsumerWidget {
             },
             onReset: state.hasActiveFilters ? controller.clearAllFilters : null,
           ),
-          AppSpacing.xs.gap,
+          AppSpacing.hGapXs,
         ],
       ),
 
-      // =====================================================
+      // =====================================================================
       // BODY
-      // =====================================================
+      // =====================================================================
       body: RefreshIndicator(
         onRefresh: () async {
           controller.refreshFAQs();
         },
         child: CustomScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
+          keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
           slivers: [
-            // =================================================
-            // HEADER
-            // =================================================
-            SliverPadding(
-              padding: const EdgeInsets.fromLTRB(
-                AppSpacing.md,
-                AppSpacing.sm,
-                AppSpacing.md,
-                0,
-              ),
-              sliver: SliverToBoxAdapter(
-                child: _FaqHeaderCard(
-                  searchQuery: state.searchQuery,
-                  hasFilters: state.hasActiveFilters,
-                  onOpenFilters: () {
-                    controller.showFilterModal(context);
-                  },
-                  onClearFilters: controller.clearAllFilters,
+            // =================================================================
+            // SEARCH / FILTER CONTEXT
+            // =================================================================
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(
+                  AppSpacing.md,
+                  AppSpacing.md,
+                  AppSpacing.md,
+                  0,
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _FaqBrowseCard(
+                      searchQuery: state.searchQuery,
+                      hasActiveFilters: state.hasActiveFilters,
+                      onOpenFilters: () {
+                        controller.showFilterModal(context);
+                      },
+                    ),
+
+                    if (hasSearch || state.hasActiveFilters) ...[
+                      AppSpacing.gapMd,
+
+                      _ActiveFaqFilters(
+                        searchQuery: state.searchQuery,
+                        hasActiveFilters: state.hasActiveFilters,
+                        onClearSearch: controller.clearSearch,
+                        onClearAll: controller.clearAllFilters,
+                        onEdit: () {
+                          controller.showFilterModal(context);
+                        },
+                      ),
+                    ],
+
+                    AppSpacing.gapLg,
+
+                    Text(
+                      hasSearch || state.hasActiveFilters
+                          ? 'Matching questions'
+                          : 'Common questions',
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+
+                    const SizedBox(height: 3),
+
+                    Text(
+                      hasSearch
+                          ? 'Showing answers related to “${state.searchQuery.trim()}”.'
+                          : state.hasActiveFilters
+                          ? 'Showing FAQs matching your current filters.'
+                          : 'Browse frequently asked questions about MediGuide.',
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: colors.onSurfaceVariant,
+                      ),
+                    ),
+
+                    AppSpacing.gapSm,
+                  ],
                 ),
               ),
             ),
 
-            // =================================================
+            // =================================================================
             // FAQ LIST
-            // =================================================
+            // =================================================================
             SliverPadding(
               padding: const EdgeInsets.fromLTRB(
                 AppSpacing.md,
-                AppSpacing.md,
+                0,
                 AppSpacing.md,
                 AppSpacing.xxxl,
               ),
@@ -97,39 +165,45 @@ class FaqPage extends ConsumerWidget {
                   return PagedSliverList<int, FAQ>.separated(
                     state: pagingState,
                     fetchNextPage: fetchNextPage,
-                    separatorBuilder: (context, index) => AppSpacing.sm.gap,
+                    separatorBuilder: (_, _) => AppSpacing.sm.gap,
                     builderDelegate: PagedChildBuilderDelegate<FAQ>(
+                      // =====================================================
+                      // ITEM
+                      // =====================================================
                       itemBuilder: (context, faq, index) {
                         return _FaqItemShell(child: FaqExpansionItem(faq: faq));
                       },
 
-                      // =========================
+                      // =====================================================
                       // FIRST PAGE LOADING
-                      // =========================
+                      // =====================================================
                       firstPageProgressIndicatorBuilder: (_) {
                         return const AppLoadingView(message: 'Loading FAQs...');
                       },
 
-                      // =========================
+                      // =====================================================
                       // NEXT PAGE LOADING
-                      // =========================
+                      // =====================================================
                       newPageProgressIndicatorBuilder: (_) {
                         return PaginationIndicators.newPageProgress();
                       },
 
-                      // =========================
+                      // =====================================================
                       // FIRST PAGE ERROR
-                      // =========================
+                      // =====================================================
                       firstPageErrorIndicatorBuilder: (_) {
                         return AppErrorView(
                           error: pagingState.error ?? 'Failed to load FAQs',
+                          title: 'Unable to load FAQs',
+                          message:
+                              'Please check your connection and try again.',
                           onRetry: fetchNextPage,
                         );
                       },
 
-                      // =========================
+                      // =====================================================
                       // NEXT PAGE ERROR
-                      // =========================
+                      // =====================================================
                       newPageErrorIndicatorBuilder: (_) {
                         return PaginationIndicators.newPageError(
                           onRetry: fetchNextPage,
@@ -138,12 +212,10 @@ class FaqPage extends ConsumerWidget {
                         );
                       },
 
-                      // =========================
+                      // =====================================================
                       // EMPTY
-                      // =========================
+                      // =====================================================
                       noItemsFoundIndicatorBuilder: (_) {
-                        final hasSearch = state.searchQuery.trim().isNotEmpty;
-
                         if (hasSearch || state.hasActiveFilters) {
                           return EmptyState.noResults(
                             title: AppTranslationKey.noFAQsFound.tr,
@@ -151,7 +223,7 @@ class FaqPage extends ConsumerWidget {
                                 AppTranslationKey.tryDifferentSearchTerm.tr,
                             actionLabel: hasSearch
                                 ? AppTranslationKey.clearSearch.tr
-                                : 'Clear Filters',
+                                : 'Clear filters',
                             onAction: hasSearch
                                 ? controller.clearSearch
                                 : controller.clearAllFilters,
@@ -164,11 +236,14 @@ class FaqPage extends ConsumerWidget {
                         );
                       },
 
-                      // =========================
+                      // =====================================================
                       // END
-                      // =========================
+                      // =====================================================
                       noMoreItemsIndicatorBuilder: (_) {
-                        return PaginationIndicators.noMoreItems();
+                        return Padding(
+                          padding: AppSpacing.vPaddingMd,
+                          child: PaginationIndicators.noMoreItems(),
+                        );
                       },
                     ),
                   );
@@ -182,108 +257,185 @@ class FaqPage extends ConsumerWidget {
   }
 }
 
-// =========================================================
-// HEADER
-// =========================================================
+// ===========================================================================
+// BROWSE CARD
+// ===========================================================================
 
-class _FaqHeaderCard extends StatelessWidget {
-  const _FaqHeaderCard({
+class _FaqBrowseCard extends StatelessWidget {
+  const _FaqBrowseCard({
     required this.searchQuery,
-    required this.hasFilters,
+    required this.hasActiveFilters,
     required this.onOpenFilters,
-    required this.onClearFilters,
   });
 
   final String searchQuery;
-  final bool hasFilters;
+  final bool hasActiveFilters;
   final VoidCallback onOpenFilters;
-  final VoidCallback onClearFilters;
 
   @override
   Widget build(BuildContext context) {
-    final cs = context.theme.colorScheme;
+    final colors = Theme.of(context).colorScheme;
+
+    final hasSearch = searchQuery.trim().isNotEmpty;
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onOpenFilters,
+        borderRadius: BorderRadius.circular(16),
+        child: Ink(
+          padding: const EdgeInsets.all(AppSpacing.md),
+          decoration: BoxDecoration(
+            color: colors.surfaceContainerLow,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: colors.outlineVariant),
+          ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: 42,
+                height: 42,
+                decoration: BoxDecoration(
+                  color: colors.primaryContainer,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(
+                  LucideIcons.messageCircleQuestion,
+                  color: colors.primary,
+                  size: 21,
+                ),
+              ),
+
+              AppSpacing.hGapMd,
+
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Find an answer',
+                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+
+                    const SizedBox(height: 3),
+
+                    Text(
+                      hasSearch
+                          ? 'Searching for “${searchQuery.trim()}”. Tap to refine your search.'
+                          : hasActiveFilters
+                          ? 'Filters are applied. Tap to adjust them.'
+                          : 'Search or filter common questions and support topics.',
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: colors.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              AppSpacing.hGapSm,
+
+              Icon(
+                LucideIcons.slidersHorizontal,
+                color: colors.primary,
+                size: 20,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ===========================================================================
+// ACTIVE SEARCH / FILTERS
+// ===========================================================================
+
+class _ActiveFaqFilters extends StatelessWidget {
+  const _ActiveFaqFilters({
+    required this.searchQuery,
+    required this.hasActiveFilters,
+    required this.onClearSearch,
+    required this.onClearAll,
+    required this.onEdit,
+  });
+
+  final String searchQuery;
+  final bool hasActiveFilters;
+
+  final VoidCallback onClearSearch;
+  final VoidCallback onClearAll;
+  final VoidCallback onEdit;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
 
     final hasSearch = searchQuery.trim().isNotEmpty;
 
     return Container(
-      padding: const EdgeInsets.all(AppSpacing.lg),
+      width: double.infinity,
+      padding: const EdgeInsets.all(AppSpacing.sm),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(24),
-        color: cs.primaryContainer.withValues(alpha: 0.35),
-        border: Border.all(color: cs.primary.withValues(alpha: 0.08)),
+        color: colors.secondaryContainer,
+        borderRadius: BorderRadius.circular(14),
       ),
-      child: Row(
+      child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            width: 54,
-            height: 54,
-            decoration: BoxDecoration(
-              color: cs.primary.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(18),
-            ),
-            child: Icon(
-              LucideIcons.messageCircleQuestion,
-              color: cs.primary,
-              size: 28,
-            ),
-          ),
+          Row(
+            children: [
+              Icon(
+                LucideIcons.listFilter,
+                size: 17,
+                color: colors.onSecondaryContainer,
+              ),
 
-          AppSpacing.md.gap,
+              AppSpacing.hGapSm,
 
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  AppTranslationKey.frequentlyAskedQuestions.tr,
-                  style: context.textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w800,
+              Expanded(
+                child: Text(
+                  hasSearch ? 'FAQ search active' : 'FAQ filters active',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: colors.onSecondaryContainer,
+                    fontWeight: FontWeight.w700,
                   ),
                 ),
+              ),
 
-                const SizedBox(height: 4),
+              TextButton(onPressed: onEdit, child: const Text('Edit')),
 
-                Text(
-                  hasSearch
-                      ? 'Showing answers matching "$searchQuery".'
-                      : 'Find quick answers about MediGuide, guidelines, tools and support.',
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: context.textTheme.bodySmall?.copyWith(
-                    color: cs.onSurfaceVariant,
-                    height: 1.4,
-                  ),
+              if (hasActiveFilters)
+                TextButton(
+                  onPressed: onClearAll,
+                  child: const Text('Clear all'),
                 ),
+            ],
+          ),
 
-                if (hasFilters) ...[
-                  const SizedBox(height: 10),
-
-                  _FaqActiveFilterChip(
-                    label: hasSearch ? searchQuery : 'Filters active',
-                    onClear: onClearFilters,
-                  ),
-                ],
-              ],
+          if (hasSearch)
+            Padding(
+              padding: const EdgeInsets.only(top: AppSpacing.xs),
+              child: _FaqActiveFilterChip(
+                label: searchQuery.trim(),
+                onClear: onClearSearch,
+              ),
             ),
-          ),
-
-          AppSpacing.sm.gap,
-
-          IconButton.filledTonal(
-            onPressed: onOpenFilters,
-            icon: const Icon(LucideIcons.slidersHorizontal),
-            tooltip: 'Filter FAQs',
-          ),
         ],
       ),
     );
   }
 }
 
-// =========================================================
+// ===========================================================================
 // ACTIVE FILTER CHIP
-// =========================================================
+// ===========================================================================
 
 class _FaqActiveFilterChip extends StatelessWidget {
   const _FaqActiveFilterChip({required this.label, required this.onClear});
@@ -293,29 +445,33 @@ class _FaqActiveFilterChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final cs = context.theme.colorScheme;
+    final colors = Theme.of(context).colorScheme;
 
     return InputChip(
-      avatar: Icon(LucideIcons.search, size: 14, color: cs.primary),
+      avatar: Icon(
+        LucideIcons.search,
+        size: 14,
+        color: colors.onSecondaryContainer,
+      ),
       label: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 180),
+        constraints: const BoxConstraints(maxWidth: 220),
         child: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis),
       ),
       onDeleted: onClear,
       deleteIcon: const Icon(LucideIcons.x, size: 14),
-      backgroundColor: cs.primary.withValues(alpha: 0.08),
+      backgroundColor: colors.surface.withValues(alpha: 0.65),
       side: BorderSide.none,
-      labelStyle: context.textTheme.labelSmall?.copyWith(
-        color: cs.primary,
+      labelStyle: Theme.of(context).textTheme.labelSmall?.copyWith(
+        color: colors.onSecondaryContainer,
         fontWeight: FontWeight.w700,
       ),
     );
   }
 }
 
-// =========================================================
+// ===========================================================================
 // FAQ ITEM SHELL
-// =========================================================
+// ===========================================================================
 
 class _FaqItemShell extends StatelessWidget {
   const _FaqItemShell({required this.child});
@@ -324,13 +480,13 @@ class _FaqItemShell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final cs = context.theme.colorScheme;
+    final colors = Theme.of(context).colorScheme;
 
     return Container(
       decoration: BoxDecoration(
-        color: cs.surfaceContainerLowest,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: cs.outlineVariant.withValues(alpha: 0.35)),
+        color: colors.surfaceContainerLowest,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: colors.outlineVariant),
       ),
       clipBehavior: Clip.antiAlias,
       child: child,

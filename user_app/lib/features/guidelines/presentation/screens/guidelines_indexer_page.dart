@@ -54,7 +54,40 @@ class _GuidelinesIndexerPageState extends ConsumerState<GuidelinesIndexerPage> {
     final controller = ref.read(guidelinesIndexerControllerProvider.notifier);
 
     return Scaffold(
-      appBar: AppBar(),
+      appBar: AppBar(
+        titleSpacing: AppSpacing.md,
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              state.channelTitle.isNotEmpty ? state.channelTitle : 'Guidelines',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: Theme.of(
+                context,
+              ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
+            ),
+            if (!state.isLoading)
+              Text(
+                state.totalSections > 0
+                    ? '${state.totalSections} sections'
+                    : 'Browse clinical guidance',
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
+              ),
+          ],
+        ),
+        actions: [
+          if (state.hasActiveFilters)
+            IconButton(
+              tooltip: 'Clear filters',
+              onPressed: controller.resetFilters,
+              icon: const Icon(LucideIcons.x),
+            ),
+          AppSpacing.hGapXs,
+        ],
+      ),
       body: _buildBody(context: context, state: state, controller: controller),
     );
   }
@@ -64,57 +97,60 @@ class _GuidelinesIndexerPageState extends ConsumerState<GuidelinesIndexerPage> {
     required GuidelinesIndexerState state,
     required GuidelinesIndexerController controller,
   }) {
-    // =====================================================
-    // LOADING
-    // =====================================================
+    // =======================================================================
+    // INITIAL LOADING
+    // =======================================================================
 
     if (state.isLoading) {
       return const AppLoadingView(message: 'Loading guideline sections...');
     }
 
-    // =====================================================
-    // ERROR
-    // =====================================================
+    // =======================================================================
+    // LOAD ERROR
+    // =======================================================================
 
     if (state.hasLoadError) {
       return AppErrorView(
         error: state.errorMessage ?? 'Unable to load guideline sections',
         title: 'Failed to load guidelines',
         message: 'Please check your connection and try again.',
-        onRetry: () {
-          controller.refreshData();
-        },
+        onRetry: controller.refreshData,
       );
     }
 
     final tree = state.visibleTree;
 
-    // =====================================================
+    // =======================================================================
     // CONTENT
-    // =====================================================
+    // =======================================================================
 
     return RefreshIndicator(
       onRefresh: controller.refreshData,
       child: CustomScrollView(
         physics: const AlwaysScrollableScrollPhysics(),
+        keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
         slivers: [
+          // =================================================================
+          // SEARCH + FILTERS
+          // =================================================================
           SliverToBoxAdapter(
             child: Padding(
-              padding: AppSpacing.hPaddingMd + AppSpacing.vPaddingMd,
+              padding: const EdgeInsets.fromLTRB(
+                AppSpacing.md,
+                AppSpacing.md,
+                AppSpacing.md,
+                0,
+              ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _BrowseHeader(state: state),
-
-                  AppSpacing.md.gap,
-
                   _SearchField(
                     search: state.filters.search,
                     onChanged: controller.updateSearch,
                     onClear: controller.clearSearch,
                   ),
 
-                  AppSpacing.md.gap,
+                  AppSpacing.gapMd,
 
                   _QuickFilterChips(
                     filters: state.filters,
@@ -123,156 +159,154 @@ class _GuidelinesIndexerPageState extends ConsumerState<GuidelinesIndexerPage> {
                     onToggleParents: controller.toggleParentsOnly,
                   ),
 
-                  _ActiveFiltersBar(
-                    filters: state.filters,
-                    onClearSearch: controller.clearSearch,
-                    onClearLevel: () {
-                      controller.setLevelFilter(null);
-                    },
-                    onToggleParents: controller.toggleParentsOnly,
-                    onReset: controller.resetFilters,
+                  if (state.hasActiveFilters) ...[
+                    AppSpacing.gapMd,
+                    _ActiveFiltersSummary(
+                      filters: state.filters,
+                      resultCount: tree.childrenAsList.length,
+                      onClearSearch: controller.clearSearch,
+                      onClearLevel: () {
+                        controller.setLevelFilter(null);
+                      },
+                      onToggleParents: controller.toggleParentsOnly,
+                      onReset: controller.resetFilters,
+                    ),
+                  ],
+
+                  AppSpacing.gapLg,
+
+                  _TreeSectionHeader(
+                    state: state,
+                    visibleCount: tree.childrenAsList.length,
                   ),
+
+                  AppSpacing.gapSm,
                 ],
               ),
             ),
           ),
 
-          // =================================================
+          // =================================================================
           // EMPTY TREE
-          // =================================================
+          // =================================================================
           if (tree.childrenAsList.isEmpty)
             SliverFillRemaining(
               hasScrollBody: false,
               child: state.hasActiveFilters
                   ? EmptyState.noResults(
-                      title: 'No Guidelines Found',
-                      description: 'No matching guideline sections were found.',
-                      actionLabel: 'Reset Filters',
+                      title: 'No guideline sections found',
+                      description:
+                          'Try another search term or adjust the current filters.',
+                      actionLabel: 'Reset filters',
                       onAction: controller.resetFilters,
                     )
                   : EmptyState.noData(
-                      title: 'No Guidelines Found',
-                      description: 'No guideline sections are available yet.',
+                      title: 'No guideline sections',
+                      description:
+                          'Published guideline sections will appear here when available.',
                       actionLabel: 'Refresh',
-                      onAction: () {
-                        controller.refreshData();
-                      },
+                      onAction: controller.refreshData,
                     ),
             )
+          // =================================================================
+          // TREE
+          // =================================================================
           else
-            SliverFillRemaining(
-              child: Padding(
-                padding: AppSpacing.hPaddingMd,
-                child:
-                    TreeView.simpleTyped<
-                      GuidelineIndex,
-                      TreeNode<GuidelineIndex>
-                    >(
-                      tree: tree,
-                      showRootNode: false,
-                      expansionBehavior: ExpansionBehavior.none,
-                      indentation: const Indentation(
-                        style: IndentStyle.squareJoint,
+            SliverPadding(
+              padding: const EdgeInsets.fromLTRB(
+                AppSpacing.md,
+                0,
+                AppSpacing.md,
+                AppSpacing.xxxl,
+              ),
+              sliver: SliverToBoxAdapter(
+                child: _GuidelineTreeContainer(
+                  child:
+                      TreeView.simpleTyped<
+                        GuidelineIndex,
+                        TreeNode<GuidelineIndex>
+                      >(
+                        tree: tree,
+                        showRootNode: false,
+                        expansionBehavior: ExpansionBehavior.none,
+                        indentation: const Indentation(
+                          style: IndentStyle.squareJoint,
+                        ),
+                        onTreeReady: (treeController) {
+                          controller.initializeTreeController(treeController);
+                        },
+                        onItemTap: (node) {
+                          final data = node.data;
+
+                          if (data == null) {
+                            return;
+                          }
+
+                          controller.openIndex(data);
+                        },
+                        builder: (context, node) {
+                          return GuidelineTreeTile(node: node);
+                        },
                       ),
-                      onTreeReady: (treeController) {
-                        controller.initializeTreeController(treeController);
-                      },
-                      onItemTap: (node) {
-                        final data = node.data;
-
-                        if (data == null) {
-                          return;
-                        }
-
-                        controller.openIndex(data);
-                      },
-                      builder: (context, node) {
-                        return GuidelineTreeTile(node: node);
-                      },
-                    ),
+                ),
               ),
             ),
-
-          const SliverToBoxAdapter(child: SizedBox(height: AppSpacing.xxxl)),
         ],
       ),
     );
   }
 }
 
-class _BrowseHeader extends StatelessWidget {
-  const _BrowseHeader({required this.state});
+// ===========================================================================
+// TREE SECTION HEADER
+// ===========================================================================
+
+class _TreeSectionHeader extends StatelessWidget {
+  const _TreeSectionHeader({required this.state, required this.visibleCount});
 
   final GuidelinesIndexerState state;
+  final int visibleCount;
 
   @override
   Widget build(BuildContext context) {
-    final cs = context.theme.colorScheme;
+    final colors = Theme.of(context).colorScheme;
 
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(AppSpacing.md),
-      decoration: BoxDecoration(
-        color: cs.primaryContainer.withValues(alpha: 0.35),
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: cs.primary.withValues(alpha: 0.08)),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 54,
-            height: 54,
-            decoration: BoxDecoration(
-              color: cs.primary.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(18),
-            ),
-            child: Icon(LucideIcons.bookOpenText, color: cs.primary),
+    return Row(
+      children: [
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                state.hasActiveFilters
+                    ? 'Matching sections'
+                    : 'Browse sections',
+                style: Theme.of(
+                  context,
+                ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                state.hasActiveFilters
+                    ? 'Showing sections matching your current filters'
+                    : state.pageSubtitle,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: Theme.of(
+                  context,
+                ).textTheme.bodySmall?.copyWith(color: colors.onSurfaceVariant),
+              ),
+            ],
           ),
-
-          AppSpacing.md.gap,
-
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  state.channelTitle,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: context.textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-
-                const SizedBox(height: 4),
-
-                Text(
-                  state.pageSubtitle,
-                  style: context.textTheme.bodySmall?.copyWith(
-                    color: cs.onSurfaceVariant,
-                    height: 1.4,
-                  ),
-                ),
-
-                const SizedBox(height: 10),
-
-                Text(
-                  state.totalSections > 0
-                      ? '${state.totalSections} sections available'
-                      : 'No sections available',
-                  style: context.textTheme.labelMedium?.copyWith(
-                    color: cs.primary,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }
+
+// ===========================================================================
+// SEARCH
+// ===========================================================================
 
 class _SearchField extends StatefulWidget {
   const _SearchField({
@@ -326,41 +360,48 @@ class _SearchFieldState extends State<_SearchField> {
 
   @override
   Widget build(BuildContext context) {
-    final cs = context.theme.colorScheme;
+    final colors = Theme.of(context).colorScheme;
 
-    final hasSearch = widget.search.trim().isNotEmpty;
+    final hasSearch = _textController.text.trim().isNotEmpty;
 
-    return TextField(
+    return SearchBar(
       controller: _textController,
+      hintText: 'Search guideline sections',
+      leading: Icon(LucideIcons.search, color: colors.primary),
+      trailing: [
+        if (hasSearch)
+          IconButton(
+            tooltip: 'Clear search',
+            onPressed: () {
+              _clearSearch();
+              setState(() {});
+            },
+            icon: const Icon(LucideIcons.x),
+          ),
+      ],
+      onChanged: (value) {
+        widget.onChanged(value);
+
+        //
+        // Rebuild so the clear icon appears/disappears
+        // immediately while typing.
+        //
+        setState(() {});
+      },
       textInputAction: TextInputAction.search,
-      onChanged: widget.onChanged,
-      decoration: InputDecoration(
-        hintText: 'Search guideline sections...',
-        prefixIcon: const Icon(LucideIcons.search),
-        suffixIcon: hasSearch
-            ? IconButton(
-                onPressed: _clearSearch,
-                icon: const Icon(LucideIcons.x),
-              )
-            : null,
-        filled: true,
-        fillColor: cs.surfaceContainerLowest,
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(18),
-          borderSide: BorderSide(color: cs.outlineVariant),
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(18),
-          borderSide: BorderSide(color: cs.outlineVariant),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(18),
-          borderSide: BorderSide(color: cs.primary),
-        ),
+      elevation: const WidgetStatePropertyAll(0),
+      backgroundColor: WidgetStatePropertyAll(colors.surfaceContainerLow),
+      side: WidgetStatePropertyAll(BorderSide(color: colors.outlineVariant)),
+      padding: const WidgetStatePropertyAll(
+        EdgeInsets.symmetric(horizontal: AppSpacing.md),
       ),
     );
   }
 }
+
+// ===========================================================================
+// QUICK FILTERS
+// ===========================================================================
 
 class _QuickFilterChips extends StatelessWidget {
   const _QuickFilterChips({
@@ -378,9 +419,10 @@ class _QuickFilterChips extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      child: Row(
+    return SizedBox(
+      height: 42,
+      child: ListView(
+        scrollDirection: Axis.horizontal,
         children: [
           _BrowseChip(
             label: 'All',
@@ -389,10 +431,10 @@ class _QuickFilterChips extends StatelessWidget {
             onTap: onReset,
           ),
 
-          AppSpacing.sm.gap,
+          AppSpacing.hGapSm,
 
           _BrowseChip(
-            label: 'Level 1',
+            label: 'Top level',
             icon: LucideIcons.folder,
             selected: filters.level == 1,
             onTap: () {
@@ -400,10 +442,10 @@ class _QuickFilterChips extends StatelessWidget {
             },
           ),
 
-          AppSpacing.sm.gap,
+          AppSpacing.hGapSm,
 
           _BrowseChip(
-            label: 'Level 2',
+            label: 'Subsections',
             icon: LucideIcons.folderOpen,
             selected: filters.level == 2,
             onTap: () {
@@ -411,10 +453,10 @@ class _QuickFilterChips extends StatelessWidget {
             },
           ),
 
-          AppSpacing.sm.gap,
+          AppSpacing.hGapSm,
 
           _BrowseChip(
-            label: 'Parents',
+            label: 'Parents only',
             icon: LucideIcons.listTree,
             selected: filters.showOnlyParents,
             onTap: onToggleParents,
@@ -440,20 +482,41 @@ class _BrowseChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return FilterChip(
+    final colors = Theme.of(context).colorScheme;
+
+    return ChoiceChip(
       selected: selected,
-      avatar: Icon(icon, size: 16),
-      label: Text(label),
       onSelected: (_) {
         onTap();
       },
+      avatar: Icon(
+        icon,
+        size: 16,
+        color: selected ? colors.onPrimary : colors.primary,
+      ),
+      label: Text(label),
+      labelStyle: Theme.of(context).textTheme.labelMedium?.copyWith(
+        color: selected ? colors.onPrimary : colors.onSurface,
+        fontWeight: FontWeight.w700,
+      ),
+      selectedColor: colors.primary,
+      backgroundColor: colors.surfaceContainerLowest,
+      side: BorderSide(
+        color: selected ? colors.primary : colors.outlineVariant,
+      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(999)),
     );
   }
 }
 
-class _ActiveFiltersBar extends StatelessWidget {
-  const _ActiveFiltersBar({
+// ===========================================================================
+// ACTIVE FILTERS
+// ===========================================================================
+
+class _ActiveFiltersSummary extends StatelessWidget {
+  const _ActiveFiltersSummary({
     required this.filters,
+    required this.resultCount,
     required this.onClearSearch,
     required this.onClearLevel,
     required this.onToggleParents,
@@ -461,6 +524,7 @@ class _ActiveFiltersBar extends StatelessWidget {
   });
 
   final GuidelinesTreeFilter filters;
+  final int resultCount;
 
   final VoidCallback onClearSearch;
   final VoidCallback onClearLevel;
@@ -469,41 +533,97 @@ class _ActiveFiltersBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (!filters.hasFilters) {
-      return const SizedBox.shrink();
-    }
+    final colors = Theme.of(context).colorScheme;
 
-    return Padding(
-      padding: const EdgeInsets.only(top: AppSpacing.md),
-      child: Wrap(
-        spacing: AppSpacing.sm,
-        runSpacing: AppSpacing.sm,
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(AppSpacing.sm),
+      decoration: BoxDecoration(
+        color: colors.secondaryContainer,
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          if (filters.search.trim().isNotEmpty)
-            InputChip(
-              label: Text('Search: ${filters.search}'),
-              onDeleted: onClearSearch,
-            ),
+          Row(
+            children: [
+              Icon(
+                LucideIcons.listFilter,
+                size: 17,
+                color: colors.onSecondaryContainer,
+              ),
 
-          if (filters.level != null)
-            InputChip(
-              label: Text('Level ${filters.level}'),
-              onDeleted: onClearLevel,
-            ),
+              AppSpacing.hGapSm,
 
-          if (filters.showOnlyParents)
-            InputChip(
-              label: const Text('Parents only'),
-              onDeleted: onToggleParents,
-            ),
+              Expanded(
+                child: Text(
+                  'Filters applied',
+                  style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                    color: colors.onSecondaryContainer,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
 
-          TextButton.icon(
-            onPressed: onReset,
-            icon: const Icon(LucideIcons.x, size: 16),
-            label: const Text('Reset'),
+              TextButton(onPressed: onReset, child: const Text('Clear all')),
+            ],
+          ),
+
+          Wrap(
+            spacing: AppSpacing.sm,
+            runSpacing: AppSpacing.sm,
+            children: [
+              if (filters.search.trim().isNotEmpty)
+                InputChip(
+                  avatar: const Icon(LucideIcons.search, size: 14),
+                  label: Text('"${filters.search}"'),
+                  onDeleted: onClearSearch,
+                ),
+
+              if (filters.level != null)
+                InputChip(
+                  avatar: const Icon(LucideIcons.layers, size: 14),
+                  label: Text(
+                    filters.level == 1 ? 'Top level' : 'Level ${filters.level}',
+                  ),
+                  onDeleted: onClearLevel,
+                ),
+
+              if (filters.showOnlyParents)
+                InputChip(
+                  avatar: const Icon(LucideIcons.listTree, size: 14),
+                  label: const Text('Parents only'),
+                  onDeleted: onToggleParents,
+                ),
+            ],
           ),
         ],
       ),
+    );
+  }
+}
+
+// ===========================================================================
+// TREE CONTAINER
+// ===========================================================================
+
+class _GuidelineTreeContainer extends StatelessWidget {
+  const _GuidelineTreeContainer({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+
+    return Container(
+      decoration: BoxDecoration(
+        color: colors.surfaceContainerLowest,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: colors.outlineVariant),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: child,
     );
   }
 }

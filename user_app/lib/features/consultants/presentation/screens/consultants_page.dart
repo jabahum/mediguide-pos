@@ -31,7 +31,6 @@ class _ConsultantsPageState extends ConsumerState<ConsultantsPage> {
   @override
   void initState() {
     super.initState();
-
     _routeArguments = widget.arguments;
   }
 
@@ -43,17 +42,36 @@ class _ConsultantsPageState extends ConsumerState<ConsultantsPage> {
 
     final controller = ref.read(provider.notifier);
 
-    final cs = context.theme.colorScheme;
+    final colors = Theme.of(context).colorScheme;
 
     return Scaffold(
-      backgroundColor: cs.surface,
+      backgroundColor: colors.surface,
+
+      // =====================================================================
+      // APP BAR
+      // =====================================================================
       appBar: AppBar(
         titleSpacing: AppSpacing.md,
-        title: Text(
-          'consultants'.tr,
-          style: context.textTheme.titleLarge?.copyWith(
-            fontWeight: FontWeight.w800,
-          ),
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'consultants'.tr,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: Theme.of(
+                context,
+              ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
+            ),
+            Text(
+              'Clinical specialists and expert contacts',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: Theme.of(
+                context,
+              ).textTheme.bodySmall?.copyWith(color: colors.onSurfaceVariant),
+            ),
+          ],
         ),
         actions: [
           FilterButton(
@@ -63,36 +81,87 @@ class _ConsultantsPageState extends ConsumerState<ConsultantsPage> {
             },
             onReset: state.hasActiveFilters ? controller.clearAllFilters : null,
           ),
-          AppSpacing.xs.gap,
+          AppSpacing.hGapXs,
         ],
       ),
+
+      // =====================================================================
+      // BODY
+      // =====================================================================
       body: RefreshIndicator(
         onRefresh: () async {
           controller.refreshData();
         },
         child: CustomScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
+          keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
           slivers: [
-            SliverPadding(
-              padding: const EdgeInsets.fromLTRB(
-                AppSpacing.md,
-                AppSpacing.sm,
-                AppSpacing.md,
-                0,
-              ),
-              sliver: SliverToBoxAdapter(
-                child: _ConsultantsHeaderCard(
-                  onOpenFilters: () {
-                    controller.showFilterModal(context);
-                  },
+            // =================================================================
+            // CONTEXT + FILTERS
+            // =================================================================
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(
+                  AppSpacing.md,
+                  AppSpacing.md,
+                  AppSpacing.md,
+                  0,
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _ConsultantBrowseCard(
+                      hasActiveFilters: state.hasActiveFilters,
+                      onOpenFilters: () {
+                        controller.showFilterModal(context);
+                      },
+                    ),
+
+                    if (state.hasActiveFilters) ...[
+                      AppSpacing.gapMd,
+                      _ActiveConsultantFiltersBanner(
+                        onEdit: () {
+                          controller.showFilterModal(context);
+                        },
+                        onClear: controller.clearAllFilters,
+                      ),
+                    ],
+
+                    AppSpacing.gapLg,
+
+                    Text(
+                      state.hasActiveFilters
+                          ? 'Matching consultants'
+                          : 'Consultants',
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+
+                    const SizedBox(height: 3),
+
+                    Text(
+                      state.hasActiveFilters
+                          ? 'Showing consultants matching your current filters.'
+                          : 'Browse specialists by expertise, organization and location.',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: colors.onSurfaceVariant,
+                      ),
+                    ),
+
+                    AppSpacing.gapSm,
+                  ],
                 ),
               ),
             ),
 
+            // =================================================================
+            // CONSULTANT LIST
+            // =================================================================
             SliverPadding(
               padding: const EdgeInsets.fromLTRB(
                 AppSpacing.md,
-                AppSpacing.md,
+                0,
                 AppSpacing.md,
                 AppSpacing.xxxl,
               ),
@@ -102,8 +171,11 @@ class _ConsultantsPageState extends ConsumerState<ConsultantsPage> {
                   return PagedSliverList<int, Consultant>.separated(
                     state: pagingState,
                     fetchNextPage: fetchNextPage,
-                    separatorBuilder: (context, index) => AppSpacing.sm.gap,
+                    separatorBuilder: (_, _) => AppSpacing.sm.gap,
                     builderDelegate: PagedChildBuilderDelegate<Consultant>(
+                      // =====================================================
+                      // ITEM
+                      // =====================================================
                       itemBuilder: (context, consultant, index) {
                         return _ConsultantCardShell(
                           child: ConsultantCard(
@@ -118,25 +190,25 @@ class _ConsultantsPageState extends ConsumerState<ConsultantsPage> {
                         );
                       },
 
-                      // =========================
+                      // =====================================================
                       // FIRST PAGE LOADING
-                      // =========================
+                      // =====================================================
                       firstPageProgressIndicatorBuilder: (_) {
                         return const AppLoadingView(
                           message: 'Loading consultants...',
                         );
                       },
 
-                      // =========================
+                      // =====================================================
                       // NEXT PAGE LOADING
-                      // =========================
+                      // =====================================================
                       newPageProgressIndicatorBuilder: (_) {
                         return PaginationIndicators.newPageProgress();
                       },
 
-                      // =========================
+                      // =====================================================
                       // FIRST PAGE ERROR
-                      // =========================
+                      // =====================================================
                       firstPageErrorIndicatorBuilder: (_) {
                         return AppErrorView(
                           error:
@@ -147,20 +219,20 @@ class _ConsultantsPageState extends ConsumerState<ConsultantsPage> {
                         );
                       },
 
-                      // =========================
+                      // =====================================================
                       // NEXT PAGE ERROR
-                      // =========================
+                      // =====================================================
                       newPageErrorIndicatorBuilder: (_) {
                         return PaginationIndicators.newPageError(
                           onRetry: fetchNextPage,
                           title: 'failedToLoadMoreConsultants'.tr,
-                          icon: LucideIcons.userCheck,
+                          icon: LucideIcons.stethoscope,
                         );
                       },
 
-                      // =========================
+                      // =====================================================
                       // EMPTY
-                      // =========================
+                      // =====================================================
                       noItemsFoundIndicatorBuilder: (_) {
                         if (state.hasActiveFilters) {
                           return EmptyState.noResults(
@@ -177,11 +249,14 @@ class _ConsultantsPageState extends ConsumerState<ConsultantsPage> {
                         );
                       },
 
-                      // =========================
+                      // =====================================================
                       // END
-                      // =========================
+                      // =====================================================
                       noMoreItemsIndicatorBuilder: (_) {
-                        return PaginationIndicators.noMoreItems();
+                        return Padding(
+                          padding: AppSpacing.vPaddingMd,
+                          child: PaginationIndicators.noMoreItems(),
+                        );
                       },
                     ),
                   );
@@ -195,72 +270,155 @@ class _ConsultantsPageState extends ConsumerState<ConsultantsPage> {
   }
 }
 
-class _ConsultantsHeaderCard extends StatelessWidget {
-  const _ConsultantsHeaderCard({required this.onOpenFilters});
+// ===========================================================================
+// BROWSE CARD
+// ===========================================================================
 
+class _ConsultantBrowseCard extends StatelessWidget {
+  const _ConsultantBrowseCard({
+    required this.hasActiveFilters,
+    required this.onOpenFilters,
+  });
+
+  final bool hasActiveFilters;
   final VoidCallback onOpenFilters;
 
   @override
   Widget build(BuildContext context) {
-    final cs = context.theme.colorScheme;
+    final colors = Theme.of(context).colorScheme;
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onOpenFilters,
+        borderRadius: BorderRadius.circular(16),
+        child: Ink(
+          padding: const EdgeInsets.all(AppSpacing.md),
+          decoration: BoxDecoration(
+            color: colors.surfaceContainerLow,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: colors.outlineVariant),
+          ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: 42,
+                height: 42,
+                decoration: BoxDecoration(
+                  color: colors.primaryContainer,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(
+                  LucideIcons.stethoscope,
+                  color: colors.primary,
+                  size: 21,
+                ),
+              ),
+
+              AppSpacing.hGapMd,
+
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Find a consultant',
+                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+
+                    const SizedBox(height: 3),
+
+                    Text(
+                      hasActiveFilters
+                          ? 'Filters are applied. Tap to adjust them.'
+                          : 'Filter by speciality, organization, region or other available attributes.',
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: colors.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              AppSpacing.hGapSm,
+
+              Icon(
+                LucideIcons.slidersHorizontal,
+                color: colors.primary,
+                size: 20,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ===========================================================================
+// ACTIVE FILTERS
+// ===========================================================================
+
+class _ActiveConsultantFiltersBanner extends StatelessWidget {
+  const _ActiveConsultantFiltersBanner({
+    required this.onEdit,
+    required this.onClear,
+  });
+
+  final VoidCallback onEdit;
+  final VoidCallback onClear;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
 
     return Container(
-      padding: const EdgeInsets.all(AppSpacing.lg),
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.md,
+        vertical: AppSpacing.sm,
+      ),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(24),
-        color: cs.primaryContainer.withValues(alpha: 0.35),
-        border: Border.all(color: cs.primary.withValues(alpha: 0.08)),
+        color: colors.secondaryContainer,
+        borderRadius: BorderRadius.circular(14),
       ),
       child: Row(
         children: [
-          Container(
-            width: 54,
-            height: 54,
-            decoration: BoxDecoration(
-              color: cs.primary.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(18),
-            ),
-            child: Icon(LucideIcons.userCheck, color: cs.primary, size: 28),
+          Icon(
+            LucideIcons.listFilter,
+            size: 18,
+            color: colors.onSecondaryContainer,
           ),
 
-          AppSpacing.md.gap,
+          AppSpacing.hGapSm,
 
           Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'consultants'.tr,
-                  style: context.textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-
-                const SizedBox(height: 4),
-
-                Text(
-                  'Find specialists and connect with medical experts for support.',
-                  style: context.textTheme.bodySmall?.copyWith(
-                    color: cs.onSurfaceVariant,
-                    height: 1.4,
-                  ),
-                ),
-              ],
+            child: Text(
+              'Consultant filters applied',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: colors.onSecondaryContainer,
+                fontWeight: FontWeight.w700,
+              ),
             ),
           ),
 
-          AppSpacing.sm.gap,
+          TextButton(onPressed: onEdit, child: const Text('Edit')),
 
-          IconButton.filledTonal(
-            onPressed: onOpenFilters,
-            icon: const Icon(LucideIcons.slidersHorizontal),
-            tooltip: 'Filter consultants',
-          ),
+          TextButton(onPressed: onClear, child: const Text('Clear')),
         ],
       ),
     );
   }
 }
+
+// ===========================================================================
+// CARD SHELL
+// ===========================================================================
 
 class _ConsultantCardShell extends StatelessWidget {
   const _ConsultantCardShell({required this.child});
@@ -269,13 +427,13 @@ class _ConsultantCardShell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final cs = context.theme.colorScheme;
+    final colors = Theme.of(context).colorScheme;
 
     return Container(
       decoration: BoxDecoration(
-        color: cs.surfaceContainerLowest,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: cs.outlineVariant.withValues(alpha: 0.35)),
+        color: colors.surfaceContainerLowest,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: colors.outlineVariant),
       ),
       clipBehavior: Clip.antiAlias,
       child: child,

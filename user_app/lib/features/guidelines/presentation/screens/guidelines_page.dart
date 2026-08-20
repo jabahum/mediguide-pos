@@ -34,6 +34,7 @@ class _GuidelinesPageState extends ConsumerState<GuidelinesPage> {
   @override
   void initState() {
     super.initState();
+
     _routeArguments = widget.arguments;
   }
 
@@ -45,15 +46,36 @@ class _GuidelinesPageState extends ConsumerState<GuidelinesPage> {
 
     final controller = ref.read(provider.notifier);
 
-    final cs = context.theme.colorScheme;
+    final colors = Theme.of(context).colorScheme;
 
     return Scaffold(
-      backgroundColor: cs.surface,
+      backgroundColor: colors.surface,
+
+      // =====================================================================
+      // APP BAR
+      // =====================================================================
       appBar: AppBar(
-        title: Text(
-          state.effectivePageTitle,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
+        titleSpacing: AppSpacing.md,
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              state.effectivePageTitle,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: Theme.of(
+                context,
+              ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
+            ),
+            Text(
+              _pageSubtitle(state),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: Theme.of(
+                context,
+              ).textTheme.bodySmall?.copyWith(color: colors.onSurfaceVariant),
+            ),
+          ],
         ),
         actions: [
           FilterButton(
@@ -70,35 +92,43 @@ class _GuidelinesPageState extends ConsumerState<GuidelinesPage> {
               onPressed: controller.showAllGuidelines,
               icon: const Icon(LucideIcons.listRestart),
             ),
+
+          AppSpacing.hGapXs,
         ],
       ),
+
+      // =====================================================================
+      // BODY
+      // =====================================================================
       body: RefreshIndicator(
         onRefresh: () async {
           controller.refresh();
         },
         child: CustomScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
+          keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
           slivers: [
+            // =================================================================
+            // SEARCH + FILTERS
+            // =================================================================
             SliverToBoxAdapter(
               child: Padding(
-                padding: AppSpacing.hPaddingSm + AppSpacing.vPaddingSm,
+                padding: const EdgeInsets.fromLTRB(
+                  AppSpacing.md,
+                  AppSpacing.md,
+                  AppSpacing.md,
+                  0,
+                ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    _GuidelinesHeader(
-                      title: state.effectivePageTitle,
-                      hasPermanentFilter: state.hasPermanentFilter,
-                    ),
-
-                    AppSpacing.md.gap,
-
                     _GuidelinesSearchBox(
                       searchQuery: state.searchQuery,
                       onChanged: controller.setSearchQuery,
                       onSubmitted: controller.submitSearchQuery,
                     ),
 
-                    AppSpacing.md.gap,
+                    AppSpacing.gapMd,
 
                     _QuickFilters(
                       hasPermanentFilter: state.hasPermanentFilter,
@@ -112,24 +142,53 @@ class _GuidelinesPageState extends ConsumerState<GuidelinesPage> {
                       onTargetPopulation: controller.setTargetPopulation,
                     ),
 
-                    if (state.hasPermanentFilter || state.hasActiveFilters)
-                      Padding(
-                        padding: const EdgeInsets.only(top: AppSpacing.md),
-                        child: _ActiveGuidelineContext(
-                          title: state.effectivePageTitle,
-                          hasPermanentFilter: state.hasPermanentFilter,
-                          hasFilters: state.hasActiveFilters,
-                          onClearFilters: controller.clearAllFilters,
-                          onShowAll: controller.showAllGuidelines,
-                        ),
-                      ),
+                    if (state.hasPermanentFilter || state.hasActiveFilters) ...[
+                      AppSpacing.gapMd,
 
-                    AppSpacing.md.gap,
+                      _ActiveGuidelineContext(
+                        title: state.effectivePageTitle,
+                        hasPermanentFilter: state.hasPermanentFilter,
+                        hasFilters: state.hasActiveFilters,
+                        searchQuery: state.searchQuery,
+                        showHighPriorityOnly: state.showHighPriorityOnly,
+                        isEmergencyRoute: state.isEmergencyRoute,
+                        targetPopulation: state.selectedTargetPopulation,
+                        onClearFilters: controller.clearAllFilters,
+                        onShowAll: controller.showAllGuidelines,
+                      ),
+                    ],
+
+                    AppSpacing.gapLg,
+
+                    Text(
+                      state.hasActiveFilters
+                          ? 'Matching guidelines'
+                          : 'Published guidelines',
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+
+                    const SizedBox(height: 3),
+
+                    Text(
+                      state.hasActiveFilters
+                          ? 'Showing guidance matching your current search and filters.'
+                          : 'Browse currently available clinical guidance.',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: colors.onSurfaceVariant,
+                      ),
+                    ),
+
+                    AppSpacing.gapSm,
                   ],
                 ),
               ),
             ),
 
+            // =================================================================
+            // PAGED LIST
+            // =================================================================
             PagingListener<int, Guideline>(
               controller: controller.pagingController,
               builder: (context, pagingState, fetchNextPage) {
@@ -140,35 +199,37 @@ class _GuidelinesPageState extends ConsumerState<GuidelinesPage> {
                   builderDelegate: PagedChildBuilderDelegate<Guideline>(
                     itemBuilder: (context, item, index) {
                       return Padding(
-                        padding: AppSpacing.hPaddingSm,
-                        child: GuidelineCard(
-                          guideline: item,
+                        padding: AppSpacing.hPaddingMd,
+                        child: _GuidelineCardShell(
                           onTap: () {
                             _openGuideline(item);
                           },
+                          child: IgnorePointer(
+                            child: GuidelineCard(guideline: item, onTap: () {}),
+                          ),
                         ),
                       );
                     },
 
-                    // =========================
+                    // =========================================================
                     // FIRST PAGE LOADING
-                    // =========================
+                    // =========================================================
                     firstPageProgressIndicatorBuilder: (_) {
                       return const AppLoadingView(
                         message: 'Loading guidelines...',
                       );
                     },
 
-                    // =========================
+                    // =========================================================
                     // NEXT PAGE LOADING
-                    // =========================
+                    // =========================================================
                     newPageProgressIndicatorBuilder: (_) {
                       return PaginationIndicators.newPageProgress();
                     },
 
-                    // =========================
+                    // =========================================================
                     // FIRST PAGE ERROR
-                    // =========================
+                    // =========================================================
                     firstPageErrorIndicatorBuilder: (_) {
                       return AppErrorView(
                         error: pagingState.error ?? 'Unable to load guidelines',
@@ -178,9 +239,9 @@ class _GuidelinesPageState extends ConsumerState<GuidelinesPage> {
                       );
                     },
 
-                    // =========================
+                    // =========================================================
                     // NEXT PAGE ERROR
-                    // =========================
+                    // =========================================================
                     newPageErrorIndicatorBuilder: (_) {
                       return PaginationIndicators.newPageError(
                         onRetry: fetchNextPage,
@@ -189,9 +250,9 @@ class _GuidelinesPageState extends ConsumerState<GuidelinesPage> {
                       );
                     },
 
-                    // =========================
+                    // =========================================================
                     // EMPTY
-                    // =========================
+                    // =========================================================
                     noItemsFoundIndicatorBuilder: (_) {
                       return _buildEmptyState(
                         state: state,
@@ -199,9 +260,9 @@ class _GuidelinesPageState extends ConsumerState<GuidelinesPage> {
                       );
                     },
 
-                    // =========================
+                    // =========================================================
                     // END
-                    // =========================
+                    // =========================================================
                     noMoreItemsIndicatorBuilder: (_) {
                       return Padding(
                         padding: AppSpacing.vPaddingMd,
@@ -220,11 +281,32 @@ class _GuidelinesPageState extends ConsumerState<GuidelinesPage> {
     );
   }
 
+  String _pageSubtitle(GuidelinesState state) {
+    if (state.isEmergencyRoute) {
+      return 'Emergency clinical guidance';
+    }
+
+    if (state.isInCategoryMode) {
+      return 'Guidelines in this clinical category';
+    }
+
+    if (state.isInTagMode) {
+      return 'Guidelines linked to this topic';
+    }
+
+    if (state.isInIndexMode) {
+      return 'Guidelines in this section';
+    }
+
+    return 'Published clinical guidance';
+  }
+
   Widget _buildEmptyState({
     required GuidelinesState state,
     required GuidelinesController controller,
   }) {
     final title = _getEmptyTitle(state);
+
     final description = _getEmptySubtitle(state);
 
     if (state.hasActiveFilters) {
@@ -310,76 +392,9 @@ class _GuidelinesPageState extends ConsumerState<GuidelinesPage> {
   }
 }
 
-class _GuidelinesHeader extends StatelessWidget {
-  const _GuidelinesHeader({
-    required this.title,
-    required this.hasPermanentFilter,
-  });
-
-  final String title;
-  final bool hasPermanentFilter;
-
-  @override
-  Widget build(BuildContext context) {
-    final cs = context.theme.colorScheme;
-
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(AppSpacing.md),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(24),
-        color: cs.primaryContainer.withValues(alpha: 0.35),
-        border: Border.all(color: cs.primary.withValues(alpha: 0.08)),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 54,
-            height: 54,
-            decoration: BoxDecoration(
-              color: cs.primary.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(18),
-            ),
-            child: Icon(
-              hasPermanentFilter ? LucideIcons.folderOpen : LucideIcons.library,
-              color: cs.primary,
-            ),
-          ),
-
-          AppSpacing.md.gap,
-
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: context.textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-
-                const SizedBox(height: 4),
-
-                Text(
-                  hasPermanentFilter
-                      ? 'Browse guidelines in this section or search within results.'
-                      : 'Search and browse all published clinical guidelines.',
-                  style: context.textTheme.bodySmall?.copyWith(
-                    color: cs.onSurfaceVariant,
-                    height: 1.4,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
+// ===========================================================================
+// SEARCH
+// ===========================================================================
 
 class _GuidelinesSearchBox extends StatefulWidget {
   const _GuidelinesSearchBox({
@@ -428,47 +443,52 @@ class _GuidelinesSearchBoxState extends State<_GuidelinesSearchBox> {
 
   void _clearSearch() {
     _textController.clear();
+
+    widget.onChanged('');
+
     widget.onSubmitted('');
+
+    setState(() {});
   }
 
   @override
   Widget build(BuildContext context) {
-    final cs = context.theme.colorScheme;
+    final colors = Theme.of(context).colorScheme;
 
-    final hasSearch = widget.searchQuery.trim().isNotEmpty;
+    final hasSearch = _textController.text.trim().isNotEmpty;
 
-    return TextField(
+    return SearchBar(
       controller: _textController,
-      textInputAction: TextInputAction.search,
-      onChanged: widget.onChanged,
+      hintText: 'Search guidelines, conditions, ICD codes…',
+      leading: Icon(LucideIcons.search, color: colors.primary),
+      trailing: [
+        if (hasSearch)
+          IconButton(
+            tooltip: 'Clear search',
+            onPressed: _clearSearch,
+            icon: const Icon(LucideIcons.x),
+          ),
+      ],
+      onChanged: (value) {
+        widget.onChanged(value);
+
+        setState(() {});
+      },
       onSubmitted: widget.onSubmitted,
-      decoration: InputDecoration(
-        hintText: 'Search guidelines, conditions, ICD codes...',
-        prefixIcon: const Icon(LucideIcons.search),
-        suffixIcon: hasSearch
-            ? IconButton(
-                onPressed: _clearSearch,
-                icon: const Icon(LucideIcons.x),
-              )
-            : null,
-        filled: true,
-        fillColor: cs.surfaceContainerLowest,
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(18),
-          borderSide: BorderSide(color: cs.outlineVariant),
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(18),
-          borderSide: BorderSide(color: cs.outlineVariant),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(18),
-          borderSide: BorderSide(color: cs.primary),
-        ),
+      textInputAction: TextInputAction.search,
+      elevation: const WidgetStatePropertyAll(0),
+      backgroundColor: WidgetStatePropertyAll(colors.surfaceContainerLow),
+      side: WidgetStatePropertyAll(BorderSide(color: colors.outlineVariant)),
+      padding: const WidgetStatePropertyAll(
+        EdgeInsets.symmetric(horizontal: AppSpacing.md),
       ),
     );
   }
 }
+
+// ===========================================================================
+// QUICK FILTERS
+// ===========================================================================
 
 class _QuickFilters extends StatelessWidget {
   const _QuickFilters({
@@ -498,9 +518,10 @@ class _QuickFilters extends StatelessWidget {
   Widget build(BuildContext context) {
     final normalizedPopulation = targetPopulation.toLowerCase();
 
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      child: Row(
+    return SizedBox(
+      height: 42,
+      child: ListView(
+        scrollDirection: Axis.horizontal,
         children: [
           _QuickFilterChip(
             label: 'All',
@@ -509,7 +530,7 @@ class _QuickFilters extends StatelessWidget {
             onTap: onShowAll,
           ),
 
-          AppSpacing.sm.gap,
+          AppSpacing.hGapSm,
 
           _QuickFilterChip(
             label: 'High Priority',
@@ -518,7 +539,7 @@ class _QuickFilters extends StatelessWidget {
             onTap: onToggleHighPriority,
           ),
 
-          AppSpacing.sm.gap,
+          AppSpacing.hGapSm,
 
           _QuickFilterChip(
             label: 'Emergency',
@@ -527,25 +548,29 @@ class _QuickFilters extends StatelessWidget {
             onTap: onEmergency,
           ),
 
-          AppSpacing.sm.gap,
+          AppSpacing.hGapSm,
 
           _QuickFilterChip(
             label: 'Children',
             icon: LucideIcons.baby,
             selected: normalizedPopulation.contains('children'),
             onTap: () {
-              onTargetPopulation('Children');
+              onTargetPopulation(
+                normalizedPopulation.contains('children') ? '' : 'Children',
+              );
             },
           ),
 
-          AppSpacing.sm.gap,
+          AppSpacing.hGapSm,
 
           _QuickFilterChip(
             label: 'Adults',
             icon: LucideIcons.user,
             selected: normalizedPopulation.contains('adult'),
             onTap: () {
-              onTargetPopulation('Adults');
+              onTargetPopulation(
+                normalizedPopulation.contains('adult') ? '' : 'Adults',
+              );
             },
           ),
         ],
@@ -569,22 +594,46 @@ class _QuickFilterChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return FilterChip(
+    final colors = Theme.of(context).colorScheme;
+
+    return ChoiceChip(
       selected: selected,
       onSelected: (_) {
         onTap();
       },
-      avatar: Icon(icon, size: 16),
+      avatar: Icon(
+        icon,
+        size: 16,
+        color: selected ? colors.onPrimary : colors.primary,
+      ),
       label: Text(label),
+      labelStyle: Theme.of(context).textTheme.labelMedium?.copyWith(
+        color: selected ? colors.onPrimary : colors.onSurface,
+        fontWeight: FontWeight.w700,
+      ),
+      selectedColor: colors.primary,
+      backgroundColor: colors.surfaceContainerLowest,
+      side: BorderSide(
+        color: selected ? colors.primary : colors.outlineVariant,
+      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(999)),
     );
   }
 }
+
+// ===========================================================================
+// ACTIVE CONTEXT
+// ===========================================================================
 
 class _ActiveGuidelineContext extends StatelessWidget {
   const _ActiveGuidelineContext({
     required this.title,
     required this.hasPermanentFilter,
     required this.hasFilters,
+    required this.searchQuery,
+    required this.showHighPriorityOnly,
+    required this.isEmergencyRoute,
+    required this.targetPopulation,
     required this.onClearFilters,
     required this.onShowAll,
   });
@@ -592,50 +641,172 @@ class _ActiveGuidelineContext extends StatelessWidget {
   final String title;
   final bool hasPermanentFilter;
   final bool hasFilters;
+
+  final String searchQuery;
+  final bool showHighPriorityOnly;
+  final bool isEmergencyRoute;
+  final String targetPopulation;
+
   final VoidCallback onClearFilters;
   final VoidCallback onShowAll;
 
   @override
   Widget build(BuildContext context) {
-    final cs = context.theme.colorScheme;
+    final colors = Theme.of(context).colorScheme;
+
+    final hasSpecificFilters =
+        searchQuery.trim().isNotEmpty ||
+        showHighPriorityOnly ||
+        isEmergencyRoute ||
+        targetPopulation.trim().isNotEmpty;
 
     return Container(
+      width: double.infinity,
       padding: const EdgeInsets.all(AppSpacing.sm),
       decoration: BoxDecoration(
-        color: cs.surfaceContainerLowest,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: cs.outlineVariant.withValues(alpha: 0.4)),
+        color: colors.secondaryContainer,
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                hasPermanentFilter
+                    ? LucideIcons.folderOpen
+                    : LucideIcons.listFilter,
+                size: 17,
+                color: colors.onSecondaryContainer,
+              ),
+
+              AppSpacing.hGapSm,
+
+              Expanded(
+                child: Text(
+                  hasPermanentFilter ? title : 'Filters applied',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                    color: colors.onSecondaryContainer,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+
+              if (hasFilters)
+                TextButton(
+                  onPressed: onClearFilters,
+                  child: const Text('Clear'),
+                ),
+
+              if (hasPermanentFilter)
+                TextButton(onPressed: onShowAll, child: const Text('Show all')),
+            ],
+          ),
+
+          if (hasSpecificFilters)
+            Wrap(
+              spacing: AppSpacing.sm,
+              runSpacing: AppSpacing.sm,
+              children: [
+                if (searchQuery.trim().isNotEmpty)
+                  _ContextBadge(
+                    icon: LucideIcons.search,
+                    label: '"${searchQuery.trim()}"',
+                  ),
+
+                if (showHighPriorityOnly)
+                  const _ContextBadge(
+                    icon: LucideIcons.triangleAlert,
+                    label: 'High Priority',
+                  ),
+
+                if (isEmergencyRoute)
+                  const _ContextBadge(
+                    icon: LucideIcons.siren,
+                    label: 'Emergency',
+                  ),
+
+                if (targetPopulation.trim().isNotEmpty)
+                  _ContextBadge(
+                    icon: LucideIcons.users,
+                    label: targetPopulation,
+                  ),
+              ],
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ContextBadge extends StatelessWidget {
+  const _ContextBadge({required this.icon, required this.label});
+
+  final IconData icon;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+      decoration: BoxDecoration(
+        color: colors.surface.withValues(alpha: 0.72),
+        borderRadius: BorderRadius.circular(999),
       ),
       child: Row(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(
-            hasPermanentFilter ? LucideIcons.folderOpen : LucideIcons.filter,
-            size: 18,
-            color: cs.primary,
-          ),
+          Icon(icon, size: 13, color: colors.onSecondaryContainer),
 
-          AppSpacing.sm.gap,
+          const SizedBox(width: 4),
 
-          Expanded(
-            child: Text(
-              hasPermanentFilter ? 'Showing: $title' : 'Filters applied',
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: context.textTheme.bodySmall?.copyWith(
-                fontWeight: FontWeight.w600,
-              ),
+          Text(
+            label,
+            style: Theme.of(context).textTheme.labelSmall?.copyWith(
+              color: colors.onSecondaryContainer,
+              fontWeight: FontWeight.w600,
             ),
           ),
-
-          if (hasFilters)
-            TextButton(
-              onPressed: onClearFilters,
-              child: const Text('Clear filters'),
-            ),
-
-          if (hasPermanentFilter)
-            TextButton(onPressed: onShowAll, child: const Text('Show all')),
         ],
+      ),
+    );
+  }
+}
+
+// ===========================================================================
+// CLICKABLE CARD SHELL
+// ===========================================================================
+
+class _GuidelineCardShell extends StatelessWidget {
+  const _GuidelineCardShell({required this.child, required this.onTap});
+
+  final Widget child;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+
+    return Semantics(
+      button: true,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(16),
+          child: Ink(
+            decoration: BoxDecoration(
+              color: colors.surfaceContainerLowest,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: colors.outlineVariant),
+            ),
+            child: child,
+          ),
+        ),
       ),
     );
   }

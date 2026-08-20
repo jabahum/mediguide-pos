@@ -1,40 +1,76 @@
 import 'package:flutter/material.dart';
-import 'package:user_app/core/utils/app_extensions.dart';
-import 'package:user_app/app/router/app_navigator.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 
-import 'package:user_app/core/constants/app_spacing.dart';
-import 'package:user_app/core/utils/responsive.dart';
+import 'package:user_app/app/router/app_navigator.dart';
 import 'package:user_app/app/router/app_router.dart';
+import 'package:user_app/core/constants/app_spacing.dart';
+import 'package:user_app/core/utils/app_extensions.dart';
 import 'package:user_app/core/utils/common.dart';
+import 'package:user_app/core/utils/responsive.dart';
 
-class AboutUsPage extends StatelessWidget {
+class AboutUsPage extends StatefulWidget {
   const AboutUsPage({super.key});
 
   @override
+  State<AboutUsPage> createState() => _AboutUsPageState();
+}
+
+class _AboutUsPageState extends State<AboutUsPage> {
+  String _version = '';
+  String _buildNumber = '';
+
+  @override
+  void initState() {
+    super.initState();
+    _loadPackageInfo();
+  }
+
+  Future<void> _loadPackageInfo() async {
+    final info = await PackageInfo.fromPlatform();
+
+    if (!mounted) {
+      return;
+    }
+
+    setState(() {
+      _version = info.version;
+      _buildNumber = info.buildNumber;
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final cs = context.theme.colorScheme;
+    final colors = Theme.of(context).colorScheme;
 
     return Scaffold(
+      backgroundColor: colors.surface,
       appBar: AppBar(
-        title: Text(
-          AppTranslationKey.aboutUs.tr,
-          style: TextStyle(
-            fontSize: Responsive.fontSize(
-              context,
-              mobile: 20.0,
-              tablet: 22.0,
-              desktop: 24.0,
+        titleSpacing: AppSpacing.md,
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              AppTranslationKey.aboutMediGuide.tr,
+              style: Theme.of(
+                context,
+              ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
             ),
-            fontWeight: FontWeight.w700,
-          ),
+            Text(
+              'Clinical guidance platform',
+              style: Theme.of(
+                context,
+              ).textTheme.bodySmall?.copyWith(color: colors.onSurfaceVariant),
+            ),
+          ],
         ),
-        elevation: context.isMobile ? 0 : 2,
       ),
       body: SingleChildScrollView(
-        padding: EdgeInsets.symmetric(
-          horizontal: context.responsiveHorizontalPadding,
-          vertical: context.responsiveVerticalPadding,
+        padding: EdgeInsets.fromLTRB(
+          context.responsiveHorizontalPadding,
+          AppSpacing.md,
+          context.responsiveHorizontalPadding,
+          AppSpacing.xxxl,
         ),
         child: Center(
           child: ConstrainedBox(
@@ -44,53 +80,64 @@ class AboutUsPage extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                _AboutHeroCard(version: '1.0.0'),
+                _AboutHero(version: _version, buildNumber: _buildNumber),
 
-                AppSpacing.lg.gap,
+                AppSpacing.gapXl,
 
-                _InfoSectionCard(
+                _AboutSection(
                   icon: LucideIcons.target,
                   title: AppTranslationKey.ourMission.tr,
+                  description:
+                      'Why MediGuide exists and the clinical need it supports.',
                   child: Text(
                     AppTranslationKey.missionDescription.tr,
-                    style: context.textTheme.bodyMedium?.copyWith(
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                       height: 1.55,
-                      color: cs.onSurfaceVariant,
+                      color: colors.onSurfaceVariant,
                     ),
                   ),
                 ),
 
-                AppSpacing.lg.gap,
+                AppSpacing.gapLg,
 
-                _InfoSectionCard(
-                  icon: LucideIcons.sparkles,
-                  title: AppTranslationKey.keyFeatures.tr,
+                _AboutSection(
+                  icon: LucideIcons.layoutGrid,
+                  title: 'What MediGuide provides',
+                  description:
+                      'Core clinical reference and decision-support resources.',
                   child: Column(
                     children: [
-                      _FeatureCard(
-                        icon: LucideIcons.bookOpen,
+                      _FeatureTile(
+                        icon: LucideIcons.bookOpenText,
                         title: AppTranslationKey.guidelines.tr,
                         description:
                             AppTranslationKey.accessToClinicGuidelines.tr,
                       ),
-                      AppSpacing.sm.gap,
-                      _FeatureCard(
-                        icon: LucideIcons.pillBottle,
+                      const _SectionDivider(),
+                      _FeatureTile(
+                        icon: LucideIcons.pill,
                         title: AppTranslationKey.drugIndex.tr,
                         description: AppTranslationKey
                             .comprehensiveMedicationDatabase
                             .tr,
                       ),
-                      AppSpacing.sm.gap,
-                      _FeatureCard(
+                      const _SectionDivider(),
+                      const _FeatureTile(
+                        icon: LucideIcons.calculator,
+                        title: 'Clinical tools',
+                        description:
+                            'Calculators, algorithms and decision-support references.',
+                      ),
+                      const _SectionDivider(),
+                      _FeatureTile(
                         icon: LucideIcons.stethoscope,
                         title: AppTranslationKey.consultants.tr,
                         description:
                             AppTranslationKey.medicalExpertsDirectory.tr,
                       ),
-                      AppSpacing.sm.gap,
-                      _FeatureCard(
-                        icon: LucideIcons.building2,
+                      const _SectionDivider(),
+                      _FeatureTile(
+                        icon: LucideIcons.hospital,
                         title: AppTranslationKey.healthInfrastructure.tr,
                         description:
                             AppTranslationKey.healthcareFacilitiesList.tr,
@@ -99,11 +146,12 @@ class AboutUsPage extends StatelessWidget {
                   ),
                 ),
 
-                AppSpacing.lg.gap,
+                AppSpacing.gapLg,
 
-                _InfoSectionCard(
-                  icon: LucideIcons.headphones,
+                _AboutSection(
+                  icon: LucideIcons.lifeBuoy,
                   title: AppTranslationKey.contactSupport.tr,
+                  description: 'Get help, report an issue or share feedback.',
                   child: Column(
                     children: [
                       _ActionTile(
@@ -111,34 +159,43 @@ class AboutUsPage extends StatelessWidget {
                         title: AppTranslationKey.emailSupport.tr,
                         subtitle: 'support@health.go.ug',
                         trailingIcon: LucideIcons.externalLink,
-                        onTap: () => Common.sendEmail('support@health.go.ug'),
+                        onTap: () {
+                          Common.sendEmail('support@health.go.ug');
+                        },
                       ),
-                      _SectionDivider(),
+                      const _SectionDivider(),
                       _ActionTile(
-                        icon: LucideIcons.messageSquare,
+                        icon: LucideIcons.messageSquareText,
                         title: AppTranslationKey.feedback.tr,
                         subtitle: AppTranslationKey.shareYourFeedback.tr,
-                        onTap: () => AppNavigator.push(AppRoutes.helpCenter),
+                        onTap: () {
+                          AppNavigator.push(AppRoutes.helpCenter);
+                        },
                       ),
                     ],
                   ),
                 ),
 
-                AppSpacing.lg.gap,
+                AppSpacing.gapLg,
 
-                _InfoSectionCard(
-                  icon: LucideIcons.scale,
-                  title: AppTranslationKey.legalInformation.tr,
+                _AboutSection(
+                  icon: LucideIcons.shieldCheck,
+                  title: 'Legal & privacy',
+                  description:
+                      'Review terms, privacy and information-use policies.',
                   child: _ActionTile(
                     icon: LucideIcons.fileText,
                     title: AppTranslationKey.termsAndPrivacy.tr,
                     subtitle: AppTranslationKey.legalInformation.tr,
-                    onTap: () =>
-                        AppNavigator.push(AppRoutes.termsAndConditions),
+                    onTap: () {
+                      AppNavigator.push(AppRoutes.termsAndConditions);
+                    },
                   ),
                 ),
 
-                AppSpacing.sectionGap,
+                AppSpacing.gapLg,
+
+                const _AboutFooter(),
               ],
             ),
           ),
@@ -148,90 +205,99 @@ class AboutUsPage extends StatelessWidget {
   }
 }
 
-class _AboutHeroCard extends StatelessWidget {
-  final String version;
+// ===========================================================================
+// HERO
+// ===========================================================================
 
-  const _AboutHeroCard({required this.version});
+class _AboutHero extends StatelessWidget {
+  const _AboutHero({required this.version, required this.buildNumber});
+
+  final String version;
+  final String buildNumber;
 
   @override
   Widget build(BuildContext context) {
-    final cs = context.theme.colorScheme;
+    final colors = Theme.of(context).colorScheme;
+
+    final versionLabel = version.isEmpty
+        ? 'Loading version...'
+        : buildNumber.isEmpty
+        ? 'Version $version'
+        : 'Version $version ($buildNumber)';
 
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(AppSpacing.lg),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(28),
-        color: cs.primaryContainer.withValues(alpha: 0.35),
-        border: Border.all(color: cs.primary.withValues(alpha: 0.08)),
+        color: colors.surfaceContainerLow,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: colors.outlineVariant),
       ),
-      child: Column(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           Container(
             width: Responsive.doubleValue(
               context,
-              mobile: 108.0,
-              tablet: 124.0,
-              desktop: 136.0,
+              mobile: 76,
+              tablet: 84,
+              desktop: 92,
             ),
             height: Responsive.doubleValue(
               context,
-              mobile: 108.0,
-              tablet: 124.0,
-              desktop: 136.0,
+              mobile: 76,
+              tablet: 84,
+              desktop: 92,
             ),
-            padding: const EdgeInsets.all(AppSpacing.md),
+            padding: const EdgeInsets.all(AppSpacing.sm),
             decoration: BoxDecoration(
-              color: cs.surface,
-              borderRadius: BorderRadius.circular(28),
-              boxShadow: [
-                BoxShadow(
-                  color: cs.shadow.withValues(alpha: 0.08),
-                  blurRadius: 24,
-                  offset: const Offset(0, 10),
-                ),
-              ],
+              color: colors.surface,
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: colors.outlineVariant),
             ),
             child: Image.asset('assets/logo.png', fit: BoxFit.contain),
           ),
 
-          AppSpacing.lg.gap,
+          AppSpacing.hGapLg,
 
-          Text(
-            AppTranslationKey.aboutMediGuide.tr,
-            style: context.textTheme.headlineSmall?.copyWith(
-              fontWeight: FontWeight.w900,
-              color: cs.primary,
-            ),
-            textAlign: TextAlign.center,
-          ),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'MediGuide',
+                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
 
-          const SizedBox(height: 6),
+                const SizedBox(height: 4),
 
-          Text(
-            '${AppTranslationKey.appVersion.tr} $version',
-            style: context.textTheme.bodyMedium?.copyWith(
-              color: cs.onSurfaceVariant,
-              fontWeight: FontWeight.w600,
-            ),
-            textAlign: TextAlign.center,
-          ),
+                Text(
+                  'Uganda clinical guidance and reference platform',
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: colors.onSurfaceVariant,
+                    height: 1.4,
+                  ),
+                ),
 
-          const SizedBox(height: 10),
+                AppSpacing.gapSm,
 
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
-            decoration: BoxDecoration(
-              color: cs.primary.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(999),
-            ),
-            child: Text(
-              'Made with love by MoH Uganda',
-              style: context.textTheme.labelMedium?.copyWith(
-                color: cs.primary,
-                fontWeight: FontWeight.w800,
-              ),
-              textAlign: TextAlign.center,
+                Wrap(
+                  spacing: AppSpacing.sm,
+                  runSpacing: AppSpacing.sm,
+                  children: [
+                    _MetadataBadge(
+                      icon: LucideIcons.package,
+                      label: versionLabel,
+                    ),
+                    const _MetadataBadge(
+                      icon: LucideIcons.landmark,
+                      label: 'Ministry of Health Uganda',
+                    ),
+                  ],
+                ),
+              ],
             ),
           ),
         ],
@@ -240,69 +306,83 @@ class _AboutHeroCard extends StatelessWidget {
   }
 }
 
-class _InfoSectionCard extends StatelessWidget {
-  final IconData icon;
-  final String title;
-  final Widget child;
+// ===========================================================================
+// SECTION
+// ===========================================================================
 
-  const _InfoSectionCard({
+class _AboutSection extends StatelessWidget {
+  const _AboutSection({
     required this.icon,
     required this.title,
+    required this.description,
     required this.child,
   });
 
-  @override
-  Widget build(BuildContext context) {
-    final cs = context.theme.colorScheme;
-
-    return Container(
-      padding: const EdgeInsets.all(AppSpacing.md),
-      decoration: BoxDecoration(
-        color: cs.surfaceContainerLowest,
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: cs.outlineVariant.withValues(alpha: 0.35)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _SectionTitle(icon: icon, title: title),
-          AppSpacing.md.gap,
-          child,
-        ],
-      ),
-    );
-  }
-}
-
-class _SectionTitle extends StatelessWidget {
   final IconData icon;
   final String title;
-
-  const _SectionTitle({required this.icon, required this.title});
+  final String description;
+  final Widget child;
 
   @override
   Widget build(BuildContext context) {
-    final cs = context.theme.colorScheme;
+    final colors = Theme.of(context).colorScheme;
 
-    return Row(
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Container(
-          width: 42,
-          height: 42,
-          decoration: BoxDecoration(
-            color: cs.primary.withValues(alpha: 0.1),
-            borderRadius: BorderRadius.circular(14),
-          ),
-          child: Icon(icon, color: cs.primary, size: 22),
-        ),
-        AppSpacing.md.gap,
-        Expanded(
-          child: Text(
-            title,
-            style: context.textTheme.titleMedium?.copyWith(
-              fontWeight: FontWeight.w900,
-              color: cs.onSurface,
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              width: 36,
+              height: 36,
+              decoration: BoxDecoration(
+                color: colors.primaryContainer,
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Icon(icon, color: colors.primary, size: 18),
             ),
+
+            AppSpacing.hGapSm,
+
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    description,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: colors.onSurfaceVariant,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+
+        AppSpacing.gapSm,
+
+        Container(
+          width: double.infinity,
+          decoration: BoxDecoration(
+            color: colors.surfaceContainerLowest,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: colors.outlineVariant),
+          ),
+          clipBehavior: Clip.antiAlias,
+          child: Padding(
+            padding: child is Text
+                ? const EdgeInsets.all(AppSpacing.md)
+                : EdgeInsets.zero,
+            child: child,
           ),
         ),
       ],
@@ -310,56 +390,57 @@ class _SectionTitle extends StatelessWidget {
   }
 }
 
-class _FeatureCard extends StatelessWidget {
-  final IconData icon;
-  final String title;
-  final String description;
+// ===========================================================================
+// FEATURE TILE
+// ===========================================================================
 
-  const _FeatureCard({
+class _FeatureTile extends StatelessWidget {
+  const _FeatureTile({
     required this.icon,
     required this.title,
     required this.description,
   });
 
+  final IconData icon;
+  final String title;
+  final String description;
+
   @override
   Widget build(BuildContext context) {
-    final cs = context.theme.colorScheme;
+    final colors = Theme.of(context).colorScheme;
 
-    return Container(
+    return Padding(
       padding: const EdgeInsets.all(AppSpacing.md),
-      decoration: BoxDecoration(
-        color: cs.surfaceContainerHighest.withValues(alpha: 0.35),
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: cs.outlineVariant.withValues(alpha: 0.25)),
-      ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Container(
-            width: 42,
-            height: 42,
+            width: 38,
+            height: 38,
             decoration: BoxDecoration(
-              color: cs.primary.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(14),
+              color: colors.primary.withValues(alpha: 0.08),
+              borderRadius: BorderRadius.circular(11),
             ),
-            child: Icon(icon, size: 21, color: cs.primary),
+            child: Icon(icon, size: 19, color: colors.primary),
           ),
-          AppSpacing.md.gap,
+
+          AppSpacing.hGapMd,
+
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   title,
-                  style: context.textTheme.titleSmall?.copyWith(
-                    fontWeight: FontWeight.w800,
-                  ),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
                 ),
-                const SizedBox(height: 4),
+                const SizedBox(height: 3),
                 Text(
                   description,
-                  style: context.textTheme.bodySmall?.copyWith(
-                    color: cs.onSurfaceVariant,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: colors.onSurfaceVariant,
                     height: 1.4,
                   ),
                 ),
@@ -372,13 +453,11 @@ class _FeatureCard extends StatelessWidget {
   }
 }
 
-class _ActionTile extends StatelessWidget {
-  final IconData icon;
-  final String title;
-  final String subtitle;
-  final VoidCallback onTap;
-  final IconData trailingIcon;
+// ===========================================================================
+// ACTION TILE
+// ===========================================================================
 
+class _ActionTile extends StatelessWidget {
   const _ActionTile({
     required this.icon,
     required this.title,
@@ -387,43 +466,133 @@ class _ActionTile extends StatelessWidget {
     this.trailingIcon = LucideIcons.chevronRight,
   });
 
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final VoidCallback onTap;
+  final IconData trailingIcon;
+
   @override
   Widget build(BuildContext context) {
-    final cs = context.theme.colorScheme;
+    final colors = Theme.of(context).colorScheme;
 
     return ListTile(
-      contentPadding: EdgeInsets.zero,
+      minTileHeight: 68,
+      contentPadding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.md,
+        vertical: AppSpacing.xs,
+      ),
       onTap: onTap,
       leading: Container(
-        width: 40,
-        height: 40,
+        width: 38,
+        height: 38,
         decoration: BoxDecoration(
-          color: cs.primary.withValues(alpha: 0.1),
-          borderRadius: BorderRadius.circular(14),
+          color: colors.primary.withValues(alpha: 0.08),
+          borderRadius: BorderRadius.circular(11),
         ),
-        child: Icon(icon, color: cs.primary, size: 20),
+        child: Icon(icon, color: colors.primary, size: 19),
       ),
       title: Text(
         title,
-        style: context.textTheme.titleSmall?.copyWith(
-          fontWeight: FontWeight.w800,
-        ),
+        style: Theme.of(
+          context,
+        ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
       ),
       subtitle: Text(subtitle, maxLines: 2, overflow: TextOverflow.ellipsis),
-      trailing: Icon(trailingIcon, color: cs.onSurfaceVariant),
+      trailing: Icon(trailingIcon, size: 18, color: colors.onSurfaceVariant),
     );
   }
 }
 
-class _SectionDivider extends StatelessWidget {
+// ===========================================================================
+// METADATA BADGE
+// ===========================================================================
+
+class _MetadataBadge extends StatelessWidget {
+  const _MetadataBadge({required this.icon, required this.label});
+
+  final IconData icon;
+  final String label;
+
   @override
   Widget build(BuildContext context) {
-    final cs = context.theme.colorScheme;
+    final colors = Theme.of(context).colorScheme;
 
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+      decoration: BoxDecoration(
+        color: colors.secondaryContainer,
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 13, color: colors.onSecondaryContainer),
+          const SizedBox(width: 5),
+          Text(
+            label,
+            style: Theme.of(context).textTheme.labelSmall?.copyWith(
+              color: colors.onSecondaryContainer,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ===========================================================================
+// DIVIDER
+// ===========================================================================
+
+class _SectionDivider extends StatelessWidget {
+  const _SectionDivider();
+
+  @override
+  Widget build(BuildContext context) {
     return Divider(
       height: 1,
-      indent: 56,
-      color: cs.outlineVariant.withValues(alpha: 0.35),
+      indent: 64,
+      color: Theme.of(context).colorScheme.outlineVariant,
+    );
+  }
+}
+
+// ===========================================================================
+// FOOTER
+// ===========================================================================
+
+class _AboutFooter extends StatelessWidget {
+  const _AboutFooter();
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+
+    return Column(
+      children: [
+        Icon(LucideIcons.heartPulse, size: 22, color: colors.primary),
+
+        AppSpacing.gapSm,
+
+        Text(
+          'MediGuide',
+          style: Theme.of(
+            context,
+          ).textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w800),
+        ),
+
+        const SizedBox(height: 3),
+
+        Text(
+          'Supporting access to trusted clinical guidance.',
+          textAlign: TextAlign.center,
+          style: Theme.of(
+            context,
+          ).textTheme.bodySmall?.copyWith(color: colors.onSurfaceVariant),
+        ),
+      ],
     );
   }
 }

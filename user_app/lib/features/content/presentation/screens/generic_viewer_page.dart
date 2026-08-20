@@ -13,6 +13,7 @@ import 'package:user_app/core/widgets/empty_state.dart';
 
 import 'package:user_app/features/ai_assistant/data/models/ai_context.dart';
 import 'package:user_app/features/ai_assistant/data/services/ai_context_service.dart';
+import 'package:user_app/features/content/data/models/generic_page.dart';
 import 'package:user_app/features/content/presentation/controllers/generic_viewer_controller.dart';
 import 'package:user_app/features/content/presentation/controllers/generic_viewer_state.dart';
 import 'package:user_app/features/content/presentation/widgets/generic_page_section.dart';
@@ -39,9 +40,7 @@ class _GenericViewerPageState extends ConsumerState<GenericViewerPage> {
     final pageKey = widget.pageKey;
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) {
-        return;
-      }
+      if (!mounted) return;
 
       ref
           .read(genericViewerControllerProvider.notifier)
@@ -57,9 +56,9 @@ class _GenericViewerPageState extends ConsumerState<GenericViewerPage> {
 
     final contextService = ref.watch(aiContextServiceProvider);
 
-    // =====================================================
+    // =====================================================================
     // LOADING
-    // =====================================================
+    // =====================================================================
 
     if (state.isLoading) {
       return const Scaffold(
@@ -67,14 +66,18 @@ class _GenericViewerPageState extends ConsumerState<GenericViewerPage> {
       );
     }
 
-    // =====================================================
+    // =====================================================================
     // ERROR
-    // =====================================================
+    // =====================================================================
 
     if (state.errorMessage != null && state.page == null) {
       return Scaffold(
         appBar: AppBar(
-          title: Text(state.pageTitle, style: context.textTheme.titleMedium),
+          title: Text(
+            state.pageTitle,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
         ),
         body: AppErrorView(
           error: state.errorMessage!,
@@ -90,25 +93,29 @@ class _GenericViewerPageState extends ConsumerState<GenericViewerPage> {
       );
     }
 
-    // =====================================================
+    // =====================================================================
     // EMPTY
-    // =====================================================
+    // =====================================================================
 
     if (!state.hasContent) {
       return Scaffold(
         appBar: AppBar(
-          title: Text(state.pageTitle, style: context.textTheme.titleMedium),
+          title: Text(
+            state.pageTitle,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
         ),
         body: EmptyState.noData(
-          title: 'No Content Available',
+          title: 'No content available',
           description: 'This page does not have any content to display.',
         ),
       );
     }
 
-    // =====================================================
-    // KEY / VALUE PAGE
-    // =====================================================
+    // =====================================================================
+    // CONTENT
+    // =====================================================================
 
     if (state.isKeyValueContent) {
       return _KeyValuePage(
@@ -118,10 +125,6 @@ class _GenericViewerPageState extends ConsumerState<GenericViewerPage> {
       );
     }
 
-    // =====================================================
-    // STANDARD HTML PAGE
-    // =====================================================
-
     return _HtmlPage(
       state: state,
       controller: controller,
@@ -129,6 +132,10 @@ class _GenericViewerPageState extends ConsumerState<GenericViewerPage> {
     );
   }
 }
+
+// ===========================================================================
+// KEY / VALUE PAGE
+// ===========================================================================
 
 class _KeyValuePage extends StatelessWidget {
   const _KeyValuePage({
@@ -145,72 +152,73 @@ class _KeyValuePage extends StatelessWidget {
   Widget build(BuildContext context) {
     final sections = state.availableSections;
 
-    // Avoid DefaultTabController(length: 0).
     if (sections.isEmpty) {
       return Scaffold(
-        appBar: AppBar(
-          title: Text(state.pageTitle, style: context.textTheme.titleMedium),
+        appBar: _ViewerAppBar(
+          state: state,
+          controller: controller,
+          contextService: contextService,
         ),
         body: EmptyState.noData(
-          title: 'No Sections Available',
+          title: 'No sections available',
           description: 'This page does not contain any sections to display.',
         ),
       );
     }
 
-    return DefaultTabController(
-      length: sections.length,
-      child: Scaffold(
-        appBar: AppBar(
-          title: Text(state.pageTitle, style: context.textTheme.titleMedium),
-          actions: [
-            AiContextButton.iconButton(
-              context: _buildPageContext(state, contextService),
-            ),
-            IconButton(
-              onPressed: controller.sharePage,
-              icon: const Icon(LucideIcons.share),
-              tooltip: 'Share',
-            ),
-          ],
-          bottom: TabBar(
-            isScrollable: true,
-            tabAlignment: TabAlignment.start,
-            tabs: [for (final section in sections) Tab(text: section.title)],
-            onTap: (index) {
-              controller.navigateToSection(sections[index]);
-            },
+    return Scaffold(
+      appBar: _ViewerAppBar(
+        state: state,
+        controller: controller,
+        contextService: contextService,
+      ),
+      body: Column(
+        children: [
+          // =================================================================
+          // SECTION NAVIGATION
+          // =================================================================
+          _SectionNavigation(
+            sections: sections,
+            onSelected: controller.navigateToSection,
           ),
-        ),
-        body: ListView(
-          controller: controller.scrollController,
-          padding: EdgeInsets.all(Responsive.horizontalPadding(context)),
-          children: [
-            if (state.page?.description?.trim().isNotEmpty == true) ...[
-              Text(
-                state.page!.description!,
-                style: context.textTheme.bodyLarge?.copyWith(
-                  color: context.theme.colorScheme.onSurfaceVariant,
-                  height: 1.5,
-                ),
-                textAlign: TextAlign.justify,
-              ),
-              AppSpacing.lg.gap,
-            ],
 
-            for (final section in sections)
-              GenericPageSectionWidget(
-                key: controller.getSectionKey(section),
-                section: section,
+          // =================================================================
+          // CONTENT
+          // =================================================================
+          Expanded(
+            child: ListView(
+              controller: controller.scrollController,
+              padding: EdgeInsets.fromLTRB(
+                Responsive.horizontalPadding(context),
+                AppSpacing.lg,
+                Responsive.horizontalPadding(context),
+                AppSpacing.xxxl,
               ),
+              children: [
+                if (state.page?.description?.trim().isNotEmpty == true) ...[
+                  _PageDescription(description: state.page!.description!),
+                  AppSpacing.gapLg,
+                ],
 
-            AppSpacing.xxl.gap,
-          ],
-        ),
+                for (final section in sections) ...[
+                  GenericPageSectionWidget(
+                    key: controller.getSectionKey(section),
+                    section: section,
+                  ),
+                  AppSpacing.gapLg,
+                ],
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
 }
+
+// ===========================================================================
+// HTML PAGE
+// ===========================================================================
 
 class _HtmlPage extends StatelessWidget {
   const _HtmlPage({
@@ -226,46 +234,220 @@ class _HtmlPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text(state.pageTitle, style: context.textTheme.titleMedium),
-        actions: [
-          AiContextButton.iconButton(
-            context: _buildPageContext(state, contextService),
-          ),
-          IconButton(
-            onPressed: controller.sharePage,
-            icon: const Icon(LucideIcons.share),
-            tooltip: 'Share',
-          ),
-        ],
+      appBar: _ViewerAppBar(
+        state: state,
+        controller: controller,
+        contextService: contextService,
       ),
       body: ListView(
-        padding: EdgeInsets.all(Responsive.horizontalPadding(context)),
+        padding: EdgeInsets.fromLTRB(
+          Responsive.horizontalPadding(context),
+          AppSpacing.lg,
+          Responsive.horizontalPadding(context),
+          AppSpacing.xxxl,
+        ),
         children: [
           if (state.page?.description?.trim().isNotEmpty == true) ...[
-            Text(
-              state.page!.description!,
-              style: context.textTheme.bodyLarge?.copyWith(
-                color: context.theme.colorScheme.onSurfaceVariant,
-                height: 1.5,
-              ),
-              textAlign: TextAlign.justify,
-            ),
-            AppSpacing.lg.gap,
+            _PageDescription(description: state.page!.description!),
+            AppSpacing.gapLg,
           ],
 
-          Html(data: state.stringContent, style: HtmlStyles.content(context)),
-
-          AppSpacing.xxl.gap,
+          _HtmlContentCard(html: state.stringContent),
         ],
       ),
     );
   }
 }
 
-// ======================================================
+// ===========================================================================
+// APP BAR
+// ===========================================================================
+
+class _ViewerAppBar extends StatelessWidget implements PreferredSizeWidget {
+  const _ViewerAppBar({
+    required this.state,
+    required this.controller,
+    required this.contextService,
+  });
+
+  final GenericViewerState state;
+  final GenericViewerController controller;
+  final AiContextService contextService;
+
+  @override
+  Size get preferredSize => const Size.fromHeight(kToolbarHeight);
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+
+    return AppBar(
+      titleSpacing: AppSpacing.md,
+      title: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            state.pageTitle,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: Theme.of(
+              context,
+            ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
+          ),
+          if (state.page?.description?.trim().isNotEmpty == true)
+            Text(
+              'MediGuide reference content',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: Theme.of(
+                context,
+              ).textTheme.bodySmall?.copyWith(color: colors.onSurfaceVariant),
+            ),
+        ],
+      ),
+      actions: [
+        AiContextButton.iconButton(
+          context: _buildPageContext(state, contextService),
+        ),
+        IconButton(
+          tooltip: 'Share',
+          onPressed: controller.sharePage,
+          icon: const Icon(LucideIcons.share2),
+        ),
+        AppSpacing.hGapXs,
+      ],
+    );
+  }
+}
+
+// ===========================================================================
+// SECTION NAVIGATION
+// ===========================================================================
+
+class _SectionNavigation extends StatelessWidget {
+  const _SectionNavigation({required this.sections, required this.onSelected});
+
+  final List<GenericPageSection> sections;
+  final ValueChanged<GenericPageSection> onSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+
+    return Container(
+      height: 54,
+      decoration: BoxDecoration(
+        color: colors.surface,
+        border: Border(bottom: BorderSide(color: colors.outlineVariant)),
+      ),
+      child: ListView.separated(
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.md,
+          vertical: AppSpacing.sm,
+        ),
+        scrollDirection: Axis.horizontal,
+        itemCount: sections.length,
+        separatorBuilder: (_, _) => AppSpacing.hGapSm,
+        itemBuilder: (context, index) {
+          final section = sections[index];
+
+          return ActionChip(
+            avatar: const Icon(LucideIcons.listTree, size: 15),
+            label: Text(
+              section.title,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+            onPressed: () {
+              onSelected(section);
+            },
+          );
+        },
+      ),
+    );
+  }
+}
+
+// ===========================================================================
+// PAGE DESCRIPTION
+// ===========================================================================
+
+class _PageDescription extends StatelessWidget {
+  const _PageDescription({required this.description});
+
+  final String description;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(AppSpacing.md),
+      decoration: BoxDecoration(
+        color: colors.surfaceContainerLow,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: colors.outlineVariant),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 36,
+            height: 36,
+            decoration: BoxDecoration(
+              color: colors.primaryContainer,
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(LucideIcons.info, size: 18, color: colors.primary),
+          ),
+
+          AppSpacing.hGapMd,
+
+          Expanded(
+            child: Text(
+              description,
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: colors.onSurfaceVariant,
+                height: 1.5,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ===========================================================================
+// HTML CONTENT
+// ===========================================================================
+
+class _HtmlContentCard extends StatelessWidget {
+  const _HtmlContentCard({required this.html});
+
+  final String html;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+
+    return Container(
+      width: double.infinity,
+      decoration: BoxDecoration(
+        color: colors.surfaceContainerLowest,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: colors.outlineVariant),
+      ),
+      padding: const EdgeInsets.all(AppSpacing.md),
+      child: Html(data: html, style: HtmlStyles.content(context)),
+    );
+  }
+}
+
+// ===========================================================================
 // AI CONTEXT
-// ======================================================
+// ===========================================================================
 
 AiContext _buildPageContext(
   GenericViewerState state,

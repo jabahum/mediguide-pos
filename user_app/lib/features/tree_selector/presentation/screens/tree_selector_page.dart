@@ -9,14 +9,14 @@ import 'package:user_app/core/utils/app_extensions.dart';
 import 'package:user_app/core/widgets/app_error_view.dart';
 import 'package:user_app/core/widgets/app_loading_view.dart';
 import 'package:user_app/core/widgets/empty_state.dart';
-import 'package:user_app/features/tree_selector/presentation/controllers/tree_selector_state.dart';
 import 'package:user_app/l10n/app_translations.dart';
 
 import 'package:user_app/features/tree_selector/data/models/tree_selector_models.dart';
 import 'package:user_app/features/tree_selector/presentation/controllers/tree_selector_controller.dart';
+import 'package:user_app/features/tree_selector/presentation/controllers/tree_selector_state.dart';
 import 'package:user_app/features/tree_selector/presentation/widgets/tree_selector_tile.dart';
 
-class TreeSelectorPage extends ConsumerWidget {
+class TreeSelectorPage extends ConsumerStatefulWidget {
   const TreeSelectorPage({super.key, required this.config});
 
   final TreeSelectorConfig config;
@@ -31,8 +31,23 @@ class TreeSelectorPage extends ConsumerWidget {
   }
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final provider = treeSelectorControllerProvider(config);
+  ConsumerState<TreeSelectorPage> createState() => _TreeSelectorPageState();
+}
+
+class _TreeSelectorPageState extends ConsumerState<TreeSelectorPage> {
+  final TextEditingController _searchController = TextEditingController();
+
+  String _search = '';
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final provider = treeSelectorControllerProvider(widget.config);
 
     final state = ref.watch(provider);
 
@@ -40,18 +55,50 @@ class TreeSelectorPage extends ConsumerWidget {
 
     final hasNodes = state.rootTreeNode.childrenAsList.isNotEmpty;
 
+    final colors = Theme.of(context).colorScheme;
+
     return Scaffold(
+      backgroundColor: colors.surface,
+
+      // =====================================================================
+      // APP BAR
+      // =====================================================================
       appBar: AppBar(
-        title: Text(config.title, maxLines: 1, overflow: TextOverflow.ellipsis),
+        titleSpacing: AppSpacing.sm,
         leading: IconButton(
-          icon: const Icon(LucideIcons.x),
           tooltip: AppTranslationKey.close.tr,
           onPressed: () {
             AppNavigator.pop();
           },
+          icon: const Icon(LucideIcons.arrowLeft),
+        ),
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              widget.config.title,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: Theme.of(
+                context,
+              ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
+            ),
+            Text(
+              widget.config.allowParentSelection
+                  ? 'Select an item or eligible parent'
+                  : 'Select an item',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: Theme.of(
+                context,
+              ).textTheme.bodySmall?.copyWith(color: colors.onSurfaceVariant),
+            ),
+          ],
         ),
       ),
+
       body: SafeArea(
+        top: false,
         child: _buildBody(
           context: context,
           state: state,
@@ -68,93 +115,375 @@ class TreeSelectorPage extends ConsumerWidget {
     required TreeSelectorController controller,
     required bool hasNodes,
   }) {
-    // =====================================================
+    // =======================================================================
     // INITIAL LOADING
-    // =====================================================
+    // =======================================================================
 
     if (state.isLoading && !hasNodes) {
       return const AppLoadingView(message: 'Loading options...');
     }
 
-    // =====================================================
+    // =======================================================================
     // INITIAL ERROR
-    // =====================================================
+    // =======================================================================
 
     if (state.hasLoadError && !hasNodes) {
       return AppErrorView(
         error: state.errorMessage ?? 'Failed to load selector data',
+        title: 'Unable to load options',
+        message: 'The available options could not be loaded. Please try again.',
         onRetry: controller.loadRootNodes,
       );
     }
 
-    // =====================================================
+    // =======================================================================
     // EMPTY
-    // =====================================================
+    // =======================================================================
 
     if (!hasNodes) {
       return EmptyState.noData(
         title: 'noItemsFound'.tr,
-        description: 'No selectable items are available.',
+        description: 'No selectable items are currently available.',
         actionLabel: AppTranslationKey.retry.tr,
         onAction: controller.loadRootNodes,
       );
     }
 
-    // =====================================================
-    // TREE
-    // =====================================================
+    // =======================================================================
+    // CONTENT
+    // =======================================================================
 
     return RefreshIndicator(
       onRefresh: controller.loadRootNodes,
-      child:
-          TreeView.simpleTyped<
-            TreeSelectorNodeModel,
-            TreeNode<TreeSelectorNodeModel>
-          >(
-            tree: state.rootTreeNode,
-            showRootNode: false,
-            indentation: const Indentation(style: IndentStyle.squareJoint),
-            expansionBehavior: ExpansionBehavior.collapseOthers,
+      child: CustomScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+        slivers: [
+          // =================================================================
+          // SEARCH
+          // =================================================================
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(
+                AppSpacing.md,
+                AppSpacing.md,
+                AppSpacing.md,
+                0,
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _TreeSearchField(
+                    controller: _searchController,
+                    onChanged: (value) {
+                      setState(() {
+                        _search = value.trim();
+                      });
+                    },
+                    onClear: () {
+                      _searchController.clear();
 
-            // ===============================================
-            // NODE TAP
-            // ===============================================
-            onItemTap: (node) async {
-              final result = await controller.onNodeTap(node);
+                      setState(() {
+                        _search = '';
+                      });
+                    },
+                  ),
 
-              if (result == null || !context.mounted) {
-                return;
-              }
+                  AppSpacing.gapMd,
 
-              Navigator.of(context).pop(result);
-            },
+                  _SelectorInfoCard(
+                    allowParentSelection: widget.config.allowParentSelection,
+                  ),
 
-            // ===============================================
-            // NODE BUILDER
-            // ===============================================
-            builder: (context, node) {
-              final data = node.data;
+                  AppSpacing.gapLg,
 
-              return Padding(
-                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
-                child: TreeSelectorTile(
-                  node: node,
-                  isNodeLoading: state.loadingNodes.contains(node.key),
-                  showParentSelectAction:
-                      config.allowParentSelection && data?.hasChildren == true,
-                  onSelectParent: () {
-                    final result = controller.selectParentNode(node);
+                  Text(
+                    _search.isEmpty ? 'Available options' : 'Matching options',
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
 
-                    if (result == null) {
-                      return;
-                    }
+                  const SizedBox(height: 3),
 
-                    Navigator.of(context).pop(result);
-                  },
-                ),
-              );
-            },
+                  Text(
+                    _search.isEmpty
+                        ? 'Expand groups to find the item you need.'
+                        : 'Showing items matching “$_search”.',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+
+                  AppSpacing.gapSm,
+                ],
+              ),
+            ),
           ),
+
+          // =================================================================
+          // TREE
+          // =================================================================
+          SliverPadding(
+            padding: const EdgeInsets.fromLTRB(
+              AppSpacing.md,
+              0,
+              AppSpacing.md,
+              AppSpacing.xxxl,
+            ),
+            sliver: SliverToBoxAdapter(
+              child: _TreeSurface(
+                child:
+                    TreeView.simpleTyped<
+                      TreeSelectorNodeModel,
+                      TreeNode<TreeSelectorNodeModel>
+                    >(
+                      tree: state.rootTreeNode,
+                      showRootNode: false,
+
+                      indentation: const Indentation(
+                        style: IndentStyle.squareJoint,
+                      ),
+
+                      expansionBehavior: ExpansionBehavior.collapseOthers,
+
+                      // =========================================================
+                      // NODE TAP
+                      // =========================================================
+                      onItemTap: (node) async {
+                        final data = node.data;
+
+                        if (data == null) {
+                          return;
+                        }
+
+                        if (!_matchesSearch(data)) {
+                          return;
+                        }
+
+                        final result = await controller.onNodeTap(node);
+
+                        if (result == null || !context.mounted) {
+                          return;
+                        }
+
+                        Navigator.of(context).pop(result);
+                      },
+
+                      // =========================================================
+                      // NODE
+                      // =========================================================
+                      builder: (context, node) {
+                        final data = node.data;
+
+                        if (data == null) {
+                          return const SizedBox.shrink();
+                        }
+
+                        if (!_matchesSearch(data)) {
+                          return const SizedBox.shrink();
+                        }
+
+                        final isLoading = state.loadingNodes.contains(node.key);
+
+                        return Semantics(
+                          button: true,
+                          label: _nodeSemanticLabel(data),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: AppSpacing.xs,
+                              vertical: 2,
+                            ),
+                            child: TreeSelectorTile(
+                              node: node,
+                              isNodeLoading: isLoading,
+                              showParentSelectAction:
+                                  widget.config.allowParentSelection &&
+                                  data.hasChildren,
+                              onSelectParent: () {
+                                final result = controller.selectParentNode(
+                                  node,
+                                );
+
+                                if (result == null) {
+                                  return;
+                                }
+
+                                Navigator.of(context).pop(result);
+                              },
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // =========================================================================
+  // SEARCH MATCHING
+  // =========================================================================
+
+  bool _matchesSearch(TreeSelectorNodeModel node) {
+    final needle = _search.trim().toLowerCase();
+
+    if (needle.isEmpty) {
+      return true;
+    }
+
+    //
+    // Adjust these properties if your model uses different names.
+    //
+    final searchable = <String>[
+      node.title ?? '',
+      node.subtitle ?? '',
+    ].join(' ').toLowerCase();
+
+    return searchable.contains(needle);
+  }
+
+  String _nodeSemanticLabel(TreeSelectorNodeModel node) {
+    final parts = <String>[
+      node.title?.trim() ?? '',
+      if (node.subtitle?.trim().isNotEmpty == true) node.subtitle!.trim(),
+      if (node.hasChildren) 'Contains child items',
+    ];
+
+    return parts.join('. ');
+  }
+}
+
+// ===========================================================================
+// SEARCH
+// ===========================================================================
+
+class _TreeSearchField extends StatefulWidget {
+  const _TreeSearchField({
+    required this.controller,
+    required this.onChanged,
+    required this.onClear,
+  });
+
+  final TextEditingController controller;
+  final ValueChanged<String> onChanged;
+  final VoidCallback onClear;
+
+  @override
+  State<_TreeSearchField> createState() => _TreeSearchFieldState();
+}
+
+class _TreeSearchFieldState extends State<_TreeSearchField> {
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+
+    final hasSearch = widget.controller.text.trim().isNotEmpty;
+
+    return SearchBar(
+      controller: widget.controller,
+      hintText: 'Search options',
+      leading: Icon(LucideIcons.search, color: colors.primary),
+      trailing: [
+        if (hasSearch)
+          IconButton(
+            tooltip: 'Clear search',
+            onPressed: () {
+              widget.onClear();
+              setState(() {});
+            },
+            icon: const Icon(LucideIcons.x),
+          ),
+      ],
+      onChanged: (value) {
+        widget.onChanged(value);
+
+        setState(() {});
+      },
+      textInputAction: TextInputAction.search,
+      elevation: const WidgetStatePropertyAll(0),
+      backgroundColor: WidgetStatePropertyAll(colors.surfaceContainerLow),
+      side: WidgetStatePropertyAll(BorderSide(color: colors.outlineVariant)),
+      padding: const WidgetStatePropertyAll(
+        EdgeInsets.symmetric(horizontal: AppSpacing.md),
+      ),
+    );
+  }
+}
+
+// ===========================================================================
+// SELECTOR INFORMATION
+// ===========================================================================
+
+class _SelectorInfoCard extends StatelessWidget {
+  const _SelectorInfoCard({required this.allowParentSelection});
+
+  final bool allowParentSelection;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(AppSpacing.sm),
+      decoration: BoxDecoration(
+        color: colors.secondaryContainer,
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(
+            LucideIcons.listTree,
+            size: 18,
+            color: colors.onSecondaryContainer,
+          ),
+
+          AppSpacing.hGapSm,
+
+          Expanded(
+            child: Text(
+              allowParentSelection
+                  ? 'Tap a row to open or select it. Parent groups may also be selected when available.'
+                  : 'Tap a row to select it. Expand groups to browse deeper levels.',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: colors.onSecondaryContainer,
+                height: 1.35,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ===========================================================================
+// TREE SURFACE
+// ===========================================================================
+
+class _TreeSurface extends StatelessWidget {
+  const _TreeSurface({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+
+    return Container(
+      width: double.infinity,
+      decoration: BoxDecoration(
+        color: colors.surfaceContainerLowest,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: colors.outlineVariant),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: child,
     );
   }
 }

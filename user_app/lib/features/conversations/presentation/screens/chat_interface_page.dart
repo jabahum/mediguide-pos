@@ -1,10 +1,10 @@
 import 'package:bubble/bubble.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import 'package:user_app/core/constants/app_spacing.dart';
-import 'package:user_app/core/utils/app_extensions.dart';
 import 'package:user_app/core/widgets/app_error_view.dart';
 import 'package:user_app/core/widgets/app_loading_view.dart';
 import 'package:user_app/core/widgets/empty_state.dart';
@@ -27,9 +27,7 @@ class ChatInterfacePage extends ConsumerStatefulWidget {
 
 class _ChatInterfacePageState extends ConsumerState<ChatInterfacePage> {
   final TextEditingController _textController = TextEditingController();
-
   final FocusNode _inputFocusNode = FocusNode();
-
   final ScrollController _scrollController = ScrollController();
 
   bool _canSend = false;
@@ -39,6 +37,18 @@ class _ChatInterfacePageState extends ConsumerState<ChatInterfacePage> {
     super.initState();
 
     _textController.addListener(_handleTextChanged);
+  }
+
+  @override
+  void dispose() {
+    _textController
+      ..removeListener(_handleTextChanged)
+      ..dispose();
+
+    _inputFocusNode.dispose();
+    _scrollController.dispose();
+
+    super.dispose();
   }
 
   void _handleTextChanged() {
@@ -54,23 +64,12 @@ class _ChatInterfacePageState extends ConsumerState<ChatInterfacePage> {
   }
 
   @override
-  void dispose() {
-    _textController
-      ..removeListener(_handleTextChanged)
-      ..dispose();
-
-    _inputFocusNode.dispose();
-    _scrollController.dispose();
-
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
     final otherUser = widget.otherUser;
 
     if (otherUser == null) {
       return Scaffold(
+        appBar: AppBar(),
         body: EmptyState.noData(
           title: 'Conversation unavailable',
           description: 'The person for this conversation could not be found.',
@@ -93,33 +92,62 @@ class _ChatInterfacePageState extends ConsumerState<ChatInterfacePage> {
       }
     });
 
-    final cs = context.theme.colorScheme;
+    final colors = Theme.of(context).colorScheme;
 
     return Scaffold(
-      backgroundColor: cs.surface,
+      backgroundColor: colors.surface,
+
+      // =====================================================================
+      // APP BAR
+      // =====================================================================
       appBar: AppBar(
         titleSpacing: AppSpacing.sm,
         title: _ChatAppBarTitle(otherUser: otherUser),
       ),
-      body: Column(
-        children: [
-          Expanded(
-            child: _buildConversationBody(
-              context: context,
-              state: state,
-              controller: controller,
-            ),
-          ),
 
-          _MessageInputBar(
-            controller: _textController,
-            focusNode: _inputFocusNode,
-            canSend: _canSend && !state.isLoading,
-            onSend: () {
-              _sendMessage(controller);
-            },
-          ),
-        ],
+      // =====================================================================
+      // BODY
+      // =====================================================================
+      body: SafeArea(
+        top: false,
+        child: Column(
+          children: [
+            // =================================================================
+            // CONTENT
+            // =================================================================
+            Expanded(
+              child: _buildConversationBody(
+                context: context,
+                state: state,
+                controller: controller,
+              ),
+            ),
+
+            // =================================================================
+            // NON-BLOCKING ERROR
+            // =================================================================
+            if (state.errorMessage != null && state.messages.isNotEmpty)
+              _ConversationErrorBanner(
+                message: state.errorMessage!,
+                onRetry: () {
+                  controller.loadMessages();
+                },
+              ),
+
+            // =================================================================
+            // INPUT
+            // =================================================================
+            _MessageInputBar(
+              controller: _textController,
+              focusNode: _inputFocusNode,
+              canSend: _canSend && !state.isLoading,
+              isSending: state.isLoading,
+              onSend: () {
+                _sendMessage(controller);
+              },
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -129,9 +157,17 @@ class _ChatInterfacePageState extends ConsumerState<ChatInterfacePage> {
     required ChatInterfaceState state,
     required ChatInterfaceController controller,
   }) {
+    // =======================================================================
+    // INITIAL LOADING
+    // =======================================================================
+
     if (state.isLoading && state.messages.isEmpty) {
       return const AppLoadingView(message: 'Loading conversation...');
     }
+
+    // =======================================================================
+    // INITIAL ERROR
+    // =======================================================================
 
     if (state.errorMessage != null && state.messages.isEmpty) {
       return AppErrorView(
@@ -144,23 +180,30 @@ class _ChatInterfacePageState extends ConsumerState<ChatInterfacePage> {
       );
     }
 
+    // =======================================================================
+    // EMPTY
+    // =======================================================================
+
     if (state.messages.isEmpty) {
       return EmptyState.noData(
         title: 'Start a conversation',
         description: 'Send a message to get started.',
-        actionLabel: 'Send Message',
+        actionLabel: 'Write a message',
         onAction: () {
           _inputFocusNode.requestFocus();
         },
       );
     }
 
+    // =======================================================================
+    // MESSAGES
+    // =======================================================================
+
     return RefreshIndicator(
-      onRefresh: () {
-        return controller.loadMessages();
-      },
+      onRefresh: controller.loadMessages,
       child: ListView.builder(
         controller: _scrollController,
+        keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
         physics: const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.fromLTRB(
           AppSpacing.md,
@@ -179,14 +222,22 @@ class _ChatInterfacePageState extends ConsumerState<ChatInterfacePage> {
             message.createdDate,
           );
 
+          final showSenderSpacing =
+              previous != null && previous.sender != message.sender;
+
           return Column(
             children: [
               if (showDateSeparator)
                 _DateSeparator(label: _formatMessageDate(message.createdDate)),
 
+              if (showSenderSpacing) const SizedBox(height: AppSpacing.xs),
+
               _MessageBubble(
                 message: message,
                 currentUserId: controller.currentUserId,
+                onCopy: () {
+                  _copyMessage(context, message);
+                },
               ),
             ],
           );
@@ -194,6 +245,10 @@ class _ChatInterfacePageState extends ConsumerState<ChatInterfacePage> {
       ),
     );
   }
+
+  // =========================================================================
+  // SEND
+  // =========================================================================
 
   Future<void> _sendMessage(ChatInterfaceController controller) async {
     final text = _textController.text.trim();
@@ -213,6 +268,35 @@ class _ChatInterfacePageState extends ConsumerState<ChatInterfacePage> {
     _scrollToBottom();
   }
 
+  // =========================================================================
+  // MESSAGE ACTIONS
+  // =========================================================================
+
+  Future<void> _copyMessage(BuildContext context, Message message) async {
+    final text = message.content.trim();
+
+    if (text.isEmpty) {
+      return;
+    }
+
+    await Clipboard.setData(ClipboardData(text: text));
+
+    if (!context.mounted) {
+      return;
+    }
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Message copied.'),
+        duration: Duration(seconds: 2),
+      ),
+    );
+  }
+
+  // =========================================================================
+  // SCROLL
+  // =========================================================================
+
   void _scrollToBottom() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted || !_scrollController.hasClients) {
@@ -221,11 +305,15 @@ class _ChatInterfacePageState extends ConsumerState<ChatInterfacePage> {
 
       _scrollController.animateTo(
         _scrollController.position.maxScrollExtent,
-        duration: const Duration(milliseconds: 300),
-        curve: Curves.easeOut,
+        duration: const Duration(milliseconds: 280),
+        curve: Curves.easeOutCubic,
       );
     });
   }
+
+  // =========================================================================
+  // DATE
+  // =========================================================================
 
   bool _shouldShowDateSeparator(DateTime? previous, DateTime? current) {
     if (current == null) {
@@ -246,11 +334,13 @@ class _ChatInterfacePageState extends ConsumerState<ChatInterfacePage> {
       return '';
     }
 
+    final localDate = dateTime.toLocal();
+
     final now = DateTime.now();
 
     final today = DateTime(now.year, now.month, now.day);
 
-    final date = DateTime(dateTime.year, dateTime.month, dateTime.day);
+    final date = DateTime(localDate.year, localDate.month, localDate.day);
 
     if (date == today) {
       return 'Today';
@@ -260,11 +350,15 @@ class _ChatInterfacePageState extends ConsumerState<ChatInterfacePage> {
       return 'Yesterday';
     }
 
-    return '${dateTime.day}/'
-        '${dateTime.month}/'
-        '${dateTime.year}';
+    return '${localDate.day.toString().padLeft(2, '0')}/'
+        '${localDate.month.toString().padLeft(2, '0')}/'
+        '${localDate.year}';
   }
 }
+
+// ===========================================================================
+// APP BAR TITLE
+// ===========================================================================
 
 class _ChatAppBarTitle extends StatelessWidget {
   const _ChatAppBarTitle({required this.otherUser});
@@ -273,17 +367,23 @@ class _ChatAppBarTitle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final cs = context.theme.colorScheme;
+    final colors = Theme.of(context).colorScheme;
 
-    final displayName = otherUser.name.isNotEmpty
-        ? otherUser.name
-        : otherUser.email;
+    final displayName = otherUser.name.trim().isNotEmpty
+        ? otherUser.name.trim()
+        : otherUser.email.trim();
+
+    final subtitle = <String>[
+      if (otherUser.jobTitle.trim().isNotEmpty) otherUser.jobTitle.trim(),
+      if (otherUser.organization.trim().isNotEmpty)
+        otherUser.organization.trim(),
+    ].join(' · ');
 
     return Row(
       children: [
         UserAvatar.small(name: displayName),
 
-        AppSpacing.md.gap,
+        AppSpacing.hGapMd,
 
         Expanded(
           child: Column(
@@ -294,20 +394,20 @@ class _ChatAppBarTitle extends StatelessWidget {
                 displayName,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: context.textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.w800,
-                ),
+                style: Theme.of(
+                  context,
+                ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
               ),
 
               const SizedBox(height: 2),
 
               Text(
-                otherUser.email,
+                subtitle.isNotEmpty ? subtitle : otherUser.email,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: context.textTheme.bodySmall?.copyWith(
-                  color: cs.onSurfaceVariant,
-                ),
+                style: Theme.of(
+                  context,
+                ).textTheme.bodySmall?.copyWith(color: colors.onSurfaceVariant),
               ),
             ],
           ),
@@ -317,6 +417,10 @@ class _ChatAppBarTitle extends StatelessWidget {
   }
 }
 
+// ===========================================================================
+// DATE SEPARATOR
+// ===========================================================================
+
 class _DateSeparator extends StatelessWidget {
   const _DateSeparator({required this.label});
 
@@ -324,7 +428,7 @@ class _DateSeparator extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final cs = context.theme.colorScheme;
+    final colors = Theme.of(context).colorScheme;
 
     if (label.isEmpty) {
       return const SizedBox.shrink();
@@ -332,104 +436,141 @@ class _DateSeparator extends StatelessWidget {
 
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-        decoration: BoxDecoration(
-          color: cs.surfaceContainerHighest.withValues(alpha: 0.7),
-          borderRadius: BorderRadius.circular(999),
-        ),
-        child: Text(
-          label,
-          style: context.textTheme.labelSmall?.copyWith(
-            color: cs.onSurfaceVariant,
-            fontWeight: FontWeight.w700,
+      child: Row(
+        children: [
+          Expanded(child: Divider(color: colors.outlineVariant)),
+
+          AppSpacing.hGapSm,
+
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+            decoration: BoxDecoration(
+              color: colors.surfaceContainerLow,
+              borderRadius: BorderRadius.circular(999),
+            ),
+            child: Text(
+              label,
+              style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                color: colors.onSurfaceVariant,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
           ),
-        ),
+
+          AppSpacing.hGapSm,
+
+          Expanded(child: Divider(color: colors.outlineVariant)),
+        ],
       ),
     );
   }
 }
 
+// ===========================================================================
+// MESSAGE BUBBLE
+// ===========================================================================
+
 class _MessageBubble extends StatelessWidget {
-  const _MessageBubble({required this.message, required this.currentUserId});
+  const _MessageBubble({
+    required this.message,
+    required this.currentUserId,
+    required this.onCopy,
+  });
 
   final Message message;
   final String? currentUserId;
+  final VoidCallback onCopy;
 
   @override
   Widget build(BuildContext context) {
-    final cs = context.theme.colorScheme;
+    final colors = Theme.of(context).colorScheme;
 
     final isMe = message.sender == currentUserId;
 
-    final bubbleColor = isMe ? cs.primary : cs.surfaceContainerHighest;
+    final bubbleColor = isMe ? colors.primary : colors.surfaceContainerHigh;
 
-    final textColor = isMe ? cs.onPrimary : cs.onSurface;
+    final textColor = isMe ? colors.onPrimary : colors.onSurface;
 
     return Padding(
       padding: EdgeInsets.only(
         bottom: AppSpacing.sm,
-        left: isMe ? 56 : 0,
-        right: isMe ? 0 : 56,
+        left: isMe ? 48 : 0,
+        right: isMe ? 0 : 48,
       ),
       child: Align(
         alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
-        child: Bubble(
-          alignment: isMe ? Alignment.topRight : Alignment.topLeft,
-          nip: isMe ? BubbleNip.rightTop : BubbleNip.leftTop,
-          color: bubbleColor,
-          radius: const Radius.circular(18),
-          margin: const BubbleEdges.all(0),
-          padding: const BubbleEdges.symmetric(
-            horizontal: AppSpacing.md,
-            vertical: AppSpacing.sm,
-          ),
-          child: ConstrainedBox(
-            constraints: BoxConstraints(
-              maxWidth: MediaQuery.sizeOf(context).width * 0.72,
+        child: GestureDetector(
+          onLongPress: onCopy,
+          child: Bubble(
+            alignment: isMe ? Alignment.topRight : Alignment.topLeft,
+            nip: isMe ? BubbleNip.rightBottom : BubbleNip.leftBottom,
+            nipWidth: 8,
+            nipHeight: 7,
+            color: bubbleColor,
+            radius: const Radius.circular(18),
+            margin: const BubbleEdges.all(0),
+            padding: const BubbleEdges.symmetric(
+              horizontal: AppSpacing.md,
+              vertical: AppSpacing.sm,
             ),
-            child: Column(
-              crossAxisAlignment: isMe
-                  ? CrossAxisAlignment.end
-                  : CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                if (message.replyTo.isNotEmpty) ...[
-                  _ReplyPreview(message: message, isMe: isMe),
-                  AppSpacing.xs.gap,
-                ],
-
-                Text(
-                  message.content,
-                  style: context.textTheme.bodyMedium?.copyWith(
-                    color: textColor,
-                    height: 1.35,
-                  ),
-                ),
-
-                const SizedBox(height: 6),
-
-                Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      _formatMessageTime(message.createdDate),
-                      style: context.textTheme.labelSmall?.copyWith(
-                        color: textColor.withValues(alpha: 0.7),
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    if (isMe) ...[
-                      const SizedBox(width: 5),
-                      _MessageStatusIcon(
-                        message: message,
-                        currentUserId: currentUserId,
-                        color: textColor.withValues(alpha: 0.75),
-                      ),
-                    ],
+            child: ConstrainedBox(
+              constraints: BoxConstraints(
+                maxWidth: MediaQuery.sizeOf(context).width * 0.76,
+              ),
+              child: Column(
+                crossAxisAlignment: isMe
+                    ? CrossAxisAlignment.end
+                    : CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // =========================================================
+                  // REPLY
+                  // =========================================================
+                  if (message.replyTo.isNotEmpty) ...[
+                    _ReplyPreview(message: message, isMe: isMe),
+                    AppSpacing.gapXs,
                   ],
-                ),
-              ],
+
+                  // =========================================================
+                  // CONTENT
+                  // =========================================================
+                  SelectableText(
+                    message.content,
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: textColor,
+                      height: 1.4,
+                    ),
+                  ),
+
+                  const SizedBox(height: 6),
+
+                  // =========================================================
+                  // METADATA
+                  // =========================================================
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        _formatMessageTime(message.createdDate),
+                        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                          color: textColor.withValues(alpha: 0.7),
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+
+                      if (isMe) ...[
+                        const SizedBox(width: 5),
+
+                        _MessageStatusIcon(
+                          message: message,
+                          currentUserId: currentUserId,
+                          color: textColor.withValues(alpha: 0.8),
+                        ),
+                      ],
+                    ],
+                  ),
+                ],
+              ),
             ),
           ),
         ),
@@ -442,10 +583,21 @@ class _MessageBubble extends StatelessWidget {
       return '';
     }
 
-    return '${dateTime.hour.toString().padLeft(2, '0')}:'
-        '${dateTime.minute.toString().padLeft(2, '0')}';
+    final local = dateTime.toLocal();
+
+    final hour12 = local.hour % 12 == 0 ? 12 : local.hour % 12;
+
+    final minute = local.minute.toString().padLeft(2, '0');
+
+    final period = local.hour >= 12 ? 'PM' : 'AM';
+
+    return '$hour12:$minute $period';
   }
 }
+
+// ===========================================================================
+// REPLY PREVIEW
+// ===========================================================================
 
 class _ReplyPreview extends StatelessWidget {
   const _ReplyPreview({required this.message, required this.isMe});
@@ -455,48 +607,58 @@ class _ReplyPreview extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final cs = context.theme.colorScheme;
+    final colors = Theme.of(context).colorScheme;
 
-    final replyToMessage = message.replyToMessage;
+    final reply = message.replyToMessage;
 
-    if (replyToMessage == null) {
+    if (reply == null) {
       return const SizedBox.shrink();
     }
 
-    final baseColor = isMe ? cs.onPrimary : cs.primary;
+    final foreground = isMe ? colors.onPrimary : colors.primary;
 
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(AppSpacing.sm),
       decoration: BoxDecoration(
-        color: baseColor.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(12),
-        border: Border(left: BorderSide(color: baseColor, width: 3)),
+        color: foreground.withValues(alpha: 0.10),
+        borderRadius: BorderRadius.circular(10),
+        border: Border(left: BorderSide(color: foreground, width: 3)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            replyToMessage.senderUser?.name ?? 'User',
-            style: context.textTheme.labelMedium?.copyWith(
-              color: baseColor,
+            reply.senderUser?.name.trim().isNotEmpty == true
+                ? reply.senderUser!.name.trim()
+                : 'Message',
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: Theme.of(context).textTheme.labelMedium?.copyWith(
+              color: foreground,
               fontWeight: FontWeight.w800,
             ),
           ),
+
           const SizedBox(height: 2),
+
           Text(
-            replyToMessage.content,
-            style: context.textTheme.bodySmall?.copyWith(
-              color: baseColor.withValues(alpha: 0.85),
-            ),
+            reply.content,
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              color: foreground.withValues(alpha: 0.85),
+            ),
           ),
         ],
       ),
     );
   }
 }
+
+// ===========================================================================
+// MESSAGE STATUS
+// ===========================================================================
 
 class _MessageStatusIcon extends StatelessWidget {
   const _MessageStatusIcon({
@@ -523,101 +685,178 @@ class _MessageStatusIcon extends StatelessWidget {
   }
 }
 
+// ===========================================================================
+// INPUT BAR
+// ===========================================================================
+
 class _MessageInputBar extends StatelessWidget {
   const _MessageInputBar({
     required this.controller,
     required this.focusNode,
     required this.canSend,
+    required this.isSending,
     required this.onSend,
   });
 
   final TextEditingController controller;
   final FocusNode focusNode;
   final bool canSend;
+  final bool isSending;
   final VoidCallback onSend;
 
   @override
   Widget build(BuildContext context) {
-    final cs = context.theme.colorScheme;
+    final colors = Theme.of(context).colorScheme;
 
-    return Container(
-      padding: const EdgeInsets.fromLTRB(
-        AppSpacing.md,
-        AppSpacing.sm,
-        AppSpacing.md,
-        AppSpacing.sm,
-      ),
+    return DecoratedBox(
       decoration: BoxDecoration(
-        color: cs.surface,
-        border: Border(
-          top: BorderSide(color: cs.outlineVariant.withValues(alpha: 0.45)),
-        ),
+        color: colors.surface,
+        border: Border(top: BorderSide(color: colors.outlineVariant)),
       ),
-      child: SafeArea(
-        top: false,
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.end,
-          children: [
-            Expanded(
-              child: TextField(
-                controller: controller,
-                focusNode: focusNode,
-                minLines: 1,
-                maxLines: 5,
-                textCapitalization: TextCapitalization.sentences,
-                textInputAction: TextInputAction.newline,
-                decoration: InputDecoration(
-                  hintText: 'Type a message...',
-                  filled: true,
-                  fillColor: cs.surfaceContainerHighest.withValues(alpha: 0.7),
-                  contentPadding: const EdgeInsets.symmetric(
-                    horizontal: AppSpacing.md,
-                    vertical: 12,
-                  ),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(24),
-                    borderSide: BorderSide.none,
-                  ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(24),
-                    borderSide: BorderSide(
-                      color: cs.outlineVariant.withValues(alpha: 0.35),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(
+          AppSpacing.md,
+          AppSpacing.sm,
+          AppSpacing.md,
+          AppSpacing.sm,
+        ),
+        child: SafeArea(
+          top: false,
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              // =============================================================
+              // TEXT INPUT
+              // =============================================================
+              Expanded(
+                child: TextField(
+                  controller: controller,
+                  focusNode: focusNode,
+                  minLines: 1,
+                  maxLines: 5,
+                  textCapitalization: TextCapitalization.sentences,
+                  keyboardType: TextInputType.multiline,
+                  textInputAction: TextInputAction.newline,
+                  decoration: InputDecoration(
+                    hintText: 'Type a message...',
+                    filled: true,
+                    fillColor: colors.surfaceContainerLow,
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: AppSpacing.md,
+                      vertical: 12,
+                    ),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(22),
+                      borderSide: BorderSide(color: colors.outlineVariant),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(22),
+                      borderSide: BorderSide(color: colors.outlineVariant),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(22),
+                      borderSide: BorderSide(color: colors.primary, width: 1.4),
                     ),
                   ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(24),
-                    borderSide: BorderSide(color: cs.primary, width: 1.5),
-                  ),
-                ),
-                onSubmitted: (_) {
-                  if (canSend) {
-                    onSend();
-                  }
-                },
-              ),
-            ),
-
-            AppSpacing.sm.gap,
-
-            AnimatedContainer(
-              duration: const Duration(milliseconds: 180),
-              width: 46,
-              height: 46,
-              decoration: BoxDecoration(
-                color: canSend ? cs.primary : cs.surfaceContainerHighest,
-                borderRadius: BorderRadius.circular(18),
-              ),
-              child: IconButton(
-                onPressed: canSend ? onSend : null,
-                icon: Icon(
-                  LucideIcons.send,
-                  color: canSend ? cs.onPrimary : cs.onSurfaceVariant,
-                  size: 20,
                 ),
               ),
-            ),
-          ],
+
+              AppSpacing.hGapSm,
+
+              // =============================================================
+              // SEND
+              // =============================================================
+              AnimatedContainer(
+                duration: const Duration(milliseconds: 160),
+                width: 46,
+                height: 46,
+                decoration: BoxDecoration(
+                  color: canSend ? colors.primary : colors.surfaceContainerHigh,
+                  shape: BoxShape.circle,
+                ),
+                child: isSending
+                    ? Padding(
+                        padding: const EdgeInsets.all(13),
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: colors.onPrimary,
+                        ),
+                      )
+                    : IconButton(
+                        tooltip: 'Send message',
+                        onPressed: canSend ? onSend : null,
+                        icon: Icon(
+                          LucideIcons.send,
+                          size: 19,
+                          color: canSend
+                              ? colors.onPrimary
+                              : colors.onSurfaceVariant,
+                        ),
+                      ),
+              ),
+            ],
+          ),
         ),
+      ),
+    );
+  }
+}
+
+// ===========================================================================
+// NON-BLOCKING ERROR
+// ===========================================================================
+
+class _ConversationErrorBanner extends StatelessWidget {
+  const _ConversationErrorBanner({
+    required this.message,
+    required this.onRetry,
+  });
+
+  final String message;
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+
+    return Container(
+      margin: const EdgeInsets.fromLTRB(
+        AppSpacing.md,
+        AppSpacing.xs,
+        AppSpacing.md,
+        AppSpacing.xs,
+      ),
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.md,
+        vertical: AppSpacing.sm,
+      ),
+      decoration: BoxDecoration(
+        color: colors.errorContainer,
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            LucideIcons.triangleAlert,
+            size: 17,
+            color: colors.onErrorContainer,
+          ),
+
+          AppSpacing.hGapSm,
+
+          Expanded(
+            child: Text(
+              message,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: Theme.of(
+                context,
+              ).textTheme.bodySmall?.copyWith(color: colors.onErrorContainer),
+            ),
+          ),
+
+          TextButton(onPressed: onRetry, child: const Text('Retry')),
+        ],
       ),
     );
   }

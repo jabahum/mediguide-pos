@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
+import 'package:user_app/app/providers/app_providers.dart';
 import 'package:user_app/core/config/app_keys.dart';
 import 'package:user_app/core/constants/app_spacing.dart';
 import 'package:user_app/core/utils/app_extensions.dart';
@@ -17,7 +18,6 @@ import 'package:user_app/features/guidelines/presentation/controllers/read_guide
 import 'package:user_app/features/guidelines/presentation/widgets/guideline_header.dart';
 import 'package:user_app/features/guidelines/presentation/widgets/guideline_section.dart';
 
-import 'package:user_app/app/providers/app_providers.dart';
 import 'package:user_app/shared/models/models.dart';
 import 'package:user_app/shared/widgets/ai_context_button.dart';
 
@@ -37,6 +37,9 @@ class _ReadGuidelinePageState extends ConsumerState<ReadGuidelinePage> {
   final Map<String, GlobalKey> _sectionKeys = {};
 
   Timer? _saveDebounce;
+  Timer? _visibleSectionDebounce;
+
+  String? _visibleSectionField;
 
   @override
   void initState() {
@@ -50,6 +53,7 @@ class _ReadGuidelinePageState extends ConsumerState<ReadGuidelinePage> {
   @override
   void dispose() {
     _saveDebounce?.cancel();
+    _visibleSectionDebounce?.cancel();
 
     _scrollController
       ..removeListener(_trackScroll)
@@ -57,6 +61,10 @@ class _ReadGuidelinePageState extends ConsumerState<ReadGuidelinePage> {
 
     super.dispose();
   }
+
+  // =========================================================================
+  // REQUEST
+  // =========================================================================
 
   ReadGuidelineRequest _resolveRequest() {
     final arguments = widget.arguments;
@@ -77,34 +85,85 @@ class _ReadGuidelinePageState extends ConsumerState<ReadGuidelinePage> {
     return ReadGuidelineRequest(id: arguments?.toString().trim() ?? '');
   }
 
+  // =========================================================================
+  // SCROLL / PROGRESS
+  // =========================================================================
+
   void _trackScroll() {
     if (!_scrollController.hasClients) {
       return;
     }
 
-    final maxExtent = _scrollController.position.maxScrollExtent;
+    final position = _scrollController.position;
 
-    if (maxExtent <= 0) {
+    final maxExtent = position.maxScrollExtent;
+
+    if (maxExtent > 0) {
+      final progress = (position.pixels / maxExtent).clamp(0.0, 1.0);
+
+      final controller = ref.read(
+        readGuidelineControllerProvider(_request).notifier,
+      );
+
+      controller.setProgress(progress);
+
+      _saveDebounce?.cancel();
+
+      _saveDebounce = Timer(const Duration(seconds: 2), () {
+        controller.saveProgress();
+      });
+    }
+
+    _visibleSectionDebounce?.cancel();
+
+    _visibleSectionDebounce = Timer(
+      const Duration(milliseconds: 100),
+      _updateVisibleSection,
+    );
+  }
+
+  void _updateVisibleSection() {
+    if (!mounted) {
       return;
     }
 
-    final progress = (_scrollController.position.pixels / maxExtent).clamp(
-      0.0,
-      1.0,
-    );
+    String? nearestField;
+    var nearestDistance = double.infinity;
 
-    final controller = ref.read(
-      readGuidelineControllerProvider(_request).notifier,
-    );
+    for (final entry in _sectionKeys.entries) {
+      final context = entry.value.currentContext;
 
-    controller.setProgress(progress);
+      final renderObject = context?.findRenderObject();
 
-    _saveDebounce?.cancel();
+      if (renderObject is! RenderBox || !renderObject.attached) {
+        continue;
+      }
 
-    _saveDebounce = Timer(const Duration(seconds: 2), () {
-      controller.saveProgress();
+      final position = renderObject.localToGlobal(Offset.zero);
+
+      //
+      // Aim slightly below the app bar / section selector.
+      //
+      final distance = (position.dy - 140).abs();
+
+      if (distance < nearestDistance) {
+        nearestDistance = distance;
+        nearestField = entry.key;
+      }
+    }
+
+    if (nearestField == null || nearestField == _visibleSectionField) {
+      return;
+    }
+
+    setState(() {
+      _visibleSectionField = nearestField;
     });
   }
+
+  // =========================================================================
+  // BUILD
+  // =========================================================================
 
   @override
   Widget build(BuildContext context) {
@@ -113,18 +172,12 @@ class _ReadGuidelinePageState extends ConsumerState<ReadGuidelinePage> {
     final asyncState = ref.watch(provider);
 
     return asyncState.when(
-      // ==================================================
-      // LOADING
-      // ==================================================
       loading: () {
         return const Scaffold(
           body: AppLoadingView(message: 'Loading guideline...'),
         );
       },
 
-      // ==================================================
-      // ERROR
-      // ==================================================
       error: (error, stackTrace) {
         final noGuidelineSelected = _request.id.isEmpty;
 
@@ -147,9 +200,6 @@ class _ReadGuidelinePageState extends ConsumerState<ReadGuidelinePage> {
         );
       },
 
-      // ==================================================
-      // DATA
-      // ==================================================
       data: (state) {
         return _buildReader(context, provider, state);
       },
@@ -165,85 +215,128 @@ class _ReadGuidelinePageState extends ConsumerState<ReadGuidelinePage> {
 
     final hasSections = state.sections.isNotEmpty;
 
-    // DefaultTabController cannot have length 0.
-    if (!hasSections) {
-      return Scaffold(
-        appBar: _buildAppBar(
-          context: context,
-          state: state,
-          controller: controller,
-        ),
-        body: SingleChildScrollView(
-          controller: _scrollController,
-          padding: EdgeInsets.all(Responsive.horizontalPadding(context)),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              GuidelineHeader(guideline: state.guideline),
+    return Scaffold(
+      appBar: _buildAppBar(
+        context: context,
+        state: state,
+        controller: controller,
+      ),
 
-              AppSpacing.contentGap,
+      body: Column(
+        children: [
+          // ===============================================================
+          // READING PROGRESS
+          // ===============================================================
+          // _ReadingProgressBar(progress: state.progress),
 
-              Text(
-                'No structured sections are available for this guideline.',
-                style: context.textTheme.bodyMedium?.copyWith(
-                  color: context.theme.colorScheme.onSurfaceVariant,
+          // ===============================================================
+          // SECTION NAVIGATION
+          // ===============================================================
+          if (hasSections)
+            _SectionNavigationBar(
+              sections: state.sections,
+              selectedField: _visibleSectionField,
+              onSelected: (section) {
+                _navigateToSection(controller, section);
+              },
+            ),
+
+          // ===============================================================
+          // CONTENT
+          // ===============================================================
+          Expanded(
+            child: NotificationListener<ScrollNotification>(
+              onNotification: (notification) {
+                if (notification is ScrollUpdateNotification ||
+                    notification is ScrollEndNotification) {
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    _updateVisibleSection();
+                  });
+                }
+
+                return false;
+              },
+              child: SingleChildScrollView(
+                controller: _scrollController,
+                keyboardDismissBehavior:
+                    ScrollViewKeyboardDismissBehavior.onDrag,
+                padding: EdgeInsets.fromLTRB(
+                  Responsive.horizontalPadding(context),
+                  AppSpacing.lg,
+                  Responsive.horizontalPadding(context),
+                  AppSpacing.xxxl,
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    GuidelineHeader(guideline: state.guideline),
+
+                    AppSpacing.contentGap,
+
+                    if (!hasSections)
+                      _NoStructuredSections(guideline: state.guideline)
+                    else
+                      for (final section in state.sections) ...[
+                        _SectionAnchor(
+                          key: _sectionKey(section),
+                          child: GuidelineSectionWidget(
+                            section: section,
+                            content: guidelineSectionContent(
+                              state.guideline,
+                              section,
+                            ),
+                          ),
+                        ),
+
+                        AppSpacing.gapLg,
+                      ],
+                  ],
                 ),
               ),
-
-              AppSpacing.xxl.gap,
-            ],
+            ),
           ),
-        ),
-      );
-    }
-
-    return DefaultTabController(
-      length: state.sections.length,
-      child: Scaffold(
-        appBar: _buildAppBar(
-          context: context,
-          state: state,
-          controller: controller,
-          showTabs: true,
-        ),
-        body: SingleChildScrollView(
-          controller: _scrollController,
-          padding: EdgeInsets.all(Responsive.horizontalPadding(context)),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              GuidelineHeader(guideline: state.guideline),
-
-              AppSpacing.contentGap,
-
-              for (final section in state.sections)
-                GuidelineSectionWidget(
-                  key: _sectionKey(section),
-                  section: section,
-                  content: guidelineSectionContent(state.guideline, section),
-                ),
-
-              AppSpacing.xxl.gap,
-            ],
-          ),
-        ),
+        ],
       ),
     );
   }
+
+  // =========================================================================
+  // APP BAR
+  // =========================================================================
 
   PreferredSizeWidget _buildAppBar({
     required BuildContext context,
     required ReadGuidelineState state,
     required ReadGuidelineController controller,
-    bool showTabs = false,
   }) {
+    final colors = Theme.of(context).colorScheme;
+
     return AppBar(
-      title: Text(
-        state.guideline.conditionName,
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-        style: context.textTheme.titleMedium,
+      titleSpacing: AppSpacing.sm,
+      title: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            state.guideline.conditionName,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: Theme.of(
+              context,
+            ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
+          ),
+
+          if (_visibleSectionLabel(state.sections) != null)
+            Text(
+              _visibleSectionLabel(state.sections)!,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: Theme.of(
+                context,
+              ).textTheme.bodySmall?.copyWith(color: colors.onSurfaceVariant),
+            ),
+        ],
       ),
+
       actions: [
         AiContextButton.iconButton(context: _guidelineContext(state)),
 
@@ -264,31 +357,45 @@ class _ReadGuidelinePageState extends ConsumerState<ReadGuidelinePage> {
                 )
               : Icon(
                   state.isBookmarked
-                      ? LucideIcons.bookmark
+                      ? LucideIcons.bookmarkCheck
                       : LucideIcons.bookmarkPlus,
                 ),
         ),
+
+        AppSpacing.hGapXs,
       ],
-      bottom: showTabs
-          ? TabBar(
-              isScrollable: true,
-              tabAlignment: TabAlignment.start,
-              tabs: [
-                for (final section in state.sections) Tab(text: section.label),
-              ],
-              onTap: (index) {
-                _navigateToSection(controller, state.sections[index]);
-              },
-            )
-          : null,
     );
   }
+
+  String? _visibleSectionLabel(List<GuidelineSection> sections) {
+    final field = _visibleSectionField;
+
+    if (field == null) {
+      return null;
+    }
+
+    for (final section in sections) {
+      if (section.fieldName == field) {
+        return section.label;
+      }
+    }
+
+    return null;
+  }
+
+  // =========================================================================
+  // SECTION NAVIGATION
+  // =========================================================================
 
   void _navigateToSection(
     ReadGuidelineController controller,
     GuidelineSection section,
   ) {
     controller.selectSection(section);
+
+    setState(() {
+      _visibleSectionField = section.fieldName;
+    });
 
     final sectionContext = _sectionKey(section).currentContext;
 
@@ -298,14 +405,19 @@ class _ReadGuidelinePageState extends ConsumerState<ReadGuidelinePage> {
 
     Scrollable.ensureVisible(
       sectionContext,
-      duration: const Duration(milliseconds: 500),
-      curve: Curves.easeInOut,
+      duration: const Duration(milliseconds: 350),
+      curve: Curves.easeOutCubic,
+      alignment: 0.02,
     );
   }
 
   GlobalKey _sectionKey(GuidelineSection section) {
     return _sectionKeys.putIfAbsent(section.fieldName, GlobalKey.new);
   }
+
+  // =========================================================================
+  // BOOKMARK
+  // =========================================================================
 
   Future<void> _toggleBookmark(
     ReadGuidelineController controller,
@@ -335,6 +447,10 @@ class _ReadGuidelinePageState extends ConsumerState<ReadGuidelinePage> {
     AppMessage.error(navigatorContext, 'Failed to update bookmark');
   }
 
+  // =========================================================================
+  // AI CONTEXT
+  // =========================================================================
+
   AiContext _guidelineContext(ReadGuidelineState state) {
     final contents = <String, dynamic>{};
 
@@ -355,5 +471,159 @@ class _ReadGuidelinePageState extends ConsumerState<ReadGuidelinePage> {
           guidelineData: contents,
           guidelineId: state.guideline.id,
         );
+  }
+}
+
+// ===========================================================================
+// READING PROGRESS
+// ===========================================================================
+
+class _ReadingProgressBar extends StatelessWidget {
+  const _ReadingProgressBar({required this.progress});
+
+  final double progress;
+
+  @override
+  Widget build(BuildContext context) {
+    final value = progress.clamp(0.0, 1.0);
+
+    if (value <= 0) {
+      return const SizedBox.shrink();
+    }
+
+    return LinearProgressIndicator(value: value, minHeight: 3);
+  }
+}
+
+// ===========================================================================
+// SECTION NAVIGATION
+// ===========================================================================
+
+class _SectionNavigationBar extends StatelessWidget {
+  const _SectionNavigationBar({
+    required this.sections,
+    required this.selectedField,
+    required this.onSelected,
+  });
+
+  final List<GuidelineSection> sections;
+
+  final String? selectedField;
+
+  final ValueChanged<GuidelineSection> onSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+
+    return Container(
+      height: 54,
+      decoration: BoxDecoration(
+        color: colors.surface,
+        border: Border(bottom: BorderSide(color: colors.outlineVariant)),
+      ),
+      child: ListView.separated(
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.md,
+          vertical: AppSpacing.sm,
+        ),
+        scrollDirection: Axis.horizontal,
+        itemCount: sections.length,
+        separatorBuilder: (_, _) => AppSpacing.hGapSm,
+        itemBuilder: (context, index) {
+          final section = sections[index];
+
+          final selected = section.fieldName == selectedField;
+
+          return ChoiceChip(
+            selected: selected,
+            label: Text(
+              section.label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+            onSelected: (_) {
+              onSelected(section);
+            },
+          );
+        },
+      ),
+    );
+  }
+}
+
+// ===========================================================================
+// SECTION ANCHOR
+// ===========================================================================
+
+class _SectionAnchor extends StatelessWidget {
+  const _SectionAnchor({super.key, required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(container: true, child: child);
+  }
+}
+
+// ===========================================================================
+// NO STRUCTURED SECTIONS
+// ===========================================================================
+
+class _NoStructuredSections extends StatelessWidget {
+  const _NoStructuredSections({required this.guideline});
+
+  final Guideline guideline;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(AppSpacing.lg),
+      decoration: BoxDecoration(
+        color: colors.surfaceContainerLow,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: colors.outlineVariant),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 42,
+            height: 42,
+            decoration: BoxDecoration(
+              color: colors.primaryContainer,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(
+              LucideIcons.bookOpenText,
+              color: colors.primary,
+              size: 20,
+            ),
+          ),
+
+          AppSpacing.gapMd,
+
+          Text(
+            'No structured sections available',
+            style: Theme.of(
+              context,
+            ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+          ),
+
+          AppSpacing.gapSm,
+
+          Text(
+            'This guideline does not currently contain structured reader sections.',
+            style: Theme.of(
+              context,
+            ).textTheme.bodyMedium?.copyWith(color: colors.onSurfaceVariant),
+          ),
+        ],
+      ),
+    );
   }
 }

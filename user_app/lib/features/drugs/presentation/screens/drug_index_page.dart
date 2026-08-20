@@ -16,26 +16,54 @@ import 'package:user_app/shared/models/models.dart';
 import 'package:user_app/shared/widgets/filter_button.dart';
 import 'package:user_app/shared/widgets/pagination_indicators.dart';
 
-class DrugIndexPage extends ConsumerWidget {
+class DrugIndexPage extends ConsumerStatefulWidget {
   const DrugIndexPage({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<DrugIndexPage> createState() => _DrugIndexPageState();
+}
+
+class _DrugIndexPageState extends ConsumerState<DrugIndexPage> {
+  final TextEditingController _searchController = TextEditingController();
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final state = ref.watch(drugIndexControllerProvider);
 
     final controller = ref.read(drugIndexControllerProvider.notifier);
 
-    final cs = context.theme.colorScheme;
+    final colors = Theme.of(context).colorScheme;
 
     return Scaffold(
-      backgroundColor: cs.surface,
+      backgroundColor: colors.surface,
+
+      // =====================================================================
+      // APP BAR
+      // =====================================================================
       appBar: AppBar(
         titleSpacing: AppSpacing.md,
-        title: Text(
-          AppTranslationKey.drugIndex.tr,
-          style: context.textTheme.titleLarge?.copyWith(
-            fontWeight: FontWeight.w800,
-          ),
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              AppTranslationKey.drugIndex.tr,
+              style: Theme.of(
+                context,
+              ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
+            ),
+            Text(
+              'Reviewed medicine references',
+              style: Theme.of(
+                context,
+              ).textTheme.bodySmall?.copyWith(color: colors.onSurfaceVariant),
+            ),
+          ],
         ),
         actions: [
           FilterButton(
@@ -45,35 +73,112 @@ class DrugIndexPage extends ConsumerWidget {
             },
             onReset: state.hasActiveFilters ? controller.clearAllFilters : null,
           ),
-          AppSpacing.xs.gap,
+          AppSpacing.hGapXs,
         ],
       ),
+
+      // =====================================================================
+      // BODY
+      // =====================================================================
       body: RefreshIndicator(
         onRefresh: () async {
           controller.refreshData();
         },
         child: CustomScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
+          keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
           slivers: [
-            SliverPadding(
-              padding: const EdgeInsets.fromLTRB(
-                AppSpacing.md,
-                AppSpacing.sm,
-                AppSpacing.md,
-                0,
-              ),
-              sliver: SliverToBoxAdapter(
-                child: _DrugIndexHeaderCard(
-                  onOpenFilters: () {
-                    controller.showFilterModal(context);
-                  },
+            // =================================================================
+            // SEARCH + FILTER CONTEXT
+            // =================================================================
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(
+                  AppSpacing.md,
+                  AppSpacing.md,
+                  AppSpacing.md,
+                  0,
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _DrugSearchField(
+                      controller: _searchController,
+                      onChanged: (value) {
+                        //
+                        // If your controller already exposes a search method,
+                        // replace this with that method.
+                        //
+                        // Example:
+                        // controller.setSearchQuery(value);
+                      },
+                      onSubmitted: (value) {
+                        //
+                        // Replace with your controller search submit method.
+                        //
+                        // Example:
+                        // controller.submitSearchQuery(value);
+                      },
+                      onClear: () {
+                        _searchController.clear();
+
+                        //
+                        // Replace with your controller's clear search method.
+                        //
+                        // Example:
+                        // controller.setSearchQuery('');
+                        // controller.submitSearchQuery('');
+                        //
+
+                        setState(() {});
+                      },
+                    ),
+
+                    if (state.hasActiveFilters) ...[
+                      AppSpacing.gapMd,
+                      _ActiveDrugFiltersBanner(
+                        onClear: controller.clearAllFilters,
+                        onOpenFilters: () {
+                          controller.showFilterModal(context);
+                        },
+                      ),
+                    ],
+
+                    AppSpacing.gapLg,
+
+                    Text(
+                      state.hasActiveFilters
+                          ? 'Matching medicines'
+                          : 'Medicines',
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+
+                    const SizedBox(height: 3),
+
+                    Text(
+                      state.hasActiveFilters
+                          ? 'Showing medicines matching the current filters.'
+                          : 'Browse medicine indications, dosage guidance and safety information.',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: colors.onSurfaceVariant,
+                      ),
+                    ),
+
+                    AppSpacing.gapSm,
+                  ],
                 ),
               ),
             ),
+
+            // =================================================================
+            // PAGINATED MEDICINES
+            // =================================================================
             SliverPadding(
               padding: const EdgeInsets.fromLTRB(
                 AppSpacing.md,
-                AppSpacing.md,
+                0,
                 AppSpacing.md,
                 AppSpacing.xxxl,
               ),
@@ -83,8 +188,11 @@ class DrugIndexPage extends ConsumerWidget {
                   return PagedSliverList<int, Drug>.separated(
                     state: pagingState,
                     fetchNextPage: fetchNextPage,
-                    separatorBuilder: (context, index) => AppSpacing.sm.gap,
+                    separatorBuilder: (_, _) => AppSpacing.sm.gap,
                     builderDelegate: PagedChildBuilderDelegate<Drug>(
+                      // =====================================================
+                      // ITEM
+                      // =====================================================
                       itemBuilder: (context, drug, index) {
                         return _DrugCardShell(
                           child: DrugCard(
@@ -99,25 +207,25 @@ class DrugIndexPage extends ConsumerWidget {
                         );
                       },
 
-                      // =========================
+                      // =====================================================
                       // FIRST PAGE LOADING
-                      // =========================
+                      // =====================================================
                       firstPageProgressIndicatorBuilder: (_) {
                         return const AppLoadingView(
                           message: 'Loading medicines...',
                         );
                       },
 
-                      // =========================
+                      // =====================================================
                       // NEXT PAGE LOADING
-                      // =========================
+                      // =====================================================
                       newPageProgressIndicatorBuilder: (_) {
                         return PaginationIndicators.newPageProgress();
                       },
 
-                      // =========================
+                      // =====================================================
                       // FIRST PAGE ERROR
-                      // =========================
+                      // =====================================================
                       firstPageErrorIndicatorBuilder: (_) {
                         return AppErrorView(
                           error:
@@ -129,9 +237,9 @@ class DrugIndexPage extends ConsumerWidget {
                         );
                       },
 
-                      // =========================
+                      // =====================================================
                       // NEXT PAGE ERROR
-                      // =========================
+                      // =====================================================
                       newPageErrorIndicatorBuilder: (_) {
                         return PaginationIndicators.newPageError(
                           onRetry: fetchNextPage,
@@ -140,9 +248,9 @@ class DrugIndexPage extends ConsumerWidget {
                         );
                       },
 
-                      // =========================
+                      // =====================================================
                       // EMPTY
-                      // =========================
+                      // =====================================================
                       noItemsFoundIndicatorBuilder: (_) {
                         if (state.hasActiveFilters) {
                           return EmptyState.noResults(
@@ -160,11 +268,14 @@ class DrugIndexPage extends ConsumerWidget {
                         );
                       },
 
-                      // =========================
+                      // =====================================================
                       // END
-                      // =========================
+                      // =====================================================
                       noMoreItemsIndicatorBuilder: (_) {
-                        return PaginationIndicators.noMoreItems();
+                        return Padding(
+                          padding: AppSpacing.vPaddingMd,
+                          child: PaginationIndicators.noMoreItems(),
+                        );
                       },
                     ),
                   );
@@ -178,70 +289,124 @@ class DrugIndexPage extends ConsumerWidget {
   }
 }
 
-class _DrugIndexHeaderCard extends StatelessWidget {
-  const _DrugIndexHeaderCard({required this.onOpenFilters});
+// ===========================================================================
+// SEARCH
+// ===========================================================================
 
+class _DrugSearchField extends StatefulWidget {
+  const _DrugSearchField({
+    required this.controller,
+    required this.onChanged,
+    required this.onSubmitted,
+    required this.onClear,
+  });
+
+  final TextEditingController controller;
+  final ValueChanged<String> onChanged;
+  final ValueChanged<String> onSubmitted;
+  final VoidCallback onClear;
+
+  @override
+  State<_DrugSearchField> createState() => _DrugSearchFieldState();
+}
+
+class _DrugSearchFieldState extends State<_DrugSearchField> {
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+
+    final hasSearch = widget.controller.text.trim().isNotEmpty;
+
+    return SearchBar(
+      controller: widget.controller,
+      hintText: 'Search medicines',
+      leading: Icon(LucideIcons.search, color: colors.primary),
+      trailing: [
+        if (hasSearch)
+          IconButton(
+            tooltip: 'Clear search',
+            onPressed: () {
+              widget.onClear();
+              setState(() {});
+            },
+            icon: const Icon(LucideIcons.x),
+          ),
+      ],
+      onChanged: (value) {
+        widget.onChanged(value);
+        setState(() {});
+      },
+      onSubmitted: widget.onSubmitted,
+      textInputAction: TextInputAction.search,
+      elevation: const WidgetStatePropertyAll(0),
+      backgroundColor: WidgetStatePropertyAll(colors.surfaceContainerLow),
+      side: WidgetStatePropertyAll(BorderSide(color: colors.outlineVariant)),
+      padding: const WidgetStatePropertyAll(
+        EdgeInsets.symmetric(horizontal: AppSpacing.md),
+      ),
+    );
+  }
+}
+
+// ===========================================================================
+// ACTIVE FILTERS
+// ===========================================================================
+
+class _ActiveDrugFiltersBanner extends StatelessWidget {
+  const _ActiveDrugFiltersBanner({
+    required this.onClear,
+    required this.onOpenFilters,
+  });
+
+  final VoidCallback onClear;
   final VoidCallback onOpenFilters;
 
   @override
   Widget build(BuildContext context) {
-    final cs = context.theme.colorScheme;
+    final colors = Theme.of(context).colorScheme;
 
     return Container(
-      padding: const EdgeInsets.all(AppSpacing.lg),
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.md,
+        vertical: AppSpacing.sm,
+      ),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(24),
-        color: cs.primaryContainer.withValues(alpha: 0.35),
-        border: Border.all(color: cs.primary.withValues(alpha: 0.08)),
+        color: colors.secondaryContainer,
+        borderRadius: BorderRadius.circular(14),
       ),
       child: Row(
         children: [
-          Container(
-            width: 54,
-            height: 54,
-            decoration: BoxDecoration(
-              color: cs.primary.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(18),
-            ),
-            child: Icon(LucideIcons.pill, color: cs.primary, size: 28),
+          Icon(
+            LucideIcons.listFilter,
+            size: 18,
+            color: colors.onSecondaryContainer,
           ),
 
-          AppSpacing.md.gap,
+          AppSpacing.hGapSm,
 
           Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  AppTranslationKey.drugIndex.tr,
-                  style: context.textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  'Search medicines, review indications, dosage guidance and safety information.',
-                  style: context.textTheme.bodySmall?.copyWith(
-                    color: cs.onSurfaceVariant,
-                    height: 1.4,
-                  ),
-                ),
-              ],
+            child: Text(
+              'Filters applied',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: colors.onSecondaryContainer,
+                fontWeight: FontWeight.w700,
+              ),
             ),
           ),
 
-          AppSpacing.sm.gap,
+          TextButton(onPressed: onOpenFilters, child: const Text('Edit')),
 
-          IconButton.filledTonal(
-            onPressed: onOpenFilters,
-            icon: const Icon(LucideIcons.slidersHorizontal),
-            tooltip: 'Filter drugs',
-          ),
+          TextButton(onPressed: onClear, child: const Text('Clear')),
         ],
       ),
     );
   }
 }
+
+// ===========================================================================
+// DRUG CARD SHELL
+// ===========================================================================
 
 class _DrugCardShell extends StatelessWidget {
   const _DrugCardShell({required this.child});
@@ -250,13 +415,13 @@ class _DrugCardShell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final cs = context.theme.colorScheme;
+    final colors = Theme.of(context).colorScheme;
 
     return Container(
       decoration: BoxDecoration(
-        color: cs.surfaceContainerLowest,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: cs.outlineVariant.withValues(alpha: 0.35)),
+        color: colors.surfaceContainerLowest,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: colors.outlineVariant),
       ),
       clipBehavior: Clip.antiAlias,
       child: child,

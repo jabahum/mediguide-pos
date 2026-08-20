@@ -1,12 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_gen_ai_chat_ui/flutter_gen_ai_chat_ui.dart';
-import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:go_router/go_router.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
-import 'package:user_app/core/constants/app_spacing.dart';
-import 'package:user_app/core/utils/app_extensions.dart';
 import 'package:user_app/app/router/route_names.dart';
+import 'package:user_app/core/constants/app_spacing.dart';
 
 import 'package:user_app/features/ai_assistant/data/models/ai_context.dart';
 import 'package:user_app/features/ai_assistant/data/models/rag_answer.dart';
@@ -43,83 +42,96 @@ class _AiAssistantPageState extends ConsumerState<AiAssistantPage> {
 
   @override
   Widget build(BuildContext context) {
-    final state = ref.watch(aiAssistantControllerProvider(_initialContext));
+    final provider = aiAssistantControllerProvider(_initialContext);
 
-    final controller = ref.read(
-      aiAssistantControllerProvider(_initialContext).notifier,
-    );
+    final state = ref.watch(provider);
 
-    final cs = context.theme.colorScheme;
+    final controller = ref.read(provider.notifier);
+
+    final colors = Theme.of(context).colorScheme;
+
     final currentContext = state.currentContext;
 
     return Scaffold(
-      backgroundColor: cs.surface,
+      backgroundColor: colors.surface,
+
+      // =====================================================================
+      // APP BAR
+      // =====================================================================
       appBar: AppBar(
         titleSpacing: AppSpacing.md,
-        backgroundColor: cs.surface,
-        elevation: 0,
-        title: Row(
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    currentContext != null
-                        ? currentContext.title
-                        : 'MediGuide Assistant',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: context.textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    currentContext != null
-                        ? 'Context-aware assistant'
-                        : 'MediGuide clinical assistant',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: context.textTheme.bodySmall?.copyWith(
-                      color: cs.onSurfaceVariant,
-                    ),
-                  ),
-                ],
-              ),
+            Text(
+              currentContext != null
+                  ? currentContext.title
+                  : 'MediGuide Assistant',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: Theme.of(
+                context,
+              ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
+            ),
+            Text(
+              currentContext != null
+                  ? 'Using guideline context'
+                  : 'Clinical knowledge assistant',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: Theme.of(
+                context,
+              ).textTheme.bodySmall?.copyWith(color: colors.onSurfaceVariant),
             ),
           ],
         ),
         actions: [
           IconButton(
             tooltip: 'Assistant history',
-            onPressed: () => context.push(AppRoutes.chatList),
+            onPressed: () {
+              context.push(AppRoutes.chatList);
+            },
             icon: const Icon(LucideIcons.history),
           ),
-          PopupMenuButton<String>(
+          PopupMenuButton<_AssistantMenuAction>(
             tooltip: 'Assistant options',
-            onSelected: (value) {
-              if (value == 'clear-context') controller.clearContext();
+            onSelected: (action) {
+              switch (action) {
+                case _AssistantMenuAction.clearContext:
+                  controller.clearContext();
+              }
             },
             itemBuilder: (_) => [
               PopupMenuItem(
-                value: 'clear-context',
+                value: _AssistantMenuAction.clearContext,
                 enabled: currentContext != null,
-                child: const Text('Clear guideline context'),
+                child: const ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: Icon(LucideIcons.fileX2),
+                  title: Text('Clear guideline context'),
+                ),
               ),
             ],
           ),
         ],
       ),
+
+      // =====================================================================
+      // BODY
+      // =====================================================================
       body: Column(
         children: [
-          const _ClinicalSafetyBanner(),
-          if (currentContext != null)
-            _AssistantContextBanner(
-              title: currentContext.title,
-              onClear: controller.clearContext,
-            ),
+          // =================================================================
+          // SAFETY + CONTEXT
+          // =================================================================
+          _AssistantTopContext(
+            currentContext: currentContext,
+            onClearContext: controller.clearContext,
+          ),
 
+          // =================================================================
+          // ERROR
+          // =================================================================
           if (state.errorMessage != null)
             _AssistantErrorBanner(
               message: state.errorMessage!,
@@ -129,12 +141,20 @@ class _AiAssistantPageState extends ConsumerState<AiAssistantPage> {
               },
             ),
 
+          // =================================================================
+          // SOURCES
+          // =================================================================
           if (state.latestCitations.isNotEmpty)
-            _SourcesPanel(
+            _SourcesStrip(
               citations: state.latestCitations,
-              onCitation: (citation) => _openCitation(context, citation),
+              onCitation: (citation) {
+                _openCitation(context, citation);
+              },
             ),
 
+          // =================================================================
+          // CHAT
+          // =================================================================
           Expanded(
             child: AiChatWidget(
               currentUser: controller.currentUser,
@@ -144,29 +164,26 @@ class _AiAssistantPageState extends ConsumerState<AiAssistantPage> {
               loadingConfig: LoadingConfig(isLoading: state.isLoading),
 
               quickReplyOptions: QuickReplyOptions(
-                textStyle: context.textTheme.bodyMedium?.copyWith(
-                  fontWeight: FontWeight.w600,
-                ),
+                textStyle: Theme.of(
+                  context,
+                ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
               ),
 
               welcomeMessageConfig: WelcomeMessageConfig(
-                titleStyle: context.textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.w800,
-                  color: cs.onPrimaryContainer,
-                  height: 1.35,
-                ),
-                containerDecoration: BoxDecoration(
-                  color: cs.primaryContainer.withValues(alpha: 0.75),
-                  borderRadius: BorderRadius.circular(22),
-                  border: Border.all(color: cs.primary.withValues(alpha: 0.08)),
-                ),
                 title: state.contextualWelcomeMessage.isNotEmpty
                     ? state.contextualWelcomeMessage
-                    : 'Hello! I’m your MediGuide AI assistant. '
-                          'I can help with medical questions, '
-                          'drug information, clinical guidelines, '
-                          'and health-related queries. '
-                          'How can I assist you today?',
+                    : 'Ask about clinical guidance, medicines, '
+                          'calculators, terminology or MediGuide content.',
+                titleStyle: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                  fontWeight: FontWeight.w600,
+                  color: colors.onSurface,
+                  height: 1.4,
+                ),
+                containerDecoration: BoxDecoration(
+                  color: colors.surfaceContainerLow,
+                  borderRadius: BorderRadius.circular(18),
+                  border: Border.all(color: colors.outlineVariant),
+                ),
               ),
 
               onSendMessage: controller.handleSendMessage,
@@ -187,34 +204,29 @@ class _AiAssistantPageState extends ConsumerState<AiAssistantPage> {
                   AppSpacing.md,
                   AppSpacing.md,
                 ),
-                materialPadding: const EdgeInsets.symmetric(
-                  vertical: AppSpacing.xs,
-                ),
-                containerPadding: const EdgeInsets.symmetric(
-                  horizontal: AppSpacing.sm,
-                  vertical: AppSpacing.xs,
-                ),
+                materialPadding: EdgeInsets.zero,
+                containerPadding: EdgeInsets.zero,
                 decoration: InputDecoration(
-                  hintText: 'Type your message...',
+                  hintText: currentContext != null
+                      ? 'Ask about this guideline...'
+                      : 'Ask MediGuide...',
                   filled: true,
-                  fillColor: cs.surfaceContainerHighest.withValues(alpha: 0.65),
+                  fillColor: colors.surfaceContainerLow,
                   contentPadding: const EdgeInsets.symmetric(
                     horizontal: AppSpacing.md,
-                    vertical: 12,
+                    vertical: 13,
                   ),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(24),
-                    borderSide: BorderSide.none,
+                    borderSide: BorderSide(color: colors.outlineVariant),
                   ),
                   enabledBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(24),
-                    borderSide: BorderSide(
-                      color: cs.outlineVariant.withValues(alpha: 0.35),
-                    ),
+                    borderSide: BorderSide(color: colors.outlineVariant),
                   ),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(24),
-                    borderSide: BorderSide(color: cs.primary, width: 1.5),
+                    borderSide: BorderSide(color: colors.primary, width: 1.4),
                   ),
                 ),
               ),
@@ -226,64 +238,159 @@ class _AiAssistantPageState extends ConsumerState<AiAssistantPage> {
   }
 
   void _openCitation(BuildContext context, RagCitation citation) {
-    if (citation.guidelineId.isEmpty) {
+    if (citation.guidelineId.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('This source does not include a navigable guideline.'),
         ),
       );
+
       return;
     }
+
     final base = AppRoutes.readPublicGuideline(citation.guidelineId);
-    final uri = citation.sectionId.isEmpty
+
+    final sectionId = citation.sectionId.trim();
+
+    final uri = sectionId.isEmpty
         ? base
-        : '$base?section=${Uri.encodeQueryComponent(citation.sectionId)}';
+        : '$base?section=${Uri.encodeQueryComponent(sectionId)}';
+
     context.push(uri);
   }
 }
 
-class _ClinicalSafetyBanner extends StatelessWidget {
-  const _ClinicalSafetyBanner();
+enum _AssistantMenuAction { clearContext }
+
+// ===========================================================================
+// TOP CONTEXT
+// ===========================================================================
+
+class _AssistantTopContext extends StatelessWidget {
+  const _AssistantTopContext({
+    required this.currentContext,
+    required this.onClearContext,
+  });
+
+  final AiContext? currentContext;
+  final VoidCallback onClearContext;
 
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
-    return Semantics(
-      container: true,
-      label:
-          'Clinical safety notice. Do not enter patient-identifiable information. Verify answers against cited sources and clinical judgement.',
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.md,
+        AppSpacing.sm,
+        AppSpacing.md,
+        AppSpacing.xs,
+      ),
       child: Container(
         width: double.infinity,
-        margin: const EdgeInsets.fromLTRB(
-          AppSpacing.md,
-          AppSpacing.sm,
-          AppSpacing.md,
-          AppSpacing.xs,
-        ),
         padding: const EdgeInsets.all(AppSpacing.sm),
         decoration: BoxDecoration(
-          color: colors.tertiaryContainer,
+          color: colors.surfaceContainerLow,
           borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: colors.outlineVariant),
         ),
-        child: Row(
+        child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Icon(LucideIcons.shieldAlert, color: colors.onTertiaryContainer),
-            AppSpacing.sm.gap,
-            Expanded(
-              child: Text(
-                'Do not enter patient-identifiable information. Verify every answer against its cited source and clinical judgement.',
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: colors.onTertiaryContainer,
+            // ===============================================================
+            // SAFETY
+            // ===============================================================
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Icon(LucideIcons.shieldAlert, size: 17, color: colors.tertiary),
+
+                AppSpacing.hGapSm,
+
+                Expanded(
+                  child: Text(
+                    'Do not enter patient-identifiable information. '
+                    'Verify clinical answers against cited sources and professional judgement.',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: colors.onSurfaceVariant,
+                      height: 1.35,
+                    ),
+                  ),
                 ),
-              ),
+              ],
             ),
+
+            // ===============================================================
+            // CONTEXT
+            // ===============================================================
+            if (currentContext != null) ...[
+              AppSpacing.gapSm,
+
+              Divider(height: 1, color: colors.outlineVariant),
+
+              AppSpacing.gapSm,
+
+              Row(
+                children: [
+                  Container(
+                    width: 32,
+                    height: 32,
+                    decoration: BoxDecoration(
+                      color: colors.secondaryContainer,
+                      borderRadius: BorderRadius.circular(9),
+                    ),
+                    child: Icon(
+                      LucideIcons.fileText,
+                      color: colors.onSecondaryContainer,
+                      size: 16,
+                    ),
+                  ),
+
+                  AppSpacing.hGapSm,
+
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Current guideline context',
+                          style: Theme.of(context).textTheme.labelSmall
+                              ?.copyWith(
+                                fontWeight: FontWeight.w700,
+                                color: colors.onSurfaceVariant,
+                              ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          currentContext!.title,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: Theme.of(context).textTheme.bodyMedium
+                              ?.copyWith(fontWeight: FontWeight.w600),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  IconButton(
+                    tooltip: 'Clear context',
+                    onPressed: onClearContext,
+                    visualDensity: VisualDensity.compact,
+                    icon: const Icon(LucideIcons.x, size: 17),
+                  ),
+                ],
+              ),
+            ],
           ],
         ),
       ),
     );
   }
 }
+
+// ===========================================================================
+// ERROR
+// ===========================================================================
 
 class _AssistantErrorBanner extends StatelessWidget {
   const _AssistantErrorBanner({
@@ -298,35 +405,47 @@ class _AssistantErrorBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final cs = context.theme.colorScheme;
+    final colors = Theme.of(context).colorScheme;
 
     return Container(
       margin: const EdgeInsets.fromLTRB(
         AppSpacing.md,
         AppSpacing.xs,
         AppSpacing.md,
-        0,
+        AppSpacing.xs,
       ),
-      padding: const EdgeInsets.all(AppSpacing.sm),
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.md,
+        vertical: AppSpacing.sm,
+      ),
       decoration: BoxDecoration(
-        color: cs.errorContainer,
-        borderRadius: BorderRadius.circular(16),
+        color: colors.errorContainer,
+        borderRadius: BorderRadius.circular(14),
       ),
       child: Row(
         children: [
-          Icon(LucideIcons.triangleAlert, color: cs.onErrorContainer, size: 18),
-          AppSpacing.sm.gap,
+          Icon(
+            LucideIcons.triangleAlert,
+            color: colors.onErrorContainer,
+            size: 18,
+          ),
+
+          AppSpacing.hGapSm,
+
           Expanded(
             child: Text(
               message,
-              style: context.textTheme.bodySmall?.copyWith(
-                color: cs.onErrorContainer,
-              ),
+              maxLines: 3,
+              overflow: TextOverflow.ellipsis,
+              style: Theme.of(
+                context,
+              ).textTheme.bodySmall?.copyWith(color: colors.onErrorContainer),
             ),
           ),
+
           TextButton(
             onPressed: isRetrying ? null : onRetry,
-            child: Text(isRetrying ? 'Retrying…' : 'Retry'),
+            child: Text(isRetrying ? 'Retrying...' : 'Retry'),
           ),
         ],
       ),
@@ -334,59 +453,71 @@ class _AssistantErrorBanner extends StatelessWidget {
   }
 }
 
-class _SourcesPanel extends StatelessWidget {
-  const _SourcesPanel({required this.citations, required this.onCitation});
+// ===========================================================================
+// SOURCES
+// ===========================================================================
+
+class _SourcesStrip extends StatelessWidget {
+  const _SourcesStrip({required this.citations, required this.onCitation});
 
   final List<RagCitation> citations;
   final ValueChanged<RagCitation> onCitation;
 
   @override
   Widget build(BuildContext context) {
-    final cs = context.theme.colorScheme;
+    final colors = Theme.of(context).colorScheme;
 
     return Container(
       margin: const EdgeInsets.fromLTRB(
         AppSpacing.md,
         AppSpacing.xs,
         AppSpacing.md,
-        0,
+        AppSpacing.xs,
       ),
       decoration: BoxDecoration(
-        color: cs.surfaceContainerLow,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: cs.outlineVariant),
+        color: colors.surfaceContainerLow,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: colors.outlineVariant),
       ),
+      clipBehavior: Clip.antiAlias,
       child: ExpansionTile(
         dense: true,
-        leading: const Icon(LucideIcons.bookOpenCheck, size: 18),
+        tilePadding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+        childrenPadding: const EdgeInsets.only(bottom: AppSpacing.sm),
+        leading: Container(
+          width: 30,
+          height: 30,
+          decoration: BoxDecoration(
+            color: colors.primaryContainer,
+            borderRadius: BorderRadius.circular(9),
+          ),
+          child: Icon(
+            LucideIcons.bookOpenCheck,
+            size: 16,
+            color: colors.primary,
+          ),
+        ),
         title: Text(
           '${citations.length} approved '
           'source${citations.length == 1 ? '' : 's'}',
-          style: context.textTheme.labelLarge?.copyWith(
-            fontWeight: FontWeight.w700,
-          ),
+          style: Theme.of(
+            context,
+          ).textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w700),
+        ),
+        subtitle: Text(
+          'Open the evidence used for the latest answer',
+          style: Theme.of(
+            context,
+          ).textTheme.bodySmall?.copyWith(color: colors.onSurfaceVariant),
         ),
         children: [
           for (var index = 0; index < citations.length; index++)
-            ListTile(
-              dense: true,
-              leading: CircleAvatar(
-                radius: 12,
-                child: Text(
-                  '${index + 1}',
-                  style: context.textTheme.labelSmall,
-                ),
-              ),
-              title: Text(citations[index].displayLabel),
-              subtitle: citations[index].guidelineId.isEmpty
-                  ? const Text('Source navigation unavailable')
-                  : const Text('Open cited guideline section'),
-              trailing: citations[index].guidelineId.isEmpty
-                  ? null
-                  : const Icon(LucideIcons.chevronRight),
-              onTap: citations[index].guidelineId.isEmpty
-                  ? null
-                  : () => onCitation(citations[index]),
+            _CitationTile(
+              index: index,
+              citation: citations[index],
+              onTap: () {
+                onCitation(citations[index]);
+              },
             ),
         ],
       ),
@@ -394,72 +525,52 @@ class _SourcesPanel extends StatelessWidget {
   }
 }
 
-class _AssistantContextBanner extends StatelessWidget {
-  const _AssistantContextBanner({required this.title, required this.onClear});
+class _CitationTile extends StatelessWidget {
+  const _CitationTile({
+    required this.index,
+    required this.citation,
+    required this.onTap,
+  });
 
-  final String title;
-  final VoidCallback onClear;
+  final int index;
+  final RagCitation citation;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    final cs = context.theme.colorScheme;
+    final colors = Theme.of(context).colorScheme;
 
-    return Container(
-      width: double.infinity,
-      margin: const EdgeInsets.fromLTRB(
-        AppSpacing.md,
-        AppSpacing.sm,
-        AppSpacing.md,
-        AppSpacing.xs,
+    final navigable = citation.guidelineId.trim().isNotEmpty;
+
+    return ListTile(
+      dense: true,
+      enabled: navigable,
+      contentPadding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+      leading: CircleAvatar(
+        radius: 12,
+        backgroundColor: colors.primaryContainer,
+        foregroundColor: colors.primary,
+        child: Text(
+          '${index + 1}',
+          style: Theme.of(
+            context,
+          ).textTheme.labelSmall?.copyWith(fontWeight: FontWeight.w700),
+        ),
       ),
-      padding: const EdgeInsets.all(AppSpacing.md),
-      decoration: BoxDecoration(
-        color: cs.secondaryContainer.withValues(alpha: 0.55),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: cs.secondary.withValues(alpha: 0.08)),
+      title: Text(
+        citation.displayLabel,
+        maxLines: 2,
+        overflow: TextOverflow.ellipsis,
       ),
-      child: Row(
-        children: [
-          Container(
-            width: 38,
-            height: 38,
-            decoration: BoxDecoration(
-              color: cs.secondary.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(14),
-            ),
-            child: Icon(LucideIcons.fileText, color: cs.secondary, size: 20),
-          ),
-          AppSpacing.sm.gap,
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Current context',
-                  style: context.textTheme.labelMedium?.copyWith(
-                    color: cs.onSecondaryContainer,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  title,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: context.textTheme.bodySmall?.copyWith(
-                    color: cs.onSecondaryContainer.withValues(alpha: 0.8),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          IconButton(
-            onPressed: onClear,
-            tooltip: 'Clear context',
-            icon: Icon(LucideIcons.x, color: cs.onSecondaryContainer, size: 18),
-          ),
-        ],
+      subtitle: Text(
+        navigable
+            ? 'Open cited guideline section'
+            : 'Source navigation unavailable',
       ),
+      trailing: navigable
+          ? const Icon(LucideIcons.chevronRight, size: 18)
+          : Icon(LucideIcons.lock, size: 16, color: colors.onSurfaceVariant),
+      onTap: navigable ? onTap : null,
     );
   }
 }

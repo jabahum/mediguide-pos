@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:user_app/app/router/app_navigator.dart';
 import 'package:user_app/app/router/route_guards.dart';
 import 'package:user_app/app/router/route_names.dart';
+import 'package:user_app/features/profile/presentation/screens/edit_profile_page.dart';
 
 import 'package:user_app/shared/models/models.dart';
 
@@ -76,6 +77,14 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: AppRoutes.forgotPassword,
         builder: (_, _) => const ForgotPasswordPage(),
+      ),
+
+      GoRoute(
+        path: AppRoutes.editProfile,
+        name: 'edit-profile',
+        builder: (context, state) {
+          return const EditProfilePage();
+        },
       ),
 
       // Main navigation

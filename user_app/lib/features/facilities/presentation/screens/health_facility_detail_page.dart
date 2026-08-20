@@ -10,7 +10,6 @@ import 'package:user_app/core/widgets/app_loading_view.dart';
 import 'package:user_app/core/widgets/empty_state.dart';
 
 import 'package:user_app/shared/models/models.dart';
-import 'package:user_app/shared/widgets/section_group.dart';
 
 final healthFacilityDetailsProvider = FutureProvider.autoDispose
     .family<HealthFacility, String>((ref, facilityId) {
@@ -56,12 +55,16 @@ class HealthFacilityDetailPage extends ConsumerWidget {
               error: error,
               title: 'Unable to load facility',
               message:
-                  'The facility details could not be loaded. Check your '
-                  'connection and try again.',
-              onRetry: () => ref.invalidate(healthFacilityDetailsProvider(id)),
+                  'The facility details could not be loaded. '
+                  'Check your connection and try again.',
+              onRetry: () {
+                ref.invalidate(healthFacilityDetailsProvider(id));
+              },
             ),
           ),
-          data: (value) => _FacilityDetailsScaffold(facility: value),
+          data: (value) {
+            return _FacilityDetailsScaffold(facility: value);
+          },
         );
   }
 }
@@ -74,79 +77,161 @@ class _FacilityDetailsScaffold extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final value = facility;
+    final colors = Theme.of(context).colorScheme;
 
     return Scaffold(
+      backgroundColor: colors.surface,
+
+      // =====================================================================
+      // APP BAR
+      // =====================================================================
       appBar: AppBar(
-        title: Text(value.name, maxLines: 1, overflow: TextOverflow.ellipsis),
+        titleSpacing: AppSpacing.md,
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              value.name,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: Theme.of(
+                context,
+              ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
+            ),
+            if (_hasText(value.facilityLevelName))
+              Text(
+                value.facilityLevelName,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: Theme.of(
+                  context,
+                ).textTheme.bodySmall?.copyWith(color: colors.onSurfaceVariant),
+              ),
+          ],
+        ),
       ),
+
+      // =====================================================================
+      // BODY
+      // =====================================================================
       body: SafeArea(
+        top: false,
         child: ListView(
           padding: const EdgeInsets.fromLTRB(
             AppSpacing.md,
-            AppSpacing.sm,
             AppSpacing.md,
-            AppSpacing.xl,
+            AppSpacing.md,
+            AppSpacing.xxxl,
           ),
           children: [
-            _FacilityHeader(facility: value),
+            // =================================================================
+            // SUMMARY
+            // =================================================================
+            _FacilitySummaryCard(facility: value),
 
-            AppSpacing.gapLg,
+            AppSpacing.gapXl,
 
+            // =================================================================
+            // LOCATION
+            // =================================================================
             if (_hasLocationData(value)) ...[
-              SectionGroup(
+              _DetailSection(
+                icon: LucideIcons.mapPin,
                 title: 'Location',
-                items: [
+                description: 'Administrative location of this health facility.',
+                rows: [
                   if (_hasText(value.regionName))
-                    _DetailRow(label: 'Region', value: value.regionName),
+                    _DetailItem(label: 'Region', value: value.regionName),
                   if (_hasText(value.districtName))
-                    _DetailRow(label: 'District', value: value.districtName),
+                    _DetailItem(label: 'District', value: value.districtName),
                   if (_hasText(value.countyName))
-                    _DetailRow(label: 'County', value: value.countyName),
+                    _DetailItem(label: 'County', value: value.countyName),
                   if (_hasText(value.subcountyName))
-                    _DetailRow(label: 'Sub-county', value: value.subcountyName),
+                    _DetailItem(
+                      label: 'Sub-county',
+                      value: value.subcountyName,
+                    ),
                   if (_hasText(value.parishName))
-                    _DetailRow(label: 'Parish', value: value.parishName),
+                    _DetailItem(label: 'Parish', value: value.parishName),
                 ],
               ),
-              AppSpacing.gapMd,
+
+              AppSpacing.gapLg,
             ],
 
+            // =================================================================
+            // FACILITY INFORMATION
+            // =================================================================
+            _DetailSection(
+              icon: LucideIcons.hospital,
+              title: 'Facility information',
+              description: 'Level, ownership and administrative authority.',
+              rows: [
+                if (_hasText(value.facilityLevelName))
+                  _DetailItem(
+                    label: 'Facility level',
+                    value: value.facilityLevelName,
+                  ),
+                if (_hasText(value.ownershipDisplay))
+                  _DetailItem(
+                    label: 'Ownership',
+                    value: value.ownershipDisplay,
+                  ),
+                if (_hasText(value.authorityName))
+                  _DetailItem(label: 'Authority', value: value.authorityName),
+              ],
+            ),
+
             if (_hasFacilityCodes(value)) ...[
-              SectionGroup(
-                title: 'Facility Codes',
-                items: [
+              AppSpacing.gapLg,
+
+              // ===============================================================
+              // IDENTIFIERS
+              // ===============================================================
+              _DetailSection(
+                icon: LucideIcons.scanBarcode,
+                title: 'Facility identifiers',
+                description:
+                    'Reference codes used across connected health systems.',
+                rows: [
                   if (_hasText(value.nhpiCode))
-                    _DetailRow(
+                    _DetailItem(
                       label: 'NHPI Code',
                       value: value.nhpiCode,
                       mono: true,
+                      selectable: true,
                     ),
                   if (_hasText(value.hsdtCode))
-                    _DetailRow(
+                    _DetailItem(
                       label: 'HSDT Code',
                       value: value.hsdtCode,
                       mono: true,
+                      selectable: true,
                     ),
                 ],
               ),
-              AppSpacing.gapMd,
             ],
 
-            SectionGroup(
-              title: 'Administrative Info',
-              items: [
-                _DetailRow(
+            AppSpacing.gapLg,
+
+            // =================================================================
+            // RECORD INFORMATION
+            // =================================================================
+            _DetailSection(
+              icon: LucideIcons.clock3,
+              title: 'Record information',
+              description: 'Metadata for this facility record.',
+              rows: [
+                _DetailItem(
                   label: 'Created',
                   value: _formatDate(value.createdAt),
                 ),
-                _DetailRow(
+                _DetailItem(
                   label: 'Updated',
                   value: _formatDate(value.updatedAt),
                 ),
               ],
             ),
-
-            AppSpacing.gapXl,
           ],
         ),
       ),
@@ -184,21 +269,33 @@ class _FacilityDetailsScaffold extends StatelessWidget {
   }
 }
 
-class _FacilityHeader extends StatelessWidget {
-  const _FacilityHeader({required this.facility});
+// ===========================================================================
+// SUMMARY CARD
+// ===========================================================================
+
+class _FacilitySummaryCard extends StatelessWidget {
+  const _FacilitySummaryCard({required this.facility});
 
   final HealthFacility facility;
 
   @override
   Widget build(BuildContext context) {
-    final cs = context.theme.colorScheme;
+    final colors = Theme.of(context).colorScheme;
+
+    final locationParts = <String>[
+      if (facility.subcountyName.trim().isNotEmpty)
+        facility.subcountyName.trim(),
+      if (facility.districtName.trim().isNotEmpty) facility.districtName.trim(),
+      if (facility.regionName.trim().isNotEmpty) facility.regionName.trim(),
+    ];
 
     return Container(
-      padding: const EdgeInsets.all(AppSpacing.lg),
+      width: double.infinity,
+      padding: const EdgeInsets.all(AppSpacing.md),
       decoration: BoxDecoration(
-        color: cs.primaryContainer.withValues(alpha: 0.30),
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: cs.primary.withValues(alpha: 0.08)),
+        color: colors.surfaceContainerLow,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: colors.outlineVariant),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -207,16 +304,20 @@ class _FacilityHeader extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Container(
-                width: 54,
-                height: 54,
+                width: 48,
+                height: 48,
                 decoration: BoxDecoration(
-                  color: cs.primary.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(18),
+                  color: colors.primaryContainer,
+                  borderRadius: BorderRadius.circular(14),
                 ),
-                child: Icon(LucideIcons.building2, color: cs.primary, size: 28),
+                child: Icon(
+                  LucideIcons.hospital,
+                  size: 23,
+                  color: colors.primary,
+                ),
               ),
 
-              AppSpacing.md.gap,
+              AppSpacing.hGapMd,
 
               Expanded(
                 child: Column(
@@ -224,28 +325,31 @@ class _FacilityHeader extends StatelessWidget {
                   children: [
                     Text(
                       facility.name,
-                      style: context.textTheme.headlineSmall?.copyWith(
+                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
                         fontWeight: FontWeight.w800,
                         height: 1.2,
                       ),
                     ),
 
-                    if (facility.districtName.trim().isNotEmpty) ...[
+                    if (locationParts.isNotEmpty) ...[
                       const SizedBox(height: 5),
+
                       Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Icon(
                             LucideIcons.mapPin,
                             size: 15,
-                            color: cs.onSurfaceVariant,
+                            color: colors.onSurfaceVariant,
                           ),
+
                           const SizedBox(width: 5),
+
                           Expanded(
                             child: Text(
-                              facility.districtName,
-                              style: context.textTheme.bodySmall?.copyWith(
-                                color: cs.onSurfaceVariant,
-                              ),
+                              locationParts.join(' • '),
+                              style: Theme.of(context).textTheme.bodySmall
+                                  ?.copyWith(color: colors.onSurfaceVariant),
                             ),
                           ),
                         ],
@@ -263,26 +367,22 @@ class _FacilityHeader extends StatelessWidget {
             spacing: AppSpacing.sm,
             runSpacing: AppSpacing.sm,
             children: [
-              _InfoChip(
-                icon: LucideIcons.building2,
-                label: facility.facilityLevelName.trim().isEmpty
-                    ? 'Unknown Level'
-                    : facility.facilityLevelName,
-                color: cs.primary,
-              ),
+              if (facility.facilityLevelName.trim().isNotEmpty)
+                _InfoBadge(
+                  icon: LucideIcons.building2,
+                  label: facility.facilityLevelName,
+                ),
 
               if (facility.ownershipDisplay.trim().isNotEmpty)
-                _InfoChip(
+                _InfoBadge(
                   icon: LucideIcons.users,
                   label: facility.ownershipDisplay,
-                  color: cs.secondary,
                 ),
 
               if (facility.authorityName.trim().isNotEmpty)
-                _InfoChip(
-                  icon: LucideIcons.shield,
+                _InfoBadge(
+                  icon: LucideIcons.shieldCheck,
                   label: facility.authorityName,
-                  color: cs.tertiary,
                 ),
             ],
           ),
@@ -292,63 +392,173 @@ class _FacilityHeader extends StatelessWidget {
   }
 }
 
-class _InfoChip extends StatelessWidget {
-  const _InfoChip({
-    required this.icon,
-    required this.label,
-    required this.color,
-  });
+// ===========================================================================
+// INFO BADGE
+// ===========================================================================
+
+class _InfoBadge extends StatelessWidget {
+  const _InfoBadge({required this.icon, required this.label});
 
   final IconData icon;
   final String label;
-  final Color color;
 
   @override
   Widget build(BuildContext context) {
-    return DecoratedBox(
+    final colors = Theme.of(context).colorScheme;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.1),
+        color: colors.secondaryContainer,
         borderRadius: BorderRadius.circular(999),
       ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 7),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, size: 14, color: color),
-            const SizedBox(width: 6),
-            Flexible(
-              child: Text(
-                label,
-                style: context.textTheme.labelSmall?.copyWith(
-                  color: color,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 13, color: colors.onSecondaryContainer),
+
+          const SizedBox(width: 5),
+
+          Text(
+            label,
+            style: Theme.of(context).textTheme.labelSmall?.copyWith(
+              color: colors.onSecondaryContainer,
+              fontWeight: FontWeight.w600,
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
 }
 
-class _DetailRow extends StatelessWidget {
-  const _DetailRow({
+// ===========================================================================
+// DETAIL SECTION
+// ===========================================================================
+
+class _DetailSection extends StatelessWidget {
+  const _DetailSection({
+    required this.icon,
+    required this.title,
+    required this.description,
+    required this.rows,
+  });
+
+  final IconData icon;
+  final String title;
+  final String description;
+  final List<_DetailItem> rows;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+
+    if (rows.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              width: 36,
+              height: 36,
+              decoration: BoxDecoration(
+                color: colors.primaryContainer,
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Icon(icon, size: 18, color: colors.primary),
+            ),
+
+            AppSpacing.hGapSm,
+
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+
+                  const SizedBox(height: 2),
+
+                  Text(
+                    description,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: colors.onSurfaceVariant,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+
+        AppSpacing.gapSm,
+
+        Container(
+          width: double.infinity,
+          decoration: BoxDecoration(
+            color: colors.surfaceContainerLowest,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: colors.outlineVariant),
+          ),
+          clipBehavior: Clip.antiAlias,
+          child: Column(
+            children: [
+              for (var index = 0; index < rows.length; index++) ...[
+                rows[index],
+
+                if (index < rows.length - 1)
+                  Divider(
+                    height: 1,
+                    indent: AppSpacing.md,
+                    endIndent: AppSpacing.md,
+                    color: colors.outlineVariant,
+                  ),
+              ],
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+// ===========================================================================
+// DETAIL ROW
+// ===========================================================================
+
+class _DetailItem extends StatelessWidget {
+  const _DetailItem({
     required this.label,
     required this.value,
     this.mono = false,
+    this.selectable = false,
   });
 
   final String label;
   final String value;
   final bool mono;
+  final bool selectable;
 
   @override
   Widget build(BuildContext context) {
-    final cs = context.theme.colorScheme;
+    final colors = Theme.of(context).colorScheme;
 
     final displayValue = value.trim().isEmpty ? '—' : value.trim();
+
+    final valueStyle = Theme.of(context).textTheme.bodyMedium?.copyWith(
+      fontWeight: FontWeight.w600,
+      height: 1.35,
+      fontFamily: mono ? 'monospace' : null,
+    );
 
     return Padding(
       padding: const EdgeInsets.symmetric(
@@ -359,11 +569,11 @@ class _DetailRow extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           SizedBox(
-            width: 104,
+            width: 112,
             child: Text(
               label,
-              style: context.textTheme.bodySmall?.copyWith(
-                color: cs.onSurfaceVariant,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: colors.onSurfaceVariant,
                 height: 1.35,
               ),
             ),
@@ -372,14 +582,9 @@ class _DetailRow extends StatelessWidget {
           AppSpacing.hGapSm,
 
           Expanded(
-            child: SelectableText(
-              displayValue,
-              style: context.textTheme.bodyMedium?.copyWith(
-                fontWeight: FontWeight.w600,
-                height: 1.35,
-                fontFamily: mono ? 'monospace' : null,
-              ),
-            ),
+            child: selectable
+                ? SelectableText(displayValue, style: valueStyle)
+                : Text(displayValue, style: valueStyle),
           ),
         ],
       ),

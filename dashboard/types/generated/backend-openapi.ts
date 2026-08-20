@@ -187,8 +187,20 @@ export interface HandlersFirebaseStatusEnvelope {
 }
 
 export interface HandlersFirebaseStatusResult {
-  /** @example true */
+  active_device_count?: number;
+  delivery_reporting?: string;
+  email_status?: string;
   enabled?: boolean;
+  last_successful_health_check_at?: string;
+  platforms?: Record<string, number>;
+  project_id?: string;
+  sms_status?: string;
+  stale_device_count?: number;
+}
+
+export interface HandlersFirebaseTestRecipientsEnvelope {
+  data?: ServicesFirebaseTestRecipient[];
+  success?: boolean;
 }
 
 export interface HandlersGenericPageEnvelope {
@@ -417,6 +429,16 @@ export interface HandlersNotificationAudienceEstimateInput {
 
 export interface HandlersNotificationCampaignEnvelope {
   data?: ServicesNotificationCampaignDTO;
+  success?: boolean;
+}
+
+export interface HandlersNotificationDeliveryAnalyticsEnvelope {
+  data?: ServicesNotificationDeliveryAnalytics;
+  success?: boolean;
+}
+
+export interface HandlersNotificationDeliveryEnvelope {
+  data?: ServicesNotificationDeliveryDTO;
   success?: boolean;
 }
 
@@ -762,6 +784,11 @@ export interface HandlersPaginatedNotificationCampaigns {
 
 export interface HandlersPaginatedNotificationCampaignsEnvelope {
   data?: HandlersPaginatedNotificationCampaigns;
+  success?: boolean;
+}
+
+export interface HandlersPaginatedNotificationDeliveriesEnvelope {
+  data?: ServicesPageResultServicesNotificationDeliveryDTO;
   success?: boolean;
 }
 
@@ -1901,6 +1928,7 @@ export interface ModelsNotification {
   created_at?: string;
   created_by?: string;
   deduplication_key?: string;
+  delivery_id?: string;
   expires_at?: string;
   id?: string;
   is_read?: boolean;
@@ -2595,10 +2623,20 @@ export interface ServicesFirebaseDeviceUpdateInput {
   notifications_enabled?: boolean;
 }
 
+export interface ServicesFirebasePushDeviceResult {
+  app_version?: string;
+  device_id?: string;
+  error_category?: string;
+  platform?: string;
+  provider_message_id?: string;
+  state?: string;
+}
+
 export interface ServicesFirebasePushInput {
   action?: ServicesNotificationAction;
   action_url?: string;
   body?: string;
+  current_user?: boolean;
   data?: Record<string, string>;
   dry_run?: boolean;
   title?: string;
@@ -2608,8 +2646,17 @@ export interface ServicesFirebasePushInput {
 export interface ServicesFirebasePushResult {
   accepted?: number;
   attempted?: number;
+  devices?: ServicesFirebasePushDeviceResult[];
   failed?: number;
   validated?: number;
+}
+
+export interface ServicesFirebaseTestRecipient {
+  device_count?: number;
+  email?: string;
+  id?: string;
+  name?: string;
+  platforms?: string[];
 }
 
 export interface ServicesGenericPageInput {
@@ -3032,6 +3079,7 @@ export interface ServicesNotificationCampaignDTO {
   ttl_seconds?: number;
   type?: string;
   updated_at?: string;
+  variables?: Record<string, any>;
 }
 
 export interface ServicesNotificationCampaignInput {
@@ -3056,6 +3104,55 @@ export interface ServicesNotificationCampaignTransitionInput {
   reason?: string;
   scheduled_at?: string;
   timezone?: string;
+}
+
+export interface ServicesNotificationDeliveryAnalytics {
+  bigquery_export_note?: string;
+  delivery_reporting?: Record<string, string>;
+  from?: string;
+  items?: ServicesNotificationDeliveryDailyMetric[];
+  to?: string;
+}
+
+export interface ServicesNotificationDeliveryDTO {
+  accepted_at?: string;
+  attempt_count?: number;
+  attempted_at?: string;
+  campaign_id?: string;
+  channel?: string;
+  clicked_at?: string;
+  created_at?: string;
+  delivered_at?: string;
+  device_id?: string;
+  error_category?: string;
+  expired_at?: string;
+  failed_at?: string;
+  id?: string;
+  notification_id?: string;
+  opened_at?: string;
+  outbox_job_id?: string;
+  provider_message_id?: string;
+  state?: string;
+  updated_at?: string;
+  user_id?: string;
+}
+
+export interface ServicesNotificationDeliveryDailyMetric {
+  accepted?: number;
+  attempted?: number;
+  channel?: string;
+  clicked?: number;
+  date?: string;
+  delivered?: number;
+  expired?: number;
+  opened?: number;
+  queued?: number;
+  rejected?: number;
+}
+
+export interface ServicesNotificationDeliveryEventInput {
+  event_id?: string;
+  occurred_at?: string;
 }
 
 export interface ServicesNotificationInput {
@@ -3136,6 +3233,11 @@ export interface ServicesNotificationPreferencesInput {
   quiet_hours_timezone?: string;
   reminders?: boolean;
   system_notices?: boolean;
+}
+
+export interface ServicesNotificationTemplateCloneInput {
+  name?: string;
+  template_key?: string;
 }
 
 export interface ServicesNotificationTemplateDTO {
@@ -3346,6 +3448,14 @@ export interface ServicesPageResultServicesConversationView {
 
 export interface ServicesPageResultServicesMessageView {
   items?: ServicesMessageView[];
+  page?: number;
+  per_page?: number;
+  total_items?: number;
+  total_pages?: number;
+}
+
+export interface ServicesPageResultServicesNotificationDeliveryDTO {
+  items?: ServicesNotificationDeliveryDTO[];
   page?: number;
   per_page?: number;
   total_items?: number;

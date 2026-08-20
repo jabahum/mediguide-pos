@@ -14,6 +14,7 @@ abstract class MyNotification with _$MyNotification {
     @Default('') String message,
     @Default('info') String type,
     @JsonKey(name: 'user_id') String? userId,
+    @JsonKey(name: 'delivery_id') String? deliveryId,
     @Default('normal') String priority,
     Map<String, dynamic>? action,
     @JsonKey(name: 'action_url') String? actionUrl,

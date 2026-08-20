@@ -92,6 +92,24 @@ class NotificationsController extends _$NotificationsController {
     }
   }
 
+  Future<void> recordOpen(MyNotification notification) async {
+    final deliveryId = notification.deliveryId?.trim();
+    if (deliveryId == null || deliveryId.isEmpty) return;
+    await _repository.recordOpen(
+      deliveryId,
+      eventId: 'in-app-open-${notification.id}',
+    );
+  }
+
+  Future<void> recordClick(MyNotification notification) async {
+    final deliveryId = notification.deliveryId?.trim();
+    if (deliveryId == null || deliveryId.isEmpty) return;
+    await _repository.recordClick(
+      deliveryId,
+      eventId: 'in-app-click-${notification.id}',
+    );
+  }
+
   // ======================================================
   // SEARCH
   // ======================================================

@@ -324,6 +324,26 @@ func (h NotificationHandler) PreviewTemplateVersion(c *gin.Context) {
 	h.writeResult(c, item, err, http.StatusOK)
 }
 
+// CloneTemplate godoc
+// @Summary Clone the current immutable template version into a new draft
+// @Tags notification-administration
+// @Security BearerAuth
+// @Param payload body services.NotificationTemplateCloneInput true "Clone identity"
+// @Success 201 {object} handlers.NotificationTemplateEnvelope
+// @Router /api/v2/notification-templates/{id}/clone [post]
+func (h NotificationHandler) CloneTemplate(c *gin.Context) {
+	id, ok := notificationID(c)
+	if !ok {
+		return
+	}
+	var in services.NotificationTemplateCloneInput
+	if !notificationBind(c, &in) {
+		return
+	}
+	item, err := h.Service.CloneTemplate(id, in, notificationClaims(c).UserID, c.ClientIP())
+	h.writeResult(c, item, err, http.StatusCreated)
+}
+
 // DeleteTemplate godoc
 // @Summary Archive a notification template
 // @Tags notification-administration
@@ -444,7 +464,7 @@ func (h NotificationHandler) UpdateCampaign(c *gin.Context) {
 // @Tags notification-administration
 // @Security BearerAuth
 // @Param id path string true "Campaign UUID"
-// @Param action path string true "submit, approve, reject, schedule, or cancel"
+// @Param action path string true "submit, approve, reject, schedule, pause, resume, or cancel"
 // @Param payload body services.NotificationCampaignTransitionInput true "Transition"
 // @Success 200 {object} handlers.NotificationCampaignEnvelope
 // @Failure 409 {object} handlers.ErrorResponse
@@ -530,6 +550,96 @@ func (h NotificationHandler) RequeueDeliveryJob(c *gin.Context) {
 	}
 	result, err := h.Outbox.Requeue(id, notificationClaims(c).UserID, in, c.ClientIP())
 	h.writeResult(c, result, err, http.StatusOK)
+}
+
+// RecordDeliveryOpen godoc
+// @Summary Record an authenticated user's notification open event idempotently
+// @Tags notifications
+// @Security BearerAuth
+// @Param id path string true "Delivery UUID"
+// @Param payload body services.NotificationDeliveryEventInput true "Client event"
+// @Success 200 {object} handlers.NotificationDeliveryEnvelope
+// @Router /api/v2/notification-deliveries/{id}/open [post]
+func (h NotificationHandler) RecordDeliveryOpen(c *gin.Context) {
+	h.recordDeliveryEvent(c, "opened")
+}
+
+// RecordDeliveryClick godoc
+// @Summary Record an authenticated user's notification action click idempotently
+// @Tags notifications
+// @Security BearerAuth
+// @Param id path string true "Delivery UUID"
+// @Param payload body services.NotificationDeliveryEventInput true "Client event"
+// @Success 200 {object} handlers.NotificationDeliveryEnvelope
+// @Router /api/v2/notification-deliveries/{id}/click [post]
+func (h NotificationHandler) RecordDeliveryClick(c *gin.Context) {
+	h.recordDeliveryEvent(c, "clicked")
+}
+
+func (h NotificationHandler) recordDeliveryEvent(c *gin.Context, eventType string) {
+	id, ok := notificationID(c)
+	if !ok {
+		return
+	}
+	var in services.NotificationDeliveryEventInput
+	if !notificationBind(c, &in) {
+		return
+	}
+	item, err := h.Outbox.RecordDeliveryEvent(notificationClaims(c).UserID, id, eventType, in)
+	h.writeResult(c, item, err, http.StatusOK)
+}
+
+// ListDeliveries godoc
+// @Summary List notification delivery lifecycle records
+// @Tags notification-administration
+// @Security BearerAuth
+// @Success 200 {object} handlers.PaginatedNotificationDeliveriesEnvelope
+// @Router /api/v2/notification-deliveries [get]
+func (h NotificationHandler) ListDeliveries(c *gin.Context) {
+	page, err := parsePageQuery(c, 20, 100)
+	if err != nil {
+		httpx.Error(c, http.StatusBadRequest, "invalid pagination parameters")
+		return
+	}
+	var campaignID *uuid.UUID
+	if raw := strings.TrimSpace(c.Query("campaign_id")); raw != "" {
+		parsed, parseErr := uuid.Parse(raw)
+		if parseErr != nil {
+			httpx.Error(c, http.StatusBadRequest, "invalid campaign id")
+			return
+		}
+		campaignID = &parsed
+	}
+	result, err := h.Outbox.ListDeliveries(services.NotificationDeliveryListInput{Page: page, CampaignID: campaignID, Channel: c.Query("channel"), State: c.Query("state")})
+	h.writeResult(c, result, err, http.StatusOK)
+}
+
+// DeliveryAnalytics godoc
+// @Summary Get daily channel delivery lifecycle aggregates
+// @Tags notification-administration
+// @Security BearerAuth
+// @Param from query string false "Start date (YYYY-MM-DD)"
+// @Param to query string false "Exclusive end date (YYYY-MM-DD)"
+// @Success 200 {object} handlers.NotificationDeliveryAnalyticsEnvelope
+// @Router /api/v2/notification-delivery-analytics/daily [get]
+func (h NotificationHandler) DeliveryAnalytics(c *gin.Context) {
+	to := time.Now().UTC().Truncate(24 * time.Hour).Add(24 * time.Hour)
+	from := to.AddDate(0, 0, -30)
+	var err error
+	if raw := strings.TrimSpace(c.Query("from")); raw != "" {
+		from, err = time.Parse("2006-01-02", raw)
+	}
+	if err == nil {
+		if raw := strings.TrimSpace(c.Query("to")); raw != "" {
+			to, err = time.Parse("2006-01-02", raw)
+		}
+	}
+	if err != nil {
+		httpx.Error(c, http.StatusBadRequest, "invalid analytics date")
+		return
+	}
+	item, err := h.Outbox.DailyAnalytics(from, to)
+	h.writeResult(c, item, err, http.StatusOK)
 }
 
 func (h NotificationHandler) deleteAdmin(c *gin.Context, kind string) {

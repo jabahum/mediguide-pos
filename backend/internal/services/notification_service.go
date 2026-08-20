@@ -100,7 +100,7 @@ func (s NotificationService) List(userID uuid.UUID, in NotificationListInput) (*
 	}
 	items := []models.Notification{}
 	if err := query.Session(&gorm.Session{}).
-		Select("notifications.*, "+readExpr+" AS is_read", userID).
+		Select("notifications.*, "+readExpr+" AS is_read, (SELECT nd.id FROM notification_deliveries nd WHERE nd.notification_id = notifications.id AND nd.user_id = ? AND nd.deleted_at IS NULL ORDER BY nd.created_at DESC LIMIT 1) AS delivery_id", userID, userID).
 		Order(column + " " + direction).Limit(page.PerPage).Offset(page.Offset()).Find(&items).Error; err != nil {
 		return nil, err
 	}
@@ -110,7 +110,7 @@ func (s NotificationService) List(userID uuid.UUID, in NotificationListInput) (*
 func (s NotificationService) Get(userID, id uuid.UUID) (*models.Notification, error) {
 	var item models.Notification
 	err := s.DB.Model(&models.Notification{}).
-		Select("notifications.*, EXISTS (SELECT 1 FROM notification_reads nr WHERE nr.notification_id = notifications.id AND nr.user_id = ?) AS is_read", userID).
+		Select("notifications.*, EXISTS (SELECT 1 FROM notification_reads nr WHERE nr.notification_id = notifications.id AND nr.user_id = ?) AS is_read, (SELECT nd.id FROM notification_deliveries nd WHERE nd.notification_id = notifications.id AND nd.user_id = ? AND nd.deleted_at IS NULL ORDER BY nd.created_at DESC LIMIT 1) AS delivery_id", userID, userID).
 		Where("notifications.id = ? AND (notifications.user_id = ? OR notifications.user_id IS NULL)", id, userID).
 		Where("NOT EXISTS (SELECT 1 FROM notification_preference_settings nps WHERE nps.user_id = ? AND nps.deleted_at IS NULL AND nps.in_app_enabled = ?)", userID, false).
 		Where("(publish_at IS NULL OR publish_at <= ?) AND (expires_at IS NULL OR expires_at > ?)", time.Now().UTC(), time.Now().UTC()).First(&item).Error

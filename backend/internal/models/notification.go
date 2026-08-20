@@ -35,6 +35,7 @@ type Notification struct {
 	CreatedBy        *uuid.UUID         `gorm:"type:uuid" json:"created_by,omitempty"`
 	PublishedBy      *uuid.UUID         `gorm:"type:uuid" json:"published_by,omitempty"`
 	IsRead           bool               `gorm:"->" json:"is_read"`
+	DeliveryID       *uuid.UUID         `gorm:"->" json:"delivery_id,omitempty"`
 }
 
 func (n *Notification) AfterFind(*gorm.DB) error {
@@ -104,6 +105,7 @@ type NotificationCampaign struct {
 	Type                   string         `json:"type"`
 	Status                 string         `json:"status"`
 	TemplateVersionID      *uuid.UUID     `gorm:"type:uuid" json:"template_version_id,omitempty"`
+	CampaignVariablesJSON  datatypes.JSON `gorm:"column:campaign_variables_json;type:jsonb" json:"-" swaggerignore:"true"`
 	RenderedTitle          string         `json:"rendered_title"`
 	RenderedBody           string         `json:"rendered_body"`
 	ActionSnapshotJSON     datatypes.JSON `gorm:"column:action_snapshot_json;type:jsonb" json:"action_snapshot" swaggertype:"object"`
@@ -204,4 +206,36 @@ type NotificationDeliveryAttempt struct {
 	ErrorMessage      *string   `json:"error_message,omitempty"`
 	RetryAfterSeconds *int      `json:"retry_after_seconds,omitempty"`
 	DurationMS        int64     `json:"duration_ms"`
+}
+
+// NotificationDelivery is the durable, channel-neutral delivery lifecycle.
+// It deliberately distinguishes provider acceptance from device delivery.
+type NotificationDelivery struct {
+	Base
+	CampaignID        uuid.UUID  `gorm:"type:uuid;not null;index" json:"campaign_id"`
+	NotificationID    *uuid.UUID `gorm:"type:uuid;index" json:"notification_id,omitempty"`
+	OutboxJobID       uuid.UUID  `gorm:"type:uuid;not null;uniqueIndex" json:"outbox_job_id"`
+	UserID            uuid.UUID  `gorm:"type:uuid;not null;index" json:"-"`
+	FirebaseDeviceID  *uuid.UUID `gorm:"type:uuid;index" json:"device_id,omitempty"`
+	Channel           string     `gorm:"not null;index" json:"channel"`
+	ProviderMessageID *string    `json:"provider_message_id,omitempty"`
+	State             string     `gorm:"not null;index" json:"state"`
+	AttemptCount      int        `gorm:"not null;default:0" json:"attempt_count"`
+	AttemptedAt       *time.Time `json:"attempted_at,omitempty"`
+	AcceptedAt        *time.Time `json:"accepted_at,omitempty"`
+	FailedAt          *time.Time `json:"failed_at,omitempty"`
+	DeliveredAt       *time.Time `json:"delivered_at,omitempty"`
+	OpenedAt          *time.Time `json:"opened_at,omitempty"`
+	ClickedAt         *time.Time `json:"clicked_at,omitempty"`
+	ExpiredAt         *time.Time `json:"expired_at,omitempty"`
+	ErrorCategory     *string    `json:"error_category,omitempty"`
+}
+
+type NotificationDeliveryEvent struct {
+	Base
+	DeliveryID uuid.UUID `gorm:"type:uuid;not null;index;uniqueIndex:idx_notification_delivery_event" json:"delivery_id"`
+	UserID     uuid.UUID `gorm:"type:uuid;not null;index" json:"-"`
+	EventID    string    `gorm:"not null;uniqueIndex:idx_notification_delivery_event" json:"event_id"`
+	EventType  string    `gorm:"not null" json:"event_type"`
+	OccurredAt time.Time `gorm:"not null" json:"occurred_at"`
 }

@@ -25,6 +25,7 @@ func notificationTestService(t *testing.T) NotificationService {
 		&models.NotificationPreference{}, &models.NotificationCampaignRecipient{},
 		&models.NotificationPreferenceSettings{},
 		&models.NotificationOutboxJob{}, &models.NotificationDeliveryAttempt{},
+		&models.NotificationDelivery{}, &models.NotificationDeliveryEvent{},
 		&models.Role{}, &models.Region{}, &models.District{}, &models.FacilityLevel{}, &models.HealthFacility{},
 	); err != nil {
 		t.Fatal(err)
@@ -299,6 +300,9 @@ func TestNotificationCampaignWorkflowEnforcesApprovalFreezeAndConcurrency(t *tes
 	}, author, "127.0.0.1")
 	if err != nil {
 		t.Fatal(err)
+	}
+	if campaign.Variables["name"] != "Ebola" || campaign.Variables["instruction"] != "isolation guidance" {
+		t.Fatalf("campaign variables were not persisted for later editing: %#v", campaign.Variables)
 	}
 	campaign, err = service.TransitionCampaign(campaign.ID, "submit", NotificationCampaignTransitionInput{LockVersion: campaign.LockVersion}, author, "127.0.0.1")
 	if err != nil {

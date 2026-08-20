@@ -17,9 +17,12 @@ Core endpoints:
 - `POST /api/v2/notification-template-versions/:id/preview`
 - `/api/v2/notification-campaigns`
 - `POST /api/v2/notification-campaigns/audience-estimate`
-- `POST /api/v2/notification-campaigns/:id/{submit|approve|reject|schedule|cancel}`
+- `POST /api/v2/notification-campaigns/:id/{submit|approve|reject|schedule|pause|resume|cancel}`
 - `GET /api/v2/notification-delivery-jobs`
 - `POST /api/v2/notification-delivery-jobs/:id/requeue`
+- `GET /api/v2/notification-deliveries` and `GET /api/v2/notification-delivery-analytics/daily`
+- `POST /api/v2/notification-deliveries/:id/{open|click}` (authenticated owner only)
+- `POST /api/v2/notification-templates/:id/clone`
 
 ## Typed audience resolution
 
@@ -68,6 +71,10 @@ Android and APNs payloads explicitly carry priority, TTL, collapse/thread key, A
 - `attempted`: a provider request was made.
 
 `accepted` is not proof of device delivery, display, or user interaction. Email and SMS remain explicitly unsupported.
+
+Every campaign job now has a channel-neutral lifecycle record. `queued`, `attempted`, `accepted`, `rejected`, `delivered`, `opened`, `clicked`, and `expired` retain distinct meanings. Mobile open/click writes derive the user from the access token and use `(delivery_id, event_id)` idempotency. Push payloads contain notification, campaign, delivery, and message correlation IDs but never registration tokens. Device-side delivery is unavailable until Firebase Cloud Messaging BigQuery export events are ingested; the dashboard labels that limitation rather than inferring delivery from provider acceptance.
+
+The administrative dashboard supports version history, cloning, draft version editing, validation/preview, template test handoff, draft campaign editing, typed audience estimates, Android/iOS previews, immediate or scheduled release, future-batch pause/resume, cancellation, archival, delivery audit, and confirmed failure requeue. Firebase test delivery uses a searchable recipient projection or the current administrator and reports per-device validation/acceptance/rejection without exposing tokens.
 
 ## Authorization and audit
 

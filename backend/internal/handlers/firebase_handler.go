@@ -41,7 +41,27 @@ func (h FirebaseHandler) ListDevices(c *gin.Context) {
 // @Success 200 {object} handlers.FirebaseStatusEnvelope
 // @Router /api/v2/firebase/status [get]
 func (h FirebaseHandler) Status(c *gin.Context) {
-	httpx.OK(c, gin.H{"enabled": h.Service != nil && h.Service.Enabled()})
+	status, err := h.Service.Status()
+	if err != nil {
+		firebaseError(c, err)
+		return
+	}
+	httpx.OK(c, status)
+}
+
+// SearchTestRecipients godoc
+// @Summary Search eligible test-push recipients without exposing tokens
+// @Tags firebase-administration
+// @Security BearerAuth
+// @Success 200 {object} handlers.FirebaseTestRecipientsEnvelope
+// @Router /api/v2/firebase/test-recipients [get]
+func (h FirebaseHandler) SearchTestRecipients(c *gin.Context) {
+	items, err := h.Service.SearchTestRecipients(c.Query("search"))
+	if err != nil {
+		firebaseError(c, err)
+		return
+	}
+	httpx.OK(c, items)
 }
 
 // RegisterDevice godoc
@@ -131,6 +151,10 @@ func (h FirebaseHandler) SendTestPush(c *gin.Context) {
 	if c.ShouldBindJSON(&input) != nil {
 		httpx.Error(c, http.StatusBadRequest, "invalid push payload")
 		return
+	}
+	claims := c.MustGet(middleware.ClaimsKey).(*security.Claims)
+	if input.CurrentUser {
+		input.UserID = claims.UserID.String()
 	}
 	result, err := h.Service.SendToUser(c.Request.Context(), input)
 	if err != nil {

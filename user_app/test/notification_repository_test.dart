@@ -194,4 +194,28 @@ void main() {
       expect(api.requestedBody, {'notifications_enabled': false});
     },
   );
+
+  test(
+    'NotificationRepository records typed delivery events without user ids',
+    () async {
+      final api = FakeNotificationApi();
+      final store = TestLocalStore();
+      addTearDown(store.close);
+      final repository = NotificationRepository(
+        api,
+        NotificationLocalRepository(store.cache),
+        userId: 'user-1',
+      );
+
+      await repository.recordOpen('delivery-1', eventId: 'push-open-message-1');
+
+      expect(
+        api.requestedPath,
+        '/api/v2/notification-deliveries/delivery-1/open',
+      );
+      expect(api.requestedBody?['event_id'], 'push-open-message-1');
+      expect(api.requestedBody?.containsKey('user_id'), isFalse);
+      expect(api.requestedBody?['occurred_at'], isNotEmpty);
+    },
+  );
 }

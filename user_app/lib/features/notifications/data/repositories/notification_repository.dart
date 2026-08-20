@@ -166,6 +166,31 @@ final class NotificationRepository {
     return _changeReadState(id, 'unread', isRead: false);
   }
 
+  Future<void> recordOpen(String deliveryId, {required String eventId}) {
+    return _recordDeliveryEvent(deliveryId, 'open', eventId);
+  }
+
+  Future<void> recordClick(String deliveryId, {required String eventId}) {
+    return _recordDeliveryEvent(deliveryId, 'click', eventId);
+  }
+
+  Future<void> _recordDeliveryEvent(
+    String deliveryId,
+    String eventType,
+    String eventId,
+  ) async {
+    final id = deliveryId.trim();
+    if (id.isEmpty) return;
+    await _api.requestJson(
+      '/api/v2/notification-deliveries/${Uri.encodeComponent(id)}/$eventType',
+      method: 'POST',
+      body: {
+        'event_id': eventId,
+        'occurred_at': DateTime.now().toUtc().toIso8601String(),
+      },
+    );
+  }
+
   // =========================================================
   // CHANGE READ STATE
   // =========================================================

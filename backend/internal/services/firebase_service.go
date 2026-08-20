@@ -46,6 +46,7 @@ type FirebaseService struct {
 	AllowedActionHosts []string
 	DeviceStaleAfter   time.Duration
 	MaxConcurrency     int
+	InitializedAt      *time.Time
 }
 
 type FirebaseMessagingClient interface {
@@ -85,20 +86,51 @@ type FirebaseDeviceDTO struct {
 }
 
 type FirebasePushInput struct {
-	UserID    string              `json:"user_id"`
-	Title     string              `json:"title"`
-	Body      string              `json:"body"`
-	Action    *NotificationAction `json:"action"`
-	ActionURL *string             `json:"action_url"`
-	Data      map[string]string   `json:"data"`
-	DryRun    bool                `json:"dry_run"`
+	UserID      string              `json:"user_id,omitempty"`
+	CurrentUser bool                `json:"current_user,omitempty"`
+	Title       string              `json:"title"`
+	Body        string              `json:"body"`
+	Action      *NotificationAction `json:"action"`
+	ActionURL   *string             `json:"action_url"`
+	Data        map[string]string   `json:"data"`
+	DryRun      bool                `json:"dry_run"`
 }
 
 type FirebasePushResult struct {
-	Attempted int `json:"attempted"`
-	Validated int `json:"validated"`
-	Accepted  int `json:"accepted"`
-	Failed    int `json:"failed"`
+	Attempted int                        `json:"attempted"`
+	Validated int                        `json:"validated"`
+	Accepted  int                        `json:"accepted"`
+	Failed    int                        `json:"failed"`
+	Devices   []FirebasePushDeviceResult `json:"devices"`
+}
+
+type FirebasePushDeviceResult struct {
+	DeviceID          uuid.UUID `json:"device_id"`
+	Platform          string    `json:"platform"`
+	AppVersion        *string   `json:"app_version,omitempty"`
+	State             string    `json:"state"`
+	ProviderMessageID *string   `json:"provider_message_id,omitempty"`
+	ErrorCategory     *string   `json:"error_category,omitempty"`
+}
+
+type FirebaseStatus struct {
+	Enabled                     bool             `json:"enabled"`
+	ProjectID                   string           `json:"project_id,omitempty"`
+	LastSuccessfulHealthCheckAt *time.Time       `json:"last_successful_health_check_at,omitempty"`
+	ActiveDeviceCount           int64            `json:"active_device_count"`
+	StaleDeviceCount            int64            `json:"stale_device_count"`
+	Platforms                   map[string]int64 `json:"platforms"`
+	DeliveryReporting           string           `json:"delivery_reporting"`
+	EmailStatus                 string           `json:"email_status"`
+	SMSStatus                   string           `json:"sms_status"`
+}
+
+type FirebaseTestRecipient struct {
+	ID          uuid.UUID `json:"id"`
+	Name        string    `json:"name"`
+	Email       string    `json:"email"`
+	DeviceCount int64     `json:"device_count"`
+	Platforms   []string  `json:"platforms"`
 }
 
 type FirebaseDeliveryOutcome struct {
@@ -143,6 +175,8 @@ func NewFirebaseService(database *gorm.DB, cfg config.Config) (*FirebaseService,
 		return nil, fmt.Errorf("initialize firebase messaging: %w", err)
 	}
 	service.Messenger = firebaseAdminMessenger{client: messagingClient}
+	initializedAt := time.Now().UTC()
+	service.InitializedAt = &initializedAt
 	// Firebase Admin Go does not expose Remote Config template management, so
 	// the existing credential-scoped client remains isolated to that API only.
 	service.Client, _, err = newFirebaseHTTPClient(cfg.FirebaseCredentials)
@@ -153,6 +187,71 @@ func NewFirebaseService(database *gorm.DB, cfg config.Config) (*FirebaseService,
 }
 
 func (s FirebaseService) Enabled() bool { return s.Messenger != nil && s.Project != "" }
+
+func (s FirebaseService) Status() (FirebaseStatus, error) {
+	result := FirebaseStatus{Enabled: s.Enabled(), ProjectID: s.Project, LastSuccessfulHealthCheckAt: s.InitializedAt, Platforms: map[string]int64{}, DeliveryReporting: "Provider acceptance only; device delivery requires Firebase BigQuery export ingestion", EmailStatus: "unsupported", SMSStatus: "unsupported"}
+	if s.DB == nil {
+		return result, nil
+	}
+	cutoff := time.Now().UTC().Add(-s.staleAfter())
+	if err := s.DB.Model(&models.FirebaseDevice{}).Where("notifications_enabled = ? AND last_seen_at >= ?", true, cutoff).Count(&result.ActiveDeviceCount).Error; err != nil {
+		return result, err
+	}
+	if err := s.DB.Model(&models.FirebaseDevice{}).Where("last_seen_at < ?", cutoff).Count(&result.StaleDeviceCount).Error; err != nil {
+		return result, err
+	}
+	type platformCount struct {
+		Platform string
+		Count    int64
+	}
+	var rows []platformCount
+	if err := s.DB.Model(&models.FirebaseDevice{}).Select("platform, COUNT(*) AS count").Where("notifications_enabled = ? AND last_seen_at >= ?", true, cutoff).Group("platform").Scan(&rows).Error; err != nil {
+		return result, err
+	}
+	for _, row := range rows {
+		result.Platforms[row.Platform] = row.Count
+	}
+	return result, nil
+}
+
+func (s FirebaseService) SearchTestRecipients(search string) ([]FirebaseTestRecipient, error) {
+	search = strings.TrimSpace(search)
+	if len(search) < 2 {
+		return []FirebaseTestRecipient{}, nil
+	}
+	type row struct {
+		ID          uuid.UUID
+		Name        string
+		Email       string
+		DeviceCount int64
+		Platforms   string
+	}
+	var rows []row
+	cutoff := time.Now().UTC().Add(-s.staleAfter())
+	err := s.DB.Table("users u").Select("u.id, u.name, u.email, COUNT(fd.id) AS device_count, COALESCE(STRING_AGG(DISTINCT fd.platform, ','), '') AS platforms").
+		Joins("LEFT JOIN firebase_devices fd ON fd.user_id = u.id AND fd.deleted_at IS NULL AND fd.notifications_enabled = ? AND fd.last_seen_at >= ?", true, cutoff).
+		Where("u.deleted_at IS NULL AND u.is_active = ? AND (LOWER(u.name) LIKE ? OR LOWER(u.email) LIKE ?)", true, "%"+strings.ToLower(search)+"%", "%"+strings.ToLower(search)+"%").
+		Group("u.id, u.name, u.email").Order("u.name, u.email").Limit(20).Scan(&rows).Error
+	if err != nil {
+		return nil, err
+	}
+	items := make([]FirebaseTestRecipient, 0, len(rows))
+	for _, row := range rows {
+		var platforms []string
+		if row.Platforms != "" {
+			platforms = strings.Split(row.Platforms, ",")
+		}
+		items = append(items, FirebaseTestRecipient{ID: row.ID, Name: row.Name, Email: row.Email, DeviceCount: row.DeviceCount, Platforms: platforms})
+	}
+	return items, nil
+}
+
+func (s FirebaseService) staleAfter() time.Duration {
+	if s.DeviceStaleAfter > 0 {
+		return s.DeviceStaleAfter
+	}
+	return 90 * 24 * time.Hour
+}
 
 func (s FirebaseService) RegisterDevice(userID uuid.UUID, in FirebaseDeviceInput) (*models.FirebaseDevice, error) {
 	installationID := strings.TrimSpace(in.InstallationID)
@@ -277,7 +376,7 @@ func (s FirebaseService) SendToUser(ctx context.Context, in FirebasePushInput) (
 	if err := s.DB.Where("user_id = ? AND notifications_enabled = ? AND last_seen_at >= ?", userID, true, time.Now().UTC().Add(-staleAfter)).Find(&devices).Error; err != nil {
 		return nil, err
 	}
-	result := &FirebasePushResult{Attempted: len(devices)}
+	result := &FirebasePushResult{Attempted: len(devices), Devices: make([]FirebasePushDeviceResult, 0, len(devices))}
 	payload := NotificationDeliveryPayload{Title: strings.TrimSpace(in.Title), Body: strings.TrimSpace(in.Body), Action: action, Priority: "normal", AndroidChannel: "mediguide_updates", PublicContent: false}
 	if compatibilityURL != nil && payload.Action.Route == nil {
 		payload.Action.Route = compatibilityURL
@@ -291,6 +390,19 @@ func (s FirebaseService) SendToUser(ctx context.Context, in FirebasePushInput) (
 		} else {
 			result.Failed++
 		}
+		deviceResult := FirebasePushDeviceResult{DeviceID: device.ID, Platform: device.Platform, AppVersion: device.AppVersion, State: "rejected"}
+		if outcome.Validated {
+			deviceResult.State = "validated"
+		} else if outcome.Accepted {
+			deviceResult.State = "accepted"
+		}
+		if outcome.MessageID != "" {
+			deviceResult.ProviderMessageID = &outcome.MessageID
+		}
+		if outcome.Code != "" {
+			deviceResult.ErrorCategory = &outcome.Code
+		}
+		result.Devices = append(result.Devices, deviceResult)
 	}
 	return result, nil
 }
@@ -360,6 +472,15 @@ func firebaseMessage(token string, payload NotificationDeliveryPayload, extra ma
 	data["action_parameters"] = string(parameters)
 	if payload.CampaignID != "" {
 		data["campaign_id"] = payload.CampaignID
+	}
+	if payload.NotificationID != "" {
+		data["notification_id"] = payload.NotificationID
+	}
+	if payload.DeliveryID != "" {
+		data["delivery_id"] = payload.DeliveryID
+	}
+	if payload.MessageID != "" {
+		data["message_id"] = payload.MessageID
 	}
 	if payload.Action.ResourceID != nil {
 		data["resource_id"] = *payload.Action.ResourceID

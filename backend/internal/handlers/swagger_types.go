@@ -118,7 +118,12 @@ type ErrorResponse struct {
 }
 
 type FirebaseStatusResult struct {
-	Enabled bool `json:"enabled" example:"true"`
+	services.FirebaseStatus
+}
+
+type FirebaseTestRecipientsEnvelope struct {
+	Success bool                             `json:"success"`
+	Data    []services.FirebaseTestRecipient `json:"data"`
 }
 
 type FirebaseStatusEnvelope struct {
@@ -163,6 +168,21 @@ type DeletedEnvelope struct {
 type FirebasePushResultEnvelope struct {
 	Success bool                        `json:"success" example:"true"`
 	Data    services.FirebasePushResult `json:"data"`
+}
+
+type NotificationDeliveryEnvelope struct {
+	Success bool                             `json:"success"`
+	Data    services.NotificationDeliveryDTO `json:"data"`
+}
+
+type PaginatedNotificationDeliveriesEnvelope struct {
+	Success bool                                                  `json:"success"`
+	Data    services.PageResult[services.NotificationDeliveryDTO] `json:"data"`
+}
+
+type NotificationDeliveryAnalyticsEnvelope struct {
+	Success bool                                   `json:"success"`
+	Data    services.NotificationDeliveryAnalytics `json:"data"`
 }
 
 type FirebaseRemoteConfigResult struct {

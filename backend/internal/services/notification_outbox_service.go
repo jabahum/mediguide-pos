@@ -21,6 +21,9 @@ import (
 
 type NotificationDeliveryPayload struct {
 	CampaignID         string             `json:"campaign_id,omitempty"`
+	NotificationID     string             `json:"notification_id,omitempty"`
+	DeliveryID         string             `json:"delivery_id,omitempty"`
+	MessageID          string             `json:"message_id,omitempty"`
 	Title              string             `json:"title"`
 	Body               string             `json:"body"`
 	Action             NotificationAction `json:"action"`
@@ -190,6 +193,9 @@ func (s NotificationService) prepareCampaignDispatch(tx *gorm.DB, item *models.N
 			}
 		}
 	}
+	if err := s.ensureCampaignDeliveryRecords(tx, item.ID); err != nil {
+		return nil, err
+	}
 	return &NotificationAudienceEstimate{EligibleUsers: int64(len(resolved.UserIDs)), ActiveDevices: int64(len(resolved.ActiveDevices))}, nil
 }
 
@@ -316,6 +322,9 @@ func (s NotificationOutboxService) Requeue(id, actor uuid.UUID, in NotificationO
 		if err := tx.Model(&job).Updates(map[string]any{"status": "pending", "attempt_count": 0, "next_attempt_at": s.now(), "locked_at": nil, "locked_by": nil, "last_error_code": nil, "last_error_message": nil, "completed_at": nil}).Error; err != nil {
 			return err
 		}
+		if err := tx.Model(&models.NotificationDelivery{}).Where("outbox_job_id = ?", job.ID).Updates(map[string]any{"state": "queued", "attempt_count": 0, "attempted_at": nil, "accepted_at": nil, "failed_at": nil, "expired_at": nil, "provider_message_id": nil, "error_category": nil, "updated_at": s.now()}).Error; err != nil {
+			return err
+		}
 		if err := tx.Model(&campaign).Updates(map[string]any{"status": "queued", "started_at": nil, "completed_at": nil, "failure_reason": nil, "lock_version": gorm.Expr("lock_version + 1")}).Error; err != nil {
 			return err
 		}
@@ -356,6 +365,9 @@ func (s NotificationOutboxService) ClaimBatch() ([]models.NotificationOutboxJob,
 		}
 		for i := range claimed {
 			if err := tx.Model(&models.NotificationOutboxJob{}).Where("id = ?", claimed[i].ID).Updates(map[string]any{"status": "processing", "locked_at": now, "locked_by": worker, "attempt_count": gorm.Expr("attempt_count + 1")}).Error; err != nil {
+				return err
+			}
+			if err := tx.Model(&models.NotificationDelivery{}).Where("outbox_job_id = ?", claimed[i].ID).Updates(map[string]any{"state": "attempted", "attempt_count": gorm.Expr("attempt_count + 1"), "attempted_at": gorm.Expr("COALESCE(attempted_at, ?)", now), "updated_at": now}).Error; err != nil {
 				return err
 			}
 			claimed[i].Status = "processing"
@@ -560,6 +572,31 @@ func (s NotificationOutboxService) RecordResult(job models.NotificationOutboxJob
 			attempt.RetryAfterSeconds = &retrySeconds
 		}
 		if err := tx.Clauses(clause.OnConflict{DoNothing: true}).Create(&attempt).Error; err != nil {
+			return err
+		}
+		deliveryUpdates := map[string]any{"attempt_count": job.AttemptCount, "attempted_at": gorm.Expr("COALESCE(attempted_at, ?)", started), "updated_at": now}
+		switch {
+		case outcome.Validated:
+			deliveryUpdates["state"] = "attempted"
+		case outcome.Accepted:
+			deliveryUpdates["state"] = "accepted"
+			deliveryUpdates["accepted_at"] = now
+			deliveryUpdates["provider_message_id"] = cleanOptional(&outcome.MessageID)
+			deliveryUpdates["error_category"] = nil
+		case outcome.Retryable && job.AttemptCount < job.MaxAttempts && !s.expired(job, now):
+			deliveryUpdates["state"] = "attempted"
+			deliveryUpdates["error_category"] = cleanOptional(&outcome.Code)
+		default:
+			if outcome.Code == "expired" {
+				deliveryUpdates["state"] = "expired"
+				deliveryUpdates["expired_at"] = now
+			} else {
+				deliveryUpdates["state"] = "rejected"
+				deliveryUpdates["failed_at"] = now
+			}
+			deliveryUpdates["error_category"] = cleanOptional(&outcome.Code)
+		}
+		if err := tx.Model(&models.NotificationDelivery{}).Where("outbox_job_id = ?", job.ID).Updates(deliveryUpdates).Error; err != nil {
 			return err
 		}
 		return s.refreshRecipientOutcome(tx, job.RecipientID)

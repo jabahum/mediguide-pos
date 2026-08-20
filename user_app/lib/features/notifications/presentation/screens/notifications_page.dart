@@ -275,6 +275,9 @@ class NotificationsPage extends ConsumerWidget {
     NotificationsController controller,
   ) async {
     try {
+      await controller.recordOpen(notification);
+    } catch (_) {}
+    try {
       await controller.markRead(notification);
     } catch (_) {
       // Reading the notification should not depend on
@@ -295,6 +298,10 @@ class NotificationsPage extends ConsumerWidget {
     // =======================================================================
 
     if (target?.location case final location?) {
+      try {
+        await controller.recordClick(notification);
+      } catch (_) {}
+      if (!context.mounted) return;
       context.push(location);
       return;
     }
@@ -305,6 +312,7 @@ class NotificationsPage extends ConsumerWidget {
 
     if (target?.externalUri case final uri?) {
       try {
+        await controller.recordClick(notification);
         final launched = await launchUrl(
           uri,
           mode: LaunchMode.externalApplication,

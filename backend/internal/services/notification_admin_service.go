@@ -131,6 +131,7 @@ type NotificationCampaignDTO struct {
 	Type                   string                         `json:"type"`
 	Status                 string                         `json:"status"`
 	TemplateVersionID      *uuid.UUID                     `json:"template_version_id,omitempty"`
+	Variables              map[string]any                 `json:"variables"`
 	RenderedTitle          string                         `json:"rendered_title"`
 	RenderedBody           string                         `json:"rendered_body"`
 	ActionSnapshot         NotificationAction             `json:"action_snapshot"`
@@ -324,6 +325,29 @@ func (s NotificationService) PreviewTemplateVersion(versionID uuid.UUID, variabl
 	return s.renderTemplate(version, variables)
 }
 
+type NotificationTemplateCloneInput struct {
+	Name        string `json:"name"`
+	TemplateKey string `json:"template_key"`
+}
+
+func (s NotificationService) CloneTemplate(id uuid.UUID, in NotificationTemplateCloneInput, actor uuid.UUID, ip string) (*NotificationTemplateDTO, error) {
+	source, err := s.GetTemplate(id)
+	if err != nil {
+		return nil, err
+	}
+	name, key := strings.TrimSpace(in.Name), strings.TrimSpace(in.TemplateKey)
+	if name == "" || key == "" {
+		return nil, ErrNotificationInvalid
+	}
+	title := source.Version.TitleTemplate
+	input := NotificationTemplateInput{Name: name, TemplateKey: key, Channel: source.Version.Channel, TitleTemplate: title, BodyTemplate: source.Version.BodyTemplate, ActionTemplate: &source.Version.ActionTemplate, VariableSchema: source.Version.VariableSchema, Category: source.Version.Category, Locale: source.Version.Locale}
+	result, err := s.SaveTemplate(nil, input, actor, ip)
+	if err == nil {
+		_ = writeNotificationAudit(s.DB, actor, "notification.template.cloned", "notification_template", result.ID, ip, map[string]any{"source_template_id": id})
+	}
+	return result, err
+}
+
 func (s NotificationService) ListCampaigns(in NotificationAdminListInput) (*PageResult[NotificationCampaignDTO], error) {
 	if (in.Type != "" && !oneOf(in.Type, "emergency", "update", "reminder", "marketing", "announcement")) || (in.Status != "" && !validCampaignStatus(in.Status)) {
 		return nil, ErrNotificationInvalid
@@ -384,6 +408,7 @@ func (s NotificationService) SaveCampaign(id *uuid.UUID, in NotificationCampaign
 	countriesJSON, _ := json.Marshal(in.Audience.Countries)
 	rolesJSON, _ := json.Marshal(in.Audience.RoleIDs)
 	actionJSON, _ := json.Marshal(preview.Action)
+	variablesJSON, _ := json.Marshal(in.Variables)
 	var result *NotificationCampaignDTO
 	err = s.DB.Transaction(func(tx *gorm.DB) error {
 		if id == nil {
@@ -401,7 +426,7 @@ func (s NotificationService) SaveCampaign(id *uuid.UUID, in NotificationCampaign
 				return err
 			}
 		}
-		item := models.NotificationCampaign{Name: strings.TrimSpace(in.Name), Type: strings.TrimSpace(in.Type), Status: "draft", TemplateVersionID: &in.TemplateVersionID, RenderedTitle: preview.Title, RenderedBody: preview.Body, ActionSnapshotJSON: datatypes.JSON(actionJSON), AudienceDefinitionJSON: datatypes.JSON(audienceJSON), ScheduledAt: in.ScheduledAt, Timezone: normalizeTimezone(in.Timezone), ExpiresAt: in.ExpiresAt, TTLSeconds: in.TTLSeconds, Priority: in.Priority, CollapseKey: cleanOptional(in.CollapseKey), RequestedChannelsJSON: datatypes.JSON(channelsJSON), CreatedBy: &actor, IdempotencyKey: strings.TrimSpace(in.IdempotencyKey), LockVersion: 1, ChannelsJSON: datatypes.JSON(channelsJSON), AudienceCountriesJSON: datatypes.JSON(countriesJSON), AudienceRolesJSON: datatypes.JSON(rolesJSON)}
+		item := models.NotificationCampaign{Name: strings.TrimSpace(in.Name), Type: strings.TrimSpace(in.Type), Status: "draft", TemplateVersionID: &in.TemplateVersionID, CampaignVariablesJSON: datatypes.JSON(variablesJSON), RenderedTitle: preview.Title, RenderedBody: preview.Body, ActionSnapshotJSON: datatypes.JSON(actionJSON), AudienceDefinitionJSON: datatypes.JSON(audienceJSON), ScheduledAt: in.ScheduledAt, Timezone: normalizeTimezone(in.Timezone), ExpiresAt: in.ExpiresAt, TTLSeconds: in.TTLSeconds, Priority: in.Priority, CollapseKey: cleanOptional(in.CollapseKey), RequestedChannelsJSON: datatypes.JSON(channelsJSON), CreatedBy: &actor, IdempotencyKey: strings.TrimSpace(in.IdempotencyKey), LockVersion: 1, ChannelsJSON: datatypes.JSON(channelsJSON), AudienceCountriesJSON: datatypes.JSON(countriesJSON), AudienceRolesJSON: datatypes.JSON(rolesJSON)}
 		if id == nil {
 			if err := tx.Create(&item).Error; err != nil {
 				return err
@@ -539,14 +564,39 @@ func (s NotificationService) TransitionCampaign(id uuid.UUID, action string, in 
 				updates["started_at"] = now
 				updates["completed_at"] = now
 			}
+		case "pause":
+			if !oneOf(item.Status, "scheduled", "queued") || item.StartedAt != nil {
+				return ErrNotificationTransition
+			}
+			updates["status"] = "paused"
+			if err := tx.Model(&models.NotificationOutboxJob{}).Where("campaign_id = ? AND status IN ?", item.ID, []string{"pending", "retry"}).Update("status", "held").Error; err != nil {
+				return err
+			}
+		case "resume":
+			if item.Status != "paused" || item.StartedAt != nil {
+				return ErrNotificationTransition
+			}
+			status := "queued"
+			next := now
+			if item.ScheduledAt != nil && item.ScheduledAt.After(now) {
+				status = "scheduled"
+				next = *item.ScheduledAt
+			}
+			updates["status"] = status
+			if err := tx.Model(&models.NotificationOutboxJob{}).Where("campaign_id = ? AND status = 'held'", item.ID).Updates(map[string]any{"status": "pending", "next_attempt_at": next}).Error; err != nil {
+				return err
+			}
 		case "cancel":
-			if !oneOf(item.Status, "draft", "pending_review", "approved", "scheduled", "queued") || item.StartedAt != nil {
+			if !oneOf(item.Status, "draft", "pending_review", "approved", "scheduled", "queued", "paused") || item.StartedAt != nil {
 				return ErrNotificationTransition
 			}
 			updates["status"] = "cancelled"
 			updates["cancelled_at"] = now
 			updates["failure_reason"] = cleanOptional(&in.Reason)
 			if err := tx.Model(&models.NotificationOutboxJob{}).Where("campaign_id = ? AND status IN ?", item.ID, []string{"held", "pending", "retry"}).Updates(map[string]any{"status": "cancelled", "completed_at": now, "last_error_code": "campaign_cancelled"}).Error; err != nil {
+				return err
+			}
+			if err := tx.Model(&models.NotificationDelivery{}).Where("campaign_id = ? AND state IN ?", item.ID, []string{"queued", "attempted"}).Updates(map[string]any{"state": "rejected", "failed_at": now, "error_category": "campaign_cancelled", "updated_at": now}).Error; err != nil {
 				return err
 			}
 			if err := tx.Model(&models.Notification{}).Where("campaign_id = ?", item.ID).Update("expires_at", now).Error; err != nil {
@@ -635,6 +685,7 @@ func campaignDTO(row models.NotificationCampaign) (NotificationCampaignDTO, erro
 	audience := NotificationAudienceDefinition{}
 	channels := []string{}
 	snapshot := map[string]any{}
+	variables := map[string]any{}
 	if len(row.ActionSnapshotJSON) > 0 {
 		if err := json.Unmarshal(row.ActionSnapshotJSON, &action); err != nil {
 			return NotificationCampaignDTO{}, err
@@ -653,7 +704,12 @@ func campaignDTO(row models.NotificationCampaign) (NotificationCampaignDTO, erro
 	if len(row.DispatchSnapshotJSON) > 0 {
 		_ = json.Unmarshal(row.DispatchSnapshotJSON, &snapshot)
 	}
-	return NotificationCampaignDTO{ID: row.ID, Name: row.Name, Type: row.Type, Status: row.Status, TemplateVersionID: row.TemplateVersionID, RenderedTitle: row.RenderedTitle, RenderedBody: row.RenderedBody, ActionSnapshot: action, Audience: audience, ResolvedRecipientCount: row.ResolvedRecipientCount, ScheduledAt: row.ScheduledAt, Timezone: row.Timezone, ExpiresAt: row.ExpiresAt, TTLSeconds: row.TTLSeconds, Priority: row.Priority, CollapseKey: row.CollapseKey, RequestedChannels: channels, CreatedBy: row.CreatedBy, ReviewedBy: row.ReviewedBy, ReviewedAt: row.ReviewedAt, ApprovedBy: row.ApprovedBy, ApprovedAt: row.ApprovedAt, StartedAt: row.StartedAt, CompletedAt: row.CompletedAt, CancelledAt: row.CancelledAt, FailureReason: row.FailureReason, IdempotencyKey: row.IdempotencyKey, DispatchSnapshot: snapshot, LockVersion: row.LockVersion, CreatedAt: row.CreatedAt, UpdatedAt: row.UpdatedAt}, nil
+	if len(row.CampaignVariablesJSON) > 0 {
+		if err := json.Unmarshal(row.CampaignVariablesJSON, &variables); err != nil {
+			return NotificationCampaignDTO{}, err
+		}
+	}
+	return NotificationCampaignDTO{ID: row.ID, Name: row.Name, Type: row.Type, Status: row.Status, TemplateVersionID: row.TemplateVersionID, Variables: variables, RenderedTitle: row.RenderedTitle, RenderedBody: row.RenderedBody, ActionSnapshot: action, Audience: audience, ResolvedRecipientCount: row.ResolvedRecipientCount, ScheduledAt: row.ScheduledAt, Timezone: row.Timezone, ExpiresAt: row.ExpiresAt, TTLSeconds: row.TTLSeconds, Priority: row.Priority, CollapseKey: row.CollapseKey, RequestedChannels: channels, CreatedBy: row.CreatedBy, ReviewedBy: row.ReviewedBy, ReviewedAt: row.ReviewedAt, ApprovedBy: row.ApprovedBy, ApprovedAt: row.ApprovedAt, StartedAt: row.StartedAt, CompletedAt: row.CompletedAt, CancelledAt: row.CancelledAt, FailureReason: row.FailureReason, IdempotencyKey: row.IdempotencyKey, DispatchSnapshot: snapshot, LockVersion: row.LockVersion, CreatedAt: row.CreatedAt, UpdatedAt: row.UpdatedAt}, nil
 }
 
 func validateTemplateInput(in NotificationTemplateInput) error {
@@ -902,7 +958,7 @@ func normalizeTimezone(v string) string {
 	return v
 }
 func validCampaignStatus(v string) bool {
-	return oneOf(v, "draft", "pending_review", "approved", "scheduled", "queued", "sending", "completed", "partially_failed", "failed", "cancelled")
+	return oneOf(v, "draft", "pending_review", "approved", "scheduled", "queued", "paused", "sending", "completed", "partially_failed", "failed", "cancelled")
 }
 func requiresIndependentApproval(item models.NotificationCampaign) bool {
 	if item.Priority == "urgent" || item.Type == "emergency" {

@@ -247,6 +247,39 @@ func TestFirebaseSendToUserReportsPartialFailureTruthfully(t *testing.T) {
 	if result.Attempted != 2 || result.Accepted != 1 || result.Failed != 1 || result.Validated != 0 {
 		t.Fatalf("partial provider result was not reported truthfully: %#v", result)
 	}
+	if len(result.Devices) != 2 || result.Devices[0].State != "accepted" || result.Devices[0].ProviderMessageID == nil || result.Devices[1].State != "rejected" || result.Devices[1].ErrorCategory == nil {
+		t.Fatalf("per-device results did not preserve provider outcomes: %#v", result.Devices)
+	}
+}
+
+func TestFirebaseStatusReportsLiveDeviceInventoryWithoutClaimingDeliveryReceipts(t *testing.T) {
+	service := firebaseTestService(t)
+	service.Project = "test-project"
+	service.Messenger = &firebaseMockMessenger{}
+	service.DeviceStaleAfter = 30 * 24 * time.Hour
+	now := time.Now().UTC()
+	service.InitializedAt = &now
+	owner := uuid.New()
+	if _, err := service.RegisterDevice(owner, FirebaseDeviceInput{InstallationID: "android-active", RegistrationToken: "token-active", Platform: "android"}); err != nil {
+		t.Fatal(err)
+	}
+	stale, err := service.RegisterDevice(owner, FirebaseDeviceInput{InstallationID: "ios-stale", RegistrationToken: "token-stale", Platform: "ios"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := service.DB.Model(&models.FirebaseDevice{}).Where("id = ?", stale.ID).Update("last_seen_at", now.Add(-31*24*time.Hour)).Error; err != nil {
+		t.Fatal(err)
+	}
+	status, err := service.Status()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !status.Enabled || status.ActiveDeviceCount != 1 || status.StaleDeviceCount != 1 || status.Platforms["android"] != 1 || status.Platforms["ios"] != 0 {
+		t.Fatalf("unexpected live Firebase status: %#v", status)
+	}
+	if status.DeliveryReporting == "available" {
+		t.Fatalf("status must not claim provider delivery receipts without BigQuery ingestion: %#v", status)
+	}
 }
 
 func TestFirebaseErrorClassificationHonorsRetryAfterAndTimeout(t *testing.T) {

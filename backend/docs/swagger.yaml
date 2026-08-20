@@ -238,8 +238,35 @@ definitions:
     type: object
   handlers.FirebaseStatusResult:
     properties:
+      active_device_count:
+        type: integer
+      delivery_reporting:
+        type: string
+      email_status:
+        type: string
       enabled:
-        example: true
+        type: boolean
+      last_successful_health_check_at:
+        type: string
+      platforms:
+        additionalProperties:
+          format: int64
+          type: integer
+        type: object
+      project_id:
+        type: string
+      sms_status:
+        type: string
+      stale_device_count:
+        type: integer
+    type: object
+  handlers.FirebaseTestRecipientsEnvelope:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/services.FirebaseTestRecipient'
+        type: array
+      success:
         type: boolean
     type: object
   handlers.GenericPageEnvelope:
@@ -596,6 +623,20 @@ definitions:
     properties:
       data:
         $ref: '#/definitions/services.NotificationCampaignDTO'
+      success:
+        type: boolean
+    type: object
+  handlers.NotificationDeliveryAnalyticsEnvelope:
+    properties:
+      data:
+        $ref: '#/definitions/services.NotificationDeliveryAnalytics'
+      success:
+        type: boolean
+    type: object
+  handlers.NotificationDeliveryEnvelope:
+    properties:
+      data:
+        $ref: '#/definitions/services.NotificationDeliveryDTO'
       success:
         type: boolean
     type: object
@@ -1121,6 +1162,13 @@ definitions:
     properties:
       data:
         $ref: '#/definitions/handlers.PaginatedNotificationCampaigns'
+      success:
+        type: boolean
+    type: object
+  handlers.PaginatedNotificationDeliveriesEnvelope:
+    properties:
+      data:
+        $ref: '#/definitions/services.PageResult-services_NotificationDeliveryDTO'
       success:
         type: boolean
     type: object
@@ -3096,6 +3144,8 @@ definitions:
         type: string
       deduplication_key:
         type: string
+      delivery_id:
+        type: string
       expires_at:
         type: string
       id:
@@ -4352,6 +4402,21 @@ definitions:
       notifications_enabled:
         type: boolean
     type: object
+  services.FirebasePushDeviceResult:
+    properties:
+      app_version:
+        type: string
+      device_id:
+        type: string
+      error_category:
+        type: string
+      platform:
+        type: string
+      provider_message_id:
+        type: string
+      state:
+        type: string
+    type: object
   services.FirebasePushInput:
     properties:
       action:
@@ -4360,6 +4425,8 @@ definitions:
         type: string
       body:
         type: string
+      current_user:
+        type: boolean
       data:
         additionalProperties:
           type: string
@@ -4377,10 +4444,29 @@ definitions:
         type: integer
       attempted:
         type: integer
+      devices:
+        items:
+          $ref: '#/definitions/services.FirebasePushDeviceResult'
+        type: array
       failed:
         type: integer
       validated:
         type: integer
+    type: object
+  services.FirebaseTestRecipient:
+    properties:
+      device_count:
+        type: integer
+      email:
+        type: string
+      id:
+        type: string
+      name:
+        type: string
+      platforms:
+        items:
+          type: string
+        type: array
     type: object
   services.GenericPageInput:
     properties:
@@ -5168,6 +5254,9 @@ definitions:
         type: string
       updated_at:
         type: string
+      variables:
+        additionalProperties: {}
+        type: object
     type: object
   services.NotificationCampaignInput:
     properties:
@@ -5212,6 +5301,96 @@ definitions:
       scheduled_at:
         type: string
       timezone:
+        type: string
+    type: object
+  services.NotificationDeliveryAnalytics:
+    properties:
+      bigquery_export_note:
+        type: string
+      delivery_reporting:
+        additionalProperties:
+          type: string
+        type: object
+      from:
+        type: string
+      items:
+        items:
+          $ref: '#/definitions/services.NotificationDeliveryDailyMetric'
+        type: array
+      to:
+        type: string
+    type: object
+  services.NotificationDeliveryDTO:
+    properties:
+      accepted_at:
+        type: string
+      attempt_count:
+        type: integer
+      attempted_at:
+        type: string
+      campaign_id:
+        type: string
+      channel:
+        type: string
+      clicked_at:
+        type: string
+      created_at:
+        type: string
+      delivered_at:
+        type: string
+      device_id:
+        type: string
+      error_category:
+        type: string
+      expired_at:
+        type: string
+      failed_at:
+        type: string
+      id:
+        type: string
+      notification_id:
+        type: string
+      opened_at:
+        type: string
+      outbox_job_id:
+        type: string
+      provider_message_id:
+        type: string
+      state:
+        type: string
+      updated_at:
+        type: string
+      user_id:
+        type: string
+    type: object
+  services.NotificationDeliveryDailyMetric:
+    properties:
+      accepted:
+        type: integer
+      attempted:
+        type: integer
+      channel:
+        type: string
+      clicked:
+        type: integer
+      date:
+        type: string
+      delivered:
+        type: integer
+      expired:
+        type: integer
+      opened:
+        type: integer
+      queued:
+        type: integer
+      rejected:
+        type: integer
+    type: object
+  services.NotificationDeliveryEventInput:
+    properties:
+      event_id:
+        type: string
+      occurred_at:
         type: string
     type: object
   services.NotificationInput:
@@ -5361,6 +5540,13 @@ definitions:
         type: boolean
       system_notices:
         type: boolean
+    type: object
+  services.NotificationTemplateCloneInput:
+    properties:
+      name:
+        type: string
+      template_key:
+        type: string
     type: object
   services.NotificationTemplateDTO:
     properties:
@@ -5750,6 +5936,21 @@ definitions:
       items:
         items:
           $ref: '#/definitions/services.MessageView'
+        type: array
+      page:
+        type: integer
+      per_page:
+        type: integer
+      total_items:
+        type: integer
+      total_pages:
+        type: integer
+    type: object
+  services.PageResult-services_NotificationDeliveryDTO:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/services.NotificationDeliveryDTO'
         type: array
       page:
         type: integer
@@ -9263,6 +9464,18 @@ paths:
       summary: Get Firebase integration status
       tags:
       - firebase
+  /api/v2/firebase/test-recipients:
+    get:
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.FirebaseTestRecipientsEnvelope'
+      security:
+      - BearerAuth: []
+      summary: Search eligible test-push recipients without exposing tokens
+      tags:
+      - firebase-administration
   /api/v2/guideline-categories:
     get:
       parameters:
@@ -12186,7 +12399,7 @@ paths:
         name: id
         required: true
         type: string
-      - description: submit, approve, reject, schedule, or cancel
+      - description: submit, approve, reject, schedule, pause, resume, or cancel
         in: path
         name: action
         required: true
@@ -12228,6 +12441,87 @@ paths:
       security:
       - BearerAuth: []
       summary: Estimate eligible users and active devices for a typed campaign audience
+      tags:
+      - notification-administration
+  /api/v2/notification-deliveries:
+    get:
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.PaginatedNotificationDeliveriesEnvelope'
+      security:
+      - BearerAuth: []
+      summary: List notification delivery lifecycle records
+      tags:
+      - notification-administration
+  /api/v2/notification-deliveries/{id}/click:
+    post:
+      parameters:
+      - description: Delivery UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Client event
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/services.NotificationDeliveryEventInput'
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.NotificationDeliveryEnvelope'
+      security:
+      - BearerAuth: []
+      summary: Record an authenticated user's notification action click idempotently
+      tags:
+      - notifications
+  /api/v2/notification-deliveries/{id}/open:
+    post:
+      parameters:
+      - description: Delivery UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Client event
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/services.NotificationDeliveryEventInput'
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.NotificationDeliveryEnvelope'
+      security:
+      - BearerAuth: []
+      summary: Record an authenticated user's notification open event idempotently
+      tags:
+      - notifications
+  /api/v2/notification-delivery-analytics/daily:
+    get:
+      parameters:
+      - description: Start date (YYYY-MM-DD)
+        in: query
+        name: from
+        type: string
+      - description: Exclusive end date (YYYY-MM-DD)
+        in: query
+        name: to
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.NotificationDeliveryAnalyticsEnvelope'
+      security:
+      - BearerAuth: []
+      summary: Get daily channel delivery lifecycle aggregates
       tags:
       - notification-administration
   /api/v2/notification-delivery-jobs:
@@ -12407,6 +12701,25 @@ paths:
       security:
       - BearerAuth: []
       summary: Replace editable notification-template fields
+      tags:
+      - notification-administration
+  /api/v2/notification-templates/{id}/clone:
+    post:
+      parameters:
+      - description: Clone identity
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/services.NotificationTemplateCloneInput'
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/handlers.NotificationTemplateEnvelope'
+      security:
+      - BearerAuth: []
+      summary: Clone the current immutable template version into a new draft
       tags:
       - notification-administration
   /api/v2/notification-templates/{id}/status:

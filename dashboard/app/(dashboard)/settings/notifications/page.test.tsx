@@ -8,6 +8,9 @@ const serviceMocks = vi.hoisted(() => ({
   firebaseStatus: vi.fn(),
   estimateAudience: vi.fn(),
   preferenceAggregates: vi.fn(),
+  listDeliveries: vi.fn(),
+  deliveryAnalytics: vi.fn(),
+  listDeliveryJobs: vi.fn(),
 }))
 
 vi.mock("@/lib/backend-client", () => ({
@@ -24,6 +27,9 @@ vi.mock("@/services/notifications.service", () => ({
     listCampaigns: serviceMocks.listCampaigns,
     estimateAudience: serviceMocks.estimateAudience,
     preferenceAggregates: serviceMocks.preferenceAggregates,
+    listDeliveries: serviceMocks.listDeliveries,
+    deliveryAnalytics: serviceMocks.deliveryAnalytics,
+    listDeliveryJobs: serviceMocks.listDeliveryJobs,
   },
 }))
 
@@ -40,6 +46,9 @@ describe("NotificationAdministrationPage", () => {
     serviceMocks.firebaseStatus.mockResolvedValue({ enabled: false })
     serviceMocks.estimateAudience.mockResolvedValue({ eligible_users: 12, active_devices: 8 })
     serviceMocks.preferenceAggregates.mockResolvedValue({ eligible_users: 20, push_enabled_users: 15, in_app_enabled_users: 18, quiet_hours_users: 5, active_devices: 16, push_enabled_devices: 12, devices_by_platform: { android: 10, ios: 6 }, category_opt_in_counts: {} })
+    serviceMocks.listDeliveries.mockResolvedValue({ items: [], page: 1, per_page: 50, total_items: 0, total_pages: 0 })
+    serviceMocks.deliveryAnalytics.mockResolvedValue({ from: "2026-08-01T00:00:00Z", to: "2026-09-01T00:00:00Z", items: [], delivery_reporting: {}, big_query_export_note: "Provider delivery unavailable" })
+    serviceMocks.listDeliveryJobs.mockResolvedValue({ items: [], page: 1, per_page: 50, total_items: 0, total_pages: 0 })
   })
 
   afterEach(() => {

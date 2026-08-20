@@ -29,6 +29,28 @@ class MediGuideApp extends ConsumerWidget {
       final data = message.valueOrNull?.data;
       if (data == null) return;
       final target = NotificationActionResolver.fromPushData(data);
+      final deliveryId = data['delivery_id']?.toString().trim() ?? '';
+      if (deliveryId.isNotEmpty) {
+        final messageId = data['message_id']?.toString().trim();
+        unawaited(
+          (() async {
+            final repository = ref.read(notificationRepositoryProvider);
+            final eventSuffix = messageId?.isNotEmpty == true
+                ? messageId!
+                : deliveryId;
+            await repository.recordOpen(
+              deliveryId,
+              eventId: 'push-open-$eventSuffix',
+            );
+            if (target != null) {
+              await repository.recordClick(
+                deliveryId,
+                eventId: 'push-click-$eventSuffix',
+              );
+            }
+          })(),
+        );
+      }
       if (target?.location case final location?) {
         router.push(location);
       } else if (target?.externalUri case final uri?) {

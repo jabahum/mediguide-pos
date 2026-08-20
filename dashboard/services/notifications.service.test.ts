@@ -84,4 +84,17 @@ describe("notificationsService", () => {
 
     expect(send).toHaveBeenCalledWith("/api/v2/notification-preferences/aggregates")
   })
+
+  it("uses typed delivery audit, analytics, clone, pause and requeue endpoints", async () => {
+    await notificationsService.cloneTemplate("template-1", { name: "Copy", template_key: "copy" })
+    await notificationsService.transitionCampaign("campaign-1", "pause", { lock_version: 4 })
+    await notificationsService.listDeliveries({ campaign_id: "campaign-1", state: "accepted" })
+    await notificationsService.deliveryAnalytics("2026-08-01", "2026-08-20")
+    await notificationsService.requeueDeliveryJob("job-1", "operator retry")
+    expect(send).toHaveBeenCalledWith("/api/v2/notification-templates/template-1/clone", expect.anything())
+    expect(send).toHaveBeenCalledWith("/api/v2/notification-campaigns/campaign-1/pause", expect.anything())
+    expect(send).toHaveBeenCalledWith("/api/v2/notification-deliveries", expect.anything())
+    expect(send).toHaveBeenCalledWith("/api/v2/notification-delivery-analytics/daily", expect.anything())
+    expect(send).toHaveBeenCalledWith("/api/v2/notification-delivery-jobs/job-1/requeue", expect.anything())
+  })
 })

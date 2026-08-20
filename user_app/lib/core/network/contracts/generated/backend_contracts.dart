@@ -656,7 +656,49 @@ final class HandlersFirebaseStatusResult {
   static const schemaName = 'handlers.FirebaseStatusResult';
   final Map<String, dynamic> value;
 
+  int? get activeDeviceCount => (value['active_device_count'] as num?)?.toInt();
+
+  String? get deliveryReporting => value['delivery_reporting']?.toString();
+
+  String? get emailStatus => value['email_status']?.toString();
+
   bool? get enabled => value['enabled'] as bool?;
+
+  String? get lastSuccessfulHealthCheckAt =>
+      value['last_successful_health_check_at']?.toString();
+
+  Map<String, dynamic> get platforms => _jsonMap(value['platforms']);
+
+  String? get projectId => value['project_id']?.toString();
+
+  String? get smsStatus => value['sms_status']?.toString();
+
+  int? get staleDeviceCount => (value['stale_device_count'] as num?)?.toInt();
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
+final class HandlersFirebaseTestRecipientsEnvelope {
+  HandlersFirebaseTestRecipientsEnvelope(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory HandlersFirebaseTestRecipientsEnvelope.fromJson(
+    Map<String, dynamic> json,
+  ) => HandlersFirebaseTestRecipientsEnvelope(json);
+
+  static const schemaName = 'handlers.FirebaseTestRecipientsEnvelope';
+  final Map<String, dynamic> value;
+
+  List<ServicesFirebaseTestRecipient> get data {
+    final raw = value['data'];
+    if (raw is! List) return const [];
+    return raw
+        .whereType<Map>()
+        .map((item) => ServicesFirebaseTestRecipient.fromJson(_jsonMap(item)))
+        .toList(growable: false);
+  }
+
+  bool? get success => value['success'] as bool?;
 
   Map<String, dynamic> toJson() => Map.of(value);
 }
@@ -1465,6 +1507,50 @@ final class HandlersNotificationCampaignEnvelope {
     final raw = value['data'];
     if (raw is! Map) return null;
     return ServicesNotificationCampaignDTO.fromJson(_jsonMap(raw));
+  }
+
+  bool? get success => value['success'] as bool?;
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
+final class HandlersNotificationDeliveryAnalyticsEnvelope {
+  HandlersNotificationDeliveryAnalyticsEnvelope(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory HandlersNotificationDeliveryAnalyticsEnvelope.fromJson(
+    Map<String, dynamic> json,
+  ) => HandlersNotificationDeliveryAnalyticsEnvelope(json);
+
+  static const schemaName = 'handlers.NotificationDeliveryAnalyticsEnvelope';
+  final Map<String, dynamic> value;
+
+  ServicesNotificationDeliveryAnalytics? get data {
+    final raw = value['data'];
+    if (raw is! Map) return null;
+    return ServicesNotificationDeliveryAnalytics.fromJson(_jsonMap(raw));
+  }
+
+  bool? get success => value['success'] as bool?;
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
+final class HandlersNotificationDeliveryEnvelope {
+  HandlersNotificationDeliveryEnvelope(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory HandlersNotificationDeliveryEnvelope.fromJson(
+    Map<String, dynamic> json,
+  ) => HandlersNotificationDeliveryEnvelope(json);
+
+  static const schemaName = 'handlers.NotificationDeliveryEnvelope';
+  final Map<String, dynamic> value;
+
+  ServicesNotificationDeliveryDTO? get data {
+    final raw = value['data'];
+    if (raw is! Map) return null;
+    return ServicesNotificationDeliveryDTO.fromJson(_jsonMap(raw));
   }
 
   bool? get success => value['success'] as bool?;
@@ -2636,6 +2722,30 @@ final class HandlersPaginatedNotificationCampaignsEnvelope {
     final raw = value['data'];
     if (raw is! Map) return null;
     return HandlersPaginatedNotificationCampaigns.fromJson(_jsonMap(raw));
+  }
+
+  bool? get success => value['success'] as bool?;
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
+final class HandlersPaginatedNotificationDeliveriesEnvelope {
+  HandlersPaginatedNotificationDeliveriesEnvelope(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory HandlersPaginatedNotificationDeliveriesEnvelope.fromJson(
+    Map<String, dynamic> json,
+  ) => HandlersPaginatedNotificationDeliveriesEnvelope(json);
+
+  static const schemaName = 'handlers.PaginatedNotificationDeliveriesEnvelope';
+  final Map<String, dynamic> value;
+
+  ServicesPageResultServicesNotificationDeliveryDTO? get data {
+    final raw = value['data'];
+    if (raw is! Map) return null;
+    return ServicesPageResultServicesNotificationDeliveryDTO.fromJson(
+      _jsonMap(raw),
+    );
   }
 
   bool? get success => value['success'] as bool?;
@@ -5988,6 +6098,8 @@ final class ModelsNotification {
 
   String? get deduplicationKey => value['deduplication_key']?.toString();
 
+  String? get deliveryId => value['delivery_id']?.toString();
+
   String? get expiresAt => value['expires_at']?.toString();
 
   String? get id => value['id']?.toString();
@@ -7881,6 +7993,32 @@ final class ServicesFirebaseDeviceUpdateInput {
   Map<String, dynamic> toJson() => Map.of(value);
 }
 
+final class ServicesFirebasePushDeviceResult {
+  ServicesFirebasePushDeviceResult(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory ServicesFirebasePushDeviceResult.fromJson(
+    Map<String, dynamic> json,
+  ) => ServicesFirebasePushDeviceResult(json);
+
+  static const schemaName = 'services.FirebasePushDeviceResult';
+  final Map<String, dynamic> value;
+
+  String? get appVersion => value['app_version']?.toString();
+
+  String? get deviceId => value['device_id']?.toString();
+
+  String? get errorCategory => value['error_category']?.toString();
+
+  String? get platform => value['platform']?.toString();
+
+  String? get providerMessageId => value['provider_message_id']?.toString();
+
+  String? get state => value['state']?.toString();
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
 final class ServicesFirebasePushInput {
   ServicesFirebasePushInput(Map<String, dynamic> value)
     : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
@@ -7900,6 +8038,8 @@ final class ServicesFirebasePushInput {
   String? get actionUrl => value['action_url']?.toString();
 
   String? get body => value['body']?.toString();
+
+  bool? get currentUser => value['current_user'] as bool?;
 
   Map<String, dynamic> get data => _jsonMap(value['data']);
 
@@ -7926,9 +8066,47 @@ final class ServicesFirebasePushResult {
 
   int? get attempted => (value['attempted'] as num?)?.toInt();
 
+  List<ServicesFirebasePushDeviceResult> get devices {
+    final raw = value['devices'];
+    if (raw is! List) return const [];
+    return raw
+        .whereType<Map>()
+        .map(
+          (item) => ServicesFirebasePushDeviceResult.fromJson(_jsonMap(item)),
+        )
+        .toList(growable: false);
+  }
+
   int? get failed => (value['failed'] as num?)?.toInt();
 
   int? get validated => (value['validated'] as num?)?.toInt();
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
+final class ServicesFirebaseTestRecipient {
+  ServicesFirebaseTestRecipient(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory ServicesFirebaseTestRecipient.fromJson(Map<String, dynamic> json) =>
+      ServicesFirebaseTestRecipient(json);
+
+  static const schemaName = 'services.FirebaseTestRecipient';
+  final Map<String, dynamic> value;
+
+  int? get deviceCount => (value['device_count'] as num?)?.toInt();
+
+  String? get email => value['email']?.toString();
+
+  String? get id => value['id']?.toString();
+
+  String? get name => value['name']?.toString();
+
+  List<String> get platforms {
+    final raw = value['platforms'];
+    if (raw is! List) return const [];
+    return raw.whereType<String>().toList(growable: false);
+  }
 
   Map<String, dynamic> toJson() => Map.of(value);
 }
@@ -9265,6 +9443,8 @@ final class ServicesNotificationCampaignDTO {
 
   String? get updatedAt => value['updated_at']?.toString();
 
+  Map<String, dynamic> get variables => _jsonMap(value['variables']);
+
   Map<String, dynamic> toJson() => Map.of(value);
 }
 
@@ -9336,6 +9516,146 @@ final class ServicesNotificationCampaignTransitionInput {
   String? get scheduledAt => value['scheduled_at']?.toString();
 
   String? get timezone => value['timezone']?.toString();
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
+final class ServicesNotificationDeliveryAnalytics {
+  ServicesNotificationDeliveryAnalytics(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory ServicesNotificationDeliveryAnalytics.fromJson(
+    Map<String, dynamic> json,
+  ) => ServicesNotificationDeliveryAnalytics(json);
+
+  static const schemaName = 'services.NotificationDeliveryAnalytics';
+  final Map<String, dynamic> value;
+
+  String? get bigqueryExportNote => value['bigquery_export_note']?.toString();
+
+  Map<String, dynamic> get deliveryReporting =>
+      _jsonMap(value['delivery_reporting']);
+
+  String? get from => value['from']?.toString();
+
+  List<ServicesNotificationDeliveryDailyMetric> get items {
+    final raw = value['items'];
+    if (raw is! List) return const [];
+    return raw
+        .whereType<Map>()
+        .map(
+          (item) =>
+              ServicesNotificationDeliveryDailyMetric.fromJson(_jsonMap(item)),
+        )
+        .toList(growable: false);
+  }
+
+  String? get to => value['to']?.toString();
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
+final class ServicesNotificationDeliveryDTO {
+  ServicesNotificationDeliveryDTO(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory ServicesNotificationDeliveryDTO.fromJson(Map<String, dynamic> json) =>
+      ServicesNotificationDeliveryDTO(json);
+
+  static const schemaName = 'services.NotificationDeliveryDTO';
+  final Map<String, dynamic> value;
+
+  String? get acceptedAt => value['accepted_at']?.toString();
+
+  int? get attemptCount => (value['attempt_count'] as num?)?.toInt();
+
+  String? get attemptedAt => value['attempted_at']?.toString();
+
+  String? get campaignId => value['campaign_id']?.toString();
+
+  String? get channel => value['channel']?.toString();
+
+  String? get clickedAt => value['clicked_at']?.toString();
+
+  String? get createdAt => value['created_at']?.toString();
+
+  String? get deliveredAt => value['delivered_at']?.toString();
+
+  String? get deviceId => value['device_id']?.toString();
+
+  String? get errorCategory => value['error_category']?.toString();
+
+  String? get expiredAt => value['expired_at']?.toString();
+
+  String? get failedAt => value['failed_at']?.toString();
+
+  String? get id => value['id']?.toString();
+
+  String? get notificationId => value['notification_id']?.toString();
+
+  String? get openedAt => value['opened_at']?.toString();
+
+  String? get outboxJobId => value['outbox_job_id']?.toString();
+
+  String? get providerMessageId => value['provider_message_id']?.toString();
+
+  String? get state => value['state']?.toString();
+
+  String? get updatedAt => value['updated_at']?.toString();
+
+  String? get userId => value['user_id']?.toString();
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
+final class ServicesNotificationDeliveryDailyMetric {
+  ServicesNotificationDeliveryDailyMetric(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory ServicesNotificationDeliveryDailyMetric.fromJson(
+    Map<String, dynamic> json,
+  ) => ServicesNotificationDeliveryDailyMetric(json);
+
+  static const schemaName = 'services.NotificationDeliveryDailyMetric';
+  final Map<String, dynamic> value;
+
+  int? get accepted => (value['accepted'] as num?)?.toInt();
+
+  int? get attempted => (value['attempted'] as num?)?.toInt();
+
+  String? get channel => value['channel']?.toString();
+
+  int? get clicked => (value['clicked'] as num?)?.toInt();
+
+  String? get date => value['date']?.toString();
+
+  int? get delivered => (value['delivered'] as num?)?.toInt();
+
+  int? get expired => (value['expired'] as num?)?.toInt();
+
+  int? get opened => (value['opened'] as num?)?.toInt();
+
+  int? get queued => (value['queued'] as num?)?.toInt();
+
+  int? get rejected => (value['rejected'] as num?)?.toInt();
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
+final class ServicesNotificationDeliveryEventInput {
+  ServicesNotificationDeliveryEventInput(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory ServicesNotificationDeliveryEventInput.fromJson(
+    Map<String, dynamic> json,
+  ) => ServicesNotificationDeliveryEventInput(json);
+
+  static const schemaName = 'services.NotificationDeliveryEventInput';
+  final Map<String, dynamic> value;
+
+  String? get eventId => value['event_id']?.toString();
+
+  String? get occurredAt => value['occurred_at']?.toString();
 
   Map<String, dynamic> toJson() => Map.of(value);
 }
@@ -9552,6 +9872,24 @@ final class ServicesNotificationPreferencesInput {
   bool? get reminders => value['reminders'] as bool?;
 
   bool? get systemNotices => value['system_notices'] as bool?;
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
+final class ServicesNotificationTemplateCloneInput {
+  ServicesNotificationTemplateCloneInput(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory ServicesNotificationTemplateCloneInput.fromJson(
+    Map<String, dynamic> json,
+  ) => ServicesNotificationTemplateCloneInput(json);
+
+  static const schemaName = 'services.NotificationTemplateCloneInput';
+  final Map<String, dynamic> value;
+
+  String? get name => value['name']?.toString();
+
+  String? get templateKey => value['template_key']?.toString();
 
   Map<String, dynamic> toJson() => Map.of(value);
 }
@@ -10323,6 +10661,38 @@ final class ServicesPageResultServicesMessageView {
     return raw
         .whereType<Map>()
         .map((item) => ServicesMessageView.fromJson(_jsonMap(item)))
+        .toList(growable: false);
+  }
+
+  int? get page => (value['page'] as num?)?.toInt();
+
+  int? get perPage => (value['per_page'] as num?)?.toInt();
+
+  int? get totalItems => (value['total_items'] as num?)?.toInt();
+
+  int? get totalPages => (value['total_pages'] as num?)?.toInt();
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
+final class ServicesPageResultServicesNotificationDeliveryDTO {
+  ServicesPageResultServicesNotificationDeliveryDTO(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory ServicesPageResultServicesNotificationDeliveryDTO.fromJson(
+    Map<String, dynamic> json,
+  ) => ServicesPageResultServicesNotificationDeliveryDTO(json);
+
+  static const schemaName =
+      'services.PageResult-services_NotificationDeliveryDTO';
+  final Map<String, dynamic> value;
+
+  List<ServicesNotificationDeliveryDTO> get items {
+    final raw = value['items'];
+    if (raw is! List) return const [];
+    return raw
+        .whereType<Map>()
+        .map((item) => ServicesNotificationDeliveryDTO.fromJson(_jsonMap(item)))
         .toList(growable: false);
   }
 

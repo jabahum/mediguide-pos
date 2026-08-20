@@ -28,6 +28,7 @@ export interface NotificationDto {
   created_by?: string
   published_by?: string
   is_read: boolean
+  delivery_id?: string
   created_at: string
   updated_at: string
 }
@@ -96,7 +97,23 @@ export interface NotificationTemplateDto extends Omit<ServicesNotificationTempla
   id: string; name: string; template_key: string; status: "draft" | "published" | "archived"
   current_version: number; locale: string; version: NotificationTemplateVersionDto; created_at: string; updated_at: string
 }
-export type NotificationCampaignStatus = "draft" | "pending_review" | "approved" | "scheduled" | "queued" | "sending" | "completed" | "partially_failed" | "failed" | "cancelled"
+export type NotificationCampaignStatus = "draft" | "pending_review" | "approved" | "scheduled" | "queued" | "paused" | "sending" | "completed" | "partially_failed" | "failed" | "cancelled"
+
+export interface NotificationAdminListQuery {
+  page?: number; per_page?: number; search?: string; type?: string; status?: string; category?: string
+}
+export interface NotificationDeliveryQuery {
+  page?: number; per_page?: number; campaign_id?: string; channel?: "in-app" | "push" | "email" | "sms"; state?: "queued" | "attempted" | "accepted" | "rejected" | "delivered" | "opened" | "clicked" | "expired"
+}
+export interface NotificationDeliveryDto {
+  id: string; campaign_id: string; notification_id?: string; outbox_job_id: string; user_id: string; device_id?: string
+  channel: string; provider_message_id?: string; state: string; attempt_count: number; attempted_at?: string; accepted_at?: string
+  failed_at?: string; delivered_at?: string; opened_at?: string; clicked_at?: string; expired_at?: string; error_category?: string
+  created_at: string; updated_at: string
+}
+export interface NotificationDeliveryDailyMetric { date: string; channel: string; queued: number; attempted: number; accepted: number; rejected: number; delivered: number; opened: number; clicked: number; expired: number }
+export interface NotificationDeliveryAnalytics { from: string; to: string; items: NotificationDeliveryDailyMetric[]; delivery_reporting: Record<string, string>; big_query_export_note: string }
+export interface NotificationOutboxJobDto { id: string; campaign_id: string; channel: string; status: string; attempt_count: number; max_attempts: number; next_attempt_at: string; last_error_code?: string; last_error_message?: string; provider_message_id?: string }
 export interface NotificationAudienceDefinition extends Omit<ServicesNotificationAudienceDefinition, "all_eligible" | "platforms" | "preference_categories"> {
   all_eligible: boolean
   user_ids?: string[]
@@ -138,7 +155,7 @@ export interface NotificationCampaignInput extends Omit<ServicesNotificationCamp
 }
 export interface NotificationCampaignDto extends Omit<ServicesNotificationCampaignDTO, "action_snapshot" | "audience" | "id" | "name" | "priority" | "requested_channels" | "status" | "type"> {
   id: string; name: string; type: NotificationCampaignInput["type"]; status: NotificationCampaignStatus
-  template_version_id?: string; rendered_title: string; rendered_body: string; action_snapshot: NotificationAction
+  template_version_id?: string; variables: Record<string, unknown>; rendered_title: string; rendered_body: string; action_snapshot: NotificationAction
   audience: NotificationCampaignInput["audience"]; resolved_recipient_count: number; scheduled_at?: string; timezone: string
   expires_at?: string; ttl_seconds?: number; priority: NotificationPriority; collapse_key?: string
   requested_channels: string[]; created_by?: string; reviewed_by?: string; approved_by?: string; approved_at?: string
@@ -170,8 +187,8 @@ export const notificationsService = {
   markAllRead() {
     return client().send<void>("/api/v2/notifications/read-all", { method: "POST" })
   },
-  listTemplates(query: Record<string, string | number | undefined> = {}) {
-    return client().send<PagedResult<NotificationTemplateDto>>("/api/v2/notification-templates", { query })
+  listTemplates(query: NotificationAdminListQuery = {}) {
+    return client().send<PagedResult<NotificationTemplateDto>>("/api/v2/notification-templates", { query: { ...query } })
   },
   createTemplate(input: NotificationTemplateInput) {
     return client().send("/api/v2/notification-templates", { method: "POST", body: JSON.stringify(input) })
@@ -182,6 +199,9 @@ export const notificationsService = {
   updateTemplateStatus(id: string, status: "published" | "archived") {
     return client().send(`/api/v2/notification-templates/${id}/status`, { method: "PATCH", body: JSON.stringify({ status }) })
   },
+  cloneTemplate(id: string, input: { name: string; template_key: string }) {
+    return client().send<NotificationTemplateDto>(`/api/v2/notification-templates/${id}/clone`, { method: "POST", body: JSON.stringify(input) })
+  },
   listTemplateVersions(id: string) {
     return client().send<NotificationTemplateVersionDto[]>(`/api/v2/notification-templates/${id}/versions`)
   },
@@ -191,8 +211,8 @@ export const notificationsService = {
   deleteTemplate(id: string) {
     return client().send<void>(`/api/v2/notification-templates/${id}`, { method: "DELETE" })
   },
-  listCampaigns(query: Record<string, string | number | undefined> = {}) {
-    return client().send<PagedResult<NotificationCampaignDto>>("/api/v2/notification-campaigns", { query })
+  listCampaigns(query: NotificationAdminListQuery = {}) {
+    return client().send<PagedResult<NotificationCampaignDto>>("/api/v2/notification-campaigns", { query: { ...query } })
   },
   estimateAudience(audience: NotificationAudienceDefinition) {
     return client().send<NotificationAudienceEstimate>("/api/v2/notification-campaigns/audience-estimate", { method: "POST", body: JSON.stringify({ audience }) })
@@ -206,10 +226,22 @@ export const notificationsService = {
   updateCampaign(id: string, input: NotificationCampaignInput) {
     return client().send(`/api/v2/notification-campaigns/${id}`, { method: "PATCH", body: JSON.stringify(input) })
   },
-  transitionCampaign(id: string, action: "submit" | "approve" | "reject" | "schedule" | "cancel", input: { lock_version: number; scheduled_at?: string; timezone?: string; reason?: string }) {
+  transitionCampaign(id: string, action: "submit" | "approve" | "reject" | "schedule" | "pause" | "resume" | "cancel", input: { lock_version: number; scheduled_at?: string; timezone?: string; reason?: string }) {
     return client().send<NotificationCampaignDto>(`/api/v2/notification-campaigns/${id}/${action}`, { method: "POST", body: JSON.stringify(input) })
   },
   deleteCampaign(id: string) {
     return client().send<void>(`/api/v2/notification-campaigns/${id}`, { method: "DELETE" })
+  },
+  listDeliveries(query: NotificationDeliveryQuery = {}) {
+    return client().send<PagedResult<NotificationDeliveryDto>>("/api/v2/notification-deliveries", { query: { ...query } })
+  },
+  deliveryAnalytics(from?: string, to?: string) {
+    return client().send<NotificationDeliveryAnalytics>("/api/v2/notification-delivery-analytics/daily", { query: { from, to } })
+  },
+  listDeliveryJobs(query: { page?: number; per_page?: number; campaign_id?: string; status?: string; channel?: string } = {}) {
+    return client().send<PagedResult<NotificationOutboxJobDto>>("/api/v2/notification-delivery-jobs", { query })
+  },
+  requeueDeliveryJob(id: string, reason: string) {
+    return client().send<NotificationOutboxJobDto>(`/api/v2/notification-delivery-jobs/${id}/requeue`, { method: "POST", body: JSON.stringify({ confirmed: true, reason }) })
   },
 }

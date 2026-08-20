@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"mediguide/internal/middleware"
@@ -63,5 +64,62 @@ func TestCampaignTransitionHandlerMapsApprovalAndConcurrencyErrors(t *testing.T)
 	router.ServeHTTP(response, request)
 	if response.Code != http.StatusConflict {
 		t.Fatalf("stale transition status=%d body=%s", response.Code, response.Body.String())
+	}
+}
+
+func TestNotificationAdministrativeHandlersRequireFocusedPermissions(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	notificationHandler := NotificationHandler{}
+	firebaseHandler := FirebaseHandler{}
+	tests := []struct {
+		name       string
+		method     string
+		path       string
+		permission string
+		handler    gin.HandlerFunc
+	}{
+		{name: "publish notification", method: http.MethodPost, path: "/api/v2/notifications", permission: "notification.publish", handler: notificationHandler.Create},
+		{name: "firebase status", method: http.MethodGet, path: "/api/v2/firebase/status", permission: "firebase.status.read", handler: firebaseHandler.Status},
+		{name: "firebase test push", method: http.MethodPost, path: "/api/v2/firebase/push/test", permission: "firebase.push.test", handler: firebaseHandler.SendTestPush},
+		{name: "get remote config", method: http.MethodGet, path: "/api/v2/firebase/remote-config", permission: "firebase.config.manage", handler: firebaseHandler.GetRemoteConfig},
+		{name: "put remote config", method: http.MethodPut, path: "/api/v2/firebase/remote-config", permission: "firebase.config.manage", handler: firebaseHandler.PutRemoteConfig},
+		{name: "list templates", method: http.MethodGet, path: "/api/v2/notification-templates", permission: "notification.template.read", handler: notificationHandler.ListTemplates},
+		{name: "get template", method: http.MethodGet, path: "/api/v2/notification-templates/:id", permission: "notification.template.read", handler: notificationHandler.GetTemplate},
+		{name: "create template", method: http.MethodPost, path: "/api/v2/notification-templates", permission: "notification.template.manage", handler: notificationHandler.CreateTemplate},
+		{name: "update template", method: http.MethodPatch, path: "/api/v2/notification-templates/:id", permission: "notification.template.manage", handler: notificationHandler.UpdateTemplate},
+		{name: "update template status", method: http.MethodPatch, path: "/api/v2/notification-templates/:id/status", permission: "notification.template.manage", handler: notificationHandler.UpdateTemplateStatus},
+		{name: "list template versions", method: http.MethodGet, path: "/api/v2/notification-templates/:id/versions", permission: "notification.template.read", handler: notificationHandler.ListTemplateVersions},
+		{name: "preview template version", method: http.MethodPost, path: "/api/v2/notification-template-versions/:id/preview", permission: "notification.template.read", handler: notificationHandler.PreviewTemplateVersion},
+		{name: "delete template", method: http.MethodDelete, path: "/api/v2/notification-templates/:id", permission: "notification.template.manage", handler: notificationHandler.DeleteTemplate},
+		{name: "list campaigns", method: http.MethodGet, path: "/api/v2/notification-campaigns", permission: "notification.campaign.read", handler: notificationHandler.ListCampaigns},
+		{name: "get campaign", method: http.MethodGet, path: "/api/v2/notification-campaigns/:id", permission: "notification.campaign.read", handler: notificationHandler.GetCampaign},
+		{name: "create campaign", method: http.MethodPost, path: "/api/v2/notification-campaigns", permission: "notification.campaign.manage", handler: notificationHandler.CreateCampaign},
+		{name: "update campaign", method: http.MethodPatch, path: "/api/v2/notification-campaigns/:id", permission: "notification.campaign.manage", handler: notificationHandler.UpdateCampaign},
+		{name: "submit campaign", method: http.MethodPost, path: "/api/v2/notification-campaigns/:id/submit", permission: "notification.campaign.manage", handler: notificationHandler.TransitionCampaign},
+		{name: "approve campaign", method: http.MethodPost, path: "/api/v2/notification-campaigns/:id/approve", permission: "notification.campaign.approve", handler: notificationHandler.TransitionCampaign},
+		{name: "reject campaign", method: http.MethodPost, path: "/api/v2/notification-campaigns/:id/reject", permission: "notification.campaign.approve", handler: notificationHandler.TransitionCampaign},
+		{name: "schedule campaign", method: http.MethodPost, path: "/api/v2/notification-campaigns/:id/schedule", permission: "notification.campaign.manage", handler: notificationHandler.TransitionCampaign},
+		{name: "cancel campaign", method: http.MethodPost, path: "/api/v2/notification-campaigns/:id/cancel", permission: "notification.campaign.manage", handler: notificationHandler.TransitionCampaign},
+		{name: "delete campaign", method: http.MethodDelete, path: "/api/v2/notification-campaigns/:id", permission: "notification.campaign.manage", handler: notificationHandler.DeleteCampaign},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			router := gin.New()
+			router.Use(func(c *gin.Context) {
+				c.Set(middleware.ClaimsKey, &security.Claims{UserID: uuid.New(), Perms: []string{"notification.read"}})
+				c.Next()
+			})
+			router.Handle(tt.method, tt.path, middleware.RequirePermission(tt.permission), tt.handler)
+
+			path := strings.ReplaceAll(tt.path, ":id", uuid.NewString())
+			response := httptest.NewRecorder()
+			request := httptest.NewRequest(tt.method, path, bytes.NewBufferString(`{}`))
+			request.Header.Set("Content-Type", "application/json")
+			router.ServeHTTP(response, request)
+			if response.Code != http.StatusForbidden {
+				t.Fatalf("%s %s returned %d, want 403", tt.method, path, response.Code)
+			}
+		})
 	}
 }

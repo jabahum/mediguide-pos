@@ -328,3 +328,185 @@ func TestNotificationCampaignWorkflowEnforcesApprovalFreezeAndConcurrency(t *tes
 		t.Fatalf("delivery state machine did not record lifecycle times: %#v", campaign)
 	}
 }
+
+func TestNotificationCampaignRejectsInvalidSchedulesAndExpiredInput(t *testing.T) {
+	service := notificationTestService(t)
+	now := time.Now().UTC()
+	templateID := uuid.New()
+	base := NotificationCampaignInput{
+		Name: "Scheduled update", Type: "update", TemplateVersionID: templateID,
+		Variables: map[string]any{}, Audience: NotificationAudienceDefinition{AllEligible: true},
+		Timezone: "Africa/Kampala", Priority: "normal", RequestedChannels: []string{"in-app"},
+		IdempotencyKey: "invalid-schedule",
+	}
+
+	scheduled, expires := now.Add(2*time.Hour), now.Add(time.Hour)
+	invalidRange := base
+	invalidRange.ScheduledAt = &scheduled
+	invalidRange.ExpiresAt = &expires
+	if _, err := service.SaveCampaign(nil, invalidRange, uuid.New(), "127.0.0.1"); err != ErrNotificationInvalid {
+		t.Fatalf("schedule ending before it starts should fail, got %v", err)
+	}
+
+	expired := base
+	past := now.Add(-time.Minute)
+	expired.ExpiresAt = &past
+	expired.IdempotencyKey = "expired-campaign"
+	if _, err := service.SaveCampaign(nil, expired, uuid.New(), "127.0.0.1"); err != ErrNotificationInvalid {
+		t.Fatalf("expired campaign should fail, got %v", err)
+	}
+
+	invalidTimezone := base
+	invalidTimezone.Timezone = "Mars/Olympus"
+	invalidTimezone.IdempotencyKey = "invalid-timezone"
+	if _, err := service.SaveCampaign(nil, invalidTimezone, uuid.New(), "127.0.0.1"); err != ErrNotificationInvalid {
+		t.Fatalf("unknown timezone should fail, got %v", err)
+	}
+}
+
+func TestNotificationCampaignReviewScheduleAndCancellationBoundaries(t *testing.T) {
+	service := notificationTestService(t)
+	author, reviewer := uuid.New(), uuid.New()
+	template := createPublishedNotificationTemplate(t, service, author, reviewer)
+	expires := time.Now().UTC().Add(24 * time.Hour)
+	campaign, err := service.SaveCampaign(nil, NotificationCampaignInput{
+		Name: "Clinical update", Type: "update", TemplateVersionID: template.Version.ID,
+		Variables: map[string]any{"topic": "Malaria"}, Audience: NotificationAudienceDefinition{AllEligible: true},
+		Timezone: "Africa/Kampala", ExpiresAt: &expires, Priority: "normal",
+		RequestedChannels: []string{"in-app"}, IdempotencyKey: "review-and-cancel",
+	}, author, "127.0.0.1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := service.TransitionCampaign(campaign.ID, "schedule", NotificationCampaignTransitionInput{LockVersion: campaign.LockVersion}, author, "127.0.0.1"); err != ErrNotificationTransition {
+		t.Fatalf("draft campaign must not schedule, got %v", err)
+	}
+	campaign, err = service.TransitionCampaign(campaign.ID, "submit", NotificationCampaignTransitionInput{LockVersion: campaign.LockVersion}, author, "127.0.0.1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := service.TransitionCampaign(campaign.ID, "reject", NotificationCampaignTransitionInput{LockVersion: campaign.LockVersion}, reviewer, "127.0.0.1"); err != ErrNotificationTransition {
+		t.Fatalf("rejection without a reason must fail, got %v", err)
+	}
+	campaign, err = service.TransitionCampaign(campaign.ID, "reject", NotificationCampaignTransitionInput{LockVersion: campaign.LockVersion, Reason: "Needs clinical review"}, reviewer, "127.0.0.1")
+	if err != nil || campaign.Status != "draft" {
+		t.Fatalf("review rejection should return to draft: campaign=%#v err=%v", campaign, err)
+	}
+	campaign, err = service.TransitionCampaign(campaign.ID, "submit", NotificationCampaignTransitionInput{LockVersion: campaign.LockVersion}, author, "127.0.0.1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	campaign, err = service.TransitionCampaign(campaign.ID, "approve", NotificationCampaignTransitionInput{LockVersion: campaign.LockVersion}, reviewer, "127.0.0.1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := service.TransitionCampaign(campaign.ID, "schedule", NotificationCampaignTransitionInput{LockVersion: campaign.LockVersion, Timezone: "Mars/Olympus"}, author, "127.0.0.1"); err != ErrNotificationInvalid {
+		t.Fatalf("invalid scheduling timezone should fail, got %v", err)
+	}
+	future := time.Now().UTC().Add(time.Hour)
+	campaign, err = service.TransitionCampaign(campaign.ID, "schedule", NotificationCampaignTransitionInput{LockVersion: campaign.LockVersion, ScheduledAt: &future}, author, "127.0.0.1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if campaign.Status != "scheduled" || campaign.Timezone != "Africa/Kampala" {
+		t.Fatalf("future scheduling should preserve the authored timezone: %#v", campaign)
+	}
+	campaign, err = service.TransitionCampaign(campaign.ID, "cancel", NotificationCampaignTransitionInput{LockVersion: campaign.LockVersion, Reason: "Superseded"}, author, "127.0.0.1")
+	if err != nil || campaign.Status != "cancelled" || campaign.CancelledAt == nil {
+		t.Fatalf("scheduled campaign should cancel before fan-out: campaign=%#v err=%v", campaign, err)
+	}
+	if _, err := service.TransitionCampaign(campaign.ID, "cancel", NotificationCampaignTransitionInput{LockVersion: campaign.LockVersion}, author, "127.0.0.1"); err != ErrNotificationTransition {
+		t.Fatalf("cancelled campaign must not be cancelled twice, got %v", err)
+	}
+}
+
+func TestNotificationCampaignCannotCancelAfterDeliveryStarts(t *testing.T) {
+	service := notificationTestService(t)
+	author, reviewer := uuid.New(), uuid.New()
+	template := createPublishedNotificationTemplate(t, service, author, reviewer)
+	expires := time.Now().UTC().Add(24 * time.Hour)
+	campaign, err := service.SaveCampaign(nil, NotificationCampaignInput{
+		Name: "Immediate update", Type: "update", TemplateVersionID: template.Version.ID,
+		Variables: map[string]any{"topic": "Ebola"}, Audience: NotificationAudienceDefinition{AllEligible: true},
+		Timezone: "UTC", ExpiresAt: &expires, Priority: "normal",
+		RequestedChannels: []string{"push"}, IdempotencyKey: "started-campaign",
+	}, author, "127.0.0.1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	campaign, err = service.TransitionCampaign(campaign.ID, "submit", NotificationCampaignTransitionInput{LockVersion: campaign.LockVersion}, author, "127.0.0.1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	campaign, err = service.TransitionCampaign(campaign.ID, "approve", NotificationCampaignTransitionInput{LockVersion: campaign.LockVersion}, reviewer, "127.0.0.1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	campaign, err = service.TransitionCampaign(campaign.ID, "schedule", NotificationCampaignTransitionInput{LockVersion: campaign.LockVersion}, author, "127.0.0.1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	campaign, err = service.AdvanceCampaignDelivery(campaign.ID, campaign.LockVersion, "sending", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := service.TransitionCampaign(campaign.ID, "cancel", NotificationCampaignTransitionInput{LockVersion: campaign.LockVersion, Reason: "Too late"}, author, "127.0.0.1"); err != ErrNotificationTransition {
+		t.Fatalf("campaign must not cancel after fan-out starts, got %v", err)
+	}
+	if _, err := service.AdvanceCampaignDelivery(campaign.ID, campaign.LockVersion, "partially_failed", ""); err != ErrNotificationInvalid {
+		t.Fatalf("partial failure without a reason must fail, got %v", err)
+	}
+	campaign, err = service.AdvanceCampaignDelivery(campaign.ID, campaign.LockVersion, "partially_failed", "one device failed")
+	if err != nil || campaign.Status != "partially_failed" || campaign.CompletedAt == nil {
+		t.Fatalf("partial failure should terminate delivery truthfully: campaign=%#v err=%v", campaign, err)
+	}
+}
+
+func TestNotificationCampaignCannotScheduleAfterExpiry(t *testing.T) {
+	service := notificationTestService(t)
+	author, reviewer := uuid.New(), uuid.New()
+	template := createPublishedNotificationTemplate(t, service, author, reviewer)
+	expires := time.Now().UTC().Add(time.Hour)
+	campaign, err := service.SaveCampaign(nil, NotificationCampaignInput{
+		Name: "Expiring update", Type: "update", TemplateVersionID: template.Version.ID,
+		Variables: map[string]any{"topic": "Malaria"}, Audience: NotificationAudienceDefinition{AllEligible: true},
+		Timezone: "UTC", ExpiresAt: &expires, Priority: "normal",
+		RequestedChannels: []string{"in-app"}, IdempotencyKey: "expires-before-schedule",
+	}, author, "127.0.0.1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	campaign, err = service.TransitionCampaign(campaign.ID, "submit", NotificationCampaignTransitionInput{LockVersion: campaign.LockVersion}, author, "127.0.0.1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	campaign, err = service.TransitionCampaign(campaign.ID, "approve", NotificationCampaignTransitionInput{LockVersion: campaign.LockVersion}, reviewer, "127.0.0.1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	past := time.Now().UTC().Add(-time.Minute)
+	if err := service.DB.Model(&models.NotificationCampaign{}).Where("id = ?", campaign.ID).Update("expires_at", past).Error; err != nil {
+		t.Fatal(err)
+	}
+	if _, err := service.TransitionCampaign(campaign.ID, "schedule", NotificationCampaignTransitionInput{LockVersion: campaign.LockVersion}, author, "127.0.0.1"); err != ErrNotificationInvalid {
+		t.Fatalf("campaign that expired during review must not schedule, got %v", err)
+	}
+}
+
+func createPublishedNotificationTemplate(t *testing.T, service NotificationService, author, reviewer uuid.UUID) *NotificationTemplateDTO {
+	t.Helper()
+	title := "Update: {{topic}}"
+	template, err := service.SaveTemplate(nil, NotificationTemplateInput{
+		Name: "Clinical update", TemplateKey: "clinical-update", Channel: "push", TitleTemplate: &title,
+		BodyTemplate: "Review {{topic}} guidance", Category: "Content Updates", Locale: "en",
+		VariableSchema: map[string]TemplateVariableRule{"topic": {Type: "string", Required: true}},
+	}, author, "127.0.0.1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	template, err = service.UpdateTemplateStatus(template.ID, "published", reviewer, "127.0.0.1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	return template
+}

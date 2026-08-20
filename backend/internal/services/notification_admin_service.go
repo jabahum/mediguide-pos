@@ -472,6 +472,9 @@ func (s NotificationService) TransitionCampaign(id uuid.UUID, action string, in 
 			if item.Status != "approved" {
 				return ErrNotificationTransition
 			}
+			if item.ExpiresAt != nil && !item.ExpiresAt.After(now) {
+				return ErrNotificationInvalid
+			}
 			scheduled := in.ScheduledAt
 			if scheduled == nil {
 				scheduled = item.ScheduledAt
@@ -482,8 +485,15 @@ func (s NotificationService) TransitionCampaign(id uuid.UUID, action string, in 
 			if item.ExpiresAt != nil && !item.ExpiresAt.After(*scheduled) {
 				return ErrNotificationInvalid
 			}
+			timezone := strings.TrimSpace(in.Timezone)
+			if timezone == "" {
+				timezone = item.Timezone
+			}
+			if _, err := time.LoadLocation(timezone); err != nil {
+				return ErrNotificationInvalid
+			}
 			updates["scheduled_at"] = scheduled.UTC()
-			updates["timezone"] = normalizeTimezone(in.Timezone)
+			updates["timezone"] = timezone
 			if scheduled.After(now) {
 				updates["status"] = "scheduled"
 			} else {

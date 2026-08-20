@@ -122,7 +122,8 @@ dependencies:
   # APP UPDATE / REVIEW
   # ==========================================================
 
-  in_app_update: ^5.0.0
+  # 4.2.5 remains compatible with the project-pinned Flutter 3.44.8 / Dart 3.11.
+  in_app_update: ^4.2.5
   in_app_review: ^2.0.11
 
   # ==========================================================

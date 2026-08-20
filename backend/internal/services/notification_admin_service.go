@@ -88,11 +88,24 @@ type NotificationTemplatePreview struct {
 }
 
 type NotificationAudienceDefinition struct {
-	AllEligible bool     `json:"all_eligible"`
-	UserIDs     []string `json:"user_ids,omitempty"`
-	RoleIDs     []string `json:"role_ids,omitempty"`
-	Countries   []string `json:"countries,omitempty"`
-	Regions     []string `json:"regions,omitempty"`
+	AllEligible            bool     `json:"all_eligible"`
+	UserIDs                []string `json:"user_ids,omitempty"`
+	RoleIDs                []string `json:"role_ids,omitempty"`
+	Countries              []string `json:"countries,omitempty"`
+	RegionIDs              []string `json:"region_ids,omitempty"`
+	DistrictIDs            []string `json:"district_ids,omitempty"`
+	FacilityIDs            []string `json:"facility_ids,omitempty"`
+	FacilityLevelIDs       []string `json:"facility_level_ids,omitempty"`
+	ProfessionalCategories []string `json:"professional_categories,omitempty"`
+	Languages              []string `json:"languages,omitempty"`
+	Platforms              []string `json:"platforms,omitempty"`
+	ApplicationVersions    []string `json:"application_versions,omitempty"`
+	PreferenceCategories   []string `json:"preference_categories,omitempty"`
+}
+
+type NotificationAudienceEstimate struct {
+	EligibleUsers int64 `json:"eligible_users"`
+	ActiveDevices int64 `json:"active_devices"`
 }
 
 type NotificationCampaignInput struct {
@@ -457,6 +470,17 @@ func (s NotificationService) TransitionCampaign(id uuid.UUID, action string, in 
 			if item.CreatedBy != nil && *item.CreatedBy == actor && requiresIndependentApproval(item) {
 				return ErrNotificationApproval
 			}
+			item.Status = "approved"
+			item.ReviewedBy = &actor
+			item.ReviewedAt = &now
+			item.ApprovedBy = &actor
+			item.ApprovedAt = &now
+			item.FailureReason = nil
+			estimate, err := s.prepareCampaignDispatch(tx, &item)
+			if err != nil {
+				return err
+			}
+			item.ResolvedRecipientCount = estimate.EligibleUsers
 			snapshot, err := campaignDispatchSnapshot(item, now)
 			if err != nil {
 				return err
@@ -466,6 +490,7 @@ func (s NotificationService) TransitionCampaign(id uuid.UUID, action string, in 
 			updates["reviewed_at"] = now
 			updates["approved_by"] = actor
 			updates["approved_at"] = now
+			updates["resolved_recipient_count"] = estimate.EligibleUsers
 			updates["dispatch_snapshot_json"] = snapshot
 			updates["failure_reason"] = nil
 		case "schedule":
@@ -494,10 +519,25 @@ func (s NotificationService) TransitionCampaign(id uuid.UUID, action string, in 
 			}
 			updates["scheduled_at"] = scheduled.UTC()
 			updates["timezone"] = timezone
+			if err := tx.Model(&models.NotificationOutboxJob{}).Where("campaign_id = ? AND status = 'held'", item.ID).Updates(map[string]any{"status": "pending", "next_attempt_at": scheduled.UTC()}).Error; err != nil {
+				return err
+			}
+			if err := tx.Model(&models.Notification{}).Where("campaign_id = ?", item.ID).Update("publish_at", scheduled.UTC()).Error; err != nil {
+				return err
+			}
 			if scheduled.After(now) {
 				updates["status"] = "scheduled"
 			} else {
 				updates["status"] = "queued"
+			}
+			var externalJobs int64
+			if err := tx.Model(&models.NotificationOutboxJob{}).Where("campaign_id = ? AND status = 'pending'", item.ID).Count(&externalJobs).Error; err != nil {
+				return err
+			}
+			if externalJobs == 0 {
+				updates["status"] = "completed"
+				updates["started_at"] = now
+				updates["completed_at"] = now
 			}
 		case "cancel":
 			if !oneOf(item.Status, "draft", "pending_review", "approved", "scheduled", "queued") || item.StartedAt != nil {
@@ -506,6 +546,12 @@ func (s NotificationService) TransitionCampaign(id uuid.UUID, action string, in 
 			updates["status"] = "cancelled"
 			updates["cancelled_at"] = now
 			updates["failure_reason"] = cleanOptional(&in.Reason)
+			if err := tx.Model(&models.NotificationOutboxJob{}).Where("campaign_id = ? AND status IN ?", item.ID, []string{"held", "pending", "retry"}).Updates(map[string]any{"status": "cancelled", "completed_at": now, "last_error_code": "campaign_cancelled"}).Error; err != nil {
+				return err
+			}
+			if err := tx.Model(&models.Notification{}).Where("campaign_id = ?", item.ID).Update("expires_at", now).Error; err != nil {
+				return err
+			}
 		default:
 			return ErrNotificationInvalid
 		}
@@ -651,13 +697,8 @@ func validateCampaignInput(in NotificationCampaignInput) error {
 			return ErrNotificationInvalid
 		}
 	}
-	if !in.Audience.AllEligible && len(in.Audience.UserIDs)+len(in.Audience.RoleIDs)+len(in.Audience.Countries)+len(in.Audience.Regions) == 0 {
+	if err := validateNotificationAudience(in.Audience); err != nil {
 		return ErrNotificationInvalid
-	}
-	for _, raw := range append(append([]string{}, in.Audience.UserIDs...), in.Audience.RoleIDs...) {
-		if _, err := uuid.Parse(raw); err != nil {
-			return ErrNotificationInvalid
-		}
 	}
 	if in.ScheduledAt != nil && in.ExpiresAt != nil && !in.ExpiresAt.After(*in.ScheduledAt) {
 		return ErrNotificationInvalid

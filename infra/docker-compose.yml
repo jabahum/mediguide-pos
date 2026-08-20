@@ -97,6 +97,7 @@ services:
       SMTP_PASSWORD: "${SMTP_PASSWORD:-}"
       FIREBASE_PROJECT_ID: "${FIREBASE_PROJECT_ID:-}"
       FIREBASE_SERVICE_ACCOUNT_BASE64: "${FIREBASE_SERVICE_ACCOUNT_BASE64:-}"
+      FIREBASE_DEVICE_STALE_DAYS: "${FIREBASE_DEVICE_STALE_DAYS:-90}"
       NOTIFICATION_ACTION_EXTERNAL_HOSTS: "${NOTIFICATION_ACTION_EXTERNAL_HOSTS:-mediguide.health.go.ug,health.go.ug,www.health.go.ug,who.int,www.who.int}"
     ports:
       - "${PUBLIC_BIND_ADDRESS:-127.0.0.1}:${API_PUBLIC_PORT:-8080}:8080"
@@ -118,6 +119,45 @@ services:
       - ALL
     healthcheck:
       test: ["CMD", "curl", "--fail", "--silent", "http://127.0.0.1:8080/api/readyz"]
+      interval: 10s
+      timeout: 3s
+      start_period: 15s
+      retries: 6
+
+  notification-worker:
+    image: "${API_IMAGE:-mediguide-api:production}"
+    command: ["/app/notification-worker"]
+    environment:
+      APP_NAME: mediguide-notification-worker
+      APP_ENV: "${APP_ENV:-production}"
+      DATABASE_URL: "${DATABASE_URL:-postgres://mediguide:mediguide@postgres:5432/mediguide?sslmode=disable}"
+      FIREBASE_PROJECT_ID: "${FIREBASE_PROJECT_ID:-}"
+      FIREBASE_SERVICE_ACCOUNT_BASE64: "${FIREBASE_SERVICE_ACCOUNT_BASE64:-}"
+      FIREBASE_DEVICE_STALE_DAYS: "${FIREBASE_DEVICE_STALE_DAYS:-90}"
+      NOTIFICATION_ACTION_EXTERNAL_HOSTS: "${NOTIFICATION_ACTION_EXTERNAL_HOSTS:-mediguide.health.go.ug,health.go.ug,www.health.go.ug,who.int,www.who.int}"
+      NOTIFICATION_WORKER_PORT: "${NOTIFICATION_WORKER_PORT:-8082}"
+      NOTIFICATION_WORKER_BATCH_SIZE: "${NOTIFICATION_WORKER_BATCH_SIZE:-100}"
+      NOTIFICATION_WORKER_CONCURRENCY: "${NOTIFICATION_WORKER_CONCURRENCY:-10}"
+      NOTIFICATION_WORKER_POLL_MS: "${NOTIFICATION_WORKER_POLL_MS:-1000}"
+      NOTIFICATION_WORKER_MAX_AGE_HOURS: "${NOTIFICATION_WORKER_MAX_AGE_HOURS:-168}"
+      NOTIFICATION_WORKER_LEASE_SECONDS: "${NOTIFICATION_WORKER_LEASE_SECONDS:-120}"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      api:
+        condition: service_healthy
+    restart: unless-stopped
+    init: true
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=32m
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    stop_grace_period: 20s
+    healthcheck:
+      test: ["CMD-SHELL", "curl --fail --silent http://127.0.0.1:$${NOTIFICATION_WORKER_PORT:-8082}/readyz"]
       interval: 10s
       timeout: 3s
       start_period: 15s

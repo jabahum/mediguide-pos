@@ -562,6 +562,18 @@ definitions:
       success:
         type: boolean
     type: object
+  handlers.NotificationAudienceEstimateEnvelope:
+    properties:
+      data:
+        $ref: '#/definitions/services.NotificationAudienceEstimate'
+      success:
+        type: boolean
+    type: object
+  handlers.NotificationAudienceEstimateInput:
+    properties:
+      audience:
+        $ref: '#/definitions/services.NotificationAudienceDefinition'
+    type: object
   handlers.NotificationCampaignEnvelope:
     properties:
       data:
@@ -575,6 +587,13 @@ definitions:
         $ref: '#/definitions/models.Notification'
       success:
         example: true
+        type: boolean
+    type: object
+  handlers.NotificationOutboxJobEnvelope:
+    properties:
+      data:
+        $ref: '#/definitions/services.NotificationOutboxJobDTO'
+      success:
         type: boolean
     type: object
   handlers.NotificationStatusInput:
@@ -1068,6 +1087,28 @@ definitions:
     properties:
       data:
         $ref: '#/definitions/handlers.PaginatedNotificationCampaigns'
+      success:
+        type: boolean
+    type: object
+  handlers.PaginatedNotificationOutboxJobs:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/services.NotificationOutboxJobDTO'
+        type: array
+      page:
+        type: integer
+      per_page:
+        type: integer
+      total_items:
+        type: integer
+      total_pages:
+        type: integer
+    type: object
+  handlers.PaginatedNotificationOutboxJobsEnvelope:
+    properties:
+      data:
+        $ref: '#/definitions/handlers.PaginatedNotificationOutboxJobs'
       success:
         type: boolean
     type: object
@@ -4278,11 +4319,13 @@ definitions:
     type: object
   services.FirebasePushResult:
     properties:
+      accepted:
+        type: integer
       attempted:
         type: integer
       failed:
         type: integer
-      sent:
+      validated:
         type: integer
     type: object
   services.GenericPageInput:
@@ -4948,11 +4991,43 @@ definitions:
     properties:
       all_eligible:
         type: boolean
+      application_versions:
+        items:
+          type: string
+        type: array
       countries:
         items:
           type: string
         type: array
-      regions:
+      district_ids:
+        items:
+          type: string
+        type: array
+      facility_ids:
+        items:
+          type: string
+        type: array
+      facility_level_ids:
+        items:
+          type: string
+        type: array
+      languages:
+        items:
+          type: string
+        type: array
+      platforms:
+        items:
+          type: string
+        type: array
+      preference_categories:
+        items:
+          type: string
+        type: array
+      professional_categories:
+        items:
+          type: string
+        type: array
+      region_ids:
         items:
           type: string
         type: array
@@ -4964,6 +5039,13 @@ definitions:
         items:
           type: string
         type: array
+    type: object
+  services.NotificationAudienceEstimate:
+    properties:
+      active_devices:
+        type: integer
+      eligible_users:
+        type: integer
     type: object
   services.NotificationCampaignDTO:
     properties:
@@ -5103,6 +5185,42 @@ definitions:
       type:
         type: string
       user_id:
+        type: string
+    type: object
+  services.NotificationOutboxJobDTO:
+    properties:
+      accepted_at:
+        type: string
+      attempt_count:
+        type: integer
+      campaign_id:
+        type: string
+      channel:
+        type: string
+      completed_at:
+        type: string
+      created_at:
+        type: string
+      id:
+        type: string
+      last_error_code:
+        type: string
+      last_error_message:
+        type: string
+      max_attempts:
+        type: integer
+      next_attempt_at:
+        type: string
+      provider_message_id:
+        type: string
+      status:
+        type: string
+    type: object
+  services.NotificationOutboxRequeueInput:
+    properties:
+      confirm:
+        type: boolean
+      reason:
         type: string
     type: object
   services.NotificationTemplateDTO:
@@ -11914,6 +12032,70 @@ paths:
       security:
       - BearerAuth: []
       summary: Apply a guarded notification-campaign workflow transition
+      tags:
+      - notification-administration
+  /api/v2/notification-campaigns/audience-estimate:
+    post:
+      parameters:
+      - description: Typed audience
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.NotificationAudienceEstimateInput'
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.NotificationAudienceEstimateEnvelope'
+      security:
+      - BearerAuth: []
+      summary: Estimate eligible users and active devices for a typed campaign audience
+      tags:
+      - notification-administration
+  /api/v2/notification-delivery-jobs:
+    get:
+      parameters:
+      - description: held, pending, processing, retry, accepted, failed, cancelled
+        in: query
+        name: status
+        type: string
+      - description: in-app, push, email, sms
+        in: query
+        name: channel
+        type: string
+      - description: Campaign UUID
+        in: query
+        name: campaign_id
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.PaginatedNotificationOutboxJobsEnvelope'
+      security:
+      - BearerAuth: []
+      summary: List notification delivery jobs without registration tokens or payload
+        contents
+      tags:
+      - notification-administration
+  /api/v2/notification-delivery-jobs/{id}/requeue:
+    post:
+      parameters:
+      - description: Explicit confirmation and reason
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/services.NotificationOutboxRequeueInput'
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.NotificationOutboxJobEnvelope'
+      security:
+      - BearerAuth: []
+      summary: Requeue one terminally failed notification delivery job
       tags:
       - notification-administration
   /api/v2/notification-template-versions/{id}/preview:

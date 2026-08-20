@@ -21,8 +21,19 @@ func notificationTestService(t *testing.T) NotificationService {
 	if err := db.AutoMigrate(
 		&models.Notification{}, &models.NotificationRead{}, &models.NotificationTemplate{},
 		&models.NotificationTemplateVersion{}, &models.NotificationCampaign{}, &models.GuidelineDocument{},
-		&models.SupportTicket{}, &models.AuditLog{},
+		&models.SupportTicket{}, &models.AuditLog{}, &models.User{}, &models.FirebaseDevice{},
+		&models.NotificationPreference{}, &models.NotificationCampaignRecipient{},
+		&models.NotificationOutboxJob{}, &models.NotificationDeliveryAttempt{},
+		&models.Role{}, &models.Region{}, &models.District{}, &models.FacilityLevel{}, &models.HealthFacility{},
 	); err != nil {
+		t.Fatal(err)
+	}
+	user := models.User{Name: "Notification recipient", Email: uuid.NewString() + "@example.test", PasswordHash: "not-a-real-password", IsActive: true, Verified: true, Status: "active"}
+	if err := db.Create(&user).Error; err != nil {
+		t.Fatal(err)
+	}
+	device := models.FirebaseDevice{UserID: user.ID, InstallationID: uuid.NewString(), RegistrationToken: uuid.NewString(), Platform: "android", NotificationsEnabled: true, LastSeenAt: time.Now().UTC()}
+	if err := db.Create(&device).Error; err != nil {
 		t.Fatal(err)
 	}
 	return NotificationService{DB: db}
@@ -373,7 +384,7 @@ func TestNotificationCampaignReviewScheduleAndCancellationBoundaries(t *testing.
 		Name: "Clinical update", Type: "update", TemplateVersionID: template.Version.ID,
 		Variables: map[string]any{"topic": "Malaria"}, Audience: NotificationAudienceDefinition{AllEligible: true},
 		Timezone: "Africa/Kampala", ExpiresAt: &expires, Priority: "normal",
-		RequestedChannels: []string{"in-app"}, IdempotencyKey: "review-and-cancel",
+		RequestedChannels: []string{"push", "in-app"}, IdempotencyKey: "review-and-cancel",
 	}, author, "127.0.0.1")
 	if err != nil {
 		t.Fatal(err)

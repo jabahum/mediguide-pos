@@ -10,6 +10,7 @@ RUN CGO_ENABLED=0 GOOS=linux go build \
     -ldflags "-X mediguide/internal/buildinfo.Version=${BUILD_VERSION} -X mediguide/internal/buildinfo.Revision=${BUILD_REVISION}" \
     -o /out/api ./cmd/api
 RUN CGO_ENABLED=0 GOOS=linux go build -o /out/migrate ./cmd/migrate
+RUN CGO_ENABLED=0 GOOS=linux go build -o /out/notification-worker ./cmd/notification-worker
 
 FROM build AS development-build
 RUN CGO_ENABLED=0 GOOS=linux go build -o /out/seed ./cmd/seed
@@ -28,6 +29,7 @@ RUN apk add --no-cache ca-certificates tzdata curl && \
     chown -R mediguide:mediguide /app
 COPY --from=build --chown=mediguide:mediguide /out/api /app/api
 COPY --from=build --chown=mediguide:mediguide /out/migrate /app/migrate
+COPY --from=build --chown=mediguide:mediguide /out/notification-worker /app/notification-worker
 COPY --chown=mediguide:mediguide migrations /app/migrations
 COPY --chown=mediguide:mediguide docs /app/docs
 USER 10001:10001

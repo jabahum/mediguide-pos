@@ -1,62 +1,90 @@
-# Notification templates and campaign workflow
+# Notification templates, audiences, and delivery
 
-MediGuide stores notification copy as versioned templates and campaign intent as a reviewed, immutable dispatch snapshot. These controls prepare safe delivery; audience resolution, outbox processing, provider fan-out, receipts, and analytics belong to the later delivery phases.
+MediGuide stores notification copy as immutable template versions, resolves typed audiences in PostgreSQL, and delivers approved campaigns through a transactional outbox. In-app persistence, recipient snapshots, and delivery jobs are committed together; the API never performs campaign fan-out synchronously.
 
-## Template lifecycle
+## Template and campaign lifecycle
 
-- A template has a stable `template_key`, locale, category, creator, reviewer, and current version.
-- Creating or editing content creates a new draft version. It never overwrites a prior version.
-- Published template versions are immutable in both the service and PostgreSQL.
-- Supported channels are `in-app`, `push`, `email`, and `sms`, with channel-specific title/body limits.
-- The restricted renderer supports only declared `{{variable}}` substitutions. Unknown or missing variables, invalid types, unsupported syntax, script content, and malformed typed actions are rejected.
-- Preview rendering uses explicit values supplied by an authorized operator; the dashboard can derive a safe preview from each variable's `sample_value`.
+- Published template versions are immutable. Rendering accepts only declared `{{variable}}` placeholders and never evaluates HTML or code.
+- Campaign states are `draft -> pending_review -> approved -> scheduled|queued -> sending -> completed|partially_failed|failed`.
+- Rejection returns a campaign to `draft`; cancellation is allowed only before delivery starts.
+- Every mutation uses `lock_version`. Urgent, emergency, and all-eligible campaigns require independent approval.
+- Approval resolves the audience, stores one immutable campaign-recipient row per user, creates in-app records and deterministic outbox jobs, and freezes the rendered dispatch snapshot in one transaction.
+- Scheduling releases held jobs at a UTC instant while retaining the author-selected IANA timezone.
 
-Endpoints:
+Core endpoints:
 
-- `GET/POST /api/v2/notification-templates`
-- `GET/PATCH/DELETE /api/v2/notification-templates/:id`
-- `PATCH /api/v2/notification-templates/:id/status`
-- `GET /api/v2/notification-templates/:id/versions`
+- `/api/v2/notification-templates` and `/api/v2/notification-templates/:id/versions`
 - `POST /api/v2/notification-template-versions/:id/preview`
+- `/api/v2/notification-campaigns`
+- `POST /api/v2/notification-campaigns/audience-estimate`
+- `POST /api/v2/notification-campaigns/:id/{submit|approve|reject|schedule|cancel}`
+- `GET /api/v2/notification-delivery-jobs`
+- `POST /api/v2/notification-delivery-jobs/:id/requeue`
 
-## Campaign lifecycle
+## Typed audience resolution
 
-Campaign states are:
+Supported filters are user IDs, role IDs, countries, region/district/facility/facility-level IDs, professional categories, languages, Android/iOS platforms, application versions, preference categories, and all eligible active users. Filters are combined with `AND`, validated as typed values, parameterized, and resolved server-side. PocketBase-style expressions are not accepted.
 
-`draft -> pending_review -> approved -> scheduled|queued -> sending -> completed|partially_failed|failed`
+The estimate endpoint returns only `eligible_users` and `active_devices`. Facility, role, geography, professional, and individual targeting additionally requires `notification.analytics.read`. Campaign reads redact sensitive audience fields and the dispatch snapshot from operators without that permission. Registration tokens and recipient lists are never returned.
 
-An operator may reject `pending_review` back to `draft`, or cancel before provider fan-out has started. Each edit and transition requires the current `lock_version`; stale operations return HTTP 409.
+An absent preference row uses the product default. An explicit disabled category excludes that user; audience resolution never silently re-enables it. Full quiet-hours and channel-specific preference management belongs to Phase 9.
 
-- Creation requires a published template version, declared variables, typed audience intent, channel list, priority, timezone, expiry/TTL rules, and an idempotency key.
-- Rendered title, body, and action are saved when the draft is created.
-- Approval records reviewer/approver identity and time and freezes a complete dispatch snapshot.
-- Urgent, emergency, and all-eligible/national campaigns require approval from someone other than their creator.
-- Scheduling persists UTC instants and the author's IANA timezone. An immediate schedule moves to `queued`.
-- A campaign cannot be edited after submission and cannot be cancelled after delivery begins.
-- Retrying creation with the same idempotency key returns the existing matching campaign; conflicting content returns HTTP 409.
+## Transactional outbox and worker
 
-Endpoints:
+`notification-worker` is built into the API image and runs as a separate Compose service. It:
 
-- `GET/POST /api/v2/notification-campaigns`
-- `GET/PATCH/DELETE /api/v2/notification-campaigns/:id`
-- `POST /api/v2/notification-campaigns/:id/submit`
-- `POST /api/v2/notification-campaigns/:id/approve`
-- `POST /api/v2/notification-campaigns/:id/reject`
-- `POST /api/v2/notification-campaigns/:id/schedule`
-- `POST /api/v2/notification-campaigns/:id/cancel`
+- claims bounded batches using `FOR UPDATE SKIP LOCKED` on PostgreSQL;
+- supports multiple replicas through leases and worker IDs;
+- uses deterministic unique idempotency keys;
+- applies bounded concurrency, exponential backoff with jitter, `Retry-After`, maximum attempts, and maximum job age;
+- records every validated, accepted, retryable, or rejected attempt;
+- leaves terminal failures inspectable and permits confirmed, audited requeue operations;
+- exposes `/healthz` and `/readyz` and drains on SIGTERM;
+- disables unregistered tokens and periodically prunes stale installations.
 
-The internal delivery worker must use `AdvanceCampaignDelivery` for `queued -> sending -> completed|partially_failed|failed`. It is deliberately not exposed as an administration endpoint.
+The delivery guarantee is at-least-once. The database prevents two workers from concurrently claiming the same job and prevents creation of duplicate logical jobs. FCM does not provide an idempotency key for token sends, so a process crash after FCM accepts a request but before the database commit can still create an ambiguous retry. Collapse keys reduce visible duplicates where supported; the UI must not claim exactly-once delivery.
+
+Configure the worker through:
+
+```dotenv
+FIREBASE_DEVICE_STALE_DAYS=90
+NOTIFICATION_WORKER_PORT=8082
+NOTIFICATION_WORKER_BATCH_SIZE=100
+NOTIFICATION_WORKER_CONCURRENCY=10
+NOTIFICATION_WORKER_POLL_MS=1000
+NOTIFICATION_WORKER_MAX_AGE_HOURS=168
+NOTIFICATION_WORKER_LEASE_SECONDS=120
+```
+
+## Firebase delivery semantics
+
+FCM delivery uses the official Firebase Admin Go SDK, initialized once after verifying that `FIREBASE_PROJECT_ID` matches the base64 service-account JSON. Targeted campaign sends use server-resolved device tokens. Topic sends are allowed only through an explicit `public-*` topic operation with content marked public; audience breadth never implicitly enables topic delivery.
+
+Android and APNs payloads explicitly carry priority, TTL, collapse/thread key, Android channel, sound, badge, typed action data, and permitted interruption behavior. User-targeted campaign text is replaced with generic lock-screen copy; the application fetches protected content after authentication. Provider responses mean:
+
+- `validated`: Firebase dry-run validation succeeded;
+- `accepted`: FCM accepted the request and returned a message ID;
+- `failed`: the provider rejected it or retry policy ended;
+- `attempted`: a provider request was made.
+
+`accepted` is not proof of device delivery, display, or user interaction. Email and SMS remain explicitly unsupported.
 
 ## Authorization and audit
 
-- Read templates: `notification.template.read`
-- Author/publish/archive templates: `notification.template.manage`
-- Read campaigns: `notification.campaign.read`
-- Author, submit, schedule, and cancel campaigns: `notification.campaign.manage`
-- Approve or reject campaigns: `notification.campaign.approve`
+- Template reads/manage: `notification.template.read`, `notification.template.manage`
+- Campaign reads/manage/approval: `notification.campaign.read`, `notification.campaign.manage`, `notification.campaign.approve`
+- Sensitive audience estimates and delivery-job inspection: `notification.analytics.read`
+- Firebase status/test/config: `firebase.status.read`, `firebase.push.test`, `firebase.config.manage`
 
-Template version creation/publication and every campaign workflow action create audit records containing actor, entity, originating IP, transition, and lock version. API responses use dedicated DTOs and do not expose persistence models or legacy projection fields.
+Template publication, campaign transitions, and delivery requeues create audit records without message bodies, credentials, or registration tokens.
 
-## Operational boundary
+## Operations
 
-An `approved`, `scheduled`, or `queued` state does not mean that Firebase, email, or SMS accepted a message. Provider acceptance, retry/dead-letter handling, per-device receipts, audience counts, and campaign analytics must only be reported after the delivery/outbox phases are installed and observed.
+After applying migration `00032`, verify the worker from inside the Compose network:
+
+```bash
+docker compose --env-file infra/production.env -f infra/docker-compose.yml exec notification-worker \
+  curl --fail --silent http://127.0.0.1:8082/readyz
+```
+
+Inspect only non-secret delivery metadata through the permission-protected dashboard/API. A healthy worker with `firebase_configured:false` can persist in-app delivery, but push jobs will fail truthfully until backend Firebase credentials are installed and the service is recreated.

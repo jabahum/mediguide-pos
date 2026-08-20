@@ -92,6 +92,7 @@ func TestNotificationAdministrativeHandlersRequireFocusedPermissions(t *testing.
 		{name: "preview template version", method: http.MethodPost, path: "/api/v2/notification-template-versions/:id/preview", permission: "notification.template.read", handler: notificationHandler.PreviewTemplateVersion},
 		{name: "delete template", method: http.MethodDelete, path: "/api/v2/notification-templates/:id", permission: "notification.template.manage", handler: notificationHandler.DeleteTemplate},
 		{name: "list campaigns", method: http.MethodGet, path: "/api/v2/notification-campaigns", permission: "notification.campaign.read", handler: notificationHandler.ListCampaigns},
+		{name: "estimate audience", method: http.MethodPost, path: "/api/v2/notification-campaigns/audience-estimate", permission: "notification.campaign.manage", handler: notificationHandler.EstimateAudience},
 		{name: "get campaign", method: http.MethodGet, path: "/api/v2/notification-campaigns/:id", permission: "notification.campaign.read", handler: notificationHandler.GetCampaign},
 		{name: "create campaign", method: http.MethodPost, path: "/api/v2/notification-campaigns", permission: "notification.campaign.manage", handler: notificationHandler.CreateCampaign},
 		{name: "update campaign", method: http.MethodPatch, path: "/api/v2/notification-campaigns/:id", permission: "notification.campaign.manage", handler: notificationHandler.UpdateCampaign},
@@ -101,6 +102,8 @@ func TestNotificationAdministrativeHandlersRequireFocusedPermissions(t *testing.
 		{name: "schedule campaign", method: http.MethodPost, path: "/api/v2/notification-campaigns/:id/schedule", permission: "notification.campaign.manage", handler: notificationHandler.TransitionCampaign},
 		{name: "cancel campaign", method: http.MethodPost, path: "/api/v2/notification-campaigns/:id/cancel", permission: "notification.campaign.manage", handler: notificationHandler.TransitionCampaign},
 		{name: "delete campaign", method: http.MethodDelete, path: "/api/v2/notification-campaigns/:id", permission: "notification.campaign.manage", handler: notificationHandler.DeleteCampaign},
+		{name: "list delivery jobs", method: http.MethodGet, path: "/api/v2/notification-delivery-jobs", permission: "notification.analytics.read", handler: notificationHandler.ListDeliveryJobs},
+		{name: "requeue delivery job", method: http.MethodPost, path: "/api/v2/notification-delivery-jobs/:id/requeue", permission: "notification.campaign.manage", handler: notificationHandler.RequeueDeliveryJob},
 	}
 
 	for _, tt := range tests {
@@ -121,5 +124,51 @@ func TestNotificationAdministrativeHandlersRequireFocusedPermissions(t *testing.
 				t.Fatalf("%s %s returned %d, want 403", tt.method, path, response.Code)
 			}
 		})
+	}
+}
+
+func TestNotificationAudienceSensitiveFiltersRequireAnalyticsPermission(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	handler := NotificationHandler{Service: services.NotificationService{}}
+	router := gin.New()
+	router.Use(func(c *gin.Context) {
+		c.Set(middleware.ClaimsKey, &security.Claims{UserID: uuid.New(), Perms: []string{"notification.campaign.manage"}})
+		c.Next()
+	})
+	router.POST("/estimate", handler.EstimateAudience)
+
+	response := httptest.NewRecorder()
+	request := httptest.NewRequest(http.MethodPost, "/estimate", bytes.NewBufferString(`{"audience":{"all_eligible":false,"facility_ids":["`+uuid.NewString()+`"]}}`))
+	request.Header.Set("Content-Type", "application/json")
+	router.ServeHTTP(response, request)
+	if response.Code != http.StatusForbidden {
+		t.Fatalf("sensitive audience status=%d body=%s", response.Code, response.Body.String())
+	}
+}
+
+func TestNotificationCampaignReadRedactsSensitiveAudienceWithoutAnalyticsPermission(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	db, err := gorm.Open(sqlite.Open("file:"+t.Name()+"?mode=memory&cache=shared"), &gorm.Config{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := db.AutoMigrate(&models.NotificationCampaign{}); err != nil {
+		t.Fatal(err)
+	}
+	campaign := models.NotificationCampaign{Name: "Facility alert", Type: "update", Status: "draft", RenderedTitle: "Title", RenderedBody: "Body", ActionSnapshotJSON: datatypes.JSON(`{"type":"none","parameters":{}}`), AudienceDefinitionJSON: datatypes.JSON(`{"all_eligible":false,"facility_ids":["` + uuid.NewString() + `"]}`), RequestedChannelsJSON: datatypes.JSON(`["in-app"]`), Priority: "normal", Timezone: "UTC", IdempotencyKey: "redacted-audience", DispatchSnapshotJSON: datatypes.JSON(`{"recipient_ids":["private"]}`)}
+	if err := db.Create(&campaign).Error; err != nil {
+		t.Fatal(err)
+	}
+	handler := NotificationHandler{Service: services.NotificationService{DB: db}}
+	router := gin.New()
+	router.Use(func(c *gin.Context) {
+		c.Set(middleware.ClaimsKey, &security.Claims{UserID: uuid.New(), Perms: []string{"notification.campaign.read"}})
+		c.Next()
+	})
+	router.GET("/campaigns/:id", handler.GetCampaign)
+	response := httptest.NewRecorder()
+	router.ServeHTTP(response, httptest.NewRequest(http.MethodGet, "/campaigns/"+campaign.ID.String(), nil))
+	if response.Code != http.StatusOK || strings.Contains(response.Body.String(), "facility_ids") || strings.Contains(response.Body.String(), "private") {
+		t.Fatalf("sensitive audience was exposed: status=%d body=%s", response.Code, response.Body.String())
 	}
 }

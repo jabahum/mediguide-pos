@@ -1,5 +1,5 @@
 import { getBackendClient } from "@/lib/backend-client"
-import type { ModelsNotificationAction, ServicesNotificationActionTypeEnum, ServicesNotificationCampaignDTO, ServicesNotificationCampaignInput, ServicesNotificationTemplateDTO, ServicesNotificationTemplateInput } from "@/types/generated/backend-openapi"
+import type { ModelsNotificationAction, ServicesNotificationActionTypeEnum, ServicesNotificationAudienceDefinition, ServicesNotificationAudienceEstimate, ServicesNotificationCampaignDTO, ServicesNotificationCampaignInput, ServicesNotificationTemplateDTO, ServicesNotificationTemplateInput } from "@/types/generated/backend-openapi"
 
 export type NotificationType = "info" | "success" | "warning" | "error"
 export type NotificationPriority = "low" | "normal" | "high" | "urgent"
@@ -97,12 +97,31 @@ export interface NotificationTemplateDto extends Omit<ServicesNotificationTempla
   current_version: number; locale: string; version: NotificationTemplateVersionDto; created_at: string; updated_at: string
 }
 export type NotificationCampaignStatus = "draft" | "pending_review" | "approved" | "scheduled" | "queued" | "sending" | "completed" | "partially_failed" | "failed" | "cancelled"
+export interface NotificationAudienceDefinition extends Omit<ServicesNotificationAudienceDefinition, "all_eligible" | "platforms" | "preference_categories"> {
+  all_eligible: boolean
+  user_ids?: string[]
+  role_ids?: string[]
+  countries?: string[]
+  region_ids?: string[]
+  district_ids?: string[]
+  facility_ids?: string[]
+  facility_level_ids?: string[]
+  professional_categories?: string[]
+  languages?: string[]
+  platforms?: Array<"android" | "ios">
+  application_versions?: string[]
+  preference_categories?: Array<"clinical_content_updates" | "outbreak_alerts" | "emergency_alerts" | "reminders" | "system_notices" | "product_announcements">
+}
+export interface NotificationAudienceEstimate extends Omit<ServicesNotificationAudienceEstimate, "eligible_users" | "active_devices"> {
+  eligible_users: number
+  active_devices: number
+}
 export interface NotificationCampaignInput extends Omit<ServicesNotificationCampaignInput, "audience" | "priority" | "requested_channels" | "type" | "variables"> {
   name: string
   type: "emergency" | "update" | "reminder" | "marketing" | "announcement"
   template_version_id: string
   variables: Record<string, unknown>
-  audience: { all_eligible: boolean; user_ids?: string[]; role_ids?: string[]; countries?: string[]; regions?: string[] }
+  audience: NotificationAudienceDefinition
   scheduled_at?: string; timezone: string; expires_at?: string; ttl_seconds?: number
   priority: NotificationPriority; collapse_key?: string; requested_channels: Array<"push" | "email" | "sms" | "in-app">
   idempotency_key: string; lock_version?: number
@@ -164,6 +183,9 @@ export const notificationsService = {
   },
   listCampaigns(query: Record<string, string | number | undefined> = {}) {
     return client().send<PagedResult<NotificationCampaignDto>>("/api/v2/notification-campaigns", { query })
+  },
+  estimateAudience(audience: NotificationAudienceDefinition) {
+    return client().send<NotificationAudienceEstimate>("/api/v2/notification-campaigns/audience-estimate", { method: "POST", body: JSON.stringify({ audience }) })
   },
   createCampaign(input: NotificationCampaignInput) {
     return client().send("/api/v2/notification-campaigns", { method: "POST", body: JSON.stringify(input) })

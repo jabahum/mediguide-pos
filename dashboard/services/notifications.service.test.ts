@@ -64,4 +64,16 @@ describe("notificationsService", () => {
       body: JSON.stringify({ lock_version: 3 }),
     })
   })
+
+  it("estimates a typed audience without requesting recipient records", async () => {
+    send.mockResolvedValue({ eligible_users: 14, active_devices: 9 })
+    const audience = { all_eligible: false, countries: ["Uganda"], platforms: ["android" as const] }
+
+    await notificationsService.estimateAudience(audience)
+
+    expect(send).toHaveBeenCalledWith("/api/v2/notification-campaigns/audience-estimate", {
+      method: "POST",
+      body: JSON.stringify({ audience }),
+    })
+  })
 })

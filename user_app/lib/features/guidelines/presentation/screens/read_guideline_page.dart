@@ -7,7 +7,6 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:user_app/app/providers/app_providers.dart';
 import 'package:user_app/core/config/app_keys.dart';
 import 'package:user_app/core/constants/app_spacing.dart';
-import 'package:user_app/core/utils/app_extensions.dart';
 import 'package:user_app/core/utils/app_message.dart';
 import 'package:user_app/core/utils/responsive.dart';
 import 'package:user_app/core/widgets/app_error_view.dart';

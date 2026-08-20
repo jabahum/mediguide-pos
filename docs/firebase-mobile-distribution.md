@@ -179,6 +179,7 @@ Set the resulting value in the protected runtime environment:
 ```dotenv
 FIREBASE_PROJECT_ID=mediguide-production
 FIREBASE_SERVICE_ACCOUNT_BASE64=BASE64_JSON_HERE
+FIREBASE_DEVICE_STALE_DAYS=90
 NOTIFICATION_ACTION_EXTERNAL_HOSTS=mediguide.health.go.ug,health.go.ug,www.health.go.ug,who.int,www.who.int
 ```
 
@@ -196,7 +197,7 @@ not reload environment variables. For a direct Compose-managed environment:
 docker compose \
   --env-file infra/production.env \
   -f infra/docker-compose.yml \
-  up -d --no-deps --force-recreate api
+  up -d --no-deps --force-recreate api notification-worker
 ```
 
 Verify while logged in as an administrator:

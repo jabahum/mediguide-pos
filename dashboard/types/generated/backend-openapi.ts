@@ -394,6 +394,15 @@ export interface HandlersMinistryDirectoryEnvelope {
   success?: boolean;
 }
 
+export interface HandlersNotificationAudienceEstimateEnvelope {
+  data?: ServicesNotificationAudienceEstimate;
+  success?: boolean;
+}
+
+export interface HandlersNotificationAudienceEstimateInput {
+  audience?: ServicesNotificationAudienceDefinition;
+}
+
 export interface HandlersNotificationCampaignEnvelope {
   data?: ServicesNotificationCampaignDTO;
   success?: boolean;
@@ -402,6 +411,11 @@ export interface HandlersNotificationCampaignEnvelope {
 export interface HandlersNotificationEnvelope {
   data?: ModelsNotification;
   /** @example true */
+  success?: boolean;
+}
+
+export interface HandlersNotificationOutboxJobEnvelope {
+  data?: ServicesNotificationOutboxJobDTO;
   success?: boolean;
 }
 
@@ -724,6 +738,19 @@ export interface HandlersPaginatedNotificationCampaigns {
 
 export interface HandlersPaginatedNotificationCampaignsEnvelope {
   data?: HandlersPaginatedNotificationCampaigns;
+  success?: boolean;
+}
+
+export interface HandlersPaginatedNotificationOutboxJobs {
+  items?: ServicesNotificationOutboxJobDTO[];
+  page?: number;
+  per_page?: number;
+  total_items?: number;
+  total_pages?: number;
+}
+
+export interface HandlersPaginatedNotificationOutboxJobsEnvelope {
+  data?: HandlersPaginatedNotificationOutboxJobs;
   success?: boolean;
 }
 
@@ -2542,9 +2569,10 @@ export interface ServicesFirebasePushInput {
 }
 
 export interface ServicesFirebasePushResult {
+  accepted?: number;
   attempted?: number;
   failed?: number;
-  sent?: number;
+  validated?: number;
 }
 
 export interface ServicesGenericPageInput {
@@ -2916,10 +2944,23 @@ export type ServicesNotificationActionTypeEnum =
 
 export interface ServicesNotificationAudienceDefinition {
   all_eligible?: boolean;
+  application_versions?: string[];
   countries?: string[];
-  regions?: string[];
+  district_ids?: string[];
+  facility_ids?: string[];
+  facility_level_ids?: string[];
+  languages?: string[];
+  platforms?: string[];
+  preference_categories?: string[];
+  professional_categories?: string[];
+  region_ids?: string[];
   role_ids?: string[];
   user_ids?: string[];
+}
+
+export interface ServicesNotificationAudienceEstimate {
+  active_devices?: number;
+  eligible_users?: number;
 }
 
 export interface ServicesNotificationCampaignDTO {
@@ -2993,6 +3034,27 @@ export interface ServicesNotificationInput {
   title?: string;
   type?: string;
   user_id?: string;
+}
+
+export interface ServicesNotificationOutboxJobDTO {
+  accepted_at?: string;
+  attempt_count?: number;
+  campaign_id?: string;
+  channel?: string;
+  completed_at?: string;
+  created_at?: string;
+  id?: string;
+  last_error_code?: string;
+  last_error_message?: string;
+  max_attempts?: number;
+  next_attempt_at?: string;
+  provider_message_id?: string;
+  status?: string;
+}
+
+export interface ServicesNotificationOutboxRequeueInput {
+  confirm?: boolean;
+  reason?: string;
 }
 
 export interface ServicesNotificationTemplateDTO {

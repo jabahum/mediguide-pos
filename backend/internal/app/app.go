@@ -133,7 +133,7 @@ func New(cfg config.Config) (*App, error) {
 	drugSvc := services.DrugService{DB: database}
 	drugReferenceSvc := services.DrugReferenceService{DB: database, Cache: cacheStore}
 	userSvc := services.UserService{DB: database}
-	notificationSvc := services.NotificationService{DB: database, AllowedActionHosts: cfg.NotificationActionExternalHosts}
+	notificationSvc := services.NotificationService{DB: database, AllowedActionHosts: cfg.NotificationActionExternalHosts, DeviceStaleAfter: time.Duration(cfg.FirebaseDeviceStaleDays) * 24 * time.Hour}
 	supportSvc := services.SupportService{DB: database}
 	helpContentSvc := services.HelpContentService{DB: database, Cache: cacheStore}
 	guidelineContentSvc := services.GuidelineContentService{DB: database, Cache: cacheStore}
@@ -160,7 +160,7 @@ func New(cfg config.Config) (*App, error) {
 	drugH := handlers.DrugHandler{Service: drugSvc}
 	drugReferenceH := handlers.DrugReferenceHandler{Service: drugReferenceSvc}
 	userH := handlers.UserHandler{Service: userSvc}
-	notificationH := handlers.NotificationHandler{Service: notificationSvc}
+	notificationH := handlers.NotificationHandler{Service: notificationSvc, Outbox: services.NotificationOutboxService{DB: database}}
 	supportH := handlers.SupportHandler{Service: supportSvc}
 	helpContentH := handlers.HelpContentHandler{Service: helpContentSvc}
 	guidelineContentH := handlers.GuidelineContentHandler{Service: guidelineContentSvc}
@@ -298,6 +298,7 @@ func New(cfg config.Config) (*App, error) {
 		protected.POST("/notification-template-versions/:id/preview", middleware.RequirePermission("notification.template.read"), notificationH.PreviewTemplateVersion)
 		protected.DELETE("/notification-templates/:id", middleware.RequirePermission("notification.template.manage"), notificationH.DeleteTemplate)
 		protected.GET("/notification-campaigns", middleware.RequirePermission("notification.campaign.read"), notificationH.ListCampaigns)
+		protected.POST("/notification-campaigns/audience-estimate", middleware.RequirePermission("notification.campaign.manage"), notificationH.EstimateAudience)
 		protected.GET("/notification-campaigns/:id", middleware.RequirePermission("notification.campaign.read"), notificationH.GetCampaign)
 		protected.POST("/notification-campaigns", middleware.RequirePermission("notification.campaign.manage"), rateLimiter.Limit(middleware.Policy("notification-campaign-write", 10, time.Hour, 0), middleware.UserIdentity), notificationH.CreateCampaign)
 		protected.PATCH("/notification-campaigns/:id", middleware.RequirePermission("notification.campaign.manage"), notificationH.UpdateCampaign)
@@ -307,6 +308,8 @@ func New(cfg config.Config) (*App, error) {
 		protected.POST("/notification-campaigns/:id/schedule", middleware.RequirePermission("notification.campaign.manage"), rateLimiter.Limit(middleware.Policy("notification-campaign-write", 10, time.Hour, 0), middleware.UserIdentity), notificationH.TransitionCampaign)
 		protected.POST("/notification-campaigns/:id/cancel", middleware.RequirePermission("notification.campaign.manage"), notificationH.TransitionCampaign)
 		protected.DELETE("/notification-campaigns/:id", middleware.RequirePermission("notification.campaign.manage"), notificationH.DeleteCampaign)
+		protected.GET("/notification-delivery-jobs", middleware.RequirePermission("notification.analytics.read"), notificationH.ListDeliveryJobs)
+		protected.POST("/notification-delivery-jobs/:id/requeue", middleware.RequirePermission("notification.campaign.manage"), rateLimiter.Limit(middleware.Policy("notification-delivery-requeue", 20, time.Hour, 0), middleware.UserIdentity), notificationH.RequeueDeliveryJob)
 
 		protected.GET("/support/tickets", supportH.ListTickets)
 		protected.GET("/support/tickets/:id", supportH.GetTicket)

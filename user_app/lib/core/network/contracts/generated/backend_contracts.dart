@@ -1362,6 +1362,48 @@ final class HandlersMinistryDirectoryEnvelope {
   Map<String, dynamic> toJson() => Map.of(value);
 }
 
+final class HandlersNotificationAudienceEstimateEnvelope {
+  HandlersNotificationAudienceEstimateEnvelope(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory HandlersNotificationAudienceEstimateEnvelope.fromJson(
+    Map<String, dynamic> json,
+  ) => HandlersNotificationAudienceEstimateEnvelope(json);
+
+  static const schemaName = 'handlers.NotificationAudienceEstimateEnvelope';
+  final Map<String, dynamic> value;
+
+  ServicesNotificationAudienceEstimate? get data {
+    final raw = value['data'];
+    if (raw is! Map) return null;
+    return ServicesNotificationAudienceEstimate.fromJson(_jsonMap(raw));
+  }
+
+  bool? get success => value['success'] as bool?;
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
+final class HandlersNotificationAudienceEstimateInput {
+  HandlersNotificationAudienceEstimateInput(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory HandlersNotificationAudienceEstimateInput.fromJson(
+    Map<String, dynamic> json,
+  ) => HandlersNotificationAudienceEstimateInput(json);
+
+  static const schemaName = 'handlers.NotificationAudienceEstimateInput';
+  final Map<String, dynamic> value;
+
+  ServicesNotificationAudienceDefinition? get audience {
+    final raw = value['audience'];
+    if (raw is! Map) return null;
+    return ServicesNotificationAudienceDefinition.fromJson(_jsonMap(raw));
+  }
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
 final class HandlersNotificationCampaignEnvelope {
   HandlersNotificationCampaignEnvelope(Map<String, dynamic> value)
     : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
@@ -1398,6 +1440,28 @@ final class HandlersNotificationEnvelope {
     final raw = value['data'];
     if (raw is! Map) return null;
     return ModelsNotification.fromJson(_jsonMap(raw));
+  }
+
+  bool? get success => value['success'] as bool?;
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
+final class HandlersNotificationOutboxJobEnvelope {
+  HandlersNotificationOutboxJobEnvelope(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory HandlersNotificationOutboxJobEnvelope.fromJson(
+    Map<String, dynamic> json,
+  ) => HandlersNotificationOutboxJobEnvelope(json);
+
+  static const schemaName = 'handlers.NotificationOutboxJobEnvelope';
+  final Map<String, dynamic> value;
+
+  ServicesNotificationOutboxJobDTO? get data {
+    final raw = value['data'];
+    if (raw is! Map) return null;
+    return ServicesNotificationOutboxJobDTO.fromJson(_jsonMap(raw));
   }
 
   bool? get success => value['success'] as bool?;
@@ -2482,6 +2546,61 @@ final class HandlersPaginatedNotificationCampaignsEnvelope {
     final raw = value['data'];
     if (raw is! Map) return null;
     return HandlersPaginatedNotificationCampaigns.fromJson(_jsonMap(raw));
+  }
+
+  bool? get success => value['success'] as bool?;
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
+final class HandlersPaginatedNotificationOutboxJobs {
+  HandlersPaginatedNotificationOutboxJobs(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory HandlersPaginatedNotificationOutboxJobs.fromJson(
+    Map<String, dynamic> json,
+  ) => HandlersPaginatedNotificationOutboxJobs(json);
+
+  static const schemaName = 'handlers.PaginatedNotificationOutboxJobs';
+  final Map<String, dynamic> value;
+
+  List<ServicesNotificationOutboxJobDTO> get items {
+    final raw = value['items'];
+    if (raw is! List) return const [];
+    return raw
+        .whereType<Map>()
+        .map(
+          (item) => ServicesNotificationOutboxJobDTO.fromJson(_jsonMap(item)),
+        )
+        .toList(growable: false);
+  }
+
+  int? get page => (value['page'] as num?)?.toInt();
+
+  int? get perPage => (value['per_page'] as num?)?.toInt();
+
+  int? get totalItems => (value['total_items'] as num?)?.toInt();
+
+  int? get totalPages => (value['total_pages'] as num?)?.toInt();
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
+final class HandlersPaginatedNotificationOutboxJobsEnvelope {
+  HandlersPaginatedNotificationOutboxJobsEnvelope(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory HandlersPaginatedNotificationOutboxJobsEnvelope.fromJson(
+    Map<String, dynamic> json,
+  ) => HandlersPaginatedNotificationOutboxJobsEnvelope(json);
+
+  static const schemaName = 'handlers.PaginatedNotificationOutboxJobsEnvelope';
+  final Map<String, dynamic> value;
+
+  HandlersPaginatedNotificationOutboxJobs? get data {
+    final raw = value['data'];
+    if (raw is! Map) return null;
+    return HandlersPaginatedNotificationOutboxJobs.fromJson(_jsonMap(raw));
   }
 
   bool? get success => value['success'] as bool?;
@@ -7672,11 +7791,13 @@ final class ServicesFirebasePushResult {
   static const schemaName = 'services.FirebasePushResult';
   final Map<String, dynamic> value;
 
+  int? get accepted => (value['accepted'] as num?)?.toInt();
+
   int? get attempted => (value['attempted'] as num?)?.toInt();
 
   int? get failed => (value['failed'] as num?)?.toInt();
 
-  int? get sent => (value['sent'] as num?)?.toInt();
+  int? get validated => (value['validated'] as num?)?.toInt();
 
   Map<String, dynamic> toJson() => Map.of(value);
 }
@@ -8834,14 +8955,62 @@ final class ServicesNotificationAudienceDefinition {
 
   bool? get allEligible => value['all_eligible'] as bool?;
 
+  List<String> get applicationVersions {
+    final raw = value['application_versions'];
+    if (raw is! List) return const [];
+    return raw.whereType<String>().toList(growable: false);
+  }
+
   List<String> get countries {
     final raw = value['countries'];
     if (raw is! List) return const [];
     return raw.whereType<String>().toList(growable: false);
   }
 
-  List<String> get regions {
-    final raw = value['regions'];
+  List<String> get districtIds {
+    final raw = value['district_ids'];
+    if (raw is! List) return const [];
+    return raw.whereType<String>().toList(growable: false);
+  }
+
+  List<String> get facilityIds {
+    final raw = value['facility_ids'];
+    if (raw is! List) return const [];
+    return raw.whereType<String>().toList(growable: false);
+  }
+
+  List<String> get facilityLevelIds {
+    final raw = value['facility_level_ids'];
+    if (raw is! List) return const [];
+    return raw.whereType<String>().toList(growable: false);
+  }
+
+  List<String> get languages {
+    final raw = value['languages'];
+    if (raw is! List) return const [];
+    return raw.whereType<String>().toList(growable: false);
+  }
+
+  List<String> get platforms {
+    final raw = value['platforms'];
+    if (raw is! List) return const [];
+    return raw.whereType<String>().toList(growable: false);
+  }
+
+  List<String> get preferenceCategories {
+    final raw = value['preference_categories'];
+    if (raw is! List) return const [];
+    return raw.whereType<String>().toList(growable: false);
+  }
+
+  List<String> get professionalCategories {
+    final raw = value['professional_categories'];
+    if (raw is! List) return const [];
+    return raw.whereType<String>().toList(growable: false);
+  }
+
+  List<String> get regionIds {
+    final raw = value['region_ids'];
     if (raw is! List) return const [];
     return raw.whereType<String>().toList(growable: false);
   }
@@ -8857,6 +9026,24 @@ final class ServicesNotificationAudienceDefinition {
     if (raw is! List) return const [];
     return raw.whereType<String>().toList(growable: false);
   }
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
+final class ServicesNotificationAudienceEstimate {
+  ServicesNotificationAudienceEstimate(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory ServicesNotificationAudienceEstimate.fromJson(
+    Map<String, dynamic> json,
+  ) => ServicesNotificationAudienceEstimate(json);
+
+  static const schemaName = 'services.NotificationAudienceEstimate';
+  final Map<String, dynamic> value;
+
+  int? get activeDevices => (value['active_devices'] as num?)?.toInt();
+
+  int? get eligibleUsers => (value['eligible_users'] as num?)?.toInt();
 
   Map<String, dynamic> toJson() => Map.of(value);
 }
@@ -9059,6 +9246,64 @@ final class ServicesNotificationInput {
   String? get type => value['type']?.toString();
 
   String? get userId => value['user_id']?.toString();
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
+final class ServicesNotificationOutboxJobDTO {
+  ServicesNotificationOutboxJobDTO(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory ServicesNotificationOutboxJobDTO.fromJson(
+    Map<String, dynamic> json,
+  ) => ServicesNotificationOutboxJobDTO(json);
+
+  static const schemaName = 'services.NotificationOutboxJobDTO';
+  final Map<String, dynamic> value;
+
+  String? get acceptedAt => value['accepted_at']?.toString();
+
+  int? get attemptCount => (value['attempt_count'] as num?)?.toInt();
+
+  String? get campaignId => value['campaign_id']?.toString();
+
+  String? get channel => value['channel']?.toString();
+
+  String? get completedAt => value['completed_at']?.toString();
+
+  String? get createdAt => value['created_at']?.toString();
+
+  String? get id => value['id']?.toString();
+
+  String? get lastErrorCode => value['last_error_code']?.toString();
+
+  String? get lastErrorMessage => value['last_error_message']?.toString();
+
+  int? get maxAttempts => (value['max_attempts'] as num?)?.toInt();
+
+  String? get nextAttemptAt => value['next_attempt_at']?.toString();
+
+  String? get providerMessageId => value['provider_message_id']?.toString();
+
+  String? get status => value['status']?.toString();
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
+final class ServicesNotificationOutboxRequeueInput {
+  ServicesNotificationOutboxRequeueInput(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory ServicesNotificationOutboxRequeueInput.fromJson(
+    Map<String, dynamic> json,
+  ) => ServicesNotificationOutboxRequeueInput(json);
+
+  static const schemaName = 'services.NotificationOutboxRequeueInput';
+  final Map<String, dynamic> value;
+
+  bool? get confirm => value['confirm'] as bool?;
+
+  String? get reason => value['reason']?.toString();
 
   Map<String, dynamic> toJson() => Map.of(value);
 }

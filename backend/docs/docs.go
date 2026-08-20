@@ -8946,6 +8946,38 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/v2/notification-campaigns/audience-estimate": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "notification-administration"
+                ],
+                "summary": "Estimate eligible users and active devices for a typed campaign audience",
+                "parameters": [
+                    {
+                        "description": "Typed audience",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handlers.NotificationAudienceEstimateInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.NotificationAudienceEstimateEnvelope"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v2/notification-campaigns/{id}": {
             "get": {
                 "security": [
@@ -9060,6 +9092,79 @@ const docTemplate = `{
                         "description": "Conflict",
                         "schema": {
                             "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v2/notification-delivery-jobs": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "notification-administration"
+                ],
+                "summary": "List notification delivery jobs without registration tokens or payload contents",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "held, pending, processing, retry, accepted, failed, cancelled",
+                        "name": "status",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "in-app, push, email, sms",
+                        "name": "channel",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Campaign UUID",
+                        "name": "campaign_id",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.PaginatedNotificationOutboxJobsEnvelope"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v2/notification-delivery-jobs/{id}/requeue": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "notification-administration"
+                ],
+                "summary": "Requeue one terminally failed notification delivery job",
+                "parameters": [
+                    {
+                        "description": "Explicit confirmation and reason",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/services.NotificationOutboxRequeueInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.NotificationOutboxJobEnvelope"
                         }
                     }
                 }
@@ -12472,6 +12577,25 @@ const docTemplate = `{
                 }
             }
         },
+        "handlers.NotificationAudienceEstimateEnvelope": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/services.NotificationAudienceEstimate"
+                },
+                "success": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "handlers.NotificationAudienceEstimateInput": {
+            "type": "object",
+            "properties": {
+                "audience": {
+                    "$ref": "#/definitions/services.NotificationAudienceDefinition"
+                }
+            }
+        },
         "handlers.NotificationCampaignEnvelope": {
             "type": "object",
             "properties": {
@@ -12492,6 +12616,17 @@ const docTemplate = `{
                 "success": {
                     "type": "boolean",
                     "example": true
+                }
+            }
+        },
+        "handlers.NotificationOutboxJobEnvelope": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/services.NotificationOutboxJobDTO"
+                },
+                "success": {
+                    "type": "boolean"
                 }
             }
         },
@@ -13232,6 +13367,40 @@ const docTemplate = `{
             "properties": {
                 "data": {
                     "$ref": "#/definitions/handlers.PaginatedNotificationCampaigns"
+                },
+                "success": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "handlers.PaginatedNotificationOutboxJobs": {
+            "type": "object",
+            "properties": {
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/services.NotificationOutboxJobDTO"
+                    }
+                },
+                "page": {
+                    "type": "integer"
+                },
+                "per_page": {
+                    "type": "integer"
+                },
+                "total_items": {
+                    "type": "integer"
+                },
+                "total_pages": {
+                    "type": "integer"
+                }
+            }
+        },
+        "handlers.PaginatedNotificationOutboxJobsEnvelope": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/handlers.PaginatedNotificationOutboxJobs"
                 },
                 "success": {
                     "type": "boolean"
@@ -18067,13 +18236,16 @@ const docTemplate = `{
         "services.FirebasePushResult": {
             "type": "object",
             "properties": {
+                "accepted": {
+                    "type": "integer"
+                },
                 "attempted": {
                     "type": "integer"
                 },
                 "failed": {
                     "type": "integer"
                 },
-                "sent": {
+                "validated": {
                     "type": "integer"
                 }
             }
@@ -19087,13 +19259,61 @@ const docTemplate = `{
                 "all_eligible": {
                     "type": "boolean"
                 },
+                "application_versions": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
                 "countries": {
                     "type": "array",
                     "items": {
                         "type": "string"
                     }
                 },
-                "regions": {
+                "district_ids": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "facility_ids": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "facility_level_ids": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "languages": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "platforms": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "preference_categories": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "professional_categories": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "region_ids": {
                     "type": "array",
                     "items": {
                         "type": "string"
@@ -19110,6 +19330,17 @@ const docTemplate = `{
                     "items": {
                         "type": "string"
                     }
+                }
+            }
+        },
+        "services.NotificationAudienceEstimate": {
+            "type": "object",
+            "properties": {
+                "active_devices": {
+                    "type": "integer"
+                },
+                "eligible_users": {
+                    "type": "integer"
                 }
             }
         },
@@ -19320,6 +19551,61 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "user_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "services.NotificationOutboxJobDTO": {
+            "type": "object",
+            "properties": {
+                "accepted_at": {
+                    "type": "string"
+                },
+                "attempt_count": {
+                    "type": "integer"
+                },
+                "campaign_id": {
+                    "type": "string"
+                },
+                "channel": {
+                    "type": "string"
+                },
+                "completed_at": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "last_error_code": {
+                    "type": "string"
+                },
+                "last_error_message": {
+                    "type": "string"
+                },
+                "max_attempts": {
+                    "type": "integer"
+                },
+                "next_attempt_at": {
+                    "type": "string"
+                },
+                "provider_message_id": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                }
+            }
+        },
+        "services.NotificationOutboxRequeueInput": {
+            "type": "object",
+            "properties": {
+                "confirm": {
+                    "type": "boolean"
+                },
+                "reason": {
                     "type": "string"
                 }
             }

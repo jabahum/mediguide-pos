@@ -683,6 +683,25 @@ type NotificationCampaignEnvelope struct {
 	Success bool                             `json:"success"`
 	Data    services.NotificationCampaignDTO `json:"data"`
 }
+type NotificationAudienceEstimateEnvelope struct {
+	Success bool                                  `json:"success"`
+	Data    services.NotificationAudienceEstimate `json:"data"`
+}
+type NotificationOutboxJobEnvelope struct {
+	Success bool                              `json:"success"`
+	Data    services.NotificationOutboxJobDTO `json:"data"`
+}
+type PaginatedNotificationOutboxJobs struct {
+	Items      []services.NotificationOutboxJobDTO `json:"items"`
+	Page       int                                 `json:"page"`
+	PerPage    int                                 `json:"per_page"`
+	TotalItems int64                               `json:"total_items"`
+	TotalPages int                                 `json:"total_pages"`
+}
+type PaginatedNotificationOutboxJobsEnvelope struct {
+	Success bool                            `json:"success"`
+	Data    PaginatedNotificationOutboxJobs `json:"data"`
+}
 type PaginatedNotificationCampaigns struct {
 	Items      []services.NotificationCampaignDTO `json:"items"`
 	Page       int                                `json:"page"`

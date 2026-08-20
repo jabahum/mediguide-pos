@@ -17,10 +17,17 @@ import (
 	"gorm.io/gorm"
 )
 
-type NotificationHandler struct{ Service services.NotificationService }
+type NotificationHandler struct {
+	Service services.NotificationService
+	Outbox  services.NotificationOutboxService
+}
 
 type NotificationStatusInput struct {
 	Status string `json:"status"`
+}
+
+type NotificationAudienceEstimateInput struct {
+	Audience services.NotificationAudienceDefinition `json:"audience"`
 }
 
 // List godoc
@@ -289,6 +296,11 @@ func (h NotificationHandler) ListCampaigns(c *gin.Context) {
 		h.writeError(c, err)
 		return
 	}
+	if !security.HasPerm(notificationClaims(c), "notification.analytics.read") {
+		for index := range result.Items {
+			redactNotificationCampaignAudience(&result.Items[index])
+		}
+	}
 	httpx.OK(c, result)
 }
 
@@ -304,6 +316,30 @@ func (h NotificationHandler) GetCampaign(c *gin.Context) {
 		return
 	}
 	item, err := h.Service.GetCampaign(id)
+	if err == nil && !security.HasPerm(notificationClaims(c), "notification.analytics.read") {
+		redactNotificationCampaignAudience(item)
+	}
+	h.writeResult(c, item, err, http.StatusOK)
+}
+
+// EstimateAudience godoc
+// @Summary Estimate eligible users and active devices for a typed campaign audience
+// @Tags notification-administration
+// @Security BearerAuth
+// @Param payload body handlers.NotificationAudienceEstimateInput true "Typed audience"
+// @Success 200 {object} handlers.NotificationAudienceEstimateEnvelope
+// @Router /api/v2/notification-campaigns/audience-estimate [post]
+func (h NotificationHandler) EstimateAudience(c *gin.Context) {
+	var in NotificationAudienceEstimateInput
+	if !notificationBind(c, &in) {
+		return
+	}
+	claims := notificationClaims(c)
+	if services.NotificationAudienceRequiresSensitivePermission(in.Audience) && !security.HasPerm(claims, "notification.analytics.read") {
+		httpx.Error(c, http.StatusForbidden, "sensitive audience estimates require notification analytics permission")
+		return
+	}
+	item, err := h.Service.EstimateAudience(in.Audience)
 	h.writeResult(c, item, err, http.StatusOK)
 }
 
@@ -317,6 +353,10 @@ func (h NotificationHandler) GetCampaign(c *gin.Context) {
 func (h NotificationHandler) CreateCampaign(c *gin.Context) {
 	var in services.NotificationCampaignInput
 	if !notificationBind(c, &in) {
+		return
+	}
+	if services.NotificationAudienceRequiresSensitivePermission(in.Audience) && !security.HasPerm(notificationClaims(c), "notification.analytics.read") {
+		httpx.Error(c, http.StatusForbidden, "sensitive audience targeting requires notification analytics permission")
 		return
 	}
 	item, err := h.Service.SaveCampaign(nil, in, notificationClaims(c).UserID, c.ClientIP())
@@ -337,6 +377,10 @@ func (h NotificationHandler) UpdateCampaign(c *gin.Context) {
 	}
 	var in services.NotificationCampaignInput
 	if !notificationBind(c, &in) {
+		return
+	}
+	if services.NotificationAudienceRequiresSensitivePermission(in.Audience) && !security.HasPerm(notificationClaims(c), "notification.analytics.read") {
+		httpx.Error(c, http.StatusForbidden, "sensitive audience targeting requires notification analytics permission")
 		return
 	}
 	item, err := h.Service.SaveCampaign(&id, in, notificationClaims(c).UserID, c.ClientIP())
@@ -383,6 +427,58 @@ func (h NotificationHandler) transitionCampaign(c *gin.Context, action string) {
 // @Success 204
 // @Router /api/v2/notification-campaigns/{id} [delete]
 func (h NotificationHandler) DeleteCampaign(c *gin.Context) { h.deleteAdmin(c, "campaign") }
+
+// ListDeliveryJobs godoc
+// @Summary List notification delivery jobs without registration tokens or payload contents
+// @Tags notification-administration
+// @Security BearerAuth
+// @Param status query string false "held, pending, processing, retry, accepted, failed, cancelled"
+// @Param channel query string false "in-app, push, email, sms"
+// @Param campaign_id query string false "Campaign UUID"
+// @Success 200 {object} handlers.PaginatedNotificationOutboxJobsEnvelope
+// @Router /api/v2/notification-delivery-jobs [get]
+func (h NotificationHandler) ListDeliveryJobs(c *gin.Context) {
+	page, err := parsePageQuery(c, 20, 100)
+	if err != nil {
+		httpx.Error(c, http.StatusBadRequest, "invalid pagination parameters")
+		return
+	}
+	var campaignID *uuid.UUID
+	if raw := strings.TrimSpace(c.Query("campaign_id")); raw != "" {
+		parsed, parseErr := uuid.Parse(raw)
+		if parseErr != nil {
+			httpx.Error(c, http.StatusBadRequest, "invalid campaign id")
+			return
+		}
+		campaignID = &parsed
+	}
+	result, err := h.Outbox.List(services.NotificationOutboxListInput{Page: page, Status: c.Query("status"), Channel: c.Query("channel"), CampaignID: campaignID})
+	if err != nil {
+		h.writeError(c, err)
+		return
+	}
+	httpx.OK(c, result)
+}
+
+// RequeueDeliveryJob godoc
+// @Summary Requeue one terminally failed notification delivery job
+// @Tags notification-administration
+// @Security BearerAuth
+// @Param payload body services.NotificationOutboxRequeueInput true "Explicit confirmation and reason"
+// @Success 200 {object} handlers.NotificationOutboxJobEnvelope
+// @Router /api/v2/notification-delivery-jobs/{id}/requeue [post]
+func (h NotificationHandler) RequeueDeliveryJob(c *gin.Context) {
+	id, ok := notificationID(c)
+	if !ok {
+		return
+	}
+	var in services.NotificationOutboxRequeueInput
+	if !notificationBind(c, &in) {
+		return
+	}
+	result, err := h.Outbox.Requeue(id, notificationClaims(c).UserID, in, c.ClientIP())
+	h.writeResult(c, result, err, http.StatusOK)
+}
 
 func (h NotificationHandler) deleteAdmin(c *gin.Context, kind string) {
 	id, ok := notificationID(c)
@@ -439,6 +535,14 @@ func notificationBind(c *gin.Context, value any) bool {
 		return false
 	}
 	return true
+}
+
+func redactNotificationCampaignAudience(item *services.NotificationCampaignDTO) {
+	if item == nil {
+		return
+	}
+	item.Audience = services.NotificationAudienceDefinition{AllEligible: item.Audience.AllEligible}
+	item.DispatchSnapshot = nil
 }
 func notificationAdminPage(c *gin.Context) (services.NotificationAdminListInput, bool) {
 	page, err := parsePageQuery(c, 20, 100)

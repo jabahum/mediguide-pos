@@ -53,6 +53,13 @@ type Config struct {
 	TrustedProxies                  []string
 	FirebaseProjectID               string
 	FirebaseCredentials             string
+	FirebaseDeviceStaleDays         int
+	NotificationWorkerPort          string
+	NotificationWorkerBatchSize     int
+	NotificationWorkerConcurrency   int
+	NotificationWorkerPollMS        int
+	NotificationWorkerMaxAgeHours   int
+	NotificationWorkerLeaseSeconds  int
 	NotificationActionExternalHosts []string
 }
 
@@ -101,6 +108,13 @@ func Load() Config {
 		TrustedProxies:                  getCSV("TRUSTED_PROXIES"),
 		FirebaseProjectID:               get("FIREBASE_PROJECT_ID", ""),
 		FirebaseCredentials:             get("FIREBASE_SERVICE_ACCOUNT_BASE64", ""),
+		FirebaseDeviceStaleDays:         getInt("FIREBASE_DEVICE_STALE_DAYS", 90),
+		NotificationWorkerPort:          get("NOTIFICATION_WORKER_PORT", "8082"),
+		NotificationWorkerBatchSize:     getInt("NOTIFICATION_WORKER_BATCH_SIZE", 100),
+		NotificationWorkerConcurrency:   getInt("NOTIFICATION_WORKER_CONCURRENCY", 10),
+		NotificationWorkerPollMS:        getInt("NOTIFICATION_WORKER_POLL_MS", 1000),
+		NotificationWorkerMaxAgeHours:   getInt("NOTIFICATION_WORKER_MAX_AGE_HOURS", 168),
+		NotificationWorkerLeaseSeconds:  getInt("NOTIFICATION_WORKER_LEASE_SECONDS", 120),
 		NotificationActionExternalHosts: getCSVWithFallback("NOTIFICATION_ACTION_EXTERNAL_HOSTS", "mediguide.health.go.ug,health.go.ug,www.health.go.ug,who.int,www.who.int"),
 	}
 }

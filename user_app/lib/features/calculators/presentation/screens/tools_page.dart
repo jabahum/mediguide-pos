@@ -16,7 +16,6 @@ import 'package:user_app/features/calculators/presentation/widgets/calculator_ca
 
 import 'package:user_app/shared/models/models.dart';
 import 'package:user_app/shared/widgets/clinical_icon_tile.dart';
-import 'package:user_app/shared/widgets/filter_button.dart';
 import 'package:user_app/shared/widgets/pagination_indicators.dart';
 
 class ToolsPage extends ConsumerStatefulWidget {

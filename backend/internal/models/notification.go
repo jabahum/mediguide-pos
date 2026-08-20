@@ -140,3 +140,55 @@ type NotificationCampaign struct {
 	MetricsOpened         int64          `json:"-" swaggerignore:"true"`
 	MetricsClicked        int64          `json:"-" swaggerignore:"true"`
 }
+
+// NotificationPreference is the category-level opt-in used while resolving a
+// campaign audience. Missing rows use the product default (enabled); Phase 9
+// extends this record with quiet hours and channel-specific preferences.
+type NotificationPreference struct {
+	Base
+	UserID   uuid.UUID `gorm:"type:uuid;not null;uniqueIndex:idx_notification_preference_user_category" json:"user_id"`
+	Category string    `gorm:"not null;uniqueIndex:idx_notification_preference_user_category" json:"category"`
+	Enabled  bool      `gorm:"not null;default:true" json:"enabled"`
+}
+
+type NotificationCampaignRecipient struct {
+	Base
+	CampaignID uuid.UUID `gorm:"type:uuid;not null;uniqueIndex:idx_notification_campaign_recipient" json:"campaign_id"`
+	UserID     uuid.UUID `gorm:"type:uuid;not null;uniqueIndex:idx_notification_campaign_recipient" json:"user_id"`
+	Status     string    `gorm:"not null;default:'pending'" json:"status"`
+}
+
+type NotificationOutboxJob struct {
+	Base
+	CampaignID        uuid.UUID      `gorm:"type:uuid;not null" json:"campaign_id"`
+	RecipientID       uuid.UUID      `gorm:"type:uuid;not null" json:"recipient_id"`
+	UserID            uuid.UUID      `gorm:"type:uuid;not null" json:"user_id"`
+	FirebaseDeviceID  *uuid.UUID     `gorm:"type:uuid" json:"firebase_device_id,omitempty"`
+	Channel           string         `gorm:"not null" json:"channel"`
+	Status            string         `gorm:"not null;default:'held'" json:"status"`
+	IdempotencyKey    string         `gorm:"not null;uniqueIndex" json:"idempotency_key"`
+	PayloadJSON       datatypes.JSON `gorm:"column:payload_json;type:jsonb;not null" json:"payload" swaggertype:"object"`
+	AttemptCount      int            `gorm:"not null;default:0" json:"attempt_count"`
+	MaxAttempts       int            `gorm:"not null;default:8" json:"max_attempts"`
+	NextAttemptAt     time.Time      `gorm:"not null" json:"next_attempt_at"`
+	LockedAt          *time.Time     `json:"locked_at,omitempty"`
+	LockedBy          *string        `json:"locked_by,omitempty"`
+	ProviderMessageID *string        `json:"provider_message_id,omitempty"`
+	LastErrorCode     *string        `json:"last_error_code,omitempty"`
+	LastErrorMessage  *string        `json:"last_error_message,omitempty"`
+	AcceptedAt        *time.Time     `json:"accepted_at,omitempty"`
+	CompletedAt       *time.Time     `json:"completed_at,omitempty"`
+	ExpiresAt         *time.Time     `json:"expires_at,omitempty"`
+}
+
+type NotificationDeliveryAttempt struct {
+	Base
+	OutboxJobID       uuid.UUID `gorm:"type:uuid;not null;index" json:"outbox_job_id"`
+	AttemptNumber     int       `gorm:"not null" json:"attempt_number"`
+	Outcome           string    `gorm:"not null" json:"outcome"`
+	ProviderMessageID *string   `json:"provider_message_id,omitempty"`
+	ErrorCode         *string   `json:"error_code,omitempty"`
+	ErrorMessage      *string   `json:"error_message,omitempty"`
+	RetryAfterSeconds *int      `json:"retry_after_seconds,omitempty"`
+	DurationMS        int64     `json:"duration_ms"`
+}

@@ -16,6 +16,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -23,7 +24,11 @@ import (
 	"mediguide/internal/config"
 	"mediguide/internal/models"
 
+	firebase "firebase.google.com/go/v4"
+	"firebase.google.com/go/v4/messaging"
 	"github.com/google/uuid"
+	"google.golang.org/api/googleapi"
+	"google.golang.org/api/option"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 )
@@ -37,7 +42,23 @@ type FirebaseService struct {
 	DB                 *gorm.DB
 	Project            string
 	Client             *firebaseHTTPClient
+	Messenger          FirebaseMessagingClient
 	AllowedActionHosts []string
+	DeviceStaleAfter   time.Duration
+	MaxConcurrency     int
+}
+
+type FirebaseMessagingClient interface {
+	Send(context.Context, *messaging.Message, bool) (string, error)
+}
+
+type firebaseAdminMessenger struct{ client *messaging.Client }
+
+func (m firebaseAdminMessenger) Send(ctx context.Context, message *messaging.Message, dryRun bool) (string, error) {
+	if dryRun {
+		return m.client.SendDryRun(ctx, message)
+	}
+	return m.client.Send(ctx, message)
 }
 
 type FirebaseDeviceInput struct {
@@ -61,29 +82,63 @@ type FirebasePushInput struct {
 
 type FirebasePushResult struct {
 	Attempted int `json:"attempted"`
-	Sent      int `json:"sent"`
+	Validated int `json:"validated"`
+	Accepted  int `json:"accepted"`
 	Failed    int `json:"failed"`
 }
 
+type FirebaseDeliveryOutcome struct {
+	Attempted    bool
+	Validated    bool
+	Accepted     bool
+	Retryable    bool
+	Unregistered bool
+	MessageID    string
+	Code         string
+	Message      string
+	RetryAfter   time.Duration
+}
+
+// firebaseCodedError keeps the delivery service mockable without coupling
+// tests to the Firebase SDK's private error constructors.
+type firebaseCodedError interface {
+	FirebaseErrorCode() string
+}
+
 func NewFirebaseService(database *gorm.DB, cfg config.Config) (*FirebaseService, error) {
-	service := &FirebaseService{DB: database, Project: strings.TrimSpace(cfg.FirebaseProjectID), AllowedActionHosts: cfg.NotificationActionExternalHosts}
+	service := &FirebaseService{DB: database, Project: strings.TrimSpace(cfg.FirebaseProjectID), AllowedActionHosts: cfg.NotificationActionExternalHosts, DeviceStaleAfter: time.Duration(cfg.FirebaseDeviceStaleDays) * 24 * time.Hour, MaxConcurrency: 10}
 	if strings.TrimSpace(cfg.FirebaseCredentials) == "" {
 		return service, nil
 	}
-	client, project, err := newFirebaseHTTPClient(cfg.FirebaseCredentials)
+	raw, account, err := decodeFirebaseServiceAccount(cfg.FirebaseCredentials)
 	if err != nil {
 		return nil, err
 	}
+	project := account.ProjectID
 	if service.Project == "" {
 		service.Project = project
 	} else if service.Project != project {
 		return nil, errors.New("firebase project does not match service account")
 	}
-	service.Client = client
+	adminApp, err := firebase.NewApp(context.Background(), &firebase.Config{ProjectID: service.Project}, option.WithCredentialsJSON(raw))
+	if err != nil {
+		return nil, fmt.Errorf("initialize firebase admin sdk: %w", err)
+	}
+	messagingClient, err := adminApp.Messaging(context.Background())
+	if err != nil {
+		return nil, fmt.Errorf("initialize firebase messaging: %w", err)
+	}
+	service.Messenger = firebaseAdminMessenger{client: messagingClient}
+	// Firebase Admin Go does not expose Remote Config template management, so
+	// the existing credential-scoped client remains isolated to that API only.
+	service.Client, _, err = newFirebaseHTTPClient(cfg.FirebaseCredentials)
+	if err != nil {
+		return nil, err
+	}
 	return service, nil
 }
 
-func (s FirebaseService) Enabled() bool { return s.Client != nil && s.Project != "" }
+func (s FirebaseService) Enabled() bool { return s.Messenger != nil && s.Project != "" }
 
 func (s FirebaseService) RegisterDevice(userID uuid.UUID, in FirebaseDeviceInput) (*models.FirebaseDevice, error) {
 	installationID := strings.TrimSpace(in.InstallationID)
@@ -145,41 +200,203 @@ func (s FirebaseService) SendToUser(ctx context.Context, in FirebasePushInput) (
 	if err != nil {
 		return nil, ErrFirebaseInvalid
 	}
-	actionParameters, err := json.Marshal(action.Parameters)
-	if err != nil {
-		return nil, ErrFirebaseInvalid
-	}
 	var devices []models.FirebaseDevice
-	if err := s.DB.Where("user_id = ? AND notifications_enabled = ?", userID, true).Find(&devices).Error; err != nil {
+	staleAfter := s.DeviceStaleAfter
+	if staleAfter <= 0 {
+		staleAfter = 90 * 24 * time.Hour
+	}
+	if err := s.DB.Where("user_id = ? AND notifications_enabled = ? AND last_seen_at >= ?", userID, true, time.Now().UTC().Add(-staleAfter)).Find(&devices).Error; err != nil {
 		return nil, err
 	}
 	result := &FirebasePushResult{Attempted: len(devices)}
+	payload := NotificationDeliveryPayload{Title: strings.TrimSpace(in.Title), Body: strings.TrimSpace(in.Body), Action: action, Priority: "normal", AndroidChannel: "mediguide_updates", PublicContent: false}
+	if compatibilityURL != nil && payload.Action.Route == nil {
+		payload.Action.Route = compatibilityURL
+	}
 	for _, device := range devices {
-		data := map[string]string{}
-		for key, value := range in.Data {
-			if strings.TrimSpace(key) != "" && len(key) <= 128 && len(value) <= 2048 {
-				data[key] = value
-			}
-		}
-		data["action_type"] = action.Type
-		data["action_parameters"] = string(actionParameters)
-		if action.ResourceID != nil {
-			data["resource_id"] = *action.ResourceID
-		}
-		if action.Route != nil {
-			data["route"] = *action.Route
-		}
-		if compatibilityURL != nil {
-			data["action_url"] = *compatibilityURL
-		}
-		payload := map[string]any{"message": map[string]any{"token": device.RegistrationToken, "notification": map[string]string{"title": strings.TrimSpace(in.Title), "body": strings.TrimSpace(in.Body)}, "data": data}, "validate_only": in.DryRun}
-		if _, _, err := s.Client.doJSON(ctx, http.MethodPost, "https://fcm.googleapis.com/v1/projects/"+url.PathEscape(s.Project)+"/messages:send", "", payload); err != nil {
+		outcome := s.DeliverToDevice(ctx, device, payload, in.Data, in.DryRun)
+		if outcome.Validated {
+			result.Validated++
+		} else if outcome.Accepted {
+			result.Accepted++
+		} else {
 			result.Failed++
-			continue
 		}
-		result.Sent++
 	}
 	return result, nil
+}
+
+func (s FirebaseService) DeliverToDevice(ctx context.Context, device models.FirebaseDevice, payload NotificationDeliveryPayload, extra map[string]string, dryRun bool) FirebaseDeliveryOutcome {
+	if !s.Enabled() {
+		return FirebaseDeliveryOutcome{Code: "firebase_disabled", Message: "Firebase messaging is not configured"}
+	}
+	message, err := firebaseMessage(device.RegistrationToken, payload, extra)
+	if err != nil {
+		return FirebaseDeliveryOutcome{Attempted: true, Code: "invalid_payload", Message: "notification payload is invalid"}
+	}
+	messageID, err := s.Messenger.Send(ctx, message, dryRun)
+	if err == nil {
+		return FirebaseDeliveryOutcome{Attempted: true, Validated: dryRun, Accepted: !dryRun, MessageID: messageID}
+	}
+	outcome := classifyFirebaseError(err)
+	outcome.Attempted = true
+	if outcome.Unregistered {
+		_ = s.DB.Model(&models.FirebaseDevice{}).Where("id = ?", device.ID).Updates(map[string]any{"notifications_enabled": false, "deleted_at": time.Now().UTC()}).Error
+	}
+	return outcome
+}
+
+func (s FirebaseService) DeliverPublicTopic(ctx context.Context, topic string, payload NotificationDeliveryPayload, dryRun bool) FirebaseDeliveryOutcome {
+	if !s.Enabled() {
+		return FirebaseDeliveryOutcome{Code: "firebase_disabled", Message: "Firebase messaging is not configured"}
+	}
+	if !payload.PublicContent || !strings.HasPrefix(topic, "public-") || len(topic) > 128 {
+		return FirebaseDeliveryOutcome{Code: "invalid_public_topic", Message: "topic delivery is restricted to public broadcasts"}
+	}
+	message, err := firebaseMessage("", payload, nil)
+	if err != nil {
+		return FirebaseDeliveryOutcome{Code: "invalid_payload", Message: "notification payload is invalid"}
+	}
+	message.Topic = topic
+	messageID, err := s.Messenger.Send(ctx, message, dryRun)
+	if err != nil {
+		outcome := classifyFirebaseError(err)
+		outcome.Attempted = true
+		return outcome
+	}
+	return FirebaseDeliveryOutcome{Attempted: true, Validated: dryRun, Accepted: !dryRun, MessageID: messageID}
+}
+
+func (s FirebaseService) PruneStaleDevices(now time.Time) (int64, error) {
+	staleAfter := s.DeviceStaleAfter
+	if staleAfter <= 0 {
+		staleAfter = 90 * 24 * time.Hour
+	}
+	result := s.DB.Model(&models.FirebaseDevice{}).Where("last_seen_at < ?", now.UTC().Add(-staleAfter)).Updates(map[string]any{"notifications_enabled": false, "deleted_at": now.UTC()})
+	return result.RowsAffected, result.Error
+}
+
+func firebaseMessage(token string, payload NotificationDeliveryPayload, extra map[string]string) (*messaging.Message, error) {
+	data := map[string]string{}
+	for key, value := range extra {
+		if strings.TrimSpace(key) != "" && len(key) <= 128 && len(value) <= 2048 {
+			data[key] = value
+		}
+	}
+	parameters, err := json.Marshal(payload.Action.Parameters)
+	if err != nil {
+		return nil, err
+	}
+	data["action_type"] = payload.Action.Type
+	data["action_parameters"] = string(parameters)
+	if payload.CampaignID != "" {
+		data["campaign_id"] = payload.CampaignID
+	}
+	if payload.Action.ResourceID != nil {
+		data["resource_id"] = *payload.Action.ResourceID
+	}
+	if payload.Action.Route != nil {
+		data["route"] = *payload.Action.Route
+	}
+	title, body := payload.Title, payload.Body
+	if !payload.PublicContent {
+		title = "MediGuide notification"
+		body = "Open MediGuide to view this update."
+	}
+	priority := "normal"
+	apnsPriority := "5"
+	interruption := "active"
+	if payload.Priority == "high" || payload.Priority == "urgent" {
+		priority = "high"
+		apnsPriority = "10"
+		interruption = "time-sensitive"
+	}
+	android := &messaging.AndroidConfig{CollapseKey: payload.CollapseKey, Priority: priority, Notification: &messaging.AndroidNotification{ChannelID: payload.AndroidChannel, DefaultSound: true, Visibility: messaging.VisibilityPrivate}}
+	if payload.TTLSeconds > 0 {
+		ttl := time.Duration(payload.TTLSeconds) * time.Second
+		android.TTL = &ttl
+	}
+	badge := 1
+	apnsHeaders := map[string]string{"apns-priority": apnsPriority}
+	if payload.CollapseKey != "" {
+		apnsHeaders["apns-collapse-id"] = payload.CollapseKey
+	}
+	message := &messaging.Message{
+		Token:        token,
+		Notification: &messaging.Notification{Title: title, Body: body},
+		Data:         data,
+		Android:      android,
+		APNS: &messaging.APNSConfig{
+			Headers: apnsHeaders,
+			Payload: &messaging.APNSPayload{Aps: &messaging.Aps{Sound: "default", Badge: &badge, ThreadID: payload.CollapseKey, CustomData: map[string]interface{}{"interruption-level": interruption}}},
+		},
+	}
+	return message, nil
+}
+
+func classifyFirebaseError(err error) FirebaseDeliveryOutcome {
+	outcome := FirebaseDeliveryOutcome{Code: "provider_rejected", Message: "Firebase rejected the notification"}
+	var coded firebaseCodedError
+	if errors.As(err, &coded) {
+		switch coded.FirebaseErrorCode() {
+		case "unregistered":
+			outcome.Code, outcome.Unregistered = "unregistered", true
+		case "invalid_argument":
+			outcome.Code = "invalid_argument"
+		case "sender_id_mismatch":
+			outcome.Code = "sender_id_mismatch"
+		case "third_party_auth":
+			outcome.Code = "third_party_auth"
+		case "quota_exceeded":
+			outcome.Code, outcome.Retryable = "quota_exceeded", true
+		case "unavailable", "internal":
+			outcome.Code, outcome.Retryable = coded.FirebaseErrorCode(), true
+		}
+		return outcome
+	}
+	switch {
+	case messaging.IsUnregistered(err):
+		outcome.Code, outcome.Unregistered = "unregistered", true
+	case messaging.IsInvalidArgument(err):
+		outcome.Code = "invalid_argument"
+	case messaging.IsSenderIDMismatch(err):
+		outcome.Code = "sender_id_mismatch"
+	case messaging.IsThirdPartyAuthError(err):
+		outcome.Code = "third_party_auth"
+	case messaging.IsQuotaExceeded(err):
+		outcome.Code, outcome.Retryable = "quota_exceeded", true
+	case messaging.IsUnavailable(err):
+		outcome.Code, outcome.Retryable = "unavailable", true
+	case messaging.IsInternal(err):
+		outcome.Code, outcome.Retryable = "internal", true
+	case errors.Is(err, context.DeadlineExceeded) || errors.Is(err, context.Canceled):
+		outcome.Code, outcome.Retryable = "timeout", true
+	}
+	var apiErr *googleapi.Error
+	if errors.As(err, &apiErr) {
+		if apiErr.Code == http.StatusTooManyRequests || apiErr.Code >= http.StatusInternalServerError {
+			outcome.Retryable = true
+		}
+		if apiErr.Code == http.StatusBadRequest || apiErr.Code == http.StatusUnauthorized || apiErr.Code == http.StatusForbidden {
+			outcome.Retryable = false
+		}
+		outcome.RetryAfter = parseRetryAfter(apiErr.Header.Get("Retry-After"), time.Now().UTC())
+	}
+	return outcome
+}
+
+func parseRetryAfter(value string, now time.Time) time.Duration {
+	value = strings.TrimSpace(value)
+	if value == "" {
+		return 0
+	}
+	if seconds, err := strconv.Atoi(value); err == nil && seconds > 0 {
+		return time.Duration(seconds) * time.Second
+	}
+	if at, err := http.ParseTime(value); err == nil && at.After(now) {
+		return at.Sub(now)
+	}
+	return 0
 }
 
 func (s FirebaseService) GetRemoteConfig(ctx context.Context) (json.RawMessage, string, error) {
@@ -222,13 +439,9 @@ type firebaseHTTPClient struct {
 }
 
 func newFirebaseHTTPClient(encoded string) (*firebaseHTTPClient, string, error) {
-	raw, err := base64.StdEncoding.DecodeString(strings.TrimSpace(encoded))
+	_, credentials, err := decodeFirebaseServiceAccount(encoded)
 	if err != nil {
-		return nil, "", fmt.Errorf("decode firebase service account: %w", err)
-	}
-	var credentials firebaseServiceAccount
-	if err := json.Unmarshal(raw, &credentials); err != nil {
-		return nil, "", fmt.Errorf("parse firebase service account: %w", err)
+		return nil, "", err
 	}
 	block, _ := pem.Decode([]byte(credentials.PrivateKey))
 	if block == nil || credentials.ClientEmail == "" || credentials.ProjectID == "" {
@@ -246,6 +459,21 @@ func newFirebaseHTTPClient(encoded string) (*firebaseHTTPClient, string, error) 
 		credentials.TokenURI = "https://oauth2.googleapis.com/token"
 	}
 	return &firebaseHTTPClient{credentials: credentials, key: key, http: &http.Client{Timeout: 20 * time.Second}}, credentials.ProjectID, nil
+}
+
+func decodeFirebaseServiceAccount(encoded string) ([]byte, firebaseServiceAccount, error) {
+	raw, err := base64.StdEncoding.DecodeString(strings.TrimSpace(encoded))
+	if err != nil {
+		return nil, firebaseServiceAccount{}, fmt.Errorf("decode firebase service account: %w", err)
+	}
+	var credentials firebaseServiceAccount
+	if err := json.Unmarshal(raw, &credentials); err != nil {
+		return nil, firebaseServiceAccount{}, fmt.Errorf("parse firebase service account: %w", err)
+	}
+	if credentials.ClientEmail == "" || credentials.ProjectID == "" || credentials.PrivateKey == "" {
+		return nil, firebaseServiceAccount{}, errors.New("invalid firebase service account")
+	}
+	return raw, credentials, nil
 }
 
 func (c *firebaseHTTPClient) accessToken(ctx context.Context) (string, error) {

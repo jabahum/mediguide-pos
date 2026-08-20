@@ -6,6 +6,7 @@ const serviceMocks = vi.hoisted(() => ({
   listTemplates: vi.fn(),
   listCampaigns: vi.fn(),
   firebaseStatus: vi.fn(),
+  estimateAudience: vi.fn(),
 }))
 
 vi.mock("@/lib/backend-client", () => ({
@@ -20,6 +21,7 @@ vi.mock("@/services/notifications.service", () => ({
   notificationsService: {
     listTemplates: serviceMocks.listTemplates,
     listCampaigns: serviceMocks.listCampaigns,
+    estimateAudience: serviceMocks.estimateAudience,
   },
 }))
 
@@ -34,6 +36,7 @@ describe("NotificationAdministrationPage", () => {
     serviceMocks.listTemplates.mockResolvedValue({ items: [], page: 1, per_page: 50, total_items: 0, total_pages: 0 })
     serviceMocks.listCampaigns.mockResolvedValue({ items: [], page: 1, per_page: 50, total_items: 0, total_pages: 0 })
     serviceMocks.firebaseStatus.mockResolvedValue({ enabled: false })
+    serviceMocks.estimateAudience.mockResolvedValue({ eligible_users: 12, active_devices: 8 })
   })
 
   afterEach(() => {
@@ -46,11 +49,26 @@ describe("NotificationAdministrationPage", () => {
     render(<NotificationAdministrationPage />)
 
     await waitFor(() => expect(screen.getByText("Notification Administration")).toBeInTheDocument())
-    expect(screen.getByText(/approving a campaign freezes its dispatch snapshot but does not claim/)).toBeInTheDocument()
+    expect(screen.getByText(/approval resolves and freezes the audience/i)).toBeInTheDocument()
     expect(screen.getByRole("button", { name: "New template" })).toBeEnabled()
     await user.click(screen.getByRole("tab", { name: "Campaigns" }))
     expect(screen.getByRole("button", { name: "New campaign" })).toBeDisabled()
     expect(screen.queryByText(/Test Mode/i)).not.toBeInTheDocument()
     expect(screen.queryByText(/delivery rate/i)).not.toBeInTheDocument()
+  })
+
+  it("shows server-estimated user and device counts before campaign approval", async () => {
+    serviceMocks.listTemplates.mockResolvedValue({
+      items: [{ id: "template-1", name: "Clinical update", status: "published", current_version: 1, locale: "en", version: { id: "version-1", template_id: "template-1", version: 1, channel: "push", status: "published", variable_schema: {}, category: "Clinical", locale: "en", body_template: "Update", action_template: { type: "none", parameters: {} }, created_at: "2026-08-20T00:00:00Z" }, created_at: "2026-08-20T00:00:00Z", updated_at: "2026-08-20T00:00:00Z" }],
+      page: 1, per_page: 50, total_items: 1, total_pages: 1,
+    })
+    const user = userEvent.setup()
+    render(<NotificationAdministrationPage />)
+    await screen.findByText("Notification Administration")
+    await user.click(screen.getByRole("tab", { name: "Campaigns" }))
+    await user.click(screen.getByRole("button", { name: "New campaign" }))
+    await user.click(screen.getByRole("button", { name: "Estimate audience" }))
+    await waitFor(() => expect(serviceMocks.estimateAudience).toHaveBeenCalledWith({ all_eligible: true }))
+    expect(screen.getByText((_, element) => element?.tagName === "P" && element.textContent === "12 eligible users · 8 active devices")).toBeInTheDocument()
   })
 })

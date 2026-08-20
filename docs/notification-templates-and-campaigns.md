@@ -23,6 +23,7 @@ Core endpoints:
 - `GET /api/v2/notification-deliveries` and `GET /api/v2/notification-delivery-analytics/daily`
 - `POST /api/v2/notification-deliveries/:id/{open|click}` (authenticated owner only)
 - `POST /api/v2/notification-templates/:id/clone`
+- `POST /api/v2/guidelines/:id/notification-campaign`
 
 ## Typed audience resolution
 
@@ -30,7 +31,11 @@ Supported filters are user IDs, role IDs, countries, region/district/facility/fa
 
 The estimate endpoint returns only `eligible_users` and `active_devices`. Facility, role, geography, professional, and individual targeting additionally requires `notification.analytics.read`. Campaign reads redact sensitive audience fields and the dispatch snapshot from operators without that permission. Registration tokens and recipient lists are never returned.
 
-An absent preference row uses the product default. An explicit disabled category excludes that user; audience resolution never silently re-enables it. Full quiet-hours and channel-specific preference management belongs to Phase 9.
+An absent preference row uses the product default. An explicit disabled category excludes that user; audience resolution never silently re-enables it. Quiet hours and channel-specific preferences are available in the mobile notification settings screen.
+
+## Guideline publishing integration
+
+Migration `00035` installs the published, versioned `guideline-update` template. The guideline list exposes campaign creation only when the document's selected current version is published. Editors choose audience, schedule, priority, and push/in-app channels; the API derives the title, version, guideline UUID, and typed guideline action. The result is always a `draft` and must pass the same submit, independent approval, and schedule workflow as every other campaign. This endpoint never dispatches synchronously and rejects stale or unpublished current versions even if a client bypasses the dashboard.
 
 ## Transactional outbox and worker
 
@@ -98,13 +103,15 @@ Disabling global push immediately disables all of the user's registered devices.
 
 Quiet hours delay push jobs until the configured local end time. The time zone must be a valid IANA name. In-app notices remain available in the inbox at their scheduled publication time.
 
+The mobile client does not request operating-system notification permission at startup. It exposes explicit `not determined`, `provisional`, `authorized`, `denied`, and `permanently denied` states, offers an in-app request when permitted, and opens the native application settings screen when the OS requires manual recovery. Foreground messages refresh the owner-scoped inbox and unread badge immediately. Foreground local-notification taps, background push taps, and terminated-app initial messages all pass through the same allowlisted typed-action resolver. Read/unread changes remain local-first and retry after connectivity returns; private Drift rows are stored under `user:<uuid>` and removed on logout.
+
 Administrators with `notification.analytics.read` can access `GET /api/v2/notification-preferences/aggregates`. It returns aggregate user/category/channel/device counts only and never returns registration tokens, installation identifiers, or recipient lists.
 
 Template publication, campaign transitions, and delivery requeues create audit records without message bodies, credentials, or registration tokens.
 
 ## Operations
 
-After applying migration `00032`, verify the worker from inside the Compose network:
+After applying migrations through `00035`, verify the worker from inside the Compose network:
 
 ```bash
 docker compose --env-file infra/production.env -f infra/docker-compose.yml exec notification-worker \

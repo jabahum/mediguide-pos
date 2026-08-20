@@ -8488,6 +8488,40 @@ final class ServicesGuidelineIndexInput {
   Map<String, dynamic> toJson() => Map.of(value);
 }
 
+final class ServicesGuidelineNotificationCampaignInput {
+  ServicesGuidelineNotificationCampaignInput(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory ServicesGuidelineNotificationCampaignInput.fromJson(
+    Map<String, dynamic> json,
+  ) => ServicesGuidelineNotificationCampaignInput(json);
+
+  static const schemaName = 'services.GuidelineNotificationCampaignInput';
+  final Map<String, dynamic> value;
+
+  ServicesNotificationAudienceDefinition? get audience {
+    final raw = value['audience'];
+    if (raw is! Map) return null;
+    return ServicesNotificationAudienceDefinition.fromJson(_jsonMap(raw));
+  }
+
+  String? get idempotencyKey => value['idempotency_key']?.toString();
+
+  String? get priority => value['priority']?.toString();
+
+  List<String> get requestedChannels {
+    final raw = value['requested_channels'];
+    if (raw is! List) return const [];
+    return raw.whereType<String>().toList(growable: false);
+  }
+
+  String? get scheduledAt => value['scheduled_at']?.toString();
+
+  String? get timezone => value['timezone']?.toString();
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
 final class ServicesGuidelinePreview {
   ServicesGuidelinePreview(Map<String, dynamic> value)
     : value = UnmodifiableMapView<String, dynamic>(Map.of(value));

@@ -20,7 +20,7 @@ func notificationTestService(t *testing.T) NotificationService {
 	}
 	if err := db.AutoMigrate(
 		&models.Notification{}, &models.NotificationRead{}, &models.NotificationTemplate{},
-		&models.NotificationTemplateVersion{}, &models.NotificationCampaign{}, &models.GuidelineDocument{},
+		&models.NotificationTemplateVersion{}, &models.NotificationCampaign{}, &models.GuidelineDocument{}, &models.GuidelineVersion{},
 		&models.SupportTicket{}, &models.AuditLog{}, &models.User{}, &models.FirebaseDevice{},
 		&models.NotificationPreference{}, &models.NotificationCampaignRecipient{},
 		&models.NotificationPreferenceSettings{},
@@ -39,6 +39,58 @@ func notificationTestService(t *testing.T) NotificationService {
 		t.Fatal(err)
 	}
 	return NotificationService{DB: db}
+}
+
+func TestGuidelineCampaignRequiresPublishedCurrentVersion(t *testing.T) {
+	service := notificationTestService(t)
+	author, reviewer := uuid.New(), uuid.New()
+	title := "{{title}} updated"
+	template, err := service.SaveTemplate(nil, NotificationTemplateInput{
+		Name: "Guideline update", TemplateKey: "guideline-update", Channel: "push", TitleTemplate: &title,
+		BodyTemplate: "Version {{version}} of {{title}} is available", Category: "Content Updates", Locale: "en",
+		ActionTemplate: &NotificationAction{Type: NotificationActionGuideline, ResourceID: stringPointer("{{guideline_id}}"), Parameters: map[string]string{}},
+		VariableSchema: map[string]TemplateVariableRule{
+			"guideline_id": {Type: "string", Required: true},
+			"title":        {Type: "string", Required: true},
+			"version":      {Type: "string", Required: true},
+		},
+	}, author, "127.0.0.1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err = service.UpdateTemplateStatus(template.ID, "published", reviewer, "127.0.0.1"); err != nil {
+		t.Fatal(err)
+	}
+	document := models.GuidelineDocument{Title: "Malaria in adults"}
+	if err := service.DB.Create(&document).Error; err != nil {
+		t.Fatal(err)
+	}
+	draft := models.GuidelineVersion{DocumentID: document.ID, Version: "2.0", Status: "draft"}
+	if err := service.DB.Create(&draft).Error; err != nil {
+		t.Fatal(err)
+	}
+	document.CurrentVersionID = &draft.ID
+	if err := service.DB.Save(&document).Error; err != nil {
+		t.Fatal(err)
+	}
+	input := GuidelineNotificationCampaignInput{
+		Audience: NotificationAudienceDefinition{AllEligible: true}, Timezone: "UTC", Priority: "high",
+		RequestedChannels: []string{"push", "in-app"}, IdempotencyKey: "guideline-update-test",
+	}
+	if _, err := service.CreateGuidelineCampaign(document.ID, input, author, "127.0.0.1"); err != ErrNotificationInvalid {
+		t.Fatalf("unpublished current version must be rejected, got %v", err)
+	}
+
+	if err := service.DB.Model(&draft).Update("status", "published").Error; err != nil {
+		t.Fatal(err)
+	}
+	campaign, err := service.CreateGuidelineCampaign(document.ID, input, author, "127.0.0.1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if campaign.Status != "draft" || campaign.ActionSnapshot.Type != NotificationActionGuideline || campaign.ActionSnapshot.ResourceID == nil || *campaign.ActionSnapshot.ResourceID != document.ID.String() {
+		t.Fatalf("unexpected guideline campaign: %#v", campaign)
+	}
 }
 
 func TestNotificationTypedActionDerivesResourceRoute(t *testing.T) {

@@ -57,6 +57,21 @@ class MediGuideApp extends ConsumerWidget {
         unawaited(launchUrl(uri, mode: LaunchMode.externalApplication));
       }
     });
+    ref.listen(firebaseForegroundMessageProvider, (_, message) {
+      if (message.valueOrNull == null) return;
+      unawaited(
+        (() async {
+          final repository = ref.read(notificationRepositoryProvider);
+          if (repository.userId.trim().isEmpty) return;
+          try {
+            await repository.list(page: 1, perPage: 30);
+          } finally {
+            ref.read(notificationInboxRefreshProvider.notifier).state++;
+            ref.invalidate(notificationUnreadCountProvider);
+          }
+        })(),
+      );
+    });
     final languageCode =
         ref.watch(languageControllerProvider).valueOrNull?.currentCode ?? 'en';
     AppTranslation.setLocale(Locale(languageCode));

@@ -81,6 +81,31 @@ void main() {
       },
     );
 
+    test(
+      'foreground, background, and terminated payloads resolve identically',
+      () {
+        const payload = {
+          'action_type': 'guideline',
+          'resource_id': guidelineId,
+          'action_parameters': '{"section":"diagnosis"}',
+        };
+
+        for (final deliveryState in [
+          'foreground',
+          'background',
+          'terminated',
+        ]) {
+          final target = NotificationActionResolver.fromPushData(payload);
+
+          expect(
+            target?.location,
+            '/public/guidelines/$guidelineId?section=diagnosis',
+            reason: deliveryState,
+          );
+        }
+      },
+    );
+
     test('retains safe legacy guideline links during client migration', () {
       final target = NotificationActionResolver.resolve(
         legacyActionUrl: '/public/guidelines/$guidelineId',

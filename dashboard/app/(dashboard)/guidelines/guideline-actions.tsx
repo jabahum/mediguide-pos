@@ -1,6 +1,6 @@
 import { RowAction, BulkAction } from "@/types/data-table"
 import { MedicalGuidelinesWithExpanded } from "@/types/expanded"
-import { Eye, Edit, Copy, Trash2, Globe, Archive, ArchiveRestore, Download, Mail, CheckCircle, XCircle, FolderTree, Plus, ShieldCheck, Upload, FileText } from "lucide-react"
+import { Eye, Edit, Copy, Trash2, Globe, Archive, ArchiveRestore, Download, CheckCircle, XCircle, FolderTree, Plus, ShieldCheck, Upload, FileText } from "lucide-react"
 import { medicalGuidelineService } from "@/services/guideline-content.service"
 import { showToast } from "@/lib/toast"
 
@@ -424,29 +424,6 @@ export const createGuidelineBulkActions = (
         }
       },
       description: "Export selected guidelines as CSV file",
-    },
-    {
-      id: "bulk-notify",
-      label: "Send Notifications",
-      icon: Mail,
-      onClick: async (guidelines) => {
-        const published = guidelines.filter((g) => g.is_published)
-        if (published.length === 0) {
-          showToast.warning(
-            "No Action Needed",
-            "No published guidelines selected for notification"
-          )
-          return
-        }
-
-        // Notification dispatch isn't wired yet — surface that clearly instead of faking success.
-        showToast.info(
-          "Not Implemented",
-          "Sending notifications is not yet wired up"
-        )
-      },
-      disabled: (guidelines) => guidelines.every((g) => !g.is_published),
-      description: "Send update notifications for published guidelines",
     },
   ]
 

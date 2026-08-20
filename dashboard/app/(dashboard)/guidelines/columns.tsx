@@ -1,7 +1,7 @@
 "use client"
 
 import { ColumnDef } from "@tanstack/react-table"
-import { Eye, FilePlus2, Pencil, Upload } from "lucide-react"
+import { BellPlus, Eye, FilePlus2, Pencil, Upload } from "lucide-react"
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -14,18 +14,22 @@ import {
 
 interface GuidelineColumnActions {
   canUpdate: boolean
+  canNotify: boolean
   onView: (document: GuidelineDocumentRecord) => void
   onEdit: (document: GuidelineDocumentRecord) => void
   onNewVersion: (document: GuidelineDocumentRecord) => void
   onUpload: (document: GuidelineDocumentRecord) => void
+  onNotify: (document: GuidelineDocumentRecord) => void
 }
 
 export function createGuidelinesColumns({
   canUpdate,
+  canNotify,
   onView,
   onEdit,
   onNewVersion,
   onUpload,
+  onNotify,
 }: GuidelineColumnActions): ColumnDef<GuidelineDocumentRecord>[] {
   return [
     {
@@ -127,6 +131,17 @@ export function createGuidelinesColumns({
                 <Upload className="h-4 w-4" />
               </Button>
             </>
+          )}
+          {canNotify && (
+            <Button
+              variant="ghost"
+              size="icon"
+              title={getDocumentCurrentVersion(row.original)?.status === "published" ? "Create notification campaign" : "Publish the current version before notifying users"}
+              disabled={getDocumentCurrentVersion(row.original)?.status !== "published"}
+              onClick={() => onNotify(row.original)}
+            >
+              <BellPlus className="h-4 w-4" />
+            </Button>
           )}
         </div>
       ),

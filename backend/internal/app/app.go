@@ -310,6 +310,7 @@ func New(cfg config.Config) (*App, error) {
 		protected.POST("/notification-campaigns/audience-estimate", middleware.RequirePermission("notification.campaign.manage"), notificationH.EstimateAudience)
 		protected.GET("/notification-campaigns/:id", middleware.RequirePermission("notification.campaign.read"), notificationH.GetCampaign)
 		protected.POST("/notification-campaigns", middleware.RequirePermission("notification.campaign.manage"), rateLimiter.Limit(middleware.Policy("notification-campaign-write", 10, time.Hour, 0), middleware.UserIdentity), notificationH.CreateCampaign)
+		protected.POST("/guidelines/:id/notification-campaign", middleware.RequirePermission("notification.campaign.manage"), rateLimiter.Limit(middleware.Policy("notification-campaign-write", 10, time.Hour, 0), middleware.UserIdentity), notificationH.CreateGuidelineCampaign)
 		protected.PATCH("/notification-campaigns/:id", middleware.RequirePermission("notification.campaign.manage"), notificationH.UpdateCampaign)
 		protected.POST("/notification-campaigns/:id/submit", middleware.RequirePermission("notification.campaign.manage"), rateLimiter.Limit(middleware.Policy("notification-campaign-write", 10, time.Hour, 0), middleware.UserIdentity), notificationH.TransitionCampaign)
 		protected.POST("/notification-campaigns/:id/approve", middleware.RequirePermission("notification.campaign.approve"), rateLimiter.Limit(middleware.Policy("notification-campaign-approval", 20, time.Hour, 0), middleware.UserIdentity), notificationH.TransitionCampaign)

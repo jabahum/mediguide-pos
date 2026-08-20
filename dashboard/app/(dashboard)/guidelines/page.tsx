@@ -9,6 +9,7 @@ import { DataTable } from "@/components/ui/data-table"
 import { LoadingState } from "@/components/ui/loading-state"
 import { PageHeader } from "@/components/ui/page-header"
 import { usePermissionContext } from "@/lib/permission-context"
+import { hasBackendPermission } from "@/lib/backend-client"
 import { showToast } from "@/lib/toast"
 import {
   CreateGuidelineVersionInput,
@@ -23,14 +24,17 @@ import {
   CreateVersionDialog,
   UploadVersionDialog,
 } from "./components/guideline-version-dialogs"
+import { GuidelineNotificationDialog } from "./components/guideline-notification-dialog"
 
 export default function GuidelinesPage() {
   const router = useRouter()
   const queryClient = useQueryClient()
   const { hasPermission, loading: permissionsLoading } = usePermissionContext()
   const canUpdate = hasPermission("content", "update:any")
+  const canNotify = hasBackendPermission("notification.campaign.manage")
   const [versionDocument, setVersionDocument] = React.useState<GuidelineDocumentRecord | null>(null)
   const [uploadVersion, setUploadVersion] = React.useState<GuidelineVersionRecord | null>(null)
+  const [notificationDocument, setNotificationDocument] = React.useState<GuidelineDocumentRecord | null>(null)
   const [submitting, setSubmitting] = React.useState(false)
 
   React.useEffect(() => {
@@ -51,6 +55,7 @@ export default function GuidelinesPage() {
     () =>
       createGuidelinesColumns({
         canUpdate,
+        canNotify,
         onView: (document) => router.push(`/guidelines/${document.id}`),
         onEdit: (document) => router.push(`/guidelines/${document.id}/edit`),
         onNewVersion: setVersionDocument,
@@ -58,8 +63,9 @@ export default function GuidelinesPage() {
           const version = getDocumentLatestVersion(document)
           if (version) setUploadVersion(version)
         },
+        onNotify: setNotificationDocument,
       }),
-    [canUpdate, router]
+    [canNotify, canUpdate, router]
   )
 
   async function createVersion(payload: CreateGuidelineVersionInput) {
@@ -141,6 +147,11 @@ export default function GuidelinesPage() {
         submitting={submitting}
         onOpenChange={(open) => !open && setUploadVersion(null)}
         onSubmit={uploadSource}
+      />
+      <GuidelineNotificationDialog
+        document={notificationDocument}
+        open={Boolean(notificationDocument)}
+        onOpenChange={(open) => !open && setNotificationDocument(null)}
       />
     </div>
   )

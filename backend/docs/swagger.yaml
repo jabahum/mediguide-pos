@@ -4695,6 +4695,23 @@ definitions:
       title:
         type: string
     type: object
+  services.GuidelineNotificationCampaignInput:
+    properties:
+      audience:
+        $ref: '#/definitions/services.NotificationAudienceDefinition'
+      idempotency_key:
+        type: string
+      priority:
+        type: string
+      requested_channels:
+        items:
+          type: string
+        type: array
+      scheduled_at:
+        type: string
+      timezone:
+        type: string
+    type: object
   services.GuidelinePreview:
     properties:
       blocks:
@@ -11716,6 +11733,45 @@ paths:
       summary: Update a guideline document
       tags:
       - guidelines
+  /api/v2/guidelines/{id}/notification-campaign:
+    post:
+      description: Selects the published guideline-update template and enters the
+        normal review and approval workflow; it never dispatches directly.
+      parameters:
+      - description: Guideline document UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Audience, schedule and priority
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/services.GuidelineNotificationCampaignInput'
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/handlers.NotificationCampaignEnvelope'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Create a draft notification campaign for a published guideline
+      tags:
+      - guidelines
+      - notification-administration
   /api/v2/guidelines/{id}/versions:
     post:
       consumes:

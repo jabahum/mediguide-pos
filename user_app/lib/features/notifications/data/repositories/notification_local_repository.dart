@@ -205,6 +205,17 @@ final class NotificationLocalRepository {
     return rows.length;
   }
 
+  Stream<int> watchUnreadCount({required String userId}) {
+    return _localCacheService
+        .watch(type: _entityType, scope: _scope(userId))
+        .map(
+          (rows) => rows.where((row) {
+            return row['is_read'] != true && row['read'] != true;
+          }).length,
+        )
+        .distinct();
+  }
+
   // =========================================================
   // MARK READ LOCALLY
   // =========================================================

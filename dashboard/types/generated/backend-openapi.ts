@@ -2786,6 +2786,15 @@ export interface ServicesGuidelineIndexInput {
   title?: string;
 }
 
+export interface ServicesGuidelineNotificationCampaignInput {
+  audience?: ServicesNotificationAudienceDefinition;
+  idempotency_key?: string;
+  priority?: string;
+  requested_channels?: string[];
+  scheduled_at?: string;
+  timezone?: string;
+}
+
 export interface ServicesGuidelinePreview {
   blocks?: ServicesPublicGuidelineBlock[];
   sections?: ServicesPublicGuidelineSection[];

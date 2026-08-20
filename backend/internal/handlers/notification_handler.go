@@ -435,6 +435,36 @@ func (h NotificationHandler) CreateCampaign(c *gin.Context) {
 	h.writeResult(c, item, err, http.StatusCreated)
 }
 
+// CreateGuidelineCampaign godoc
+// @Summary Create a draft notification campaign for a published guideline
+// @Description Selects the published guideline-update template and enters the normal review and approval workflow; it never dispatches directly.
+// @Tags guidelines,notification-administration
+// @Security BearerAuth
+// @Param id path string true "Guideline document UUID"
+// @Param payload body services.GuidelineNotificationCampaignInput true "Audience, schedule and priority"
+// @Success 201 {object} handlers.NotificationCampaignEnvelope
+// @Failure 400 {object} handlers.ErrorResponse
+// @Failure 403 {object} handlers.ErrorResponse
+// @Failure 404 {object} handlers.ErrorResponse
+// @Router /api/v2/guidelines/{id}/notification-campaign [post]
+func (h NotificationHandler) CreateGuidelineCampaign(c *gin.Context) {
+	documentID, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		httpx.Error(c, http.StatusBadRequest, "invalid guideline id")
+		return
+	}
+	var in services.GuidelineNotificationCampaignInput
+	if !notificationBind(c, &in) {
+		return
+	}
+	if services.NotificationAudienceRequiresSensitivePermission(in.Audience) && !security.HasPerm(notificationClaims(c), "notification.analytics.read") {
+		httpx.Error(c, http.StatusForbidden, "sensitive audience targeting requires notification analytics permission")
+		return
+	}
+	item, err := h.Service.CreateGuidelineCampaign(documentID, in, notificationClaims(c).UserID, c.ClientIP())
+	h.writeResult(c, item, err, http.StatusCreated)
+}
+
 // UpdateCampaign godoc
 // @Summary Replace editable notification-campaign fields
 // @Tags notification-administration

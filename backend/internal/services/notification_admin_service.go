@@ -125,6 +125,18 @@ type NotificationCampaignInput struct {
 	LockVersion       int                            `json:"lock_version,omitempty"`
 }
 
+// GuidelineNotificationCampaignInput deliberately exposes only the editorial
+// choices that are safe at the guideline boundary. The server selects the
+// published template/version and derives all guideline variables and actions.
+type GuidelineNotificationCampaignInput struct {
+	Audience          NotificationAudienceDefinition `json:"audience"`
+	ScheduledAt       *time.Time                     `json:"scheduled_at"`
+	Timezone          string                         `json:"timezone"`
+	Priority          string                         `json:"priority"`
+	RequestedChannels []string                       `json:"requested_channels"`
+	IdempotencyKey    string                         `json:"idempotency_key"`
+}
+
 type NotificationCampaignDTO struct {
 	ID                     uuid.UUID                      `json:"id"`
 	Name                   string                         `json:"name"`
@@ -461,6 +473,52 @@ func (s NotificationService) SaveCampaign(id *uuid.UUID, in NotificationCampaign
 		return err
 	})
 	return result, err
+}
+
+// CreateGuidelineCampaign creates a draft in the normal campaign approval
+// workflow. It never dispatches and it refuses documents whose selected
+// current version is not published.
+func (s NotificationService) CreateGuidelineCampaign(documentID uuid.UUID, in GuidelineNotificationCampaignInput, actor uuid.UUID, ip string) (*NotificationCampaignDTO, error) {
+	var document models.GuidelineDocument
+	if err := s.DB.First(&document, "id = ?", documentID).Error; err != nil {
+		return nil, err
+	}
+	if document.CurrentVersionID == nil {
+		return nil, ErrNotificationInvalid
+	}
+	var guidelineVersion models.GuidelineVersion
+	if err := s.DB.First(&guidelineVersion, "id = ? AND document_id = ? AND status = 'published'", *document.CurrentVersionID, document.ID).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, ErrNotificationInvalid
+		}
+		return nil, err
+	}
+
+	var template models.NotificationTemplate
+	if err := s.DB.First(&template, "template_key = ? AND status = 'published'", "guideline-update").Error; err != nil {
+		return nil, err
+	}
+	var templateVersion models.NotificationTemplateVersion
+	if err := s.DB.First(&templateVersion, "template_id = ? AND version = ? AND status = 'published'", template.ID, template.CurrentVersion).Error; err != nil {
+		return nil, err
+	}
+
+	return s.SaveCampaign(nil, NotificationCampaignInput{
+		Name:              "Guideline update: " + document.Title,
+		Type:              "update",
+		TemplateVersionID: templateVersion.ID,
+		Variables: map[string]any{
+			"guideline_id": document.ID.String(),
+			"title":        document.Title,
+			"version":      guidelineVersion.Version,
+		},
+		Audience:          in.Audience,
+		ScheduledAt:       in.ScheduledAt,
+		Timezone:          in.Timezone,
+		Priority:          in.Priority,
+		RequestedChannels: in.RequestedChannels,
+		IdempotencyKey:    in.IdempotencyKey,
+	}, actor, ip)
 }
 
 func (s NotificationService) TransitionCampaign(id uuid.UUID, action string, in NotificationCampaignTransitionInput, actor uuid.UUID, ip string) (*NotificationCampaignDTO, error) {

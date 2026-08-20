@@ -90,6 +90,8 @@ class AuthController extends _$AuthController {
 
       state = AsyncData(AuthState.authenticated(user));
 
+      _invalidateUserScopedProviders();
+
       return true;
     } catch (error, stackTrace) {
       state = AsyncData(AuthState.failure(error, user: previous?.user));
@@ -123,6 +125,8 @@ class AuthController extends _$AuthController {
       await _store.saveUser(user);
 
       state = AsyncData(AuthState.authenticated(user));
+
+      _invalidateUserScopedProviders();
 
       return true;
     } catch (error, stackTrace) {

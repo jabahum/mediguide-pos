@@ -8,6 +8,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:firebase_remote_config/firebase_remote_config.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -17,6 +18,15 @@ import 'package:user_app/features/authentication/data/datasources/auth_remote_da
 
 const _installationKey = 'firebase_installation_id';
 const _deviceRecordKey = 'firebase_device_record_id';
+const _permissionRequestedKey = 'firebase_notification_permission_requested';
+
+enum AppNotificationPermissionState {
+  notDetermined,
+  provisional,
+  authorized,
+  denied,
+  permanentlyDenied,
+}
 
 @pragma('vm:entry-point')
 Future<void> firebaseBackgroundMessageHandler(RemoteMessage message) async {
@@ -36,6 +46,10 @@ final class MediGuideFirebaseService {
       FlutterLocalNotificationsPlugin();
   final StreamController<RemoteMessage> _openedMessages =
       StreamController.broadcast();
+  final StreamController<RemoteMessage> _foregroundMessages =
+      StreamController.broadcast();
+  final StreamController<AppNotificationPermissionState> _permissionStates =
+      StreamController.broadcast();
 
   StreamSubscription<String>? _tokenSubscription;
   StreamSubscription<RemoteMessage>? _foregroundSubscription;
@@ -43,6 +57,8 @@ final class MediGuideFirebaseService {
   VoidCallback? _authListener;
   RemoteMessage? _initialMessage;
   bool _enabled = false;
+  AppNotificationPermissionState _permissionState =
+      AppNotificationPermissionState.notDetermined;
 
   bool get enabled => _enabled;
   Stream<RemoteMessage> get openedMessages async* {
@@ -51,6 +67,11 @@ final class MediGuideFirebaseService {
     if (initial != null) yield initial;
     yield* _openedMessages.stream;
   }
+
+  Stream<RemoteMessage> get foregroundMessages => _foregroundMessages.stream;
+  Stream<AppNotificationPermissionState> get permissionStates =>
+      _permissionStates.stream;
+  AppNotificationPermissionState get permissionState => _permissionState;
 
   FirebaseRemoteConfig? get remoteConfig =>
       _enabled ? FirebaseRemoteConfig.instance : null;
@@ -164,14 +185,15 @@ final class MediGuideFirebaseService {
 
   Future<void> _initializeMessaging() async {
     final messaging = FirebaseMessaging.instance;
-    final settings = await messaging.requestPermission(
-      alert: true,
-      badge: true,
-      sound: true,
-      provisional: Platform.isIOS,
+    final settings = await messaging.getNotificationSettings();
+    _setPermissionState(
+      permissionStateFor(
+        settings.authorizationStatus,
+        previouslyRequested:
+            _preferences.getBool(_permissionRequestedKey) ?? false,
+      ),
     );
     await FirebaseAnalytics.instance.setAnalyticsCollectionEnabled(true);
-    if (settings.authorizationStatus == AuthorizationStatus.denied) return;
 
     _tokenSubscription = messaging.onTokenRefresh.listen((_) {
       unawaited(registerCurrentDevice());
@@ -187,6 +209,7 @@ final class MediGuideFirebaseService {
   }
 
   Future<void> _showForegroundMessage(RemoteMessage message) async {
+    _foregroundMessages.add(message);
     final notification = message.notification;
     if (notification == null) return;
     await _localNotifications.show(
@@ -207,8 +230,68 @@ final class MediGuideFirebaseService {
     );
   }
 
+  Future<AppNotificationPermissionState> requestNotificationPermission() async {
+    if (!_enabled) return _permissionState;
+    final settings = await FirebaseMessaging.instance.requestPermission(
+      alert: true,
+      badge: true,
+      sound: true,
+      provisional: Platform.isIOS,
+    );
+    await _preferences.setBool(_permissionRequestedKey, true);
+    final state = permissionStateFor(
+      settings.authorizationStatus,
+      previouslyRequested: true,
+    );
+    _setPermissionState(state);
+    if (state == AppNotificationPermissionState.authorized ||
+        state == AppNotificationPermissionState.provisional) {
+      await registerCurrentDevice();
+    }
+    return state;
+  }
+
+  Future<bool> openNotificationSettings() async {
+    if (!_enabled) return false;
+    try {
+      return await const MethodChannel(
+            'mediguide/app_settings',
+          ).invokeMethod<bool>('openNotificationSettings') ??
+          false;
+    } on PlatformException {
+      return false;
+    }
+  }
+
+  static AppNotificationPermissionState permissionStateFor(
+    AuthorizationStatus status, {
+    required bool previouslyRequested,
+  }) {
+    return switch (status) {
+      AuthorizationStatus.notDetermined =>
+        AppNotificationPermissionState.notDetermined,
+      AuthorizationStatus.provisional =>
+        AppNotificationPermissionState.provisional,
+      AuthorizationStatus.authorized =>
+        AppNotificationPermissionState.authorized,
+      AuthorizationStatus.denied =>
+        previouslyRequested
+            ? AppNotificationPermissionState.permanentlyDenied
+            : AppNotificationPermissionState.denied,
+    };
+  }
+
+  void _setPermissionState(AppNotificationPermissionState value) {
+    _permissionState = value;
+    _permissionStates.add(value);
+  }
+
   Future<void> registerCurrentDevice() async {
     if (!_enabled || _auth.currentUser.value == null) return;
+    if (_permissionState != AppNotificationPermissionState.authorized &&
+        _permissionState != AppNotificationPermissionState.provisional) {
+      return;
+    }
     if (!FirebaseRemoteConfig.instance.getBool('enable_push_notifications')) {
       return;
     }
@@ -270,5 +353,7 @@ final class MediGuideFirebaseService {
     await _foregroundSubscription?.cancel();
     await _openedSubscription?.cancel();
     await _openedMessages.close();
+    await _foregroundMessages.close();
+    await _permissionStates.close();
   }
 }

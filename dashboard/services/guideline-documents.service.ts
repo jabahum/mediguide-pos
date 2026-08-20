@@ -1,8 +1,25 @@
 "use client"
 
 import { getBackendClient } from "@/lib/backend-client"
+import type { ServicesGuidelineNotificationCampaignInput } from "@/types/generated/backend-openapi"
 
 export const guidelineDocumentsQueryKey = ["v2-guideline-documents"] as const
+
+export interface GuidelineNotificationCampaignInput extends Omit<ServicesGuidelineNotificationCampaignInput, "audience" | "priority" | "requested_channels"> {
+  audience: {
+    all_eligible: boolean
+    user_ids?: string[]
+    role_ids?: string[]
+    countries?: string[]
+    languages?: string[]
+    platforms?: Array<"android" | "ios">
+    preference_categories?: string[]
+  }
+  timezone: string
+  priority: "low" | "normal" | "high" | "urgent"
+  requested_channels: Array<"push" | "in-app">
+  idempotency_key: string
+}
 
 export interface GuidelineVersionRecord {
   id: string
@@ -280,6 +297,16 @@ export class GuidelineDocumentsService {
     return getBackendClient().request<{ published: boolean }>(
       `/api/v2/guideline-versions/${versionId}/publish`,
       { method: "POST" }
+    )
+  }
+
+  static async createNotificationCampaign(
+    documentId: string,
+    payload: GuidelineNotificationCampaignInput
+  ): Promise<{ id: string; status: "draft"; name: string }> {
+    return getBackendClient().request<{ id: string; status: "draft"; name: string }>(
+      `/api/v2/guidelines/${documentId}/notification-campaign`,
+      { method: "POST", body: JSON.stringify(payload) }
     )
   }
 

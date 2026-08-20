@@ -15,6 +15,7 @@ import 'package:user_app/core/widgets/empty_state.dart';
 import 'package:user_app/features/authentication/presentation/controllers/auth_controller.dart';
 import 'package:user_app/features/home/presentation/controllers/home_controller.dart';
 import 'package:user_app/features/home/presentation/controllers/home_state.dart';
+import 'package:user_app/app/providers/app_providers.dart';
 
 import 'package:user_app/shared/models/models.dart';
 import 'package:user_app/shared/widgets/section_header.dart';
@@ -54,6 +55,8 @@ class HomePage extends ConsumerWidget {
     ].join(' · ');
 
     final greeting = _greetingFor(greetingHour ?? DateTime.now().hour);
+    final notificationUnreadCount =
+        ref.watch(notificationUnreadCountProvider).valueOrNull ?? 0;
 
     return Scaffold(
       backgroundColor: colors.surface,
@@ -62,6 +65,7 @@ class HomePage extends ConsumerWidget {
         greeting: greeting,
         userName: userName,
         professionalContext: professionalContext,
+        notificationUnreadCount: notificationUnreadCount,
         onNotifications: () {
           AppNavigator.push(AppRoutes.notifications);
         },
@@ -325,12 +329,14 @@ class _HomeAppBar extends StatelessWidget implements PreferredSizeWidget {
     required this.greeting,
     required this.userName,
     required this.professionalContext,
+    required this.notificationUnreadCount,
     required this.onNotifications,
   });
 
   final String greeting;
   final String userName;
   final String professionalContext;
+  final int notificationUnreadCount;
   final VoidCallback onNotifications;
 
   @override
@@ -388,7 +394,15 @@ class _HomeAppBar extends StatelessWidget implements PreferredSizeWidget {
           child: IconButton(
             onPressed: onNotifications,
             tooltip: 'Notifications',
-            icon: const Icon(LucideIcons.bell),
+            icon: Badge(
+              isLabelVisible: notificationUnreadCount > 0,
+              label: Text(
+                notificationUnreadCount > 99
+                    ? '99+'
+                    : '$notificationUnreadCount',
+              ),
+              child: const Icon(LucideIcons.bell),
+            ),
           ),
         ),
       ],

@@ -73,6 +73,19 @@ final firebaseOpenedMessageProvider = StreamProvider<RemoteMessage>(
   (ref) => ref.watch(firebaseServiceProvider).openedMessages,
 );
 
+final firebaseForegroundMessageProvider = StreamProvider<RemoteMessage>(
+  (ref) => ref.watch(firebaseServiceProvider).foregroundMessages,
+);
+
+final notificationPermissionProvider =
+    StreamProvider<AppNotificationPermissionState>((ref) async* {
+      final service = ref.watch(firebaseServiceProvider);
+      yield service.permissionState;
+      yield* service.permissionStates;
+    });
+
+final notificationInboxRefreshProvider = StateProvider<int>((ref) => 0);
+
 final ragRepositoryProvider = Provider.autoDispose<RagAssistant>(
   (ref) => RagRepository(
     ref.watch(backendApiServiceProvider),
@@ -164,6 +177,18 @@ final notificationRepositoryProvider = Provider<NotificationRepository>(
     userId: ref.watch(authServiceProvider).currentUser.value?.id ?? '',
   ),
 );
+
+final notificationUnreadCountProvider = StreamProvider.autoDispose<int>((
+  ref,
+) async* {
+  final repository = ref.watch(notificationRepositoryProvider);
+  if (repository.userId.trim().isEmpty) {
+    yield 0;
+    return;
+  }
+  yield await repository.unreadCount();
+  yield* repository.watchUnreadCount();
+});
 
 final genericPageRepositoryProvider = Provider<GenericPageRepository>(
   (ref) => GenericPageRepository(

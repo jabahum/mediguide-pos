@@ -500,6 +500,10 @@ final class NotificationRepository {
     }
   }
 
+  Stream<int> watchUnreadCount() {
+    return _local.watchUnreadCount(userId: userId);
+  }
+
   // =========================================================
   // LOCAL CACHE
   // =========================================================

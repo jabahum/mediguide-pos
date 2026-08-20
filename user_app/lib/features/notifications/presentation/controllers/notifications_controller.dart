@@ -45,6 +45,10 @@ class NotificationsController extends _$NotificationsController {
       pagingController.dispose();
     });
 
+    ref.listen(notificationInboxRefreshProvider, (previous, next) {
+      if (previous != null && next != previous) pagingController.refresh();
+    });
+
     return const NotificationsState();
   }
 
@@ -87,6 +91,7 @@ class NotificationsController extends _$NotificationsController {
       await _repository.markRead(notification.id);
 
       pagingController.refresh();
+      ref.invalidate(notificationUnreadCountProvider);
     } catch (error) {
       _showError('Failed to mark notification as read: $error');
     }

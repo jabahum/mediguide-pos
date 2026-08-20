@@ -57,6 +57,8 @@ class GuestHomePage extends ConsumerWidget {
             ),
             Text(
               'Clinical guidance when you need it',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
               style: Theme.of(
                 context,
               ).textTheme.bodySmall?.copyWith(color: colors.onSurfaceVariant),
@@ -181,7 +183,7 @@ class GuestHomePage extends ConsumerWidget {
             AppSpacing.gapXl,
 
             // =================================================================
-            // OFFLINE INFORMATION
+            // OFFLINE
             // =================================================================
             _OfflineAccessCard(
               onTap: () {
@@ -195,9 +197,9 @@ class GuestHomePage extends ConsumerWidget {
   }
 }
 
-// ===========================================================================
+// =============================================================================
 // SEARCH
-// ===========================================================================
+// =============================================================================
 
 class _GuestSearchCard extends StatelessWidget {
   const _GuestSearchCard({required this.onTap});
@@ -283,9 +285,9 @@ class _GuestSearchCard extends StatelessWidget {
   }
 }
 
-// ===========================================================================
+// =============================================================================
 // ACTIVE OUTBREAK
-// ===========================================================================
+// =============================================================================
 
 class _ActiveOutbreakCard extends StatelessWidget {
   const _ActiveOutbreakCard({
@@ -429,9 +431,9 @@ class _ActiveOutbreakCard extends StatelessWidget {
   }
 }
 
-// ===========================================================================
+// =============================================================================
 // PUBLICATIONS
-// ===========================================================================
+// =============================================================================
 
 class _PublicationSections extends StatelessWidget {
   const _PublicationSections({required this.publications});
@@ -452,15 +454,17 @@ class _PublicationSections extends StatelessWidget {
         .map((item) => item.programArea.trim())
         .where((value) => value.isNotEmpty)
         .toSet()
-        .take(6)
+        .take(8)
         .toList(growable: false);
+
+    final latest = publications.take(4).toList(growable: false);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // -------------------------------------------------------------------
-        // CATEGORIES
-        // -------------------------------------------------------------------
+        // ===================================================================
+        // CLINICAL CATEGORIES
+        // ===================================================================
         if (areas.isNotEmpty) ...[
           SectionHeader(
             title: 'Clinical categories',
@@ -473,31 +477,25 @@ class _PublicationSections extends StatelessWidget {
 
           AppSpacing.gapSm,
 
-          Wrap(
-            spacing: AppSpacing.sm,
-            runSpacing: AppSpacing.sm,
-            children: [
-              for (final area in areas)
-                _CategoryChip(
-                  label: area,
-                  onTap: () {
-                    //
-                    // This currently opens the full guideline
-                    // catalogue because no category-specific route
-                    // was provided in the shared code.
-                    //
-                    context.push(AppRoutes.publicGuidelines);
-                  },
-                ),
-            ],
+          _CategoryQuickAccessGrid(
+            categories: areas,
+            onCategory: (area) {
+              //
+              // For now this opens the publications catalogue.
+              //
+              // When your publications page supports a category/program-area
+              // argument, pass `area` here instead.
+              //
+              context.push(AppRoutes.publicGuidelines);
+            },
           ),
 
           AppSpacing.gapXl,
         ],
 
-        // -------------------------------------------------------------------
-        // LATEST
-        // -------------------------------------------------------------------
+        // ===================================================================
+        // LATEST GUIDANCE
+        // ===================================================================
         SectionHeader(
           title: 'Latest guidance',
           subtitle: 'Recently published or updated',
@@ -509,19 +507,250 @@ class _PublicationSections extends StatelessWidget {
 
         AppSpacing.gapSm,
 
-        for (var index = 0; index < publications.take(4).length; index++)
+        for (var index = 0; index < latest.length; index++)
           Padding(
             padding: EdgeInsets.only(
-              bottom: index < publications.take(4).length - 1
-                  ? AppSpacing.sm
-                  : 0,
+              bottom: index == latest.length - 1 ? 0 : AppSpacing.sm,
             ),
-            child: _PublicationCard(publication: publications[index]),
+            child: _PublicationCard(publication: latest[index]),
           ),
       ],
     );
   }
 }
+
+// =============================================================================
+// CATEGORY QUICK ACCESS
+// =============================================================================
+
+class _CategoryQuickAccessGrid extends StatelessWidget {
+  const _CategoryQuickAccessGrid({
+    required this.categories,
+    required this.onCategory,
+  });
+
+  final List<String> categories;
+  final ValueChanged<String> onCategory;
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        //
+        // This intentionally mirrors the Quick Access layout:
+        //
+        // normal phone  -> 4 columns
+        // narrow phone  -> 2 columns
+        // larger device -> still compact, up to 4
+        //
+        final columns = constraints.maxWidth >= 340 ? 4 : 2;
+
+        final textScale = MediaQuery.textScalerOf(context).scale(1);
+
+        final largeText = textScale >= 1.5;
+
+        return GridView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          itemCount: categories.length,
+          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: columns,
+            mainAxisSpacing: AppSpacing.sm,
+            crossAxisSpacing: AppSpacing.sm,
+            childAspectRatio: largeText
+                ? 0.72
+                : columns == 4
+                ? 0.86
+                : 1.45,
+          ),
+          itemBuilder: (context, index) {
+            final category = categories[index];
+
+            return _CategoryQuickAccessTile(
+              label: category,
+              onTap: () {
+                onCategory(category);
+              },
+            );
+          },
+        );
+      },
+    );
+  }
+}
+
+class _CategoryQuickAccessTile extends StatelessWidget {
+  const _CategoryQuickAccessTile({required this.label, required this.onTap});
+
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+
+    final icon = _categoryIcon(label);
+
+    return Semantics(
+      button: true,
+      label: 'Browse $label guidelines',
+      child: Card(
+        margin: EdgeInsets.zero,
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.all(AppSpacing.xs),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Container(
+                  width: 38,
+                  height: 38,
+                  decoration: BoxDecoration(
+                    color: colors.secondaryContainer,
+                    borderRadius: BorderRadius.circular(11),
+                  ),
+                  child: Icon(
+                    icon,
+                    size: 19,
+                    color: colors.onSecondaryContainer,
+                  ),
+                ),
+
+                const SizedBox(height: 7),
+
+                Text(
+                  label,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                    fontWeight: FontWeight.w600,
+                    height: 1.15,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  static IconData _categoryIcon(String category) {
+    final value = category.toLowerCase();
+
+    // Maternal / reproductive health
+    if (value.contains('maternal') ||
+        value.contains('pregnan') ||
+        value.contains('reproductive') ||
+        value.contains('obstetric')) {
+      return LucideIcons.heartHandshake;
+    }
+
+    // Child health
+    if (value.contains('child') ||
+        value.contains('paediatric') ||
+        value.contains('pediatric') ||
+        value.contains('newborn') ||
+        value.contains('neonatal')) {
+      return LucideIcons.baby;
+    }
+
+    // Diabetes / endocrine
+    if (value.contains('diabetes') || value.contains('endocr')) {
+      return LucideIcons.droplets;
+    }
+
+    // HIV / AIDS
+    if (value.contains('hiv') || value.contains('aids')) {
+      return LucideIcons.ribbon;
+    }
+
+    // TB / respiratory
+    if (value.contains('tb') ||
+        value.contains('tuberculosis') ||
+        value.contains('respiratory') ||
+        value.contains('pulmonary')) {
+      return LucideIcons.activity;
+    }
+
+    // Cardiovascular
+    if (value.contains('cardio') ||
+        value.contains('heart') ||
+        value.contains('hypertension')) {
+      return LucideIcons.heartPulse;
+    }
+
+    // Mental health
+    if (value.contains('mental') || value.contains('psychiatr')) {
+      return LucideIcons.brain;
+    }
+
+    // Emergency / critical care
+    if (value.contains('emergency') ||
+        value.contains('critical') ||
+        value.contains('acute')) {
+      return LucideIcons.siren;
+    }
+
+    // Infectious / communicable diseases
+    if (value.contains('infect') ||
+        value.contains('communicable') ||
+        value.contains('disease')) {
+      return LucideIcons.bug;
+    }
+
+    // Nutrition
+    if (value.contains('nutrition') || value.contains('malnutrition')) {
+      return LucideIcons.apple;
+    }
+
+    // Surgery
+    if (value.contains('surgery') || value.contains('surgical')) {
+      return LucideIcons.cross;
+    }
+
+    // Medicines / pharmacy
+    if (value.contains('medicine') ||
+        value.contains('drug') ||
+        value.contains('pharmacy') ||
+        value.contains('pharmaceutical')) {
+      return LucideIcons.pill;
+    }
+
+    // Laboratory
+    if (value.contains('laboratory') ||
+        value.contains('lab') ||
+        value.contains('diagnostic')) {
+      return LucideIcons.flaskConical;
+    }
+
+    // Eye / ophthalmology
+    if (value.contains('eye') || value.contains('ophthalm')) {
+      return LucideIcons.eye;
+    }
+
+    // Dental / oral
+    if (value.contains('dental') || value.contains('oral')) {
+      return LucideIcons.smile;
+    }
+
+    // Cancer / oncology
+    if (value.contains('cancer') ||
+        value.contains('oncology') ||
+        value.contains('oncological')) {
+      return LucideIcons.ribbon;
+    }
+
+    // General / default clinical guidance
+    return LucideIcons.bookOpenText;
+  }
+}
+// =============================================================================
+// PUBLICATION CARD
+// =============================================================================
 
 class _PublicationCard extends StatelessWidget {
   const _PublicationCard({required this.publication});
@@ -574,6 +803,7 @@ class _PublicationCard extends StatelessWidget {
 
                       if (publication.programArea.trim().isNotEmpty) ...[
                         const SizedBox(height: 6),
+
                         _ProgramAreaBadge(label: publication.programArea),
                       ],
 
@@ -638,29 +868,9 @@ class _ProgramAreaBadge extends StatelessWidget {
   }
 }
 
-// ===========================================================================
-// CATEGORY CHIP
-// ===========================================================================
-
-class _CategoryChip extends StatelessWidget {
-  const _CategoryChip({required this.label, required this.onTap});
-
-  final String label;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return ActionChip(
-      avatar: const Icon(LucideIcons.bookOpen, size: 16),
-      label: Text(label),
-      onPressed: onTap,
-    );
-  }
-}
-
-// ===========================================================================
+// =============================================================================
 // QUICK ACTIONS
-// ===========================================================================
+// =============================================================================
 
 class _QuickActionGrid extends StatelessWidget {
   const _QuickActionGrid({required this.actions});
@@ -671,10 +881,6 @@ class _QuickActionGrid extends StatelessWidget {
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        //
-        // Keep the same compact sizing as the
-        // logged-in home screen.
-        //
         final columns = constraints.maxWidth >= 340 ? 4 : 2;
 
         final textScale = MediaQuery.textScalerOf(context).scale(1);
@@ -696,10 +902,7 @@ class _QuickActionGrid extends StatelessWidget {
           ),
           itemCount: actions.length,
           itemBuilder: (context, index) {
-            return _QuickActionCard(
-              action: actions[index],
-              compact: columns == 4,
-            );
+            return _QuickActionCard(action: actions[index]);
           },
         );
       },
@@ -708,10 +911,9 @@ class _QuickActionGrid extends StatelessWidget {
 }
 
 class _QuickActionCard extends StatelessWidget {
-  const _QuickActionCard({required this.action, required this.compact});
+  const _QuickActionCard({required this.action});
 
   final _QuickAction action;
-  final bool compact;
 
   @override
   Widget build(BuildContext context) {
@@ -728,7 +930,7 @@ class _QuickActionCard extends StatelessWidget {
             context.push(action.route);
           },
           child: Padding(
-            padding: EdgeInsets.all(compact ? AppSpacing.xs : AppSpacing.sm),
+            padding: const EdgeInsets.all(AppSpacing.xs),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
@@ -774,9 +976,9 @@ class _QuickAction {
   final String route;
 }
 
-// ===========================================================================
+// =============================================================================
 // OFFLINE ACCESS
-// ===========================================================================
+// =============================================================================
 
 class _OfflineAccessCard extends StatelessWidget {
   const _OfflineAccessCard({required this.onTap});
@@ -852,9 +1054,9 @@ class _OfflineAccessCard extends StatelessWidget {
   }
 }
 
-// ===========================================================================
+// =============================================================================
 // EMPTY PUBLICATIONS
-// ===========================================================================
+// =============================================================================
 
 class _EmptyPublicationsCard extends StatelessWidget {
   const _EmptyPublicationsCard({required this.onTap});
@@ -889,15 +1091,17 @@ class _EmptyPublicationsCard extends StatelessWidget {
   }
 }
 
-// ===========================================================================
+// =============================================================================
 // LOADING
-// ===========================================================================
+// =============================================================================
 
 class _PublicationSkeleton extends StatelessWidget {
   const _PublicationSkeleton();
 
   @override
   Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+
     return Column(
       children: [
         for (var index = 0; index < 3; index++)
@@ -913,9 +1117,7 @@ class _PublicationSkeleton extends StatelessWidget {
                       width: 42,
                       height: 42,
                       decoration: BoxDecoration(
-                        color: Theme.of(
-                          context,
-                        ).colorScheme.surfaceContainerHigh,
+                        color: colors.surfaceContainerHigh,
                         borderRadius: BorderRadius.circular(12),
                       ),
                     ),
@@ -935,9 +1137,9 @@ class _PublicationSkeleton extends StatelessWidget {
   }
 }
 
-// ===========================================================================
+// =============================================================================
 // ERROR
-// ===========================================================================
+// =============================================================================
 
 class _SectionError extends StatelessWidget {
   const _SectionError({required this.onRetry});

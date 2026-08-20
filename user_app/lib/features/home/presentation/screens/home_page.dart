@@ -5,7 +5,6 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:user_app/app/router/app_navigator.dart';
 import 'package:user_app/app/router/app_router.dart';
 import 'package:user_app/core/constants/app_spacing.dart';
-import 'package:user_app/core/utils/app_extensions.dart';
 import 'package:user_app/core/utils/date_utils.dart';
 import 'package:user_app/core/utils/responsive.dart';
 
@@ -188,7 +187,10 @@ class HomePage extends ConsumerWidget {
                 title: 'Calculators',
                 subtitle: 'Clinical tools',
                 onTap: () async {
-                  await AppNavigator.push(AppRoutes.calculators);
+                  await AppNavigator.push(
+                    AppRoutes.tools,
+                    extra: const {'initialTab': 1},
+                  );
                 },
               ),
 

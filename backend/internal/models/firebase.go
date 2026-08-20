@@ -10,7 +10,7 @@ import (
 // deliberately excluded from API responses and logs.
 type FirebaseDevice struct {
 	Base
-	UserID               uuid.UUID `gorm:"type:uuid;not null;uniqueIndex:idx_firebase_device_installation" json:"user_id"`
+	UserID               uuid.UUID `gorm:"type:uuid;not null;uniqueIndex:idx_firebase_device_installation" json:"-"`
 	InstallationID       string    `gorm:"not null;uniqueIndex:idx_firebase_device_installation" json:"installation_id"`
 	RegistrationToken    string    `gorm:"not null;uniqueIndex" json:"-"`
 	Platform             string    `json:"platform"`

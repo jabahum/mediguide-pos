@@ -18,6 +18,22 @@ import (
 
 type FirebaseHandler struct{ Service *services.FirebaseService }
 
+// ListDevices godoc
+// @Summary List the current user's push installations
+// @Tags firebase
+// @Security BearerAuth
+// @Success 200 {object} handlers.FirebaseDevicesEnvelope
+// @Router /api/v2/firebase/devices [get]
+func (h FirebaseHandler) ListDevices(c *gin.Context) {
+	claims := c.MustGet(middleware.ClaimsKey).(*security.Claims)
+	devices, err := h.Service.ListDevices(claims.UserID)
+	if err != nil {
+		firebaseError(c, err)
+		return
+	}
+	httpx.OK(c, devices)
+}
+
 // Status godoc
 // @Summary Get Firebase integration status
 // @Tags firebase
@@ -49,6 +65,35 @@ func (h FirebaseHandler) RegisterDevice(c *gin.Context) {
 		return
 	}
 	httpx.Created(c, device)
+}
+
+// UpdateDevice godoc
+// @Summary Update push enablement for one of the current user's installations
+// @Tags firebase
+// @Security BearerAuth
+// @Param id path string true "Firebase device UUID"
+// @Param payload body services.FirebaseDeviceUpdateInput true "Device preference"
+// @Success 200 {object} handlers.FirebaseDeviceDTOEnvelope
+// @Failure 404 {object} handlers.ErrorResponse
+// @Router /api/v2/firebase/devices/{id} [patch]
+func (h FirebaseHandler) UpdateDevice(c *gin.Context) {
+	id, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		httpx.Error(c, http.StatusBadRequest, "invalid firebase device id")
+		return
+	}
+	var input services.FirebaseDeviceUpdateInput
+	if c.ShouldBindJSON(&input) != nil {
+		httpx.Error(c, http.StatusBadRequest, "invalid firebase device payload")
+		return
+	}
+	claims := c.MustGet(middleware.ClaimsKey).(*security.Claims)
+	device, err := h.Service.UpdateDevice(claims.UserID, id, input)
+	if err != nil {
+		firebaseError(c, err)
+		return
+	}
+	httpx.OK(c, device)
 }
 
 // DeleteDevice godoc

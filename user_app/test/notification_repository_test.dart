@@ -8,6 +8,8 @@ class FakeNotificationApi extends BackendApiService {
   int? requestedPage;
   String? requestedSearch;
   String? markedReadId;
+  String? requestedPath;
+  Map<String, dynamic>? requestedBody;
 
   @override
   Future<Map<String, dynamic>> requestJson(
@@ -17,6 +19,50 @@ class FakeNotificationApi extends BackendApiService {
     Map<String, String>? query,
     bool includeAuth = true,
   }) async {
+    requestedPath = path;
+    requestedBody = body;
+    if (path == '/api/v2/notification-preferences') {
+      return {
+        'data': {
+          'clinical_content_updates': body?['clinical_content_updates'] ?? true,
+          'outbreak_alerts': true,
+          'emergency_alerts': true,
+          'reminders': true,
+          'system_notices': true,
+          'product_announcements': true,
+          'quiet_hours_enabled': false,
+          'quiet_hours_timezone': 'Africa/Kampala',
+          'preferred_language': 'en',
+          'push_enabled': true,
+          'in_app_enabled': true,
+        },
+      };
+    }
+    if (path == '/api/v2/firebase/devices' && method == 'GET') {
+      return {
+        'data': [
+          {
+            'id': 'device-1',
+            'installation_id': 'installation-1',
+            'platform': 'android',
+            'app_version': '2.0.24+51',
+            'notifications_enabled': true,
+            'last_seen_at': '2026-08-20T10:00:00Z',
+          },
+        ],
+      };
+    }
+    if (path == '/api/v2/firebase/devices/device-1') {
+      return {
+        'data': {
+          'id': 'device-1',
+          'installation_id': 'installation-1',
+          'platform': 'android',
+          'notifications_enabled': body?['notifications_enabled'],
+          'last_seen_at': '2026-08-20T10:00:00Z',
+        },
+      };
+    }
     if (path == '/api/v2/notifications') {
       requestedPage = int.parse(query!['page']!);
       requestedSearch = query['search'];
@@ -102,6 +148,50 @@ void main() {
 
       expect(api.markedReadId, 'notice-1');
       expect(result.isRead, isTrue);
+    },
+  );
+
+  test('NotificationRepository loads and updates owned preferences', () async {
+    final api = FakeNotificationApi();
+    final store = TestLocalStore();
+    addTearDown(store.close);
+    final repository = NotificationRepository(
+      api,
+      NotificationLocalRepository(store.cache),
+      userId: 'user-1',
+    );
+
+    final initial = await repository.getPreferences();
+    expect(initial.pushEnabled, isTrue);
+    expect(initial.quietHoursTimezone, 'Africa/Kampala');
+
+    final updated = await repository.updatePreferences({
+      'clinical_content_updates': false,
+    });
+    expect(updated.clinicalContentUpdates, isFalse);
+    expect(api.requestedPath, '/api/v2/notification-preferences');
+    expect(api.requestedBody, {'clinical_content_updates': false});
+  });
+
+  test(
+    'NotificationRepository manages token-free device projections',
+    () async {
+      final api = FakeNotificationApi();
+      final store = TestLocalStore();
+      addTearDown(store.close);
+      final repository = NotificationRepository(
+        api,
+        NotificationLocalRepository(store.cache),
+        userId: 'user-1',
+      );
+
+      final devices = await repository.listDevices();
+      expect(devices.single.platform, 'android');
+      expect(devices.single.notificationsEnabled, isTrue);
+
+      final updated = await repository.setDevicePushEnabled('device-1', false);
+      expect(updated.notificationsEnabled, isFalse);
+      expect(api.requestedBody, {'notifications_enabled': false});
     },
   );
 }

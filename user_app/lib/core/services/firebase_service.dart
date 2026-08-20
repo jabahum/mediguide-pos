@@ -229,7 +229,6 @@ final class MediGuideFirebaseService {
         'platform': Platform.isIOS ? 'ios' : 'android',
         'app_version': '${package.version}+${package.buildNumber}',
         'locale': Platform.localeName,
-        'notifications_enabled': true,
       },
     );
     final data = response['data'];

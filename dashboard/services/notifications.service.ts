@@ -116,6 +116,16 @@ export interface NotificationAudienceEstimate extends Omit<ServicesNotificationA
   eligible_users: number
   active_devices: number
 }
+export interface NotificationPreferenceAggregates {
+  eligible_users: number
+  push_enabled_users: number
+  in_app_enabled_users: number
+  quiet_hours_users: number
+  active_devices: number
+  push_enabled_devices: number
+  devices_by_platform: Record<string, number>
+  category_opt_in_counts: Record<string, number>
+}
 export interface NotificationCampaignInput extends Omit<ServicesNotificationCampaignInput, "audience" | "priority" | "requested_channels" | "type" | "variables"> {
   name: string
   type: "emergency" | "update" | "reminder" | "marketing" | "announcement"
@@ -186,6 +196,9 @@ export const notificationsService = {
   },
   estimateAudience(audience: NotificationAudienceDefinition) {
     return client().send<NotificationAudienceEstimate>("/api/v2/notification-campaigns/audience-estimate", { method: "POST", body: JSON.stringify({ audience }) })
+  },
+  preferenceAggregates() {
+    return client().send<NotificationPreferenceAggregates>("/api/v2/notification-preferences/aggregates")
   },
   createCampaign(input: NotificationCampaignInput) {
     return client().send("/api/v2/notification-campaigns", { method: "POST", body: JSON.stringify(input) })

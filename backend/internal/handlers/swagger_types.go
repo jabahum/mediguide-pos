@@ -131,6 +131,26 @@ type FirebaseDeviceEnvelope struct {
 	Data    models.FirebaseDevice `json:"data"`
 }
 
+type FirebaseDeviceDTOEnvelope struct {
+	Success bool                       `json:"success" example:"true"`
+	Data    services.FirebaseDeviceDTO `json:"data"`
+}
+
+type FirebaseDevicesEnvelope struct {
+	Success bool                         `json:"success" example:"true"`
+	Data    []services.FirebaseDeviceDTO `json:"data"`
+}
+
+type NotificationPreferencesEnvelope struct {
+	Success bool                             `json:"success" example:"true"`
+	Data    services.NotificationPreferences `json:"data"`
+}
+
+type NotificationPreferenceAggregatesEnvelope struct {
+	Success bool                                      `json:"success" example:"true"`
+	Data    services.NotificationPreferenceAggregates `json:"data"`
+}
+
 type DeletedResult struct {
 	Deleted bool `json:"deleted" example:"true"`
 }

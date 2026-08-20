@@ -2,6 +2,7 @@ import 'package:user_app/shared/models/models.dart';
 import 'package:user_app/core/network/api_client.dart';
 
 import 'package:user_app/features/notifications/data/repositories/notification_local_repository.dart';
+import 'package:user_app/features/notifications/data/models/notification_preferences.dart';
 
 final class NotificationRepository {
   NotificationRepository(this._api, this._local, {required this.userId});
@@ -12,6 +13,54 @@ final class NotificationRepository {
   /// Notifications are private user data, so all persistent cache
   /// operations are scoped to the authenticated user.
   final String userId;
+
+  Future<NotificationPreferences> getPreferences() async {
+    final response = await _api.requestJson(
+      '/api/v2/notification-preferences',
+      method: 'GET',
+    );
+    return NotificationPreferences.fromJson(_data(response));
+  }
+
+  Future<NotificationPreferences> updatePreferences(
+    Map<String, dynamic> changes,
+  ) async {
+    final response = await _api.requestJson(
+      '/api/v2/notification-preferences',
+      method: 'PATCH',
+      body: changes,
+    );
+    return NotificationPreferences.fromJson(_data(response));
+  }
+
+  Future<List<NotificationDevice>> listDevices() async {
+    final response = await _api.requestJson(
+      '/api/v2/firebase/devices',
+      method: 'GET',
+    );
+    final raw = response['data'];
+    if (raw is! List) return const [];
+    return raw
+        .whereType<Map>()
+        .map(
+          (value) =>
+              NotificationDevice.fromJson(Map<String, dynamic>.from(value)),
+        )
+        .where((device) => device.id.isNotEmpty)
+        .toList(growable: false);
+  }
+
+  Future<NotificationDevice> setDevicePushEnabled(
+    String deviceId,
+    bool enabled,
+  ) async {
+    final response = await _api.requestJson(
+      '/api/v2/firebase/devices/${Uri.encodeComponent(deviceId)}',
+      method: 'PATCH',
+      body: {'notifications_enabled': enabled},
+    );
+    return NotificationDevice.fromJson(_data(response));
+  }
 
   // =========================================================
   // LIST

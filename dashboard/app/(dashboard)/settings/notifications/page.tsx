@@ -20,7 +20,7 @@ import { hasBackendPermission } from "@/lib/backend-client"
 import { usePermissionContext } from "@/lib/permission-context"
 import { showToast } from "@/lib/toast"
 import { firebaseService } from "@/services/firebase.service"
-import { notificationsService, type NotificationAction, type NotificationAudienceDefinition, type NotificationAudienceEstimate, type NotificationCampaignDto, type NotificationCampaignInput, type NotificationPriority, type NotificationTemplateDto, type NotificationTemplateInput, type NotificationType } from "@/services/notifications.service"
+import { notificationsService, type NotificationAction, type NotificationAudienceDefinition, type NotificationAudienceEstimate, type NotificationCampaignDto, type NotificationCampaignInput, type NotificationPreferenceAggregates, type NotificationPriority, type NotificationTemplateDto, type NotificationTemplateInput, type NotificationType } from "@/services/notifications.service"
 
 type FirebaseState = "configured" | "disabled" | "unavailable"
 type CampaignAudienceForm = {
@@ -38,11 +38,13 @@ export default function NotificationAdministrationPage() {
   const canManageCampaigns = hasBackendPermission("notification.campaign.manage")
   const canApproveCampaigns = hasBackendPermission("notification.campaign.approve")
   const canReadFirebase = hasBackendPermission("firebase.status.read")
+  const canReadAnalytics = hasBackendPermission("notification.analytics.read")
   const canAdminister = [
     canPublish,
     canReadTemplates,
     canReadCampaigns,
     canReadFirebase,
+    canReadAnalytics,
   ].some(Boolean)
   const [templates, setTemplates] = React.useState<NotificationTemplateDto[]>([])
   const [campaigns, setCampaigns] = React.useState<NotificationCampaignDto[]>([])
@@ -62,6 +64,7 @@ export default function NotificationAdministrationPage() {
   const [templateAction, setTemplateAction] = React.useState<NotificationAction>(emptyNotificationAction)
   const [campaignForm, setCampaignForm] = React.useState({ name: "", type: "announcement" as NotificationCampaignInput["type"], templateVersionId: "", variables: "{}", priority: "normal" as NotificationPriority, channels: ["in-app"] as NotificationCampaignInput["requested_channels"], timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC", scheduledAt: "", expiresAt: "", allEligible: true, userIds: "", roleIds: "", countries: "", regionIds: "", districtIds: "", facilityIds: "", facilityLevelIds: "", professionalCategories: "", languages: "", platforms: "", applicationVersions: "", preferenceCategories: "" })
   const [audienceEstimate, setAudienceEstimate] = React.useState<NotificationAudienceEstimate | null>(null)
+  const [preferenceAggregates, setPreferenceAggregates] = React.useState<NotificationPreferenceAggregates | null>(null)
 
   const load = React.useCallback(async () => {
     if (!canAdminister) { setLoading(false); return }
@@ -71,22 +74,24 @@ export default function NotificationAdministrationPage() {
       Promise.all([
         canReadTemplates ? notificationsService.listTemplates({ page: 1, per_page: 50 }) : Promise.resolve({ items: [], page: 1, per_page: 50, total_items: 0, total_pages: 0 }),
         canReadCampaigns ? notificationsService.listCampaigns({ page: 1, per_page: 50 }) : Promise.resolve({ items: [], page: 1, per_page: 50, total_items: 0, total_pages: 0 }),
+        canReadAnalytics ? notificationsService.preferenceAggregates() : Promise.resolve(null),
       ]),
       canReadFirebase ? firebaseService.status() : Promise.resolve({ enabled: false }),
     ])
 
     if (notificationResult.status === "fulfilled") {
-      const [templatePage, campaignPage] = notificationResult.value
+      const [templatePage, campaignPage, aggregates] = notificationResult.value
       setTemplates(templatePage.items)
       setCampaigns(campaignPage.items)
       setTemplateTotal(templatePage.total_items)
       setCampaignTotal(campaignPage.total_items)
+      setPreferenceAggregates(aggregates)
     } else {
       setLoadError(notificationResult.reason instanceof Error ? notificationResult.reason.message : "Unable to load notification administration")
     }
     setFirebaseState(firebaseResult.status === "fulfilled" ? (firebaseResult.value.enabled ? "configured" : "disabled") : "unavailable")
     setLoading(false)
-  }, [canAdminister, canReadCampaigns, canReadFirebase, canReadTemplates])
+  }, [canAdminister, canReadAnalytics, canReadCampaigns, canReadFirebase, canReadTemplates])
 
   React.useEffect(() => {
     if (!permissionsLoading) void load()
@@ -225,6 +230,8 @@ export default function NotificationAdministrationPage() {
         <Summary title="Published templates" value={templates.filter((item) => item.status === "published").length} detail="Immutable approved versions" />
         <Summary title="Campaigns" value={campaignTotal} detail="Stored campaign records" />
         <Summary title="Firebase" value={firebaseState === "configured" ? "Configured" : firebaseState === "disabled" ? "Disabled" : "Unavailable"} detail="Live backend status" />
+        {preferenceAggregates ? <Summary title="Push opt-in" value={`${preferenceAggregates.push_enabled_users}/${preferenceAggregates.eligible_users}`} detail={`${preferenceAggregates.push_enabled_devices} enabled active devices`} /> : null}
+        {preferenceAggregates ? <Summary title="In-app opt-in" value={`${preferenceAggregates.in_app_enabled_users}/${preferenceAggregates.eligible_users}`} detail={`${preferenceAggregates.quiet_hours_users} users use quiet hours`} /> : null}
       </div>
 
       <Tabs defaultValue="templates" className="space-y-4">

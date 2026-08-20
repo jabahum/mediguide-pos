@@ -172,3 +172,44 @@ func TestNotificationCampaignReadRedactsSensitiveAudienceWithoutAnalyticsPermiss
 		t.Fatalf("sensitive audience was exposed: status=%d body=%s", response.Code, response.Body.String())
 	}
 }
+
+func TestNotificationPreferenceHandlersUseAuthenticatedOwner(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	db, err := gorm.Open(sqlite.Open("file:"+t.Name()+"?mode=memory&cache=shared"), &gorm.Config{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := db.AutoMigrate(&models.User{}, &models.NotificationPreference{}, &models.NotificationPreferenceSettings{}, &models.FirebaseDevice{}); err != nil {
+		t.Fatal(err)
+	}
+	owner := models.User{Name: "Owner", Email: uuid.NewString() + "@example.test", PasswordHash: "hash", IsActive: true, Status: "active"}
+	other := models.User{Name: "Other", Email: uuid.NewString() + "@example.test", PasswordHash: "hash", IsActive: true, Status: "active"}
+	if err := db.Create(&owner).Error; err != nil {
+		t.Fatal(err)
+	}
+	if err := db.Create(&other).Error; err != nil {
+		t.Fatal(err)
+	}
+	handler := NotificationHandler{Service: services.NotificationService{DB: db}}
+	router := gin.New()
+	router.Use(func(c *gin.Context) {
+		c.Set(middleware.ClaimsKey, &security.Claims{UserID: owner.ID})
+		c.Next()
+	})
+	router.PATCH("/preferences", handler.UpdatePreferences)
+	response := httptest.NewRecorder()
+	request := httptest.NewRequest(http.MethodPatch, "/preferences", bytes.NewBufferString(`{"push_enabled":false,"emergency_alerts":false}`))
+	request.Header.Set("Content-Type", "application/json")
+	router.ServeHTTP(response, request)
+	if response.Code != http.StatusOK || !strings.Contains(response.Body.String(), `"push_enabled":false`) || !strings.Contains(response.Body.String(), `"emergency_alerts":false`) || strings.Contains(response.Body.String(), owner.ID.String()) {
+		t.Fatalf("unexpected preference response: status=%d body=%s", response.Code, response.Body.String())
+	}
+	var ownerSettings models.NotificationPreferenceSettings
+	if err := db.First(&ownerSettings, "user_id = ?", owner.ID).Error; err != nil || ownerSettings.PushEnabled {
+		t.Fatalf("owner preference missing: %#v err=%v", ownerSettings, err)
+	}
+	var otherSettings int64
+	if err := db.Model(&models.NotificationPreferenceSettings{}).Where("user_id = ?", other.ID).Count(&otherSettings).Error; err != nil || otherSettings != 0 {
+		t.Fatalf("preference mutated another owner: count=%d err=%v", otherSettings, err)
+	}
+}

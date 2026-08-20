@@ -30,6 +30,58 @@ type NotificationAudienceEstimateInput struct {
 	Audience services.NotificationAudienceDefinition `json:"audience"`
 }
 
+// GetPreferences godoc
+// @Summary Get notification preferences for the current user
+// @Tags notifications
+// @Security BearerAuth
+// @Success 200 {object} handlers.NotificationPreferencesEnvelope
+// @Router /api/v2/notification-preferences [get]
+func (h NotificationHandler) GetPreferences(c *gin.Context) {
+	preferences, err := h.Service.GetPreferences(notificationClaims(c).UserID)
+	if err != nil {
+		h.writeError(c, err)
+		return
+	}
+	httpx.OK(c, preferences)
+}
+
+// UpdatePreferences godoc
+// @Summary Update notification preferences for the current user
+// @Tags notifications
+// @Security BearerAuth
+// @Param payload body services.NotificationPreferencesInput true "Preference changes"
+// @Success 200 {object} handlers.NotificationPreferencesEnvelope
+// @Failure 400 {object} handlers.ErrorResponse
+// @Router /api/v2/notification-preferences [patch]
+func (h NotificationHandler) UpdatePreferences(c *gin.Context) {
+	var input services.NotificationPreferencesInput
+	if c.ShouldBindJSON(&input) != nil {
+		httpx.Error(c, http.StatusBadRequest, "invalid notification preferences")
+		return
+	}
+	preferences, err := h.Service.UpdatePreferences(notificationClaims(c).UserID, input)
+	if err != nil {
+		h.writeError(c, err)
+		return
+	}
+	httpx.OK(c, preferences)
+}
+
+// PreferenceAggregates godoc
+// @Summary Get aggregate notification preference and device counts
+// @Tags notification-administration
+// @Security BearerAuth
+// @Success 200 {object} handlers.NotificationPreferenceAggregatesEnvelope
+// @Router /api/v2/notification-preferences/aggregates [get]
+func (h NotificationHandler) PreferenceAggregates(c *gin.Context) {
+	aggregates, err := h.Service.PreferenceAggregates()
+	if err != nil {
+		h.writeError(c, err)
+		return
+	}
+	httpx.OK(c, aggregates)
+}
+
 // List godoc
 // @Summary List notifications visible to the current user
 // @Tags notifications

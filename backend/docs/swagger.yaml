@@ -170,10 +170,28 @@ definitions:
       success:
         type: boolean
     type: object
+  handlers.FirebaseDeviceDTOEnvelope:
+    properties:
+      data:
+        $ref: '#/definitions/services.FirebaseDeviceDTO'
+      success:
+        example: true
+        type: boolean
+    type: object
   handlers.FirebaseDeviceEnvelope:
     properties:
       data:
         $ref: '#/definitions/models.FirebaseDevice'
+      success:
+        example: true
+        type: boolean
+    type: object
+  handlers.FirebaseDevicesEnvelope:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/services.FirebaseDeviceDTO'
+        type: array
       success:
         example: true
         type: boolean
@@ -594,6 +612,22 @@ definitions:
       data:
         $ref: '#/definitions/services.NotificationOutboxJobDTO'
       success:
+        type: boolean
+    type: object
+  handlers.NotificationPreferenceAggregatesEnvelope:
+    properties:
+      data:
+        $ref: '#/definitions/services.NotificationPreferenceAggregates'
+      success:
+        example: true
+        type: boolean
+    type: object
+  handlers.NotificationPreferencesEnvelope:
+    properties:
+      data:
+        $ref: '#/definitions/services.NotificationPreferences'
+      success:
+        example: true
         type: boolean
     type: object
   handlers.NotificationStatusInput:
@@ -2194,8 +2228,6 @@ definitions:
       platform:
         type: string
       updated_at:
-        type: string
-      user_id:
         type: string
     type: object
   models.GenericPage:
@@ -4283,6 +4315,23 @@ definitions:
       session_end:
         type: string
     type: object
+  services.FirebaseDeviceDTO:
+    properties:
+      app_version:
+        type: string
+      id:
+        type: string
+      installation_id:
+        type: string
+      last_seen_at:
+        type: string
+      locale:
+        type: string
+      notifications_enabled:
+        type: boolean
+      platform:
+        type: string
+    type: object
   services.FirebaseDeviceInput:
     properties:
       app_version:
@@ -4297,6 +4346,11 @@ definitions:
         type: string
       registration_token:
         type: string
+    type: object
+  services.FirebaseDeviceUpdateInput:
+    properties:
+      notifications_enabled:
+        type: boolean
     type: object
   services.FirebasePushInput:
     properties:
@@ -5222,6 +5276,91 @@ definitions:
         type: boolean
       reason:
         type: string
+    type: object
+  services.NotificationPreferenceAggregates:
+    properties:
+      active_devices:
+        type: integer
+      category_opt_in_counts:
+        additionalProperties:
+          format: int64
+          type: integer
+        type: object
+      devices_by_platform:
+        additionalProperties:
+          format: int64
+          type: integer
+        type: object
+      eligible_users:
+        type: integer
+      in_app_enabled_users:
+        type: integer
+      push_enabled_devices:
+        type: integer
+      push_enabled_users:
+        type: integer
+      quiet_hours_users:
+        type: integer
+    type: object
+  services.NotificationPreferences:
+    properties:
+      clinical_content_updates:
+        type: boolean
+      emergency_alerts:
+        type: boolean
+      in_app_enabled:
+        type: boolean
+      outbreak_alerts:
+        type: boolean
+      preferred_language:
+        type: string
+      product_announcements:
+        type: boolean
+      push_enabled:
+        type: boolean
+      quiet_hours_enabled:
+        type: boolean
+      quiet_hours_end:
+        type: string
+      quiet_hours_start:
+        type: string
+      quiet_hours_timezone:
+        type: string
+      reminders:
+        type: boolean
+      system_notices:
+        type: boolean
+      updated_at:
+        type: string
+    type: object
+  services.NotificationPreferencesInput:
+    properties:
+      clinical_content_updates:
+        type: boolean
+      emergency_alerts:
+        type: boolean
+      in_app_enabled:
+        type: boolean
+      outbreak_alerts:
+        type: boolean
+      preferred_language:
+        type: string
+      product_announcements:
+        type: boolean
+      push_enabled:
+        type: boolean
+      quiet_hours_enabled:
+        type: boolean
+      quiet_hours_end:
+        type: string
+      quiet_hours_start:
+        type: string
+      quiet_hours_timezone:
+        type: string
+      reminders:
+        type: boolean
+      system_notices:
+        type: boolean
     type: object
   services.NotificationTemplateDTO:
     properties:
@@ -8964,6 +9103,17 @@ paths:
       tags:
       - help-content
   /api/v2/firebase/devices:
+    get:
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.FirebaseDevicesEnvelope'
+      security:
+      - BearerAuth: []
+      summary: List the current user's push installations
+      tags:
+      - firebase
     post:
       parameters:
       - description: Firebase device registration
@@ -9006,6 +9156,33 @@ paths:
       security:
       - BearerAuth: []
       summary: Remove one of the current user's Firebase installations
+      tags:
+      - firebase
+    patch:
+      parameters:
+      - description: Firebase device UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Device preference
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/services.FirebaseDeviceUpdateInput'
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.FirebaseDeviceDTOEnvelope'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Update push enablement for one of the current user's installations
       tags:
       - firebase
   /api/v2/firebase/push/test:
@@ -12096,6 +12273,52 @@ paths:
       security:
       - BearerAuth: []
       summary: Requeue one terminally failed notification delivery job
+      tags:
+      - notification-administration
+  /api/v2/notification-preferences:
+    get:
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.NotificationPreferencesEnvelope'
+      security:
+      - BearerAuth: []
+      summary: Get notification preferences for the current user
+      tags:
+      - notifications
+    patch:
+      parameters:
+      - description: Preference changes
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/services.NotificationPreferencesInput'
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.NotificationPreferencesEnvelope'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Update notification preferences for the current user
+      tags:
+      - notifications
+  /api/v2/notification-preferences/aggregates:
+    get:
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.NotificationPreferenceAggregatesEnvelope'
+      security:
+      - BearerAuth: []
+      summary: Get aggregate notification preference and device counts
       tags:
       - notification-administration
   /api/v2/notification-template-versions/{id}/preview:

@@ -7,6 +7,7 @@ const serviceMocks = vi.hoisted(() => ({
   listCampaigns: vi.fn(),
   firebaseStatus: vi.fn(),
   estimateAudience: vi.fn(),
+  preferenceAggregates: vi.fn(),
 }))
 
 vi.mock("@/lib/backend-client", () => ({
@@ -22,6 +23,7 @@ vi.mock("@/services/notifications.service", () => ({
     listTemplates: serviceMocks.listTemplates,
     listCampaigns: serviceMocks.listCampaigns,
     estimateAudience: serviceMocks.estimateAudience,
+    preferenceAggregates: serviceMocks.preferenceAggregates,
   },
 }))
 
@@ -37,6 +39,7 @@ describe("NotificationAdministrationPage", () => {
     serviceMocks.listCampaigns.mockResolvedValue({ items: [], page: 1, per_page: 50, total_items: 0, total_pages: 0 })
     serviceMocks.firebaseStatus.mockResolvedValue({ enabled: false })
     serviceMocks.estimateAudience.mockResolvedValue({ eligible_users: 12, active_devices: 8 })
+    serviceMocks.preferenceAggregates.mockResolvedValue({ eligible_users: 20, push_enabled_users: 15, in_app_enabled_users: 18, quiet_hours_users: 5, active_devices: 16, push_enabled_devices: 12, devices_by_platform: { android: 10, ios: 6 }, category_opt_in_counts: {} })
   })
 
   afterEach(() => {
@@ -55,6 +58,7 @@ describe("NotificationAdministrationPage", () => {
     expect(screen.getByRole("button", { name: "New campaign" })).toBeDisabled()
     expect(screen.queryByText(/Test Mode/i)).not.toBeInTheDocument()
     expect(screen.queryByText(/delivery rate/i)).not.toBeInTheDocument()
+    expect(screen.getByText("15/20")).toBeInTheDocument()
   })
 
   it("shows server-estimated user and device counts before campaign approval", async () => {

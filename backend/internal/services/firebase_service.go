@@ -70,6 +70,20 @@ type FirebaseDeviceInput struct {
 	NotificationsEnabled *bool   `json:"notifications_enabled"`
 }
 
+type FirebaseDeviceUpdateInput struct {
+	NotificationsEnabled *bool `json:"notifications_enabled"`
+}
+
+type FirebaseDeviceDTO struct {
+	ID                   uuid.UUID `json:"id"`
+	InstallationID       string    `json:"installation_id"`
+	Platform             string    `json:"platform"`
+	AppVersion           *string   `json:"app_version,omitempty"`
+	Locale               *string   `json:"locale,omitempty"`
+	NotificationsEnabled bool      `json:"notifications_enabled"`
+	LastSeenAt           time.Time `json:"last_seen_at"`
+}
+
 type FirebasePushInput struct {
 	UserID    string              `json:"user_id"`
 	Title     string              `json:"title"`
@@ -147,8 +161,15 @@ func (s FirebaseService) RegisterDevice(userID uuid.UUID, in FirebaseDeviceInput
 	if installationID == "" || len(installationID) > 255 || token == "" || len(token) > 4096 || (platform != "android" && platform != "ios") {
 		return nil, ErrFirebaseInvalid
 	}
-	enabled := true
-	if in.NotificationsEnabled != nil {
+	globalPushEnabled := true
+	var settings models.NotificationPreferenceSettings
+	if err := s.DB.Where("user_id = ?", userID).First(&settings).Error; err == nil && !settings.PushEnabled {
+		globalPushEnabled = false
+	} else if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, err
+	}
+	enabled := globalPushEnabled
+	if in.NotificationsEnabled != nil && globalPushEnabled {
 		enabled = *in.NotificationsEnabled
 	}
 	now := time.Now().UTC()
@@ -159,9 +180,14 @@ func (s FirebaseService) RegisterDevice(userID uuid.UUID, in FirebaseDeviceInput
 		if err := tx.Unscoped().Where("registration_token = ? AND (user_id <> ? OR installation_id <> ?)", token, userID, installationID).Delete(&models.FirebaseDevice{}).Error; err != nil {
 			return err
 		}
+		assignments := map[string]any{"registration_token": token, "platform": platform, "app_version": device.AppVersion, "locale": device.Locale, "last_seen_at": now, "updated_at": now, "deleted_at": nil}
+		// A metadata refresh must not silently undo a device-level opt-out.
+		if in.NotificationsEnabled != nil {
+			assignments["notifications_enabled"] = enabled
+		}
 		return tx.Clauses(clause.OnConflict{
 			Columns:   []clause.Column{{Name: "user_id"}, {Name: "installation_id"}},
-			DoUpdates: clause.Assignments(map[string]any{"registration_token": token, "platform": platform, "app_version": device.AppVersion, "locale": device.Locale, "notifications_enabled": enabled, "last_seen_at": now, "updated_at": now, "deleted_at": nil}),
+			DoUpdates: clause.Assignments(assignments),
 		}).Create(&device).Error
 	})
 	if err != nil {
@@ -177,6 +203,45 @@ func (s FirebaseService) RegisterDevice(userID uuid.UUID, in FirebaseDeviceInput
 	return &device, nil
 }
 
+func (s FirebaseService) ListDevices(userID uuid.UUID) ([]FirebaseDeviceDTO, error) {
+	var devices []models.FirebaseDevice
+	if err := s.DB.Where("user_id = ?", userID).Order("last_seen_at DESC, id").Find(&devices).Error; err != nil {
+		return nil, err
+	}
+	result := make([]FirebaseDeviceDTO, 0, len(devices))
+	for _, device := range devices {
+		result = append(result, firebaseDeviceDTO(device))
+	}
+	return result, nil
+}
+
+func (s FirebaseService) UpdateDevice(userID, id uuid.UUID, input FirebaseDeviceUpdateInput) (*FirebaseDeviceDTO, error) {
+	if input.NotificationsEnabled == nil {
+		return nil, ErrFirebaseInvalid
+	}
+	if *input.NotificationsEnabled {
+		var settings models.NotificationPreferenceSettings
+		if err := s.DB.Where("user_id = ?", userID).First(&settings).Error; err == nil && !settings.PushEnabled {
+			return nil, ErrFirebaseInvalid
+		} else if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, err
+		}
+	}
+	result := s.DB.Model(&models.FirebaseDevice{}).Where("id = ? AND user_id = ?", id, userID).Update("notifications_enabled", *input.NotificationsEnabled)
+	if result.Error != nil {
+		return nil, result.Error
+	}
+	if result.RowsAffected != 1 {
+		return nil, gorm.ErrRecordNotFound
+	}
+	var device models.FirebaseDevice
+	if err := s.DB.First(&device, "id = ? AND user_id = ?", id, userID).Error; err != nil {
+		return nil, err
+	}
+	dto := firebaseDeviceDTO(device)
+	return &dto, nil
+}
+
 func (s FirebaseService) DeleteDevice(userID, id uuid.UUID) error {
 	result := s.DB.Where("id = ? AND user_id = ?", id, userID).Delete(&models.FirebaseDevice{})
 	if result.Error != nil {
@@ -186,6 +251,10 @@ func (s FirebaseService) DeleteDevice(userID, id uuid.UUID) error {
 		return gorm.ErrRecordNotFound
 	}
 	return nil
+}
+
+func firebaseDeviceDTO(device models.FirebaseDevice) FirebaseDeviceDTO {
+	return FirebaseDeviceDTO{ID: device.ID, InstallationID: device.InstallationID, Platform: device.Platform, AppVersion: device.AppVersion, Locale: device.Locale, NotificationsEnabled: device.NotificationsEnabled, LastSeenAt: device.LastSeenAt}
 }
 
 func (s FirebaseService) SendToUser(ctx context.Context, in FirebasePushInput) (*FirebasePushResult, error) {

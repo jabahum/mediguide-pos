@@ -519,7 +519,7 @@ func (s NotificationService) TransitionCampaign(id uuid.UUID, action string, in 
 			}
 			updates["scheduled_at"] = scheduled.UTC()
 			updates["timezone"] = timezone
-			if err := tx.Model(&models.NotificationOutboxJob{}).Where("campaign_id = ? AND status = 'held'", item.ID).Updates(map[string]any{"status": "pending", "next_attempt_at": scheduled.UTC()}).Error; err != nil {
+			if err := tx.Model(&models.NotificationOutboxJob{}).Where("campaign_id = ? AND status = 'held'", item.ID).Updates(map[string]any{"status": "pending", "next_attempt_at": gorm.Expr("CASE WHEN next_attempt_at > ? THEN next_attempt_at ELSE ? END", scheduled.UTC(), scheduled.UTC())}).Error; err != nil {
 				return err
 			}
 			if err := tx.Model(&models.Notification{}).Where("campaign_id = ?", item.ID).Update("publish_at", scheduled.UTC()).Error; err != nil {

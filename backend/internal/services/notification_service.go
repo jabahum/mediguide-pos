@@ -53,6 +53,7 @@ func (s NotificationService) List(userID uuid.UUID, in NotificationListInput) (*
 	readExpr := "EXISTS (SELECT 1 FROM notification_reads nr WHERE nr.notification_id = notifications.id AND nr.user_id = ?)"
 	query := s.DB.Model(&models.Notification{}).
 		Where("notifications.user_id = ? OR notifications.user_id IS NULL", userID).
+		Where("NOT EXISTS (SELECT 1 FROM notification_preference_settings nps WHERE nps.user_id = ? AND nps.deleted_at IS NULL AND nps.in_app_enabled = ?)", userID, false).
 		Where("(publish_at IS NULL OR publish_at <= ?) AND (expires_at IS NULL OR expires_at > ?)", time.Now().UTC(), time.Now().UTC()).
 		Where("notifications.campaign_id IS NULL OR EXISTS (SELECT 1 FROM notification_campaigns nc WHERE nc.id = notifications.campaign_id AND nc.deleted_at IS NULL AND nc.status IN ('queued','sending','completed','partially_failed'))")
 	if search := strings.TrimSpace(in.Search); search != "" {
@@ -111,6 +112,7 @@ func (s NotificationService) Get(userID, id uuid.UUID) (*models.Notification, er
 	err := s.DB.Model(&models.Notification{}).
 		Select("notifications.*, EXISTS (SELECT 1 FROM notification_reads nr WHERE nr.notification_id = notifications.id AND nr.user_id = ?) AS is_read", userID).
 		Where("notifications.id = ? AND (notifications.user_id = ? OR notifications.user_id IS NULL)", id, userID).
+		Where("NOT EXISTS (SELECT 1 FROM notification_preference_settings nps WHERE nps.user_id = ? AND nps.deleted_at IS NULL AND nps.in_app_enabled = ?)", userID, false).
 		Where("(publish_at IS NULL OR publish_at <= ?) AND (expires_at IS NULL OR expires_at > ?)", time.Now().UTC(), time.Now().UTC()).First(&item).Error
 	return &item, err
 }

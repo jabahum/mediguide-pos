@@ -186,6 +186,15 @@ class ProfilePage extends ConsumerWidget {
               ),
 
               _SettingsTile(
+                icon: LucideIcons.bellRing,
+                title: 'Notification preferences',
+                subtitle: 'Channels, alert categories, quiet hours and devices',
+                onTap: () {
+                  AppNavigator.push(AppRoutes.notificationPreferences);
+                },
+              ),
+
+              _SettingsTile(
                 icon: LucideIcons.palette,
                 title: AppTranslationKey.theme.tr,
                 subtitle: _getThemeDisplayName(),

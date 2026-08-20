@@ -81,7 +81,7 @@ func (s NotificationService) resolveAudience(audience NotificationAudienceDefini
 			devicePredicate += " AND LOWER(COALESCE(notification_fd.app_version, '')) IN ?"
 			deviceArgs = append(deviceArgs, normalizedAudienceStrings(audience.ApplicationVersions))
 		}
-		q = q.Where(devicePredicate+")", deviceArgs...)
+		q = q.Where(devicePredicate+")", deviceArgs...).Where("NOT EXISTS (SELECT 1 FROM notification_preference_settings notification_nps WHERE notification_nps.user_id = users.id AND notification_nps.deleted_at IS NULL AND notification_nps.push_enabled = ?)", false)
 	}
 	for _, category := range audience.PreferenceCategories {
 		q = q.Where("NOT EXISTS (SELECT 1 FROM notification_preferences notification_np WHERE notification_np.user_id = users.id AND notification_np.category = ? AND notification_np.enabled = ? AND notification_np.deleted_at IS NULL)", strings.ToLower(strings.TrimSpace(category)), false)
@@ -93,7 +93,8 @@ func (s NotificationService) resolveAudience(audience NotificationAudienceDefini
 	}
 	devices := []models.FirebaseDevice{}
 	if len(userIDs) > 0 {
-		deviceQuery := s.DB.Where("user_id IN ? AND notifications_enabled = ? AND last_seen_at >= ?", userIDs, true, activeDeviceCutoff)
+		deviceQuery := s.DB.Where("user_id IN ? AND notifications_enabled = ? AND last_seen_at >= ?", userIDs, true, activeDeviceCutoff).
+			Where("NOT EXISTS (SELECT 1 FROM notification_preference_settings notification_nps WHERE notification_nps.user_id = firebase_devices.user_id AND notification_nps.deleted_at IS NULL AND notification_nps.push_enabled = ?)", false)
 		if len(audience.Platforms) > 0 {
 			deviceQuery = deviceQuery.Where("LOWER(platform) IN ?", normalizedAudienceStrings(audience.Platforms))
 		}
@@ -108,8 +109,8 @@ func (s NotificationService) resolveAudience(audience NotificationAudienceDefini
 }
 
 func validateNotificationAudience(audience NotificationAudienceDefinition) error {
-	count := len(audience.UserIDs) + len(audience.RoleIDs) + len(audience.Countries) + len(audience.RegionIDs) + len(audience.DistrictIDs) + len(audience.FacilityIDs) + len(audience.FacilityLevelIDs) + len(audience.ProfessionalCategories) + len(audience.Languages) + len(audience.Platforms) + len(audience.ApplicationVersions) + len(audience.PreferenceCategories)
-	if (!audience.AllEligible && count == 0) || (audience.AllEligible && count != 0) {
+	selectorCount := len(audience.UserIDs) + len(audience.RoleIDs) + len(audience.Countries) + len(audience.RegionIDs) + len(audience.DistrictIDs) + len(audience.FacilityIDs) + len(audience.FacilityLevelIDs) + len(audience.ProfessionalCategories) + len(audience.Languages) + len(audience.Platforms) + len(audience.ApplicationVersions)
+	if (!audience.AllEligible && selectorCount+len(audience.PreferenceCategories) == 0) || (audience.AllEligible && selectorCount != 0) {
 		return ErrNotificationInvalid
 	}
 	for _, values := range [][]string{audience.UserIDs, audience.RoleIDs, audience.RegionIDs, audience.DistrictIDs, audience.FacilityIDs, audience.FacilityLevelIDs} {

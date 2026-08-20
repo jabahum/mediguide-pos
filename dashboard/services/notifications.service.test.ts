@@ -76,4 +76,12 @@ describe("notificationsService", () => {
       body: JSON.stringify({ audience }),
     })
   })
+
+  it("loads aggregate preference counts without raw devices or tokens", async () => {
+    send.mockResolvedValue({ eligible_users: 20, push_enabled_users: 15 })
+
+    await notificationsService.preferenceAggregates()
+
+    expect(send).toHaveBeenCalledWith("/api/v2/notification-preferences/aggregates")
+  })
 })

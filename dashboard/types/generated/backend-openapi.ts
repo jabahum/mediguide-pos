@@ -138,8 +138,20 @@ export interface HandlersFAQTagEnvelope {
   success?: boolean;
 }
 
+export interface HandlersFirebaseDeviceDTOEnvelope {
+  data?: ServicesFirebaseDeviceDTO;
+  /** @example true */
+  success?: boolean;
+}
+
 export interface HandlersFirebaseDeviceEnvelope {
   data?: ModelsFirebaseDevice;
+  /** @example true */
+  success?: boolean;
+}
+
+export interface HandlersFirebaseDevicesEnvelope {
+  data?: ServicesFirebaseDeviceDTO[];
   /** @example true */
   success?: boolean;
 }
@@ -416,6 +428,18 @@ export interface HandlersNotificationEnvelope {
 
 export interface HandlersNotificationOutboxJobEnvelope {
   data?: ServicesNotificationOutboxJobDTO;
+  success?: boolean;
+}
+
+export interface HandlersNotificationPreferenceAggregatesEnvelope {
+  data?: ServicesNotificationPreferenceAggregates;
+  /** @example true */
+  success?: boolean;
+}
+
+export interface HandlersNotificationPreferencesEnvelope {
+  data?: ServicesNotificationPreferences;
+  /** @example true */
   success?: boolean;
 }
 
@@ -1421,7 +1445,6 @@ export interface ModelsFirebaseDevice {
   notifications_enabled?: boolean;
   platform?: string;
   updated_at?: string;
-  user_id?: string;
 }
 
 export interface ModelsGenericPage {
@@ -2549,6 +2572,16 @@ export interface ServicesFinishCalculatorUsageInput {
   session_end?: string;
 }
 
+export interface ServicesFirebaseDeviceDTO {
+  app_version?: string;
+  id?: string;
+  installation_id?: string;
+  last_seen_at?: string;
+  locale?: string;
+  notifications_enabled?: boolean;
+  platform?: string;
+}
+
 export interface ServicesFirebaseDeviceInput {
   app_version?: string;
   installation_id?: string;
@@ -2556,6 +2589,10 @@ export interface ServicesFirebaseDeviceInput {
   notifications_enabled?: boolean;
   platform?: string;
   registration_token?: string;
+}
+
+export interface ServicesFirebaseDeviceUpdateInput {
+  notifications_enabled?: boolean;
 }
 
 export interface ServicesFirebasePushInput {
@@ -3055,6 +3092,50 @@ export interface ServicesNotificationOutboxJobDTO {
 export interface ServicesNotificationOutboxRequeueInput {
   confirm?: boolean;
   reason?: string;
+}
+
+export interface ServicesNotificationPreferenceAggregates {
+  active_devices?: number;
+  category_opt_in_counts?: Record<string, number>;
+  devices_by_platform?: Record<string, number>;
+  eligible_users?: number;
+  in_app_enabled_users?: number;
+  push_enabled_devices?: number;
+  push_enabled_users?: number;
+  quiet_hours_users?: number;
+}
+
+export interface ServicesNotificationPreferences {
+  clinical_content_updates?: boolean;
+  emergency_alerts?: boolean;
+  in_app_enabled?: boolean;
+  outbreak_alerts?: boolean;
+  preferred_language?: string;
+  product_announcements?: boolean;
+  push_enabled?: boolean;
+  quiet_hours_enabled?: boolean;
+  quiet_hours_end?: string;
+  quiet_hours_start?: string;
+  quiet_hours_timezone?: string;
+  reminders?: boolean;
+  system_notices?: boolean;
+  updated_at?: string;
+}
+
+export interface ServicesNotificationPreferencesInput {
+  clinical_content_updates?: boolean;
+  emergency_alerts?: boolean;
+  in_app_enabled?: boolean;
+  outbreak_alerts?: boolean;
+  preferred_language?: string;
+  product_announcements?: boolean;
+  push_enabled?: boolean;
+  quiet_hours_enabled?: boolean;
+  quiet_hours_end?: string;
+  quiet_hours_start?: string;
+  quiet_hours_timezone?: string;
+  reminders?: boolean;
+  system_notices?: boolean;
 }
 
 export interface ServicesNotificationTemplateDTO {

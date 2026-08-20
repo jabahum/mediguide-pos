@@ -23,6 +23,7 @@ func notificationTestService(t *testing.T) NotificationService {
 		&models.NotificationTemplateVersion{}, &models.NotificationCampaign{}, &models.GuidelineDocument{},
 		&models.SupportTicket{}, &models.AuditLog{}, &models.User{}, &models.FirebaseDevice{},
 		&models.NotificationPreference{}, &models.NotificationCampaignRecipient{},
+		&models.NotificationPreferenceSettings{},
 		&models.NotificationOutboxJob{}, &models.NotificationDeliveryAttempt{},
 		&models.Role{}, &models.Region{}, &models.District{}, &models.FacilityLevel{}, &models.HealthFacility{},
 	); err != nil {

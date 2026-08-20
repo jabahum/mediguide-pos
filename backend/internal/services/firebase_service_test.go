@@ -51,7 +51,7 @@ func firebaseTestService(t *testing.T) FirebaseService {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := db.AutoMigrate(&models.FirebaseDevice{}); err != nil {
+	if err := db.AutoMigrate(&models.FirebaseDevice{}, &models.NotificationPreferenceSettings{}); err != nil {
 		t.Fatal(err)
 	}
 	return FirebaseService{DB: db}
@@ -131,6 +131,24 @@ func TestFirebaseDeviceRegistrationUpsertsAndMovesRefreshedToken(t *testing.T) {
 	}
 	if moved.UserID != secondOwner {
 		t.Fatal("refreshed token must belong only to its latest authenticated owner")
+	}
+}
+
+func TestFirebaseMetadataRefreshPreservesDeviceOptOut(t *testing.T) {
+	service := firebaseTestService(t)
+	owner := uuid.New()
+	disabled := false
+	device, err := service.RegisterDevice(owner, FirebaseDeviceInput{InstallationID: "opted-out", RegistrationToken: "token-one", Platform: "android", NotificationsEnabled: &disabled})
+	if err != nil {
+		t.Fatal(err)
+	}
+	version := "2.1.0+50"
+	device, err = service.RegisterDevice(owner, FirebaseDeviceInput{InstallationID: "opted-out", RegistrationToken: "token-two", Platform: "android", AppVersion: &version})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if device.NotificationsEnabled {
+		t.Fatal("metadata refresh silently re-enabled an opted-out device")
 	}
 }
 

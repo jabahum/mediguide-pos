@@ -141,14 +141,27 @@ type NotificationCampaign struct {
 	MetricsClicked        int64          `json:"-" swaggerignore:"true"`
 }
 
-// NotificationPreference is the category-level opt-in used while resolving a
-// campaign audience. Missing rows use the product default (enabled); Phase 9
-// extends this record with quiet hours and channel-specific preferences.
+// NotificationPreference is a category-level opt-in used while resolving a
+// campaign audience. Missing rows use the product default (enabled).
 type NotificationPreference struct {
 	Base
-	UserID   uuid.UUID `gorm:"type:uuid;not null;uniqueIndex:idx_notification_preference_user_category" json:"user_id"`
+	UserID   uuid.UUID `gorm:"type:uuid;not null;uniqueIndex:idx_notification_preference_user_category" json:"-"`
 	Category string    `gorm:"not null;uniqueIndex:idx_notification_preference_user_category" json:"category"`
 	Enabled  bool      `gorm:"not null;default:true" json:"enabled"`
+}
+
+// NotificationPreferenceSettings stores user-wide channel, locale, and quiet
+// hour choices. Device-specific push consent remains on FirebaseDevice.
+type NotificationPreferenceSettings struct {
+	Base
+	UserID             uuid.UUID `gorm:"type:uuid;not null;uniqueIndex" json:"-"`
+	QuietHoursEnabled  bool      `gorm:"not null;default:false" json:"quiet_hours_enabled"`
+	QuietHoursStart    *string   `json:"quiet_hours_start,omitempty"`
+	QuietHoursEnd      *string   `json:"quiet_hours_end,omitempty"`
+	QuietHoursTimezone string    `gorm:"not null;default:'UTC'" json:"quiet_hours_timezone"`
+	PreferredLanguage  string    `gorm:"not null;default:'en'" json:"preferred_language"`
+	PushEnabled        bool      `gorm:"not null;default:true" json:"push_enabled"`
+	InAppEnabled       bool      `gorm:"not null;default:true" json:"in_app_enabled"`
 }
 
 type NotificationCampaignRecipient struct {

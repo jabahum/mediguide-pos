@@ -4192,6 +4192,25 @@ const docTemplate = `{
             }
         },
         "/api/v2/firebase/devices": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "firebase"
+                ],
+                "summary": "List the current user's push installations",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.FirebaseDevicesEnvelope"
+                        }
+                    }
+                }
+            },
             "post": {
                 "security": [
                     {
@@ -4254,6 +4273,49 @@ const docTemplate = `{
                         "description": "OK",
                         "schema": {
                             "$ref": "#/definitions/handlers.DeletedEnvelope"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "patch": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "firebase"
+                ],
+                "summary": "Update push enablement for one of the current user's installations",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Firebase device UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Device preference",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/services.FirebaseDeviceUpdateInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.FirebaseDeviceDTOEnvelope"
                         }
                     },
                     "404": {
@@ -9170,6 +9232,84 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/v2/notification-preferences": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "notifications"
+                ],
+                "summary": "Get notification preferences for the current user",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.NotificationPreferencesEnvelope"
+                        }
+                    }
+                }
+            },
+            "patch": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "notifications"
+                ],
+                "summary": "Update notification preferences for the current user",
+                "parameters": [
+                    {
+                        "description": "Preference changes",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/services.NotificationPreferencesInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.NotificationPreferencesEnvelope"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v2/notification-preferences/aggregates": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "notification-administration"
+                ],
+                "summary": "Get aggregate notification preference and device counts",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.NotificationPreferenceAggregatesEnvelope"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v2/notification-template-versions/{id}/preview": {
             "post": {
                 "security": [
@@ -11987,11 +12127,38 @@ const docTemplate = `{
                 }
             }
         },
+        "handlers.FirebaseDeviceDTOEnvelope": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/services.FirebaseDeviceDTO"
+                },
+                "success": {
+                    "type": "boolean",
+                    "example": true
+                }
+            }
+        },
         "handlers.FirebaseDeviceEnvelope": {
             "type": "object",
             "properties": {
                 "data": {
                     "$ref": "#/definitions/models.FirebaseDevice"
+                },
+                "success": {
+                    "type": "boolean",
+                    "example": true
+                }
+            }
+        },
+        "handlers.FirebaseDevicesEnvelope": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/services.FirebaseDeviceDTO"
+                    }
                 },
                 "success": {
                     "type": "boolean",
@@ -12627,6 +12794,30 @@ const docTemplate = `{
                 },
                 "success": {
                     "type": "boolean"
+                }
+            }
+        },
+        "handlers.NotificationPreferenceAggregatesEnvelope": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/services.NotificationPreferenceAggregates"
+                },
+                "success": {
+                    "type": "boolean",
+                    "example": true
+                }
+            }
+        },
+        "handlers.NotificationPreferencesEnvelope": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/services.NotificationPreferences"
+                },
+                "success": {
+                    "type": "boolean",
+                    "example": true
                 }
             }
         },
@@ -15044,9 +15235,6 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "updated_at": {
-                    "type": "string"
-                },
-                "user_id": {
                     "type": "string"
                 }
             }
@@ -18181,6 +18369,32 @@ const docTemplate = `{
                 }
             }
         },
+        "services.FirebaseDeviceDTO": {
+            "type": "object",
+            "properties": {
+                "app_version": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "installation_id": {
+                    "type": "string"
+                },
+                "last_seen_at": {
+                    "type": "string"
+                },
+                "locale": {
+                    "type": "string"
+                },
+                "notifications_enabled": {
+                    "type": "boolean"
+                },
+                "platform": {
+                    "type": "string"
+                }
+            }
+        },
         "services.FirebaseDeviceInput": {
             "type": "object",
             "properties": {
@@ -18201,6 +18415,14 @@ const docTemplate = `{
                 },
                 "registration_token": {
                     "type": "string"
+                }
+            }
+        },
+        "services.FirebaseDeviceUpdateInput": {
+            "type": "object",
+            "properties": {
+                "notifications_enabled": {
+                    "type": "boolean"
                 }
             }
         },
@@ -19607,6 +19829,134 @@ const docTemplate = `{
                 },
                 "reason": {
                     "type": "string"
+                }
+            }
+        },
+        "services.NotificationPreferenceAggregates": {
+            "type": "object",
+            "properties": {
+                "active_devices": {
+                    "type": "integer"
+                },
+                "category_opt_in_counts": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "integer",
+                        "format": "int64"
+                    }
+                },
+                "devices_by_platform": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "integer",
+                        "format": "int64"
+                    }
+                },
+                "eligible_users": {
+                    "type": "integer"
+                },
+                "in_app_enabled_users": {
+                    "type": "integer"
+                },
+                "push_enabled_devices": {
+                    "type": "integer"
+                },
+                "push_enabled_users": {
+                    "type": "integer"
+                },
+                "quiet_hours_users": {
+                    "type": "integer"
+                }
+            }
+        },
+        "services.NotificationPreferences": {
+            "type": "object",
+            "properties": {
+                "clinical_content_updates": {
+                    "type": "boolean"
+                },
+                "emergency_alerts": {
+                    "type": "boolean"
+                },
+                "in_app_enabled": {
+                    "type": "boolean"
+                },
+                "outbreak_alerts": {
+                    "type": "boolean"
+                },
+                "preferred_language": {
+                    "type": "string"
+                },
+                "product_announcements": {
+                    "type": "boolean"
+                },
+                "push_enabled": {
+                    "type": "boolean"
+                },
+                "quiet_hours_enabled": {
+                    "type": "boolean"
+                },
+                "quiet_hours_end": {
+                    "type": "string"
+                },
+                "quiet_hours_start": {
+                    "type": "string"
+                },
+                "quiet_hours_timezone": {
+                    "type": "string"
+                },
+                "reminders": {
+                    "type": "boolean"
+                },
+                "system_notices": {
+                    "type": "boolean"
+                },
+                "updated_at": {
+                    "type": "string"
+                }
+            }
+        },
+        "services.NotificationPreferencesInput": {
+            "type": "object",
+            "properties": {
+                "clinical_content_updates": {
+                    "type": "boolean"
+                },
+                "emergency_alerts": {
+                    "type": "boolean"
+                },
+                "in_app_enabled": {
+                    "type": "boolean"
+                },
+                "outbreak_alerts": {
+                    "type": "boolean"
+                },
+                "preferred_language": {
+                    "type": "string"
+                },
+                "product_announcements": {
+                    "type": "boolean"
+                },
+                "push_enabled": {
+                    "type": "boolean"
+                },
+                "quiet_hours_enabled": {
+                    "type": "boolean"
+                },
+                "quiet_hours_end": {
+                    "type": "string"
+                },
+                "quiet_hours_start": {
+                    "type": "string"
+                },
+                "quiet_hours_timezone": {
+                    "type": "string"
+                },
+                "reminders": {
+                    "type": "boolean"
+                },
+                "system_notices": {
+                    "type": "boolean"
                 }
             }
         },

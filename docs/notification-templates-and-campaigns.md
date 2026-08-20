@@ -76,6 +76,23 @@ Android and APNs payloads explicitly carry priority, TTL, collapse/thread key, A
 - Sensitive audience estimates and delivery-job inspection: `notification.analytics.read`
 - Firebase status/test/config: `firebase.status.read`, `firebase.push.test`, `firebase.config.manage`
 
+## User preferences and devices
+
+Authenticated users manage their own settings through `GET/PATCH /api/v2/notification-preferences`. The response includes the six supported categories, quiet hours, notification language, and global push/in-app channel choices. Omitted fields in a PATCH retain their current value; a later application startup cannot silently reset an opt-out.
+
+Push installations are private owner-scoped records:
+
+- `GET /api/v2/firebase/devices` lists token-free device projections for the current user;
+- `POST /api/v2/firebase/devices` registers or refreshes installation metadata and preserves existing device enablement unless the request explicitly changes it;
+- `PATCH /api/v2/firebase/devices/:id` changes push enablement for an owned installation;
+- `DELETE /api/v2/firebase/devices/:id` unregisters an owned installation and is called during mobile logout.
+
+Disabling global push immediately disables all of the user's registered devices. Re-enabling global push does not re-enable individual installations; the user must explicitly select them. Category and channel opt-outs always win. The worker checks the latest preferences again at delivery time, so an opt-out made after campaign approval still takes effect. Urgent campaigns using an Emergency template may bypass quiet hours, but they do not bypass emergency-category, global-channel, per-device, or operating-system consent.
+
+Quiet hours delay push jobs until the configured local end time. The time zone must be a valid IANA name. In-app notices remain available in the inbox at their scheduled publication time.
+
+Administrators with `notification.analytics.read` can access `GET /api/v2/notification-preferences/aggregates`. It returns aggregate user/category/channel/device counts only and never returns registration tokens, installation identifiers, or recipient lists.
+
 Template publication, campaign transitions, and delivery requeues create audit records without message bodies, credentials, or registration tokens.
 
 ## Operations

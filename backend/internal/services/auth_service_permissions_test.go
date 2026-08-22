@@ -17,6 +17,17 @@ func TestDerivedRolePermissionsCoverCalculatorDomain(t *testing.T) {
 	}
 }
 
+func TestClinicalToolWorkflowPermissionsAreSeparated(t *testing.T) {
+	admin := deriveRolePermissions("admin", "")
+	for _, permission := range []string{"calculator.read", "calculator.write", "calculator.review", "calculator.publish", "calculator.withdraw"} {
+		if !containsPermission(admin, permission) { t.Fatalf("admin missing %s", permission) }
+	}
+	author := deriveRolePermissions("content_manager", "")
+	if !containsPermission(author, "calculator.write") || containsPermission(author, "calculator.publish") || containsPermission(author, "calculator.review") { t.Fatal("author permissions must not bypass review or publication") }
+	reviewer := deriveRolePermissions("reviewer", "")
+	if !containsPermission(reviewer, "calculator.review") || containsPermission(reviewer, "calculator.write") || containsPermission(reviewer, "calculator.publish") { t.Fatal("reviewer permissions must be limited to review") }
+}
+
 func TestCustomContentPermissionsMapToCalculatorDomain(t *testing.T) {
 	permissions := deriveRolePermissions("custom", `{
 		"content": {

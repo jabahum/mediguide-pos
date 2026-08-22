@@ -58,7 +58,7 @@ type Input struct {
 	Minimum               *float64        `json:"minimum,omitempty"`
 	Maximum               *float64        `json:"maximum,omitempty"`
 	Step                  *float64        `json:"step,omitempty"`
-	Default               json.RawMessage `json:"default,omitempty"`
+	Default               json.RawMessage `json:"default,omitempty" swaggertype:"object"`
 	AllowedUnits          []string        `json:"allowed_units,omitempty"`
 	DefaultUnit           string          `json:"default_unit,omitempty"`
 	Options               []Option        `json:"options,omitempty"`
@@ -76,7 +76,7 @@ type Input struct {
 }
 
 type Option struct {
-	Value       json.RawMessage `json:"value"`
+	Value       json.RawMessage `json:"value" swaggertype:"object"`
 	Label       string          `json:"label"`
 	Description string          `json:"description,omitempty"`
 	Score       *float64        `json:"score,omitempty"`
@@ -93,7 +93,7 @@ type Section struct {
 
 type Expression struct {
 	Op           string          `json:"op"`
-	Value        json.RawMessage `json:"value,omitempty"`
+	Value        json.RawMessage `json:"value,omitempty" swaggertype:"object"`
 	Field        string          `json:"field,omitempty"`
 	Args         []Expression    `json:"args,omitempty"`
 	Precision    *int            `json:"precision,omitempty"`
@@ -159,8 +159,8 @@ type TestCase struct {
 	Key              string                     `json:"key"`
 	Description      string                     `json:"description,omitempty"`
 	FixedNow         *time.Time                 `json:"fixed_now,omitempty"`
-	Inputs           map[string]json.RawMessage `json:"inputs"`
-	Expected         map[string]json.RawMessage `json:"expected"`
+	Inputs           map[string]json.RawMessage `json:"inputs" swaggertype:"object"`
+	Expected         map[string]json.RawMessage `json:"expected" swaggertype:"object"`
 	NumericTolerance *float64                   `json:"numeric_tolerance,omitempty"`
 }
 

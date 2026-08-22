@@ -10,6 +10,663 @@ Map<String, dynamic> _jsonMap(Object? value) {
   return const <String, dynamic>{};
 }
 
+final class ClinicaltoolsAction {
+  ClinicaltoolsAction(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory ClinicaltoolsAction.fromJson(Map<String, dynamic> json) =>
+      ClinicaltoolsAction(json);
+
+  static const schemaName = 'clinicaltools.Action';
+  final Map<String, dynamic> value;
+
+  String? get messageKey => value['message_key']?.toString();
+
+  String? get target => value['target']?.toString();
+
+  String? get type => value['type']?.toString();
+
+  ClinicaltoolsExpression? get valueField {
+    final raw = value['value'];
+    if (raw is! Map) return null;
+    return ClinicaltoolsExpression.fromJson(_jsonMap(raw));
+  }
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
+final class ClinicaltoolsCalculation {
+  ClinicaltoolsCalculation(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory ClinicaltoolsCalculation.fromJson(Map<String, dynamic> json) =>
+      ClinicaltoolsCalculation(json);
+
+  static const schemaName = 'clinicaltools.Calculation';
+  final Map<String, dynamic> value;
+
+  ClinicaltoolsExpression? get expression {
+    final raw = value['expression'];
+    if (raw is! Map) return null;
+    return ClinicaltoolsExpression.fromJson(_jsonMap(raw));
+  }
+
+  String? get key => value['key']?.toString();
+
+  int? get precision => (value['precision'] as num?)?.toInt();
+
+  String? get roundingMode => value['rounding_mode']?.toString();
+
+  String? get unit => value['unit']?.toString();
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
+final class ClinicaltoolsCitation {
+  ClinicaltoolsCitation(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory ClinicaltoolsCitation.fromJson(Map<String, dynamic> json) =>
+      ClinicaltoolsCitation(json);
+
+  static const schemaName = 'clinicaltools.Citation';
+  final Map<String, dynamic> value;
+
+  String? get accessedAt => value['accessed_at']?.toString();
+
+  String? get key => value['key']?.toString();
+
+  String? get organization => value['organization']?.toString();
+
+  String? get publishedAt => value['published_at']?.toString();
+
+  String? get title => value['title']?.toString();
+
+  String? get url => value['url']?.toString();
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
+final class ClinicaltoolsCompletion {
+  ClinicaltoolsCompletion(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory ClinicaltoolsCompletion.fromJson(Map<String, dynamic> json) =>
+      ClinicaltoolsCompletion(json);
+
+  static const schemaName = 'clinicaltools.Completion';
+  final Map<String, dynamic> value;
+
+  bool? get allowResume => value['allow_resume'] as bool?;
+
+  ClinicaltoolsExpression? get expression {
+    final raw = value['expression'];
+    if (raw is! Map) return null;
+    return ClinicaltoolsExpression.fromJson(_jsonMap(raw));
+  }
+
+  String? get mode => value['mode']?.toString();
+
+  bool? get requireReview => value['require_review'] as bool?;
+
+  bool? get resetConfirmation => value['reset_confirmation'] as bool?;
+
+  bool? get showPercentage => value['show_percentage'] as bool?;
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
+final class ClinicaltoolsDefinition {
+  ClinicaltoolsDefinition(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory ClinicaltoolsDefinition.fromJson(Map<String, dynamic> json) =>
+      ClinicaltoolsDefinition(json);
+
+  static const schemaName = 'clinicaltools.Definition';
+  final Map<String, dynamic> value;
+
+  List<ClinicaltoolsCalculation> get calculation {
+    final raw = value['calculation'];
+    if (raw is! List) return const [];
+    return raw
+        .whereType<Map>()
+        .map((item) => ClinicaltoolsCalculation.fromJson(_jsonMap(item)))
+        .toList(growable: false);
+  }
+
+  List<ClinicaltoolsCitation> get citations {
+    final raw = value['citations'];
+    if (raw is! List) return const [];
+    return raw
+        .whereType<Map>()
+        .map((item) => ClinicaltoolsCitation.fromJson(_jsonMap(item)))
+        .toList(growable: false);
+  }
+
+  String? get clinicalOwner => value['clinical_owner']?.toString();
+
+  String? get clinicalReviewer => value['clinical_reviewer']?.toString();
+
+  ClinicaltoolsCompletion? get completion {
+    final raw = value['completion'];
+    if (raw is! Map) return null;
+    return ClinicaltoolsCompletion.fromJson(_jsonMap(raw));
+  }
+
+  String? get description => value['description']?.toString();
+
+  String? get effectiveAt => value['effective_at']?.toString();
+
+  List<String> get exclusions {
+    final raw = value['exclusions'];
+    if (raw is! List) return const [];
+    return raw.whereType<String>().toList(growable: false);
+  }
+
+  List<ClinicaltoolsInput> get inputs {
+    final raw = value['inputs'];
+    if (raw is! List) return const [];
+    return raw
+        .whereType<Map>()
+        .map((item) => ClinicaltoolsInput.fromJson(_jsonMap(item)))
+        .toList(growable: false);
+  }
+
+  List<ClinicaltoolsInterpretation> get interpretations {
+    final raw = value['interpretations'];
+    if (raw is! List) return const [];
+    return raw
+        .whereType<Map>()
+        .map((item) => ClinicaltoolsInterpretation.fromJson(_jsonMap(item)))
+        .toList(growable: false);
+  }
+
+  String? get locale => value['locale']?.toString();
+
+  String? get minimumAppVersion => value['minimum_app_version']?.toString();
+
+  List<ClinicaltoolsOutput> get outputs {
+    final raw = value['outputs'];
+    if (raw is! List) return const [];
+    return raw
+        .whereType<Map>()
+        .map((item) => ClinicaltoolsOutput.fromJson(_jsonMap(item)))
+        .toList(growable: false);
+  }
+
+  String? get reviewAt => value['review_at']?.toString();
+
+  List<ClinicaltoolsRule> get rules {
+    final raw = value['rules'];
+    if (raw is! List) return const [];
+    return raw
+        .whereType<Map>()
+        .map((item) => ClinicaltoolsRule.fromJson(_jsonMap(item)))
+        .toList(growable: false);
+  }
+
+  String? get schemaVersion => value['schema_version']?.toString();
+
+  List<ClinicaltoolsSection> get sections {
+    final raw = value['sections'];
+    if (raw is! List) return const [];
+    return raw
+        .whereType<Map>()
+        .map((item) => ClinicaltoolsSection.fromJson(_jsonMap(item)))
+        .toList(growable: false);
+  }
+
+  List<String> get supportedPopulation {
+    final raw = value['supported_population'];
+    if (raw is! List) return const [];
+    return raw.whereType<String>().toList(growable: false);
+  }
+
+  List<ClinicaltoolsTestCase> get testCases {
+    final raw = value['test_cases'];
+    if (raw is! List) return const [];
+    return raw
+        .whereType<Map>()
+        .map((item) => ClinicaltoolsTestCase.fromJson(_jsonMap(item)))
+        .toList(growable: false);
+  }
+
+  String? get title => value['title']?.toString();
+
+  String? get toolType => value['tool_type']?.toString();
+
+  String? get version => value['version']?.toString();
+
+  List<ClinicaltoolsMessage> get warnings {
+    final raw = value['warnings'];
+    if (raw is! List) return const [];
+    return raw
+        .whereType<Map>()
+        .map((item) => ClinicaltoolsMessage.fromJson(_jsonMap(item)))
+        .toList(growable: false);
+  }
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
+final class ClinicaltoolsEvaluationError {
+  ClinicaltoolsEvaluationError(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory ClinicaltoolsEvaluationError.fromJson(Map<String, dynamic> json) =>
+      ClinicaltoolsEvaluationError(json);
+
+  static const schemaName = 'clinicaltools.EvaluationError';
+  final Map<String, dynamic> value;
+
+  String? get code => value['code']?.toString();
+
+  String? get message => value['message']?.toString();
+
+  String? get path => value['path']?.toString();
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
+final class ClinicaltoolsExpression {
+  ClinicaltoolsExpression(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory ClinicaltoolsExpression.fromJson(Map<String, dynamic> json) =>
+      ClinicaltoolsExpression(json);
+
+  static const schemaName = 'clinicaltools.Expression';
+  final Map<String, dynamic> value;
+
+  List<ClinicaltoolsExpression> get args {
+    final raw = value['args'];
+    if (raw is! List) return const [];
+    return raw
+        .whereType<Map>()
+        .map((item) => ClinicaltoolsExpression.fromJson(_jsonMap(item)))
+        .toList(growable: false);
+  }
+
+  String? get dateUnit => value['date_unit']?.toString();
+
+  String? get field => value['field']?.toString();
+
+  String? get fromUnit => value['from_unit']?.toString();
+
+  String? get op => value['op']?.toString();
+
+  int? get precision => (value['precision'] as num?)?.toInt();
+
+  String? get roundingMode => value['rounding_mode']?.toString();
+
+  String? get toUnit => value['to_unit']?.toString();
+
+  Map<String, dynamic> get valueField => _jsonMap(value['value']);
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
+final class ClinicaltoolsInput {
+  ClinicaltoolsInput(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory ClinicaltoolsInput.fromJson(Map<String, dynamic> json) =>
+      ClinicaltoolsInput(json);
+
+  static const schemaName = 'clinicaltools.Input';
+  final Map<String, dynamic> value;
+
+  String? get accessibilityLabel => value['accessibility_label']?.toString();
+
+  bool? get allowNote => value['allow_note'] as bool?;
+
+  List<String> get allowedUnits {
+    final raw = value['allowed_units'];
+    if (raw is! List) return const [];
+    return raw.whereType<String>().toList(growable: false);
+  }
+
+  String? get checklistKind => value['checklist_kind']?.toString();
+
+  String? get clinicalWarning => value['clinical_warning']?.toString();
+
+  bool? get critical => value['critical'] as bool?;
+
+  Map<String, dynamic> get defaultField => _jsonMap(value['default']);
+
+  String? get defaultUnit => value['default_unit']?.toString();
+
+  List<String> get dependsOn {
+    final raw = value['depends_on'];
+    if (raw is! List) return const [];
+    return raw.whereType<String>().toList(growable: false);
+  }
+
+  String? get description => value['description']?.toString();
+
+  List<String> get escalationMessageKeys {
+    final raw = value['escalation_message_keys'];
+    if (raw is! List) return const [];
+    return raw.whereType<String>().toList(growable: false);
+  }
+
+  String? get helpText => value['help_text']?.toString();
+
+  String? get key => value['key']?.toString();
+
+  String? get label => value['label']?.toString();
+
+  num? get maximum => value['maximum'] as num?;
+
+  num? get minimum => value['minimum'] as num?;
+
+  List<ClinicaltoolsOption> get options {
+    final raw = value['options'];
+    if (raw is! List) return const [];
+    return raw
+        .whereType<Map>()
+        .map((item) => ClinicaltoolsOption.fromJson(_jsonMap(item)))
+        .toList(growable: false);
+  }
+
+  bool? get requiredField => value['required'] as bool?;
+
+  String? get sectionKey => value['section_key']?.toString();
+
+  num? get step => value['step'] as num?;
+
+  ClinicaltoolsExpression? get stopWhen {
+    final raw = value['stop_when'];
+    if (raw is! Map) return null;
+    return ClinicaltoolsExpression.fromJson(_jsonMap(raw));
+  }
+
+  String? get type => value['type']?.toString();
+
+  ClinicaltoolsExpression? get visibleWhen {
+    final raw = value['visible_when'];
+    if (raw is! Map) return null;
+    return ClinicaltoolsExpression.fromJson(_jsonMap(raw));
+  }
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
+final class ClinicaltoolsInterpretation {
+  ClinicaltoolsInterpretation(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory ClinicaltoolsInterpretation.fromJson(Map<String, dynamic> json) =>
+      ClinicaltoolsInterpretation(json);
+
+  static const schemaName = 'clinicaltools.Interpretation';
+  final Map<String, dynamic> value;
+
+  String? get description => value['description']?.toString();
+
+  String? get key => value['key']?.toString();
+
+  String? get label => value['label']?.toString();
+
+  int? get order => (value['order'] as num?)?.toInt();
+
+  List<String> get recommendations {
+    final raw = value['recommendations'];
+    if (raw is! List) return const [];
+    return raw.whereType<String>().toList(growable: false);
+  }
+
+  String? get severity => value['severity']?.toString();
+
+  ClinicaltoolsExpression? get whenField {
+    final raw = value['when'];
+    if (raw is! Map) return null;
+    return ClinicaltoolsExpression.fromJson(_jsonMap(raw));
+  }
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
+final class ClinicaltoolsMessage {
+  ClinicaltoolsMessage(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory ClinicaltoolsMessage.fromJson(Map<String, dynamic> json) =>
+      ClinicaltoolsMessage(json);
+
+  static const schemaName = 'clinicaltools.Message';
+  final Map<String, dynamic> value;
+
+  String? get key => value['key']?.toString();
+
+  String? get severity => value['severity']?.toString();
+
+  String? get text => value['text']?.toString();
+
+  ClinicaltoolsExpression? get whenField {
+    final raw = value['when'];
+    if (raw is! Map) return null;
+    return ClinicaltoolsExpression.fromJson(_jsonMap(raw));
+  }
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
+final class ClinicaltoolsOption {
+  ClinicaltoolsOption(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory ClinicaltoolsOption.fromJson(Map<String, dynamic> json) =>
+      ClinicaltoolsOption(json);
+
+  static const schemaName = 'clinicaltools.Option';
+  final Map<String, dynamic> value;
+
+  String? get description => value['description']?.toString();
+
+  String? get label => value['label']?.toString();
+
+  num? get score => value['score'] as num?;
+
+  Map<String, dynamic> get valueField => _jsonMap(value['value']);
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
+final class ClinicaltoolsOutput {
+  ClinicaltoolsOutput(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory ClinicaltoolsOutput.fromJson(Map<String, dynamic> json) =>
+      ClinicaltoolsOutput(json);
+
+  static const schemaName = 'clinicaltools.Output';
+  final Map<String, dynamic> value;
+
+  String? get accessibilityLabel => value['accessibility_label']?.toString();
+
+  String? get key => value['key']?.toString();
+
+  String? get label => value['label']?.toString();
+
+  int? get precision => (value['precision'] as num?)?.toInt();
+
+  String? get roundingMode => value['rounding_mode']?.toString();
+
+  String? get unit => value['unit']?.toString();
+
+  ClinicaltoolsExpression? get valueField {
+    final raw = value['value'];
+    if (raw is! Map) return null;
+    return ClinicaltoolsExpression.fromJson(_jsonMap(raw));
+  }
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
+final class ClinicaltoolsRule {
+  ClinicaltoolsRule(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory ClinicaltoolsRule.fromJson(Map<String, dynamic> json) =>
+      ClinicaltoolsRule(json);
+
+  static const schemaName = 'clinicaltools.Rule';
+  final Map<String, dynamic> value;
+
+  List<ClinicaltoolsAction> get actions {
+    final raw = value['actions'];
+    if (raw is! List) return const [];
+    return raw
+        .whereType<Map>()
+        .map((item) => ClinicaltoolsAction.fromJson(_jsonMap(item)))
+        .toList(growable: false);
+  }
+
+  String? get key => value['key']?.toString();
+
+  int? get order => (value['order'] as num?)?.toInt();
+
+  bool? get stop => value['stop'] as bool?;
+
+  ClinicaltoolsExpression? get whenField {
+    final raw = value['when'];
+    if (raw is! Map) return null;
+    return ClinicaltoolsExpression.fromJson(_jsonMap(raw));
+  }
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
+final class ClinicaltoolsSection {
+  ClinicaltoolsSection(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory ClinicaltoolsSection.fromJson(Map<String, dynamic> json) =>
+      ClinicaltoolsSection(json);
+
+  static const schemaName = 'clinicaltools.Section';
+  final Map<String, dynamic> value;
+
+  String? get description => value['description']?.toString();
+
+  String? get key => value['key']?.toString();
+
+  int? get order => (value['order'] as num?)?.toInt();
+
+  bool? get reviewBeforeCompletion =>
+      value['review_before_completion'] as bool?;
+
+  String? get title => value['title']?.toString();
+
+  ClinicaltoolsExpression? get visibleWhen {
+    final raw = value['visible_when'];
+    if (raw is! Map) return null;
+    return ClinicaltoolsExpression.fromJson(_jsonMap(raw));
+  }
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
+final class ClinicaltoolsTestCase {
+  ClinicaltoolsTestCase(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory ClinicaltoolsTestCase.fromJson(Map<String, dynamic> json) =>
+      ClinicaltoolsTestCase(json);
+
+  static const schemaName = 'clinicaltools.TestCase';
+  final Map<String, dynamic> value;
+
+  String? get description => value['description']?.toString();
+
+  Map<String, dynamic> get expected => _jsonMap(value['expected']);
+
+  String? get fixedNow => value['fixed_now']?.toString();
+
+  Map<String, dynamic> get inputs => _jsonMap(value['inputs']);
+
+  String? get key => value['key']?.toString();
+
+  num? get numericTolerance => value['numeric_tolerance'] as num?;
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
+final class ClinicaltoolsTestCaseResult {
+  ClinicaltoolsTestCaseResult(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory ClinicaltoolsTestCaseResult.fromJson(Map<String, dynamic> json) =>
+      ClinicaltoolsTestCaseResult(json);
+
+  static const schemaName = 'clinicaltools.TestCaseResult';
+  final Map<String, dynamic> value;
+
+  Map<String, dynamic> get actual => _jsonMap(value['actual']);
+
+  List<ClinicaltoolsEvaluationError> get errors {
+    final raw = value['errors'];
+    if (raw is! List) return const [];
+    return raw
+        .whereType<Map>()
+        .map((item) => ClinicaltoolsEvaluationError.fromJson(_jsonMap(item)))
+        .toList(growable: false);
+  }
+
+  Map<String, dynamic> get expected => _jsonMap(value['expected']);
+
+  String? get key => value['key']?.toString();
+
+  bool? get passed => value['passed'] as bool?;
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
+final class ClinicaltoolsTestReport {
+  ClinicaltoolsTestReport(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory ClinicaltoolsTestReport.fromJson(Map<String, dynamic> json) =>
+      ClinicaltoolsTestReport(json);
+
+  static const schemaName = 'clinicaltools.TestReport';
+  final Map<String, dynamic> value;
+
+  List<ClinicaltoolsTestCaseResult> get cases {
+    final raw = value['cases'];
+    if (raw is! List) return const [];
+    return raw
+        .whereType<Map>()
+        .map((item) => ClinicaltoolsTestCaseResult.fromJson(_jsonMap(item)))
+        .toList(growable: false);
+  }
+
+  bool? get passed => value['passed'] as bool?;
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
+final class ClinicaltoolsValidationError {
+  ClinicaltoolsValidationError(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory ClinicaltoolsValidationError.fromJson(Map<String, dynamic> json) =>
+      ClinicaltoolsValidationError(json);
+
+  static const schemaName = 'clinicaltools.ValidationError';
+  final Map<String, dynamic> value;
+
+  String? get code => value['code']?.toString();
+
+  String? get message => value['message']?.toString();
+
+  String? get path => value['path']?.toString();
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
 final class HandlersAbbreviationEnvelope {
   HandlersAbbreviationEnvelope(Map<String, dynamic> value)
     : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
@@ -52,6 +709,28 @@ final class HandlersAskEnvelope {
   Map<String, dynamic> toJson() => Map.of(value);
 }
 
+final class HandlersCalculatorDefinitionEnvelope {
+  HandlersCalculatorDefinitionEnvelope(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory HandlersCalculatorDefinitionEnvelope.fromJson(
+    Map<String, dynamic> json,
+  ) => HandlersCalculatorDefinitionEnvelope(json);
+
+  static const schemaName = 'handlers.CalculatorDefinitionEnvelope';
+  final Map<String, dynamic> value;
+
+  ServicesCalculatorDefinitionDTO? get data {
+    final raw = value['data'];
+    if (raw is! Map) return null;
+    return ServicesCalculatorDefinitionDTO.fromJson(_jsonMap(raw));
+  }
+
+  bool? get success => value['success'] as bool?;
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
 final class HandlersCalculatorEnvelope {
   HandlersCalculatorEnvelope(Map<String, dynamic> value)
     : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
@@ -87,6 +766,140 @@ final class HandlersCalculatorUsageEnvelope {
     final raw = value['data'];
     if (raw is! Map) return null;
     return ModelsCalculatorUsageLog.fromJson(_jsonMap(raw));
+  }
+
+  bool? get success => value['success'] as bool?;
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
+final class HandlersCalculatorVersionAuditEnvelope {
+  HandlersCalculatorVersionAuditEnvelope(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory HandlersCalculatorVersionAuditEnvelope.fromJson(
+    Map<String, dynamic> json,
+  ) => HandlersCalculatorVersionAuditEnvelope(json);
+
+  static const schemaName = 'handlers.CalculatorVersionAuditEnvelope';
+  final Map<String, dynamic> value;
+
+  List<ServicesCalculatorVersionAuditDTO> get data {
+    final raw = value['data'];
+    if (raw is! List) return const [];
+    return raw
+        .whereType<Map>()
+        .map(
+          (item) => ServicesCalculatorVersionAuditDTO.fromJson(_jsonMap(item)),
+        )
+        .toList(growable: false);
+  }
+
+  bool? get success => value['success'] as bool?;
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
+final class HandlersCalculatorVersionEnvelope {
+  HandlersCalculatorVersionEnvelope(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory HandlersCalculatorVersionEnvelope.fromJson(
+    Map<String, dynamic> json,
+  ) => HandlersCalculatorVersionEnvelope(json);
+
+  static const schemaName = 'handlers.CalculatorVersionEnvelope';
+  final Map<String, dynamic> value;
+
+  ServicesCalculatorVersionDTO? get data {
+    final raw = value['data'];
+    if (raw is! Map) return null;
+    return ServicesCalculatorVersionDTO.fromJson(_jsonMap(raw));
+  }
+
+  bool? get success => value['success'] as bool?;
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
+final class HandlersCalculatorVersionLockRequest {
+  HandlersCalculatorVersionLockRequest(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory HandlersCalculatorVersionLockRequest.fromJson(
+    Map<String, dynamic> json,
+  ) => HandlersCalculatorVersionLockRequest(json);
+
+  static const schemaName = 'handlers.CalculatorVersionLockRequest';
+  final Map<String, dynamic> value;
+
+  int? get lockVersion => (value['lock_version'] as num?)?.toInt();
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
+final class HandlersCalculatorVersionTestEnvelope {
+  HandlersCalculatorVersionTestEnvelope(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory HandlersCalculatorVersionTestEnvelope.fromJson(
+    Map<String, dynamic> json,
+  ) => HandlersCalculatorVersionTestEnvelope(json);
+
+  static const schemaName = 'handlers.CalculatorVersionTestEnvelope';
+  final Map<String, dynamic> value;
+
+  ServicesCalculatorVersionTestDTO? get data {
+    final raw = value['data'];
+    if (raw is! Map) return null;
+    return ServicesCalculatorVersionTestDTO.fromJson(_jsonMap(raw));
+  }
+
+  bool? get success => value['success'] as bool?;
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
+final class HandlersCalculatorVersionValidationEnvelope {
+  HandlersCalculatorVersionValidationEnvelope(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory HandlersCalculatorVersionValidationEnvelope.fromJson(
+    Map<String, dynamic> json,
+  ) => HandlersCalculatorVersionValidationEnvelope(json);
+
+  static const schemaName = 'handlers.CalculatorVersionValidationEnvelope';
+  final Map<String, dynamic> value;
+
+  ServicesCalculatorVersionValidationDTO? get data {
+    final raw = value['data'];
+    if (raw is! Map) return null;
+    return ServicesCalculatorVersionValidationDTO.fromJson(_jsonMap(raw));
+  }
+
+  bool? get success => value['success'] as bool?;
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
+final class HandlersCalculatorVersionsEnvelope {
+  HandlersCalculatorVersionsEnvelope(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory HandlersCalculatorVersionsEnvelope.fromJson(
+    Map<String, dynamic> json,
+  ) => HandlersCalculatorVersionsEnvelope(json);
+
+  static const schemaName = 'handlers.CalculatorVersionsEnvelope';
+  final Map<String, dynamic> value;
+
+  List<ServicesCalculatorVersionDTO> get data {
+    final raw = value['data'];
+    if (raw is! List) return const [];
+    return raw
+        .whereType<Map>()
+        .map((item) => ServicesCalculatorVersionDTO.fromJson(_jsonMap(item)))
+        .toList(growable: false);
   }
 
   bool? get success => value['success'] as bool?;
@@ -4444,6 +5257,8 @@ final class ModelsCalculator {
 
   String? get createdAt => value['created_at']?.toString();
 
+  String? get currentVersionId => value['current_version_id']?.toString();
+
   String? get description => value['description']?.toString();
 
   bool? get featured => value['featured'] as bool?;
@@ -4453,6 +5268,8 @@ final class ModelsCalculator {
   String? get id => value['id']?.toString();
 
   String? get name => value['name']?.toString();
+
+  String? get runtimeTypeField => value['runtime_type']?.toString();
 
   String? get status => value['status']?.toString();
 
@@ -4480,6 +5297,8 @@ final class ModelsCalculatorUsageLog {
   String? get calculatorId => value['calculator_id']?.toString();
 
   String? get calculatorType => value['calculator_type']?.toString();
+
+  String? get calculatorVersionId => value['calculator_version_id']?.toString();
 
   String? get createdAt => value['created_at']?.toString();
 
@@ -6654,6 +7473,193 @@ final class ServicesAssignGuidelineReviewerInput {
   Map<String, dynamic> toJson() => Map.of(value);
 }
 
+final class ServicesCalculatorDefinitionDTO {
+  ServicesCalculatorDefinitionDTO(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory ServicesCalculatorDefinitionDTO.fromJson(Map<String, dynamic> json) =>
+      ServicesCalculatorDefinitionDTO(json);
+
+  static const schemaName = 'services.CalculatorDefinitionDTO';
+  final Map<String, dynamic> value;
+
+  String? get calculatorId => value['calculator_id']?.toString();
+
+  ClinicaltoolsDefinition? get definition {
+    final raw = value['definition'];
+    if (raw is! Map) return null;
+    return ClinicaltoolsDefinition.fromJson(_jsonMap(raw));
+  }
+
+  String? get definitionChecksum => value['definition_checksum']?.toString();
+
+  String? get runtimeTypeField => value['runtime_type']?.toString();
+
+  String? get semanticVersion => value['semantic_version']?.toString();
+
+  String? get versionId => value['version_id']?.toString();
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
+final class ServicesCalculatorVersionAuditDTO {
+  ServicesCalculatorVersionAuditDTO(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory ServicesCalculatorVersionAuditDTO.fromJson(
+    Map<String, dynamic> json,
+  ) => ServicesCalculatorVersionAuditDTO(json);
+
+  static const schemaName = 'services.CalculatorVersionAuditDTO';
+  final Map<String, dynamic> value;
+
+  String? get action => value['action']?.toString();
+
+  String? get actorId => value['actor_id']?.toString();
+
+  String? get calculatorId => value['calculator_id']?.toString();
+
+  String? get calculatorVersionId => value['calculator_version_id']?.toString();
+
+  String? get createdAt => value['created_at']?.toString();
+
+  String? get fromStatus => value['from_status']?.toString();
+
+  String? get id => value['id']?.toString();
+
+  Map<String, dynamic> get metadata => _jsonMap(value['metadata']);
+
+  String? get toStatus => value['to_status']?.toString();
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
+final class ServicesCalculatorVersionDTO {
+  ServicesCalculatorVersionDTO(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory ServicesCalculatorVersionDTO.fromJson(Map<String, dynamic> json) =>
+      ServicesCalculatorVersionDTO(json);
+
+  static const schemaName = 'services.CalculatorVersionDTO';
+  final Map<String, dynamic> value;
+
+  String? get approvedAt => value['approved_at']?.toString();
+
+  String? get approvedBy => value['approved_by']?.toString();
+
+  String? get calculatorId => value['calculator_id']?.toString();
+
+  String? get changeSummary => value['change_summary']?.toString();
+
+  String? get createdAt => value['created_at']?.toString();
+
+  String? get createdBy => value['created_by']?.toString();
+
+  ClinicaltoolsDefinition? get definition {
+    final raw = value['definition'];
+    if (raw is! Map) return null;
+    return ClinicaltoolsDefinition.fromJson(_jsonMap(raw));
+  }
+
+  String? get definitionChecksum => value['definition_checksum']?.toString();
+
+  String? get effectiveAt => value['effective_at']?.toString();
+
+  String? get id => value['id']?.toString();
+
+  int? get lockVersion => (value['lock_version'] as num?)?.toInt();
+
+  String? get publishedAt => value['published_at']?.toString();
+
+  String? get publishedBy => value['published_by']?.toString();
+
+  String? get reviewAt => value['review_at']?.toString();
+
+  String? get reviewedAt => value['reviewed_at']?.toString();
+
+  String? get reviewedBy => value['reviewed_by']?.toString();
+
+  String? get schemaVersion => value['schema_version']?.toString();
+
+  String? get semanticVersion => value['semantic_version']?.toString();
+
+  String? get status => value['status']?.toString();
+
+  bool? get testsPassed => value['tests_passed'] as bool?;
+
+  String? get updatedAt => value['updated_at']?.toString();
+
+  bool? get validationPassed => value['validation_passed'] as bool?;
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
+final class ServicesCalculatorVersionReviewCommentInput {
+  ServicesCalculatorVersionReviewCommentInput(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory ServicesCalculatorVersionReviewCommentInput.fromJson(
+    Map<String, dynamic> json,
+  ) => ServicesCalculatorVersionReviewCommentInput(json);
+
+  static const schemaName = 'services.CalculatorVersionReviewCommentInput';
+  final Map<String, dynamic> value;
+
+  String? get comment => value['comment']?.toString();
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
+final class ServicesCalculatorVersionTestDTO {
+  ServicesCalculatorVersionTestDTO(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory ServicesCalculatorVersionTestDTO.fromJson(
+    Map<String, dynamic> json,
+  ) => ServicesCalculatorVersionTestDTO(json);
+
+  static const schemaName = 'services.CalculatorVersionTestDTO';
+  final Map<String, dynamic> value;
+
+  int? get lockVersion => (value['lock_version'] as num?)?.toInt();
+
+  ClinicaltoolsTestReport? get report {
+    final raw = value['report'];
+    if (raw is! Map) return null;
+    return ClinicaltoolsTestReport.fromJson(_jsonMap(raw));
+  }
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
+final class ServicesCalculatorVersionValidationDTO {
+  ServicesCalculatorVersionValidationDTO(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory ServicesCalculatorVersionValidationDTO.fromJson(
+    Map<String, dynamic> json,
+  ) => ServicesCalculatorVersionValidationDTO(json);
+
+  static const schemaName = 'services.CalculatorVersionValidationDTO';
+  final Map<String, dynamic> value;
+
+  List<ClinicaltoolsValidationError> get errors {
+    final raw = value['errors'];
+    if (raw is! List) return const [];
+    return raw
+        .whereType<Map>()
+        .map((item) => ClinicaltoolsValidationError.fromJson(_jsonMap(item)))
+        .toList(growable: false);
+  }
+
+  int? get lockVersion => (value['lock_version'] as num?)?.toInt();
+
+  bool? get valid => value['valid'] as bool?;
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
 final class ServicesChildContentInput {
   ServicesChildContentInput(Map<String, dynamic> value)
     : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
@@ -7047,6 +8053,24 @@ final class ServicesCreateCalculatorInput {
   Map<String, dynamic> toJson() => Map.of(value);
 }
 
+final class ServicesCreateCalculatorVersionInput {
+  ServicesCreateCalculatorVersionInput(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory ServicesCreateCalculatorVersionInput.fromJson(
+    Map<String, dynamic> json,
+  ) => ServicesCreateCalculatorVersionInput(json);
+
+  static const schemaName = 'services.CreateCalculatorVersionInput';
+  final Map<String, dynamic> value;
+
+  String? get changeSummary => value['change_summary']?.toString();
+
+  Map<String, dynamic> get definition => _jsonMap(value['definition']);
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
 final class ServicesCreateGuidelineBlockInput {
   ServicesCreateGuidelineBlockInput(Map<String, dynamic> value)
     : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
@@ -7406,6 +8430,24 @@ final class ServicesDrugTagInput {
   String? get status => value['status']?.toString();
 
   String? get tagCategory => value['tag_category']?.toString();
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
+final class ServicesDuplicateCalculatorVersionInput {
+  ServicesDuplicateCalculatorVersionInput(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory ServicesDuplicateCalculatorVersionInput.fromJson(
+    Map<String, dynamic> json,
+  ) => ServicesDuplicateCalculatorVersionInput(json);
+
+  static const schemaName = 'services.DuplicateCalculatorVersionInput';
+  final Map<String, dynamic> value;
+
+  String? get changeSummary => value['change_summary']?.toString();
+
+  String? get semanticVersion => value['semantic_version']?.toString();
 
   Map<String, dynamic> toJson() => Map.of(value);
 }
@@ -12451,6 +13493,26 @@ final class ServicesUpdateCalculatorInput {
   String? get type => value['type']?.toString();
 
   String? get version => value['version']?.toString();
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
+final class ServicesUpdateCalculatorVersionInput {
+  ServicesUpdateCalculatorVersionInput(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory ServicesUpdateCalculatorVersionInput.fromJson(
+    Map<String, dynamic> json,
+  ) => ServicesUpdateCalculatorVersionInput(json);
+
+  static const schemaName = 'services.UpdateCalculatorVersionInput';
+  final Map<String, dynamic> value;
+
+  String? get changeSummary => value['change_summary']?.toString();
+
+  Map<String, dynamic> get definition => _jsonMap(value['definition']);
+
+  int? get lockVersion => (value['lock_version'] as num?)?.toInt();
 
   Map<String, dynamic> toJson() => Map.of(value);
 }

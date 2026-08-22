@@ -20,7 +20,7 @@ mkdir -p "${TEMP_DIR}/docs" "${TEMP_DIR}/dashboard" "${TEMP_DIR}/mobile"
   cd "${REPOSITORY_ROOT}/backend"
   go run github.com/swaggo/swag/cmd/swag@v1.16.6 init \
     -g main.go \
-    -d cmd/api,internal/handlers,internal/httpx,internal/models,internal/services \
+    -d cmd/api,internal/handlers,internal/httpx,internal/models,internal/services,internal/clinicaltools \
     -o "${TEMP_DIR}/docs" \
     --outputTypes go,json,yaml \
     --generatedTime=false \

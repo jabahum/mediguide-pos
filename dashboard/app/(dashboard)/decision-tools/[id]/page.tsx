@@ -46,11 +46,13 @@ export default function DecisionToolViewPage({ params }: DecisionToolViewPagePro
     }
   }
 
-  const { record: tool, loading, error } = useDomainRecord<DecisionToolWithRelations>("calculators", id, calculatorService.get)
+  const { record: tool, loading } = useDomainRecord<DecisionToolWithRelations>("calculators", id, calculatorService.get)
 
   const handleEdit = () => {
     router.push(`/decision-tools/${id}/edit`)
   }
+
+  const handleAuthor = () => router.push(`/decision-tools/${id}/author`)
 
   const handleDuplicate = () => {
     router.push(`/decision-tools/create?duplicate=${id}`)
@@ -143,6 +145,10 @@ export default function DecisionToolViewPage({ params }: DecisionToolViewPagePro
             label: "Edit",
             onClick: handleEdit,
             icon: <Edit className="h-4 w-4" />
+          }, {
+            label: "Author definition",
+            onClick: handleAuthor,
+            icon: <Settings className="h-4 w-4" />
           }] : []),
           {
             label: "Duplicate",

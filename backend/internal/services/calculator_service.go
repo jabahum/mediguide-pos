@@ -22,6 +22,7 @@ var (
 	ErrCalculatorInvalidPayload  = errors.New("invalid calculator payload")
 	ErrCalculatorArtifactMissing = errors.New("calculator artifact is missing")
 	ErrCalculatorArtifactUnsafe  = errors.New("calculator artifact path is unsafe")
+	ErrCalculatorLegacyOnly      = errors.New("HTML content is unavailable for native schema tools")
 	ErrCalculatorUsageForbidden  = errors.New("calculator usage session is not owned by the user")
 )
 
@@ -227,6 +228,9 @@ func (s CalculatorService) Artifact(id uuid.UUID) (*CalculatorArtifact, error) {
 	calculator, err := s.Get(id)
 	if err != nil {
 		return nil, err
+	}
+	if calculator.RuntimeType != "legacy_html" {
+		return nil, ErrCalculatorLegacyOnly
 	}
 	return resolveCalculatorArtifact(calculator.AppFileJSON, s.StaticSamplesDir)
 }

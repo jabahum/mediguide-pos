@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:user_app/features/calculators/data/repositories/calculator_repository.dart';
 import 'package:user_app/core/network/api_client.dart';
@@ -7,6 +9,7 @@ import 'helpers/test_local_store.dart';
 class FakeCalculatorApi extends BackendApiService {
   String? path;
   Map<String, String>? query;
+  bool offline = false;
 
   @override
   Future<Map<String, dynamic>> requestJson(
@@ -18,6 +21,33 @@ class FakeCalculatorApi extends BackendApiService {
   }) async {
     this.path = path;
     this.query = query;
+    if (offline) throw const SocketException('offline');
+    if (path.endsWith('/definition')) {
+      return {
+        'data': {
+          'calculator_id': 'calculator-1',
+          'version_id': 'version-1',
+          'runtime_type': 'schema_v1',
+          'semantic_version': '1.0.0',
+          'definition_checksum': 'server-checksum',
+          'definition': {
+            'schema_version': '1.0',
+            'tool_type': 'calculator',
+            'title': 'BMI',
+            'version': '1.0.0',
+            'locale': 'en',
+            'inputs': [],
+            'sections': [],
+            'calculation': [],
+            'rules': [],
+            'outputs': [],
+            'interpretations': [],
+            'completion': {'mode': 'none', 'reset_confirmation': true},
+            'test_cases': [],
+          },
+        },
+      };
+    }
     return {
       'items': [
         {
@@ -61,4 +91,23 @@ void main() {
     expect(api.query?.containsKey('filter'), isFalse);
     expect(result.items.single.id, 'calculator-1');
   });
+
+  test(
+    'published native definition remains available offline with checksum metadata',
+    () async {
+      final api = FakeCalculatorApi();
+      final store = TestLocalStore();
+      addTearDown(store.close);
+      final repository = CalculatorRepository(
+        api,
+        CalculatorLocalRepository(store.cache),
+      );
+      final online = await repository.definition('calculator-1');
+      expect(online.definitionChecksum, 'server-checksum');
+      api.offline = true;
+      final offline = await repository.definition('calculator-1');
+      expect(offline.versionId, 'version-1');
+      expect(offline.definition.title, 'BMI');
+    },
+  );
 }

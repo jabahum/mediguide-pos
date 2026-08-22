@@ -9,6 +9,7 @@ import 'package:user_app/core/widgets/app_error_view.dart';
 import 'package:user_app/core/widgets/app_loading_view.dart';
 
 import 'package:user_app/features/calculators/presentation/controllers/use_calculator_controller.dart';
+import 'package:user_app/features/calculators/presentation/widgets/native_clinical_tool.dart';
 import 'package:user_app/shared/models/models.dart';
 
 class UseCalculatorPage extends ConsumerStatefulWidget {
@@ -145,6 +146,20 @@ class _UseCalculatorPageState extends ConsumerState<UseCalculatorPage> {
         // Calculator content
         // ----------------------------------------------------
         data: (state) {
+          if (state.definition != null) {
+            return Column(
+              children: [
+                _CalculatorContextBar(calculator: state.calculator),
+                Expanded(
+                  child: NativeClinicalTool(
+                    definition: state.definition!.definition,
+                    initialValues: state.responses,
+                    onChanged: controller.saveResponses,
+                  ),
+                ),
+              ],
+            );
+          }
           if (state.webViewError != null) {
             return AppErrorView(
               error: state.webViewError!,

@@ -56,13 +56,208 @@ type CalculatorVersionDTO struct {
 }
 
 type CreateCalculatorVersionInput struct {
-	Definition    json.RawMessage `json:"definition"`
+	Definition    json.RawMessage `json:"definition" swaggertype:"object"`
 	ChangeSummary string          `json:"change_summary"`
 }
 type UpdateCalculatorVersionInput struct {
-	Definition    json.RawMessage `json:"definition"`
+	Definition    json.RawMessage `json:"definition" swaggertype:"object"`
 	ChangeSummary string          `json:"change_summary"`
 	LockVersion   int             `json:"lock_version"`
+}
+
+type DuplicateCalculatorVersionInput struct {
+	SemanticVersion string `json:"semantic_version" binding:"required"`
+	ChangeSummary   string `json:"change_summary"`
+}
+
+type CalculatorVersionReviewCommentInput struct {
+	Comment string `json:"comment" binding:"required,max=4000"`
+}
+
+type CalculatorDefinitionDTO struct {
+	CalculatorID       uuid.UUID                `json:"calculator_id"`
+	VersionID          uuid.UUID                `json:"version_id"`
+	RuntimeType        string                   `json:"runtime_type"`
+	SemanticVersion    string                   `json:"semantic_version"`
+	DefinitionChecksum string                   `json:"definition_checksum"`
+	Definition         clinicaltools.Definition `json:"definition"`
+}
+
+type CalculatorVersionValidationDTO struct {
+	Valid       bool                            `json:"valid"`
+	Errors      []clinicaltools.ValidationError `json:"errors"`
+	LockVersion int                             `json:"lock_version"`
+}
+
+type CalculatorVersionTestDTO struct {
+	Report      clinicaltools.TestReport `json:"report"`
+	LockVersion int                      `json:"lock_version"`
+}
+
+type CalculatorVersionAuditDTO struct {
+	ID                  uuid.UUID      `json:"id"`
+	CalculatorID        uuid.UUID      `json:"calculator_id"`
+	CalculatorVersionID *uuid.UUID     `json:"calculator_version_id,omitempty"`
+	ActorID             *uuid.UUID     `json:"actor_id,omitempty"`
+	Action              string         `json:"action"`
+	FromStatus          *string        `json:"from_status,omitempty"`
+	ToStatus            *string        `json:"to_status,omitempty"`
+	Metadata            map[string]any `json:"metadata"`
+	CreatedAt           time.Time      `json:"created_at"`
+}
+
+func (s CalculatorVersionService) Definition(calculatorID uuid.UUID) (*CalculatorDefinitionDTO, error) {
+	var tool models.Calculator
+	if err := s.DB.First(&tool, "id = ?", calculatorID).Error; err != nil {
+		return nil, err
+	}
+	if tool.RuntimeType != "schema_v1" || tool.CurrentVersionID == nil {
+		return nil, ErrCalculatorVersionInvalidState
+	}
+	var version models.CalculatorVersion
+	if err := s.DB.First(&version, "id = ? AND calculator_id = ? AND status = 'published'", *tool.CurrentVersionID, tool.ID).Error; err != nil {
+		return nil, err
+	}
+	definition, validation := clinicaltools.ParseAndValidate(version.DefinitionJSON)
+	if !validation.Valid {
+		return nil, ErrCalculatorVersionValidation
+	}
+	return &CalculatorDefinitionDTO{CalculatorID: tool.ID, VersionID: version.ID, RuntimeType: tool.RuntimeType, SemanticVersion: version.SemanticVersion, DefinitionChecksum: version.DefinitionChecksum, Definition: *definition}, nil
+}
+
+func (s CalculatorVersionService) List(calculatorID uuid.UUID) ([]CalculatorVersionDTO, error) {
+	var rows []models.CalculatorVersion
+	if err := s.DB.Where("calculator_id = ?", calculatorID).Order("created_at DESC, id DESC").Find(&rows).Error; err != nil {
+		return nil, err
+	}
+	items := make([]CalculatorVersionDTO, 0, len(rows))
+	for _, row := range rows {
+		item, err := calculatorVersionDTO(row)
+		if err != nil {
+			return nil, err
+		}
+		items = append(items, *item)
+	}
+	return items, nil
+}
+
+func (s CalculatorVersionService) Get(versionID uuid.UUID) (*CalculatorVersionDTO, error) {
+	var row models.CalculatorVersion
+	if err := s.DB.First(&row, "id = ?", versionID).Error; err != nil {
+		return nil, err
+	}
+	return calculatorVersionDTO(row)
+}
+
+func (s CalculatorVersionService) Duplicate(versionID, actorID uuid.UUID, in DuplicateCalculatorVersionInput) (*CalculatorVersionDTO, clinicaltools.ValidationResult, error) {
+	var source models.CalculatorVersion
+	if err := s.DB.First(&source, "id = ?", versionID).Error; err != nil {
+		return nil, clinicaltools.ValidationResult{}, err
+	}
+	definition, validation := clinicaltools.ParseAndValidate(source.DefinitionJSON)
+	if !validation.Valid {
+		return nil, validation, ErrCalculatorVersionValidation
+	}
+	definition.Version = strings.TrimSpace(in.SemanticVersion)
+	raw, err := json.Marshal(definition)
+	if err != nil {
+		return nil, validation, err
+	}
+	return s.CreateDraft(source.CalculatorID, actorID, CreateCalculatorVersionInput{Definition: raw, ChangeSummary: in.ChangeSummary})
+}
+
+func (s CalculatorVersionService) ValidateVersion(versionID, actorID uuid.UUID, lockVersion int) (*CalculatorVersionValidationDTO, error) {
+	var response CalculatorVersionValidationDTO
+	err := s.DB.Transaction(func(tx *gorm.DB) error {
+		var row models.CalculatorVersion
+		if err := tx.First(&row, "id = ?", versionID).Error; err != nil {
+			return err
+		}
+		if row.Status != "draft" {
+			return ErrCalculatorVersionImmutable
+		}
+		_, validation := clinicaltools.ParseAndValidate(row.DefinitionJSON)
+		result := tx.Model(&models.CalculatorVersion{}).Where("id = ? AND status = 'draft' AND lock_version = ?", row.ID, lockVersion).Updates(map[string]any{"validation_passed": validation.Valid, "tests_passed": false, "lock_version": gorm.Expr("lock_version + 1"), "updated_at": s.now()})
+		if result.Error != nil {
+			return result.Error
+		}
+		if result.RowsAffected == 0 {
+			return ErrCalculatorVersionConflict
+		}
+		if err := writeCalculatorVersionAudit(tx, row.CalculatorID, &row.ID, actorID, "calculator.version.validated", calculatorStringPointer("draft"), calculatorStringPointer("draft"), map[string]any{"valid": validation.Valid, "error_count": len(validation.Errors)}); err != nil {
+			return err
+		}
+		response = CalculatorVersionValidationDTO{Valid: validation.Valid, Errors: validation.Errors, LockVersion: lockVersion + 1}
+		return nil
+	})
+	return &response, err
+}
+
+func (s CalculatorVersionService) RunTests(versionID, actorID uuid.UUID, lockVersion int) (*CalculatorVersionTestDTO, error) {
+	var response CalculatorVersionTestDTO
+	err := s.DB.Transaction(func(tx *gorm.DB) error {
+		var row models.CalculatorVersion
+		if err := tx.First(&row, "id = ?", versionID).Error; err != nil {
+			return err
+		}
+		if row.Status != "draft" {
+			return ErrCalculatorVersionImmutable
+		}
+		definition, validation := clinicaltools.ParseAndValidate(row.DefinitionJSON)
+		if !validation.Valid {
+			return ErrCalculatorVersionValidation
+		}
+		report := clinicaltools.ExecuteTestCases(definition)
+		if err := persistCalculatorTestReport(tx, row.ID, report, s.now()); err != nil {
+			return err
+		}
+		result := tx.Model(&models.CalculatorVersion{}).
+			Where("id = ? AND status = 'draft' AND lock_version = ?", row.ID, lockVersion).
+			Updates(map[string]any{"validation_passed": true, "tests_passed": report.Passed, "lock_version": gorm.Expr("lock_version + 1"), "updated_at": s.now()})
+		if result.Error != nil {
+			return result.Error
+		}
+		if result.RowsAffected == 0 {
+			return ErrCalculatorVersionConflict
+		}
+		if err := writeCalculatorVersionAudit(tx, row.CalculatorID, &row.ID, actorID, "calculator.version.tests_run", calculatorStringPointer("draft"), calculatorStringPointer("draft"), map[string]any{"passed": report.Passed, "case_count": len(report.Cases)}); err != nil {
+			return err
+		}
+		response = CalculatorVersionTestDTO{Report: report, LockVersion: lockVersion + 1}
+		return nil
+	})
+	return &response, err
+}
+
+func (s CalculatorVersionService) Audit(versionID uuid.UUID) ([]CalculatorVersionAuditDTO, error) {
+	var rows []models.CalculatorVersionAudit
+	if err := s.DB.Where("calculator_version_id = ?", versionID).Order("created_at ASC, id ASC").Find(&rows).Error; err != nil {
+		return nil, err
+	}
+	items := make([]CalculatorVersionAuditDTO, 0, len(rows))
+	for _, row := range rows {
+		metadata := map[string]any{}
+		_ = json.Unmarshal(row.MetadataJSON, &metadata)
+		items = append(items, CalculatorVersionAuditDTO{ID: row.ID, CalculatorID: row.CalculatorID, CalculatorVersionID: row.CalculatorVersionID, ActorID: row.ActorID, Action: row.Action, FromStatus: row.FromStatus, ToStatus: row.ToStatus, Metadata: metadata, CreatedAt: row.CreatedAt})
+	}
+	return items, nil
+}
+
+func (s CalculatorVersionService) AddReviewComment(versionID, actorID uuid.UUID, input CalculatorVersionReviewCommentInput) error {
+	comment := strings.TrimSpace(input.Comment)
+	if comment == "" || len(comment) > 4000 {
+		return ErrCalculatorVersionValidation
+	}
+	return s.DB.Transaction(func(tx *gorm.DB) error {
+		var row models.CalculatorVersion
+		if err := tx.First(&row, "id = ?", versionID).Error; err != nil {
+			return err
+		}
+		if row.Status == "withdrawn" {
+			return ErrCalculatorVersionInvalidState
+		}
+		return writeCalculatorVersionAudit(tx, row.CalculatorID, &row.ID, actorID, "calculator.version.review_commented", calculatorStringPointer(row.Status), calculatorStringPointer(row.Status), map[string]any{"comment": comment})
+	})
 }
 
 func (s CalculatorVersionService) CreateDraft(calculatorID, actorID uuid.UUID, in CreateCalculatorVersionInput) (*CalculatorVersionDTO, clinicaltools.ValidationResult, error) {
@@ -135,34 +330,6 @@ func (s CalculatorVersionService) UpdateDraft(versionID, actorID uuid.UUID, in U
 	return dto, validation, err
 }
 
-func (s CalculatorVersionService) RecordChecks(versionID, actorID uuid.UUID, validationPassed, testsPassed bool, lockVersion int) (*CalculatorVersionDTO, error) {
-	var updated models.CalculatorVersion
-	err := s.DB.Transaction(func(tx *gorm.DB) error {
-		var current models.CalculatorVersion
-		if err := tx.First(&current, "id = ?", versionID).Error; err != nil {
-			return err
-		}
-		if current.Status != "draft" {
-			return ErrCalculatorVersionImmutable
-		}
-		result := tx.Model(&models.CalculatorVersion{}).Where("id = ? AND lock_version = ?", versionID, lockVersion).Updates(map[string]any{"validation_passed": validationPassed, "tests_passed": testsPassed, "lock_version": gorm.Expr("lock_version + 1"), "updated_at": s.now()})
-		if result.Error != nil {
-			return result.Error
-		}
-		if result.RowsAffected == 0 {
-			return ErrCalculatorVersionConflict
-		}
-		if err := writeCalculatorVersionAudit(tx, current.CalculatorID, &current.ID, actorID, "calculator.version.checks_recorded", calculatorStringPointer(current.Status), calculatorStringPointer(current.Status), map[string]any{"validation_passed": validationPassed, "tests_passed": testsPassed}); err != nil {
-			return err
-		}
-		return tx.First(&updated, "id = ?", versionID).Error
-	})
-	if err != nil {
-		return nil, err
-	}
-	return calculatorVersionDTO(updated)
-}
-
 func (s CalculatorVersionService) Submit(versionID, actorID uuid.UUID, lockVersion int) (*CalculatorVersionDTO, error) {
 	return s.transition(versionID, actorID, lockVersion, "draft", "pending_review", "calculator.version.submitted", nil)
 }
@@ -170,6 +337,16 @@ func (s CalculatorVersionService) Approve(versionID, actorID uuid.UUID, lockVers
 	var row models.CalculatorVersion
 	if err := s.DB.First(&row, "id = ?", versionID).Error; err != nil {
 		return nil, err
+	}
+	definition, validation := clinicaltools.ParseAndValidate(row.DefinitionJSON)
+	if !validation.Valid {
+		return nil, ErrCalculatorVersionValidation
+	}
+	if report := clinicaltools.ExecuteTestCases(definition); !report.Passed {
+		return nil, ErrCalculatorVersionTestsFailed
+	}
+	if !row.ValidationPassed || !row.TestsPassed {
+		return nil, ErrCalculatorVersionTestsFailed
 	}
 	if row.CreatedBy != nil && *row.CreatedBy == actorID {
 		var tool models.Calculator
@@ -200,7 +377,18 @@ func (s CalculatorVersionService) Publish(versionID, actorID uuid.UUID, lockVers
 		if !row.TestsPassed {
 			return ErrCalculatorVersionTestsFailed
 		}
+		definition, validation := clinicaltools.ParseAndValidate(row.DefinitionJSON)
+		if !validation.Valid {
+			return ErrCalculatorVersionValidation
+		}
+		testReport := clinicaltools.ExecuteTestCases(definition)
+		if !testReport.Passed {
+			return ErrCalculatorVersionTestsFailed
+		}
 		now := s.now()
+		if err := persistCalculatorTestReport(tx, row.ID, testReport, now); err != nil {
+			return err
+		}
 		if err := supersedeCurrentCalculatorVersion(tx, row.CalculatorID, actorID, now); err != nil {
 			return err
 		}
@@ -397,6 +585,25 @@ func replaceCalculatorVersionChildren(tx *gorm.DB, row *models.CalculatorVersion
 		child := models.CalculatorCitation{CalculatorVersionID: row.ID, CitationKey: citation.Key, Title: citation.Title, Organization: citation.Organization, URL: citation.URL, PublishedAt: published, AccessedAt: accessed, SortOrder: index}
 		if err := tx.Create(&child).Error; err != nil {
 			return err
+		}
+	}
+	return nil
+}
+
+func persistCalculatorTestReport(tx *gorm.DB, versionID uuid.UUID, report clinicaltools.TestReport, now time.Time) error {
+	for _, test := range report.Cases {
+		actual, err := json.Marshal(test.Actual)
+		if err != nil {
+			return err
+		}
+		result := tx.Model(&models.CalculatorTestCase{}).
+			Where("calculator_version_id = ? AND test_key = ?", versionID, test.Key).
+			Updates(map[string]any{"last_result_json": datatypes.JSON(actual), "last_passed": test.Passed, "last_run_at": now, "updated_at": now})
+		if result.Error != nil {
+			return result.Error
+		}
+		if result.RowsAffected == 0 {
+			return gorm.ErrRecordNotFound
 		}
 	}
 	return nil

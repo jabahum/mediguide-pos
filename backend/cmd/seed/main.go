@@ -238,6 +238,11 @@ func seedAuthorization(database *gorm.DB) (seedAuthorizationState, error) {
 		{Code: "protocol.read", Name: "Read protocols"},
 		{Code: "protocol.write", Name: "Create/update protocols"},
 		{Code: "chat.ask", Name: "Ask RAG chatbot"},
+		{Code: "calculator.read", Name: "Read clinical tools"},
+		{Code: "calculator.write", Name: "Author clinical tools"},
+		{Code: "calculator.review", Name: "Review clinical tools"},
+		{Code: "calculator.publish", Name: "Publish clinical tools"},
+		{Code: "calculator.withdraw", Name: "Withdraw clinical tools"},
 		{Code: "sync.read", Name: "Read sync packages"},
 		{Code: "notification.read", Name: "Read own and global notifications"},
 		{Code: "notification.compose", Name: "Compose notification drafts"},
@@ -477,6 +482,7 @@ func deriveBackendPermissions(roleKey, permissionsJSON string) []string {
 		return []string{
 			"admin.all",
 			"chat.ask",
+			"calculator.read", "calculator.write", "calculator.review", "calculator.publish", "calculator.withdraw",
 			"guideline.publish",
 			"guideline.read",
 			"guideline.write",
@@ -495,6 +501,7 @@ func deriveBackendPermissions(roleKey, permissionsJSON string) []string {
 	case "content_manager":
 		return []string{
 			"chat.ask",
+			"calculator.read", "calculator.write",
 			"guideline.publish",
 			"guideline.read",
 			"guideline.write",
@@ -511,7 +518,7 @@ func deriveBackendPermissions(roleKey, permissionsJSON string) []string {
 		}
 	case "reviewer":
 		return []string{
-			"chat.ask", "guideline.publish", "guideline.read", "guideline.markdown.read",
+			"chat.ask", "calculator.read", "calculator.review", "guideline.publish", "guideline.read", "guideline.markdown.read",
 			"guideline.review", "guideline.high_risk.approve", "protocol.read", "sync.read",
 			"notification.read", "notification.template.read", "notification.campaign.read",
 			"notification.campaign.approve", "notification.analytics.read", "firebase.status.read",
@@ -519,6 +526,7 @@ func deriveBackendPermissions(roleKey, permissionsJSON string) []string {
 	case "healthcare_provider":
 		return []string{
 			"chat.ask",
+			"calculator.read",
 			"guideline.read",
 			"protocol.read",
 			"sync.read",
@@ -526,6 +534,7 @@ func deriveBackendPermissions(roleKey, permissionsJSON string) []string {
 		}
 	case "observer":
 		return []string{
+			"calculator.read",
 			"guideline.read",
 			"protocol.read",
 			"sync.read",

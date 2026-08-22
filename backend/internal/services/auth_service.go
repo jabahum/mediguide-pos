@@ -481,6 +481,7 @@ func deriveRolePermissions(roleKey, permissionsJSON string) []string {
 			"admin.all",
 			"calculator.read",
 			"calculator.write",
+			"calculator.review", "calculator.publish", "calculator.withdraw",
 			"chat.ask",
 			"drug.read",
 			"drug.write",
@@ -526,7 +527,7 @@ func deriveRolePermissions(roleKey, permissionsJSON string) []string {
 		}
 	case "reviewer":
 		return []string{
-			"chat.ask", "calculator.read", "drug.read", "facility.read", "guideline.read",
+			"chat.ask", "calculator.read", "calculator.review", "drug.read", "facility.read", "guideline.read",
 			"guideline.markdown.read", "guideline.review", "guideline.high_risk.approve",
 			"guideline.publish", "protocol.read", "sync.read", "notification.read",
 			"notification.template.read", "notification.campaign.read",

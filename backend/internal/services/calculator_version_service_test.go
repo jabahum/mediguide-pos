@@ -41,13 +41,20 @@ func TestCalculatorVersionWorkflowIsImmutableAuditedAndOptimisticallyLocked(t *t
 	if _, _, err = service.UpdateDraft(draft.ID, author, UpdateCalculatorVersionInput{Definition: raw, LockVersion: 99}); !errors.Is(err, ErrCalculatorVersionConflict) {
 		t.Fatalf("expected conflict, got %v", err)
 	}
-	checked, err := service.RecordChecks(draft.ID, author, true, true, 1)
+	validated, err := service.ValidateVersion(draft.ID, author, 1)
 	if err != nil {
 		t.Fatal(err)
+	}
+	checked, err := service.RunTests(draft.ID, author, validated.LockVersion)
+	if err != nil || !checked.Report.Passed {
+		t.Fatalf("tests: %v %#v", err, checked.Report)
 	}
 	submitted, err := service.Submit(draft.ID, author, checked.LockVersion)
 	if err != nil {
 		t.Fatal(err)
+	}
+	if err = service.AddReviewComment(draft.ID, reviewer, CalculatorVersionReviewCommentInput{Comment: " Verify the emergency escalation wording. "}); err != nil {
+		t.Fatalf("add review comment: %v", err)
 	}
 	if _, err = service.Approve(draft.ID, author, submitted.LockVersion); !errors.Is(err, ErrCalculatorVersionAuthorApproval) {
 		t.Fatalf("expected two-person rejection, got %v", err)
@@ -77,9 +84,13 @@ func TestCalculatorVersionWorkflowIsImmutableAuditedAndOptimisticallyLocked(t *t
 	if err != nil || !validation.Valid {
 		t.Fatalf("create second version: %v %#v", err, validation.Errors)
 	}
-	secondChecked, err := service.RecordChecks(secondDraft.ID, author, true, true, secondDraft.LockVersion)
+	secondValidated, err := service.ValidateVersion(secondDraft.ID, author, secondDraft.LockVersion)
 	if err != nil {
 		t.Fatal(err)
+	}
+	secondChecked, err := service.RunTests(secondDraft.ID, author, secondValidated.LockVersion)
+	if err != nil || !secondChecked.Report.Passed {
+		t.Fatalf("second tests: %v %#v", err, secondChecked.Report)
 	}
 	secondSubmitted, err := service.Submit(secondDraft.ID, author, secondChecked.LockVersion)
 	if err != nil {
@@ -124,7 +135,7 @@ func TestCalculatorVersionWorkflowIsImmutableAuditedAndOptimisticallyLocked(t *t
 	if err = db.Model(&models.CalculatorVersionAudit{}).Where("calculator_id = ?", tool.ID).Count(&audits).Error; err != nil {
 		t.Fatal(err)
 	}
-	if audits < 13 {
+	if audits < 14 {
 		t.Fatalf("expected complete audit trail, got %d", audits)
 	}
 }
@@ -151,12 +162,8 @@ func TestCalculatorVersionPublishRequiresValidationAndPassingTests(t *testing.T)
 	if err != nil {
 		t.Fatal(err)
 	}
-	approved, err := service.Approve(draft.ID, actor, submitted.LockVersion)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if _, err = service.Publish(draft.ID, actor, approved.LockVersion); !errors.Is(err, ErrCalculatorVersionValidation) {
-		t.Fatalf("expected validation failure, got %v", err)
+	if _, err = service.Approve(draft.ID, actor, submitted.LockVersion); !errors.Is(err, ErrCalculatorVersionTestsFailed) {
+		t.Fatalf("expected approval to require persisted validation and tests, got %v", err)
 	}
 }
 

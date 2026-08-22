@@ -1,5 +1,357 @@
 basePath: /
 definitions:
+  clinicaltools.Action:
+    properties:
+      message_key:
+        type: string
+      target:
+        type: string
+      type:
+        type: string
+      value:
+        $ref: '#/definitions/clinicaltools.Expression'
+    type: object
+  clinicaltools.Calculation:
+    properties:
+      expression:
+        $ref: '#/definitions/clinicaltools.Expression'
+      key:
+        type: string
+      precision:
+        type: integer
+      rounding_mode:
+        type: string
+      unit:
+        type: string
+    type: object
+  clinicaltools.Citation:
+    properties:
+      accessed_at:
+        type: string
+      key:
+        type: string
+      organization:
+        type: string
+      published_at:
+        type: string
+      title:
+        type: string
+      url:
+        type: string
+    type: object
+  clinicaltools.Completion:
+    properties:
+      allow_resume:
+        type: boolean
+      expression:
+        $ref: '#/definitions/clinicaltools.Expression'
+      mode:
+        type: string
+      require_review:
+        type: boolean
+      reset_confirmation:
+        type: boolean
+      show_percentage:
+        type: boolean
+    type: object
+  clinicaltools.Definition:
+    properties:
+      calculation:
+        items:
+          $ref: '#/definitions/clinicaltools.Calculation'
+        type: array
+      citations:
+        items:
+          $ref: '#/definitions/clinicaltools.Citation'
+        type: array
+      clinical_owner:
+        type: string
+      clinical_reviewer:
+        type: string
+      completion:
+        $ref: '#/definitions/clinicaltools.Completion'
+      description:
+        type: string
+      effective_at:
+        type: string
+      exclusions:
+        items:
+          type: string
+        type: array
+      inputs:
+        items:
+          $ref: '#/definitions/clinicaltools.Input'
+        type: array
+      interpretations:
+        items:
+          $ref: '#/definitions/clinicaltools.Interpretation'
+        type: array
+      locale:
+        type: string
+      minimum_app_version:
+        type: string
+      outputs:
+        items:
+          $ref: '#/definitions/clinicaltools.Output'
+        type: array
+      review_at:
+        type: string
+      rules:
+        items:
+          $ref: '#/definitions/clinicaltools.Rule'
+        type: array
+      schema_version:
+        type: string
+      sections:
+        items:
+          $ref: '#/definitions/clinicaltools.Section'
+        type: array
+      supported_population:
+        items:
+          type: string
+        type: array
+      test_cases:
+        items:
+          $ref: '#/definitions/clinicaltools.TestCase'
+        type: array
+      title:
+        type: string
+      tool_type:
+        type: string
+      version:
+        type: string
+      warnings:
+        items:
+          $ref: '#/definitions/clinicaltools.Message'
+        type: array
+    type: object
+  clinicaltools.EvaluationError:
+    properties:
+      code:
+        type: string
+      message:
+        type: string
+      path:
+        type: string
+    type: object
+  clinicaltools.Expression:
+    properties:
+      args:
+        items:
+          $ref: '#/definitions/clinicaltools.Expression'
+        type: array
+      date_unit:
+        type: string
+      field:
+        type: string
+      from_unit:
+        type: string
+      op:
+        type: string
+      precision:
+        type: integer
+      rounding_mode:
+        type: string
+      to_unit:
+        type: string
+      value:
+        type: object
+    type: object
+  clinicaltools.Input:
+    properties:
+      accessibility_label:
+        type: string
+      allow_note:
+        type: boolean
+      allowed_units:
+        items:
+          type: string
+        type: array
+      checklist_kind:
+        type: string
+      clinical_warning:
+        type: string
+      critical:
+        type: boolean
+      default:
+        type: object
+      default_unit:
+        type: string
+      depends_on:
+        items:
+          type: string
+        type: array
+      description:
+        type: string
+      escalation_message_keys:
+        items:
+          type: string
+        type: array
+      help_text:
+        type: string
+      key:
+        type: string
+      label:
+        type: string
+      maximum:
+        type: number
+      minimum:
+        type: number
+      options:
+        items:
+          $ref: '#/definitions/clinicaltools.Option'
+        type: array
+      required:
+        type: boolean
+      section_key:
+        type: string
+      step:
+        type: number
+      stop_when:
+        $ref: '#/definitions/clinicaltools.Expression'
+      type:
+        type: string
+      visible_when:
+        $ref: '#/definitions/clinicaltools.Expression'
+    type: object
+  clinicaltools.Interpretation:
+    properties:
+      description:
+        type: string
+      key:
+        type: string
+      label:
+        type: string
+      order:
+        type: integer
+      recommendations:
+        items:
+          type: string
+        type: array
+      severity:
+        type: string
+      when:
+        $ref: '#/definitions/clinicaltools.Expression'
+    type: object
+  clinicaltools.Message:
+    properties:
+      key:
+        type: string
+      severity:
+        type: string
+      text:
+        type: string
+      when:
+        $ref: '#/definitions/clinicaltools.Expression'
+    type: object
+  clinicaltools.Option:
+    properties:
+      description:
+        type: string
+      label:
+        type: string
+      score:
+        type: number
+      value:
+        type: object
+    type: object
+  clinicaltools.Output:
+    properties:
+      accessibility_label:
+        type: string
+      key:
+        type: string
+      label:
+        type: string
+      precision:
+        type: integer
+      rounding_mode:
+        type: string
+      unit:
+        type: string
+      value:
+        $ref: '#/definitions/clinicaltools.Expression'
+    type: object
+  clinicaltools.Rule:
+    properties:
+      actions:
+        items:
+          $ref: '#/definitions/clinicaltools.Action'
+        type: array
+      key:
+        type: string
+      order:
+        type: integer
+      stop:
+        type: boolean
+      when:
+        $ref: '#/definitions/clinicaltools.Expression'
+    type: object
+  clinicaltools.Section:
+    properties:
+      description:
+        type: string
+      key:
+        type: string
+      order:
+        type: integer
+      review_before_completion:
+        type: boolean
+      title:
+        type: string
+      visible_when:
+        $ref: '#/definitions/clinicaltools.Expression'
+    type: object
+  clinicaltools.TestCase:
+    properties:
+      description:
+        type: string
+      expected:
+        type: object
+      fixed_now:
+        type: string
+      inputs:
+        type: object
+      key:
+        type: string
+      numeric_tolerance:
+        type: number
+    type: object
+  clinicaltools.TestCaseResult:
+    properties:
+      actual:
+        additionalProperties: {}
+        type: object
+      errors:
+        items:
+          $ref: '#/definitions/clinicaltools.EvaluationError'
+        type: array
+      expected:
+        additionalProperties: {}
+        type: object
+      key:
+        type: string
+      passed:
+        type: boolean
+    type: object
+  clinicaltools.TestReport:
+    properties:
+      cases:
+        items:
+          $ref: '#/definitions/clinicaltools.TestCaseResult'
+        type: array
+      passed:
+        type: boolean
+    type: object
+  clinicaltools.ValidationError:
+    properties:
+      code:
+        type: string
+      message:
+        type: string
+      path:
+        type: string
+    type: object
   handlers.AbbreviationEnvelope:
     properties:
       data:
@@ -13,6 +365,13 @@ definitions:
         $ref: '#/definitions/services.AskResponse'
       success:
         example: true
+        type: boolean
+    type: object
+  handlers.CalculatorDefinitionEnvelope:
+    properties:
+      data:
+        $ref: '#/definitions/services.CalculatorDefinitionDTO'
+      success:
         type: boolean
     type: object
   handlers.CalculatorEnvelope:
@@ -29,6 +388,53 @@ definitions:
         $ref: '#/definitions/models.CalculatorUsageLog'
       success:
         example: true
+        type: boolean
+    type: object
+  handlers.CalculatorVersionAuditEnvelope:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/services.CalculatorVersionAuditDTO'
+        type: array
+      success:
+        type: boolean
+    type: object
+  handlers.CalculatorVersionEnvelope:
+    properties:
+      data:
+        $ref: '#/definitions/services.CalculatorVersionDTO'
+      success:
+        type: boolean
+    type: object
+  handlers.CalculatorVersionLockRequest:
+    properties:
+      lock_version:
+        minimum: 1
+        type: integer
+    required:
+    - lock_version
+    type: object
+  handlers.CalculatorVersionTestEnvelope:
+    properties:
+      data:
+        $ref: '#/definitions/services.CalculatorVersionTestDTO'
+      success:
+        type: boolean
+    type: object
+  handlers.CalculatorVersionValidationEnvelope:
+    properties:
+      data:
+        $ref: '#/definitions/services.CalculatorVersionValidationDTO'
+      success:
+        type: boolean
+    type: object
+  handlers.CalculatorVersionsEnvelope:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/services.CalculatorVersionDTO'
+        type: array
+      success:
         type: boolean
     type: object
   handlers.ClinicalProtocolEnvelope:
@@ -1909,6 +2315,8 @@ definitions:
         type: string
       created_at:
         type: string
+      current_version_id:
+        type: string
       description:
         type: string
       featured:
@@ -1918,6 +2326,8 @@ definitions:
       id:
         type: string
       name:
+        type: string
+      runtime_type:
         type: string
       status:
         type: string
@@ -1935,6 +2345,8 @@ definitions:
       calculator_id:
         type: string
       calculator_type:
+        type: string
+      calculator_version_id:
         type: string
       created_at:
         type: string
@@ -3512,6 +3924,116 @@ definitions:
     required:
     - reviewer_id
     type: object
+  services.CalculatorDefinitionDTO:
+    properties:
+      calculator_id:
+        type: string
+      definition:
+        $ref: '#/definitions/clinicaltools.Definition'
+      definition_checksum:
+        type: string
+      runtime_type:
+        type: string
+      semantic_version:
+        type: string
+      version_id:
+        type: string
+    type: object
+  services.CalculatorVersionAuditDTO:
+    properties:
+      action:
+        type: string
+      actor_id:
+        type: string
+      calculator_id:
+        type: string
+      calculator_version_id:
+        type: string
+      created_at:
+        type: string
+      from_status:
+        type: string
+      id:
+        type: string
+      metadata:
+        additionalProperties: {}
+        type: object
+      to_status:
+        type: string
+    type: object
+  services.CalculatorVersionDTO:
+    properties:
+      approved_at:
+        type: string
+      approved_by:
+        type: string
+      calculator_id:
+        type: string
+      change_summary:
+        type: string
+      created_at:
+        type: string
+      created_by:
+        type: string
+      definition:
+        $ref: '#/definitions/clinicaltools.Definition'
+      definition_checksum:
+        type: string
+      effective_at:
+        type: string
+      id:
+        type: string
+      lock_version:
+        type: integer
+      published_at:
+        type: string
+      published_by:
+        type: string
+      review_at:
+        type: string
+      reviewed_at:
+        type: string
+      reviewed_by:
+        type: string
+      schema_version:
+        type: string
+      semantic_version:
+        type: string
+      status:
+        type: string
+      tests_passed:
+        type: boolean
+      updated_at:
+        type: string
+      validation_passed:
+        type: boolean
+    type: object
+  services.CalculatorVersionReviewCommentInput:
+    properties:
+      comment:
+        maxLength: 4000
+        type: string
+    required:
+    - comment
+    type: object
+  services.CalculatorVersionTestDTO:
+    properties:
+      lock_version:
+        type: integer
+      report:
+        $ref: '#/definitions/clinicaltools.TestReport'
+    type: object
+  services.CalculatorVersionValidationDTO:
+    properties:
+      errors:
+        items:
+          $ref: '#/definitions/clinicaltools.ValidationError'
+        type: array
+      lock_version:
+        type: integer
+      valid:
+        type: boolean
+    type: object
   services.ChildContentInput:
     properties:
       asset_url:
@@ -3782,6 +4304,13 @@ definitions:
       version:
         type: string
     type: object
+  services.CreateCalculatorVersionInput:
+    properties:
+      change_summary:
+        type: string
+      definition:
+        type: object
+    type: object
   services.CreateGuidelineBlockInput:
     properties:
       content:
@@ -4012,6 +4541,15 @@ definitions:
         type: string
       tag_category:
         type: string
+    type: object
+  services.DuplicateCalculatorVersionInput:
+    properties:
+      change_summary:
+        type: string
+      semantic_version:
+        type: string
+    required:
+    - semantic_version
     type: object
   services.DuplicateMarkdownVersionInput:
     properties:
@@ -7023,6 +7561,15 @@ definitions:
       version:
         type: string
     type: object
+  services.UpdateCalculatorVersionInput:
+    properties:
+      change_summary:
+        type: string
+      definition:
+        type: object
+      lock_version:
+        type: integer
+    type: object
   services.UpdateGuidelineBlockInput:
     properties:
       content:
@@ -8191,6 +8738,338 @@ paths:
       summary: Finish a calculator usage session
       tags:
       - calculators
+  /api/v2/calculator-versions/{id}:
+    delete:
+      consumes:
+      - application/json
+      parameters:
+      - description: Version ID
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Optimistic lock
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.CalculatorVersionLockRequest'
+      responses:
+        "204":
+          description: No Content
+      security:
+      - BearerAuth: []
+      summary: Delete a draft calculator definition version
+      tags:
+      - calculator-versions
+    get:
+      parameters:
+      - description: Version ID
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.CalculatorVersionEnvelope'
+      security:
+      - BearerAuth: []
+      summary: Get a calculator definition version
+      tags:
+      - calculator-versions
+    patch:
+      consumes:
+      - application/json
+      parameters:
+      - description: Version ID
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Definition and optimistic lock
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/services.UpdateCalculatorVersionInput'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.CalculatorVersionEnvelope'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "422":
+          description: Unprocessable Entity
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Update an editable calculator definition version
+      tags:
+      - calculator-versions
+  /api/v2/calculator-versions/{id}/approve:
+    post:
+      parameters:
+      - description: Version ID
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Optimistic lock
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.CalculatorVersionLockRequest'
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.CalculatorVersionEnvelope'
+      security:
+      - BearerAuth: []
+      summary: Clinically approve a tested version
+      tags:
+      - calculator-versions
+  /api/v2/calculator-versions/{id}/audit:
+    get:
+      parameters:
+      - description: Version ID
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.CalculatorVersionAuditEnvelope'
+      security:
+      - BearerAuth: []
+      summary: List the immutable calculator-version audit history
+      tags:
+      - calculator-versions
+  /api/v2/calculator-versions/{id}/duplicate:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Version ID
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: New semantic version
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/services.DuplicateCalculatorVersionInput'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/handlers.CalculatorVersionEnvelope'
+      security:
+      - BearerAuth: []
+      summary: Duplicate a calculator version into a new draft
+      tags:
+      - calculator-versions
+  /api/v2/calculator-versions/{id}/publish:
+    post:
+      parameters:
+      - description: Version ID
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Optimistic lock
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.CalculatorVersionLockRequest'
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.CalculatorVersionEnvelope'
+      security:
+      - BearerAuth: []
+      summary: Publish a clinically approved version
+      tags:
+      - calculator-versions
+  /api/v2/calculator-versions/{id}/review-comments:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Version ID
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Review comment
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/services.CalculatorVersionReviewCommentInput'
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Add an immutable review comment to a calculator version
+      tags:
+      - calculator-versions
+  /api/v2/calculator-versions/{id}/submit:
+    post:
+      parameters:
+      - description: Version ID
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Optimistic lock
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.CalculatorVersionLockRequest'
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.CalculatorVersionEnvelope'
+      security:
+      - BearerAuth: []
+      summary: Submit a validated draft for review
+      tags:
+      - calculator-versions
+  /api/v2/calculator-versions/{id}/test:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Version ID
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Optimistic lock
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.CalculatorVersionLockRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.CalculatorVersionTestEnvelope'
+      security:
+      - BearerAuth: []
+      summary: Execute all saved definition fixtures
+      tags:
+      - calculator-versions
+  /api/v2/calculator-versions/{id}/validate:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Version ID
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Optimistic lock
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.CalculatorVersionLockRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.CalculatorVersionValidationEnvelope'
+      security:
+      - BearerAuth: []
+      summary: Validate a draft definition
+      tags:
+      - calculator-versions
+  /api/v2/calculator-versions/{id}/withdraw:
+    post:
+      parameters:
+      - description: Version ID
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Optimistic lock
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.CalculatorVersionLockRequest'
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.CalculatorVersionEnvelope'
+      security:
+      - BearerAuth: []
+      summary: Withdraw a superseded version
+      tags:
+      - calculator-versions
   /api/v2/calculators:
     get:
       parameters:
@@ -8390,6 +9269,35 @@ paths:
       summary: Load executable calculator content
       tags:
       - calculators
+  /api/v2/calculators/{id}/definition:
+    get:
+      parameters:
+      - description: Calculator ID
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.CalculatorDefinitionEnvelope'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get the current published native calculator definition
+      tags:
+      - calculator-versions
   /api/v2/calculators/{id}/usage:
     post:
       consumes:
@@ -8423,6 +9331,59 @@ paths:
       summary: Start a calculator usage session
       tags:
       - calculators
+  /api/v2/calculators/{id}/versions:
+    get:
+      parameters:
+      - description: Calculator ID
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.CalculatorVersionsEnvelope'
+      security:
+      - BearerAuth: []
+      summary: List calculator definition versions
+      tags:
+      - calculator-versions
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Calculator ID
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Version definition
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/services.CreateCalculatorVersionInput'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/handlers.CalculatorVersionEnvelope'
+        "422":
+          description: Unprocessable Entity
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Create a draft calculator definition version
+      tags:
+      - calculator-versions
   /api/v2/chat/ask:
     post:
       consumes:

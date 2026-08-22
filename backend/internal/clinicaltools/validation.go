@@ -22,7 +22,7 @@ var (
 	localePattern   = regexp.MustCompile(`^[A-Za-z]{2,3}(?:-[A-Za-z0-9]{2,8})*$`)
 	validToolTypes  = set("calculator", "decision_tool", "checklist")
 	validInputTypes = set("number", "integer", "text", "date", "time", "boolean", "single_selection", "multiple_selection", "measurement", "checklist_item")
-	validOperators  = set("literal", "field", "add", "subtract", "multiply", "divide", "power", "min", "max", "abs", "round", "equal", "not_equal", "less_than", "less_than_or_equal", "greater_than", "greater_than_or_equal", "and", "or", "not", "if", "in", "date_difference", "convert_unit")
+	validOperators  = set("literal", "field", "now", "add", "subtract", "multiply", "divide", "power", "min", "max", "abs", "round", "equal", "not_equal", "less_than", "less_than_or_equal", "greater_than", "greater_than_or_equal", "and", "or", "not", "if", "in", "date_difference", "convert_unit")
 	validCompletion = set("none", "all_required", "expression")
 	validChecklist  = set("action", "information", "single_selection", "multiple_selection")
 	validSeverity   = set("normal", "info", "warning", "critical")
@@ -207,6 +207,16 @@ func Validate(definition *Definition) ValidationResult {
 			validateExpression(*section.VisibleWhen, fmt.Sprintf("$.sections[%d].visible_when", index), fields, calculations, 1, &operations, nil, add)
 		}
 	}
+	outputs := map[string]bool{}
+	for index, output := range definition.Outputs {
+		validateKey(output.Key, fmt.Sprintf("$.outputs[%d].key", index), outputs, add)
+		outputs[output.Key] = true
+	}
+	interpretations := map[string]bool{}
+	for index, interpretation := range definition.Interpretations {
+		validateKey(interpretation.Key, fmt.Sprintf("$.interpretations[%d].key", index), interpretations, add)
+		interpretations[interpretation.Key] = true
+	}
 	rules := map[string]bool{}
 	for index, rule := range definition.Rules {
 		path := fmt.Sprintf("$.rules[%d]", index)
@@ -226,25 +236,36 @@ func Validate(definition *Definition) ValidationResult {
 			if action.MessageKey != "" && !messages[action.MessageKey] {
 				add(actionPath+".message_key", "unknown_reference", "unknown warning message")
 			}
+			switch action.Type {
+			case "set_output":
+				if !outputs[action.Target] {
+					add(actionPath+".target", "unknown_reference", "unknown output target")
+				}
+				if action.Value == nil {
+					add(actionPath+".value", "required", "set_output requires a value")
+				}
+			case "add_interpretation", "add_recommendation":
+				if !interpretations[action.Target] {
+					add(actionPath+".target", "unknown_reference", "unknown interpretation target")
+				}
+			case "add_warning", "escalate":
+				if action.MessageKey == "" {
+					add(actionPath+".message_key", "required", "message_key is required")
+				}
+			}
 		}
 		validateExpression(rule.When, fmt.Sprintf("$.rules[%d].when", index), fields, calculations, 1, &operations, nil, add)
 	}
-	outputs := map[string]bool{}
 	for index, output := range definition.Outputs {
 		path := fmt.Sprintf("$.outputs[%d]", index)
-		validateKey(output.Key, path+".key", outputs, add)
-		outputs[output.Key] = true
 		if strings.TrimSpace(output.Label) == "" {
 			add(path+".label", "required", "output label is required")
 		}
 		validatePrecision(output.Precision, output.RoundingMode, path, add)
 		validateExpression(output.Value, fmt.Sprintf("$.outputs[%d].value", index), fields, calculations, 1, &operations, nil, add)
 	}
-	interpretations := map[string]bool{}
 	for index, interpretation := range definition.Interpretations {
 		path := fmt.Sprintf("$.interpretations[%d]", index)
-		validateKey(interpretation.Key, path+".key", interpretations, add)
-		interpretations[interpretation.Key] = true
 		if !validSeverity[interpretation.Severity] {
 			add(path+".severity", "unsupported", "unsupported interpretation severity")
 		}
@@ -311,6 +332,9 @@ func validateExpression(expression Expression, path string, fields, calculations
 		if calculations[expression.Field] && refs != nil {
 			*refs = append(*refs, expression.Field)
 		}
+		return
+	}
+	if expression.Op == "now" {
 		return
 	}
 	minArgs, maxArgs := operatorArity(expression.Op)
@@ -415,6 +439,8 @@ func literalZero(expression Expression) bool {
 }
 func operatorArity(operator string) (int, int) {
 	switch operator {
+	case "now":
+		return 0, 0
 	case "abs", "round", "not", "convert_unit":
 		return 1, 1
 	case "subtract", "divide", "power", "equal", "not_equal", "less_than", "less_than_or_equal", "greater_than", "greater_than_or_equal", "date_difference":

@@ -1,8 +1,12 @@
+import 'dart:convert';
+
+import 'package:crypto/crypto.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:user_app/core/storage/local_cache_service.dart';
 
 import 'package:user_app/features/calculators/data/models/calculator.dart';
 import 'package:user_app/features/calculators/data/models/calculator_enums.dart';
+import 'package:user_app/features/calculators/data/models/clinical_tool_definition.dart';
 
 final calculatorLocalRepositoryProvider = Provider<CalculatorLocalRepository>((
   ref,
@@ -17,6 +21,82 @@ class CalculatorLocalRepository {
 
   static const String _entityType = 'calculator';
   static const String _scope = 'public';
+  static const String _definitionType = 'calculator_definition';
+  static const String _workflowType = 'calculator_workflow';
+
+  Future<void> saveDefinition(ClinicalToolDefinitionEnvelope value) {
+    final data = value.toJson();
+    data['_cache_integrity'] = sha256
+        .convert(utf8.encode(jsonEncode(value.definition.toJson())))
+        .toString();
+    return _localCacheService.put(
+      type: _definitionType,
+      id: value.calculatorId,
+      scope: _scope,
+      data: data,
+      version: value.definitionChecksum,
+    );
+  }
+
+  Future<ClinicalToolDefinitionEnvelope?> getDefinition(
+    String calculatorId,
+  ) async {
+    final value = await _localCacheService.get(
+      type: _definitionType,
+      id: calculatorId,
+      scope: _scope,
+    );
+    if (value == null) return null;
+    try {
+      final integrity = value.remove('_cache_integrity')?.toString();
+      final parsed = ClinicalToolDefinitionEnvelope.fromJson(value);
+      final actual = sha256
+          .convert(utf8.encode(jsonEncode(parsed.definition.toJson())))
+          .toString();
+      if (integrity == null || integrity != actual) return null;
+      return parsed;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<void> saveWorkflow({
+    required String calculatorId,
+    required String userId,
+    required String versionId,
+    required String checksum,
+    required Map<String, Object?> responses,
+  }) => _localCacheService.put(
+    type: _workflowType,
+    id: calculatorId,
+    scope: 'user:$userId',
+    data: {
+      'version_id': versionId,
+      'definition_checksum': checksum,
+      'responses': responses,
+    },
+    version: checksum,
+  );
+
+  Future<Map<String, Object?>> getWorkflow({
+    required String calculatorId,
+    required String userId,
+    required String versionId,
+    required String checksum,
+  }) async {
+    final value = await _localCacheService.get(
+      type: _workflowType,
+      id: calculatorId,
+      scope: 'user:$userId',
+    );
+    if (value == null ||
+        value['version_id'] != versionId ||
+        value['definition_checksum'] != checksum ||
+        value['responses'] is! Map) {
+      return const {};
+    }
+    return Map<String, Object?>.from(value['responses'] as Map);
+  }
 
   // =========================================================
   // SAVE ONE

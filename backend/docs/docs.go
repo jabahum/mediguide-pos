@@ -1522,6 +1522,533 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/v2/calculator-versions/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "calculator-versions"
+                ],
+                "summary": "Get a calculator definition version",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "Version ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.CalculatorVersionEnvelope"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "tags": [
+                    "calculator-versions"
+                ],
+                "summary": "Delete a draft calculator definition version",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "Version ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Optimistic lock",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handlers.CalculatorVersionLockRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    }
+                }
+            },
+            "patch": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "calculator-versions"
+                ],
+                "summary": "Update an editable calculator definition version",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "Version ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Definition and optimistic lock",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/services.UpdateCalculatorVersionInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.CalculatorVersionEnvelope"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    },
+                    "422": {
+                        "description": "Unprocessable Entity",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v2/calculator-versions/{id}/approve": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "calculator-versions"
+                ],
+                "summary": "Clinically approve a tested version",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "Version ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Optimistic lock",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handlers.CalculatorVersionLockRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.CalculatorVersionEnvelope"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v2/calculator-versions/{id}/audit": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "calculator-versions"
+                ],
+                "summary": "List the immutable calculator-version audit history",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "Version ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.CalculatorVersionAuditEnvelope"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v2/calculator-versions/{id}/duplicate": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "calculator-versions"
+                ],
+                "summary": "Duplicate a calculator version into a new draft",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "Version ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "New semantic version",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/services.DuplicateCalculatorVersionInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.CalculatorVersionEnvelope"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v2/calculator-versions/{id}/publish": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "calculator-versions"
+                ],
+                "summary": "Publish a clinically approved version",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "Version ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Optimistic lock",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handlers.CalculatorVersionLockRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.CalculatorVersionEnvelope"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v2/calculator-versions/{id}/review-comments": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "calculator-versions"
+                ],
+                "summary": "Add an immutable review comment to a calculator version",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "Version ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Review comment",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/services.CalculatorVersionReviewCommentInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v2/calculator-versions/{id}/submit": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "calculator-versions"
+                ],
+                "summary": "Submit a validated draft for review",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "Version ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Optimistic lock",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handlers.CalculatorVersionLockRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.CalculatorVersionEnvelope"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v2/calculator-versions/{id}/test": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "calculator-versions"
+                ],
+                "summary": "Execute all saved definition fixtures",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "Version ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Optimistic lock",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handlers.CalculatorVersionLockRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.CalculatorVersionTestEnvelope"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v2/calculator-versions/{id}/validate": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "calculator-versions"
+                ],
+                "summary": "Validate a draft definition",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "Version ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Optimistic lock",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handlers.CalculatorVersionLockRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.CalculatorVersionValidationEnvelope"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v2/calculator-versions/{id}/withdraw": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "calculator-versions"
+                ],
+                "summary": "Withdraw a superseded version",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "Version ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Optimistic lock",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handlers.CalculatorVersionLockRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.CalculatorVersionEnvelope"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v2/calculators": {
             "get": {
                 "security": [
@@ -1834,6 +2361,52 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/v2/calculators/{id}/definition": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "calculator-versions"
+                ],
+                "summary": "Get the current published native calculator definition",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "Calculator ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.CalculatorDefinitionEnvelope"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v2/calculators/{id}/usage": {
             "post": {
                 "security": [
@@ -1879,6 +2452,90 @@ const docTemplate = `{
                     },
                     "400": {
                         "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v2/calculators/{id}/versions": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "calculator-versions"
+                ],
+                "summary": "List calculator definition versions",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "Calculator ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.CalculatorVersionsEnvelope"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "calculator-versions"
+                ],
+                "summary": "Create a draft calculator definition version",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "Calculator ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Version definition",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/services.CreateCalculatorVersionInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.CalculatorVersionEnvelope"
+                        }
+                    },
+                    "422": {
+                        "description": "Unprocessable Entity",
                         "schema": {
                             "$ref": "#/definitions/handlers.ErrorResponse"
                         }
@@ -13701,6 +14358,542 @@ const docTemplate = `{
         }
     },
     "definitions": {
+        "clinicaltools.Action": {
+            "type": "object",
+            "properties": {
+                "message_key": {
+                    "type": "string"
+                },
+                "target": {
+                    "type": "string"
+                },
+                "type": {
+                    "type": "string"
+                },
+                "value": {
+                    "$ref": "#/definitions/clinicaltools.Expression"
+                }
+            }
+        },
+        "clinicaltools.Calculation": {
+            "type": "object",
+            "properties": {
+                "expression": {
+                    "$ref": "#/definitions/clinicaltools.Expression"
+                },
+                "key": {
+                    "type": "string"
+                },
+                "precision": {
+                    "type": "integer"
+                },
+                "rounding_mode": {
+                    "type": "string"
+                },
+                "unit": {
+                    "type": "string"
+                }
+            }
+        },
+        "clinicaltools.Citation": {
+            "type": "object",
+            "properties": {
+                "accessed_at": {
+                    "type": "string"
+                },
+                "key": {
+                    "type": "string"
+                },
+                "organization": {
+                    "type": "string"
+                },
+                "published_at": {
+                    "type": "string"
+                },
+                "title": {
+                    "type": "string"
+                },
+                "url": {
+                    "type": "string"
+                }
+            }
+        },
+        "clinicaltools.Completion": {
+            "type": "object",
+            "properties": {
+                "allow_resume": {
+                    "type": "boolean"
+                },
+                "expression": {
+                    "$ref": "#/definitions/clinicaltools.Expression"
+                },
+                "mode": {
+                    "type": "string"
+                },
+                "require_review": {
+                    "type": "boolean"
+                },
+                "reset_confirmation": {
+                    "type": "boolean"
+                },
+                "show_percentage": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "clinicaltools.Definition": {
+            "type": "object",
+            "properties": {
+                "calculation": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/clinicaltools.Calculation"
+                    }
+                },
+                "citations": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/clinicaltools.Citation"
+                    }
+                },
+                "clinical_owner": {
+                    "type": "string"
+                },
+                "clinical_reviewer": {
+                    "type": "string"
+                },
+                "completion": {
+                    "$ref": "#/definitions/clinicaltools.Completion"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "effective_at": {
+                    "type": "string"
+                },
+                "exclusions": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "inputs": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/clinicaltools.Input"
+                    }
+                },
+                "interpretations": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/clinicaltools.Interpretation"
+                    }
+                },
+                "locale": {
+                    "type": "string"
+                },
+                "minimum_app_version": {
+                    "type": "string"
+                },
+                "outputs": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/clinicaltools.Output"
+                    }
+                },
+                "review_at": {
+                    "type": "string"
+                },
+                "rules": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/clinicaltools.Rule"
+                    }
+                },
+                "schema_version": {
+                    "type": "string"
+                },
+                "sections": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/clinicaltools.Section"
+                    }
+                },
+                "supported_population": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "test_cases": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/clinicaltools.TestCase"
+                    }
+                },
+                "title": {
+                    "type": "string"
+                },
+                "tool_type": {
+                    "type": "string"
+                },
+                "version": {
+                    "type": "string"
+                },
+                "warnings": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/clinicaltools.Message"
+                    }
+                }
+            }
+        },
+        "clinicaltools.EvaluationError": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "string"
+                },
+                "message": {
+                    "type": "string"
+                },
+                "path": {
+                    "type": "string"
+                }
+            }
+        },
+        "clinicaltools.Expression": {
+            "type": "object",
+            "properties": {
+                "args": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/clinicaltools.Expression"
+                    }
+                },
+                "date_unit": {
+                    "type": "string"
+                },
+                "field": {
+                    "type": "string"
+                },
+                "from_unit": {
+                    "type": "string"
+                },
+                "op": {
+                    "type": "string"
+                },
+                "precision": {
+                    "type": "integer"
+                },
+                "rounding_mode": {
+                    "type": "string"
+                },
+                "to_unit": {
+                    "type": "string"
+                },
+                "value": {
+                    "type": "object"
+                }
+            }
+        },
+        "clinicaltools.Input": {
+            "type": "object",
+            "properties": {
+                "accessibility_label": {
+                    "type": "string"
+                },
+                "allow_note": {
+                    "type": "boolean"
+                },
+                "allowed_units": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "checklist_kind": {
+                    "type": "string"
+                },
+                "clinical_warning": {
+                    "type": "string"
+                },
+                "critical": {
+                    "type": "boolean"
+                },
+                "default": {
+                    "type": "object"
+                },
+                "default_unit": {
+                    "type": "string"
+                },
+                "depends_on": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "description": {
+                    "type": "string"
+                },
+                "escalation_message_keys": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "help_text": {
+                    "type": "string"
+                },
+                "key": {
+                    "type": "string"
+                },
+                "label": {
+                    "type": "string"
+                },
+                "maximum": {
+                    "type": "number"
+                },
+                "minimum": {
+                    "type": "number"
+                },
+                "options": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/clinicaltools.Option"
+                    }
+                },
+                "required": {
+                    "type": "boolean"
+                },
+                "section_key": {
+                    "type": "string"
+                },
+                "step": {
+                    "type": "number"
+                },
+                "stop_when": {
+                    "$ref": "#/definitions/clinicaltools.Expression"
+                },
+                "type": {
+                    "type": "string"
+                },
+                "visible_when": {
+                    "$ref": "#/definitions/clinicaltools.Expression"
+                }
+            }
+        },
+        "clinicaltools.Interpretation": {
+            "type": "object",
+            "properties": {
+                "description": {
+                    "type": "string"
+                },
+                "key": {
+                    "type": "string"
+                },
+                "label": {
+                    "type": "string"
+                },
+                "order": {
+                    "type": "integer"
+                },
+                "recommendations": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "severity": {
+                    "type": "string"
+                },
+                "when": {
+                    "$ref": "#/definitions/clinicaltools.Expression"
+                }
+            }
+        },
+        "clinicaltools.Message": {
+            "type": "object",
+            "properties": {
+                "key": {
+                    "type": "string"
+                },
+                "severity": {
+                    "type": "string"
+                },
+                "text": {
+                    "type": "string"
+                },
+                "when": {
+                    "$ref": "#/definitions/clinicaltools.Expression"
+                }
+            }
+        },
+        "clinicaltools.Option": {
+            "type": "object",
+            "properties": {
+                "description": {
+                    "type": "string"
+                },
+                "label": {
+                    "type": "string"
+                },
+                "score": {
+                    "type": "number"
+                },
+                "value": {
+                    "type": "object"
+                }
+            }
+        },
+        "clinicaltools.Output": {
+            "type": "object",
+            "properties": {
+                "accessibility_label": {
+                    "type": "string"
+                },
+                "key": {
+                    "type": "string"
+                },
+                "label": {
+                    "type": "string"
+                },
+                "precision": {
+                    "type": "integer"
+                },
+                "rounding_mode": {
+                    "type": "string"
+                },
+                "unit": {
+                    "type": "string"
+                },
+                "value": {
+                    "$ref": "#/definitions/clinicaltools.Expression"
+                }
+            }
+        },
+        "clinicaltools.Rule": {
+            "type": "object",
+            "properties": {
+                "actions": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/clinicaltools.Action"
+                    }
+                },
+                "key": {
+                    "type": "string"
+                },
+                "order": {
+                    "type": "integer"
+                },
+                "stop": {
+                    "type": "boolean"
+                },
+                "when": {
+                    "$ref": "#/definitions/clinicaltools.Expression"
+                }
+            }
+        },
+        "clinicaltools.Section": {
+            "type": "object",
+            "properties": {
+                "description": {
+                    "type": "string"
+                },
+                "key": {
+                    "type": "string"
+                },
+                "order": {
+                    "type": "integer"
+                },
+                "review_before_completion": {
+                    "type": "boolean"
+                },
+                "title": {
+                    "type": "string"
+                },
+                "visible_when": {
+                    "$ref": "#/definitions/clinicaltools.Expression"
+                }
+            }
+        },
+        "clinicaltools.TestCase": {
+            "type": "object",
+            "properties": {
+                "description": {
+                    "type": "string"
+                },
+                "expected": {
+                    "type": "object"
+                },
+                "fixed_now": {
+                    "type": "string"
+                },
+                "inputs": {
+                    "type": "object"
+                },
+                "key": {
+                    "type": "string"
+                },
+                "numeric_tolerance": {
+                    "type": "number"
+                }
+            }
+        },
+        "clinicaltools.TestCaseResult": {
+            "type": "object",
+            "properties": {
+                "actual": {
+                    "type": "object",
+                    "additionalProperties": {}
+                },
+                "errors": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/clinicaltools.EvaluationError"
+                    }
+                },
+                "expected": {
+                    "type": "object",
+                    "additionalProperties": {}
+                },
+                "key": {
+                    "type": "string"
+                },
+                "passed": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "clinicaltools.TestReport": {
+            "type": "object",
+            "properties": {
+                "cases": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/clinicaltools.TestCaseResult"
+                    }
+                },
+                "passed": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "clinicaltools.ValidationError": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "string"
+                },
+                "message": {
+                    "type": "string"
+                },
+                "path": {
+                    "type": "string"
+                }
+            }
+        },
         "handlers.AbbreviationEnvelope": {
             "type": "object",
             "properties": {
@@ -13721,6 +14914,17 @@ const docTemplate = `{
                 "success": {
                     "type": "boolean",
                     "example": true
+                }
+            }
+        },
+        "handlers.CalculatorDefinitionEnvelope": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/services.CalculatorDefinitionDTO"
+                },
+                "success": {
+                    "type": "boolean"
                 }
             }
         },
@@ -13745,6 +14949,79 @@ const docTemplate = `{
                 "success": {
                     "type": "boolean",
                     "example": true
+                }
+            }
+        },
+        "handlers.CalculatorVersionAuditEnvelope": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/services.CalculatorVersionAuditDTO"
+                    }
+                },
+                "success": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "handlers.CalculatorVersionEnvelope": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/services.CalculatorVersionDTO"
+                },
+                "success": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "handlers.CalculatorVersionLockRequest": {
+            "type": "object",
+            "required": [
+                "lock_version"
+            ],
+            "properties": {
+                "lock_version": {
+                    "type": "integer",
+                    "minimum": 1
+                }
+            }
+        },
+        "handlers.CalculatorVersionTestEnvelope": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/services.CalculatorVersionTestDTO"
+                },
+                "success": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "handlers.CalculatorVersionValidationEnvelope": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/services.CalculatorVersionValidationDTO"
+                },
+                "success": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "handlers.CalculatorVersionsEnvelope": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/services.CalculatorVersionDTO"
+                    }
+                },
+                "success": {
+                    "type": "boolean"
                 }
             }
         },
@@ -16584,6 +17861,9 @@ const docTemplate = `{
                 "created_at": {
                     "type": "string"
                 },
+                "current_version_id": {
+                    "type": "string"
+                },
                 "description": {
                     "type": "string"
                 },
@@ -16597,6 +17877,9 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "name": {
+                    "type": "string"
+                },
+                "runtime_type": {
                     "type": "string"
                 },
                 "status": {
@@ -16623,6 +17906,9 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "calculator_type": {
+                    "type": "string"
+                },
+                "calculator_version_id": {
                     "type": "string"
                 },
                 "created_at": {
@@ -18980,6 +20266,173 @@ const docTemplate = `{
                 }
             }
         },
+        "services.CalculatorDefinitionDTO": {
+            "type": "object",
+            "properties": {
+                "calculator_id": {
+                    "type": "string"
+                },
+                "definition": {
+                    "$ref": "#/definitions/clinicaltools.Definition"
+                },
+                "definition_checksum": {
+                    "type": "string"
+                },
+                "runtime_type": {
+                    "type": "string"
+                },
+                "semantic_version": {
+                    "type": "string"
+                },
+                "version_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "services.CalculatorVersionAuditDTO": {
+            "type": "object",
+            "properties": {
+                "action": {
+                    "type": "string"
+                },
+                "actor_id": {
+                    "type": "string"
+                },
+                "calculator_id": {
+                    "type": "string"
+                },
+                "calculator_version_id": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "from_status": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "metadata": {
+                    "type": "object",
+                    "additionalProperties": {}
+                },
+                "to_status": {
+                    "type": "string"
+                }
+            }
+        },
+        "services.CalculatorVersionDTO": {
+            "type": "object",
+            "properties": {
+                "approved_at": {
+                    "type": "string"
+                },
+                "approved_by": {
+                    "type": "string"
+                },
+                "calculator_id": {
+                    "type": "string"
+                },
+                "change_summary": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "created_by": {
+                    "type": "string"
+                },
+                "definition": {
+                    "$ref": "#/definitions/clinicaltools.Definition"
+                },
+                "definition_checksum": {
+                    "type": "string"
+                },
+                "effective_at": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "lock_version": {
+                    "type": "integer"
+                },
+                "published_at": {
+                    "type": "string"
+                },
+                "published_by": {
+                    "type": "string"
+                },
+                "review_at": {
+                    "type": "string"
+                },
+                "reviewed_at": {
+                    "type": "string"
+                },
+                "reviewed_by": {
+                    "type": "string"
+                },
+                "schema_version": {
+                    "type": "string"
+                },
+                "semantic_version": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "tests_passed": {
+                    "type": "boolean"
+                },
+                "updated_at": {
+                    "type": "string"
+                },
+                "validation_passed": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "services.CalculatorVersionReviewCommentInput": {
+            "type": "object",
+            "required": [
+                "comment"
+            ],
+            "properties": {
+                "comment": {
+                    "type": "string",
+                    "maxLength": 4000
+                }
+            }
+        },
+        "services.CalculatorVersionTestDTO": {
+            "type": "object",
+            "properties": {
+                "lock_version": {
+                    "type": "integer"
+                },
+                "report": {
+                    "$ref": "#/definitions/clinicaltools.TestReport"
+                }
+            }
+        },
+        "services.CalculatorVersionValidationDTO": {
+            "type": "object",
+            "properties": {
+                "errors": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/clinicaltools.ValidationError"
+                    }
+                },
+                "lock_version": {
+                    "type": "integer"
+                },
+                "valid": {
+                    "type": "boolean"
+                }
+            }
+        },
         "services.ChildContentInput": {
             "type": "object",
             "properties": {
@@ -19390,6 +20843,17 @@ const docTemplate = `{
                 }
             }
         },
+        "services.CreateCalculatorVersionInput": {
+            "type": "object",
+            "properties": {
+                "change_summary": {
+                    "type": "string"
+                },
+                "definition": {
+                    "type": "object"
+                }
+            }
+        },
         "services.CreateGuidelineBlockInput": {
             "type": "object",
             "required": [
@@ -19738,6 +21202,20 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "tag_category": {
+                    "type": "string"
+                }
+            }
+        },
+        "services.DuplicateCalculatorVersionInput": {
+            "type": "object",
+            "required": [
+                "semantic_version"
+            ],
+            "properties": {
+                "change_summary": {
+                    "type": "string"
+                },
+                "semantic_version": {
                     "type": "string"
                 }
             }
@@ -24316,6 +25794,20 @@ const docTemplate = `{
                 },
                 "version": {
                     "type": "string"
+                }
+            }
+        },
+        "services.UpdateCalculatorVersionInput": {
+            "type": "object",
+            "properties": {
+                "change_summary": {
+                    "type": "string"
+                },
+                "definition": {
+                    "type": "object"
+                },
+                "lock_version": {
+                    "type": "integer"
                 }
             }
         },

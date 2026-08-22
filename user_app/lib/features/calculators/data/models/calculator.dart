@@ -21,6 +21,8 @@ abstract class Calculator with _$Calculator {
     @JsonKey(name: 'type') @Default('calculator') String typeValue,
     @JsonKey(name: 'status') @Default('draft') String statusValue,
     @JsonKey(name: 'usage_count') @Default(0) int usageCount,
+    @JsonKey(name: 'runtime_type') @Default('legacy_html') String runtimeKind,
+    @JsonKey(name: 'current_version_id') String? currentVersionId,
     @Default(false) bool featured,
     @JsonKey(name: 'created_at')
     @NullableDateTimeConverter()
@@ -46,6 +48,7 @@ abstract class Calculator with _$Calculator {
   bool get isActive => status == CalculatorStatus.active;
   bool get isDraft => status == CalculatorStatus.draft;
   bool get isArchived => status == CalculatorStatus.archived;
+  bool get isNativeSchema => runtimeKind == 'schema_v1';
   String get typeDisplayName => switch (type) {
     CalculatorType.calculator => 'Calculator',
     CalculatorType.decisionTool => 'Decision Tool',

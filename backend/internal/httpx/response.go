@@ -26,6 +26,12 @@ func Created(c *gin.Context, data any) {
 }
 func Error(c *gin.Context, code int, msg string) { c.JSON(code, Response{Success: false, Error: msg}) }
 
+// ErrorWithMeta preserves machine-readable validation details while retaining
+// the response envelope used by every v2 endpoint.
+func ErrorWithMeta(c *gin.Context, code int, msg string, meta any) {
+	c.JSON(code, Response{Success: false, Error: msg, Meta: meta})
+}
+
 func TooManyRequests(c *gin.Context, metadata RateLimitMetadata) {
 	c.JSON(http.StatusTooManyRequests, Response{Success: false, Error: "rate limit exceeded", Meta: metadata})
 }

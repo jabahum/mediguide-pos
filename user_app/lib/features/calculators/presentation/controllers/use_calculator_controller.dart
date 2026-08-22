@@ -10,6 +10,7 @@ import 'package:user_app/app/providers/app_providers.dart';
 import 'package:user_app/core/constants/app_constants.dart';
 import 'package:user_app/features/authentication/presentation/controllers/auth_controller.dart';
 import 'package:user_app/features/calculators/data/repositories/calculator_repository.dart';
+import 'package:user_app/features/calculators/data/models/clinical_tool_definition.dart';
 import 'package:user_app/shared/models/models.dart';
 
 part 'use_calculator_controller.g.dart';
@@ -194,8 +195,10 @@ final class FileCalculatorContentLoader implements CalculatorContentLoader {
 final class UseCalculatorState {
   const UseCalculatorState({
     required this.calculator,
-    required this.html,
-    required this.baseUrl,
+    this.html = '',
+    this.baseUrl = '',
+    this.definition,
+    this.responses = const {},
     this.isWebViewReady = false,
     this.webViewError,
   });
@@ -203,11 +206,14 @@ final class UseCalculatorState {
   final Calculator calculator;
   final String html;
   final String baseUrl;
+  final ClinicalToolDefinitionEnvelope? definition;
+  final Map<String, Object?> responses;
 
   final bool isWebViewReady;
   final String? webViewError;
 
   UseCalculatorState copyWith({
+    Map<String, Object?>? responses,
     bool? isWebViewReady,
     String? webViewError,
     bool clearError = false,
@@ -216,6 +222,8 @@ final class UseCalculatorState {
       calculator: calculator,
       html: html,
       baseUrl: baseUrl,
+      definition: definition,
+      responses: responses ?? this.responses,
       isWebViewReady: isWebViewReady ?? this.isWebViewReady,
       webViewError: clearError ? null : webViewError ?? this.webViewError,
     );
@@ -249,6 +257,24 @@ class UseCalculatorController extends _$UseCalculatorController {
       unawaited(_finishUsage());
     });
 
+    if (calculator.isNativeSchema) {
+      final definition = await _repository.definition(calculator.id);
+      final userId = ref.read(authControllerProvider).valueOrNull?.user?.id;
+      final responses =
+          userId == null || !definition.definition.completion.allowResume
+          ? const <String, Object?>{}
+          : await _repository.workflow(
+              calculatorId: calculator.id,
+              userId: userId,
+              definition: definition,
+            );
+      return UseCalculatorState(
+        calculator: calculator,
+        definition: definition,
+        responses: responses,
+      );
+    }
+
     final content = await ref
         .read(calculatorContentLoaderProvider)
         .load(calculator);
@@ -257,6 +283,25 @@ class UseCalculatorController extends _$UseCalculatorController {
       calculator: calculator,
       html: content.html,
       baseUrl: content.baseUrl,
+    );
+  }
+
+  Future<void> saveResponses(Map<String, Object?> responses) async {
+    final current = state.valueOrNull;
+    final userId = ref.read(authControllerProvider).valueOrNull?.user?.id;
+    if (current?.definition == null ||
+        userId == null ||
+        !current!.definition!.definition.completion.allowResume) {
+      return;
+    }
+    await _repository.saveWorkflow(
+      calculatorId: current.calculator.id,
+      userId: userId,
+      definition: current.definition!,
+      responses: responses,
+    );
+    state = AsyncData(
+      current.copyWith(responses: Map<String, Object?>.from(responses)),
     );
   }
 

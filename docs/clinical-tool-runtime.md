@@ -35,6 +35,7 @@ fixtures before a schema version can be published.
 - `date_difference` uses ISO-8601 calendar dates and the declared `date_unit`.
   Any current-time dependency receives an injected UTC clock. Tests that depend
   on time must provide `fixed_now`; runtimes must not read their wall clocks.
+  The zero-argument `now` AST node returns that clock as an RFC 3339 UTC value.
 
 ## Unit conversions
 
@@ -85,3 +86,64 @@ event. Clinically critical tools require a reviewer other than the author.
 Rollback selects a previous published/superseded immutable version rather than
 copying or overwriting it. Usage events retain the version ID that was active
 when the session started.
+
+## Typed API and authorization
+
+Published definitions are read from
+`GET /api/v2/calculators/{id}/definition`. Authoring uses the typed version
+routes under `/api/v2/calculators/{id}/versions` and
+`/api/v2/calculator-versions/{id}` for draft CRUD, duplication, validation,
+saved-fixture execution, submission, approval, publication, withdrawal,
+immutable review comments, and audit history. The legacy content endpoint is
+restricted to `legacy_html` tools.
+
+The workflow permissions are deliberately separated:
+
+- `calculator.read` reads tools and the active published definition.
+- `calculator.write` authors drafts, validates them, and runs fixtures.
+- `calculator.review` reviews submitted versions and writes immutable review
+  comments.
+- `calculator.publish` publishes approved versions.
+- `calculator.withdraw` withdraws non-current superseded versions.
+
+Administrative roles receive all workflow permissions. Content managers can
+author but cannot approve or publish. Clinical reviewers can review but cannot
+edit definitions. Clinically critical decision, triage, emergency, and
+medication tools require an approver other than the draft author. Validate,
+test, and publish operations have per-user rate limits.
+
+## Authoring and preview
+
+The dashboard authoring route is
+`/decision-tools/{id}/author`. It provides version history, optimistic-lock
+draft saves, JSON import/export, exact schema-path validation feedback, saved
+fixture execution, review comments, audit history, published-versus-current
+comparison, lifecycle actions, and a native React preview. Definitions are
+rendered as React controls and text; authored HTML and executable source are
+never inserted into the page. The preview is advisory: backend validation and
+the Go evaluator are the publication authority.
+
+## Mobile execution and offline state
+
+Flutter fetches a published schema definition through the focused calculator
+repository, maps it to Freezed models, and renders it with native widgets. A
+WebView is used only when `runtime_type` is `legacy_html`. Successful definition
+reads are cached with calculator ID, immutable version ID, server checksum, and
+a locally computed integrity digest. Corrupt cache entries are rejected.
+
+Resumable checklist/form responses are stored separately under an authenticated
+`user:{id}` scope and are restored only when the version ID and definition
+checksum still match. Guest responses are not persisted. The native evaluator
+supports the schema allowlist, normalized units, rules, outputs,
+interpretations, recommendations, and warnings; unknown operations fail closed.
+The UI supports light/dark themes, scaled text, keyboard-friendly controls,
+screen-reader labels, and an accessibility live region for results.
+
+## Contract generation and validation
+
+After changing the API or schema, run `make contracts` and
+`make contracts-check` from the repository root. Generated TypeScript and Dart
+contracts must only be changed by their generators. Backend evaluator fixtures,
+dashboard preview tests, Flutter evaluator/widget/repository tests, static
+analysis, production builds, and the debug APK build form the release gate for
+schema-runtime changes.

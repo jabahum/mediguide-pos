@@ -196,7 +196,8 @@ String _fieldName(String value) {
   if (parts.isEmpty) return 'field';
   final candidate =
       parts.first.toLowerCase() + parts.skip(1).map(_capitalize).join();
-  return _dartKeywords.contains(candidate) || _generatorReservedNames.contains(candidate)
+  return _dartKeywords.contains(candidate) ||
+          _generatorReservedNames.contains(candidate)
       ? '${candidate}Field'
       : candidate;
 }
@@ -280,4 +281,10 @@ const _dartKeywords = {
 };
 
 // Contract wrappers use these names for their own backing storage/API.
-const _generatorReservedNames = {'value', 'toJson', 'schemaName'};
+// Object members cannot be shadowed with incompatible generated getter types.
+const _generatorReservedNames = {
+  'value',
+  'toJson',
+  'schemaName',
+  'runtimeType',
+};

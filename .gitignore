@@ -13,6 +13,8 @@
 !docs/mobile-alpha-release.md
 !docs/notification-templates-and-campaigns.md
 !docs/outbreak-operations.md
+!docs/clinical-tool-phase-1-inventory.md
+!docs/clinical-tool-runtime.md
 !guidelines-platform/src/content/**/*.md
 backend/.env
 backend/.env.local

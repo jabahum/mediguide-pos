@@ -9,6 +9,7 @@
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "test": "bun run --bun vitest run",
+    "test:legacy-tools": "bun run --bun vitest run samples/legacy-tools.characterization.test.ts",
     "test:watch": "bun run --bun vitest",
     "generate-types": "./scripts/generate-backend-types.sh"
   },

@@ -104,6 +104,10 @@ func TestCalculatorUsageIsOwnedByAuthenticatedUser(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	versionID := uuid.New()
+	if err := service.DB.Model(&models.Calculator{}).Where("id = ?", calculator.ID).Update("current_version_id", versionID).Error; err != nil {
+		t.Fatal(err)
+	}
 
 	usage, err := service.StartUsage(userID, calculator.ID, StartCalculatorUsageInput{
 		SessionStart:   "2026-07-30T12:00:00Z",
@@ -111,6 +115,9 @@ func TestCalculatorUsageIsOwnedByAuthenticatedUser(t *testing.T) {
 	})
 	if err != nil {
 		t.Fatalf("start usage: %v", err)
+	}
+	if usage.CalculatorVersionID == nil || *usage.CalculatorVersionID != versionID {
+		t.Fatalf("usage did not retain the active immutable version: %#v", usage)
 	}
 
 	if _, err := service.FinishUsage(uuid.New(), usage.ID, FinishCalculatorUsageInput{

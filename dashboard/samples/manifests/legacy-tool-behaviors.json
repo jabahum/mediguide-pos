@@ -1,0 +1,1984 @@
+{
+  "schema_version": 1,
+  "scope": "Characterization of the legacy standalone HTML tools. This file is descriptive and must not be used as a clinical source of truth.",
+  "tools": [
+    {
+      "id": "apgar-score-calculator",
+      "file": "apgar-score-calculator.html",
+      "type": "score",
+      "entry_point": "calculateAPGAR",
+      "inputs": [
+        {
+          "name": "activity",
+          "type": "radio",
+          "unit": "points",
+          "required": false,
+          "allowed": [
+            0,
+            1,
+            2
+          ]
+        },
+        {
+          "name": "pulse",
+          "type": "radio",
+          "unit": "points",
+          "required": false,
+          "allowed": [
+            0,
+            1,
+            2
+          ]
+        },
+        {
+          "name": "grimace",
+          "type": "radio",
+          "unit": "points",
+          "required": false,
+          "allowed": [
+            0,
+            1,
+            2
+          ]
+        },
+        {
+          "name": "appearance",
+          "type": "radio",
+          "unit": "points",
+          "required": false,
+          "allowed": [
+            0,
+            1,
+            2
+          ]
+        },
+        {
+          "name": "respiration",
+          "type": "radio",
+          "unit": "points",
+          "required": false,
+          "allowed": [
+            0,
+            1,
+            2
+          ]
+        },
+        {
+          "name": "score-1min",
+          "type": "number",
+          "unit": "points",
+          "required": false,
+          "min": 0,
+          "max": 10
+        },
+        {
+          "name": "score-5min",
+          "type": "number",
+          "unit": "points",
+          "required": false,
+          "min": 0,
+          "max": 10
+        }
+      ],
+      "logic": {
+        "formula": "sum selected values; missing categories contribute 0",
+        "precision": "integer",
+        "thresholds": [
+          "0-3 Severe Depression",
+          "4-7 Moderate Depression",
+          "8-10 Excellent"
+        ],
+        "conditional": "comparison is shown only when both comparison scores parse as integers",
+        "reset": "none",
+        "time_dependency": "none"
+      },
+      "outputs": [
+        "score-value",
+        "score-interpretation",
+        "clinical-significance",
+        "management-recommendations",
+        "comparison-row"
+      ],
+      "warnings": [
+        "0-3 produces immediate-resuscitation guidance"
+      ],
+      "sources": [],
+      "ambiguities": [
+        "The UI calculates a partial score when categories are unanswered instead of rejecting incomplete input."
+      ],
+      "characterization": [
+        {
+          "id": "all-zero",
+          "tags": [
+            "minimum",
+            "critical",
+            "warning"
+          ],
+          "radios": [
+            "activity-0",
+            "pulse-0",
+            "grimace-0",
+            "appearance-0",
+            "respiration-0"
+          ],
+          "invoke": "calculateAPGAR()",
+          "expect": {
+            "score-value": "0",
+            "score-interpretation": "Severe Depression (0-3)"
+          }
+        },
+        {
+          "id": "boundary-four",
+          "tags": [
+            "boundary",
+            "immediately-above"
+          ],
+          "radios": [
+            "activity-1",
+            "pulse-1",
+            "grimace-1",
+            "appearance-1",
+            "respiration-0"
+          ],
+          "invoke": "calculateAPGAR()",
+          "expect": {
+            "score-value": "4",
+            "score-interpretation": "Moderate Depression (4-7)"
+          }
+        },
+        {
+          "id": "boundary-eight-with-comparison",
+          "tags": [
+            "normal",
+            "maximum",
+            "boundary",
+            "conditional"
+          ],
+          "values": {
+            "score-1min": "5",
+            "score-5min": "8"
+          },
+          "radios": [
+            "activity-2",
+            "pulse-2",
+            "grimace-2",
+            "appearance-1",
+            "respiration-1"
+          ],
+          "invoke": "calculateAPGAR()",
+          "expect": {
+            "score-value": "8",
+            "score-interpretation": "Excellent (8-10)",
+            "comparison-row": "1 min: 55 min: 8 5 → 8 ↑ Improving Good recovery, positive response to resuscitation"
+          }
+        }
+      ]
+    },
+    {
+      "id": "blood-pressure-assessment",
+      "file": "blood-pressure-assessment.html",
+      "type": "classification",
+      "entry_point": "assessBloodPressure",
+      "inputs": [
+        {
+          "name": "systolic",
+          "type": "number",
+          "unit": "mmHg",
+          "required": true,
+          "min": 70,
+          "max": 250
+        },
+        {
+          "name": "diastolic",
+          "type": "number",
+          "unit": "mmHg",
+          "required": true,
+          "min": 40,
+          "max": 150
+        },
+        {
+          "name": "risk-factors",
+          "type": "checkbox-group",
+          "required": false,
+          "allowed_count": [
+            0,
+            10
+          ]
+        }
+      ],
+      "logic": {
+        "formula": "classify by the highest systolic or diastolic threshold",
+        "precision": "integer parsing",
+        "thresholds": [
+          "normal: <120 and <80",
+          "elevated: 120-129 and <80",
+          "stage 1: >=130 or >=80",
+          "stage 2: >=140 or >=90",
+          "crisis: >=180 or >=120"
+        ],
+        "conditional": "risk count: 0 low, 1-2 moderate, 3-4 high, 5+ very high",
+        "reset": "none",
+        "time_dependency": "none"
+      },
+      "outputs": [
+        "bpCategory",
+        "bpReading",
+        "riskLevel",
+        "riskFactorCount",
+        "recommendations"
+      ],
+      "warnings": [
+        "hypertensive crisis directs immediate medical attention"
+      ],
+      "sources": [],
+      "ambiguities": [
+        "HTML min/max constraints are not revalidated by the JavaScript entry point."
+      ],
+      "characterization": [
+        {
+          "id": "missing",
+          "tags": [
+            "missing",
+            "invalid"
+          ],
+          "values": {
+            "systolic": "120"
+          },
+          "invoke": "assessBloodPressure()",
+          "alert": "Please enter both systolic and diastolic values"
+        },
+        {
+          "id": "normal",
+          "tags": [
+            "normal",
+            "minimum"
+          ],
+          "values": {
+            "systolic": "119",
+            "diastolic": "79"
+          },
+          "invoke": "assessBloodPressure()",
+          "expect": {
+            "bpCategory": "Normal Blood Pressure",
+            "bpReading": "119/79",
+            "riskLevel": "Low Risk"
+          }
+        },
+        {
+          "id": "stage-boundaries",
+          "tags": [
+            "boundary",
+            "immediately-below",
+            "immediately-above"
+          ],
+          "values": {
+            "systolic": "130",
+            "diastolic": "79"
+          },
+          "checks": [
+            "age",
+            "family-history",
+            "diabetes"
+          ],
+          "invoke": "assessBloodPressure()",
+          "expect": {
+            "bpCategory": "Stage 1 High Blood Pressure",
+            "riskLevel": "High Risk"
+          }
+        },
+        {
+          "id": "crisis",
+          "tags": [
+            "maximum",
+            "critical",
+            "warning"
+          ],
+          "values": {
+            "systolic": "180",
+            "diastolic": "80"
+          },
+          "invoke": "assessBloodPressure()",
+          "expect": {
+            "bpCategory": "Hypertensive Crisis"
+          }
+        }
+      ]
+    },
+    {
+      "id": "bmi-calculator",
+      "file": "bmi-calculator.html",
+      "type": "calculator",
+      "entry_point": "calculateBMI",
+      "inputs": [
+        {
+          "name": "weight",
+          "type": "number",
+          "unit": "kg|lb",
+          "required": true,
+          "min": 1,
+          "max": 500
+        },
+        {
+          "name": "weightUnit",
+          "type": "select",
+          "required": true,
+          "allowed": [
+            "kg",
+            "lbs"
+          ],
+          "default": "kg"
+        },
+        {
+          "name": "height",
+          "type": "number",
+          "unit": "m|cm|ft|in",
+          "required": true,
+          "min": 0.5,
+          "max": 3
+        },
+        {
+          "name": "heightUnit",
+          "type": "select",
+          "required": true,
+          "allowed": [
+            "m",
+            "cm",
+            "ft",
+            "in"
+          ],
+          "default": "m"
+        }
+      ],
+      "logic": {
+        "formula": "kg / metres^2",
+        "conversions": [
+          "lb × 0.453592",
+          "cm / 100",
+          "ft × 0.3048",
+          "in × 0.0254"
+        ],
+        "precision": "BMI rounded to one decimal with toFixed(1)",
+        "thresholds": [
+          "<18.5 underweight",
+          "18.5..<25 normal",
+          "25..<30 overweight",
+          ">=30 obese"
+        ],
+        "reset": "browser form reset only",
+        "time_dependency": "none"
+      },
+      "outputs": [
+        "bmiValue",
+        "bmiCategory",
+        "recommendations"
+      ],
+      "warnings": [],
+      "sources": [],
+      "ambiguities": [
+        "Direct invocation permits empty/zero values and can display NaN or Infinity; browser required/min validation only applies on form submit."
+      ],
+      "characterization": [
+        {
+          "id": "metric-normal",
+          "tags": [
+            "normal"
+          ],
+          "values": {
+            "weight": "70",
+            "weightUnit": "kg",
+            "height": "1.75",
+            "heightUnit": "m"
+          },
+          "invoke": "calculateBMI()",
+          "expect": {
+            "bmiValue": "22.9",
+            "bmiCategory": "Normal Weight"
+          }
+        },
+        {
+          "id": "unit-conversion",
+          "tags": [
+            "conversion"
+          ],
+          "values": {
+            "weight": "154.324",
+            "weightUnit": "lbs",
+            "height": "68.8976",
+            "heightUnit": "in"
+          },
+          "invoke": "calculateBMI()",
+          "expect": {
+            "bmiValue": "22.9",
+            "bmiCategory": "Normal Weight"
+          }
+        },
+        {
+          "id": "boundary-25",
+          "tags": [
+            "boundary",
+            "immediately-below",
+            "immediately-above"
+          ],
+          "values": {
+            "weight": "81",
+            "weightUnit": "kg",
+            "height": "1.8",
+            "heightUnit": "m"
+          },
+          "invoke": "calculateBMI()",
+          "expect": {
+            "bmiValue": "25.0",
+            "bmiCategory": "Overweight"
+          }
+        },
+        {
+          "id": "invalid-empty",
+          "tags": [
+            "missing",
+            "invalid",
+            "maximum"
+          ],
+          "invoke": "calculateBMI()",
+          "expect": {
+            "bmiValue": "NaN",
+            "bmiCategory": "Obese"
+          }
+        }
+      ]
+    },
+    {
+      "id": "cardiac-risk-assessment",
+      "file": "cardiac-risk-assessment.html",
+      "type": "risk-score",
+      "entry_point": "calculateCardiacRisk",
+      "inputs": [
+        {
+          "name": "age",
+          "type": "number",
+          "unit": "years",
+          "required": true,
+          "min": 20,
+          "max": 100
+        },
+        {
+          "name": "gender",
+          "type": "select",
+          "required": true,
+          "allowed": [
+            "male",
+            "female"
+          ]
+        },
+        {
+          "name": "ethnicity",
+          "type": "select",
+          "required": false,
+          "allowed": [
+            "white",
+            "black",
+            "hispanic",
+            "asian",
+            "other"
+          ]
+        },
+        {
+          "name": "systolic-bp",
+          "type": "number",
+          "unit": "mmHg",
+          "required": true,
+          "min": 90,
+          "max": 250
+        },
+        {
+          "name": "diastolic-bp",
+          "type": "number",
+          "unit": "mmHg",
+          "required": true,
+          "min": 50,
+          "max": 150
+        },
+        {
+          "name": "total-cholesterol",
+          "type": "number",
+          "unit": "mg/dL",
+          "required": true,
+          "min": 100,
+          "max": 400
+        },
+        {
+          "name": "hdl-cholesterol",
+          "type": "number",
+          "unit": "mg/dL",
+          "required": true,
+          "min": 20,
+          "max": 100
+        },
+        {
+          "name": "ldl-cholesterol",
+          "type": "number",
+          "unit": "mg/dL",
+          "required": false,
+          "min": 50,
+          "max": 300
+        },
+        {
+          "name": "risk-factors",
+          "type": "checkbox-group",
+          "required": false,
+          "allowed_count": [
+            0,
+            10
+          ]
+        }
+      ],
+      "logic": {
+        "formula": "simplified Framingham points and simplified ASCVD coefficients; overall risk combines maximum score with modifiers",
+        "precision": "whole percentage values are displayed",
+        "thresholds": [
+          "low <5%",
+          "borderline 5..<7.5%",
+          "intermediate 7.5..<20%",
+          "high >=20%"
+        ],
+        "conditional": "family history, diabetes, smoking and other factors can raise overall classification",
+        "reset": "none",
+        "time_dependency": "none"
+      },
+      "outputs": [
+        "framingham-risk",
+        "ascvd-risk",
+        "risk-category",
+        "risk-factors-count"
+      ],
+      "warnings": [
+        "high-risk results recommend clinician assessment"
+      ],
+      "sources": [
+        "UI labels the algorithms Framingham and ASCVD but contains simplified local implementations"
+      ],
+      "ambiguities": [
+        "Not a validated reference implementation; ethnicity and statin inputs are only partly or not used."
+      ],
+      "characterization": [
+        {
+          "id": "missing",
+          "tags": [
+            "missing",
+            "invalid"
+          ],
+          "invoke": "calculateCardiacRisk()",
+          "alert": "Please fill in all required fields"
+        },
+        {
+          "id": "baseline",
+          "tags": [
+            "normal",
+            "minimum"
+          ],
+          "values": {
+            "age": "40",
+            "gender": "male",
+            "ethnicity": "white",
+            "systolic-bp": "120",
+            "diastolic-bp": "80",
+            "total-cholesterol": "180",
+            "hdl-cholesterol": "55"
+          },
+          "invoke": "calculateCardiacRisk()",
+          "expectVisible": "result"
+        },
+        {
+          "id": "risk-heavy",
+          "tags": [
+            "maximum",
+            "boundary",
+            "conditional",
+            "warning",
+            "critical"
+          ],
+          "values": {
+            "age": "75",
+            "gender": "male",
+            "ethnicity": "black",
+            "systolic-bp": "180",
+            "diastolic-bp": "120",
+            "total-cholesterol": "300",
+            "hdl-cholesterol": "30",
+            "family-history": "yes",
+            "bp-treatment": "yes"
+          },
+          "checks": [
+            "diabetes",
+            "smoking",
+            "hypertension"
+          ],
+          "invoke": "calculateCardiacRisk()",
+          "expectVisible": "result"
+        }
+      ]
+    },
+    {
+      "id": "dehydration-assessment",
+      "file": "dehydration-assessment.html",
+      "type": "score",
+      "entry_point": "assessDehydration",
+      "inputs": [
+        {
+          "name": "age-group",
+          "type": "select",
+          "required": true,
+          "allowed": [
+            "infant",
+            "child",
+            "adolescent",
+            "adult"
+          ]
+        },
+        {
+          "name": "weight",
+          "type": "number",
+          "unit": "kg",
+          "required": false,
+          "min": 1,
+          "max": 200,
+          "default_runtime": 10
+        },
+        {
+          "name": "six-clinical-signs",
+          "type": "radio-groups",
+          "unit": "points",
+          "required": false,
+          "allowed": [
+            0,
+            1,
+            2
+          ]
+        },
+        {
+          "name": "additional-symptoms",
+          "type": "checkbox-group",
+          "required": false,
+          "allowed_count": [
+            0,
+            5
+          ]
+        }
+      ],
+      "logic": {
+        "formula": "sum six sign scores; count additional symptoms separately",
+        "precision": "integer score and rounded mL",
+        "thresholds": [
+          "0-2 no/mild",
+          "3-6 moderate",
+          ">6 severe",
+          "3+ additional symptoms raises wording one level unless severe"
+        ],
+        "conditional": "fluid recommendation changes for adult versus other age groups",
+        "reset": "none",
+        "time_dependency": "none"
+      },
+      "outputs": [
+        "dehydrationLevel",
+        "fluidLoss",
+        "totalScore",
+        "scoreInterpretation",
+        "treatmentList",
+        "fluidCalculation"
+      ],
+      "warnings": [
+        "moderate starts ORS immediately; severe starts urgent IV guidance"
+      ],
+      "sources": [],
+      "ambiguities": [
+        "Unanswered signs contribute zero and blank weight silently defaults to 10 kg."
+      ],
+      "characterization": [
+        {
+          "id": "minimum-default-weight",
+          "tags": [
+            "minimum",
+            "missing",
+            "normal"
+          ],
+          "invoke": "assessDehydration()",
+          "expect": {
+            "dehydrationLevel": "No or Mild Dehydration",
+            "totalScore": "0/12"
+          }
+        },
+        {
+          "id": "moderate-boundary",
+          "tags": [
+            "boundary",
+            "immediately-above",
+            "conditional",
+            "warning"
+          ],
+          "values": {
+            "age-group": "child",
+            "weight": "20"
+          },
+          "radios": [
+            "appearance-restless",
+            "eyes-sunken",
+            "mouth-sticky"
+          ],
+          "invoke": "assessDehydration()",
+          "expect": {
+            "dehydrationLevel": "Moderate Dehydration",
+            "totalScore": "3/12"
+          }
+        },
+        {
+          "id": "severe",
+          "tags": [
+            "maximum",
+            "critical"
+          ],
+          "radios": [
+            "appearance-lethargic",
+            "eyes-very-sunken",
+            "mouth-dry",
+            "tears-absent"
+          ],
+          "invoke": "assessDehydration()",
+          "expect": {
+            "dehydrationLevel": "Severe Dehydration",
+            "totalScore": "8/12"
+          }
+        }
+      ]
+    },
+    {
+      "id": "emergency-triage-assessment",
+      "file": "emergency-triage-assessment.html",
+      "type": "decision-tool",
+      "entry_point": "performTriage",
+      "inputs": [
+        {
+          "name": "age",
+          "type": "number",
+          "unit": "years|months|days",
+          "required": true,
+          "min": 0,
+          "max": 120
+        },
+        {
+          "name": "vitals",
+          "type": "number-group",
+          "required": false,
+          "fields": [
+            "heart-rate",
+            "respiratory-rate",
+            "blood-pressure-sys",
+            "blood-pressure-dia",
+            "temperature",
+            "oxygen-saturation",
+            "pain-score"
+          ]
+        },
+        {
+          "name": "clinical-signs",
+          "type": "checkbox-group",
+          "required": false,
+          "allowed_priorities": [
+            1,
+            2,
+            3,
+            4
+          ]
+        }
+      ],
+      "logic": {
+        "formula": "minimum urgency number from checked signs and age-adjusted vital thresholds, then pain escalation",
+        "precision": "integer parsing",
+        "thresholds": [
+          "P1 immediate",
+          "P2 <=10 min",
+          "P3 <=60 min",
+          "P4 <=120 min",
+          "P5 <=240 min"
+        ],
+        "conditional": "age converts months /12 and days /365",
+        "reset": "none",
+        "time_dependency": "none"
+      },
+      "outputs": [
+        "priority-badge",
+        "triage-category",
+        "time-target",
+        "clinical-priority",
+        "action-list",
+        "monitoring-points"
+      ],
+      "warnings": [
+        "P1 and P2 represent life-threatening or time-critical care"
+      ],
+      "sources": [],
+      "ambiguities": [
+        "The required age is not validated by performTriage; blank values become NaN and default to adult vital branches."
+      ],
+      "characterization": [
+        {
+          "id": "default-nonurgent",
+          "tags": [
+            "missing",
+            "invalid",
+            "minimum"
+          ],
+          "invoke": "performTriage()",
+          "expect": {
+            "priority-badge": "Priority 5",
+            "triage-category": "NON-URGENT (Priority 5 - BLUE)"
+          }
+        },
+        {
+          "id": "priority-one-sign",
+          "tags": [
+            "critical",
+            "warning",
+            "conditional"
+          ],
+          "values": {
+            "age": "35"
+          },
+          "checks": [
+            "cardiac-arrest"
+          ],
+          "invoke": "performTriage()",
+          "expect": {
+            "priority-badge": "Priority 1",
+            "time-target": "0 minutes - Immediate resuscitation"
+          }
+        },
+        {
+          "id": "oxygen-boundary",
+          "tags": [
+            "normal",
+            "boundary",
+            "immediately-below",
+            "immediately-above",
+            "maximum"
+          ],
+          "values": {
+            "age": "35",
+            "oxygen-saturation": "91"
+          },
+          "invoke": "performTriage()",
+          "expect": {
+            "priority-badge": "Priority 2"
+          }
+        }
+      ]
+    },
+    {
+      "id": "fluid-balance-calculator",
+      "file": "fluid-balance-calculator.html",
+      "type": "calculator",
+      "entry_point": "calculateFluidBalance",
+      "reset_entry_point": "resetCalculator",
+      "inputs": [
+        {
+          "name": "weight",
+          "type": "number",
+          "unit": "kg",
+          "required": true,
+          "min": 1,
+          "max": 300
+        },
+        {
+          "name": "age",
+          "type": "number",
+          "unit": "years",
+          "required": true,
+          "min": 0,
+          "max": 120
+        },
+        {
+          "name": "clinical-condition",
+          "type": "select",
+          "required": true
+        },
+        {
+          "name": "intakes",
+          "type": "number-group",
+          "unit": "mL/24h",
+          "default_values": {
+            "food-moisture": 800
+          }
+        },
+        {
+          "name": "outputs",
+          "type": "number-group",
+          "unit": "mL/24h",
+          "default_values": {
+            "insensible": 800
+          }
+        },
+        {
+          "name": "interval-urine",
+          "type": "number-group",
+          "unit": "mL/4h",
+          "required": false
+        }
+      ],
+      "logic": {
+        "formula": "net=intake-output; mL/kg=net/weight; urine mL/kg/h=urine/weight/24",
+        "precision": "balance/kg one decimal; urine/kg/hour two decimals",
+        "thresholds": [
+          "balanced abs(net)<=500 and abs(perKg)<=7",
+          "retention >500; significant >1500 or >20/kg",
+          "deficit <-500; significant <-1500 or <-20/kg",
+          "critical urine <0.3/kg/h"
+        ],
+        "conditional": "normal urine minimum is 0.4 for age >=65, otherwise 0.5; condition adjusts recommendations",
+        "reset": "resets inputs and hides result",
+        "time_dependency": "none"
+      },
+      "outputs": [
+        "total-intake",
+        "total-output",
+        "net-balance",
+        "balance-per-kg",
+        "urine-per-kg",
+        "balance-status",
+        "recommendations-list"
+      ],
+      "warnings": [
+        "critical oliguria and significant retention/deficit"
+      ],
+      "sources": [],
+      "ambiguities": [
+        "Age 0 is allowed by HTML but rejected by the JavaScript truthiness check."
+      ],
+      "characterization": [
+        {
+          "id": "missing",
+          "tags": [
+            "missing",
+            "invalid"
+          ],
+          "invoke": "calculateFluidBalance()",
+          "alert": "Please enter patient weight and age"
+        },
+        {
+          "id": "balanced",
+          "tags": [
+            "normal",
+            "minimum",
+            "boundary"
+          ],
+          "values": {
+            "weight": "70",
+            "age": "40",
+            "oral-fluids": "800",
+            "urine-output": "800"
+          },
+          "invoke": "calculateFluidBalance()",
+          "expect": {
+            "net-balance": "0",
+            "balance-status": "Balanced"
+          }
+        },
+        {
+          "id": "critical-retention",
+          "tags": [
+            "maximum",
+            "critical",
+            "warning",
+            "conditional"
+          ],
+          "values": {
+            "weight": "70",
+            "age": "70",
+            "iv-fluids": "3000",
+            "urine-output": "0"
+          },
+          "invoke": "calculateFluidBalance()",
+          "expect": {
+            "balance-status": "Significant Fluid Retention"
+          }
+        },
+        {
+          "id": "reset",
+          "tags": [
+            "reset"
+          ],
+          "values": {
+            "weight": "70",
+            "age": "40"
+          },
+          "invoke": "calculateFluidBalance(); resetCalculator()",
+          "expectHidden": "result",
+          "expectValues": {
+            "oral-fluids": "0",
+            "food-moisture": "800"
+          }
+        }
+      ]
+    },
+    {
+      "id": "glasgow-coma-scale",
+      "file": "glasgow-coma-scale.html",
+      "type": "score",
+      "entry_point": "calculateGCS",
+      "inputs": [
+        {
+          "name": "eye",
+          "type": "radio",
+          "unit": "points",
+          "required": false,
+          "allowed": [
+            1,
+            2,
+            3,
+            4
+          ]
+        },
+        {
+          "name": "verbal",
+          "type": "radio",
+          "unit": "points",
+          "required": false,
+          "allowed": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "name": "motor",
+          "type": "radio",
+          "unit": "points",
+          "required": false,
+          "allowed": [
+            1,
+            2,
+            3,
+            4,
+            5,
+            6
+          ]
+        }
+      ],
+      "logic": {
+        "formula": "eye + verbal + motor",
+        "precision": "integer",
+        "thresholds": [
+          "3-8 severe",
+          "9-12 moderate",
+          "13-15 mild"
+        ],
+        "conditional": "unanswered components contribute zero",
+        "reset": "none",
+        "time_dependency": "none"
+      },
+      "outputs": [
+        "total-score",
+        "severity",
+        "eye-score",
+        "verbal-score",
+        "motor-score",
+        "recommendations"
+      ],
+      "warnings": [
+        "score <=8 includes airway/intubation escalation"
+      ],
+      "sources": [],
+      "ambiguities": [
+        "Partial selection can generate scores below the clinical scale minimum of 3."
+      ],
+      "characterization": [
+        {
+          "id": "minimum",
+          "tags": [
+            "minimum",
+            "critical",
+            "warning"
+          ],
+          "radios": [
+            "eye-1",
+            "verbal-1",
+            "motor-1"
+          ],
+          "invoke": "calculateGCS()",
+          "expect": {
+            "total-score": "3"
+          }
+        },
+        {
+          "id": "boundary-eight",
+          "tags": [
+            "boundary",
+            "immediately-below"
+          ],
+          "radios": [
+            "eye-2",
+            "verbal-2",
+            "motor-4"
+          ],
+          "invoke": "calculateGCS()",
+          "expect": {
+            "total-score": "8"
+          }
+        },
+        {
+          "id": "maximum",
+          "tags": [
+            "normal",
+            "maximum",
+            "immediately-above"
+          ],
+          "radios": [
+            "eye-4",
+            "verbal-5",
+            "motor-6"
+          ],
+          "invoke": "calculateGCS()",
+          "expect": {
+            "total-score": "15"
+          }
+        }
+      ]
+    },
+    {
+      "id": "immunization-schedule-checker",
+      "file": "immunization-schedule-checker.html",
+      "type": "date-driven-checklist",
+      "entry_point": "checkImmunizations",
+      "inputs": [
+        {
+          "name": "birth-date",
+          "type": "date",
+          "required": true
+        },
+        {
+          "name": "gender",
+          "type": "select",
+          "required": false,
+          "allowed": [
+            "male",
+            "female",
+            "other"
+          ]
+        },
+        {
+          "name": "country",
+          "type": "select",
+          "required": true,
+          "allowed": [
+            "usa",
+            "who",
+            "canada",
+            "uk",
+            "australia"
+          ]
+        },
+        {
+          "name": "risk-category",
+          "type": "select",
+          "required": true
+        },
+        {
+          "name": "conditions",
+          "type": "checkbox-group",
+          "required": false
+        }
+      ],
+      "logic": {
+        "formula": "derive age from current date and compare schedule due dates with today",
+        "precision": "calendar days/months/years",
+        "thresholds": [
+          "overdue",
+          "due now",
+          "upcoming",
+          "future"
+        ],
+        "conditional": "schedule and additional recommendations depend on country, age, sex, risk category and conditions",
+        "reset": "none",
+        "time_dependency": "current wall clock; tests freeze Date"
+      },
+      "outputs": [
+        "age-display",
+        "schedule-container",
+        "recommendations-list",
+        "alerts-container"
+      ],
+      "warnings": [
+        "overdue and high-risk vaccine alerts"
+      ],
+      "sources": [
+        "country schedule names are shown in UI; verify schedule data clinically before migration"
+      ],
+      "ambiguities": [
+        "Schedule correctness and jurisdictional freshness require clinical review."
+      ],
+      "characterization": [
+        {
+          "id": "missing",
+          "tags": [
+            "missing",
+            "invalid"
+          ],
+          "invoke": "checkImmunizations()",
+          "expectVisible": "result"
+        },
+        {
+          "id": "fixed-clock-child",
+          "tags": [
+            "normal",
+            "boundary",
+            "conditional",
+            "fixed-clock",
+            "checklist"
+          ],
+          "fixedNow": "2026-01-15T12:00:00Z",
+          "values": {
+            "birth-date": "2025-01-15",
+            "country": "who",
+            "gender": "female",
+            "risk-category": "standard"
+          },
+          "invoke": "checkImmunizations()",
+          "expectVisible": "result"
+        },
+        {
+          "id": "fixed-clock-risk",
+          "tags": [
+            "minimum",
+            "maximum",
+            "warning",
+            "critical",
+            "fixed-clock",
+            "checklist"
+          ],
+          "fixedNow": "2026-01-15T12:00:00Z",
+          "values": {
+            "birth-date": "1950-01-15",
+            "country": "usa",
+            "risk-category": "immunocompromised"
+          },
+          "checks": [
+            "diabetes",
+            "heart-disease"
+          ],
+          "invoke": "checkImmunizations()",
+          "expectVisible": "result"
+        }
+      ]
+    },
+    {
+      "id": "medication-dosage-calculator",
+      "file": "medication-dosage-calculator.html",
+      "type": "medication-calculator",
+      "entry_point": "calculateDosage",
+      "inputs": [
+        {
+          "name": "medication",
+          "type": "select",
+          "required": true,
+          "allowed": [
+            "paracetamol",
+            "ibuprofen",
+            "amoxicillin",
+            "aspirin",
+            "prednisolone",
+            "custom"
+          ]
+        },
+        {
+          "name": "weight",
+          "type": "number",
+          "unit": "kg|lb",
+          "required": true,
+          "min": 0.5,
+          "max": 200
+        },
+        {
+          "name": "weightUnit",
+          "type": "select",
+          "required": true,
+          "allowed": [
+            "kg",
+            "lbs"
+          ]
+        },
+        {
+          "name": "age",
+          "type": "number",
+          "unit": "years",
+          "required": true,
+          "min": 0,
+          "max": 120
+        },
+        {
+          "name": "dosage",
+          "type": "number",
+          "unit": "mg/kg/dose",
+          "required": "custom only",
+          "min": 0
+        },
+        {
+          "name": "frequency",
+          "type": "select",
+          "unit": "doses/day",
+          "required": true,
+          "allowed": [
+            1,
+            2,
+            3,
+            4,
+            6
+          ]
+        }
+      ],
+      "logic": {
+        "formula": "single=min(mg/kg × kg, medication max single); daily=single × frequency",
+        "conversions": [
+          "lb / 2.20462 to kg"
+        ],
+        "precision": "weight one decimal, doses one decimal",
+        "thresholds": [
+          "medication-specific dose, maximum single dose, maximum daily dose and age warnings"
+        ],
+        "conditional": "custom uses entered dosage/frequency; standard drugs load preset values",
+        "reset": "none",
+        "time_dependency": "none"
+      },
+      "outputs": [
+        "singleDose",
+        "dosageFrequency",
+        "dailyDose",
+        "calculationFormula",
+        "patientInfo",
+        "result"
+      ],
+      "warnings": [
+        "single-dose cap",
+        "daily maximum",
+        "aspirin child warning",
+        "ibuprofen infant warning",
+        "medication contraindication notes"
+      ],
+      "sources": [],
+      "ambiguities": [
+        "The calculator is educational and preset doses require pharmacist/clinical validation."
+      ],
+      "characterization": [
+        {
+          "id": "missing",
+          "tags": [
+            "missing",
+            "invalid"
+          ],
+          "invoke": "calculateDosage()",
+          "alert": "Please fill in all required fields"
+        },
+        {
+          "id": "paracetamol-child",
+          "tags": [
+            "normal",
+            "pediatric",
+            "frequency",
+            "rounding"
+          ],
+          "values": {
+            "medication": "paracetamol",
+            "weight": "20",
+            "weightUnit": "kg",
+            "age": "8"
+          },
+          "invoke": "loadMedicationInfo(); calculateDosage()",
+          "expect": {
+            "singleDose": "300.0 mg",
+            "dailyDose": "1200.0 mg"
+          }
+        },
+        {
+          "id": "pounds-conversion",
+          "tags": [
+            "conversion",
+            "adult",
+            "frequency"
+          ],
+          "values": {
+            "medication": "ibuprofen",
+            "weight": "44.0924",
+            "weightUnit": "lbs",
+            "age": "20"
+          },
+          "invoke": "loadMedicationInfo(); calculateDosage()",
+          "expect": {
+            "singleDose": "150.0 mg"
+          }
+        },
+        {
+          "id": "cap-and-daily-max",
+          "tags": [
+            "minimum",
+            "maximum",
+            "boundary",
+            "immediately-below",
+            "immediately-above",
+            "cap",
+            "daily-max",
+            "warning",
+            "contraindication"
+          ],
+          "values": {
+            "medication": "custom",
+            "weight": "200",
+            "weightUnit": "kg",
+            "age": "17",
+            "dosage": "100",
+            "frequency": "6"
+          },
+          "invoke": "calculateDosage()",
+          "expectVisible": "result"
+        }
+      ]
+    },
+    {
+      "id": "pain-assessment-scale",
+      "file": "pain-assessment-scale.html",
+      "type": "multi-scale-assessment",
+      "entry_point": "assessPain",
+      "inputs": [
+        {
+          "name": "patient-age",
+          "type": "number",
+          "unit": "years",
+          "required": false,
+          "min": 0,
+          "max": 120
+        },
+        {
+          "name": "cognitive-status",
+          "type": "select",
+          "required": false
+        },
+        {
+          "name": "pain-duration",
+          "type": "select",
+          "required": false
+        },
+        {
+          "name": "pain-location",
+          "type": "text",
+          "required": false
+        },
+        {
+          "name": "scale",
+          "type": "tab",
+          "required": true,
+          "allowed": [
+            "numeric",
+            "wong-baker",
+            "behavioral",
+            "flacc",
+            "pqrst"
+          ]
+        },
+        {
+          "name": "scale-responses",
+          "type": "mixed",
+          "required": false
+        }
+      ],
+      "logic": {
+        "formula": "numeric/FACES/PQRST selected score; BPS=sum 3 domains; FLACC=sum 5 domains",
+        "precision": "integer",
+        "thresholds": [
+          "0 none",
+          "1-3 mild",
+          "4-6 moderate",
+          "7-10 severe",
+          "BPS 3-5 minimal, 6-8 moderate, 9-12 severe"
+        ],
+        "conditional": "recommendations depend on age, duration and scale",
+        "reset": "none",
+        "time_dependency": "none"
+      },
+      "outputs": [
+        "pain-score",
+        "pain-level",
+        "pain-scale-used",
+        "management-list"
+      ],
+      "warnings": [
+        "moderate and severe pain escalation guidance"
+      ],
+      "sources": [],
+      "ambiguities": [
+        "An untouched numeric scale reports a missing-assessment alert; BPS and FLACC instead sum unanswered components as zero."
+      ],
+      "characterization": [
+        {
+          "id": "numeric-default",
+          "tags": [
+            "minimum",
+            "missing",
+            "normal"
+          ],
+          "values": {
+            "patient-age": "30"
+          },
+          "invoke": "assessPain()",
+          "alert": "Please complete the pain assessment by selecting a score or answering all questions."
+        },
+        {
+          "id": "direct-boundary-six",
+          "tags": [
+            "boundary",
+            "immediately-below",
+            "warning",
+            "conditional"
+          ],
+          "values": {
+            "patient-age": "70",
+            "pain-duration": "chronic"
+          },
+          "invoke": "displayPainAssessment(6, 'Numeric Rating Scale (0-10)', 'chronic', 'back', 70)",
+          "expect": {
+            "pain-score": "6",
+            "pain-level": "Moderate Pain"
+          }
+        },
+        {
+          "id": "direct-seven",
+          "tags": [
+            "maximum",
+            "immediately-above",
+            "critical"
+          ],
+          "invoke": "displayPainAssessment(7, 'Numeric Rating Scale (0-10)', 'acute', '', 30)",
+          "expect": {
+            "pain-score": "7",
+            "pain-level": "Severe Pain"
+          }
+        }
+      ]
+    },
+    {
+      "id": "pediatric-fever-management",
+      "file": "pediatric-fever-management.html",
+      "type": "decision-and-medication-tool",
+      "entry_point": "assessFever",
+      "inputs": [
+        {
+          "name": "age-months",
+          "type": "number",
+          "unit": "months|years",
+          "required": true,
+          "min": 0,
+          "max": 216
+        },
+        {
+          "name": "weight",
+          "type": "number",
+          "unit": "kg",
+          "required": false,
+          "min": 1,
+          "max": 50
+        },
+        {
+          "name": "temperature",
+          "type": "number",
+          "unit": "C|F",
+          "required": true,
+          "min": 35,
+          "max": 45
+        },
+        {
+          "name": "danger-signs",
+          "type": "checkbox-group",
+          "required": false,
+          "allowed_count": [
+            0,
+            8
+          ]
+        }
+      ],
+      "logic": {
+        "formula": "convert age to months and F to C; classify by age, temperature and danger signs; medication=15 mg/kg paracetamol and 10 mg/kg ibuprofen",
+        "conversions": [
+          "years × 12",
+          "(F-32) × 5/9"
+        ],
+        "precision": "temperature one decimal; doses rounded to whole mg",
+        "thresholds": [
+          "<3 months fever >=38 urgent",
+          "3-5 months >=39 high, >=38 moderate",
+          "6+ months >=39.5 high, >=38 moderate",
+          "any danger sign escalates"
+        ],
+        "conditional": "weight is estimated when absent; ibuprofen only from 6 months",
+        "reset": "none",
+        "time_dependency": "none"
+      },
+      "outputs": [
+        "riskLevel",
+        "displayTemp",
+        "ageGroup",
+        "managementList",
+        "dosageDetails"
+      ],
+      "warnings": [
+        "young infant fever and any danger sign require urgent evaluation"
+      ],
+      "sources": [],
+      "ambiguities": [
+        "Age 0 is allowed by HTML but rejected by the JavaScript truthiness check; estimated weight is a rough fallback."
+      ],
+      "characterization": [
+        {
+          "id": "missing",
+          "tags": [
+            "missing",
+            "invalid",
+            "minimum"
+          ],
+          "values": {
+            "temperature": "38"
+          },
+          "invoke": "assessFever()",
+          "alert": "Please enter age and temperature"
+        },
+        {
+          "id": "fahrenheit-conversion",
+          "tags": [
+            "normal",
+            "conversion",
+            "pediatric",
+            "rounding",
+            "frequency"
+          ],
+          "values": {
+            "age-months": "12",
+            "age-unit": "months",
+            "weight": "10",
+            "temperature": "100.4",
+            "temp-unit": "fahrenheit"
+          },
+          "invoke": "assessFever()",
+          "expect": {
+            "displayTemp": "38.0°C (100.4°F)",
+            "riskLevel": "Moderate Fever - Home Management"
+          }
+        },
+        {
+          "id": "infant-boundary",
+          "tags": [
+            "boundary",
+            "immediately-below",
+            "immediately-above",
+            "critical",
+            "warning",
+            "conditional",
+            "maximum"
+          ],
+          "values": {
+            "age-months": "2",
+            "temperature": "38",
+            "temp-unit": "celsius"
+          },
+          "invoke": "assessFever()",
+          "expect": {
+            "riskLevel": "URGENT - Immediate Medical Attention Required"
+          }
+        }
+      ]
+    },
+    {
+      "id": "pregnancy-due-date-calculator",
+      "file": "pregnancy-due-date-calculator.html",
+      "type": "date-calculator",
+      "entry_point": "calculateDueDate",
+      "inputs": [
+        {
+          "name": "method",
+          "type": "tab",
+          "required": true,
+          "allowed": [
+            "lmp",
+            "conception",
+            "ultrasound"
+          ],
+          "default": "lmp"
+        },
+        {
+          "name": "lmp-date",
+          "type": "date",
+          "required": "lmp"
+        },
+        {
+          "name": "cycle-length",
+          "type": "number",
+          "unit": "days",
+          "required": false,
+          "min": 21,
+          "max": 35,
+          "default": 28
+        },
+        {
+          "name": "conception-date",
+          "type": "date",
+          "required": "conception"
+        },
+        {
+          "name": "ultrasound-date",
+          "type": "date",
+          "required": "ultrasound"
+        },
+        {
+          "name": "weeks",
+          "type": "number",
+          "unit": "weeks",
+          "required": "ultrasound",
+          "min": 0,
+          "max": 42
+        },
+        {
+          "name": "days",
+          "type": "number",
+          "unit": "days",
+          "required": false,
+          "min": 0,
+          "max": 6
+        }
+      ],
+      "logic": {
+        "formula": "LMP due=LMP+280d; conception due=conception+266d; ultrasound derives LMP by subtracting gestational days then +280d",
+        "precision": "calendar days",
+        "thresholds": [
+          "trimester: <13, 13-26, 27+ weeks"
+        ],
+        "conditional": "method-specific date derivation and milestone generation",
+        "reset": "none",
+        "time_dependency": "current wall clock; tests freeze Date"
+      },
+      "outputs": [
+        "due-date-display",
+        "current-ga",
+        "days-remaining",
+        "conception-display",
+        "current-trimester",
+        "week-info",
+        "milestones-list"
+      ],
+      "warnings": [],
+      "sources": [],
+      "ambiguities": [
+        "Cycle length affects conception estimate but not due date; invalid ultrasound weeks can pass because parseInt yields NaN rather than undefined."
+      ],
+      "characterization": [
+        {
+          "id": "missing",
+          "tags": [
+            "missing",
+            "invalid"
+          ],
+          "fixedNow": "2026-01-15T12:00:00Z",
+          "invoke": "calculateDueDate()",
+          "alert": "Please enter the first day of your last menstrual period"
+        },
+        {
+          "id": "lmp-fixed-clock",
+          "tags": [
+            "normal",
+            "minimum",
+            "maximum",
+            "boundary",
+            "immediately-below",
+            "immediately-above",
+            "fixed-clock",
+            "conditional"
+          ],
+          "fixedNow": "2026-01-15T12:00:00Z",
+          "values": {
+            "lmp-date": "2025-12-01",
+            "cycle-length": "28"
+          },
+          "invoke": "calculateDueDate()",
+          "expectVisible": "result"
+        }
+      ]
+    },
+    {
+      "id": "wound-assessment-tool",
+      "file": "wound-assessment-tool.html",
+      "type": "checklist-and-decision-tool",
+      "entry_point": "assessWound",
+      "inputs": [
+        {
+          "name": "wound-location",
+          "type": "select",
+          "required": false
+        },
+        {
+          "name": "wound-type",
+          "type": "radio",
+          "required": false
+        },
+        {
+          "name": "dimensions",
+          "type": "number-group",
+          "unit": "cm",
+          "required": false,
+          "ranges": {
+            "length": [
+              0,
+              50
+            ],
+            "width": [
+              0,
+              50
+            ],
+            "depth": [
+              0,
+              10
+            ]
+          }
+        },
+        {
+          "name": "edges",
+          "type": "radio",
+          "required": false
+        },
+        {
+          "name": "tissue",
+          "type": "checkbox-group",
+          "required": false
+        },
+        {
+          "name": "exudate-amount",
+          "type": "select",
+          "required": false
+        },
+        {
+          "name": "exudate-type",
+          "type": "select",
+          "required": false
+        },
+        {
+          "name": "infection-signs",
+          "type": "checkbox-group",
+          "required": false,
+          "allowed_count": [
+            0,
+            8
+          ]
+        },
+        {
+          "name": "risk-factors",
+          "type": "checkbox-group",
+          "required": false,
+          "allowed_count": [
+            0,
+            6
+          ]
+        },
+        {
+          "name": "tetanus-status",
+          "type": "select",
+          "required": false
+        }
+      ],
+      "logic": {
+        "formula": "area=length×width; severity, infection risk and healing potential use counts plus tissue/depth/exudate conditions",
+        "precision": "floating dimensions, no displayed numeric rounding",
+        "thresholds": [
+          "major: bone, >=3 infection signs, depth>3, area>25 with depth>1, or purulent",
+          "moderate: >=1 sign, necrotic/slough, depth>1, area>10, heavy exudate, or >=2 risk factors"
+        ],
+        "conditional": "care changes by severity, infection risk, healing potential and tetanus status",
+        "reset": "none",
+        "time_dependency": "none",
+        "checklist_completion": "unchecked items are treated as absent; no completeness validation"
+      },
+      "outputs": [
+        "severity-badge",
+        "wound-classification",
+        "infection-risk",
+        "healing-potential",
+        "immediate-care",
+        "ongoing-care",
+        "warning-signs"
+      ],
+      "warnings": [
+        "major/high infection risk immediate care; overdue/never/unknown tetanus warning"
+      ],
+      "sources": [],
+      "ambiguities": [
+        "All fields are optional and an empty form produces a minor unspecified wound."
+      ],
+      "characterization": [
+        {
+          "id": "empty",
+          "tags": [
+            "minimum",
+            "missing",
+            "invalid",
+            "normal",
+            "checklist"
+          ],
+          "invoke": "assessWound()",
+          "expect": {
+            "severity-badge": "Minor Wound",
+            "wound-classification": "Minor wound - unspecified location"
+          }
+        },
+        {
+          "id": "moderate-boundary",
+          "tags": [
+            "boundary",
+            "immediately-below",
+            "conditional",
+            "warning",
+            "checklist"
+          ],
+          "values": {
+            "length": "11",
+            "width": "1",
+            "depth": "0",
+            "tetanus-status": "overdue"
+          },
+          "invoke": "assessWound()",
+          "expect": {
+            "severity-badge": "Moderate Wound"
+          }
+        },
+        {
+          "id": "major",
+          "tags": [
+            "maximum",
+            "immediately-above",
+            "critical",
+            "checklist"
+          ],
+          "values": {
+            "wound-location": "leg-lower",
+            "exudate-type": "purulent"
+          },
+          "radios": [
+            "puncture"
+          ],
+          "checks": [
+            "tissue-bone",
+            "infection-redness",
+            "infection-warmth",
+            "infection-swelling"
+          ],
+          "invoke": "assessWound()",
+          "expect": {
+            "severity-badge": "Major Wound",
+            "infection-risk": "High",
+            "healing-potential": "Poor"
+          }
+        }
+      ]
+    }
+  ]
+}

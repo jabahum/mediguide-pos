@@ -235,16 +235,18 @@ func (s CalculatorService) StartUsage(userID, calculatorID uuid.UUID, in StartCa
 	if strings.TrimSpace(in.SessionStart) == "" || !validCalculatorType(in.CalculatorType) {
 		return nil, ErrCalculatorInvalidPayload
 	}
-	if _, err := s.Get(calculatorID); err != nil {
+	calculator, err := s.Get(calculatorID)
+	if err != nil {
 		return nil, err
 	}
 	log := models.CalculatorUsageLog{
-		UserID:         userID,
-		CalculatorID:   calculatorID,
-		SessionStart:   strings.TrimSpace(in.SessionStart),
-		CalculatorType: strings.TrimSpace(in.CalculatorType),
+		UserID:              userID,
+		CalculatorID:        calculatorID,
+		SessionStart:        strings.TrimSpace(in.SessionStart),
+		CalculatorType:      strings.TrimSpace(in.CalculatorType),
+		CalculatorVersionID: calculator.CurrentVersionID,
 	}
-	err := s.DB.Transaction(func(tx *gorm.DB) error {
+	err = s.DB.Transaction(func(tx *gorm.DB) error {
 		if err := tx.Create(&log).Error; err != nil {
 			return err
 		}

@@ -10,6 +10,11 @@ enum SearchCategory {
   ),
   abbreviations(value: 'abbreviations', displayName: 'Abbreviations'),
   faq(value: 'faq', displayName: 'FAQ'),
+  outbreaks(value: 'outbreaks', displayName: 'Outbreaks'),
+  situationReports(
+    value: 'situation_reports',
+    displayName: 'Situation Reports',
+  ),
   tools(value: 'tools', displayName: 'Tools');
 
   const SearchCategory({required this.value, required this.displayName});
@@ -35,6 +40,8 @@ class SearchResult {
   final String? route;
   final Map<String, dynamic>? routeArguments;
   final double relevanceScore;
+  final bool isOffline;
+  final bool isStale;
   final dynamic item; // Store the actual object (Drug, Guideline, etc.)
 
   const SearchResult({
@@ -46,6 +53,8 @@ class SearchResult {
     this.route,
     this.routeArguments,
     this.relevanceScore = 0.0,
+    this.isOffline = false,
+    this.isStale = false,
     this.item,
   });
 
@@ -60,6 +69,8 @@ class SearchResult {
       route: json['route'] as String?,
       routeArguments: json['routeArguments'] as Map<String, dynamic>?,
       relevanceScore: (json['relevanceScore'] as num?)?.toDouble() ?? 0.0,
+      isOffline: json['isOffline'] as bool? ?? false,
+      isStale: json['isStale'] as bool? ?? false,
       item:
           json['item'], // Note: item is not serialized/deserialized as it's runtime-only
     );
@@ -76,6 +87,8 @@ class SearchResult {
       'route': route,
       'routeArguments': routeArguments,
       'relevanceScore': relevanceScore,
+      'isOffline': isOffline,
+      'isStale': isStale,
       // Note: item is not serialized as it's a runtime-only object
     };
   }
@@ -90,6 +103,8 @@ class SearchResult {
     String? route,
     Map<String, dynamic>? routeArguments,
     double? relevanceScore,
+    bool? isOffline,
+    bool? isStale,
     dynamic item,
   }) {
     return SearchResult(
@@ -101,6 +116,8 @@ class SearchResult {
       route: route ?? this.route,
       routeArguments: routeArguments ?? this.routeArguments,
       relevanceScore: relevanceScore ?? this.relevanceScore,
+      isOffline: isOffline ?? this.isOffline,
+      isStale: isStale ?? this.isStale,
       item: item ?? this.item,
     );
   }

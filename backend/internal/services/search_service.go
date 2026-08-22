@@ -2,6 +2,7 @@ package services
 
 import (
 	"context"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -18,17 +19,21 @@ type SearchService struct {
 }
 
 type SearchResult struct {
-	ID            string `json:"id"`
-	GuidelineID   string `json:"guideline_id,omitempty"`
-	SectionID     string `json:"section_id,omitempty"`
-	BlockID       string `json:"block_id,omitempty"`
-	ContentType   string `json:"content_type,omitempty"`
-	Title         string `json:"title"`
-	Snippet       string `json:"snippet"`
-	SourceName    string `json:"source_name"`
-	SourceVersion string `json:"source_version"`
-	PageStart     *int   `json:"page_start"`
-	PageEnd       *int   `json:"page_end"`
+	ID             string     `json:"id"`
+	ResultType     string     `json:"result_type"`
+	GuidelineID    string     `json:"guideline_id,omitempty"`
+	SectionID      string     `json:"section_id,omitempty"`
+	BlockID        string     `json:"block_id,omitempty"`
+	ContentType    string     `json:"content_type,omitempty"`
+	Title          string     `json:"title"`
+	Snippet        string     `json:"snippet"`
+	SourceName     string     `json:"source_name"`
+	SourceVersion  string     `json:"source_version"`
+	PageStart      *int       `json:"page_start"`
+	PageEnd        *int       `json:"page_end"`
+	Status         string     `json:"status,omitempty"`
+	LastVerifiedAt *time.Time `json:"last_verified_at,omitempty"`
+	IsStale        bool       `json:"is_stale,omitempty"`
 }
 
 // PublicSearchContext searches only approved chunks belonging to the current
@@ -55,18 +60,27 @@ func (s SearchService) PublicSearchContext(ctx context.Context, q, programArea s
 		PageStart     *int
 		PageEnd       *int
 	}
+	snippetExpression := "LEFT(gc.content, 350)"
+	if s.DB.Dialector.Name() != "postgres" {
+		snippetExpression = "substr(gc.content, 1, 350)"
+	}
 	query := s.DB.WithContext(ctx).Table("guideline_chunks AS gc").
 		Select(`CAST(gc.id AS TEXT) AS id, CAST(gc.document_id AS TEXT) AS guideline_id,
 			COALESCE(CAST(gc.section_id AS TEXT), '') AS section_id,
 			COALESCE(CAST(gc.block_id AS TEXT), '') AS block_id,
 			COALESCE(CAST(gcb.type AS TEXT), 'section') AS content_type,
-			gc.title, LEFT(gc.content, 350) AS snippet, gc.source_name,
+			gc.title, `+snippetExpression+` AS snippet, gc.source_name,
 			gc.source_version, gc.page_start, gc.page_end`).
 		Joins("JOIN guideline_documents gd ON gd.id = gc.document_id AND gd.deleted_at IS NULL").
 		Joins("JOIN guideline_versions gv ON gv.id = gc.version_id AND gv.deleted_at IS NULL AND gd.current_version_id = gv.id").
 		Joins("LEFT JOIN guideline_content_blocks gcb ON gcb.id = gc.block_id AND gcb.deleted_at IS NULL").
-		Where("gc.deleted_at IS NULL AND gc.review_status = ? AND LOWER(gv.status) = ?", "approved", "published").
-		Where("gc.content ILIKE ? OR gc.title ILIKE ?", "%"+normalizedQuery+"%", "%"+normalizedQuery+"%")
+		Where("gc.deleted_at IS NULL AND gc.review_status = ? AND LOWER(gv.status) = ?", "approved", "published")
+	if s.DB.Dialector.Name() == "postgres" {
+		query = query.Where("gc.content ILIKE ? OR gc.title ILIKE ?", "%"+normalizedQuery+"%", "%"+normalizedQuery+"%")
+	} else {
+		pattern := "%" + strings.ToLower(normalizedQuery) + "%"
+		query = query.Where("lower(gc.content) LIKE ? OR lower(gc.title) LIKE ?", pattern, pattern)
+	}
 	if strings.TrimSpace(programArea) != "" {
 		query = query.Where("gc.program_area = ?", strings.TrimSpace(programArea))
 	}
@@ -74,16 +88,89 @@ func (s SearchService) PublicSearchContext(ctx context.Context, q, programArea s
 	if err := query.Order("gc.updated_at DESC, gc.id ASC").Limit(limit).Scan(&rows).Error; err != nil {
 		return nil, err
 	}
-	results := make([]SearchResult, 0, len(rows))
+	results := make([]SearchResult, 0, len(rows)+limit)
 	for _, value := range rows {
 		results = append(results, SearchResult{
-			ID: value.ID, GuidelineID: value.GuidelineID, SectionID: value.SectionID,
+			ID: value.ID, ResultType: "guideline", GuidelineID: value.GuidelineID, SectionID: value.SectionID,
 			BlockID: value.BlockID, ContentType: value.ContentType, Title: value.Title,
 			Snippet: value.Snippet, SourceName: value.SourceName,
 			SourceVersion: value.SourceVersion, PageStart: value.PageStart, PageEnd: value.PageEnd,
 		})
 	}
+	type discoveryRow struct {
+		ID, Title, Snippet, SourceName, Status string
+		LastVerifiedAt                         *time.Time
+		SortDate                               time.Time
+	}
+	pattern := "%" + strings.ToLower(normalizedQuery) + "%"
+	var outbreaks []discoveryRow
+	err := s.DB.WithContext(ctx).Table("outbreaks").
+		Select("CAST(id AS TEXT) AS id, title, summary AS snippet, source_organization AS source_name, status, last_verified_at, last_update AS sort_date").
+		Where("deleted_at IS NULL AND published_at IS NOT NULL AND published_at <= ? AND withdrawn_at IS NULL AND status IN ?", time.Now(), []string{"published", "active", "monitoring", "contained", "closed"}).
+		Where("lower(title) LIKE ? OR lower(summary) LIKE ? OR lower(disease_type) LIKE ? OR lower(geographic_area) LIKE ? OR lower(source_organization) LIKE ? OR lower(source_reference) LIKE ?", pattern, pattern, pattern, pattern, pattern, pattern).
+		Limit(limit).Scan(&outbreaks).Error
+	if err != nil {
+		return nil, err
+	}
+	for _, row := range outbreaks {
+		results = append(results, SearchResult{ID: row.ID, ResultType: "outbreak", Title: row.Title, Snippet: row.Snippet, SourceName: row.SourceName, Status: row.Status, LastVerifiedAt: row.LastVerifiedAt, IsStale: discoveryStale(row.Status, row.LastVerifiedAt)})
+	}
+	var reports []discoveryRow
+	err = s.DB.WithContext(ctx).Table("situation_reports").
+		Select("CAST(id AS TEXT) AS id, title, summary AS snippet, source_organization AS source_name, status, last_verified_at, publication_date AS sort_date").
+		Where("deleted_at IS NULL AND status = ? AND published_at IS NOT NULL AND published_at <= ? AND withdrawn_at IS NULL", "published", time.Now()).
+		Where("outbreak_id IS NULL OR EXISTS (SELECT 1 FROM outbreaks o WHERE o.id = situation_reports.outbreak_id AND o.deleted_at IS NULL AND o.withdrawn_at IS NULL AND o.published_at IS NOT NULL AND o.published_at <= ? AND o.status IN ?)", time.Now(), []string{"published", "active", "monitoring", "contained", "closed"}).
+		Where("lower(title) LIKE ? OR lower(summary) LIKE ? OR lower(geographic_area) LIKE ? OR lower(source_organization) LIKE ? OR lower(source_reference) LIKE ? OR lower(CAST(key_highlights AS TEXT)) LIKE ?", pattern, pattern, pattern, pattern, pattern, pattern).
+		Limit(limit).Scan(&reports).Error
+	if err != nil {
+		return nil, err
+	}
+	for _, row := range reports {
+		results = append(results, SearchResult{ID: row.ID, ResultType: "situation_report", Title: row.Title, Snippet: row.Snippet, SourceName: row.SourceName, Status: row.Status, LastVerifiedAt: row.LastVerifiedAt, IsStale: discoveryStale(row.Status, row.LastVerifiedAt)})
+	}
+	sort.SliceStable(results, func(i, j int) bool {
+		left, right := discoveryRank(results[i], normalizedQuery), discoveryRank(results[j], normalizedQuery)
+		if left != right {
+			return left > right
+		}
+		return strings.ToLower(results[i].Title) < strings.ToLower(results[j].Title)
+	})
+	if len(results) > limit {
+		results = results[:limit]
+	}
 	return results, nil
+}
+
+func discoveryStale(status string, verified *time.Time) bool {
+	if verified == nil {
+		return true
+	}
+	maximumAge := 30 * 24 * time.Hour
+	if status == "active" || status == "monitoring" {
+		maximumAge = 72 * time.Hour
+	}
+	return time.Since(verified.UTC()) > maximumAge
+}
+
+func discoveryRank(result SearchResult, query string) int {
+	rank := 0
+	title := strings.ToLower(result.Title)
+	if title == strings.ToLower(query) {
+		rank += 100
+	}
+	if strings.HasPrefix(title, strings.ToLower(query)) {
+		rank += 50
+	}
+	if strings.Contains(title, strings.ToLower(query)) {
+		rank += 25
+	}
+	if result.ResultType == "outbreak" && (result.Status == "active" || result.Status == "monitoring") && !result.IsStale {
+		rank += 20
+	}
+	if result.LastVerifiedAt != nil && time.Since(result.LastVerifiedAt.UTC()) <= 7*24*time.Hour {
+		rank += 10
+	}
+	return rank
 }
 
 func (s SearchService) Search(q, programArea string, limit int) ([]SearchResult, error) {
@@ -120,7 +207,7 @@ func (s SearchService) searchUncached(ctx context.Context, q, programArea string
 		if len(snippet) > 350 {
 			snippet = snippet[:350] + "..."
 		}
-		out = append(out, SearchResult{ID: c.ID.String(), Title: c.Title, Snippet: snippet, SourceName: c.SourceName, SourceVersion: c.SourceVersion, PageStart: c.PageStart, PageEnd: c.PageEnd})
+		out = append(out, SearchResult{ID: c.ID.String(), ResultType: "guideline", Title: c.Title, Snippet: snippet, SourceName: c.SourceName, SourceVersion: c.SourceVersion, PageStart: c.PageStart, PageEnd: c.PageEnd})
 	}
 	return out, nil
 }

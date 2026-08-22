@@ -179,13 +179,29 @@ void main() {
       addTearDown(store.close);
       var now = DateTime.now().toUtc();
       final api = FakeOutbreakApi();
-      final repository = OutbreakRepository(api, store.cache, clock: () => now);
+      final metrics = <(String, Map<String, Object>)>[];
+      final repository = OutbreakRepository(
+        api,
+        store.cache,
+        clock: () => now,
+        recordMetric: (name, parameters) async {
+          metrics.add((name, parameters));
+        },
+      );
       await repository.outbreaks();
       now = now.add(const Duration(hours: 1));
       api.offline = true;
       final cached = await repository.outbreaks();
       expect(cached.cache.isOffline, isTrue);
       expect(cached.cache.isStale, isTrue);
+      expect(metrics.first.$1, 'outbreak_cache_access');
+      expect(metrics.first.$2, {
+        'content_type': 'outbreak_list',
+        'result': 'hit',
+        'stale': 1,
+      });
+      expect(metrics.last.$1, 'outbreak_offline_content_used');
+      expect(metrics.last.$2, {'content_type': 'outbreak_list', 'stale': 1});
     },
   );
 

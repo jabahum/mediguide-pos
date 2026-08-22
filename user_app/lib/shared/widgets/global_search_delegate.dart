@@ -11,6 +11,7 @@ import 'package:user_app/features/consultants/data/models/consultant.dart';
 import 'package:user_app/features/drugs/data/models/drug.dart';
 import 'package:user_app/features/guidelines/data/models/guideline_publication.dart';
 import 'package:user_app/features/facilities/data/models/health_facility.dart';
+import 'package:user_app/features/outbreaks/data/models/outbreak_models.dart';
 import 'package:user_app/shared/models/search_models.dart';
 import 'package:user_app/features/search/presentation/controllers/global_search_controller.dart';
 import 'package:user_app/features/drugs/presentation/widgets/drug_details_bottom_sheet.dart';
@@ -423,6 +424,18 @@ class GlobalSearchDelegate extends SearchDelegate<String?> {
         if (result.item != null) {
           AppNavigator.push(AppRoutes.faq, extra: result.item);
         }
+      case SearchCategory.outbreaks:
+        final outbreak = result.getItem<PublicOutbreak>();
+        AppNavigator.push(
+          AppRoutes.outbreak(outbreak?.id ?? result.id),
+          extra: outbreak,
+        );
+      case SearchCategory.situationReports:
+        final report = result.getItem<PublicSituationReport>();
+        AppNavigator.push(
+          AppRoutes.situationReport(report?.id ?? result.id),
+          extra: report,
+        );
       case SearchCategory.all:
         if (result.route != null) {
           AppNavigator.push(result.route!, extra: result.routeArguments);
@@ -483,6 +496,10 @@ class GlobalSearchDelegate extends SearchDelegate<String?> {
         return LucideIcons.type;
       case SearchCategory.faq:
         return LucideIcons.messageCircle;
+      case SearchCategory.outbreaks:
+        return LucideIcons.siren;
+      case SearchCategory.situationReports:
+        return LucideIcons.fileChartColumn;
       case SearchCategory.tools:
         return LucideIcons.wrench;
     }

@@ -12008,9 +12008,15 @@ final class ServicesSearchResult {
 
   String? get id => value['id']?.toString();
 
+  bool? get isStale => value['is_stale'] as bool?;
+
+  String? get lastVerifiedAt => value['last_verified_at']?.toString();
+
   int? get pageEnd => (value['page_end'] as num?)?.toInt();
 
   int? get pageStart => (value['page_start'] as num?)?.toInt();
+
+  String? get resultType => value['result_type']?.toString();
 
   String? get sectionId => value['section_id']?.toString();
 
@@ -12019,6 +12025,8 @@ final class ServicesSearchResult {
   String? get sourceName => value['source_name']?.toString();
 
   String? get sourceVersion => value['source_version']?.toString();
+
+  String? get status => value['status']?.toString();
 
   String? get title => value['title']?.toString();
 

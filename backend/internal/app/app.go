@@ -13,6 +13,7 @@ import (
 	"mediguide/internal/handlers"
 	"mediguide/internal/mailer"
 	"mediguide/internal/middleware"
+	"mediguide/internal/observability"
 	"mediguide/internal/redisx"
 	"mediguide/internal/services"
 	"mediguide/internal/storage"
@@ -63,7 +64,7 @@ func New(cfg config.Config) (*App, error) {
 	if err := r.SetTrustedProxies(cfg.TrustedProxies); err != nil {
 		return nil, err
 	}
-	r.Use(gin.Recovery(), middleware.RequestLogger())
+	r.Use(gin.Recovery(), middleware.RequestLogger(), observability.OutbreakHTTP())
 
 	// Build CORS allow-list from config (comma-separated).
 	allowedOrigins := []string{}
@@ -96,6 +97,7 @@ func New(cfg config.Config) (*App, error) {
 			"revision": buildinfo.Revision,
 		})
 	})
+	r.GET("/api/metrics", handlers.OperationsHandler{DB: database, Cache: cacheStore, Store: store}.Metrics)
 
 	// Readiness probe: verify DB connectivity.
 	r.GET("/api/readyz", func(c *gin.Context) {
@@ -111,6 +113,12 @@ func New(cfg config.Config) (*App, error) {
 				c.JSON(http.StatusServiceUnavailable, gin.H{"ok": false, "reason": "redis_unavailable"})
 				return
 			}
+		}
+		storageContext, cancelStorage := context.WithTimeout(c.Request.Context(), 2*time.Second)
+		defer cancelStorage()
+		if checker, ok := any(store).(interface{ Health(context.Context) error }); ok && checker.Health(storageContext) != nil {
+			c.JSON(http.StatusServiceUnavailable, gin.H{"ok": false, "reason": "managed_storage_unavailable"})
+			return
 		}
 		c.JSON(http.StatusOK, gin.H{
 			"ok":       true,

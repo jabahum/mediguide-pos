@@ -605,7 +605,7 @@ const docTemplate = `{
                 "tags": [
                     "public-guidelines"
                 ],
-                "summary": "Search published approved guideline content",
+                "summary": "Search published guidelines, outbreaks, and situation reports",
                 "parameters": [
                     {
                         "minLength": 2,
@@ -23807,11 +23807,20 @@ const docTemplate = `{
                 "id": {
                     "type": "string"
                 },
+                "is_stale": {
+                    "type": "boolean"
+                },
+                "last_verified_at": {
+                    "type": "string"
+                },
                 "page_end": {
                     "type": "integer"
                 },
                 "page_start": {
                     "type": "integer"
+                },
+                "result_type": {
+                    "type": "string"
                 },
                 "section_id": {
                     "type": "string"
@@ -23823,6 +23832,9 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "source_version": {
+                    "type": "string"
+                },
+                "status": {
                     "type": "string"
                 },
                 "title": {

@@ -6733,10 +6733,16 @@ definitions:
         type: string
       id:
         type: string
+      is_stale:
+        type: boolean
+      last_verified_at:
+        type: string
       page_end:
         type: integer
       page_start:
         type: integer
+      result_type:
+        type: string
       section_id:
         type: string
       snippet:
@@ -6744,6 +6750,8 @@ definitions:
       source_name:
         type: string
       source_version:
+        type: string
+      status:
         type: string
       title:
         type: string
@@ -7590,7 +7598,7 @@ paths:
           description: Internal Server Error
           schema:
             $ref: '#/definitions/handlers.ErrorResponse'
-      summary: Search published approved guideline content
+      summary: Search published guidelines, outbreaks, and situation reports
       tags:
       - public-guidelines
   /api/public/situation-reports:

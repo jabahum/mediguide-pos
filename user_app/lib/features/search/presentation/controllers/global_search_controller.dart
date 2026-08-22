@@ -17,6 +17,7 @@ import 'package:user_app/features/guidelines/data/repositories/guideline_content
 import 'package:user_app/features/guidelines/data/models/guideline_publication.dart';
 import 'package:user_app/features/guidelines/data/repositories/guideline_publication_repository.dart';
 import 'package:user_app/features/support/data/repositories/help_content_repository.dart';
+import 'package:user_app/features/outbreaks/data/repositories/outbreak_repository.dart';
 
 import 'package:user_app/shared/models/search_models.dart';
 
@@ -99,6 +100,7 @@ GlobalSearchDataSource globalSearchDataSource(GlobalSearchDataSourceRef ref) {
     facilities: ref.watch(facilityRepositoryProvider),
     helpContent: ref.watch(helpContentRepositoryProvider),
     calculators: ref.watch(calculatorRepositoryProvider),
+    outbreaks: ref.watch(outbreakRepositoryProvider),
   );
 }
 
@@ -207,13 +209,15 @@ final class RepositoryGlobalSearchDataSource implements GlobalSearchDataSource {
     required FacilityRepository facilities,
     required HelpContentRepository helpContent,
     required CalculatorRepository calculators,
+    required OutbreakRepository outbreaks,
   }) : _drugs = drugs,
        _guidelines = guidelines,
        _publications = publications,
        _consultants = consultants,
        _facilities = facilities,
        _helpContent = helpContent,
-       _calculators = calculators;
+       _calculators = calculators,
+       _outbreaks = outbreaks;
 
   final DrugRepository _drugs;
   final GuidelineContentRepository _guidelines;
@@ -222,6 +226,7 @@ final class RepositoryGlobalSearchDataSource implements GlobalSearchDataSource {
   final FacilityRepository _facilities;
   final HelpContentRepository _helpContent;
   final CalculatorRepository _calculators;
+  final OutbreakRepository _outbreaks;
 
   @override
   Future<List<SearchResult>> search(String query) async {
@@ -362,6 +367,74 @@ final class RepositoryGlobalSearchDataSource implements GlobalSearchDataSource {
             })
             .toList(growable: false);
 
+      case SearchCategory.outbreaks:
+        final response = await _outbreaks.outbreaks(
+          page: 1,
+          perPage: 10,
+          query: OutbreakQuery(search: query),
+        );
+        return response.items
+            .map(
+              (item) => _withDiscoveryRelevance(
+                _withRelevance(
+                  SearchResult(
+                    id: item.id,
+                    title: item.title,
+                    subtitle: response.cache.isStale
+                        ? 'Cached update — verify when online'
+                        : [
+                            item.diseaseType,
+                            item.geographicArea,
+                          ].where((value) => value.isNotEmpty).join(' · '),
+                    description: item.summary,
+                    category: category,
+                    route: AppRoutes.outbreak(item.id),
+                    isOffline: response.cache.isOffline,
+                    isStale: response.cache.isStale,
+                    item: item,
+                  ),
+                  query,
+                ),
+                status: item.status,
+                lastVerifiedAt: item.lastVerifiedAt,
+              ),
+            )
+            .toList(growable: false);
+
+      case SearchCategory.situationReports:
+        final response = await _outbreaks.reports(
+          page: 1,
+          perPage: 10,
+          query: SituationReportQuery(search: query),
+        );
+        return response.items
+            .map(
+              (item) => _withDiscoveryRelevance(
+                _withRelevance(
+                  SearchResult(
+                    id: item.id,
+                    title: item.title,
+                    subtitle: response.cache.isStale
+                        ? 'Cached report — verify when online'
+                        : [
+                            item.geographicArea,
+                            item.sourceOrganization,
+                          ].where((value) => value.isNotEmpty).join(' · '),
+                    description: item.summary,
+                    category: category,
+                    route: AppRoutes.situationReport(item.id),
+                    isOffline: response.cache.isOffline,
+                    isStale: response.cache.isStale,
+                    item: item,
+                  ),
+                  query,
+                ),
+                status: item.status,
+                lastVerifiedAt: item.lastVerifiedAt,
+              ),
+            )
+            .toList(growable: false);
+
       case SearchCategory.all:
         return const [];
     }
@@ -491,6 +564,8 @@ final class RepositoryGlobalSearchDataSource implements GlobalSearchDataSource {
 
       case SearchCategory.all:
       case SearchCategory.faq:
+      case SearchCategory.outbreaks:
+      case SearchCategory.situationReports:
         throw UnsupportedError('Unsupported search category: $category');
     }
   }
@@ -577,5 +652,22 @@ final class RepositoryGlobalSearchDataSource implements GlobalSearchDataSource {
     }
 
     return result.copyWith(relevanceScore: score);
+  }
+
+  SearchResult _withDiscoveryRelevance(
+    SearchResult result, {
+    required String status,
+    required DateTime? lastVerifiedAt,
+  }) {
+    var bonus = 0.0;
+    if (!result.isStale && (status == 'active' || status == 'monitoring')) {
+      bonus += 20;
+    }
+    if (lastVerifiedAt != null &&
+        DateTime.now().toUtc().difference(lastVerifiedAt.toUtc()) <=
+            const Duration(days: 7)) {
+      bonus += 10;
+    }
+    return result.copyWith(relevanceScore: result.relevanceScore + bonus);
   }
 }

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:user_app/core/network/api_client.dart';
 import 'package:user_app/core/network/contracts/generated/backend_contracts.dart';
@@ -50,7 +52,7 @@ final class OutbreakQuery {
         source.toLowerCase().contains(value.trim().toLowerCase());
     return (status.trim().isEmpty || item.status == status.trim()) &&
         contains(
-          '${item.title} ${item.summary} ${item.diseaseType} ${item.geographicArea}',
+          '${item.title} ${item.summary} ${item.diseaseType} ${item.geographicArea} ${item.sourceOrganization} ${item.sourceReference}',
           search,
         ) &&
         contains(item.diseaseType, disease) &&
@@ -92,7 +94,7 @@ final class SituationReportQuery {
   bool matches(PublicSituationReport item) {
     final needle = search.trim().toLowerCase();
     final searchable =
-        '${item.title} ${item.summary} ${item.geographicArea} ${item.sourceOrganization}'
+        '${item.title} ${item.summary} ${item.geographicArea} ${item.sourceOrganization} ${item.sourceReference} ${item.keyHighlights.join(' ')}'
             .toLowerCase();
     return (needle.isEmpty || searchable.contains(needle)) &&
         (outbreakId.trim().isEmpty || item.outbreakId == outbreakId.trim());
@@ -100,8 +102,13 @@ final class SituationReportQuery {
 }
 
 final class OutbreakRepository {
-  OutbreakRepository(this._api, this._cache, {DateTime Function()? clock})
-    : _clock = clock ?? DateTime.now;
+  OutbreakRepository(
+    this._api,
+    this._cache, {
+    DateTime Function()? clock,
+    Future<void> Function(String, Map<String, Object>)? recordMetric,
+  }) : _clock = clock ?? DateTime.now,
+       _recordMetric = recordMetric;
 
   static const _scope = 'public';
   static const _outbreakType = 'public_outbreak';
@@ -115,6 +122,7 @@ final class OutbreakRepository {
   final BackendApiService _api;
   final LocalCacheService _cache;
   final DateTime Function() _clock;
+  final Future<void> Function(String, Map<String, Object>)? _recordMetric;
 
   Future<PublicPage<PublicOutbreak>> outbreaks({
     int page = 1,
@@ -149,7 +157,11 @@ final class OutbreakRepository {
         safePerPage,
         query,
       );
-      if (cached == null) rethrow;
+      if (cached == null) {
+        _observeCacheMiss('outbreak_list');
+        rethrow;
+      }
+      _observeCacheUse('outbreak_list', cached.cache);
       return cached;
     }
   }
@@ -289,7 +301,7 @@ final class OutbreakRepository {
         ttl: _freshnessFor(outbreak),
         data: _detailToJson(detail),
         searchableText:
-            '${outbreak.title} ${outbreak.summary} ${outbreak.diseaseType} ${outbreak.geographicArea}',
+            '${outbreak.title} ${outbreak.summary} ${outbreak.diseaseType} ${outbreak.geographicArea} ${outbreak.sourceOrganization} ${outbreak.sourceReference}',
         remoteUpdatedAt: outbreak.lastUpdate,
       ),
     );
@@ -335,7 +347,11 @@ final class OutbreakRepository {
         safePerPage,
         query,
       );
-      if (cached == null) rethrow;
+      if (cached == null) {
+        _observeCacheMiss('situation_report_list');
+        rethrow;
+      }
+      _observeCacheUse('situation_report_list', cached.cache);
       return cached;
     }
   }
@@ -665,7 +681,7 @@ final class OutbreakRepository {
     id: item.id,
     data: item.toJson(),
     searchableText:
-        '${item.title} ${item.summary} ${item.diseaseType} ${item.geographicArea}',
+        '${item.title} ${item.summary} ${item.diseaseType} ${item.geographicArea} ${item.sourceOrganization} ${item.sourceReference}',
     remoteUpdatedAt: item.lastUpdate,
   );
 
@@ -675,7 +691,7 @@ final class OutbreakRepository {
     id: item.id,
     data: item.toJson(),
     searchableText:
-        '${item.title} ${item.summary} ${item.geographicArea} ${item.sourceOrganization}',
+        '${item.title} ${item.summary} ${item.geographicArea} ${item.sourceOrganization} ${item.sourceReference} ${item.keyHighlights.join(' ')}',
     remoteUpdatedAt: item.publicationDate,
   );
 
@@ -774,6 +790,36 @@ final class OutbreakRepository {
       if (latest == null || value.isAfter(latest)) latest = value;
     }
     return latest;
+  }
+
+  void _observeCacheUse(String contentType, PublicCacheMetadata cache) {
+    final recorder = _recordMetric;
+    if (recorder == null || !cache.isOffline) return;
+    unawaited(
+      recorder('outbreak_cache_access', <String, Object>{
+        'content_type': contentType,
+        'result': 'hit',
+        'stale': cache.isStale ? 1 : 0,
+      }),
+    );
+    unawaited(
+      recorder('outbreak_offline_content_used', <String, Object>{
+        'content_type': contentType,
+        'stale': cache.isStale ? 1 : 0,
+      }),
+    );
+  }
+
+  void _observeCacheMiss(String contentType) {
+    final metric = _recordMetric?.call(
+      'outbreak_cache_access',
+      <String, Object>{
+        'content_type': contentType,
+        'result': 'miss',
+        'stale': 0,
+      },
+    );
+    if (metric != null) unawaited(metric);
   }
 
   Map<String, dynamic> _pageMetadata<T>(PublicPage<T> page) => {

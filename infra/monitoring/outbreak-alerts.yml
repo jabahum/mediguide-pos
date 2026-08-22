@@ -1,0 +1,51 @@
+groups:
+  - name: mediguide-outbreak-operations
+    rules:
+      - alert: ActiveOutbreakVerificationOverdue
+        expr: max by (outbreak_id) (mediguide_outbreak_verification_age_hours{status=~"active|monitoring"}) > 72
+        for: 15m
+        labels:
+          severity: critical
+        annotations:
+          summary: Active outbreak verification is overdue
+          description: "Outbreak {{ $labels.outbreak_id }} has not been verified within 72 hours. Treat cached/current-state claims as stale until editorial verification."
+
+      - alert: OutbreakPublicAPIErrorRateHigh
+        expr: sum(rate(mediguide_outbreak_public_request_errors_total[10m])) / clamp_min(sum(rate(mediguide_outbreak_public_requests_total[10m])), 0.001) > 0.05
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: Public outbreak API error rate exceeds 5 percent
+
+      - alert: OutbreakPublicAPILatencyHigh
+        expr: sum(rate(mediguide_outbreak_public_request_duration_seconds_sum[10m])) / clamp_min(sum(rate(mediguide_outbreak_public_requests_total[10m])), 0.001) > 1
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: Mean public outbreak API latency exceeds one second
+
+      - alert: SituationReportAssetFailuresRepeated
+        expr: increase(mediguide_outbreak_report_asset_failures_total[15m]) >= 3
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: Managed situation-report assets are repeatedly failing
+
+      - alert: ManagedReportStorageUnavailable
+        expr: mediguide_managed_report_storage_healthy == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: Managed report object storage is unavailable
+
+      - alert: MalformedOutbreakActionsElevated
+        expr: increase(mediguide_outbreak_malformed_actions_total[15m]) >= 10
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: Repeated malformed outbreak resource actions detected

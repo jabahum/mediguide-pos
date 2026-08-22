@@ -12,6 +12,7 @@
 !docs/mobile-environments.md
 !docs/mobile-alpha-release.md
 !docs/notification-templates-and-campaigns.md
+!docs/outbreak-operations.md
 !guidelines-platform/src/content/**/*.md
 backend/.env
 backend/.env.local

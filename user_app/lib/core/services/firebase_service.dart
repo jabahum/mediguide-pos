@@ -98,6 +98,22 @@ final class MediGuideFirebaseService {
 
   Map<String, RemoteConfigValue> get remoteConfigValues =>
       _enabled ? FirebaseRemoteConfig.instance.getAll() : const {};
+
+  Future<void> recordOperationalEvent(
+    String name,
+    Map<String, Object> parameters,
+  ) async {
+    if (!_enabled) return;
+    try {
+      await FirebaseAnalytics.instance.logEvent(
+        name: name,
+        parameters: parameters,
+      );
+    } catch (_) {
+      // Telemetry must never interrupt access to clinical content.
+    }
+  }
+
   DateTime? get remoteConfigLastFetchTime =>
       _enabled ? FirebaseRemoteConfig.instance.lastFetchTime : null;
   RemoteConfigFetchStatus? get remoteConfigLastFetchStatus =>

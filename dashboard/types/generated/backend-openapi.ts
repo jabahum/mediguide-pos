@@ -3892,12 +3892,16 @@ export interface ServicesSearchResult {
   content_type?: string;
   guideline_id?: string;
   id?: string;
+  is_stale?: boolean;
+  last_verified_at?: string;
   page_end?: number;
   page_start?: number;
+  result_type?: string;
   section_id?: string;
   snippet?: string;
   source_name?: string;
   source_version?: string;
+  status?: string;
   title?: string;
 }
 

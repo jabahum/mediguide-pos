@@ -239,6 +239,7 @@ final outbreakRepositoryProvider = Provider<OutbreakRepository>(
   (ref) => OutbreakRepository(
     ref.watch(backendApiServiceProvider),
     ref.watch(localCacheServiceProvider),
+    recordMetric: ref.watch(firebaseServiceProvider).recordOperationalEvent,
   ),
 );
 

@@ -2,6 +2,7 @@ package storage
 
 import (
 	"context"
+	"errors"
 	"io"
 	"net/url"
 	"time"
@@ -50,4 +51,14 @@ func (s *MinioStore) Delete(ctx context.Context, key string) error {
 }
 func (s *MinioStore) PresignGet(ctx context.Context, key string, expiry time.Duration) (*url.URL, error) {
 	return s.client.PresignedGetObject(ctx, s.bucket, key, expiry, nil)
+}
+func (s *MinioStore) Health(ctx context.Context) error {
+	exists, err := s.client.BucketExists(ctx, s.bucket)
+	if err != nil {
+		return err
+	}
+	if !exists {
+		return errors.New("managed report bucket is unavailable")
+	}
+	return nil
 }

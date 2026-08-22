@@ -12,7 +12,7 @@ import (
 type SearchHandler struct{ Service services.SearchService }
 
 // PublicSearch godoc
-// @Summary Search published approved guideline content
+// @Summary Search published guidelines, outbreaks, and situation reports
 // @Tags public-guidelines
 // @Produce json
 // @Param q query string true "Search query" minlength(2)

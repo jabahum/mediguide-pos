@@ -9,6 +9,8 @@ import 'package:user_app/core/constants/app_spacing.dart';
 import 'package:user_app/core/utils/responsive.dart';
 import 'package:user_app/features/guidelines/data/models/guideline_publication.dart';
 import 'package:user_app/features/outbreaks/data/models/outbreak_models.dart';
+import 'package:user_app/features/outbreaks/data/repositories/outbreak_repository.dart';
+import 'package:user_app/features/outbreaks/presentation/providers/outbreak_providers.dart';
 import 'package:user_app/shared/widgets/clinical_icon_tile.dart';
 import 'package:user_app/shared/widgets/section_header.dart';
 
@@ -23,7 +25,13 @@ final guestHomePublicationsProvider =
 
 final guestHomeOutbreaksProvider =
     FutureProvider.autoDispose<List<PublicOutbreak>>((ref) async {
-      return ref.watch(outbreakRepositoryProvider).outbreaks(status: 'active');
+      final enabled = ref.watch(outbreakFeatureEnabledProvider);
+      if (!enabled) return const <PublicOutbreak>[];
+      final page = await ref
+          .watch(outbreakRepositoryProvider)
+          .outbreaks(query: const OutbreakQuery(status: 'active'));
+      final primary = selectPrimaryOutbreak(page.items);
+      return primary == null ? const <PublicOutbreak>[] : [primary];
     });
 
 class GuestHomePage extends ConsumerWidget {

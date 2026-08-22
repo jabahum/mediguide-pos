@@ -304,6 +304,22 @@ final class _Scenario {
   final List<Override> overrides;
 }
 
+final class _GoldenOutbreaksController extends PublicOutbreaksController {
+  _GoldenOutbreaksController(this.outbreak);
+
+  final PublicOutbreak outbreak;
+
+  @override
+  Future<PublicPage<PublicOutbreak>> build() async => PublicPage(
+    items: [outbreak],
+    page: 1,
+    perPage: 20,
+    totalItems: 1,
+    totalPages: 1,
+    cache: const PublicCacheMetadata.online(),
+  );
+}
+
 void main() {
   final commonOverrides = <Override>[
     authControllerProvider.overrideWith(_GoldenAuthController.new),
@@ -318,10 +334,15 @@ void main() {
     toolsControllerProvider(null).overrideWith(_GoldenToolsController.new),
     guestHomePublicationsProvider.overrideWith((_) async => [_publication]),
     guestHomeOutbreaksProvider.overrideWith((_) async => [_outbreak]),
-    publicOutbreaksProvider.overrideWith((_) async => [_outbreak]),
-    publicSituationReportProvider(
-      'report-1',
-    ).overrideWith((_) async => _report),
+    publicOutbreaksProvider.overrideWith(
+      () => _GoldenOutbreaksController(_outbreak),
+    ),
+    publicSituationReportProvider('report-1').overrideWith(
+      (_) async => PublicContent(
+        value: _report,
+        cache: const PublicCacheMetadata.online(),
+      ),
+    ),
     publicationReadingProgressProvider(
       'golden-guideline',
     ).overrideWith((_) async => null),

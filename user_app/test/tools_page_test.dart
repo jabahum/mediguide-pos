@@ -10,14 +10,14 @@ void main() {
     );
 
     expect(find.text('Tools'), findsOneWidget);
-    expect(find.text('Clinical Tools'), findsOneWidget);
+    expect(find.text('Clinical tools'), findsOneWidget);
     expect(find.text('Calculators'), findsOneWidget);
     expect(find.text('Decision Tools'), findsOneWidget);
     expect(find.text('Checklists'), findsOneWidget);
     expect(find.text('References'), findsOneWidget);
     expect(find.text('Drug Index'), findsOneWidget);
     expect(find.text('Abbreviations'), findsOneWidget);
-    expect(find.text('Other'), findsOneWidget);
+    expect(find.text('Directories'), findsOneWidget);
     expect(find.text('Health Facilities'), findsOneWidget);
     expect(find.text('Ministry Directory'), findsOneWidget);
   });

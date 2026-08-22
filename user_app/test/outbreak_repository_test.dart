@@ -1,11 +1,16 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:user_app/core/network/api_client.dart';
+import 'package:user_app/features/outbreaks/data/models/outbreak_models.dart';
 import 'package:user_app/features/outbreaks/data/repositories/outbreak_repository.dart';
 import 'helpers/test_local_store.dart';
 
 class FakeOutbreakApi extends BackendApiService {
   bool offline = false;
+  bool malformed = false;
+  bool missingDetail = false;
+  final failedPaths = <String>{};
   final calls = <String>[];
+  final queries = <Map<String, String>?>[];
 
   @override
   Future<Map<String, dynamic>> requestJson(
@@ -16,8 +21,17 @@ class FakeOutbreakApi extends BackendApiService {
     bool includeAuth = true,
   }) async {
     calls.add(path);
+    queries.add(query);
     expect(includeAuth, isFalse);
-    if (offline) throw const BackendApiException('offline', statusCode: 503);
+    if (offline) {
+      throw const BackendApiException('offline', statusCode: 503);
+    }
+    if (failedPaths.contains(path)) {
+      throw const BackendApiException('temporary', statusCode: 503);
+    }
+    if (missingDetail && path == '/api/public/outbreaks/outbreak-1') {
+      throw const BackendApiException('missing', statusCode: 404);
+    }
     if (path.endsWith('/updates')) {
       return {
         'data': {
@@ -72,9 +86,18 @@ class FakeOutbreakApi extends BackendApiService {
       ],
     };
     if (path == '/api/public/outbreaks') {
+      if (malformed) {
+        return {
+          'data': {'items': 'invalid'},
+        };
+      }
       return {
         'data': {
           'items': [outbreak],
+          'page': 1,
+          'per_page': 20,
+          'total_items': 1,
+          'total_pages': 1,
         },
       };
     }
@@ -104,15 +127,22 @@ void main() {
       final api = FakeOutbreakApi();
       final repository = OutbreakRepository(api, store.cache);
 
-      final online = await repository.outbreaks(status: 'active');
-      expect(online.single.title, 'Published response');
-      expect(online.single.metrics.single.label, 'Confirmed');
-      expect(online.single.metrics.single.value, '4');
+      final online = await repository.outbreaks(
+        query: const OutbreakQuery(status: 'active'),
+      );
+      expect(online.items.single.title, 'Published response');
+      expect(online.items.single.metrics.single.label, 'Confirmed');
+      expect(online.items.single.metrics.single.value, '4');
       expect(api.calls.single, '/api/public/outbreaks');
+      expect(api.queries.single?['per_page'], '20');
+      expect(api.queries.single?['status'], 'active');
 
       api.offline = true;
-      final offline = await repository.outbreaks(status: 'active');
-      expect(offline.single.id, 'outbreak-1');
+      final offline = await repository.outbreaks(
+        query: const OutbreakQuery(status: 'active'),
+      );
+      expect(offline.items.single.id, 'outbreak-1');
+      expect(offline.cache.isOffline, isTrue);
     },
   );
 
@@ -125,10 +155,88 @@ void main() {
       store.cache,
     ).outbreak('outbreak-1');
 
-    expect(detail.updates.single.title, 'Published update');
-    expect(detail.resources.single.title, 'Clinical guidance');
-    expect(detail.reports.single.title, 'Situation report');
+    expect(detail.value.updates.single.title, 'Published update');
+    expect(detail.value.resources.single.title, 'Clinical guidance');
+    expect(detail.value.reports.single.title, 'Situation report');
     expect(api.calls, contains('/api/public/outbreaks/outbreak-1/updates'));
     expect(api.calls, contains('/api/public/outbreaks/outbreak-1/resources'));
   });
+
+  test('malformed server payload is not hidden by a cached response', () async {
+    final store = TestLocalStore();
+    addTearDown(store.close);
+    final api = FakeOutbreakApi();
+    final repository = OutbreakRepository(api, store.cache);
+    await repository.outbreaks();
+    api.malformed = true;
+    await expectLater(repository.outbreaks(), throwsA(isA<TypeError>()));
+  });
+
+  test(
+    'cached active critical content reports stale offline metadata',
+    () async {
+      final store = TestLocalStore();
+      addTearDown(store.close);
+      var now = DateTime.now().toUtc();
+      final api = FakeOutbreakApi();
+      final repository = OutbreakRepository(api, store.cache, clock: () => now);
+      await repository.outbreaks();
+      now = now.add(const Duration(hours: 1));
+      api.offline = true;
+      final cached = await repository.outbreaks();
+      expect(cached.cache.isOffline, isTrue);
+      expect(cached.cache.isStale, isTrue);
+    },
+  );
+
+  test('offline fallback applies typed filters to canonical cache', () async {
+    final store = TestLocalStore();
+    addTearDown(store.close);
+    final api = FakeOutbreakApi();
+    final repository = OutbreakRepository(api, store.cache);
+    await repository.outbreaks();
+    api.offline = true;
+    final matching = await repository.outbreaks(
+      query: const OutbreakQuery(search: 'Published response'),
+    );
+    final missing = await repository.outbreaks(
+      query: const OutbreakQuery(search: 'not in cache'),
+    );
+    expect(matching.items.single.id, 'outbreak-1');
+    expect(missing.items, isEmpty);
+  });
+
+  test('detail child failures retain independently cached sections', () async {
+    final store = TestLocalStore();
+    addTearDown(store.close);
+    final api = FakeOutbreakApi();
+    final repository = OutbreakRepository(api, store.cache);
+    await repository.outbreak('outbreak-1');
+    api.failedPaths.add('/api/public/outbreaks/outbreak-1/resources');
+    final partial = await repository.outbreak('outbreak-1');
+    expect(partial.partialFailures, contains('resources'));
+    expect(partial.value.resources.single.title, 'Clinical guidance');
+  });
+
+  test(
+    'withdrawn details are tombstoned and never served as active cache',
+    () async {
+      final store = TestLocalStore();
+      addTearDown(store.close);
+      final api = FakeOutbreakApi();
+      final repository = OutbreakRepository(api, store.cache);
+      await repository.outbreak('outbreak-1');
+      api.missingDetail = true;
+      await expectLater(
+        repository.outbreak('outbreak-1'),
+        throwsA(
+          isA<PublicContentUnavailableException>().having(
+            (error) => error.isWithdrawn,
+            'isWithdrawn',
+            isTrue,
+          ),
+        ),
+      );
+    },
+  );
 }

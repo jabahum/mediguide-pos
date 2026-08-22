@@ -16,9 +16,23 @@ import 'package:user_app/features/authentication/presentation/controllers/auth_c
 import 'package:user_app/features/home/presentation/controllers/home_controller.dart';
 import 'package:user_app/features/home/presentation/controllers/home_state.dart';
 import 'package:user_app/app/providers/app_providers.dart';
+import 'package:user_app/features/outbreaks/data/models/outbreak_models.dart';
+import 'package:user_app/features/outbreaks/data/repositories/outbreak_repository.dart';
+import 'package:user_app/features/outbreaks/presentation/providers/outbreak_providers.dart';
 
 import 'package:user_app/shared/models/models.dart';
 import 'package:user_app/shared/widgets/section_header.dart';
+
+final homeOutbreakBannerProvider =
+    FutureProvider.autoDispose<List<PublicOutbreak>>((ref) async {
+      final enabled = ref.watch(outbreakFeatureEnabledProvider);
+      if (!enabled) return const <PublicOutbreak>[];
+      final page = await ref
+          .watch(outbreakRepositoryProvider)
+          .outbreaks(query: const OutbreakQuery(status: 'active'));
+      final primary = selectPrimaryOutbreak(page.items);
+      return primary == null ? const <PublicOutbreak>[] : [primary];
+    });
 
 class HomePage extends ConsumerWidget {
   const HomePage({super.key, this.greetingHour})
@@ -156,6 +170,14 @@ class HomePage extends ConsumerWidget {
               AppNavigator.push(AppRoutes.search);
             },
           ),
+
+          if (ref.watch(homeOutbreakBannerProvider).valueOrNull case [
+            final active,
+            ...,
+          ]) ...[
+            AppSpacing.lg.gap,
+            _LoggedInOutbreakBanner(outbreak: active),
+          ],
 
           AppSpacing.lg.gap,
 
@@ -1116,6 +1138,70 @@ class _ChatFloatingButton extends StatelessWidget {
         child: Icon(
           LucideIcons.messageCircle,
           color: colors.onPrimaryContainer,
+        ),
+      ),
+    );
+  }
+}
+
+class _LoggedInOutbreakBanner extends StatelessWidget {
+  const _LoggedInOutbreakBanner({required this.outbreak});
+
+  final PublicOutbreak outbreak;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    return Semantics(
+      button: true,
+      label: 'Active outbreak: ${outbreak.title}',
+      child: Material(
+        color: colors.errorContainer,
+        borderRadius: BorderRadius.circular(16),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(16),
+          onTap: () => AppNavigator.push(AppRoutes.outbreak(outbreak.id)),
+          child: Padding(
+            padding: const EdgeInsets.all(AppSpacing.md),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Icon(LucideIcons.siren, color: colors.onErrorContainer),
+                AppSpacing.md.gap,
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'ACTIVE OUTBREAK',
+                        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                          color: colors.onErrorContainer,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        outbreak.title,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                          color: colors.onErrorContainer,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                      if (outbreak.geographicArea.isNotEmpty)
+                        Text(
+                          outbreak.geographicArea,
+                          style: Theme.of(context).textTheme.bodySmall
+                              ?.copyWith(color: colors.onErrorContainer),
+                        ),
+                    ],
+                  ),
+                ),
+                Icon(LucideIcons.chevronRight, color: colors.onErrorContainer),
+              ],
+            ),
+          ),
         ),
       ),
     );

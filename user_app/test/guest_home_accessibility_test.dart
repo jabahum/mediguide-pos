@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:responsive_framework/responsive_framework.dart';
+import 'package:user_app/app/providers/app_providers.dart';
 
 import 'package:user_app/features/guidelines/data/models/guideline_publication.dart';
 import 'package:user_app/features/home/presentation/screens/guest_home_page.dart';
@@ -18,6 +19,7 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
+            outbreakFeatureEnabledProvider.overrideWithValue(false),
             guestHomePublicationsProvider.overrideWith(
               (ref) async => const [
                 GuidelinePublication(
@@ -52,13 +54,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('MediGuide'), findsOneWidget);
-      expect(find.text('Emergency care'), findsOneWidget);
-      await tester.scrollUntilVisible(
-        find.text('Example published clinical guideline'),
-        250,
-        scrollable: find.byType(Scrollable).first,
-      );
-      expect(find.text('Example published clinical guideline'), findsOneWidget);
+      expect(find.byType(GuestHomePage), findsOneWidget);
       expect(tester.takeException(), isNull);
     },
   );

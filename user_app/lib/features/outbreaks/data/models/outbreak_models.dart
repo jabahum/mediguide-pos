@@ -10,6 +10,10 @@ abstract class OutbreakMetric with _$OutbreakMetric {
     @Default('') String label,
     @Default('') String value,
     @Default('') String unit,
+    @JsonKey(name: 'numeric_value') double? numericValue,
+    @JsonKey(name: 'as_of') DateTime? asOf,
+    @JsonKey(name: 'source_reference') @Default('') String sourceReference,
+    @JsonKey(name: 'sort_order') @Default(0) int sortOrder,
   }) = _OutbreakMetric;
   factory OutbreakMetric.fromJson(Map<String, dynamic> json) =>
       _$OutbreakMetricFromJson(json);
@@ -31,6 +35,11 @@ abstract class PublicOutbreak with _$PublicOutbreak {
     @Default('')
     String sourceOrganization,
     @JsonKey(name: 'published_at') DateTime? publishedAt,
+    @JsonKey(name: 'effective_at') DateTime? effectiveAt,
+    @JsonKey(name: 'data_as_of') DateTime? dataAsOf,
+    @JsonKey(name: 'last_verified_at') DateTime? lastVerifiedAt,
+    @JsonKey(name: 'source_reference') @Default('') String sourceReference,
+    @JsonKey(name: 'source_url') @Default('') String sourceUrl,
     @Default(<OutbreakMetric>[]) List<OutbreakMetric> metrics,
   }) = _PublicOutbreak;
   factory PublicOutbreak.fromJson(Map<String, dynamic> json) =>
@@ -79,6 +88,11 @@ abstract class PublicSituationReport with _$PublicSituationReport {
     @JsonKey(name: 'publication_date') DateTime? publicationDate,
     @Default('published') String status,
     @JsonKey(name: 'report_asset_url') @Default('') String reportAssetUrl,
+    @JsonKey(name: 'effective_at') DateTime? effectiveAt,
+    @JsonKey(name: 'data_as_of') DateTime? dataAsOf,
+    @JsonKey(name: 'last_verified_at') DateTime? lastVerifiedAt,
+    @JsonKey(name: 'source_reference') @Default('') String sourceReference,
+    @JsonKey(name: 'source_url') @Default('') String sourceUrl,
     @JsonKey(name: 'key_highlights')
     @Default(<String>[])
     List<String> keyHighlights,
@@ -96,4 +110,71 @@ abstract class PublicOutbreakDetail with _$PublicOutbreakDetail {
     @Default(<PublicOutbreakResource>[]) List<PublicOutbreakResource> resources,
     @Default(<PublicSituationReport>[]) List<PublicSituationReport> reports,
   }) = _PublicOutbreakDetail;
+}
+
+final class PublicCacheMetadata {
+  const PublicCacheMetadata({
+    required this.cachedAt,
+    required this.lastVerifiedAt,
+    required this.isStale,
+    required this.isWithdrawn,
+    required this.isOffline,
+  });
+
+  const PublicCacheMetadata.online({this.lastVerifiedAt})
+    : cachedAt = null,
+      isStale = false,
+      isWithdrawn = false,
+      isOffline = false;
+
+  final DateTime? cachedAt;
+  final DateTime? lastVerifiedAt;
+  final bool isStale;
+  final bool isWithdrawn;
+  final bool isOffline;
+}
+
+final class PublicContent<T> {
+  const PublicContent({
+    required this.value,
+    required this.cache,
+    this.partialFailures = const <String>[],
+  });
+
+  final T value;
+  final PublicCacheMetadata cache;
+  final List<String> partialFailures;
+}
+
+final class PublicPage<T> {
+  const PublicPage({
+    required this.items,
+    required this.page,
+    required this.perPage,
+    required this.totalItems,
+    required this.totalPages,
+    required this.cache,
+  });
+
+  final List<T> items;
+  final int page;
+  final int perPage;
+  final int totalItems;
+  final int totalPages;
+  final PublicCacheMetadata cache;
+
+  bool get hasMore => page < totalPages;
+}
+
+final class PublicContentUnavailableException implements Exception {
+  const PublicContentUnavailableException(
+    this.message, {
+    this.isWithdrawn = false,
+  });
+
+  final String message;
+  final bool isWithdrawn;
+
+  @override
+  String toString() => message;
 }

@@ -19,6 +19,9 @@ import 'package:user_app/features/authentication/data/datasources/auth_remote_da
 const _installationKey = 'firebase_installation_id';
 const _deviceRecordKey = 'firebase_device_record_id';
 const _permissionRequestedKey = 'firebase_notification_permission_requested';
+const _outbreakTopicPreferenceKey = 'firebase_outbreak_topic_preference';
+const _outbreakTopicSubscribedKey = 'firebase_outbreak_topic_subscribed';
+const _publicOutbreakTopic = 'public-outbreaks';
 
 enum AppNotificationPermissionState {
   notDetermined,
@@ -50,10 +53,13 @@ final class MediGuideFirebaseService {
       StreamController.broadcast();
   final StreamController<AppNotificationPermissionState> _permissionStates =
       StreamController.broadcast();
+  final StreamController<bool> _outbreakBannerStates =
+      StreamController<bool>.broadcast();
 
   StreamSubscription<String>? _tokenSubscription;
   StreamSubscription<RemoteMessage>? _foregroundSubscription;
   StreamSubscription<RemoteMessage>? _openedSubscription;
+  StreamSubscription<RemoteConfigUpdate>? _remoteConfigSubscription;
   VoidCallback? _authListener;
   RemoteMessage? _initialMessage;
   bool _enabled = false;
@@ -72,6 +78,10 @@ final class MediGuideFirebaseService {
   Stream<AppNotificationPermissionState> get permissionStates =>
       _permissionStates.stream;
   AppNotificationPermissionState get permissionState => _permissionState;
+  Stream<bool> get outbreakBannerStates async* {
+    yield outbreakBannerEnabled;
+    yield* _outbreakBannerStates.stream;
+  }
 
   FirebaseRemoteConfig? get remoteConfig =>
       _enabled ? FirebaseRemoteConfig.instance : null;
@@ -95,7 +105,10 @@ final class MediGuideFirebaseService {
 
   Future<bool> refreshRemoteConfig() async {
     if (!_enabled) return false;
-    return FirebaseRemoteConfig.instance.fetchAndActivate();
+    final changed = await FirebaseRemoteConfig.instance.fetchAndActivate();
+    _outbreakBannerStates.add(outbreakBannerEnabled);
+    await _syncPublicOutbreakTopic();
+    return changed;
   }
 
   Future<MediGuideFirebaseService> init() async {
@@ -114,16 +127,19 @@ final class MediGuideFirebaseService {
     await _initializeRemoteConfig();
     await _initializeLocalNotifications();
     await _initializeMessaging();
+    await _syncPublicOutbreakTopic();
 
     _auth.beforeLogout = unregisterCurrentDevice;
     _authListener = () {
       if (_auth.currentUser.value != null) {
         unawaited(registerCurrentDevice());
+        unawaited(syncOutbreakTopicPreferenceFromServer());
       }
     };
     _auth.currentUser.addListener(_authListener!);
     if (_auth.currentUser.value != null) {
       await registerCurrentDevice();
+      await syncOutbreakTopicPreferenceFromServer();
     }
     return this;
   }
@@ -151,8 +167,10 @@ final class MediGuideFirebaseService {
     } catch (error) {
       debugPrint('Remote Config fetch failed; defaults remain active: $error');
     }
-    config.onConfigUpdated.listen((_) async {
+    _remoteConfigSubscription = config.onConfigUpdated.listen((_) async {
       await config.activate();
+      _outbreakBannerStates.add(outbreakBannerEnabled);
+      await _syncPublicOutbreakTopic();
     });
   }
 
@@ -248,7 +266,68 @@ final class MediGuideFirebaseService {
         state == AppNotificationPermissionState.provisional) {
       await registerCurrentDevice();
     }
+    await _syncPublicOutbreakTopic();
     return state;
+  }
+
+  /// Persists the user's outbreak-alert preference and reconciles the public
+  /// Firebase topic. Production never subscribes unless permission, Remote
+  /// Config and both notification preferences permit it.
+  Future<void> setOutbreakTopicPreference({
+    required bool outbreakAlerts,
+    required bool pushEnabled,
+  }) async {
+    await _preferences.setBool(
+      _outbreakTopicPreferenceKey,
+      outbreakAlerts && pushEnabled,
+    );
+    await _syncPublicOutbreakTopic();
+  }
+
+  Future<void> syncOutbreakTopicPreferenceFromServer() async {
+    if (!_enabled || _auth.currentUser.value == null) return;
+    try {
+      final response = await _api.requestJson(
+        '/api/v2/notification-preferences',
+        method: 'GET',
+      );
+      final raw = response['data'];
+      if (raw is! Map) return;
+      final preferences = Map<String, dynamic>.from(raw);
+      await setOutbreakTopicPreference(
+        outbreakAlerts: preferences['outbreak_alerts'] != false,
+        pushEnabled: preferences['push_enabled'] != false,
+      );
+    } catch (error) {
+      debugPrint('Outbreak topic preference sync failed: $error');
+    }
+  }
+
+  Future<void> _syncPublicOutbreakTopic() async {
+    if (!_enabled) return;
+    final shouldSubscribe = shouldSubscribeToPublicOutbreaks(
+      remoteEnabled: outbreakBannerEnabled,
+      pushEnabled: FirebaseRemoteConfig.instance.getBool(
+        'enable_push_notifications',
+      ),
+      userOptedIn: _preferences.getBool(_outbreakTopicPreferenceKey) ?? false,
+      permissionState: _permissionState,
+    );
+    final subscribed =
+        _preferences.getBool(_outbreakTopicSubscribedKey) ?? false;
+    if (shouldSubscribe == subscribed) return;
+    try {
+      if (shouldSubscribe) {
+        await FirebaseMessaging.instance.subscribeToTopic(_publicOutbreakTopic);
+      } else {
+        await FirebaseMessaging.instance.unsubscribeFromTopic(
+          _publicOutbreakTopic,
+        );
+      }
+      await _preferences.setBool(_outbreakTopicSubscribedKey, shouldSubscribe);
+    } catch (error) {
+      debugPrint('Outbreak topic reconciliation failed: $error');
+    }
   }
 
   Future<bool> openNotificationSettings() async {
@@ -322,6 +401,8 @@ final class MediGuideFirebaseService {
 
   Future<void> unregisterCurrentDevice() async {
     if (!_enabled) return;
+    await _preferences.setBool(_outbreakTopicPreferenceKey, false);
+    await _syncPublicOutbreakTopic();
     final id = _preferences.getString(_deviceRecordKey);
     if (id != null && id.isNotEmpty) {
       try {
@@ -352,8 +433,23 @@ final class MediGuideFirebaseService {
     await _tokenSubscription?.cancel();
     await _foregroundSubscription?.cancel();
     await _openedSubscription?.cancel();
+    await _remoteConfigSubscription?.cancel();
     await _openedMessages.close();
     await _foregroundMessages.close();
     await _permissionStates.close();
+    await _outbreakBannerStates.close();
   }
+}
+
+@visibleForTesting
+bool shouldSubscribeToPublicOutbreaks({
+  required bool remoteEnabled,
+  required bool pushEnabled,
+  required bool userOptedIn,
+  required AppNotificationPermissionState permissionState,
+}) {
+  final permitted =
+      permissionState == AppNotificationPermissionState.authorized ||
+      permissionState == AppNotificationPermissionState.provisional;
+  return remoteEnabled && pushEnabled && userOptedIn && permitted;
 }

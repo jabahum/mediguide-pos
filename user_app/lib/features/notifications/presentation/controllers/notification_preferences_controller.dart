@@ -30,8 +30,15 @@ final class NotificationPreferencesController
       repository.getPreferences(),
       repository.listDevices(),
     ]);
+    final preferences = results[0] as NotificationPreferences;
+    await ref
+        .read(firebaseServiceProvider)
+        .setOutbreakTopicPreference(
+          outbreakAlerts: preferences.outbreakAlerts,
+          pushEnabled: preferences.pushEnabled,
+        );
     return NotificationPreferencesState(
-      preferences: results[0] as NotificationPreferences,
+      preferences: preferences,
       devices: results[1] as List<NotificationDevice>,
     );
   }
@@ -56,6 +63,12 @@ final class NotificationPreferencesController
       final devices = await ref
           .read(notificationRepositoryProvider)
           .listDevices();
+      await ref
+          .read(firebaseServiceProvider)
+          .setOutbreakTopicPreference(
+            outbreakAlerts: preferences.outbreakAlerts,
+            pushEnabled: preferences.pushEnabled,
+          );
       return NotificationPreferencesState(
         preferences: preferences,
         devices: devices,

@@ -16,6 +16,82 @@ class LocalCacheService {
 
   final AppDatabase _database;
 
+  /// Atomically stores a complete server snapshot and optionally tombstones
+  /// records that disappeared from the canonical, unfiltered response.
+  Future<void> replaceSnapshot({
+    required String type,
+    required String snapshotType,
+    required String snapshotId,
+    required Iterable<CachedEntityInput> entities,
+    String scope = 'public',
+    Duration? ttl,
+    bool reconcileMissing = false,
+    Map<String, dynamic> snapshotData = const <String, dynamic>{},
+  }) async {
+    final rows = entities.toList(growable: false);
+    final now = DateTime.now().toUtc();
+    final expiresAt = ttl == null ? null : now.add(ttl);
+    final ids = rows.map((row) => row.id).toSet();
+
+    await _database.transaction(() async {
+      await _database.batch((batch) {
+        for (final entity in rows) {
+          batch.insert(
+            _database.cachedEntities,
+            CachedEntitiesCompanion.insert(
+              entityType: type,
+              entityId: entity.id,
+              payload: jsonEncode(entity.data),
+              searchableText: Value(entity.searchableText.toLowerCase()),
+              metadata: Value(
+                entity.metadata == null ? null : jsonEncode(entity.metadata),
+              ),
+              scope: Value(scope),
+              version: Value(entity.version),
+              remoteUpdatedAt: Value(entity.remoteUpdatedAt),
+              cachedAt: now,
+              expiresAt: Value(expiresAt),
+              isDeleted: const Value(false),
+            ),
+            mode: InsertMode.insertOrReplace,
+          );
+        }
+        batch.insert(
+          _database.cachedEntities,
+          CachedEntitiesCompanion.insert(
+            entityType: snapshotType,
+            entityId: snapshotId,
+            payload: jsonEncode({
+              ...snapshotData,
+              'ids': ids.toList(growable: false),
+            }),
+            scope: Value(scope),
+            cachedAt: now,
+            expiresAt: Value(expiresAt),
+            isDeleted: const Value(false),
+          ),
+          mode: InsertMode.insertOrReplace,
+        );
+      });
+
+      if (reconcileMissing) {
+        final update = _database.update(_database.cachedEntities)
+          ..where(
+            (table) =>
+                table.entityType.equals(type) &
+                table.scope.equals(scope) &
+                table.isDeleted.equals(false) &
+                (ids.isEmpty
+                    ? const Constant(true)
+                    : table.entityId.isNotIn(ids)),
+          );
+        await update.write(
+          const CachedEntitiesCompanion(isDeleted: Value(true)),
+        );
+      }
+    });
+  }
+
   // =========================================================
   // WRITE
   // =========================================================
@@ -114,6 +190,49 @@ class LocalCacheService {
     }
 
     return _decode(row.payload);
+  }
+
+  Future<CachedEntityValue?> getEntry({
+    required String type,
+    required String id,
+    String scope = 'public',
+    bool includeDeleted = false,
+  }) async {
+    final query = _database.select(_database.cachedEntities)
+      ..where(
+        (table) =>
+            table.entityType.equals(type) &
+            table.entityId.equals(id) &
+            table.scope.equals(scope) &
+            (includeDeleted
+                ? const Constant(true)
+                : table.isDeleted.equals(false)),
+      );
+    final row = await query.getSingleOrNull();
+    if (row == null) return null;
+    final data = _decode(row.payload);
+    if (data == null) return null;
+    return CachedEntityValue(
+      data: data,
+      cachedAt: row.cachedAt,
+      expiresAt: row.expiresAt,
+      remoteUpdatedAt: row.remoteUpdatedAt,
+      isDeleted: row.isDeleted,
+    );
+  }
+
+  Future<void> tombstone({
+    required String type,
+    required String id,
+    String scope = 'public',
+  }) async {
+    await (_database.update(_database.cachedEntities)..where(
+          (table) =>
+              table.entityType.equals(type) &
+              table.entityId.equals(id) &
+              table.scope.equals(scope),
+        ))
+        .write(const CachedEntitiesCompanion(isDeleted: Value(true)));
   }
 
   // =========================================================
@@ -310,4 +429,20 @@ class CachedEntityInput {
   final Map<String, dynamic>? metadata;
   final String? version;
   final DateTime? remoteUpdatedAt;
+}
+
+final class CachedEntityValue {
+  const CachedEntityValue({
+    required this.data,
+    required this.cachedAt,
+    required this.isDeleted,
+    this.expiresAt,
+    this.remoteUpdatedAt,
+  });
+
+  final Map<String, dynamic> data;
+  final DateTime cachedAt;
+  final DateTime? expiresAt;
+  final DateTime? remoteUpdatedAt;
+  final bool isDeleted;
 }

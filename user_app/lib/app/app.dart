@@ -15,6 +15,9 @@ import 'package:user_app/features/settings/presentation/controllers/language_con
 import 'package:user_app/l10n/app_translations.dart';
 import 'package:user_app/core/debug/debug_tools_overlay.dart';
 import 'package:user_app/features/notifications/domain/notification_action_resolver.dart';
+import 'package:user_app/features/home/presentation/screens/guest_home_page.dart';
+import 'package:user_app/features/home/presentation/screens/home_page.dart';
+import 'package:user_app/features/outbreaks/presentation/providers/outbreak_providers.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class MediGuideApp extends ConsumerWidget {
@@ -25,9 +28,17 @@ class MediGuideApp extends ConsumerWidget {
     ref.watch(authControllerProvider);
     ref.watch(backendReconnectProvider);
     final router = ref.watch(appRouterProvider);
+    ref.listen(outbreakBannerEnabledProvider, (_, next) {
+      if (!next.hasValue) return;
+      ref.invalidate(guestHomeOutbreaksProvider);
+      ref.invalidate(homeOutbreakBannerProvider);
+      ref.invalidate(publicOutbreaksProvider);
+      ref.invalidate(publicSituationReportsProvider);
+    });
     ref.listen(firebaseOpenedMessageProvider, (_, message) {
       final data = message.valueOrNull?.data;
       if (data == null) return;
+      _invalidateOutbreakContent(ref, data);
       final target = NotificationActionResolver.fromPushData(data);
       final deliveryId = data['delivery_id']?.toString().trim() ?? '';
       if (deliveryId.isNotEmpty) {
@@ -58,7 +69,9 @@ class MediGuideApp extends ConsumerWidget {
       }
     });
     ref.listen(firebaseForegroundMessageProvider, (_, message) {
-      if (message.valueOrNull == null) return;
+      final foreground = message.valueOrNull;
+      if (foreground == null) return;
+      _invalidateOutbreakContent(ref, foreground.data);
       unawaited(
         (() async {
           final repository = ref.read(notificationRepositoryProvider);
@@ -105,5 +118,24 @@ class MediGuideApp extends ConsumerWidget {
         ),
       ),
     );
+  }
+}
+
+void _invalidateOutbreakContent(WidgetRef ref, Map<String, dynamic> data) {
+  final type = [data['action_type'], data['resource_type'], data['type']]
+      .whereType<Object>()
+      .map((value) => value.toString().toLowerCase())
+      .join(' ');
+  if (!type.contains('outbreak') && !type.contains('situation_report')) return;
+  ref.invalidate(guestHomeOutbreaksProvider);
+  ref.invalidate(homeOutbreakBannerProvider);
+  ref.invalidate(publicOutbreaksProvider);
+  ref.invalidate(publicSituationReportsProvider);
+  final resourceId = data['resource_id']?.toString().trim() ?? '';
+  if (resourceId.isEmpty) return;
+  if (type.contains('situation_report')) {
+    ref.invalidate(publicSituationReportProvider(resourceId));
+  } else {
+    ref.invalidate(publicOutbreakProvider(resourceId));
   }
 }

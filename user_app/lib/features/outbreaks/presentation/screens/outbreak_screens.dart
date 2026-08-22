@@ -97,9 +97,9 @@ class OutbreakHubPage extends ConsumerWidget {
           }
 
           return RefreshIndicator(
-            onRefresh: () async {
-              await ref.refresh(publicOutbreaksProvider.future);
-            },
+            onRefresh: () => ref
+                .refresh(publicOutbreaksProvider.future)
+                .then((outbreaks) {}),
             child: ListView(
               physics: const AlwaysScrollableScrollPhysics(),
               padding: const EdgeInsets.fromLTRB(
@@ -236,9 +236,9 @@ class SituationReportsPage extends ConsumerWidget {
           }
 
           return RefreshIndicator(
-            onRefresh: () async {
-              await ref.refresh(publicSituationReportsProvider.future);
-            },
+            onRefresh: () => ref
+                .refresh(publicSituationReportsProvider.future)
+                .then((reports) {}),
             child: ListView(
               physics: const AlwaysScrollableScrollPhysics(),
               padding: const EdgeInsets.fromLTRB(

@@ -486,7 +486,7 @@ export interface HandlersNotificationTemplateVersionsEnvelope {
 }
 
 export interface HandlersOutbreakEnvelope {
-  data?: ModelsOutbreak;
+  data?: ServicesPublicOutbreak;
   success?: boolean;
 }
 
@@ -837,17 +837,17 @@ export interface HandlersPaginatedNotificationsEnvelope {
 }
 
 export interface HandlersPaginatedOutbreakResourcesEnvelope {
-  data?: ServicesPageResultModelsOutbreakResource;
+  data?: ServicesPageResultServicesPublicOutbreakResource;
   success?: boolean;
 }
 
 export interface HandlersPaginatedOutbreakUpdatesEnvelope {
-  data?: ServicesPageResultModelsOutbreakUpdate;
+  data?: ServicesPageResultServicesPublicOutbreakUpdate;
   success?: boolean;
 }
 
 export interface HandlersPaginatedOutbreaksEnvelope {
-  data?: ServicesPageResultModelsOutbreak;
+  data?: ServicesPageResultServicesPublicOutbreak;
   success?: boolean;
 }
 
@@ -946,7 +946,7 @@ export interface HandlersPaginatedSettingsEnvelope {
 }
 
 export interface HandlersPaginatedSituationReportsEnvelope {
-  data?: ServicesPageResultModelsSituationReport;
+  data?: ServicesPageResultServicesPublicSituationReport;
   success?: boolean;
 }
 
@@ -1142,7 +1142,7 @@ export interface HandlersSettingEnvelope {
 }
 
 export interface HandlersSituationReportEnvelope {
-  data?: ModelsSituationReport;
+  data?: ServicesPublicSituationReport;
   success?: boolean;
 }
 
@@ -1963,45 +1963,6 @@ export type ModelsNotificationActionTypeEnum =
   | "internal_route"
   | "approved_external_url";
 
-export interface ModelsOutbreak {
-  created_at?: string;
-  disease_type?: string;
-  geographic_area?: string;
-  id?: string;
-  last_update?: string;
-  metrics?: object[];
-  published_at?: string;
-  source_organization?: string;
-  start_date?: string;
-  status?: string;
-  summary?: string;
-  title?: string;
-  updated_at?: string;
-  visual_tone?: string;
-}
-
-export interface ModelsOutbreakResource {
-  asset_url?: string;
-  created_at?: string;
-  id?: string;
-  outbreak_id?: string;
-  resource_type?: string;
-  sort_order?: number;
-  title?: string;
-  updated_at?: string;
-  url?: string;
-}
-
-export interface ModelsOutbreakUpdate {
-  created_at?: string;
-  id?: string;
-  outbreak_id?: string;
-  published_at?: string;
-  summary?: string;
-  title?: string;
-  updated_at?: string;
-}
-
 export interface ModelsPermission {
   code?: string;
   created_at?: string;
@@ -2047,22 +2008,6 @@ export interface ModelsSetting {
   key?: string;
   updated_at?: string;
   value_json?: object;
-}
-
-export interface ModelsSituationReport {
-  created_at?: string;
-  geographic_area?: string;
-  id?: string;
-  key_highlights?: string[];
-  metrics?: object[];
-  outbreak_id?: string;
-  publication_date?: string;
-  report_asset_url?: string;
-  source_organization?: string;
-  status?: string;
-  summary?: string;
-  title?: string;
-  updated_at?: string;
 }
 
 export interface ModelsSupportTicket {
@@ -2176,6 +2121,16 @@ export interface ServicesAskResponse {
 export interface ServicesAssignGuidelineReviewerInput {
   due_at?: string;
   reviewer_id: string;
+}
+
+export interface ServicesChildContentInput {
+  asset_url?: string;
+  lock_version?: number;
+  resource_type?: string;
+  sort_order?: number;
+  summary?: string;
+  title?: string;
+  url?: string;
 }
 
 export interface ServicesCitation {
@@ -3303,6 +3258,113 @@ export interface ServicesNotificationTemplateVersionDTO {
   version?: number;
 }
 
+export interface ServicesOutbreakAdminDTO {
+  approved_at?: string;
+  approved_by?: string;
+  author_id?: string;
+  created_at?: string;
+  data_as_of?: string;
+  disease_type?: string;
+  district_id?: string;
+  effective_at?: string;
+  geographic_area?: string;
+  id?: string;
+  last_update?: string;
+  last_verified_at?: string;
+  lock_version?: number;
+  metrics?: ServicesOutbreakMetric[];
+  published_at?: string;
+  region_id?: string;
+  reviewed_at?: string;
+  reviewed_by?: string;
+  source_organization?: string;
+  source_reference?: string;
+  source_url?: string;
+  start_date?: string;
+  status?: string;
+  summary?: string;
+  supersedes_id?: string;
+  title?: string;
+  updated_at?: string;
+  visual_tone?: string;
+  withdrawal_reason?: string;
+  withdrawn_at?: string;
+}
+
+export interface ServicesOutbreakInput {
+  data_as_of?: string;
+  disease_type?: string;
+  district_id?: string;
+  effective_at?: string;
+  geographic_area?: string;
+  last_update?: string;
+  last_verified_at?: string;
+  lock_version?: number;
+  metrics?: ServicesOutbreakMetric[];
+  region_id?: string;
+  source_organization?: string;
+  source_reference?: string;
+  source_url?: string;
+  start_date?: string;
+  summary?: string;
+  title?: string;
+  visual_tone?: string;
+}
+
+export interface ServicesOutbreakMetric {
+  as_of?: string;
+  key?: string;
+  label?: string;
+  numeric_value?: number;
+  sort_order?: number;
+  source_reference?: string;
+  unit?: string;
+  value?: string;
+}
+
+export interface ServicesOutbreakResourceAdminDTO {
+  approved_at?: string;
+  approved_by?: string;
+  asset_url?: string;
+  author_id?: string;
+  created_at?: string;
+  id?: string;
+  lock_version?: number;
+  outbreak_id?: string;
+  published_at?: string;
+  resource_type?: string;
+  reviewed_at?: string;
+  reviewed_by?: string;
+  sort_order?: number;
+  status?: string;
+  supersedes_id?: string;
+  title?: string;
+  updated_at?: string;
+  url?: string;
+  withdrawal_reason?: string;
+  withdrawn_at?: string;
+}
+
+export interface ServicesOutbreakUpdateAdminDTO {
+  approved_at?: string;
+  approved_by?: string;
+  author_id?: string;
+  created_at?: string;
+  id?: string;
+  lock_version?: number;
+  outbreak_id?: string;
+  published_at?: string;
+  reviewed_at?: string;
+  reviewed_by?: string;
+  status?: string;
+  summary?: string;
+  supersedes_id?: string;
+  title?: string;
+  updated_at?: string;
+  withdrawal_reason?: string;
+  withdrawn_at?: string;
+}
+
 export interface ServicesPageResultModelsAbbreviation {
   items?: ModelsAbbreviation[];
   page?: number;
@@ -3391,40 +3453,8 @@ export interface ServicesPageResultModelsMinistryDirectoryEntry {
   total_pages?: number;
 }
 
-export interface ServicesPageResultModelsOutbreak {
-  items?: ModelsOutbreak[];
-  page?: number;
-  per_page?: number;
-  total_items?: number;
-  total_pages?: number;
-}
-
-export interface ServicesPageResultModelsOutbreakResource {
-  items?: ModelsOutbreakResource[];
-  page?: number;
-  per_page?: number;
-  total_items?: number;
-  total_pages?: number;
-}
-
-export interface ServicesPageResultModelsOutbreakUpdate {
-  items?: ModelsOutbreakUpdate[];
-  page?: number;
-  per_page?: number;
-  total_items?: number;
-  total_pages?: number;
-}
-
 export interface ServicesPageResultModelsReadingProgress {
   items?: ModelsReadingProgress[];
-  page?: number;
-  per_page?: number;
-  total_items?: number;
-  total_pages?: number;
-}
-
-export interface ServicesPageResultModelsSituationReport {
-  items?: ModelsSituationReport[];
   page?: number;
   per_page?: number;
   total_items?: number;
@@ -3471,8 +3501,72 @@ export interface ServicesPageResultServicesNotificationDeliveryDTO {
   total_pages?: number;
 }
 
+export interface ServicesPageResultServicesOutbreakAdminDTO {
+  items?: ServicesOutbreakAdminDTO[];
+  page?: number;
+  per_page?: number;
+  total_items?: number;
+  total_pages?: number;
+}
+
+export interface ServicesPageResultServicesOutbreakResourceAdminDTO {
+  items?: ServicesOutbreakResourceAdminDTO[];
+  page?: number;
+  per_page?: number;
+  total_items?: number;
+  total_pages?: number;
+}
+
+export interface ServicesPageResultServicesOutbreakUpdateAdminDTO {
+  items?: ServicesOutbreakUpdateAdminDTO[];
+  page?: number;
+  per_page?: number;
+  total_items?: number;
+  total_pages?: number;
+}
+
+export interface ServicesPageResultServicesPublicOutbreak {
+  items?: ServicesPublicOutbreak[];
+  page?: number;
+  per_page?: number;
+  total_items?: number;
+  total_pages?: number;
+}
+
+export interface ServicesPageResultServicesPublicOutbreakResource {
+  items?: ServicesPublicOutbreakResource[];
+  page?: number;
+  per_page?: number;
+  total_items?: number;
+  total_pages?: number;
+}
+
+export interface ServicesPageResultServicesPublicOutbreakUpdate {
+  items?: ServicesPublicOutbreakUpdate[];
+  page?: number;
+  per_page?: number;
+  total_items?: number;
+  total_pages?: number;
+}
+
+export interface ServicesPageResultServicesPublicSituationReport {
+  items?: ServicesPublicSituationReport[];
+  page?: number;
+  per_page?: number;
+  total_items?: number;
+  total_pages?: number;
+}
+
 export interface ServicesPageResultServicesRoleView {
   items?: ServicesRoleView[];
+  page?: number;
+  per_page?: number;
+  total_items?: number;
+  total_pages?: number;
+}
+
+export interface ServicesPageResultServicesSituationReportAdminDTO {
+  items?: ServicesSituationReportAdminDTO[];
   page?: number;
   per_page?: number;
   total_items?: number;
@@ -3609,6 +3703,69 @@ export interface ServicesPublicGuidelineTable {
   sort_order?: number;
 }
 
+export interface ServicesPublicOutbreak {
+  data_as_of?: string;
+  disease_type?: string;
+  district_id?: string;
+  effective_at?: string;
+  geographic_area?: string;
+  id?: string;
+  last_update?: string;
+  last_verified_at?: string;
+  metrics?: ServicesOutbreakMetric[];
+  published_at?: string;
+  region_id?: string;
+  source_organization?: string;
+  source_reference?: string;
+  source_url?: string;
+  start_date?: string;
+  status?: string;
+  summary?: string;
+  title?: string;
+  visual_tone?: string;
+}
+
+export interface ServicesPublicOutbreakResource {
+  asset_url?: string;
+  id?: string;
+  outbreak_id?: string;
+  published_at?: string;
+  resource_type?: string;
+  sort_order?: number;
+  title?: string;
+  url?: string;
+}
+
+export interface ServicesPublicOutbreakUpdate {
+  id?: string;
+  outbreak_id?: string;
+  published_at?: string;
+  summary?: string;
+  title?: string;
+}
+
+export interface ServicesPublicSituationReport {
+  data_as_of?: string;
+  district_id?: string;
+  effective_at?: string;
+  geographic_area?: string;
+  id?: string;
+  key_highlights?: string[];
+  last_verified_at?: string;
+  metrics?: ServicesOutbreakMetric[];
+  outbreak_id?: string;
+  publication_date?: string;
+  published_at?: string;
+  region_id?: string;
+  report_asset_id?: string;
+  report_asset_url?: string;
+  source_organization?: string;
+  source_reference?: string;
+  source_url?: string;
+  summary?: string;
+  title?: string;
+}
+
 export interface ServicesReadingProgressInput {
   current_section?: string;
   is_bookmarked?: boolean;
@@ -3697,6 +3854,72 @@ export interface ServicesSearchResult {
   title?: string;
 }
 
+export interface ServicesSituationReportAdminDTO {
+  approved_at?: string;
+  approved_by?: string;
+  author_id?: string;
+  correction_reason?: string;
+  created_at?: string;
+  data_as_of?: string;
+  district_id?: string;
+  effective_at?: string;
+  geographic_area?: string;
+  id?: string;
+  key_highlights?: string[];
+  last_verified_at?: string;
+  lock_version?: number;
+  metrics?: ServicesOutbreakMetric[];
+  outbreak_id?: string;
+  publication_date?: string;
+  published_at?: string;
+  region_id?: string;
+  report_asset_id?: string;
+  report_asset_url?: string;
+  reviewed_at?: string;
+  reviewed_by?: string;
+  source_organization?: string;
+  source_reference?: string;
+  source_url?: string;
+  standalone_allowed?: boolean;
+  status?: string;
+  summary?: string;
+  supersedes_id?: string;
+  title?: string;
+  updated_at?: string;
+  withdrawal_reason?: string;
+  withdrawn_at?: string;
+}
+
+export interface ServicesSituationReportAssetDTO {
+  checksum_sha256?: string;
+  content_type?: string;
+  created_at?: string;
+  file_name?: string;
+  id?: string;
+  situation_report_id?: string;
+  size_bytes?: number;
+}
+
+export interface ServicesSituationReportInput {
+  data_as_of?: string;
+  district_id?: string;
+  effective_at?: string;
+  geographic_area?: string;
+  key_highlights?: string[];
+  last_verified_at?: string;
+  lock_version?: number;
+  metrics?: ServicesOutbreakMetric[];
+  outbreak_id?: string;
+  publication_date?: string;
+  region_id?: string;
+  source_organization?: string;
+  source_reference?: string;
+  source_url?: string;
+  standalone_allowed?: boolean;
+  summary?: string;
+  title?: string;
+}
+
 export interface ServicesSplitGuidelineSectionInput {
   block_id: string;
   level?: number;
@@ -3734,6 +3957,12 @@ export interface ServicesTemplateVariableRule {
   required?: boolean;
   sample_value?: any;
   type?: string;
+}
+
+export interface ServicesTransitionInput {
+  lock_version?: number;
+  operational_status?: string;
+  reason?: string;
 }
 
 export interface ServicesTreeNode {

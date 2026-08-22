@@ -30,7 +30,7 @@ final class OutbreakRepository {
         },
       );
       final items = _maps(_data(response)['items'])
-          .map(ModelsOutbreak.fromJson)
+          .map(ServicesPublicOutbreak.fromJson)
           .map(
             (value) =>
                 PublicOutbreak.fromJson(_normalizeMetrics(value.toJson())),
@@ -89,19 +89,19 @@ final class OutbreakRepository {
       final value = PublicOutbreakDetail(
         outbreak: PublicOutbreak.fromJson(
           _normalizeMetrics(
-            ModelsOutbreak.fromJson(_data(responses[0])).toJson(),
+            ServicesPublicOutbreak.fromJson(_data(responses[0])).toJson(),
           ),
         ),
         updates: _maps(_data(responses[1])['items'])
-            .map(ModelsOutbreakUpdate.fromJson)
+            .map(ServicesPublicOutbreakUpdate.fromJson)
             .map((item) => PublicOutbreakUpdate.fromJson(item.toJson()))
             .toList(),
         resources: _maps(_data(responses[2])['items'])
-            .map(ModelsOutbreakResource.fromJson)
+            .map(ServicesPublicOutbreakResource.fromJson)
             .map((item) => PublicOutbreakResource.fromJson(item.toJson()))
             .toList(),
         reports: _maps(_data(responses[3])['items'])
-            .map(ModelsSituationReport.fromJson)
+            .map(ServicesPublicSituationReport.fromJson)
             .map(
               (item) => PublicSituationReport.fromJson(
                 _normalizeMetrics(item.toJson()),
@@ -161,7 +161,7 @@ final class OutbreakRepository {
         },
       );
       final items = _maps(_data(response)['items'])
-          .map(ModelsSituationReport.fromJson)
+          .map(ServicesPublicSituationReport.fromJson)
           .map(
             (value) => PublicSituationReport.fromJson(
               _normalizeMetrics(value.toJson()),
@@ -205,7 +205,7 @@ final class OutbreakRepository {
       );
       final value = PublicSituationReport.fromJson(
         _normalizeMetrics(
-          ModelsSituationReport.fromJson(_data(response)).toJson(),
+          ServicesPublicSituationReport.fromJson(_data(response)).toJson(),
         ),
       );
       await _bestEffortCache(

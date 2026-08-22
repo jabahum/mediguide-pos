@@ -124,6 +124,7 @@ func New(cfg config.Config) (*App, error) {
 	guidelineSvc := services.GuidelineService{DB: database, Store: store, Cache: cacheStore}
 	publicGuidelineSvc := services.PublicGuidelineService{DB: database, Store: store, Cache: cacheStore}
 	outbreakSvc := services.OutbreakService{DB: database}
+	outbreakAdminSvc := services.OutbreakAdminService{DB: database, Store: store, AllowedExternalHosts: cfg.NotificationActionExternalHosts}
 	searchSvc := services.SearchService{DB: database, Cache: cacheStore}
 	ragSvc := services.RAGService{DB: database, Search: searchSvc, Cfg: cfg}
 	protocolSvc := services.ProtocolService{DB: database}
@@ -151,6 +152,7 @@ func New(cfg config.Config) (*App, error) {
 	guidelineH := handlers.GuidelineHandler{Service: guidelineSvc, MaxUploadMB: cfg.MaxUploadMB}
 	publicGuidelineH := handlers.PublicGuidelineHandler{Service: publicGuidelineSvc, Content: publicGuidelineSvc}
 	outbreakH := handlers.OutbreakHandler{Service: outbreakSvc}
+	outbreakAdminH := handlers.OutbreakAdminHandler{Service: outbreakAdminSvc, MaxUploadMB: cfg.MaxUploadMB}
 	searchH := handlers.SearchHandler{Service: searchSvc}
 	ragH := handlers.RAGHandler{Service: ragSvc}
 	protocolH := handlers.ProtocolHandler{Service: protocolSvc}
@@ -202,12 +204,13 @@ func New(cfg config.Config) (*App, error) {
 		public.GET("/guidelines/:id/original", rateLimiter.Limit(middleware.Policy("public-guideline-original", 30, time.Minute, 5), middleware.IPIdentity), publicGuidelineH.Original)
 		public.GET("/guidelines/:id/offline-package", rateLimiter.Limit(middleware.Policy("public-guideline-offline", 20, time.Minute, 3), middleware.IPIdentity), publicGuidelineH.OfflinePackage)
 		public.GET("/guidelines/:id/markdown", rateLimiter.Limit(middleware.Policy("public-markdown", 60, time.Minute, 10), middleware.IPIdentity), publicGuidelineH.Markdown)
-		public.GET("/outbreaks", outbreakH.List)
-		public.GET("/outbreaks/:id", outbreakH.Get)
-		public.GET("/outbreaks/:id/updates", outbreakH.Updates)
-		public.GET("/outbreaks/:id/resources", outbreakH.Resources)
-		public.GET("/situation-reports", outbreakH.ListReports)
-		public.GET("/situation-reports/:id", outbreakH.GetReport)
+		outbreakReadLimit := rateLimiter.Limit(middleware.Policy("public-outbreaks", 90, time.Minute, 15), middleware.IPIdentity)
+		public.GET("/outbreaks", outbreakReadLimit, outbreakH.List)
+		public.GET("/outbreaks/:id", outbreakReadLimit, outbreakH.Get)
+		public.GET("/outbreaks/:id/updates", outbreakReadLimit, outbreakH.Updates)
+		public.GET("/outbreaks/:id/resources", outbreakReadLimit, outbreakH.Resources)
+		public.GET("/situation-reports", outbreakReadLimit, outbreakH.ListReports)
+		public.GET("/situation-reports/:id", outbreakReadLimit, outbreakH.GetReport)
 	}
 
 	v2 := r.Group("/api/v2")
@@ -244,6 +247,48 @@ func New(cfg config.Config) (*App, error) {
 		protected.POST("/auth/logout", authH.Logout)
 		protected.GET("/me", authH.Me)
 		protected.POST("/me/password", rateLimiter.Limit(middleware.Policy("password-change", 5, time.Hour, 0), middleware.UserIdentity), authH.ChangePassword)
+
+		protected.GET("/outbreaks", middleware.RequirePermission("outbreak.read"), outbreakAdminH.ListOutbreaks)
+		protected.POST("/outbreaks", middleware.RequirePermission("outbreak.manage"), outbreakAdminH.CreateOutbreak)
+		protected.GET("/outbreaks/:id", middleware.RequirePermission("outbreak.read"), outbreakAdminH.GetOutbreak)
+		protected.PATCH("/outbreaks/:id", middleware.RequirePermission("outbreak.manage"), outbreakAdminH.UpdateOutbreak)
+		protected.DELETE("/outbreaks/:id", middleware.RequirePermission("outbreak.manage"), outbreakAdminH.DeleteOutbreak)
+		protected.POST("/outbreaks/:id/submit", middleware.RequirePermission("outbreak.manage"), outbreakAdminH.TransitionOutbreak("submit"))
+		protected.POST("/outbreaks/:id/approve", middleware.RequirePermission("outbreak.review"), outbreakAdminH.TransitionOutbreak("approve"))
+		protected.POST("/outbreaks/:id/publish", middleware.RequirePermission("outbreak.publish"), outbreakAdminH.TransitionOutbreak("publish"))
+		protected.POST("/outbreaks/:id/withdraw", middleware.RequirePermission("outbreak.withdraw"), outbreakAdminH.TransitionOutbreak("withdraw"))
+		protected.POST("/outbreaks/:id/correct", middleware.RequirePermission("outbreak.manage"), outbreakAdminH.CorrectOutbreak)
+		protected.GET("/outbreaks/:id/updates", middleware.RequirePermission("outbreak.read"), outbreakAdminH.ListUpdates)
+		protected.POST("/outbreaks/:id/updates", middleware.RequirePermission("outbreak.manage"), outbreakAdminH.CreateUpdate)
+		protected.GET("/outbreaks/:id/updates/:updateId", middleware.RequirePermission("outbreak.read"), outbreakAdminH.GetUpdate)
+		protected.PATCH("/outbreaks/:id/updates/:updateId", middleware.RequirePermission("outbreak.manage"), outbreakAdminH.UpdateUpdate)
+		protected.DELETE("/outbreaks/:id/updates/:updateId", middleware.RequirePermission("outbreak.manage"), outbreakAdminH.DeleteUpdate)
+		protected.POST("/outbreaks/:id/updates/:updateId/submit", middleware.RequirePermission("outbreak.manage"), outbreakAdminH.TransitionUpdate("submit"))
+		protected.POST("/outbreaks/:id/updates/:updateId/approve", middleware.RequirePermission("outbreak.review"), outbreakAdminH.TransitionUpdate("approve"))
+		protected.POST("/outbreaks/:id/updates/:updateId/publish", middleware.RequirePermission("outbreak.publish"), outbreakAdminH.TransitionUpdate("publish"))
+		protected.POST("/outbreaks/:id/updates/:updateId/withdraw", middleware.RequirePermission("outbreak.withdraw"), outbreakAdminH.TransitionUpdate("withdraw"))
+		protected.POST("/outbreaks/:id/updates/:updateId/correct", middleware.RequirePermission("outbreak.manage"), outbreakAdminH.CorrectUpdate)
+		protected.GET("/outbreaks/:id/resources", middleware.RequirePermission("outbreak.read"), outbreakAdminH.ListResources)
+		protected.POST("/outbreaks/:id/resources", middleware.RequirePermission("outbreak.manage"), outbreakAdminH.CreateResource)
+		protected.GET("/outbreaks/:id/resources/:resourceId", middleware.RequirePermission("outbreak.read"), outbreakAdminH.GetResource)
+		protected.PATCH("/outbreaks/:id/resources/:resourceId", middleware.RequirePermission("outbreak.manage"), outbreakAdminH.UpdateResource)
+		protected.DELETE("/outbreaks/:id/resources/:resourceId", middleware.RequirePermission("outbreak.manage"), outbreakAdminH.DeleteResource)
+		protected.POST("/outbreaks/:id/resources/:resourceId/submit", middleware.RequirePermission("outbreak.manage"), outbreakAdminH.TransitionResource("submit"))
+		protected.POST("/outbreaks/:id/resources/:resourceId/approve", middleware.RequirePermission("outbreak.review"), outbreakAdminH.TransitionResource("approve"))
+		protected.POST("/outbreaks/:id/resources/:resourceId/publish", middleware.RequirePermission("outbreak.publish"), outbreakAdminH.TransitionResource("publish"))
+		protected.POST("/outbreaks/:id/resources/:resourceId/withdraw", middleware.RequirePermission("outbreak.withdraw"), outbreakAdminH.TransitionResource("withdraw"))
+		protected.POST("/outbreaks/:id/resources/:resourceId/correct", middleware.RequirePermission("outbreak.manage"), outbreakAdminH.CorrectResource)
+		protected.GET("/situation-reports", middleware.RequirePermission("situation_report.read"), outbreakAdminH.ListReports)
+		protected.POST("/situation-reports", middleware.RequirePermission("situation_report.manage"), outbreakAdminH.CreateReport)
+		protected.GET("/situation-reports/:id", middleware.RequirePermission("situation_report.read"), outbreakAdminH.GetReport)
+		protected.PATCH("/situation-reports/:id", middleware.RequirePermission("situation_report.manage"), outbreakAdminH.UpdateReport)
+		protected.DELETE("/situation-reports/:id", middleware.RequirePermission("situation_report.manage"), outbreakAdminH.DeleteReport)
+		protected.POST("/situation-reports/:id/submit", middleware.RequirePermission("situation_report.manage"), outbreakAdminH.TransitionReport("submit"))
+		protected.POST("/situation-reports/:id/approve", middleware.RequirePermission("situation_report.review"), outbreakAdminH.TransitionReport("approve"))
+		protected.POST("/situation-reports/:id/publish", middleware.RequirePermission("situation_report.publish"), outbreakAdminH.TransitionReport("publish"))
+		protected.POST("/situation-reports/:id/withdraw", middleware.RequirePermission("situation_report.withdraw"), outbreakAdminH.TransitionReport("withdraw"))
+		protected.POST("/situation-reports/:id/correct", middleware.RequirePermission("situation_report.manage"), outbreakAdminH.CorrectReport)
+		protected.POST("/situation-reports/:id/asset", middleware.RequirePermission("situation_report.manage"), outbreakAdminH.UploadReportAsset)
 
 		protected.GET("/calculators", middleware.RequireAnyPermission("calculator.read", "guideline.read"), calculatorH.List)
 		protected.GET("/calculators/:id", middleware.RequireAnyPermission("calculator.read", "guideline.read"), calculatorH.Get)

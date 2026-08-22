@@ -934,33 +934,33 @@ type PaginatedGuidelineDownloadsEnvelope struct {
 }
 
 type OutbreakEnvelope struct {
-	Success bool            `json:"success"`
-	Data    models.Outbreak `json:"data"`
+	Success bool                    `json:"success"`
+	Data    services.PublicOutbreak `json:"data"`
 }
 
 type PaginatedOutbreaksEnvelope struct {
-	Success bool                                 `json:"success"`
-	Data    services.PageResult[models.Outbreak] `json:"data"`
+	Success bool                                         `json:"success"`
+	Data    services.PageResult[services.PublicOutbreak] `json:"data"`
 }
 
 type PaginatedOutbreakUpdatesEnvelope struct {
-	Success bool                                       `json:"success"`
-	Data    services.PageResult[models.OutbreakUpdate] `json:"data"`
+	Success bool                                               `json:"success"`
+	Data    services.PageResult[services.PublicOutbreakUpdate] `json:"data"`
 }
 
 type PaginatedOutbreakResourcesEnvelope struct {
-	Success bool                                         `json:"success"`
-	Data    services.PageResult[models.OutbreakResource] `json:"data"`
+	Success bool                                                 `json:"success"`
+	Data    services.PageResult[services.PublicOutbreakResource] `json:"data"`
 }
 
 type SituationReportEnvelope struct {
-	Success bool                   `json:"success"`
-	Data    models.SituationReport `json:"data"`
+	Success bool                           `json:"success"`
+	Data    services.PublicSituationReport `json:"data"`
 }
 
 type PaginatedSituationReportsEnvelope struct {
-	Success bool                                        `json:"success"`
-	Data    services.PageResult[models.SituationReport] `json:"data"`
+	Success bool                                                `json:"success"`
+	Data    services.PageResult[services.PublicSituationReport] `json:"data"`
 }
 
 type MarkdownValidationEnvelope struct {

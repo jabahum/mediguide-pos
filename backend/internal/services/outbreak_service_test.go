@@ -55,10 +55,10 @@ func TestOutbreakServiceScopesChildrenAndReportsToPublishedParents(t *testing.T)
 			t.Fatal(err)
 		}
 	}
-	if err := service.DB.Create(&models.OutbreakUpdate{OutbreakID: public.ID, Title: "Update", PublishedAt: now}).Error; err != nil {
+	if err := service.DB.Create(&models.OutbreakUpdate{OutbreakID: public.ID, Title: "Update", Status: "published", PublishedAt: &now}).Error; err != nil {
 		t.Fatal(err)
 	}
-	if err := service.DB.Create(&models.OutbreakResource{OutbreakID: public.ID, Title: "Guidance", SortOrder: 1}).Error; err != nil {
+	if err := service.DB.Create(&models.OutbreakResource{OutbreakID: public.ID, Title: "Guidance", Status: "published", PublishedAt: &now, SortOrder: 1}).Error; err != nil {
 		t.Fatal(err)
 	}
 	updates, err := service.Updates(public.ID, PageInput{})
@@ -73,13 +73,13 @@ func TestOutbreakServiceScopesChildrenAndReportsToPublishedParents(t *testing.T)
 		t.Fatalf("draft updates exposed: %v", err)
 	}
 
-	if err := service.DB.Create(&models.SituationReport{Title: "Published report", Status: "published", PublicationDate: now}).Error; err != nil {
+	if err := service.DB.Create(&models.SituationReport{Title: "Published report", Status: "published", PublicationDate: now, PublishedAt: &now, StandaloneAllowed: true}).Error; err != nil {
 		t.Fatal(err)
 	}
 	if err := service.DB.Create(&models.SituationReport{Title: "Draft report", Status: "draft", PublicationDate: now}).Error; err != nil {
 		t.Fatal(err)
 	}
-	reports, err := service.ListReports(PageInput{}, "", "", "", "")
+	reports, err := service.ListReports(SituationReportQuery{Page: PageInput{}})
 	if err != nil || reports.TotalItems != 1 || reports.Items[0].Title != "Published report" {
 		t.Fatalf("reports: %#v %v", reports, err)
 	}

@@ -703,7 +703,7 @@ definitions:
   handlers.OutbreakEnvelope:
     properties:
       data:
-        $ref: '#/definitions/models.Outbreak'
+        $ref: '#/definitions/services.PublicOutbreak'
       success:
         type: boolean
     type: object
@@ -1246,21 +1246,21 @@ definitions:
   handlers.PaginatedOutbreakResourcesEnvelope:
     properties:
       data:
-        $ref: '#/definitions/services.PageResult-models_OutbreakResource'
+        $ref: '#/definitions/services.PageResult-services_PublicOutbreakResource'
       success:
         type: boolean
     type: object
   handlers.PaginatedOutbreakUpdatesEnvelope:
     properties:
       data:
-        $ref: '#/definitions/services.PageResult-models_OutbreakUpdate'
+        $ref: '#/definitions/services.PageResult-services_PublicOutbreakUpdate'
       success:
         type: boolean
     type: object
   handlers.PaginatedOutbreaksEnvelope:
     properties:
       data:
-        $ref: '#/definitions/services.PageResult-models_Outbreak'
+        $ref: '#/definitions/services.PageResult-services_PublicOutbreak'
       success:
         type: boolean
     type: object
@@ -1419,7 +1419,7 @@ definitions:
   handlers.PaginatedSituationReportsEnvelope:
     properties:
       data:
-        $ref: '#/definitions/services.PageResult-models_SituationReport'
+        $ref: '#/definitions/services.PageResult-services_PublicSituationReport'
       success:
         type: boolean
     type: object
@@ -1704,7 +1704,7 @@ definitions:
   handlers.SituationReportEnvelope:
     properties:
       data:
-        $ref: '#/definitions/models.SituationReport'
+        $ref: '#/definitions/services.PublicSituationReport'
       success:
         type: boolean
     type: object
@@ -3197,77 +3197,6 @@ definitions:
         - approved_external_url
         type: string
     type: object
-  models.Outbreak:
-    properties:
-      created_at:
-        type: string
-      disease_type:
-        type: string
-      geographic_area:
-        type: string
-      id:
-        type: string
-      last_update:
-        type: string
-      metrics:
-        items:
-          type: object
-        type: array
-      published_at:
-        type: string
-      source_organization:
-        type: string
-      start_date:
-        type: string
-      status:
-        type: string
-      summary:
-        type: string
-      title:
-        type: string
-      updated_at:
-        type: string
-      visual_tone:
-        type: string
-    type: object
-  models.OutbreakResource:
-    properties:
-      asset_url:
-        type: string
-      created_at:
-        type: string
-      id:
-        type: string
-      outbreak_id:
-        type: string
-      resource_type:
-        type: string
-      sort_order:
-        type: integer
-      title:
-        type: string
-      updated_at:
-        type: string
-      url:
-        type: string
-    type: object
-  models.OutbreakUpdate:
-    properties:
-      created_at:
-        type: string
-      id:
-        type: string
-      outbreak_id:
-        type: string
-      published_at:
-        type: string
-      summary:
-        type: string
-      title:
-        type: string
-      updated_at:
-        type: string
-    type: object
   models.Permission:
     properties:
       code:
@@ -3351,39 +3280,6 @@ definitions:
         type: string
       value_json:
         type: object
-    type: object
-  models.SituationReport:
-    properties:
-      created_at:
-        type: string
-      geographic_area:
-        type: string
-      id:
-        type: string
-      key_highlights:
-        items:
-          type: string
-        type: array
-      metrics:
-        items:
-          type: object
-        type: array
-      outbreak_id:
-        type: string
-      publication_date:
-        type: string
-      report_asset_url:
-        type: string
-      source_organization:
-        type: string
-      status:
-        type: string
-      summary:
-        type: string
-      title:
-        type: string
-      updated_at:
-        type: string
     type: object
   models.SupportTicket:
     properties:
@@ -3592,6 +3488,23 @@ definitions:
         type: string
     required:
     - reviewer_id
+    type: object
+  services.ChildContentInput:
+    properties:
+      asset_url:
+        type: string
+      lock_version:
+        type: integer
+      resource_type:
+        type: string
+      sort_order:
+        type: integer
+      summary:
+        type: string
+      title:
+        type: string
+      url:
+        type: string
     type: object
   services.Citation:
     properties:
@@ -5663,6 +5576,209 @@ definitions:
       version:
         type: integer
     type: object
+  services.OutbreakAdminDTO:
+    properties:
+      approved_at:
+        type: string
+      approved_by:
+        type: string
+      author_id:
+        type: string
+      created_at:
+        type: string
+      data_as_of:
+        type: string
+      disease_type:
+        type: string
+      district_id:
+        type: string
+      effective_at:
+        type: string
+      geographic_area:
+        type: string
+      id:
+        type: string
+      last_update:
+        type: string
+      last_verified_at:
+        type: string
+      lock_version:
+        type: integer
+      metrics:
+        items:
+          $ref: '#/definitions/services.OutbreakMetric'
+        type: array
+      published_at:
+        type: string
+      region_id:
+        type: string
+      reviewed_at:
+        type: string
+      reviewed_by:
+        type: string
+      source_organization:
+        type: string
+      source_reference:
+        type: string
+      source_url:
+        type: string
+      start_date:
+        type: string
+      status:
+        type: string
+      summary:
+        type: string
+      supersedes_id:
+        type: string
+      title:
+        type: string
+      updated_at:
+        type: string
+      visual_tone:
+        type: string
+      withdrawal_reason:
+        type: string
+      withdrawn_at:
+        type: string
+    type: object
+  services.OutbreakInput:
+    properties:
+      data_as_of:
+        type: string
+      disease_type:
+        type: string
+      district_id:
+        type: string
+      effective_at:
+        type: string
+      geographic_area:
+        type: string
+      last_update:
+        type: string
+      last_verified_at:
+        type: string
+      lock_version:
+        type: integer
+      metrics:
+        items:
+          $ref: '#/definitions/services.OutbreakMetric'
+        type: array
+      region_id:
+        type: string
+      source_organization:
+        type: string
+      source_reference:
+        type: string
+      source_url:
+        type: string
+      start_date:
+        type: string
+      summary:
+        type: string
+      title:
+        type: string
+      visual_tone:
+        type: string
+    type: object
+  services.OutbreakMetric:
+    properties:
+      as_of:
+        type: string
+      key:
+        type: string
+      label:
+        type: string
+      numeric_value:
+        type: number
+      sort_order:
+        type: integer
+      source_reference:
+        type: string
+      unit:
+        type: string
+      value:
+        type: string
+    type: object
+  services.OutbreakResourceAdminDTO:
+    properties:
+      approved_at:
+        type: string
+      approved_by:
+        type: string
+      asset_url:
+        type: string
+      author_id:
+        type: string
+      created_at:
+        type: string
+      id:
+        type: string
+      lock_version:
+        type: integer
+      outbreak_id:
+        type: string
+      published_at:
+        type: string
+      resource_type:
+        type: string
+      reviewed_at:
+        type: string
+      reviewed_by:
+        type: string
+      sort_order:
+        type: integer
+      status:
+        type: string
+      supersedes_id:
+        type: string
+      title:
+        type: string
+      updated_at:
+        type: string
+      url:
+        type: string
+      withdrawal_reason:
+        type: string
+      withdrawn_at:
+        type: string
+    type: object
+  services.OutbreakUpdateAdminDTO:
+    properties:
+      approved_at:
+        type: string
+      approved_by:
+        type: string
+      author_id:
+        type: string
+      created_at:
+        type: string
+      id:
+        type: string
+      lock_version:
+        type: integer
+      outbreak_id:
+        type: string
+      published_at:
+        type: string
+      reviewed_at:
+        type: string
+      reviewed_by:
+        type: string
+      status:
+        type: string
+      summary:
+        type: string
+      supersedes_id:
+        type: string
+      title:
+        type: string
+      updated_at:
+        type: string
+      withdrawal_reason:
+        type: string
+      withdrawn_at:
+        type: string
+    type: object
   services.PageResult-models_Abbreviation:
     properties:
       items:
@@ -5828,71 +5944,11 @@ definitions:
       total_pages:
         type: integer
     type: object
-  services.PageResult-models_Outbreak:
-    properties:
-      items:
-        items:
-          $ref: '#/definitions/models.Outbreak'
-        type: array
-      page:
-        type: integer
-      per_page:
-        type: integer
-      total_items:
-        type: integer
-      total_pages:
-        type: integer
-    type: object
-  services.PageResult-models_OutbreakResource:
-    properties:
-      items:
-        items:
-          $ref: '#/definitions/models.OutbreakResource'
-        type: array
-      page:
-        type: integer
-      per_page:
-        type: integer
-      total_items:
-        type: integer
-      total_pages:
-        type: integer
-    type: object
-  services.PageResult-models_OutbreakUpdate:
-    properties:
-      items:
-        items:
-          $ref: '#/definitions/models.OutbreakUpdate'
-        type: array
-      page:
-        type: integer
-      per_page:
-        type: integer
-      total_items:
-        type: integer
-      total_pages:
-        type: integer
-    type: object
   services.PageResult-models_ReadingProgress:
     properties:
       items:
         items:
           $ref: '#/definitions/models.ReadingProgress'
-        type: array
-      page:
-        type: integer
-      per_page:
-        type: integer
-      total_items:
-        type: integer
-      total_pages:
-        type: integer
-    type: object
-  services.PageResult-models_SituationReport:
-    properties:
-      items:
-        items:
-          $ref: '#/definitions/models.SituationReport'
         type: array
       page:
         type: integer
@@ -5978,11 +6034,131 @@ definitions:
       total_pages:
         type: integer
     type: object
+  services.PageResult-services_OutbreakAdminDTO:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/services.OutbreakAdminDTO'
+        type: array
+      page:
+        type: integer
+      per_page:
+        type: integer
+      total_items:
+        type: integer
+      total_pages:
+        type: integer
+    type: object
+  services.PageResult-services_OutbreakResourceAdminDTO:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/services.OutbreakResourceAdminDTO'
+        type: array
+      page:
+        type: integer
+      per_page:
+        type: integer
+      total_items:
+        type: integer
+      total_pages:
+        type: integer
+    type: object
+  services.PageResult-services_OutbreakUpdateAdminDTO:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/services.OutbreakUpdateAdminDTO'
+        type: array
+      page:
+        type: integer
+      per_page:
+        type: integer
+      total_items:
+        type: integer
+      total_pages:
+        type: integer
+    type: object
+  services.PageResult-services_PublicOutbreak:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/services.PublicOutbreak'
+        type: array
+      page:
+        type: integer
+      per_page:
+        type: integer
+      total_items:
+        type: integer
+      total_pages:
+        type: integer
+    type: object
+  services.PageResult-services_PublicOutbreakResource:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/services.PublicOutbreakResource'
+        type: array
+      page:
+        type: integer
+      per_page:
+        type: integer
+      total_items:
+        type: integer
+      total_pages:
+        type: integer
+    type: object
+  services.PageResult-services_PublicOutbreakUpdate:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/services.PublicOutbreakUpdate'
+        type: array
+      page:
+        type: integer
+      per_page:
+        type: integer
+      total_items:
+        type: integer
+      total_pages:
+        type: integer
+    type: object
+  services.PageResult-services_PublicSituationReport:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/services.PublicSituationReport'
+        type: array
+      page:
+        type: integer
+      per_page:
+        type: integer
+      total_items:
+        type: integer
+      total_pages:
+        type: integer
+    type: object
   services.PageResult-services_RoleView:
     properties:
       items:
         items:
           $ref: '#/definitions/services.RoleView'
+        type: array
+      page:
+        type: integer
+      per_page:
+        type: integer
+      total_items:
+        type: integer
+      total_pages:
+        type: integer
+    type: object
+  services.PageResult-services_SituationReportAdminDTO:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/services.SituationReportAdminDTO'
         type: array
       page:
         type: integer
@@ -6223,6 +6399,126 @@ definitions:
       sort_order:
         type: integer
     type: object
+  services.PublicOutbreak:
+    properties:
+      data_as_of:
+        type: string
+      disease_type:
+        type: string
+      district_id:
+        type: string
+      effective_at:
+        type: string
+      geographic_area:
+        type: string
+      id:
+        type: string
+      last_update:
+        type: string
+      last_verified_at:
+        type: string
+      metrics:
+        items:
+          $ref: '#/definitions/services.OutbreakMetric'
+        type: array
+      published_at:
+        type: string
+      region_id:
+        type: string
+      source_organization:
+        type: string
+      source_reference:
+        type: string
+      source_url:
+        type: string
+      start_date:
+        type: string
+      status:
+        type: string
+      summary:
+        type: string
+      title:
+        type: string
+      visual_tone:
+        type: string
+    type: object
+  services.PublicOutbreakResource:
+    properties:
+      asset_url:
+        type: string
+      id:
+        type: string
+      outbreak_id:
+        type: string
+      published_at:
+        type: string
+      resource_type:
+        type: string
+      sort_order:
+        type: integer
+      title:
+        type: string
+      url:
+        type: string
+    type: object
+  services.PublicOutbreakUpdate:
+    properties:
+      id:
+        type: string
+      outbreak_id:
+        type: string
+      published_at:
+        type: string
+      summary:
+        type: string
+      title:
+        type: string
+    type: object
+  services.PublicSituationReport:
+    properties:
+      data_as_of:
+        type: string
+      district_id:
+        type: string
+      effective_at:
+        type: string
+      geographic_area:
+        type: string
+      id:
+        type: string
+      key_highlights:
+        items:
+          type: string
+        type: array
+      last_verified_at:
+        type: string
+      metrics:
+        items:
+          $ref: '#/definitions/services.OutbreakMetric'
+        type: array
+      outbreak_id:
+        type: string
+      publication_date:
+        type: string
+      published_at:
+        type: string
+      region_id:
+        type: string
+      report_asset_id:
+        type: string
+      report_asset_url:
+        type: string
+      source_organization:
+        type: string
+      source_reference:
+        type: string
+      source_url:
+        type: string
+      summary:
+        type: string
+      title:
+        type: string
+    type: object
   services.ReadingProgressInput:
     properties:
       current_section:
@@ -6379,6 +6675,137 @@ definitions:
       title:
         type: string
     type: object
+  services.SituationReportAdminDTO:
+    properties:
+      approved_at:
+        type: string
+      approved_by:
+        type: string
+      author_id:
+        type: string
+      correction_reason:
+        type: string
+      created_at:
+        type: string
+      data_as_of:
+        type: string
+      district_id:
+        type: string
+      effective_at:
+        type: string
+      geographic_area:
+        type: string
+      id:
+        type: string
+      key_highlights:
+        items:
+          type: string
+        type: array
+      last_verified_at:
+        type: string
+      lock_version:
+        type: integer
+      metrics:
+        items:
+          $ref: '#/definitions/services.OutbreakMetric'
+        type: array
+      outbreak_id:
+        type: string
+      publication_date:
+        type: string
+      published_at:
+        type: string
+      region_id:
+        type: string
+      report_asset_id:
+        type: string
+      report_asset_url:
+        type: string
+      reviewed_at:
+        type: string
+      reviewed_by:
+        type: string
+      source_organization:
+        type: string
+      source_reference:
+        type: string
+      source_url:
+        type: string
+      standalone_allowed:
+        type: boolean
+      status:
+        type: string
+      summary:
+        type: string
+      supersedes_id:
+        type: string
+      title:
+        type: string
+      updated_at:
+        type: string
+      withdrawal_reason:
+        type: string
+      withdrawn_at:
+        type: string
+    type: object
+  services.SituationReportAssetDTO:
+    properties:
+      checksum_sha256:
+        type: string
+      content_type:
+        type: string
+      created_at:
+        type: string
+      file_name:
+        type: string
+      id:
+        type: string
+      situation_report_id:
+        type: string
+      size_bytes:
+        type: integer
+    type: object
+  services.SituationReportInput:
+    properties:
+      data_as_of:
+        type: string
+      district_id:
+        type: string
+      effective_at:
+        type: string
+      geographic_area:
+        type: string
+      key_highlights:
+        items:
+          type: string
+        type: array
+      last_verified_at:
+        type: string
+      lock_version:
+        type: integer
+      metrics:
+        items:
+          $ref: '#/definitions/services.OutbreakMetric'
+        type: array
+      outbreak_id:
+        type: string
+      publication_date:
+        type: string
+      region_id:
+        type: string
+      source_organization:
+        type: string
+      source_reference:
+        type: string
+      source_url:
+        type: string
+      standalone_allowed:
+        type: boolean
+      summary:
+        type: string
+      title:
+        type: string
+    type: object
   services.SplitGuidelineSectionInput:
     properties:
       block_id:
@@ -6439,6 +6866,15 @@ definitions:
         type: boolean
       sample_value: {}
       type:
+        type: string
+    type: object
+  services.TransitionInput:
+    properties:
+      lock_version:
+        type: integer
+      operational_status:
+        type: string
+      reason:
         type: string
     type: object
   services.TreeNode:
@@ -6959,9 +7395,33 @@ paths:
         in: query
         name: status
         type: string
+      - description: Exact disease type
+        in: query
+        name: disease
+        type: string
       - description: Geographic area
         in: query
         name: area
+        type: string
+      - description: Region UUID
+        in: query
+        name: region_id
+        type: string
+      - description: Effective at or after (RFC3339 or YYYY-MM-DD)
+        in: query
+        name: effective_from
+        type: string
+      - description: Effective at or before (RFC3339 or YYYY-MM-DD)
+        in: query
+        name: effective_to
+        type: string
+      - description: Updated at or after (RFC3339 or YYYY-MM-DD)
+        in: query
+        name: updated_from
+        type: string
+      - description: Updated at or before (RFC3339 or YYYY-MM-DD)
+        in: query
+        name: updated_to
         type: string
       - description: title, status, start_date, last_update, or published_at
         in: query
@@ -7070,6 +7530,38 @@ paths:
       - description: Title, summary, or area
         in: query
         name: search
+        type: string
+      - description: Geographic area
+        in: query
+        name: area
+        type: string
+      - description: Region UUID
+        in: query
+        name: region_id
+        type: string
+      - description: Effective at or after
+        in: query
+        name: effective_from
+        type: string
+      - description: Effective at or before
+        in: query
+        name: effective_to
+        type: string
+      - description: Updated at or after
+        in: query
+        name: updated_from
+        type: string
+      - description: Updated at or before
+        in: query
+        name: updated_to
+        type: string
+      - description: publication_date, title, effective_at, updated_at, or last_verified_at
+        in: query
+        name: sort
+        type: string
+      - description: asc or desc
+        in: query
+        name: order
         type: string
       responses:
         "200":
@@ -12910,6 +13402,504 @@ paths:
       summary: Mark all visible notifications as read for the current user
       tags:
       - notifications
+  /api/v2/outbreaks:
+    get:
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/services.PageResult-services_OutbreakAdminDTO'
+      security:
+      - BearerAuth: []
+      summary: List outbreak administration records
+      tags:
+      - outbreak-administration
+    post:
+      parameters:
+      - description: Outbreak draft
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/services.OutbreakInput'
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/services.OutbreakAdminDTO'
+      security:
+      - BearerAuth: []
+      summary: Create an outbreak draft
+      tags:
+      - outbreak-administration
+  /api/v2/outbreaks/{id}:
+    delete:
+      parameters:
+      - description: Optimistic lock version
+        in: query
+        name: lock_version
+        required: true
+        type: integer
+      responses:
+        "204":
+          description: No Content
+      security:
+      - BearerAuth: []
+      summary: Soft-delete an unpublished outbreak
+      tags:
+      - outbreak-administration
+    get:
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/services.OutbreakAdminDTO'
+      security:
+      - BearerAuth: []
+      summary: Get an outbreak administration record
+      tags:
+      - outbreak-administration
+    patch:
+      parameters:
+      - description: Outbreak changes
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/services.OutbreakInput'
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/services.OutbreakAdminDTO'
+      security:
+      - BearerAuth: []
+      summary: Update an unpublished outbreak draft using optimistic locking
+      tags:
+      - outbreak-administration
+  /api/v2/outbreaks/{id}/approve:
+    post:
+      parameters:
+      - description: Transition
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/services.TransitionInput'
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/services.OutbreakAdminDTO'
+      security:
+      - BearerAuth: []
+      summary: Submit, approve, publish, or withdraw an outbreak
+      tags:
+      - outbreak-administration
+  /api/v2/outbreaks/{id}/correct:
+    post:
+      parameters:
+      - description: Correction reason and lock version
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/services.TransitionInput'
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/services.OutbreakAdminDTO'
+      security:
+      - BearerAuth: []
+      summary: Create a correction draft that supersedes a published outbreak
+      tags:
+      - outbreak-administration
+  /api/v2/outbreaks/{id}/publish:
+    post:
+      parameters:
+      - description: Transition
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/services.TransitionInput'
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/services.OutbreakAdminDTO'
+      security:
+      - BearerAuth: []
+      summary: Submit, approve, publish, or withdraw an outbreak
+      tags:
+      - outbreak-administration
+  /api/v2/outbreaks/{id}/resources:
+    get:
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/services.PageResult-services_OutbreakResourceAdminDTO'
+      security:
+      - BearerAuth: []
+      summary: List outbreak resources for administration
+      tags:
+      - outbreak-administration
+    post:
+      parameters:
+      - description: Resource draft
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/services.ChildContentInput'
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/services.OutbreakResourceAdminDTO'
+      security:
+      - BearerAuth: []
+      summary: Create an outbreak resource draft
+      tags:
+      - outbreak-administration
+  /api/v2/outbreaks/{id}/resources/{resourceId}:
+    delete:
+      responses:
+        "204":
+          description: No Content
+      security:
+      - BearerAuth: []
+      summary: Delete an unpublished outbreak resource
+      tags:
+      - outbreak-administration
+    get:
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/services.OutbreakResourceAdminDTO'
+      security:
+      - BearerAuth: []
+      summary: Get an outbreak resource administration record
+      tags:
+      - outbreak-administration
+    patch:
+      parameters:
+      - description: Resource changes
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/services.ChildContentInput'
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/services.OutbreakResourceAdminDTO'
+      security:
+      - BearerAuth: []
+      summary: Update an unpublished outbreak resource
+      tags:
+      - outbreak-administration
+  /api/v2/outbreaks/{id}/resources/{resourceId}/approve:
+    post:
+      parameters:
+      - description: Transition
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/services.TransitionInput'
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/services.OutbreakResourceAdminDTO'
+      security:
+      - BearerAuth: []
+      summary: Submit, approve, publish, or withdraw an outbreak resource
+      tags:
+      - outbreak-administration
+  /api/v2/outbreaks/{id}/resources/{resourceId}/correct:
+    post:
+      parameters:
+      - description: Correction
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/services.TransitionInput'
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/services.OutbreakResourceAdminDTO'
+      security:
+      - BearerAuth: []
+      summary: Create a correction draft for a published outbreak resource
+      tags:
+      - outbreak-administration
+  /api/v2/outbreaks/{id}/resources/{resourceId}/publish:
+    post:
+      parameters:
+      - description: Transition
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/services.TransitionInput'
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/services.OutbreakResourceAdminDTO'
+      security:
+      - BearerAuth: []
+      summary: Submit, approve, publish, or withdraw an outbreak resource
+      tags:
+      - outbreak-administration
+  /api/v2/outbreaks/{id}/resources/{resourceId}/submit:
+    post:
+      parameters:
+      - description: Transition
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/services.TransitionInput'
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/services.OutbreakResourceAdminDTO'
+      security:
+      - BearerAuth: []
+      summary: Submit, approve, publish, or withdraw an outbreak resource
+      tags:
+      - outbreak-administration
+  /api/v2/outbreaks/{id}/resources/{resourceId}/withdraw:
+    post:
+      parameters:
+      - description: Transition
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/services.TransitionInput'
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/services.OutbreakResourceAdminDTO'
+      security:
+      - BearerAuth: []
+      summary: Submit, approve, publish, or withdraw an outbreak resource
+      tags:
+      - outbreak-administration
+  /api/v2/outbreaks/{id}/submit:
+    post:
+      parameters:
+      - description: Transition
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/services.TransitionInput'
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/services.OutbreakAdminDTO'
+      security:
+      - BearerAuth: []
+      summary: Submit, approve, publish, or withdraw an outbreak
+      tags:
+      - outbreak-administration
+  /api/v2/outbreaks/{id}/updates:
+    get:
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/services.PageResult-services_OutbreakUpdateAdminDTO'
+      security:
+      - BearerAuth: []
+      summary: List outbreak updates for administration
+      tags:
+      - outbreak-administration
+    post:
+      parameters:
+      - description: Update draft
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/services.ChildContentInput'
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/services.OutbreakUpdateAdminDTO'
+      security:
+      - BearerAuth: []
+      summary: Create an outbreak update draft
+      tags:
+      - outbreak-administration
+  /api/v2/outbreaks/{id}/updates/{updateId}:
+    delete:
+      responses:
+        "204":
+          description: No Content
+      security:
+      - BearerAuth: []
+      summary: Delete an unpublished outbreak update
+      tags:
+      - outbreak-administration
+    get:
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/services.OutbreakUpdateAdminDTO'
+      security:
+      - BearerAuth: []
+      summary: Get an outbreak update
+      tags:
+      - outbreak-administration
+    patch:
+      parameters:
+      - description: Update changes
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/services.ChildContentInput'
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/services.OutbreakUpdateAdminDTO'
+      security:
+      - BearerAuth: []
+      summary: Update an outbreak update draft
+      tags:
+      - outbreak-administration
+  /api/v2/outbreaks/{id}/updates/{updateId}/approve:
+    post:
+      parameters:
+      - description: Transition
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/services.TransitionInput'
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/services.OutbreakUpdateAdminDTO'
+      security:
+      - BearerAuth: []
+      summary: Submit, approve, publish, or withdraw an outbreak update
+      tags:
+      - outbreak-administration
+  /api/v2/outbreaks/{id}/updates/{updateId}/correct:
+    post:
+      parameters:
+      - description: Correction
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/services.TransitionInput'
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/services.OutbreakUpdateAdminDTO'
+      security:
+      - BearerAuth: []
+      summary: Create a correction draft for a published outbreak update
+      tags:
+      - outbreak-administration
+  /api/v2/outbreaks/{id}/updates/{updateId}/publish:
+    post:
+      parameters:
+      - description: Transition
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/services.TransitionInput'
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/services.OutbreakUpdateAdminDTO'
+      security:
+      - BearerAuth: []
+      summary: Submit, approve, publish, or withdraw an outbreak update
+      tags:
+      - outbreak-administration
+  /api/v2/outbreaks/{id}/updates/{updateId}/submit:
+    post:
+      parameters:
+      - description: Transition
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/services.TransitionInput'
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/services.OutbreakUpdateAdminDTO'
+      security:
+      - BearerAuth: []
+      summary: Submit, approve, publish, or withdraw an outbreak update
+      tags:
+      - outbreak-administration
+  /api/v2/outbreaks/{id}/updates/{updateId}/withdraw:
+    post:
+      parameters:
+      - description: Transition
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/services.TransitionInput'
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/services.OutbreakUpdateAdminDTO'
+      security:
+      - BearerAuth: []
+      summary: Submit, approve, publish, or withdraw an outbreak update
+      tags:
+      - outbreak-administration
+  /api/v2/outbreaks/{id}/withdraw:
+    post:
+      parameters:
+      - description: Transition
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/services.TransitionInput'
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/services.OutbreakAdminDTO'
+      security:
+      - BearerAuth: []
+      summary: Submit, approve, publish, or withdraw an outbreak
+      tags:
+      - outbreak-administration
   /api/v2/pages:
     get:
       parameters:
@@ -13685,6 +14675,190 @@ paths:
       summary: Create a setting
       tags:
       - reference
+  /api/v2/situation-reports:
+    get:
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/services.PageResult-services_SituationReportAdminDTO'
+      security:
+      - BearerAuth: []
+      summary: List situation reports for administration
+      tags:
+      - situation-report-administration
+    post:
+      parameters:
+      - description: Report draft
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/services.SituationReportInput'
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/services.SituationReportAdminDTO'
+      security:
+      - BearerAuth: []
+      summary: Create a situation report draft
+      tags:
+      - situation-report-administration
+  /api/v2/situation-reports/{id}:
+    delete:
+      responses:
+        "204":
+          description: No Content
+      security:
+      - BearerAuth: []
+      summary: Delete an unpublished situation report
+      tags:
+      - situation-report-administration
+    get:
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/services.SituationReportAdminDTO'
+      security:
+      - BearerAuth: []
+      summary: Get a situation report administration record
+      tags:
+      - situation-report-administration
+    patch:
+      parameters:
+      - description: Report changes
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/services.SituationReportInput'
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/services.SituationReportAdminDTO'
+      security:
+      - BearerAuth: []
+      summary: Update an unpublished situation report
+      tags:
+      - situation-report-administration
+  /api/v2/situation-reports/{id}/approve:
+    post:
+      parameters:
+      - description: Transition
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/services.TransitionInput'
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/services.SituationReportAdminDTO'
+      security:
+      - BearerAuth: []
+      summary: Submit, approve, publish, or withdraw a situation report
+      tags:
+      - situation-report-administration
+  /api/v2/situation-reports/{id}/asset:
+    post:
+      consumes:
+      - multipart/form-data
+      parameters:
+      - description: PDF report
+        in: formData
+        name: file
+        required: true
+        type: file
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/services.SituationReportAssetDTO'
+      security:
+      - BearerAuth: []
+      summary: Upload a managed PDF asset for a situation report draft
+      tags:
+      - situation-report-administration
+  /api/v2/situation-reports/{id}/correct:
+    post:
+      parameters:
+      - description: Correction
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/services.TransitionInput'
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/services.SituationReportAdminDTO'
+      security:
+      - BearerAuth: []
+      summary: Create a correction draft for a published situation report
+      tags:
+      - situation-report-administration
+  /api/v2/situation-reports/{id}/publish:
+    post:
+      parameters:
+      - description: Transition
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/services.TransitionInput'
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/services.SituationReportAdminDTO'
+      security:
+      - BearerAuth: []
+      summary: Submit, approve, publish, or withdraw a situation report
+      tags:
+      - situation-report-administration
+  /api/v2/situation-reports/{id}/submit:
+    post:
+      parameters:
+      - description: Transition
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/services.TransitionInput'
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/services.SituationReportAdminDTO'
+      security:
+      - BearerAuth: []
+      summary: Submit, approve, publish, or withdraw a situation report
+      tags:
+      - situation-report-administration
+  /api/v2/situation-reports/{id}/withdraw:
+    post:
+      parameters:
+      - description: Transition
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/services.TransitionInput'
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/services.SituationReportAdminDTO'
+      security:
+      - BearerAuth: []
+      summary: Submit, approve, publish, or withdraw a situation report
+      tags:
+      - situation-report-administration
   /api/v2/support/tickets:
     get:
       parameters:

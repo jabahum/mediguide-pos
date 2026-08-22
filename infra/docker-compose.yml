@@ -98,7 +98,7 @@ services:
       FIREBASE_PROJECT_ID: "${FIREBASE_PROJECT_ID:-}"
       FIREBASE_SERVICE_ACCOUNT_BASE64: "${FIREBASE_SERVICE_ACCOUNT_BASE64:-}"
       FIREBASE_DEVICE_STALE_DAYS: "${FIREBASE_DEVICE_STALE_DAYS:-90}"
-      NOTIFICATION_ACTION_EXTERNAL_HOSTS: "${NOTIFICATION_ACTION_EXTERNAL_HOSTS:-mediguide.health.go.ug,health.go.ug,www.health.go.ug,who.int,www.who.int}"
+      NOTIFICATION_ACTION_EXTERNAL_HOSTS: "${NOTIFICATION_ACTION_EXTERNAL_HOSTS:-mediguide.health.go.ug,health.go.ug,www.health.go.ug,who.int,www.who.int,afro.who.int,www.afro.who.int,iris.who.int}"
     ports:
       - "${PUBLIC_BIND_ADDRESS:-127.0.0.1}:${API_PUBLIC_PORT:-8080}:8080"
     depends_on:
@@ -134,7 +134,7 @@ services:
       FIREBASE_PROJECT_ID: "${FIREBASE_PROJECT_ID:-}"
       FIREBASE_SERVICE_ACCOUNT_BASE64: "${FIREBASE_SERVICE_ACCOUNT_BASE64:-}"
       FIREBASE_DEVICE_STALE_DAYS: "${FIREBASE_DEVICE_STALE_DAYS:-90}"
-      NOTIFICATION_ACTION_EXTERNAL_HOSTS: "${NOTIFICATION_ACTION_EXTERNAL_HOSTS:-mediguide.health.go.ug,health.go.ug,www.health.go.ug,who.int,www.who.int}"
+      NOTIFICATION_ACTION_EXTERNAL_HOSTS: "${NOTIFICATION_ACTION_EXTERNAL_HOSTS:-mediguide.health.go.ug,health.go.ug,www.health.go.ug,who.int,www.who.int,afro.who.int,www.afro.who.int,iris.who.int}"
       NOTIFICATION_WORKER_PORT: "${NOTIFICATION_WORKER_PORT:-8082}"
       NOTIFICATION_WORKER_BATCH_SIZE: "${NOTIFICATION_WORKER_BATCH_SIZE:-100}"
       NOTIFICATION_WORKER_CONCURRENCY: "${NOTIFICATION_WORKER_CONCURRENCY:-10}"

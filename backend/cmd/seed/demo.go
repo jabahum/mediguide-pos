@@ -487,7 +487,8 @@ func seedDemoOutbreaks(database *gorm.DB) error {
 			"geographic_area": "Uganda and the Democratic Republic of the Congo border region",
 			"summary":         "Uganda entered the 42-day countdown toward ending its outbreak after the last confirmed patient was discharged. Cross-border surveillance and readiness remained necessary while transmission continued in the Democratic Republic of the Congo.",
 			"start_date":      startDate, "last_update": reportDate, "visual_tone": "warning", "source_organization": "Ministry of Health Uganda and WHO Regional Office for Africa", "published_at": publicationDate,
-			"metrics": mustJSON(`[{"key":"uganda_confirmed","label":"Confirmed cases in Uganda","value":20},{"key":"uganda_deaths","label":"Deaths in Uganda","value":2},{"key":"contacts_followed","label":"Contacts followed up","value":836},{"key":"high_risk_districts","label":"High-risk districts","value":36}]`),
+			"source_url": "https://www.afro.who.int/countries/uganda/news/uganda-begins-countdown-end-ebola-outbreak", "source_reference": "WHO/MoH Uganda Bundibugyo virus disease response update", "effective_at": publicationDate, "data_as_of": reportDate, "last_verified_at": reportDate, "approved_at": publicationDate,
+			"metrics": mustJSON(`[{"key":"uganda_confirmed","label":"Confirmed cases in Uganda","value":"20","numeric_value":20,"unit":"cases","as_of":"2026-07-26T12:00:00Z","source_reference":"WHO situation report 11","sort_order":1},{"key":"uganda_deaths","label":"Deaths in Uganda","value":"2","numeric_value":2,"unit":"deaths","as_of":"2026-07-26T12:00:00Z","source_reference":"WHO situation report 11","sort_order":2},{"key":"contacts_followed","label":"Contacts followed up","value":"836","numeric_value":836,"unit":"contacts","as_of":"2026-07-26T12:00:00Z","source_reference":"WHO situation report 11","sort_order":3},{"key":"high_risk_districts","label":"High-risk districts","value":"36","numeric_value":36,"unit":"districts","as_of":"2026-07-26T12:00:00Z","source_reference":"WHO situation report 11","sort_order":4}]`),
 		},
 	}
 	for _, row := range rows {
@@ -496,8 +497,8 @@ func seedDemoOutbreaks(database *gorm.DB) error {
 		}
 	}
 	updates := []map[string]any{
-		{"id": demoID("outbreak-update", "uganda-countdown-2026-07-16"), "outbreak_id": ebolaID, "title": "Uganda begins 42-day countdown", "summary": "The last confirmed patient tested negative for a second time and was discharged; surveillance and rapid investigation of alerts continued.", "published_at": time.Date(2026, time.July, 16, 12, 0, 0, 0, time.UTC)},
-		{"id": demoID("outbreak-update", "who-sitrep-11-2026-07-26"), "outbreak_id": ebolaID, "title": "WHO publishes weekly external situation report 11", "summary": "WHO reported no new cases outside the Democratic Republic of the Congo while highlighting continued regional spread risk and the need for cross-border preparedness.", "published_at": reportDate},
+		{"id": demoID("outbreak-update", "uganda-countdown-2026-07-16"), "outbreak_id": ebolaID, "title": "Uganda begins 42-day countdown", "summary": "The last confirmed patient tested negative for a second time and was discharged; surveillance and rapid investigation of alerts continued.", "status": "published", "published_at": time.Date(2026, time.July, 16, 12, 0, 0, 0, time.UTC)},
+		{"id": demoID("outbreak-update", "who-sitrep-11-2026-07-26"), "outbreak_id": ebolaID, "title": "WHO publishes weekly external situation report 11", "summary": "WHO reported no new cases outside the Democratic Republic of the Congo while highlighting continued regional spread risk and the need for cross-border preparedness.", "status": "published", "published_at": reportDate},
 	}
 	for _, row := range updates {
 		if err := upsertByID(database, "outbreak_updates", row); err != nil {
@@ -505,9 +506,9 @@ func seedDemoOutbreaks(database *gorm.DB) error {
 		}
 	}
 	resources := []map[string]any{
-		{"id": demoID("outbreak-resource", "uganda-moh-press-statement-2026"), "outbreak_id": ebolaID, "title": "Uganda Ministry of Health press statement", "resource_type": "official_statement", "url": "https://health.go.ug/download/press-statement-ebola-bundibugyo-virus-disease-outbreak-2026/", "asset_url": "", "sort_order": 1},
-		{"id": demoID("outbreak-resource", "who-uganda-countdown-2026"), "outbreak_id": ebolaID, "title": "Uganda begins countdown to end of outbreak", "resource_type": "official_update", "url": "https://www.afro.who.int/countries/uganda/news/uganda-begins-countdown-end-ebola-outbreak", "asset_url": "", "sort_order": 2},
-		{"id": demoID("outbreak-resource", "local-ebola-guideline"), "outbreak_id": ebolaID, "title": "Ebola and Marburg preparedness guideline", "resource_type": "guideline", "url": "/public/guidelines/" + demoID("guideline", "ebola-marburg").String(), "asset_url": "", "sort_order": 3},
+		{"id": demoID("outbreak-resource", "uganda-moh-press-statement-2026"), "outbreak_id": ebolaID, "title": "Uganda Ministry of Health press statement", "resource_type": "official_statement", "url": "https://health.go.ug/download/press-statement-ebola-bundibugyo-virus-disease-outbreak-2026/", "asset_url": "", "sort_order": 1, "status": "published", "published_at": publicationDate},
+		{"id": demoID("outbreak-resource", "who-uganda-countdown-2026"), "outbreak_id": ebolaID, "title": "Uganda begins countdown to end of outbreak", "resource_type": "official_update", "url": "https://www.afro.who.int/countries/uganda/news/uganda-begins-countdown-end-ebola-outbreak", "asset_url": "", "sort_order": 2, "status": "published", "published_at": publicationDate},
+		{"id": demoID("outbreak-resource", "local-ebola-guideline"), "outbreak_id": ebolaID, "title": "Ebola and Marburg preparedness guideline", "resource_type": "guideline", "url": "/public/guidelines/" + demoID("guideline", "ebola-marburg").String(), "asset_url": "", "sort_order": 3, "status": "published", "published_at": publicationDate},
 	}
 	for _, row := range resources {
 		if err := upsertByID(database, "outbreak_resources", row); err != nil {
@@ -517,9 +518,9 @@ func seedDemoOutbreaks(database *gorm.DB) error {
 	if err := upsertByID(database, "situation_reports", map[string]any{
 		"id": demoID("situation-report", "who-bvd-11-2026-07-26"), "outbreak_id": ebolaID, "title": "Bundibugyo virus disease weekly external situation report 11",
 		"geographic_area": "Democratic Republic of the Congo and Uganda", "summary": "WHO's weekly external situation report with data as of 26 July 2026. It documents continued transmission in the Democratic Republic of the Congo and continuing regional preparedness needs.",
-		"source_organization": "WHO Regional Office for Africa", "publication_date": reportDate, "status": "published", "report_asset_url": "https://iris.who.int/bitstreams/e5023872-6b1c-446e-992d-7c92810d730a/download",
+		"source_organization": "WHO Regional Office for Africa", "publication_date": reportDate, "status": "published", "published_at": reportDate, "approved_at": reportDate, "effective_at": reportDate, "data_as_of": reportDate, "last_verified_at": reportDate, "source_reference": "WHO weekly external situation report 11", "source_url": "https://www.who.int/emergencies/situations", "report_asset_url": "https://iris.who.int/bitstreams/e5023872-6b1c-446e-992d-7c92810d730a/download",
 		"key_highlights": mustJSON(`["No new cases were reported outside the Democratic Republic of the Congo during the reporting period","Regional cross-border spread risk remained high","Sustained surveillance and preparedness remained necessary"]`),
-		"metrics":        mustJSON(`[{"key":"uganda_confirmed","label":"Confirmed cases in Uganda","value":20},{"key":"uganda_deaths","label":"Deaths in Uganda","value":2},{"key":"contacts_followed","label":"Contacts followed up","value":836}]`),
+		"metrics":        mustJSON(`[{"key":"uganda_confirmed","label":"Confirmed cases in Uganda","value":"20","numeric_value":20,"unit":"cases","as_of":"2026-07-26T12:00:00Z","source_reference":"WHO situation report 11","sort_order":1},{"key":"uganda_deaths","label":"Deaths in Uganda","value":"2","numeric_value":2,"unit":"deaths","as_of":"2026-07-26T12:00:00Z","source_reference":"WHO situation report 11","sort_order":2},{"key":"contacts_followed","label":"Contacts followed up","value":"836","numeric_value":836,"unit":"contacts","as_of":"2026-07-26T12:00:00Z","source_reference":"WHO situation report 11","sort_order":3}]`),
 	}); err != nil {
 		return err
 	}

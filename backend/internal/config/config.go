@@ -115,7 +115,7 @@ func Load() Config {
 		NotificationWorkerPollMS:        getInt("NOTIFICATION_WORKER_POLL_MS", 1000),
 		NotificationWorkerMaxAgeHours:   getInt("NOTIFICATION_WORKER_MAX_AGE_HOURS", 168),
 		NotificationWorkerLeaseSeconds:  getInt("NOTIFICATION_WORKER_LEASE_SECONDS", 120),
-		NotificationActionExternalHosts: getCSVWithFallback("NOTIFICATION_ACTION_EXTERNAL_HOSTS", "mediguide.health.go.ug,health.go.ug,www.health.go.ug,who.int,www.who.int"),
+		NotificationActionExternalHosts: getCSVWithFallback("NOTIFICATION_ACTION_EXTERNAL_HOSTS", "mediguide.health.go.ug,health.go.ug,www.health.go.ug,who.int,www.who.int,afro.who.int,www.afro.who.int,iris.who.int"),
 	}
 }
 

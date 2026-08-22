@@ -456,8 +456,44 @@
                     },
                     {
                         "type": "string",
+                        "description": "Exact disease type",
+                        "name": "disease",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
                         "description": "Geographic area",
                         "name": "area",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Region UUID",
+                        "name": "region_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Effective at or after (RFC3339 or YYYY-MM-DD)",
+                        "name": "effective_from",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Effective at or before (RFC3339 or YYYY-MM-DD)",
+                        "name": "effective_to",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Updated at or after (RFC3339 or YYYY-MM-DD)",
+                        "name": "updated_from",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Updated at or before (RFC3339 or YYYY-MM-DD)",
+                        "name": "updated_to",
                         "in": "query"
                     },
                     {
@@ -624,6 +660,54 @@
                         "type": "string",
                         "description": "Title, summary, or area",
                         "name": "search",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Geographic area",
+                        "name": "area",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Region UUID",
+                        "name": "region_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Effective at or after",
+                        "name": "effective_from",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Effective at or before",
+                        "name": "effective_to",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Updated at or after",
+                        "name": "updated_from",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Updated at or before",
+                        "name": "updated_to",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "publication_date, title, effective_at, updated_at, or last_verified_at",
+                        "name": "sort",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "asc or desc",
+                        "name": "order",
                         "in": "query"
                     }
                 ],
@@ -9926,6 +10010,849 @@
                 }
             }
         },
+        "/api/v2/outbreaks": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "outbreak-administration"
+                ],
+                "summary": "List outbreak administration records",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/services.PageResult-services_OutbreakAdminDTO"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "outbreak-administration"
+                ],
+                "summary": "Create an outbreak draft",
+                "parameters": [
+                    {
+                        "description": "Outbreak draft",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/services.OutbreakInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/services.OutbreakAdminDTO"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v2/outbreaks/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "outbreak-administration"
+                ],
+                "summary": "Get an outbreak administration record",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/services.OutbreakAdminDTO"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "outbreak-administration"
+                ],
+                "summary": "Soft-delete an unpublished outbreak",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Optimistic lock version",
+                        "name": "lock_version",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    }
+                }
+            },
+            "patch": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "outbreak-administration"
+                ],
+                "summary": "Update an unpublished outbreak draft using optimistic locking",
+                "parameters": [
+                    {
+                        "description": "Outbreak changes",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/services.OutbreakInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/services.OutbreakAdminDTO"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v2/outbreaks/{id}/approve": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "outbreak-administration"
+                ],
+                "summary": "Submit, approve, publish, or withdraw an outbreak",
+                "parameters": [
+                    {
+                        "description": "Transition",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/services.TransitionInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/services.OutbreakAdminDTO"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v2/outbreaks/{id}/correct": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "outbreak-administration"
+                ],
+                "summary": "Create a correction draft that supersedes a published outbreak",
+                "parameters": [
+                    {
+                        "description": "Correction reason and lock version",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/services.TransitionInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/services.OutbreakAdminDTO"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v2/outbreaks/{id}/publish": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "outbreak-administration"
+                ],
+                "summary": "Submit, approve, publish, or withdraw an outbreak",
+                "parameters": [
+                    {
+                        "description": "Transition",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/services.TransitionInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/services.OutbreakAdminDTO"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v2/outbreaks/{id}/resources": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "outbreak-administration"
+                ],
+                "summary": "List outbreak resources for administration",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/services.PageResult-services_OutbreakResourceAdminDTO"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "outbreak-administration"
+                ],
+                "summary": "Create an outbreak resource draft",
+                "parameters": [
+                    {
+                        "description": "Resource draft",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/services.ChildContentInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/services.OutbreakResourceAdminDTO"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v2/outbreaks/{id}/resources/{resourceId}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "outbreak-administration"
+                ],
+                "summary": "Get an outbreak resource administration record",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/services.OutbreakResourceAdminDTO"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "outbreak-administration"
+                ],
+                "summary": "Delete an unpublished outbreak resource",
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    }
+                }
+            },
+            "patch": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "outbreak-administration"
+                ],
+                "summary": "Update an unpublished outbreak resource",
+                "parameters": [
+                    {
+                        "description": "Resource changes",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/services.ChildContentInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/services.OutbreakResourceAdminDTO"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v2/outbreaks/{id}/resources/{resourceId}/approve": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "outbreak-administration"
+                ],
+                "summary": "Submit, approve, publish, or withdraw an outbreak resource",
+                "parameters": [
+                    {
+                        "description": "Transition",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/services.TransitionInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/services.OutbreakResourceAdminDTO"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v2/outbreaks/{id}/resources/{resourceId}/correct": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "outbreak-administration"
+                ],
+                "summary": "Create a correction draft for a published outbreak resource",
+                "parameters": [
+                    {
+                        "description": "Correction",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/services.TransitionInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/services.OutbreakResourceAdminDTO"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v2/outbreaks/{id}/resources/{resourceId}/publish": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "outbreak-administration"
+                ],
+                "summary": "Submit, approve, publish, or withdraw an outbreak resource",
+                "parameters": [
+                    {
+                        "description": "Transition",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/services.TransitionInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/services.OutbreakResourceAdminDTO"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v2/outbreaks/{id}/resources/{resourceId}/submit": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "outbreak-administration"
+                ],
+                "summary": "Submit, approve, publish, or withdraw an outbreak resource",
+                "parameters": [
+                    {
+                        "description": "Transition",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/services.TransitionInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/services.OutbreakResourceAdminDTO"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v2/outbreaks/{id}/resources/{resourceId}/withdraw": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "outbreak-administration"
+                ],
+                "summary": "Submit, approve, publish, or withdraw an outbreak resource",
+                "parameters": [
+                    {
+                        "description": "Transition",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/services.TransitionInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/services.OutbreakResourceAdminDTO"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v2/outbreaks/{id}/submit": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "outbreak-administration"
+                ],
+                "summary": "Submit, approve, publish, or withdraw an outbreak",
+                "parameters": [
+                    {
+                        "description": "Transition",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/services.TransitionInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/services.OutbreakAdminDTO"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v2/outbreaks/{id}/updates": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "outbreak-administration"
+                ],
+                "summary": "List outbreak updates for administration",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/services.PageResult-services_OutbreakUpdateAdminDTO"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "outbreak-administration"
+                ],
+                "summary": "Create an outbreak update draft",
+                "parameters": [
+                    {
+                        "description": "Update draft",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/services.ChildContentInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/services.OutbreakUpdateAdminDTO"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v2/outbreaks/{id}/updates/{updateId}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "outbreak-administration"
+                ],
+                "summary": "Get an outbreak update",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/services.OutbreakUpdateAdminDTO"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "outbreak-administration"
+                ],
+                "summary": "Delete an unpublished outbreak update",
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    }
+                }
+            },
+            "patch": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "outbreak-administration"
+                ],
+                "summary": "Update an outbreak update draft",
+                "parameters": [
+                    {
+                        "description": "Update changes",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/services.ChildContentInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/services.OutbreakUpdateAdminDTO"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v2/outbreaks/{id}/updates/{updateId}/approve": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "outbreak-administration"
+                ],
+                "summary": "Submit, approve, publish, or withdraw an outbreak update",
+                "parameters": [
+                    {
+                        "description": "Transition",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/services.TransitionInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/services.OutbreakUpdateAdminDTO"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v2/outbreaks/{id}/updates/{updateId}/correct": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "outbreak-administration"
+                ],
+                "summary": "Create a correction draft for a published outbreak update",
+                "parameters": [
+                    {
+                        "description": "Correction",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/services.TransitionInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/services.OutbreakUpdateAdminDTO"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v2/outbreaks/{id}/updates/{updateId}/publish": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "outbreak-administration"
+                ],
+                "summary": "Submit, approve, publish, or withdraw an outbreak update",
+                "parameters": [
+                    {
+                        "description": "Transition",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/services.TransitionInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/services.OutbreakUpdateAdminDTO"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v2/outbreaks/{id}/updates/{updateId}/submit": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "outbreak-administration"
+                ],
+                "summary": "Submit, approve, publish, or withdraw an outbreak update",
+                "parameters": [
+                    {
+                        "description": "Transition",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/services.TransitionInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/services.OutbreakUpdateAdminDTO"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v2/outbreaks/{id}/updates/{updateId}/withdraw": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "outbreak-administration"
+                ],
+                "summary": "Submit, approve, publish, or withdraw an outbreak update",
+                "parameters": [
+                    {
+                        "description": "Transition",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/services.TransitionInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/services.OutbreakUpdateAdminDTO"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v2/outbreaks/{id}/withdraw": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "outbreak-administration"
+                ],
+                "summary": "Submit, approve, publish, or withdraw an outbreak",
+                "parameters": [
+                    {
+                        "description": "Transition",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/services.TransitionInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/services.OutbreakAdminDTO"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v2/pages": {
             "get": {
                 "security": [
@@ -11156,6 +12083,317 @@
                         "description": "Forbidden",
                         "schema": {
                             "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v2/situation-reports": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "situation-report-administration"
+                ],
+                "summary": "List situation reports for administration",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/services.PageResult-services_SituationReportAdminDTO"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "situation-report-administration"
+                ],
+                "summary": "Create a situation report draft",
+                "parameters": [
+                    {
+                        "description": "Report draft",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/services.SituationReportInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/services.SituationReportAdminDTO"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v2/situation-reports/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "situation-report-administration"
+                ],
+                "summary": "Get a situation report administration record",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/services.SituationReportAdminDTO"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "situation-report-administration"
+                ],
+                "summary": "Delete an unpublished situation report",
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    }
+                }
+            },
+            "patch": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "situation-report-administration"
+                ],
+                "summary": "Update an unpublished situation report",
+                "parameters": [
+                    {
+                        "description": "Report changes",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/services.SituationReportInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/services.SituationReportAdminDTO"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v2/situation-reports/{id}/approve": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "situation-report-administration"
+                ],
+                "summary": "Submit, approve, publish, or withdraw a situation report",
+                "parameters": [
+                    {
+                        "description": "Transition",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/services.TransitionInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/services.SituationReportAdminDTO"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v2/situation-reports/{id}/asset": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "multipart/form-data"
+                ],
+                "tags": [
+                    "situation-report-administration"
+                ],
+                "summary": "Upload a managed PDF asset for a situation report draft",
+                "parameters": [
+                    {
+                        "type": "file",
+                        "description": "PDF report",
+                        "name": "file",
+                        "in": "formData",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/services.SituationReportAssetDTO"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v2/situation-reports/{id}/correct": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "situation-report-administration"
+                ],
+                "summary": "Create a correction draft for a published situation report",
+                "parameters": [
+                    {
+                        "description": "Correction",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/services.TransitionInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/services.SituationReportAdminDTO"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v2/situation-reports/{id}/publish": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "situation-report-administration"
+                ],
+                "summary": "Submit, approve, publish, or withdraw a situation report",
+                "parameters": [
+                    {
+                        "description": "Transition",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/services.TransitionInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/services.SituationReportAdminDTO"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v2/situation-reports/{id}/submit": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "situation-report-administration"
+                ],
+                "summary": "Submit, approve, publish, or withdraw a situation report",
+                "parameters": [
+                    {
+                        "description": "Transition",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/services.TransitionInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/services.SituationReportAdminDTO"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v2/situation-reports/{id}/withdraw": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "situation-report-administration"
+                ],
+                "summary": "Submit, approve, publish, or withdraw a situation report",
+                "parameters": [
+                    {
+                        "description": "Transition",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/services.TransitionInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/services.SituationReportAdminDTO"
                         }
                     }
                 }
@@ -13176,7 +14414,7 @@
             "type": "object",
             "properties": {
                 "data": {
-                    "$ref": "#/definitions/models.Outbreak"
+                    "$ref": "#/definitions/services.PublicOutbreak"
                 },
                 "success": {
                     "type": "boolean"
@@ -13992,7 +15230,7 @@
             "type": "object",
             "properties": {
                 "data": {
-                    "$ref": "#/definitions/services.PageResult-models_OutbreakResource"
+                    "$ref": "#/definitions/services.PageResult-services_PublicOutbreakResource"
                 },
                 "success": {
                     "type": "boolean"
@@ -14003,7 +15241,7 @@
             "type": "object",
             "properties": {
                 "data": {
-                    "$ref": "#/definitions/services.PageResult-models_OutbreakUpdate"
+                    "$ref": "#/definitions/services.PageResult-services_PublicOutbreakUpdate"
                 },
                 "success": {
                     "type": "boolean"
@@ -14014,7 +15252,7 @@
             "type": "object",
             "properties": {
                 "data": {
-                    "$ref": "#/definitions/services.PageResult-models_Outbreak"
+                    "$ref": "#/definitions/services.PageResult-services_PublicOutbreak"
                 },
                 "success": {
                     "type": "boolean"
@@ -14257,7 +15495,7 @@
             "type": "object",
             "properties": {
                 "data": {
-                    "$ref": "#/definitions/services.PageResult-models_SituationReport"
+                    "$ref": "#/definitions/services.PageResult-services_PublicSituationReport"
                 },
                 "success": {
                     "type": "boolean"
@@ -14684,7 +15922,7 @@
             "type": "object",
             "properties": {
                 "data": {
-                    "$ref": "#/definitions/models.SituationReport"
+                    "$ref": "#/definitions/services.PublicSituationReport"
                 },
                 "success": {
                     "type": "boolean"
@@ -16912,114 +18150,6 @@
                 }
             }
         },
-        "models.Outbreak": {
-            "type": "object",
-            "properties": {
-                "created_at": {
-                    "type": "string"
-                },
-                "disease_type": {
-                    "type": "string"
-                },
-                "geographic_area": {
-                    "type": "string"
-                },
-                "id": {
-                    "type": "string"
-                },
-                "last_update": {
-                    "type": "string"
-                },
-                "metrics": {
-                    "type": "array",
-                    "items": {
-                        "type": "object"
-                    }
-                },
-                "published_at": {
-                    "type": "string"
-                },
-                "source_organization": {
-                    "type": "string"
-                },
-                "start_date": {
-                    "type": "string"
-                },
-                "status": {
-                    "type": "string"
-                },
-                "summary": {
-                    "type": "string"
-                },
-                "title": {
-                    "type": "string"
-                },
-                "updated_at": {
-                    "type": "string"
-                },
-                "visual_tone": {
-                    "type": "string"
-                }
-            }
-        },
-        "models.OutbreakResource": {
-            "type": "object",
-            "properties": {
-                "asset_url": {
-                    "type": "string"
-                },
-                "created_at": {
-                    "type": "string"
-                },
-                "id": {
-                    "type": "string"
-                },
-                "outbreak_id": {
-                    "type": "string"
-                },
-                "resource_type": {
-                    "type": "string"
-                },
-                "sort_order": {
-                    "type": "integer"
-                },
-                "title": {
-                    "type": "string"
-                },
-                "updated_at": {
-                    "type": "string"
-                },
-                "url": {
-                    "type": "string"
-                }
-            }
-        },
-        "models.OutbreakUpdate": {
-            "type": "object",
-            "properties": {
-                "created_at": {
-                    "type": "string"
-                },
-                "id": {
-                    "type": "string"
-                },
-                "outbreak_id": {
-                    "type": "string"
-                },
-                "published_at": {
-                    "type": "string"
-                },
-                "summary": {
-                    "type": "string"
-                },
-                "title": {
-                    "type": "string"
-                },
-                "updated_at": {
-                    "type": "string"
-                }
-            }
-        },
         "models.Permission": {
             "type": "object",
             "properties": {
@@ -17145,56 +18275,6 @@
                 },
                 "value_json": {
                     "type": "object"
-                }
-            }
-        },
-        "models.SituationReport": {
-            "type": "object",
-            "properties": {
-                "created_at": {
-                    "type": "string"
-                },
-                "geographic_area": {
-                    "type": "string"
-                },
-                "id": {
-                    "type": "string"
-                },
-                "key_highlights": {
-                    "type": "array",
-                    "items": {
-                        "type": "string"
-                    }
-                },
-                "metrics": {
-                    "type": "array",
-                    "items": {
-                        "type": "object"
-                    }
-                },
-                "outbreak_id": {
-                    "type": "string"
-                },
-                "publication_date": {
-                    "type": "string"
-                },
-                "report_asset_url": {
-                    "type": "string"
-                },
-                "source_organization": {
-                    "type": "string"
-                },
-                "status": {
-                    "type": "string"
-                },
-                "summary": {
-                    "type": "string"
-                },
-                "title": {
-                    "type": "string"
-                },
-                "updated_at": {
-                    "type": "string"
                 }
             }
         },
@@ -17511,6 +18591,32 @@
                     "type": "string"
                 },
                 "reviewer_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "services.ChildContentInput": {
+            "type": "object",
+            "properties": {
+                "asset_url": {
+                    "type": "string"
+                },
+                "lock_version": {
+                    "type": "integer"
+                },
+                "resource_type": {
+                    "type": "string"
+                },
+                "sort_order": {
+                    "type": "integer"
+                },
+                "summary": {
+                    "type": "string"
+                },
+                "title": {
+                    "type": "string"
+                },
+                "url": {
                     "type": "string"
                 }
             }
@@ -20662,6 +21768,313 @@
                 }
             }
         },
+        "services.OutbreakAdminDTO": {
+            "type": "object",
+            "properties": {
+                "approved_at": {
+                    "type": "string"
+                },
+                "approved_by": {
+                    "type": "string"
+                },
+                "author_id": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "data_as_of": {
+                    "type": "string"
+                },
+                "disease_type": {
+                    "type": "string"
+                },
+                "district_id": {
+                    "type": "string"
+                },
+                "effective_at": {
+                    "type": "string"
+                },
+                "geographic_area": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "last_update": {
+                    "type": "string"
+                },
+                "last_verified_at": {
+                    "type": "string"
+                },
+                "lock_version": {
+                    "type": "integer"
+                },
+                "metrics": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/services.OutbreakMetric"
+                    }
+                },
+                "published_at": {
+                    "type": "string"
+                },
+                "region_id": {
+                    "type": "string"
+                },
+                "reviewed_at": {
+                    "type": "string"
+                },
+                "reviewed_by": {
+                    "type": "string"
+                },
+                "source_organization": {
+                    "type": "string"
+                },
+                "source_reference": {
+                    "type": "string"
+                },
+                "source_url": {
+                    "type": "string"
+                },
+                "start_date": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "summary": {
+                    "type": "string"
+                },
+                "supersedes_id": {
+                    "type": "string"
+                },
+                "title": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                },
+                "visual_tone": {
+                    "type": "string"
+                },
+                "withdrawal_reason": {
+                    "type": "string"
+                },
+                "withdrawn_at": {
+                    "type": "string"
+                }
+            }
+        },
+        "services.OutbreakInput": {
+            "type": "object",
+            "properties": {
+                "data_as_of": {
+                    "type": "string"
+                },
+                "disease_type": {
+                    "type": "string"
+                },
+                "district_id": {
+                    "type": "string"
+                },
+                "effective_at": {
+                    "type": "string"
+                },
+                "geographic_area": {
+                    "type": "string"
+                },
+                "last_update": {
+                    "type": "string"
+                },
+                "last_verified_at": {
+                    "type": "string"
+                },
+                "lock_version": {
+                    "type": "integer"
+                },
+                "metrics": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/services.OutbreakMetric"
+                    }
+                },
+                "region_id": {
+                    "type": "string"
+                },
+                "source_organization": {
+                    "type": "string"
+                },
+                "source_reference": {
+                    "type": "string"
+                },
+                "source_url": {
+                    "type": "string"
+                },
+                "start_date": {
+                    "type": "string"
+                },
+                "summary": {
+                    "type": "string"
+                },
+                "title": {
+                    "type": "string"
+                },
+                "visual_tone": {
+                    "type": "string"
+                }
+            }
+        },
+        "services.OutbreakMetric": {
+            "type": "object",
+            "properties": {
+                "as_of": {
+                    "type": "string"
+                },
+                "key": {
+                    "type": "string"
+                },
+                "label": {
+                    "type": "string"
+                },
+                "numeric_value": {
+                    "type": "number"
+                },
+                "sort_order": {
+                    "type": "integer"
+                },
+                "source_reference": {
+                    "type": "string"
+                },
+                "unit": {
+                    "type": "string"
+                },
+                "value": {
+                    "type": "string"
+                }
+            }
+        },
+        "services.OutbreakResourceAdminDTO": {
+            "type": "object",
+            "properties": {
+                "approved_at": {
+                    "type": "string"
+                },
+                "approved_by": {
+                    "type": "string"
+                },
+                "asset_url": {
+                    "type": "string"
+                },
+                "author_id": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "lock_version": {
+                    "type": "integer"
+                },
+                "outbreak_id": {
+                    "type": "string"
+                },
+                "published_at": {
+                    "type": "string"
+                },
+                "resource_type": {
+                    "type": "string"
+                },
+                "reviewed_at": {
+                    "type": "string"
+                },
+                "reviewed_by": {
+                    "type": "string"
+                },
+                "sort_order": {
+                    "type": "integer"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "supersedes_id": {
+                    "type": "string"
+                },
+                "title": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                },
+                "url": {
+                    "type": "string"
+                },
+                "withdrawal_reason": {
+                    "type": "string"
+                },
+                "withdrawn_at": {
+                    "type": "string"
+                }
+            }
+        },
+        "services.OutbreakUpdateAdminDTO": {
+            "type": "object",
+            "properties": {
+                "approved_at": {
+                    "type": "string"
+                },
+                "approved_by": {
+                    "type": "string"
+                },
+                "author_id": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "lock_version": {
+                    "type": "integer"
+                },
+                "outbreak_id": {
+                    "type": "string"
+                },
+                "published_at": {
+                    "type": "string"
+                },
+                "reviewed_at": {
+                    "type": "string"
+                },
+                "reviewed_by": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "summary": {
+                    "type": "string"
+                },
+                "supersedes_id": {
+                    "type": "string"
+                },
+                "title": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                },
+                "withdrawal_reason": {
+                    "type": "string"
+                },
+                "withdrawn_at": {
+                    "type": "string"
+                }
+            }
+        },
         "services.PageResult-models_Abbreviation": {
             "type": "object",
             "properties": {
@@ -20915,75 +22328,6 @@
                 }
             }
         },
-        "services.PageResult-models_Outbreak": {
-            "type": "object",
-            "properties": {
-                "items": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/models.Outbreak"
-                    }
-                },
-                "page": {
-                    "type": "integer"
-                },
-                "per_page": {
-                    "type": "integer"
-                },
-                "total_items": {
-                    "type": "integer"
-                },
-                "total_pages": {
-                    "type": "integer"
-                }
-            }
-        },
-        "services.PageResult-models_OutbreakResource": {
-            "type": "object",
-            "properties": {
-                "items": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/models.OutbreakResource"
-                    }
-                },
-                "page": {
-                    "type": "integer"
-                },
-                "per_page": {
-                    "type": "integer"
-                },
-                "total_items": {
-                    "type": "integer"
-                },
-                "total_pages": {
-                    "type": "integer"
-                }
-            }
-        },
-        "services.PageResult-models_OutbreakUpdate": {
-            "type": "object",
-            "properties": {
-                "items": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/models.OutbreakUpdate"
-                    }
-                },
-                "page": {
-                    "type": "integer"
-                },
-                "per_page": {
-                    "type": "integer"
-                },
-                "total_items": {
-                    "type": "integer"
-                },
-                "total_pages": {
-                    "type": "integer"
-                }
-            }
-        },
         "services.PageResult-models_ReadingProgress": {
             "type": "object",
             "properties": {
@@ -20991,29 +22335,6 @@
                     "type": "array",
                     "items": {
                         "$ref": "#/definitions/models.ReadingProgress"
-                    }
-                },
-                "page": {
-                    "type": "integer"
-                },
-                "per_page": {
-                    "type": "integer"
-                },
-                "total_items": {
-                    "type": "integer"
-                },
-                "total_pages": {
-                    "type": "integer"
-                }
-            }
-        },
-        "services.PageResult-models_SituationReport": {
-            "type": "object",
-            "properties": {
-                "items": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/models.SituationReport"
                     }
                 },
                 "page": {
@@ -21145,6 +22466,167 @@
                 }
             }
         },
+        "services.PageResult-services_OutbreakAdminDTO": {
+            "type": "object",
+            "properties": {
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/services.OutbreakAdminDTO"
+                    }
+                },
+                "page": {
+                    "type": "integer"
+                },
+                "per_page": {
+                    "type": "integer"
+                },
+                "total_items": {
+                    "type": "integer"
+                },
+                "total_pages": {
+                    "type": "integer"
+                }
+            }
+        },
+        "services.PageResult-services_OutbreakResourceAdminDTO": {
+            "type": "object",
+            "properties": {
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/services.OutbreakResourceAdminDTO"
+                    }
+                },
+                "page": {
+                    "type": "integer"
+                },
+                "per_page": {
+                    "type": "integer"
+                },
+                "total_items": {
+                    "type": "integer"
+                },
+                "total_pages": {
+                    "type": "integer"
+                }
+            }
+        },
+        "services.PageResult-services_OutbreakUpdateAdminDTO": {
+            "type": "object",
+            "properties": {
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/services.OutbreakUpdateAdminDTO"
+                    }
+                },
+                "page": {
+                    "type": "integer"
+                },
+                "per_page": {
+                    "type": "integer"
+                },
+                "total_items": {
+                    "type": "integer"
+                },
+                "total_pages": {
+                    "type": "integer"
+                }
+            }
+        },
+        "services.PageResult-services_PublicOutbreak": {
+            "type": "object",
+            "properties": {
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/services.PublicOutbreak"
+                    }
+                },
+                "page": {
+                    "type": "integer"
+                },
+                "per_page": {
+                    "type": "integer"
+                },
+                "total_items": {
+                    "type": "integer"
+                },
+                "total_pages": {
+                    "type": "integer"
+                }
+            }
+        },
+        "services.PageResult-services_PublicOutbreakResource": {
+            "type": "object",
+            "properties": {
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/services.PublicOutbreakResource"
+                    }
+                },
+                "page": {
+                    "type": "integer"
+                },
+                "per_page": {
+                    "type": "integer"
+                },
+                "total_items": {
+                    "type": "integer"
+                },
+                "total_pages": {
+                    "type": "integer"
+                }
+            }
+        },
+        "services.PageResult-services_PublicOutbreakUpdate": {
+            "type": "object",
+            "properties": {
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/services.PublicOutbreakUpdate"
+                    }
+                },
+                "page": {
+                    "type": "integer"
+                },
+                "per_page": {
+                    "type": "integer"
+                },
+                "total_items": {
+                    "type": "integer"
+                },
+                "total_pages": {
+                    "type": "integer"
+                }
+            }
+        },
+        "services.PageResult-services_PublicSituationReport": {
+            "type": "object",
+            "properties": {
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/services.PublicSituationReport"
+                    }
+                },
+                "page": {
+                    "type": "integer"
+                },
+                "per_page": {
+                    "type": "integer"
+                },
+                "total_items": {
+                    "type": "integer"
+                },
+                "total_pages": {
+                    "type": "integer"
+                }
+            }
+        },
         "services.PageResult-services_RoleView": {
             "type": "object",
             "properties": {
@@ -21152,6 +22634,29 @@
                     "type": "array",
                     "items": {
                         "$ref": "#/definitions/services.RoleView"
+                    }
+                },
+                "page": {
+                    "type": "integer"
+                },
+                "per_page": {
+                    "type": "integer"
+                },
+                "total_items": {
+                    "type": "integer"
+                },
+                "total_pages": {
+                    "type": "integer"
+                }
+            }
+        },
+        "services.PageResult-services_SituationReportAdminDTO": {
+            "type": "object",
+            "properties": {
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/services.SituationReportAdminDTO"
                     }
                 },
                 "page": {
@@ -21517,6 +23022,188 @@
                 }
             }
         },
+        "services.PublicOutbreak": {
+            "type": "object",
+            "properties": {
+                "data_as_of": {
+                    "type": "string"
+                },
+                "disease_type": {
+                    "type": "string"
+                },
+                "district_id": {
+                    "type": "string"
+                },
+                "effective_at": {
+                    "type": "string"
+                },
+                "geographic_area": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "last_update": {
+                    "type": "string"
+                },
+                "last_verified_at": {
+                    "type": "string"
+                },
+                "metrics": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/services.OutbreakMetric"
+                    }
+                },
+                "published_at": {
+                    "type": "string"
+                },
+                "region_id": {
+                    "type": "string"
+                },
+                "source_organization": {
+                    "type": "string"
+                },
+                "source_reference": {
+                    "type": "string"
+                },
+                "source_url": {
+                    "type": "string"
+                },
+                "start_date": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "summary": {
+                    "type": "string"
+                },
+                "title": {
+                    "type": "string"
+                },
+                "visual_tone": {
+                    "type": "string"
+                }
+            }
+        },
+        "services.PublicOutbreakResource": {
+            "type": "object",
+            "properties": {
+                "asset_url": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "outbreak_id": {
+                    "type": "string"
+                },
+                "published_at": {
+                    "type": "string"
+                },
+                "resource_type": {
+                    "type": "string"
+                },
+                "sort_order": {
+                    "type": "integer"
+                },
+                "title": {
+                    "type": "string"
+                },
+                "url": {
+                    "type": "string"
+                }
+            }
+        },
+        "services.PublicOutbreakUpdate": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "string"
+                },
+                "outbreak_id": {
+                    "type": "string"
+                },
+                "published_at": {
+                    "type": "string"
+                },
+                "summary": {
+                    "type": "string"
+                },
+                "title": {
+                    "type": "string"
+                }
+            }
+        },
+        "services.PublicSituationReport": {
+            "type": "object",
+            "properties": {
+                "data_as_of": {
+                    "type": "string"
+                },
+                "district_id": {
+                    "type": "string"
+                },
+                "effective_at": {
+                    "type": "string"
+                },
+                "geographic_area": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "key_highlights": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "last_verified_at": {
+                    "type": "string"
+                },
+                "metrics": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/services.OutbreakMetric"
+                    }
+                },
+                "outbreak_id": {
+                    "type": "string"
+                },
+                "publication_date": {
+                    "type": "string"
+                },
+                "published_at": {
+                    "type": "string"
+                },
+                "region_id": {
+                    "type": "string"
+                },
+                "report_asset_id": {
+                    "type": "string"
+                },
+                "report_asset_url": {
+                    "type": "string"
+                },
+                "source_organization": {
+                    "type": "string"
+                },
+                "source_reference": {
+                    "type": "string"
+                },
+                "source_url": {
+                    "type": "string"
+                },
+                "summary": {
+                    "type": "string"
+                },
+                "title": {
+                    "type": "string"
+                }
+            }
+        },
         "services.ReadingProgressInput": {
             "type": "object",
             "properties": {
@@ -21757,6 +23444,204 @@
                 }
             }
         },
+        "services.SituationReportAdminDTO": {
+            "type": "object",
+            "properties": {
+                "approved_at": {
+                    "type": "string"
+                },
+                "approved_by": {
+                    "type": "string"
+                },
+                "author_id": {
+                    "type": "string"
+                },
+                "correction_reason": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "data_as_of": {
+                    "type": "string"
+                },
+                "district_id": {
+                    "type": "string"
+                },
+                "effective_at": {
+                    "type": "string"
+                },
+                "geographic_area": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "key_highlights": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "last_verified_at": {
+                    "type": "string"
+                },
+                "lock_version": {
+                    "type": "integer"
+                },
+                "metrics": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/services.OutbreakMetric"
+                    }
+                },
+                "outbreak_id": {
+                    "type": "string"
+                },
+                "publication_date": {
+                    "type": "string"
+                },
+                "published_at": {
+                    "type": "string"
+                },
+                "region_id": {
+                    "type": "string"
+                },
+                "report_asset_id": {
+                    "type": "string"
+                },
+                "report_asset_url": {
+                    "type": "string"
+                },
+                "reviewed_at": {
+                    "type": "string"
+                },
+                "reviewed_by": {
+                    "type": "string"
+                },
+                "source_organization": {
+                    "type": "string"
+                },
+                "source_reference": {
+                    "type": "string"
+                },
+                "source_url": {
+                    "type": "string"
+                },
+                "standalone_allowed": {
+                    "type": "boolean"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "summary": {
+                    "type": "string"
+                },
+                "supersedes_id": {
+                    "type": "string"
+                },
+                "title": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                },
+                "withdrawal_reason": {
+                    "type": "string"
+                },
+                "withdrawn_at": {
+                    "type": "string"
+                }
+            }
+        },
+        "services.SituationReportAssetDTO": {
+            "type": "object",
+            "properties": {
+                "checksum_sha256": {
+                    "type": "string"
+                },
+                "content_type": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "file_name": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "situation_report_id": {
+                    "type": "string"
+                },
+                "size_bytes": {
+                    "type": "integer"
+                }
+            }
+        },
+        "services.SituationReportInput": {
+            "type": "object",
+            "properties": {
+                "data_as_of": {
+                    "type": "string"
+                },
+                "district_id": {
+                    "type": "string"
+                },
+                "effective_at": {
+                    "type": "string"
+                },
+                "geographic_area": {
+                    "type": "string"
+                },
+                "key_highlights": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "last_verified_at": {
+                    "type": "string"
+                },
+                "lock_version": {
+                    "type": "integer"
+                },
+                "metrics": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/services.OutbreakMetric"
+                    }
+                },
+                "outbreak_id": {
+                    "type": "string"
+                },
+                "publication_date": {
+                    "type": "string"
+                },
+                "region_id": {
+                    "type": "string"
+                },
+                "source_organization": {
+                    "type": "string"
+                },
+                "source_reference": {
+                    "type": "string"
+                },
+                "source_url": {
+                    "type": "string"
+                },
+                "standalone_allowed": {
+                    "type": "boolean"
+                },
+                "summary": {
+                    "type": "string"
+                },
+                "title": {
+                    "type": "string"
+                }
+            }
+        },
         "services.SplitGuidelineSectionInput": {
             "type": "object",
             "required": [
@@ -21848,6 +23733,20 @@
                 },
                 "sample_value": {},
                 "type": {
+                    "type": "string"
+                }
+            }
+        },
+        "services.TransitionInput": {
+            "type": "object",
+            "properties": {
+                "lock_version": {
+                    "type": "integer"
+                },
+                "operational_status": {
+                    "type": "string"
+                },
+                "reason": {
                     "type": "string"
                 }
             }

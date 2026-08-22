@@ -196,7 +196,9 @@ String _fieldName(String value) {
   if (parts.isEmpty) return 'field';
   final candidate =
       parts.first.toLowerCase() + parts.skip(1).map(_capitalize).join();
-  return _dartKeywords.contains(candidate) ? '${candidate}Value' : candidate;
+  return _dartKeywords.contains(candidate) || _generatorReservedNames.contains(candidate)
+      ? '${candidate}Field'
+      : candidate;
 }
 
 String _capitalize(String value) {
@@ -276,3 +278,6 @@ const _dartKeywords = {
   'with',
   'yield',
 };
+
+// Contract wrappers use these names for their own backing storage/API.
+const _generatorReservedNames = {'value', 'toJson', 'schemaName'};

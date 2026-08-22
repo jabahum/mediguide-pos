@@ -109,6 +109,16 @@ Administrators with `notification.analytics.read` can access `GET /api/v2/notifi
 
 Template publication, campaign transitions, and delivery requeues create audit records without message bodies, credentials, or registration tokens.
 
+## Rate limits and abuse controls
+
+Notification administration and mobile event ingestion use Redis-backed token-bucket limits. Administrative limits are keyed by the authenticated user; open and click ingestion is also user-scoped and remains protected by ownership checks and idempotency. Authorization always runs independently and before the operation—rate limiting never grants access.
+
+Focused policies cover direct publication, campaign creation, approval and scheduling, audience estimation, test push, failed-job requeue, Remote Config publishing, and mobile open/click events. Urgent publication and campaign creation, approval, and scheduling have an additional three-per-hour policy. Approval and scheduling urgency is read from the persisted campaign, so a client cannot evade the stronger policy by changing its request body.
+
+Every `429` includes `Retry-After`, `RateLimit-Limit`, `RateLimit-Remaining`, and `RateLimit-Reset` headers plus a non-secret `meta` object containing the same retry timing. An authenticated denied attempt creates a rate-limit audit record at most once per policy and user per minute on each API instance. Audit metadata contains only the policy, typed route, retry interval, and fallback state; request bodies, notification text, email addresses, credentials, and device tokens are never recorded.
+
+All policy defaults can be overridden using `RATE_LIMIT_<POLICY>_{LIMIT,WINDOW_SECONDS,BURST}`. The production environment template lists the notification-specific settings. Redis is required when rate limiting is enabled in production; the bounded in-process fallback protects a single instance during a transient Redis error but does not replace the shared quota.
+
 ## Operations
 
 After applying migrations through `00035`, verify the worker from inside the Compose network:

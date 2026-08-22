@@ -18,11 +18,14 @@ import (
 	"time"
 
 	"mediguide/internal/httpx"
+	"mediguide/internal/models"
 	"mediguide/internal/security"
 
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 	"github.com/redis/go-redis/v9"
 	"github.com/rs/zerolog/log"
+	"gorm.io/gorm"
 )
 
 type RateLimitPolicy struct {
@@ -40,6 +43,9 @@ type RateLimiter struct {
 	enabled     bool
 	fallback    *localRateLimiter
 	concurrency *localConcurrencyLimiter
+	auditDB     *gorm.DB
+	auditMu     sync.Mutex
+	lastAudit   map[string]time.Time
 }
 
 type rateDecision struct {
@@ -106,7 +112,15 @@ func NewRateLimiter(client redis.UniversalClient, prefix string, enabled bool) *
 	return &RateLimiter{
 		client: client, prefix: strings.TrimSuffix(prefix, ":"), enabled: enabled,
 		fallback: newLocalRateLimiter(10_000), concurrency: newLocalConcurrencyLimiter(),
+		lastAudit: make(map[string]time.Time),
 	}
+}
+
+// WithAuditDB records a bounded, content-free audit event when an authenticated
+// caller repeatedly exceeds a limit. Audit failures never make an endpoint fail.
+func (l *RateLimiter) WithAuditDB(database *gorm.DB) *RateLimiter {
+	l.auditDB = database
+	return l
 }
 
 func ByMethod(read, write gin.HandlerFunc) gin.HandlerFunc {
@@ -157,10 +171,16 @@ func (l *RateLimiter) Limit(policy RateLimitPolicy, identity IdentityFunc) gin.H
 			route = "unmatched"
 		}
 		if !decision.allowed {
+			retrySeconds := max(secondsCeil(decision.retryAfter), 1)
 			log.Warn().Str("rate_limit_policy", policy.Name).Bool("rate_limit_fallback", fallback).
 				Str("route", route).Bool("rate_limit_allowed", false).Int("rate_limit_remaining", decision.remaining).
-				Int("retry_after_seconds", secondsCeil(decision.retryAfter)).Msg("request rate limited")
-			httpx.Error(c, http.StatusTooManyRequests, "rate limit exceeded")
+				Int("retry_after_seconds", retrySeconds).Msg("request rate limited")
+			l.auditDenied(c, policy, identityValue, route, retrySeconds, fallback)
+			httpx.TooManyRequests(c, httpx.RateLimitMetadata{
+				Limit: decision.limit, Remaining: max(decision.remaining, 0),
+				RetryAfterSeconds: retrySeconds,
+				ResetAfterSeconds: max(secondsCeil(decision.resetAfter), retrySeconds),
+			})
 			c.Abort()
 			return
 		}
@@ -168,6 +188,19 @@ func (l *RateLimiter) Limit(policy RateLimitPolicy, identity IdentityFunc) gin.H
 			Bool("rate_limit_allowed", true).Bool("rate_limit_fallback", fallback).
 			Int("rate_limit_remaining", decision.remaining).Msg("rate limit evaluated")
 		c.Next()
+	}
+}
+
+// LimitWhen applies a second, stronger policy only when predicate matches.
+// It composes with the normal endpoint policy and keeps authorization separate.
+func (l *RateLimiter) LimitWhen(policy RateLimitPolicy, identity IdentityFunc, predicate func(*gin.Context) bool) gin.HandlerFunc {
+	limited := l.Limit(policy, identity)
+	return func(c *gin.Context) {
+		if predicate == nil || !predicate(c) {
+			c.Next()
+			return
+		}
+		limited(c)
 	}
 }
 
@@ -199,9 +232,9 @@ func (l *RateLimiter) Concurrency(name string, limit int, ttl time.Duration, ide
 			c.Header("Retry-After", strconv.Itoa(retrySeconds))
 			c.Header("RateLimit-Limit", strconv.Itoa(limit))
 			c.Header("RateLimit-Remaining", "0")
-			c.Header("RateLimit-Reset", strconv.FormatInt(time.Now().Add(time.Duration(retrySeconds)*time.Second).Unix(), 10))
+			c.Header("RateLimit-Reset", strconv.Itoa(retrySeconds))
 			log.Warn().Str("rate_limit_policy", name).Bool("rate_limit_fallback", fallback).Msg("request concurrency limited")
-			httpx.Error(c, http.StatusTooManyRequests, "too many concurrent requests")
+			httpx.TooManyRequests(c, httpx.RateLimitMetadata{Limit: limit, Remaining: 0, RetryAfterSeconds: retrySeconds, ResetAfterSeconds: retrySeconds})
 			c.Abort()
 			return
 		}
@@ -278,6 +311,100 @@ func SessionIdentity(c *gin.Context) string {
 
 func StaticIdentity(value string) IdentityFunc {
 	return func(_ *gin.Context) string { return "static:" + value }
+}
+
+// JSONFieldEquals safely inspects a small JSON body and restores it for handlers.
+func JSONFieldEquals(field, expected string) func(*gin.Context) bool {
+	return func(c *gin.Context) bool {
+		const maximum = 256 * 1024
+		if c.Request.Body == nil {
+			return true
+		}
+		if c.Request.ContentLength > maximum {
+			return true
+		}
+		original := c.Request.Body
+		data, err := io.ReadAll(io.LimitReader(original, maximum+1))
+		if err != nil {
+			return true
+		}
+		if len(data) > maximum {
+			c.Request.Body = io.NopCloser(io.MultiReader(bytes.NewReader(data), original))
+			return true
+		}
+		c.Request.Body = io.NopCloser(bytes.NewReader(data))
+		var payload map[string]any
+		if json.Unmarshal(data, &payload) != nil {
+			return true
+		}
+		value, ok := payload[field].(string)
+		if !ok {
+			return true
+		}
+		return strings.EqualFold(strings.TrimSpace(value), strings.TrimSpace(expected))
+	}
+}
+
+// CampaignIsUrgent resolves priority from PostgreSQL so clients cannot bypass
+// stronger approval and scheduling limits by altering request payloads.
+func CampaignIsUrgent(database *gorm.DB) func(*gin.Context) bool {
+	return func(c *gin.Context) bool {
+		id, err := uuid.Parse(strings.TrimSpace(c.Param("id")))
+		if err != nil || database == nil {
+			return true
+		}
+		var campaign struct {
+			Priority string
+			Type     string
+		}
+		if err := database.Model(&models.NotificationCampaign{}).Select("priority", "type").Where("id = ?", id).Take(&campaign).Error; err != nil {
+			return true
+		}
+		return strings.EqualFold(campaign.Priority, "urgent") || strings.EqualFold(campaign.Type, "emergency")
+	}
+}
+
+func (l *RateLimiter) auditDenied(c *gin.Context, policy RateLimitPolicy, identity, route string, retrySeconds int, fallback bool) {
+	if l.auditDB == nil {
+		return
+	}
+	actorID := ""
+	if value, ok := c.Get(ClaimsKey); ok {
+		if claims, valid := value.(*security.Claims); valid && claims.UserID != uuid.Nil {
+			actorID = claims.UserID.String()
+		}
+	}
+	if actorID == "" {
+		return
+	}
+	auditKey := policy.Name + ":" + hashValue(identity)
+	now := time.Now().UTC()
+	l.auditMu.Lock()
+	if previous := l.lastAudit[auditKey]; !previous.IsZero() && now.Sub(previous) < time.Minute {
+		l.auditMu.Unlock()
+		return
+	}
+	l.lastAudit[auditKey] = now
+	if len(l.lastAudit) > 10_000 {
+		for key, recordedAt := range l.lastAudit {
+			if now.Sub(recordedAt) > time.Hour {
+				delete(l.lastAudit, key)
+			}
+		}
+	}
+	l.auditMu.Unlock()
+
+	metadata, _ := json.Marshal(map[string]any{
+		"policy": policy.Name, "route": route, "retry_after_seconds": retrySeconds,
+		"fallback": fallback,
+	})
+	audit := models.AuditLog{
+		ActorID: actorID, Action: "rate_limit.denied", EntityType: "rate_limit_policy",
+		EntityID: hashValue(policy.Name), MetadataJSON: string(metadata), IPAddress: c.ClientIP(),
+	}
+	if err := l.auditDB.WithContext(c.Request.Context()).Create(&audit).Error; err != nil {
+		log.Error().Err(err).Str("rate_limit_policy", policy.Name).Msg("rate-limit audit write failed")
+	}
 }
 
 func IPAndJSONFieldIdentity(field string) IdentityFunc {

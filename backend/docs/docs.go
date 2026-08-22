@@ -4462,6 +4462,12 @@ const docTemplate = `{
                             "$ref": "#/definitions/handlers.FirebasePushResultEnvelope"
                         }
                     },
+                    "429": {
+                        "description": "Too Many Requests",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.RateLimitErrorResponse"
+                        }
+                    },
                     "503": {
                         "description": "Service Unavailable",
                         "schema": {
@@ -4536,6 +4542,12 @@ const docTemplate = `{
                         "description": "Bad Request",
                         "schema": {
                             "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    },
+                    "429": {
+                        "description": "Too Many Requests",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.RateLimitErrorResponse"
                         }
                     }
                 }
@@ -8152,6 +8164,12 @@ const docTemplate = `{
                         "schema": {
                             "$ref": "#/definitions/handlers.ErrorResponse"
                         }
+                    },
+                    "429": {
+                        "description": "Too Many Requests",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.RateLimitErrorResponse"
+                        }
                     }
                 }
             }
@@ -9190,6 +9208,12 @@ const docTemplate = `{
                         "schema": {
                             "$ref": "#/definitions/handlers.NotificationCampaignEnvelope"
                         }
+                    },
+                    "429": {
+                        "description": "Too Many Requests",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.RateLimitErrorResponse"
+                        }
                     }
                 }
             }
@@ -9221,6 +9245,12 @@ const docTemplate = `{
                         "description": "OK",
                         "schema": {
                             "$ref": "#/definitions/handlers.NotificationAudienceEstimateEnvelope"
+                        }
+                    },
+                    "429": {
+                        "description": "Too Many Requests",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.RateLimitErrorResponse"
                         }
                     }
                 }
@@ -9341,6 +9371,12 @@ const docTemplate = `{
                         "schema": {
                             "$ref": "#/definitions/handlers.ErrorResponse"
                         }
+                    },
+                    "429": {
+                        "description": "Too Many Requests",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.RateLimitErrorResponse"
+                        }
                     }
                 }
             }
@@ -9401,6 +9437,12 @@ const docTemplate = `{
                         "schema": {
                             "$ref": "#/definitions/handlers.NotificationDeliveryEnvelope"
                         }
+                    },
+                    "429": {
+                        "description": "Too Many Requests",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.RateLimitErrorResponse"
+                        }
                     }
                 }
             }
@@ -9439,6 +9481,12 @@ const docTemplate = `{
                         "description": "OK",
                         "schema": {
                             "$ref": "#/definitions/handlers.NotificationDeliveryEnvelope"
+                        }
+                    },
+                    "429": {
+                        "description": "Too Many Requests",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.RateLimitErrorResponse"
                         }
                     }
                 }
@@ -9547,6 +9595,12 @@ const docTemplate = `{
                         "description": "OK",
                         "schema": {
                             "$ref": "#/definitions/handlers.NotificationOutboxJobEnvelope"
+                        }
+                    },
+                    "429": {
+                        "description": "Too Many Requests",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.RateLimitErrorResponse"
                         }
                     }
                 }
@@ -9949,6 +10003,12 @@ const docTemplate = `{
                         "description": "Created",
                         "schema": {
                             "$ref": "#/definitions/handlers.NotificationEnvelope"
+                        }
+                    },
+                    "429": {
+                        "description": "Too Many Requests",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.RateLimitErrorResponse"
                         }
                     }
                 }
@@ -10356,6 +10416,12 @@ const docTemplate = `{
                         "description": "Created",
                         "schema": {
                             "$ref": "#/definitions/handlers.NotificationCampaignEnvelope"
+                        }
+                    },
+                    "429": {
+                        "description": "Too Many Requests",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.RateLimitErrorResponse"
                         }
                     }
                 }
@@ -12548,6 +12614,12 @@ const docTemplate = `{
                         "description": "Created",
                         "schema": {
                             "$ref": "#/definitions/handlers.NotificationCampaignEnvelope"
+                        }
+                    },
+                    "429": {
+                        "description": "Too Many Requests",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.RateLimitErrorResponse"
                         }
                     }
                 }
@@ -15988,6 +16060,22 @@ const docTemplate = `{
                 }
             }
         },
+        "handlers.RateLimitErrorResponse": {
+            "type": "object",
+            "properties": {
+                "error": {
+                    "type": "string",
+                    "example": "rate limit exceeded"
+                },
+                "meta": {
+                    "$ref": "#/definitions/httpx.RateLimitMetadata"
+                },
+                "success": {
+                    "type": "boolean",
+                    "example": false
+                }
+            }
+        },
         "handlers.ReadingProgressEnvelope": {
             "type": "object",
             "properties": {
@@ -16375,6 +16463,23 @@ const docTemplate = `{
                 }
             }
         },
+        "httpx.RateLimitMetadata": {
+            "type": "object",
+            "properties": {
+                "limit": {
+                    "type": "integer"
+                },
+                "remaining": {
+                    "type": "integer"
+                },
+                "reset_after_seconds": {
+                    "type": "integer"
+                },
+                "retry_after_seconds": {
+                    "type": "integer"
+                }
+            }
+        },
         "httpx.Response": {
             "type": "object",
             "properties": {
@@ -16382,6 +16487,7 @@ const docTemplate = `{
                 "error": {
                     "type": "string"
                 },
+                "meta": {},
                 "success": {
                     "type": "boolean"
                 }

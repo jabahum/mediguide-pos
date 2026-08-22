@@ -3693,6 +3693,29 @@ final class HandlersPublishResult {
   Map<String, dynamic> toJson() => Map.of(value);
 }
 
+final class HandlersRateLimitErrorResponse {
+  HandlersRateLimitErrorResponse(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory HandlersRateLimitErrorResponse.fromJson(Map<String, dynamic> json) =>
+      HandlersRateLimitErrorResponse(json);
+
+  static const schemaName = 'handlers.RateLimitErrorResponse';
+  final Map<String, dynamic> value;
+
+  String? get error => value['error']?.toString();
+
+  HttpxRateLimitMetadata? get meta {
+    final raw = value['meta'];
+    if (raw is! Map) return null;
+    return HttpxRateLimitMetadata.fromJson(_jsonMap(raw));
+  }
+
+  bool? get success => value['success'] as bool?;
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
 final class HandlersReadingProgressEnvelope {
   HandlersReadingProgressEnvelope(Map<String, dynamic> value)
     : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
@@ -4287,6 +4310,27 @@ final class HandlersVerificationResultEnvelope {
   Map<String, dynamic> toJson() => Map.of(value);
 }
 
+final class HttpxRateLimitMetadata {
+  HttpxRateLimitMetadata(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory HttpxRateLimitMetadata.fromJson(Map<String, dynamic> json) =>
+      HttpxRateLimitMetadata(json);
+
+  static const schemaName = 'httpx.RateLimitMetadata';
+  final Map<String, dynamic> value;
+
+  int? get limit => (value['limit'] as num?)?.toInt();
+
+  int? get remaining => (value['remaining'] as num?)?.toInt();
+
+  int? get resetAfterSeconds => (value['reset_after_seconds'] as num?)?.toInt();
+
+  int? get retryAfterSeconds => (value['retry_after_seconds'] as num?)?.toInt();
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
 final class HttpxResponse {
   HttpxResponse(Map<String, dynamic> value)
     : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
@@ -4300,6 +4344,8 @@ final class HttpxResponse {
   Object? get data => value['data'];
 
   String? get error => value['error']?.toString();
+
+  Object? get meta => value['meta'];
 
   bool? get success => value['success'] as bool?;
 

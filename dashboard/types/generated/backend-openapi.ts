@@ -1044,6 +1044,14 @@ export interface HandlersPublishResult {
   published?: boolean;
 }
 
+export interface HandlersRateLimitErrorResponse {
+  /** @example "rate limit exceeded" */
+  error?: string;
+  meta?: HttpxRateLimitMetadata;
+  /** @example false */
+  success?: boolean;
+}
+
 export interface HandlersReadingProgressEnvelope {
   data?: ModelsReadingProgress;
   success?: boolean;
@@ -1227,9 +1235,17 @@ export interface HandlersVerificationResultEnvelope {
   success?: boolean;
 }
 
+export interface HttpxRateLimitMetadata {
+  limit?: number;
+  remaining?: number;
+  reset_after_seconds?: number;
+  retry_after_seconds?: number;
+}
+
 export interface HttpxResponse {
   data?: any;
   error?: string;
+  meta?: any;
   success?: boolean;
 }
 

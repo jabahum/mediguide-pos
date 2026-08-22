@@ -144,6 +144,7 @@ func (h NotificationHandler) Get(c *gin.Context) {
 // @Security BearerAuth
 // @Param payload body services.NotificationInput true "Notification"
 // @Success 201 {object} handlers.NotificationEnvelope
+// @Failure 429 {object} handlers.RateLimitErrorResponse
 // @Router /api/v2/notifications [post]
 func (h NotificationHandler) Create(c *gin.Context) {
 	var in services.NotificationInput
@@ -400,6 +401,7 @@ func (h NotificationHandler) GetCampaign(c *gin.Context) {
 // @Security BearerAuth
 // @Param payload body handlers.NotificationAudienceEstimateInput true "Typed audience"
 // @Success 200 {object} handlers.NotificationAudienceEstimateEnvelope
+// @Failure 429 {object} handlers.RateLimitErrorResponse
 // @Router /api/v2/notification-campaigns/audience-estimate [post]
 func (h NotificationHandler) EstimateAudience(c *gin.Context) {
 	var in NotificationAudienceEstimateInput
@@ -421,6 +423,7 @@ func (h NotificationHandler) EstimateAudience(c *gin.Context) {
 // @Security BearerAuth
 // @Param payload body services.NotificationCampaignInput true "Campaign"
 // @Success 201 {object} handlers.NotificationCampaignEnvelope
+// @Failure 429 {object} handlers.RateLimitErrorResponse
 // @Router /api/v2/notification-campaigns [post]
 func (h NotificationHandler) CreateCampaign(c *gin.Context) {
 	var in services.NotificationCampaignInput
@@ -446,6 +449,7 @@ func (h NotificationHandler) CreateCampaign(c *gin.Context) {
 // @Failure 400 {object} handlers.ErrorResponse
 // @Failure 403 {object} handlers.ErrorResponse
 // @Failure 404 {object} handlers.ErrorResponse
+// @Failure 429 {object} handlers.RateLimitErrorResponse
 // @Router /api/v2/guidelines/{id}/notification-campaign [post]
 func (h NotificationHandler) CreateGuidelineCampaign(c *gin.Context) {
 	documentID, err := uuid.Parse(c.Param("id"))
@@ -473,6 +477,7 @@ func (h NotificationHandler) CreateGuidelineCampaign(c *gin.Context) {
 // @Param id path string true "Published outbreak UUID"
 // @Param payload body services.OutbreakNotificationCampaignInput true "Audience, schedule, priority and campaign kind"
 // @Success 201 {object} handlers.NotificationCampaignEnvelope
+// @Failure 429 {object} handlers.RateLimitErrorResponse
 // @Router /api/v2/outbreaks/{id}/notification-campaign [post]
 func (h NotificationHandler) CreateOutbreakCampaign(c *gin.Context) {
 	id, err := uuid.Parse(c.Param("id"))
@@ -504,6 +509,7 @@ func (h NotificationHandler) CreateOutbreakCampaign(c *gin.Context) {
 // @Param id path string true "Published situation-report UUID"
 // @Param payload body services.OutbreakNotificationCampaignInput true "Audience, schedule and priority"
 // @Success 201 {object} handlers.NotificationCampaignEnvelope
+// @Failure 429 {object} handlers.RateLimitErrorResponse
 // @Router /api/v2/situation-reports/{id}/notification-campaign [post]
 func (h NotificationHandler) CreateSituationReportCampaign(c *gin.Context) {
 	id, err := uuid.Parse(c.Param("id"))
@@ -560,6 +566,7 @@ func (h NotificationHandler) UpdateCampaign(c *gin.Context) {
 // @Param payload body services.NotificationCampaignTransitionInput true "Transition"
 // @Success 200 {object} handlers.NotificationCampaignEnvelope
 // @Failure 409 {object} handlers.ErrorResponse
+// @Failure 429 {object} handlers.RateLimitErrorResponse
 // @Router /api/v2/notification-campaigns/{id}/{action} [post]
 func (h NotificationHandler) TransitionCampaign(c *gin.Context) {
 	h.transitionCampaign(c, c.Param("action"))
@@ -630,6 +637,7 @@ func (h NotificationHandler) ListDeliveryJobs(c *gin.Context) {
 // @Security BearerAuth
 // @Param payload body services.NotificationOutboxRequeueInput true "Explicit confirmation and reason"
 // @Success 200 {object} handlers.NotificationOutboxJobEnvelope
+// @Failure 429 {object} handlers.RateLimitErrorResponse
 // @Router /api/v2/notification-delivery-jobs/{id}/requeue [post]
 func (h NotificationHandler) RequeueDeliveryJob(c *gin.Context) {
 	id, ok := notificationID(c)
@@ -651,6 +659,7 @@ func (h NotificationHandler) RequeueDeliveryJob(c *gin.Context) {
 // @Param id path string true "Delivery UUID"
 // @Param payload body services.NotificationDeliveryEventInput true "Client event"
 // @Success 200 {object} handlers.NotificationDeliveryEnvelope
+// @Failure 429 {object} handlers.RateLimitErrorResponse
 // @Router /api/v2/notification-deliveries/{id}/open [post]
 func (h NotificationHandler) RecordDeliveryOpen(c *gin.Context) {
 	h.recordDeliveryEvent(c, "opened")
@@ -663,6 +672,7 @@ func (h NotificationHandler) RecordDeliveryOpen(c *gin.Context) {
 // @Param id path string true "Delivery UUID"
 // @Param payload body services.NotificationDeliveryEventInput true "Client event"
 // @Success 200 {object} handlers.NotificationDeliveryEnvelope
+// @Failure 429 {object} handlers.RateLimitErrorResponse
 // @Router /api/v2/notification-deliveries/{id}/click [post]
 func (h NotificationHandler) RecordDeliveryClick(c *gin.Context) {
 	h.recordDeliveryEvent(c, "clicked")

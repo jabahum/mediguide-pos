@@ -3,6 +3,7 @@ package handlers
 import (
 	"encoding/json"
 
+	"mediguide/internal/httpx"
 	"mediguide/internal/models"
 	"mediguide/internal/services"
 
@@ -115,6 +116,12 @@ type HealthResult struct {
 type ErrorResponse struct {
 	Success bool   `json:"success" example:"false"`
 	Error   string `json:"error" example:"invalid request"`
+}
+
+type RateLimitErrorResponse struct {
+	Success bool                    `json:"success" example:"false"`
+	Error   string                  `json:"error" example:"rate limit exceeded"`
+	Meta    httpx.RateLimitMetadata `json:"meta"`
 }
 
 type FirebaseStatusResult struct {

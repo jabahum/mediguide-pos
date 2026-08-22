@@ -144,6 +144,7 @@ func (h FirebaseHandler) DeleteDevice(c *gin.Context) {
 // @Security BearerAuth
 // @Param payload body services.FirebasePushInput true "Push notification"
 // @Success 200 {object} handlers.FirebasePushResultEnvelope
+// @Failure 429 {object} handlers.RateLimitErrorResponse
 // @Failure 503 {object} handlers.ErrorResponse
 // @Router /api/v2/firebase/push/test [post]
 func (h FirebaseHandler) SendTestPush(c *gin.Context) {
@@ -189,6 +190,7 @@ func (h FirebaseHandler) GetRemoteConfig(c *gin.Context) {
 // @Param payload body handlers.FirebaseRemoteConfigUpdateRequest true "Remote Config update"
 // @Success 200 {object} handlers.FirebaseRemoteConfigEnvelope
 // @Failure 400 {object} handlers.ErrorResponse
+// @Failure 429 {object} handlers.RateLimitErrorResponse
 // @Router /api/v2/firebase/remote-config [put]
 func (h FirebaseHandler) PutRemoteConfig(c *gin.Context) {
 	etag := strings.TrimSpace(c.GetHeader("If-Match"))

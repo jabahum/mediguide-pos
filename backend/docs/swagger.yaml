@@ -1558,6 +1558,17 @@ definitions:
         example: true
         type: boolean
     type: object
+  handlers.RateLimitErrorResponse:
+    properties:
+      error:
+        example: rate limit exceeded
+        type: string
+      meta:
+        $ref: '#/definitions/httpx.RateLimitMetadata'
+      success:
+        example: false
+        type: boolean
+    type: object
   handlers.ReadingProgressEnvelope:
     properties:
       data:
@@ -1818,11 +1829,23 @@ definitions:
         example: true
         type: boolean
     type: object
+  httpx.RateLimitMetadata:
+    properties:
+      limit:
+        type: integer
+      remaining:
+        type: integer
+      reset_after_seconds:
+        type: integer
+      retry_after_seconds:
+        type: integer
+    type: object
   httpx.Response:
     properties:
       data: {}
       error:
         type: string
+      meta: {}
       success:
         type: boolean
     type: object
@@ -10004,6 +10027,10 @@ paths:
           description: OK
           schema:
             $ref: '#/definitions/handlers.FirebasePushResultEnvelope'
+        "429":
+          description: Too Many Requests
+          schema:
+            $ref: '#/definitions/handlers.RateLimitErrorResponse'
         "503":
           description: Service Unavailable
           schema:
@@ -10051,6 +10078,10 @@ paths:
           description: Bad Request
           schema:
             $ref: '#/definitions/handlers.ErrorResponse'
+        "429":
+          description: Too Many Requests
+          schema:
+            $ref: '#/definitions/handlers.RateLimitErrorResponse'
       security:
       - BearerAuth: []
       summary: Validate or publish a Firebase Remote Config template
@@ -12353,6 +12384,10 @@ paths:
           description: Not Found
           schema:
             $ref: '#/definitions/handlers.ErrorResponse'
+        "429":
+          description: Too Many Requests
+          schema:
+            $ref: '#/definitions/handlers.RateLimitErrorResponse'
       security:
       - BearerAuth: []
       summary: Create a draft notification campaign for a published guideline
@@ -12990,6 +13025,10 @@ paths:
           description: Created
           schema:
             $ref: '#/definitions/handlers.NotificationCampaignEnvelope'
+        "429":
+          description: Too Many Requests
+          schema:
+            $ref: '#/definitions/handlers.RateLimitErrorResponse'
       security:
       - BearerAuth: []
       summary: Create a notification campaign
@@ -13062,6 +13101,10 @@ paths:
           description: Conflict
           schema:
             $ref: '#/definitions/handlers.ErrorResponse'
+        "429":
+          description: Too Many Requests
+          schema:
+            $ref: '#/definitions/handlers.RateLimitErrorResponse'
       security:
       - BearerAuth: []
       summary: Apply a guarded notification-campaign workflow transition
@@ -13081,6 +13124,10 @@ paths:
           description: OK
           schema:
             $ref: '#/definitions/handlers.NotificationAudienceEstimateEnvelope'
+        "429":
+          description: Too Many Requests
+          schema:
+            $ref: '#/definitions/handlers.RateLimitErrorResponse'
       security:
       - BearerAuth: []
       summary: Estimate eligible users and active devices for a typed campaign audience
@@ -13117,6 +13164,10 @@ paths:
           description: OK
           schema:
             $ref: '#/definitions/handlers.NotificationDeliveryEnvelope'
+        "429":
+          description: Too Many Requests
+          schema:
+            $ref: '#/definitions/handlers.RateLimitErrorResponse'
       security:
       - BearerAuth: []
       summary: Record an authenticated user's notification action click idempotently
@@ -13141,6 +13192,10 @@ paths:
           description: OK
           schema:
             $ref: '#/definitions/handlers.NotificationDeliveryEnvelope'
+        "429":
+          description: Too Many Requests
+          schema:
+            $ref: '#/definitions/handlers.RateLimitErrorResponse'
       security:
       - BearerAuth: []
       summary: Record an authenticated user's notification open event idempotently
@@ -13207,6 +13262,10 @@ paths:
           description: OK
           schema:
             $ref: '#/definitions/handlers.NotificationOutboxJobEnvelope'
+        "429":
+          description: Too Many Requests
+          schema:
+            $ref: '#/definitions/handlers.RateLimitErrorResponse'
       security:
       - BearerAuth: []
       summary: Requeue one terminally failed notification delivery job
@@ -13446,6 +13505,10 @@ paths:
           description: Created
           schema:
             $ref: '#/definitions/handlers.NotificationEnvelope'
+        "429":
+          description: Too Many Requests
+          schema:
+            $ref: '#/definitions/handlers.RateLimitErrorResponse'
       security:
       - BearerAuth: []
       summary: Publish a notification
@@ -13692,6 +13755,10 @@ paths:
           description: Created
           schema:
             $ref: '#/definitions/handlers.NotificationCampaignEnvelope'
+        "429":
+          description: Too Many Requests
+          schema:
+            $ref: '#/definitions/handlers.RateLimitErrorResponse'
       security:
       - BearerAuth: []
       summary: Create a draft notification campaign from a published outbreak
@@ -15034,6 +15101,10 @@ paths:
           description: Created
           schema:
             $ref: '#/definitions/handlers.NotificationCampaignEnvelope'
+        "429":
+          description: Too Many Requests
+          schema:
+            $ref: '#/definitions/handlers.RateLimitErrorResponse'
       security:
       - BearerAuth: []
       summary: Create a draft notification campaign from a published situation report

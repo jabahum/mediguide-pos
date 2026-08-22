@@ -137,6 +137,20 @@ type GuidelineNotificationCampaignInput struct {
 	IdempotencyKey    string                         `json:"idempotency_key"`
 }
 
+// OutbreakNotificationCampaignInput deliberately omits template, action and
+// source fields. Those values are selected and derived by the server so an
+// editor cannot turn trusted public-health content into an arbitrary action.
+type OutbreakNotificationCampaignInput struct {
+	Kind              string                         `json:"kind" enums:"alert,update,status_change,closure,publication"`
+	Audience          NotificationAudienceDefinition `json:"audience"`
+	ScheduledAt       *time.Time                     `json:"scheduled_at"`
+	Timezone          string                         `json:"timezone"`
+	Priority          string                         `json:"priority" enums:"low,normal,high,urgent"`
+	RequestedChannels []string                       `json:"requested_channels"`
+	IdempotencyKey    string                         `json:"idempotency_key"`
+	ConfirmedUrgent   bool                           `json:"confirmed_urgent"`
+}
+
 type NotificationCampaignDTO struct {
 	ID                     uuid.UUID                      `json:"id"`
 	Name                   string                         `json:"name"`
@@ -519,6 +533,93 @@ func (s NotificationService) CreateGuidelineCampaign(documentID uuid.UUID, in Gu
 		RequestedChannels: in.RequestedChannels,
 		IdempotencyKey:    in.IdempotencyKey,
 	}, actor, ip)
+}
+
+// CreateOutbreakCampaign creates a draft campaign from an explicitly
+// published outbreak. It never submits, approves, schedules or dispatches it.
+func (s NotificationService) CreateOutbreakCampaign(outbreakID uuid.UUID, in OutbreakNotificationCampaignInput, actor uuid.UUID, ip string) (*NotificationCampaignDTO, error) {
+	var outbreak models.Outbreak
+	if err := s.DB.First(&outbreak, "id = ? AND published_at IS NOT NULL AND withdrawn_at IS NULL AND status IN ?", outbreakID, []string{"published", "active", "monitoring", "contained", "closed"}).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, ErrNotificationInvalid
+		}
+		return nil, err
+	}
+	kind := strings.TrimSpace(in.Kind)
+	if kind == "" {
+		kind = "alert"
+	}
+	key := map[string]string{"alert": "outbreak-alert", "update": "outbreak-update", "status_change": "outbreak-status-change", "closure": "outbreak-status-change"}[kind]
+	if key == "" || in.Priority == "urgent" && !in.ConfirmedUrgent {
+		return nil, ErrNotificationInvalid
+	}
+	version, err := s.currentPublishedTemplateVersion(key)
+	if err != nil {
+		return nil, err
+	}
+	return s.SaveCampaign(nil, NotificationCampaignInput{
+		Name: "Outbreak notification: " + outbreak.Title, Type: "emergency",
+		TemplateVersionID: version.ID,
+		Variables:         map[string]any{"outbreak_id": outbreak.ID.String(), "title": outbreak.Title, "status": outbreak.Status, "area": outbreak.GeographicArea, "data_as_of": formatOptionalTime(outbreak.DataAsOf)},
+		Audience:          in.Audience, ScheduledAt: in.ScheduledAt, Timezone: in.Timezone,
+		Priority: in.Priority, RequestedChannels: in.RequestedChannels, IdempotencyKey: in.IdempotencyKey,
+	}, actor, ip)
+}
+
+// CreateSituationReportCampaign creates a draft campaign from published,
+// visible report content. Parent outbreak visibility is checked independently.
+func (s NotificationService) CreateSituationReportCampaign(reportID uuid.UUID, in OutbreakNotificationCampaignInput, actor uuid.UUID, ip string) (*NotificationCampaignDTO, error) {
+	if kind := strings.TrimSpace(in.Kind); kind != "" && kind != "publication" {
+		return nil, ErrNotificationInvalid
+	}
+	var report models.SituationReport
+	if err := s.DB.First(&report, "id = ? AND status = 'published' AND published_at IS NOT NULL AND withdrawn_at IS NULL", reportID).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, ErrNotificationInvalid
+		}
+		return nil, err
+	}
+	if report.OutbreakID != nil {
+		var visible int64
+		if err := s.DB.Model(&models.Outbreak{}).Where("id = ? AND published_at IS NOT NULL AND withdrawn_at IS NULL AND status IN ?", *report.OutbreakID, []string{"published", "active", "monitoring", "contained", "closed"}).Count(&visible).Error; err != nil {
+			return nil, err
+		}
+		if visible != 1 {
+			return nil, ErrNotificationInvalid
+		}
+	}
+	if in.Priority == "urgent" && !in.ConfirmedUrgent {
+		return nil, ErrNotificationInvalid
+	}
+	version, err := s.currentPublishedTemplateVersion("situation-report-publication")
+	if err != nil {
+		return nil, err
+	}
+	return s.SaveCampaign(nil, NotificationCampaignInput{
+		Name: "Situation report: " + report.Title, Type: "update", TemplateVersionID: version.ID,
+		Variables: map[string]any{"situation_report_id": report.ID.String(), "title": report.Title, "area": report.GeographicArea, "publication_date": report.PublicationDate.UTC().Format("2006-01-02")},
+		Audience:  in.Audience, ScheduledAt: in.ScheduledAt, Timezone: in.Timezone,
+		Priority: in.Priority, RequestedChannels: in.RequestedChannels, IdempotencyKey: in.IdempotencyKey,
+	}, actor, ip)
+}
+
+func (s NotificationService) currentPublishedTemplateVersion(key string) (*models.NotificationTemplateVersion, error) {
+	var template models.NotificationTemplate
+	if err := s.DB.First(&template, "template_key = ? AND status = 'published'", key).Error; err != nil {
+		return nil, err
+	}
+	var version models.NotificationTemplateVersion
+	if err := s.DB.First(&version, "template_id = ? AND version = ? AND status = 'published'", template.ID, template.CurrentVersion).Error; err != nil {
+		return nil, err
+	}
+	return &version, nil
+}
+
+func formatOptionalTime(value *time.Time) string {
+	if value == nil {
+		return ""
+	}
+	return value.UTC().Format(time.RFC3339)
 }
 
 func (s NotificationService) TransitionCampaign(id uuid.UUID, action string, in NotificationCampaignTransitionInput, actor uuid.UUID, ip string) (*NotificationCampaignDTO, error) {

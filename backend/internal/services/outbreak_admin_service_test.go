@@ -70,6 +70,39 @@ func TestOutbreakGeographyAndResourceSafetyValidation(t *testing.T) {
 	if _, err := service.CreateResource(OutbreakActor{ID: uuid.New()}, parent.ID, ChildContentInput{Title: &title, ResourceType: &kind, URL: &hostile}); !errors.Is(err, ErrOutbreakInvalid) {
 		t.Fatalf("hostile resource URL accepted: %v", err)
 	}
+	redirect := "https://health.go.ug/open?redirect=https://evil.example"
+	if _, err := service.CreateResource(OutbreakActor{ID: uuid.New()}, parent.ID, ChildContentInput{Title: &title, ResourceType: &kind, URL: &redirect}); !errors.Is(err, ErrOutbreakInvalid) {
+		t.Fatalf("redirect-style resource URL accepted: %v", err)
+	}
+	managed, rawStorageKey := "managed_document", "situation-reports/private/report.pdf"
+	if _, err := service.CreateResource(OutbreakActor{ID: uuid.New()}, parent.ID, ChildContentInput{Title: &title, ResourceType: &managed, AssetURL: &rawStorageKey}); !errors.Is(err, ErrOutbreakInvalid) {
+		t.Fatalf("raw managed storage key accepted: %v", err)
+	}
+}
+
+func TestOutbreakAdministrationFiltersAreTypedAndApplied(t *testing.T) {
+	service := outbreakAdminTestService(t)
+	now := time.Now().UTC()
+	old := now.Add(-72 * time.Hour)
+	region := models.Region{Name: "Central"}
+	if err := service.DB.Create(&region).Error; err != nil {
+		t.Fatal(err)
+	}
+	first := models.Outbreak{Base: models.Base{UpdatedAt: now}, Title: "Ebola response", DiseaseType: "Ebola", GeographicArea: "Kampala", RegionID: &region.ID, Status: "active", VisualTone: "critical", LastUpdate: now, EffectiveAt: &now, LockVersion: 1}
+	second := models.Outbreak{Base: models.Base{UpdatedAt: old}, Title: "Malaria update", DiseaseType: "Malaria", GeographicArea: "Gulu", Status: "monitoring", VisualTone: "info", LastUpdate: old, EffectiveAt: &old, LockVersion: 1}
+	if err := service.DB.Create(&first).Error; err != nil {
+		t.Fatal(err)
+	}
+	if err := service.DB.Create(&second).Error; err != nil {
+		t.Fatal(err)
+	}
+	page, err := service.ListOutbreaks(OutbreakAdminQuery{Page: PageInput{Page: 1, PerPage: 20}, Disease: "ebola", RegionID: region.ID.String(), VisualTone: "critical", UpdatedFrom: now.Add(-time.Hour).Format(time.RFC3339), Sort: "effective_at", Order: "desc"})
+	if err != nil || page.TotalItems != 1 || page.Items[0].ID != first.ID {
+		t.Fatalf("typed filters returned %#v err=%v", page, err)
+	}
+	if _, err := service.ListOutbreaks(OutbreakAdminQuery{UpdatedFrom: "yesterday"}); !errors.Is(err, ErrOutbreakInvalid) {
+		t.Fatalf("malformed date accepted: %v", err)
+	}
 }
 
 func TestSituationReportHighlightsAreBoundedAndUnique(t *testing.T) {
@@ -93,6 +126,7 @@ func TestOutbreakLifecycleRequiresIndependentReviewerAndOptimisticLock(t *testin
 	now := time.Now().UTC()
 	author := OutbreakActor{ID: uuid.New(), IP: "127.0.0.1"}
 	reviewer := OutbreakActor{ID: uuid.New(), IP: "127.0.0.2"}
+	publisher := OutbreakActor{ID: uuid.New(), IP: "127.0.0.3"}
 	item, err := service.CreateOutbreak(author, validOutbreakDraftInput(now))
 	if err != nil || item.Status != "draft" || item.LockVersion != 1 {
 		t.Fatalf("create: %#v %v", item, err)
@@ -110,7 +144,10 @@ func TestOutbreakLifecycleRequiresIndependentReviewerAndOptimisticLock(t *testin
 	if _, err = service.TransitionOutbreak(reviewer, item.ID, "publish", TransitionInput{LockVersion: 2}); !errors.Is(err, ErrOutbreakConflict) {
 		t.Fatalf("stale lock accepted: %v", err)
 	}
-	published, err := service.TransitionOutbreak(reviewer, item.ID, "publish", TransitionInput{LockVersion: 3, OperationalStatus: "active"})
+	if _, err = service.TransitionOutbreak(reviewer, item.ID, "publish", TransitionInput{LockVersion: 3, OperationalStatus: "active"}); !errors.Is(err, ErrOutbreakInvalid) {
+		t.Fatalf("critical outbreak reviewer also published: %v", err)
+	}
+	published, err := service.TransitionOutbreak(publisher, item.ID, "publish", TransitionInput{LockVersion: 3, OperationalStatus: "active"})
 	if err != nil || published.Status != "active" || published.PublishedAt == nil {
 		t.Fatalf("publish: %#v %v", published, err)
 	}
@@ -124,6 +161,34 @@ func TestOutbreakLifecycleRequiresIndependentReviewerAndOptimisticLock(t *testin
 	var auditCount int64
 	if err := service.DB.Model(&models.AuditLog{}).Where("entity_type = ?", "outbreak").Count(&auditCount).Error; err != nil || auditCount < 5 {
 		t.Fatalf("audit count=%d err=%v", auditCount, err)
+	}
+}
+
+func TestOutbreakReviewCommentIsValidatedAndAudited(t *testing.T) {
+	service := outbreakAdminTestService(t)
+	actor := OutbreakActor{ID: uuid.New()}
+	item, err := service.CreateOutbreak(actor, validOutbreakDraftInput(time.Now().UTC()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := service.AddReviewComment(actor, "outbreak", item.ID, "  Confirm source date before publishing.  "); err != nil {
+		t.Fatal(err)
+	}
+	if err := service.AddReviewComment(actor, "outbreak", item.ID, "  "); !errors.Is(err, ErrOutbreakInvalid) {
+		t.Fatalf("blank comment accepted: %v", err)
+	}
+	history, err := service.ListAudit("outbreak", item.ID, PageInput{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	found := false
+	for _, event := range history.Items {
+		if event.Action == "outbreak.review_comment" && event.Metadata["comment"] == "Confirm source date before publishing." {
+			found = true
+		}
+	}
+	if !found {
+		t.Fatalf("review comment missing from audit history: %#v", history.Items)
 	}
 }
 

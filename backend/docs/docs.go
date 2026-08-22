@@ -749,6 +749,28 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/public/situation-reports/{id}/asset": {
+            "get": {
+                "produces": [
+                    "application/pdf"
+                ],
+                "tags": [
+                    "public-outbreaks"
+                ],
+                "summary": "Open the managed PDF for a published situation report",
+                "responses": {
+                    "307": {
+                        "description": "Temporary Redirect"
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/consultants/tree": {
             "get": {
                 "description": "Legacy v1 endpoint that groups consultants by region, city, then specialty.",
@@ -10024,6 +10046,80 @@ const docTemplate = `{
                     "outbreak-administration"
                 ],
                 "summary": "List outbreak administration records",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Title, summary, or disease search",
+                        "name": "search",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Lifecycle status",
+                        "name": "status",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Disease name",
+                        "name": "disease",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Geographic text",
+                        "name": "area",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Region UUID",
+                        "name": "region_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Visual tone",
+                        "name": "visual_tone",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Effective from (RFC3339)",
+                        "name": "effective_from",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Effective to (RFC3339)",
+                        "name": "effective_to",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Updated from (RFC3339)",
+                        "name": "updated_from",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Updated to (RFC3339)",
+                        "name": "updated_to",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Allowlisted sort field",
+                        "name": "sort",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "asc or desc",
+                        "name": "order",
+                        "in": "query"
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -10172,6 +10268,27 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/v2/outbreaks/{id}/audit": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "outbreak-administration"
+                ],
+                "summary": "List immutable audit history for outbreak content",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/services.PageResult-services_OutbreakAuditDTO"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v2/outbreaks/{id}/correct": {
             "post": {
                 "security": [
@@ -10199,6 +10316,46 @@ const docTemplate = `{
                         "description": "Created",
                         "schema": {
                             "$ref": "#/definitions/services.OutbreakAdminDTO"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v2/outbreaks/{id}/notification-campaign": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Creates a draft only; normal campaign review, approval and scheduling remain mandatory.",
+                "tags": [
+                    "notification-campaigns"
+                ],
+                "summary": "Create a draft notification campaign from a published outbreak",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Published outbreak UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Audience, schedule, priority and campaign kind",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/services.OutbreakNotificationCampaignInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.NotificationCampaignEnvelope"
                         }
                     }
                 }
@@ -10510,6 +10667,35 @@ const docTemplate = `{
                         "schema": {
                             "$ref": "#/definitions/services.OutbreakResourceAdminDTO"
                         }
+                    }
+                }
+            }
+        },
+        "/api/v2/outbreaks/{id}/review-comments": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "outbreak-administration"
+                ],
+                "summary": "Add an auditable review comment to outbreak content",
+                "parameters": [
+                    {
+                        "description": "Review comment",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/services.OutbreakReviewCommentInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
                     }
                 }
             }
@@ -12274,6 +12460,27 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/v2/situation-reports/{id}/audit": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "outbreak-administration"
+                ],
+                "summary": "List immutable audit history for outbreak content",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/services.PageResult-services_OutbreakAuditDTO"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v2/situation-reports/{id}/correct": {
             "post": {
                 "security": [
@@ -12301,6 +12508,46 @@ const docTemplate = `{
                         "description": "Created",
                         "schema": {
                             "$ref": "#/definitions/services.SituationReportAdminDTO"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v2/situation-reports/{id}/notification-campaign": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Creates a draft only; normal campaign review, approval and scheduling remain mandatory.",
+                "tags": [
+                    "notification-campaigns"
+                ],
+                "summary": "Create a draft notification campaign from a published situation report",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Published situation-report UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Audience, schedule and priority",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/services.OutbreakNotificationCampaignInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.NotificationCampaignEnvelope"
                         }
                     }
                 }
@@ -12334,6 +12581,35 @@ const docTemplate = `{
                         "schema": {
                             "$ref": "#/definitions/services.SituationReportAdminDTO"
                         }
+                    }
+                }
+            }
+        },
+        "/api/v2/situation-reports/{id}/review-comments": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "outbreak-administration"
+                ],
+                "summary": "Add an auditable review comment to outbreak content",
+                "parameters": [
+                    {
+                        "description": "Review comment",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/services.OutbreakReviewCommentInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
                     }
                 }
             }
@@ -21869,6 +22145,33 @@ const docTemplate = `{
                 }
             }
         },
+        "services.OutbreakAuditDTO": {
+            "type": "object",
+            "properties": {
+                "action": {
+                    "type": "string"
+                },
+                "actor_id": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "entity_id": {
+                    "type": "string"
+                },
+                "entity_type": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "metadata": {
+                    "type": "object",
+                    "additionalProperties": {}
+                }
+            }
+        },
         "services.OutbreakInput": {
             "type": "object",
             "properties": {
@@ -21957,6 +22260,51 @@ const docTemplate = `{
                 }
             }
         },
+        "services.OutbreakNotificationCampaignInput": {
+            "type": "object",
+            "properties": {
+                "audience": {
+                    "$ref": "#/definitions/services.NotificationAudienceDefinition"
+                },
+                "confirmed_urgent": {
+                    "type": "boolean"
+                },
+                "idempotency_key": {
+                    "type": "string"
+                },
+                "kind": {
+                    "type": "string",
+                    "enum": [
+                        "alert",
+                        "update",
+                        "status_change",
+                        "closure",
+                        "publication"
+                    ]
+                },
+                "priority": {
+                    "type": "string",
+                    "enum": [
+                        "low",
+                        "normal",
+                        "high",
+                        "urgent"
+                    ]
+                },
+                "requested_channels": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "scheduled_at": {
+                    "type": "string"
+                },
+                "timezone": {
+                    "type": "string"
+                }
+            }
+        },
         "services.OutbreakResourceAdminDTO": {
             "type": "object",
             "properties": {
@@ -22019,6 +22367,18 @@ const docTemplate = `{
                 },
                 "withdrawn_at": {
                     "type": "string"
+                }
+            }
+        },
+        "services.OutbreakReviewCommentInput": {
+            "type": "object",
+            "required": [
+                "comment"
+            ],
+            "properties": {
+                "comment": {
+                    "type": "string",
+                    "maxLength": 4000
                 }
             }
         },
@@ -22476,6 +22836,29 @@ const docTemplate = `{
                     "type": "array",
                     "items": {
                         "$ref": "#/definitions/services.OutbreakAdminDTO"
+                    }
+                },
+                "page": {
+                    "type": "integer"
+                },
+                "per_page": {
+                    "type": "integer"
+                },
+                "total_items": {
+                    "type": "integer"
+                },
+                "total_pages": {
+                    "type": "integer"
+                }
+            }
+        },
+        "services.PageResult-services_OutbreakAuditDTO": {
+            "type": "object",
+            "properties": {
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/services.OutbreakAuditDTO"
                     }
                 },
                 "page": {

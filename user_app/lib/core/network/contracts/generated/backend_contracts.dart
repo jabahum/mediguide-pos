@@ -10054,6 +10054,33 @@ final class ServicesOutbreakAdminDTO {
   Map<String, dynamic> toJson() => Map.of(value);
 }
 
+final class ServicesOutbreakAuditDTO {
+  ServicesOutbreakAuditDTO(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory ServicesOutbreakAuditDTO.fromJson(Map<String, dynamic> json) =>
+      ServicesOutbreakAuditDTO(json);
+
+  static const schemaName = 'services.OutbreakAuditDTO';
+  final Map<String, dynamic> value;
+
+  String? get action => value['action']?.toString();
+
+  String? get actorId => value['actor_id']?.toString();
+
+  String? get createdAt => value['created_at']?.toString();
+
+  String? get entityId => value['entity_id']?.toString();
+
+  String? get entityType => value['entity_type']?.toString();
+
+  String? get id => value['id']?.toString();
+
+  Map<String, dynamic> get metadata => _jsonMap(value['metadata']);
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
 final class ServicesOutbreakInput {
   ServicesOutbreakInput(Map<String, dynamic> value)
     : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
@@ -10137,6 +10164,44 @@ final class ServicesOutbreakMetric {
   Map<String, dynamic> toJson() => Map.of(value);
 }
 
+final class ServicesOutbreakNotificationCampaignInput {
+  ServicesOutbreakNotificationCampaignInput(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory ServicesOutbreakNotificationCampaignInput.fromJson(
+    Map<String, dynamic> json,
+  ) => ServicesOutbreakNotificationCampaignInput(json);
+
+  static const schemaName = 'services.OutbreakNotificationCampaignInput';
+  final Map<String, dynamic> value;
+
+  ServicesNotificationAudienceDefinition? get audience {
+    final raw = value['audience'];
+    if (raw is! Map) return null;
+    return ServicesNotificationAudienceDefinition.fromJson(_jsonMap(raw));
+  }
+
+  bool? get confirmedUrgent => value['confirmed_urgent'] as bool?;
+
+  String? get idempotencyKey => value['idempotency_key']?.toString();
+
+  String? get kind => value['kind']?.toString();
+
+  String? get priority => value['priority']?.toString();
+
+  List<String> get requestedChannels {
+    final raw = value['requested_channels'];
+    if (raw is! List) return const [];
+    return raw.whereType<String>().toList(growable: false);
+  }
+
+  String? get scheduledAt => value['scheduled_at']?.toString();
+
+  String? get timezone => value['timezone']?.toString();
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
 final class ServicesOutbreakResourceAdminDTO {
   ServicesOutbreakResourceAdminDTO(Map<String, dynamic> value)
     : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
@@ -10187,6 +10252,22 @@ final class ServicesOutbreakResourceAdminDTO {
   String? get withdrawalReason => value['withdrawal_reason']?.toString();
 
   String? get withdrawnAt => value['withdrawn_at']?.toString();
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
+final class ServicesOutbreakReviewCommentInput {
+  ServicesOutbreakReviewCommentInput(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory ServicesOutbreakReviewCommentInput.fromJson(
+    Map<String, dynamic> json,
+  ) => ServicesOutbreakReviewCommentInput(json);
+
+  static const schemaName = 'services.OutbreakReviewCommentInput';
+  final Map<String, dynamic> value;
+
+  String? get comment => value['comment']?.toString();
 
   Map<String, dynamic> toJson() => Map.of(value);
 }
@@ -10781,6 +10862,37 @@ final class ServicesPageResultServicesOutbreakAdminDTO {
     return raw
         .whereType<Map>()
         .map((item) => ServicesOutbreakAdminDTO.fromJson(_jsonMap(item)))
+        .toList(growable: false);
+  }
+
+  int? get page => (value['page'] as num?)?.toInt();
+
+  int? get perPage => (value['per_page'] as num?)?.toInt();
+
+  int? get totalItems => (value['total_items'] as num?)?.toInt();
+
+  int? get totalPages => (value['total_pages'] as num?)?.toInt();
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
+final class ServicesPageResultServicesOutbreakAuditDTO {
+  ServicesPageResultServicesOutbreakAuditDTO(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory ServicesPageResultServicesOutbreakAuditDTO.fromJson(
+    Map<String, dynamic> json,
+  ) => ServicesPageResultServicesOutbreakAuditDTO(json);
+
+  static const schemaName = 'services.PageResult-services_OutbreakAuditDTO';
+  final Map<String, dynamic> value;
+
+  List<ServicesOutbreakAuditDTO> get items {
+    final raw = value['items'];
+    if (raw is! List) return const [];
+    return raw
+        .whereType<Map>()
+        .map((item) => ServicesOutbreakAuditDTO.fromJson(_jsonMap(item)))
         .toList(growable: false);
   }
 

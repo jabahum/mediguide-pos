@@ -465,6 +465,68 @@ func (h NotificationHandler) CreateGuidelineCampaign(c *gin.Context) {
 	h.writeResult(c, item, err, http.StatusCreated)
 }
 
+// CreateOutbreakCampaign godoc
+// @Summary Create a draft notification campaign from a published outbreak
+// @Description Creates a draft only; normal campaign review, approval and scheduling remain mandatory.
+// @Tags notification-campaigns
+// @Security BearerAuth
+// @Param id path string true "Published outbreak UUID"
+// @Param payload body services.OutbreakNotificationCampaignInput true "Audience, schedule, priority and campaign kind"
+// @Success 201 {object} handlers.NotificationCampaignEnvelope
+// @Router /api/v2/outbreaks/{id}/notification-campaign [post]
+func (h NotificationHandler) CreateOutbreakCampaign(c *gin.Context) {
+	id, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		httpx.Error(c, http.StatusBadRequest, "invalid outbreak id")
+		return
+	}
+	var in services.OutbreakNotificationCampaignInput
+	if !notificationBind(c, &in) {
+		return
+	}
+	if services.NotificationAudienceRequiresSensitivePermission(in.Audience) && !security.HasPerm(notificationClaims(c), "notification.analytics.read") {
+		httpx.Error(c, http.StatusForbidden, "sensitive audience targeting requires notification analytics permission")
+		return
+	}
+	if in.Priority == "urgent" && !security.HasPerm(notificationClaims(c), "notification.campaign.approve") {
+		httpx.Error(c, http.StatusForbidden, "urgent campaigns require campaign approval permission")
+		return
+	}
+	item, err := h.Service.CreateOutbreakCampaign(id, in, notificationClaims(c).UserID, c.ClientIP())
+	h.writeResult(c, item, err, http.StatusCreated)
+}
+
+// CreateSituationReportCampaign godoc
+// @Summary Create a draft notification campaign from a published situation report
+// @Description Creates a draft only; normal campaign review, approval and scheduling remain mandatory.
+// @Tags notification-campaigns
+// @Security BearerAuth
+// @Param id path string true "Published situation-report UUID"
+// @Param payload body services.OutbreakNotificationCampaignInput true "Audience, schedule and priority"
+// @Success 201 {object} handlers.NotificationCampaignEnvelope
+// @Router /api/v2/situation-reports/{id}/notification-campaign [post]
+func (h NotificationHandler) CreateSituationReportCampaign(c *gin.Context) {
+	id, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		httpx.Error(c, http.StatusBadRequest, "invalid situation report id")
+		return
+	}
+	var in services.OutbreakNotificationCampaignInput
+	if !notificationBind(c, &in) {
+		return
+	}
+	if services.NotificationAudienceRequiresSensitivePermission(in.Audience) && !security.HasPerm(notificationClaims(c), "notification.analytics.read") {
+		httpx.Error(c, http.StatusForbidden, "sensitive audience targeting requires notification analytics permission")
+		return
+	}
+	if in.Priority == "urgent" && !security.HasPerm(notificationClaims(c), "notification.campaign.approve") {
+		httpx.Error(c, http.StatusForbidden, "urgent campaigns require campaign approval permission")
+		return
+	}
+	item, err := h.Service.CreateSituationReportCampaign(id, in, notificationClaims(c).UserID, c.ClientIP())
+	h.writeResult(c, item, err, http.StatusCreated)
+}
+
 // UpdateCampaign godoc
 // @Summary Replace editable notification-campaign fields
 // @Tags notification-administration

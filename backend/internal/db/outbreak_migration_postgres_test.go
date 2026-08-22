@@ -54,7 +54,7 @@ func TestOutbreakAdministrationMigrationUpDownUp(t *testing.T) {
 	if err := goose.DownTo(testDB, "../../migrations", 35); err != nil {
 		t.Fatal(err)
 	}
-	if err := goose.UpTo(testDB, "../../migrations", 37); err != nil {
+	if err := goose.UpTo(testDB, "../../migrations", 38); err != nil {
 		t.Fatal(err)
 	}
 	var count int
@@ -66,5 +66,8 @@ func TestOutbreakAdministrationMigrationUpDownUp(t *testing.T) {
 	}
 	if err := testDB.QueryRowContext(ctx, `SELECT count(*) FROM information_schema.table_constraints WHERE constraint_schema = $1 AND constraint_name IN ('outbreaks_metrics_array_check','situation_reports_highlights_array_check')`, schema).Scan(&count); err != nil || count != 2 {
 		t.Fatalf("outbreak JSON safety constraints missing after up/down/up: count=%d err=%v", count, err)
+	}
+	if err := testDB.QueryRowContext(ctx, `SELECT count(*) FROM notification_templates WHERE template_key IN ('outbreak-alert','outbreak-update','outbreak-status-change','situation-report-publication') AND status = 'published'`).Scan(&count); err != nil || count != 4 {
+		t.Fatalf("outbreak notification templates missing after up/down/up: count=%d err=%v", count, err)
 	}
 }

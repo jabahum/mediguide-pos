@@ -8,9 +8,11 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:user_app/app/providers/app_providers.dart';
 import 'package:user_app/app/router/route_names.dart';
 import 'package:user_app/core/constants/app_spacing.dart';
+import 'package:user_app/core/config/app_config.dart';
 import 'package:user_app/core/widgets/app_error_view.dart';
 import 'package:user_app/core/widgets/app_loading_view.dart';
 import 'package:user_app/features/documents/presentation/screens/document_reader_page.dart';
+import 'package:user_app/features/notifications/domain/notification_action_resolver.dart';
 import 'package:user_app/features/outbreaks/data/models/outbreak_models.dart';
 import 'package:user_app/shared/widgets/clinical_icon_tile.dart';
 import 'package:user_app/shared/widgets/section_header.dart';
@@ -591,10 +593,7 @@ class _OutbreakDetail extends StatelessWidget {
               title: resource.title,
               type: resource.resourceType,
               onTap: () {
-                _openExternal(
-                  context,
-                  resource.url.isNotEmpty ? resource.url : resource.assetUrl,
-                );
+                _openOutbreakResource(context, resource);
               },
             ),
         ],
@@ -1396,34 +1395,76 @@ Future<void> _copyLink(BuildContext context, String value) async {
     ..showSnackBar(const SnackBar(content: Text('Link copied.')));
 }
 
-Future<void> _openExternal(BuildContext context, String value) async {
-  final uri = Uri.tryParse(value.trim());
-
-  if (uri == null || (uri.scheme != 'https' && uri.scheme != 'http')) {
-    if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('This resource link is invalid.')),
-      );
-    }
-
-    return;
-  }
-
-  try {
-    final launched = await launchUrl(uri, mode: LaunchMode.externalApplication);
-
+Future<void> _openOutbreakResource(
+  BuildContext context,
+  PublicOutbreakResource resource,
+) async {
+  if ((resource.resourceType == 'managed_document' ||
+          resource.resourceType == 'downloadable_asset') &&
+      _isManagedOutbreakAssetPath(resource.assetUrl)) {
+    final base = Uri.parse('${AppConfig.current.apiBaseUrl}/');
+    final target = base.resolve(resource.assetUrl.replaceFirst('/', ''));
+    final launched = await launchUrl(
+      target,
+      mode: LaunchMode.externalApplication,
+    );
     if (!launched && context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Unable to open this resource.')),
+        const SnackBar(content: Text('Unable to open this managed document.')),
       );
     }
-  } catch (_) {
-    if (!context.mounted) {
-      return;
+    return;
+  }
+  final target = NotificationActionResolver.fromOutbreakResource(
+    type: resource.resourceType,
+    url: resource.url,
+    assetUrl: resource.assetUrl,
+  );
+  if (target?.location case final String location) {
+    context.push(location);
+    return;
+  }
+  if (target?.externalUri case final Uri uri) {
+    final launched = await launchUrl(uri, mode: LaunchMode.externalApplication);
+    if (!launched && context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Unable to open this trusted resource.')),
+      );
     }
-
+    return;
+  }
+  if (context.mounted) {
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Unable to open this resource.')),
+      const SnackBar(content: Text('This resource link is unavailable.')),
     );
   }
+}
+
+bool _isManagedOutbreakAssetPath(String value) {
+  final uri = Uri.tryParse(value);
+  if (uri == null ||
+      uri.hasScheme ||
+      uri.hasAuthority ||
+      uri.hasQuery ||
+      uri.hasFragment) {
+    return false;
+  }
+  final parts = uri.pathSegments;
+  if (parts.length != 5 ||
+      parts[0] != 'api' ||
+      parts[1] != 'public' ||
+      parts[2] != 'situation-reports' ||
+      parts[4] != 'asset') {
+    return false;
+  }
+  final id = parts[3].split('-');
+  const lengths = <int>[8, 4, 4, 4, 12];
+  if (id.length != lengths.length) return false;
+  for (var index = 0; index < id.length; index++) {
+    if (id[index].length != lengths[index] ||
+        int.tryParse(id[index], radix: 16) == null) {
+      return false;
+    }
+  }
+  return true;
 }

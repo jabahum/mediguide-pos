@@ -5641,6 +5641,24 @@ definitions:
       withdrawn_at:
         type: string
     type: object
+  services.OutbreakAuditDTO:
+    properties:
+      action:
+        type: string
+      actor_id:
+        type: string
+      created_at:
+        type: string
+      entity_id:
+        type: string
+      entity_type:
+        type: string
+      id:
+        type: string
+      metadata:
+        additionalProperties: {}
+        type: object
+    type: object
   services.OutbreakInput:
     properties:
       data_as_of:
@@ -5699,6 +5717,38 @@ definitions:
       value:
         type: string
     type: object
+  services.OutbreakNotificationCampaignInput:
+    properties:
+      audience:
+        $ref: '#/definitions/services.NotificationAudienceDefinition'
+      confirmed_urgent:
+        type: boolean
+      idempotency_key:
+        type: string
+      kind:
+        enum:
+        - alert
+        - update
+        - status_change
+        - closure
+        - publication
+        type: string
+      priority:
+        enum:
+        - low
+        - normal
+        - high
+        - urgent
+        type: string
+      requested_channels:
+        items:
+          type: string
+        type: array
+      scheduled_at:
+        type: string
+      timezone:
+        type: string
+    type: object
   services.OutbreakResourceAdminDTO:
     properties:
       approved_at:
@@ -5741,6 +5791,14 @@ definitions:
         type: string
       withdrawn_at:
         type: string
+    type: object
+  services.OutbreakReviewCommentInput:
+    properties:
+      comment:
+        maxLength: 4000
+        type: string
+    required:
+    - comment
     type: object
   services.OutbreakUpdateAdminDTO:
     properties:
@@ -6039,6 +6097,21 @@ definitions:
       items:
         items:
           $ref: '#/definitions/services.OutbreakAdminDTO'
+        type: array
+      page:
+        type: integer
+      per_page:
+        type: integer
+      total_items:
+        type: integer
+      total_pages:
+        type: integer
+    type: object
+  services.PageResult-services_OutbreakAuditDTO:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/services.OutbreakAuditDTO'
         type: array
       page:
         type: integer
@@ -7585,6 +7658,20 @@ paths:
           schema:
             $ref: '#/definitions/handlers.SituationReportEnvelope'
       summary: Get a published public situation report
+      tags:
+      - public-outbreaks
+  /api/public/situation-reports/{id}/asset:
+    get:
+      produces:
+      - application/pdf
+      responses:
+        "307":
+          description: Temporary Redirect
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+      summary: Open the managed PDF for a published situation report
       tags:
       - public-outbreaks
   /api/v1/consultants/tree:
@@ -13404,6 +13491,55 @@ paths:
       - notifications
   /api/v2/outbreaks:
     get:
+      parameters:
+      - description: Title, summary, or disease search
+        in: query
+        name: search
+        type: string
+      - description: Lifecycle status
+        in: query
+        name: status
+        type: string
+      - description: Disease name
+        in: query
+        name: disease
+        type: string
+      - description: Geographic text
+        in: query
+        name: area
+        type: string
+      - description: Region UUID
+        in: query
+        name: region_id
+        type: string
+      - description: Visual tone
+        in: query
+        name: visual_tone
+        type: string
+      - description: Effective from (RFC3339)
+        in: query
+        name: effective_from
+        type: string
+      - description: Effective to (RFC3339)
+        in: query
+        name: effective_to
+        type: string
+      - description: Updated from (RFC3339)
+        in: query
+        name: updated_from
+        type: string
+      - description: Updated to (RFC3339)
+        in: query
+        name: updated_to
+        type: string
+      - description: Allowlisted sort field
+        in: query
+        name: sort
+        type: string
+      - description: asc or desc
+        in: query
+        name: order
+        type: string
       responses:
         "200":
           description: OK
@@ -13496,6 +13632,18 @@ paths:
       summary: Submit, approve, publish, or withdraw an outbreak
       tags:
       - outbreak-administration
+  /api/v2/outbreaks/{id}/audit:
+    get:
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/services.PageResult-services_OutbreakAuditDTO'
+      security:
+      - BearerAuth: []
+      summary: List immutable audit history for outbreak content
+      tags:
+      - outbreak-administration
   /api/v2/outbreaks/{id}/correct:
     post:
       parameters:
@@ -13515,6 +13663,32 @@ paths:
       summary: Create a correction draft that supersedes a published outbreak
       tags:
       - outbreak-administration
+  /api/v2/outbreaks/{id}/notification-campaign:
+    post:
+      description: Creates a draft only; normal campaign review, approval and scheduling
+        remain mandatory.
+      parameters:
+      - description: Published outbreak UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Audience, schedule, priority and campaign kind
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/services.OutbreakNotificationCampaignInput'
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/handlers.NotificationCampaignEnvelope'
+      security:
+      - BearerAuth: []
+      summary: Create a draft notification campaign from a published outbreak
+      tags:
+      - notification-campaigns
   /api/v2/outbreaks/{id}/publish:
     post:
       parameters:
@@ -13696,6 +13870,23 @@ paths:
       security:
       - BearerAuth: []
       summary: Submit, approve, publish, or withdraw an outbreak resource
+      tags:
+      - outbreak-administration
+  /api/v2/outbreaks/{id}/review-comments:
+    post:
+      parameters:
+      - description: Review comment
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/services.OutbreakReviewCommentInput'
+      responses:
+        "204":
+          description: No Content
+      security:
+      - BearerAuth: []
+      summary: Add an auditable review comment to outbreak content
       tags:
       - outbreak-administration
   /api/v2/outbreaks/{id}/submit:
@@ -14783,6 +14974,18 @@ paths:
       summary: Upload a managed PDF asset for a situation report draft
       tags:
       - situation-report-administration
+  /api/v2/situation-reports/{id}/audit:
+    get:
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/services.PageResult-services_OutbreakAuditDTO'
+      security:
+      - BearerAuth: []
+      summary: List immutable audit history for outbreak content
+      tags:
+      - outbreak-administration
   /api/v2/situation-reports/{id}/correct:
     post:
       parameters:
@@ -14802,6 +15005,32 @@ paths:
       summary: Create a correction draft for a published situation report
       tags:
       - situation-report-administration
+  /api/v2/situation-reports/{id}/notification-campaign:
+    post:
+      description: Creates a draft only; normal campaign review, approval and scheduling
+        remain mandatory.
+      parameters:
+      - description: Published situation-report UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Audience, schedule and priority
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/services.OutbreakNotificationCampaignInput'
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/handlers.NotificationCampaignEnvelope'
+      security:
+      - BearerAuth: []
+      summary: Create a draft notification campaign from a published situation report
+      tags:
+      - notification-campaigns
   /api/v2/situation-reports/{id}/publish:
     post:
       parameters:
@@ -14821,6 +15050,23 @@ paths:
       summary: Submit, approve, publish, or withdraw a situation report
       tags:
       - situation-report-administration
+  /api/v2/situation-reports/{id}/review-comments:
+    post:
+      parameters:
+      - description: Review comment
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/services.OutbreakReviewCommentInput'
+      responses:
+        "204":
+          description: No Content
+      security:
+      - BearerAuth: []
+      summary: Add an auditable review comment to outbreak content
+      tags:
+      - outbreak-administration
   /api/v2/situation-reports/{id}/submit:
     post:
       parameters:

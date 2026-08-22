@@ -59,6 +59,32 @@ func (h OutbreakHandler) List(c *gin.Context) {
 	h.result(c, result, err)
 }
 
+// ReportAsset godoc
+// @Summary Open the managed PDF for a published situation report
+// @Tags public-outbreaks
+// @Produce application/pdf
+// @Success 307
+// @Failure 404 {object} handlers.ErrorResponse
+// @Router /api/public/situation-reports/{id}/asset [get]
+func (h OutbreakHandler) ReportAsset(c *gin.Context) {
+	id, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		httpx.Error(c, http.StatusBadRequest, "invalid situation report id")
+		return
+	}
+	target, err := h.Service.PresignReportAsset(c.Request.Context(), id)
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		httpx.Error(c, http.StatusNotFound, "published report asset not found")
+		return
+	}
+	if err != nil {
+		httpx.Error(c, http.StatusServiceUnavailable, "report asset unavailable")
+		return
+	}
+	c.Header("Cache-Control", "private, no-store")
+	c.Redirect(http.StatusTemporaryRedirect, target.String())
+}
+
 // Get godoc
 // @Summary Get a published public outbreak
 // @Tags public-outbreaks

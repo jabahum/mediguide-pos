@@ -1,11 +1,14 @@
 package services
 
 import (
+	"context"
 	"errors"
+	"net/url"
 	"strings"
 	"time"
 
 	"mediguide/internal/models"
+	"mediguide/internal/storage"
 
 	"github.com/google/uuid"
 	"gorm.io/gorm"
@@ -15,7 +18,10 @@ var ErrOutbreakInvalid = errors.New("invalid outbreak query")
 var ErrOutbreakConflict = errors.New("outbreak content changed; reload and retry")
 var ErrOutbreakImmutable = errors.New("published outbreak content must be corrected, not edited")
 
-type OutbreakService struct{ DB *gorm.DB }
+type OutbreakService struct {
+	DB    *gorm.DB
+	Store storage.ObjectStore
+}
 
 type OutbreakQuery struct {
 	Page                       PageInput
@@ -289,11 +295,33 @@ func (s OutbreakService) GetReport(id uuid.UUID) (*PublicSituationReport, error)
 	return &result, nil
 }
 
+func (s OutbreakService) PresignReportAsset(ctx context.Context, id uuid.UUID) (*url.URL, error) {
+	if s.Store == nil {
+		return nil, errors.New("outbreak asset storage unavailable")
+	}
+	report, err := s.GetReport(id)
+	if err != nil {
+		return nil, err
+	}
+	if report.ReportAssetID == nil {
+		return nil, gorm.ErrRecordNotFound
+	}
+	var asset models.SituationReportAsset
+	if err := s.DB.First(&asset, "id = ? AND situation_report_id = ?", *report.ReportAssetID, id).Error; err != nil {
+		return nil, err
+	}
+	return s.Store.PresignGet(ctx, asset.StorageKey, 10*time.Minute)
+}
+
 func publicOutbreak(row models.Outbreak) PublicOutbreak {
 	return PublicOutbreak{row.ID, row.Title, row.DiseaseType, row.Status, row.GeographicArea, row.RegionID, row.DistrictID, row.Summary, row.StartDate, row.LastUpdate, row.VisualTone, row.SourceOrganization, row.PublishedAt, row.SourceURL, row.SourceReference, row.EffectiveAt, row.DataAsOf, row.LastVerifiedAt, decodeMetrics(row.Metrics)}
 }
 func publicSituationReport(row models.SituationReport) PublicSituationReport {
-	return PublicSituationReport{row.ID, row.OutbreakID, row.RegionID, row.DistrictID, row.Title, row.GeographicArea, row.Summary, row.SourceOrganization, row.PublicationDate, row.PublishedAt, row.ReportAssetURL, row.ReportAssetID, row.SourceURL, row.SourceReference, row.EffectiveAt, row.DataAsOf, row.LastVerifiedAt, decodeHighlights(row.KeyHighlights), decodeMetrics(row.Metrics)}
+	assetURL := row.ReportAssetURL
+	if row.ReportAssetID != nil {
+		assetURL = "/api/public/situation-reports/" + row.ID.String() + "/asset"
+	}
+	return PublicSituationReport{row.ID, row.OutbreakID, row.RegionID, row.DistrictID, row.Title, row.GeographicArea, row.Summary, row.SourceOrganization, row.PublicationDate, row.PublishedAt, assetURL, row.ReportAssetID, row.SourceURL, row.SourceReference, row.EffectiveAt, row.DataAsOf, row.LastVerifiedAt, decodeHighlights(row.KeyHighlights), decodeMetrics(row.Metrics)}
 }
 
 func validOutbreakValue(value string, allowed ...string) bool {

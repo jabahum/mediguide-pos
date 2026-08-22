@@ -76,6 +76,18 @@ func (h OutbreakAdminHandler) result(c *gin.Context, status int, value any, err 
 // @Summary List outbreak administration records
 // @Tags outbreak-administration
 // @Security BearerAuth
+// @Param search query string false "Title, summary, or disease search"
+// @Param status query string false "Lifecycle status"
+// @Param disease query string false "Disease name"
+// @Param area query string false "Geographic text"
+// @Param region_id query string false "Region UUID"
+// @Param visual_tone query string false "Visual tone"
+// @Param effective_from query string false "Effective from (RFC3339)"
+// @Param effective_to query string false "Effective to (RFC3339)"
+// @Param updated_from query string false "Updated from (RFC3339)"
+// @Param updated_to query string false "Updated to (RFC3339)"
+// @Param sort query string false "Allowlisted sort field"
+// @Param order query string false "asc or desc"
 // @Success 200 {object} services.PageResult[services.OutbreakAdminDTO]
 // @Router /api/v2/outbreaks [get]
 func (h OutbreakAdminHandler) ListOutbreaks(c *gin.Context) {
@@ -83,7 +95,7 @@ func (h OutbreakAdminHandler) ListOutbreaks(c *gin.Context) {
 	if !ok {
 		return
 	}
-	v, e := h.Service.ListOutbreaks(services.OutbreakAdminQuery{Page: p, Search: c.Query("search"), Status: c.Query("status"), Area: c.Query("area"), Sort: c.Query("sort"), Order: c.Query("order")})
+	v, e := h.Service.ListOutbreaks(services.OutbreakAdminQuery{Page: p, Search: c.Query("search"), Status: c.Query("status"), Disease: c.Query("disease"), Area: c.Query("area"), RegionID: c.Query("region_id"), VisualTone: c.Query("visual_tone"), EffectiveFrom: c.Query("effective_from"), EffectiveTo: c.Query("effective_to"), UpdatedFrom: c.Query("updated_from"), UpdatedTo: c.Query("updated_to"), Sort: c.Query("sort"), Order: c.Query("order")})
 	h.result(c, 200, v, e)
 }
 
@@ -659,6 +671,55 @@ func (h OutbreakAdminHandler) UploadReportAsset(c *gin.Context) {
 	defer file.Close()
 	v, e := h.Service.UploadReportAsset(c.Request.Context(), outbreakActor(c), id, file, header, max<<20)
 	h.result(c, 201, v, e)
+}
+
+// ListAudit godoc
+// @Summary List immutable audit history for outbreak content
+// @Tags outbreak-administration
+// @Security BearerAuth
+// @Success 200 {object} services.PageResult[services.OutbreakAuditDTO]
+// @Router /api/v2/outbreaks/{id}/audit [get]
+// @Router /api/v2/situation-reports/{id}/audit [get]
+func (h OutbreakAdminHandler) ListAudit(entityType string) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		id, ok := outbreakAdminID(c, "id")
+		if !ok {
+			return
+		}
+		page, ok := outbreakAdminPage(c)
+		if !ok {
+			return
+		}
+		value, err := h.Service.ListAudit(entityType, id, page)
+		h.result(c, http.StatusOK, value, err)
+	}
+}
+
+// AddReviewComment godoc
+// @Summary Add an auditable review comment to outbreak content
+// @Tags outbreak-administration
+// @Security BearerAuth
+// @Param payload body services.OutbreakReviewCommentInput true "Review comment"
+// @Success 204
+// @Router /api/v2/outbreaks/{id}/review-comments [post]
+// @Router /api/v2/situation-reports/{id}/review-comments [post]
+func (h OutbreakAdminHandler) AddReviewComment(entityType string) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		id, ok := outbreakAdminID(c, "id")
+		if !ok {
+			return
+		}
+		var in services.OutbreakReviewCommentInput
+		if c.ShouldBindJSON(&in) != nil {
+			httpx.Error(c, http.StatusBadRequest, "valid review comment is required")
+			return
+		}
+		if err := h.Service.AddReviewComment(outbreakActor(c), entityType, id, in.Comment); err != nil {
+			h.result(c, 0, nil, err)
+			return
+		}
+		c.Status(http.StatusNoContent)
+	}
 }
 
 func twoOutbreakIDs(c *gin.Context, childName string) (uuid.UUID, uuid.UUID, bool) {

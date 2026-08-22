@@ -1,0 +1,20 @@
+"use client"
+
+import * as React from "react"
+import Link from "next/link"
+import { FileText, Loader2, Plus, Search } from "lucide-react"
+import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { PageHeader } from "@/components/ui/page-header"
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { situationReportsService, type SituationReportRecord } from "@/services/outbreaks.service"
+
+export default function SituationReportsPage() {
+  const [items, setItems] = React.useState<SituationReportRecord[]>([]), [search, setSearch] = React.useState(""), [status, setStatus] = React.useState(""), [error, setError] = React.useState("")
+  const [loading, setLoading] = React.useState(true), [page, setPage] = React.useState(1), [pages, setPages] = React.useState(0)
+  const load = React.useCallback(async () => { setLoading(true); setError(""); try { const result = await situationReportsService.list({ page, per_page: 20, search: search || undefined, status: status || undefined, sort: "updated_at", order: "desc" }); setItems(result.items || []); setPages(result.total_pages || 0) } catch (value) { setError(value instanceof Error ? value.message : "Unable to load situation reports") } finally { setLoading(false) } }, [page, search, status])
+  React.useEffect(() => { void load() }, [load])
+  return <div className="space-y-6"><div className="flex flex-wrap justify-between gap-3"><PageHeader title="Situation reports" description="Manage reviewed reports and their controlled PDF assets" /><Button asChild><Link href="/situation-reports/new"><Plus className="mr-2 h-4 w-4" />New report</Link></Button></div><div className="flex gap-3 rounded-lg border p-4"><div className="relative flex-1"><Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" /><Input className="pl-9" value={search} onChange={event => { setSearch(event.target.value); setPage(1) }} placeholder="Search reports" /></div><select className="rounded-md border bg-background px-3" value={status} onChange={event => { setStatus(event.target.value); setPage(1) }}><option value="">All states</option>{["draft","pending_review","published","withdrawn"].map(value => <option key={value}>{value}</option>)}</select></div>{error ? <div role="alert" className="rounded-md border border-destructive/40 p-4 text-destructive">{error}</div> : null}<div className="rounded-lg border"><Table><TableHeader><TableRow><TableHead>Report</TableHead><TableHead>Status</TableHead><TableHead>Area</TableHead><TableHead>Source</TableHead><TableHead>Publication</TableHead><TableHead>Verified</TableHead></TableRow></TableHeader><TableBody>{loading ? <TableRow><TableCell colSpan={6} className="py-12 text-center"><Loader2 className="mr-2 inline h-4 w-4 animate-spin" />Loading…</TableCell></TableRow> : null}{!loading && !items.length ? <TableRow><TableCell colSpan={6} className="py-12 text-center text-muted-foreground"><FileText className="mx-auto mb-2 h-8 w-8" />No situation reports found.</TableCell></TableRow> : null}{items.map(item => <TableRow key={item.id}><TableCell><Link className="font-medium hover:underline" href={`/situation-reports/${item.id}`}>{item.title}</Link></TableCell><TableCell><Badge variant={item.status === "withdrawn" ? "destructive" : "outline"}>{item.status}</Badge></TableCell><TableCell>{item.geographic_area}</TableCell><TableCell>{item.source_organization}</TableCell><TableCell>{date(item.publication_date)}</TableCell><TableCell>{date(item.last_verified_at)}</TableCell></TableRow>)}</TableBody></Table></div><div className="flex justify-between text-sm"><span>Page {page}{pages ? ` of ${pages}` : ""}</span><div className="flex gap-2"><Button variant="outline" size="sm" disabled={page <= 1 || loading} onClick={() => setPage(value => value - 1)}>Previous</Button><Button variant="outline" size="sm" disabled={page >= pages || loading} onClick={() => setPage(value => value + 1)}>Next</Button></div></div></div>
+}
+function date(value?: string) { return value ? new Date(value).toLocaleDateString() : "—" }

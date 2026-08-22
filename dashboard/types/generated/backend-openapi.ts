@@ -3291,6 +3291,16 @@ export interface ServicesOutbreakAdminDTO {
   withdrawn_at?: string;
 }
 
+export interface ServicesOutbreakAuditDTO {
+  action?: string;
+  actor_id?: string;
+  created_at?: string;
+  entity_id?: string;
+  entity_type?: string;
+  id?: string;
+  metadata?: Record<string, any>;
+}
+
 export interface ServicesOutbreakInput {
   data_as_of?: string;
   disease_type?: string;
@@ -3322,6 +3332,30 @@ export interface ServicesOutbreakMetric {
   value?: string;
 }
 
+export interface ServicesOutbreakNotificationCampaignInput {
+  audience?: ServicesNotificationAudienceDefinition;
+  confirmed_urgent?: boolean;
+  idempotency_key?: string;
+  kind?: ServicesOutbreakNotificationCampaignInputKindEnum;
+  priority?: ServicesOutbreakNotificationCampaignInputPriorityEnum;
+  requested_channels?: string[];
+  scheduled_at?: string;
+  timezone?: string;
+}
+
+export type ServicesOutbreakNotificationCampaignInputKindEnum =
+  | "alert"
+  | "update"
+  | "status_change"
+  | "closure"
+  | "publication";
+
+export type ServicesOutbreakNotificationCampaignInputPriorityEnum =
+  | "low"
+  | "normal"
+  | "high"
+  | "urgent";
+
 export interface ServicesOutbreakResourceAdminDTO {
   approved_at?: string;
   approved_by?: string;
@@ -3343,6 +3377,11 @@ export interface ServicesOutbreakResourceAdminDTO {
   url?: string;
   withdrawal_reason?: string;
   withdrawn_at?: string;
+}
+
+export interface ServicesOutbreakReviewCommentInput {
+  /** @maxLength 4000 */
+  comment: string;
 }
 
 export interface ServicesOutbreakUpdateAdminDTO {
@@ -3503,6 +3542,14 @@ export interface ServicesPageResultServicesNotificationDeliveryDTO {
 
 export interface ServicesPageResultServicesOutbreakAdminDTO {
   items?: ServicesOutbreakAdminDTO[];
+  page?: number;
+  per_page?: number;
+  total_items?: number;
+  total_pages?: number;
+}
+
+export interface ServicesPageResultServicesOutbreakAuditDTO {
+  items?: ServicesOutbreakAuditDTO[];
   page?: number;
   per_page?: number;
   total_items?: number;

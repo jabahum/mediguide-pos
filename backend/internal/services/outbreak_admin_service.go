@@ -35,8 +35,9 @@ type OutbreakAdminService struct {
 }
 
 type OutbreakAdminQuery struct {
-	Page                              PageInput
-	Search, Status, Area, Sort, Order string
+	Page                                                                                                    PageInput
+	Search, Status, Disease, Area, RegionID, VisualTone, EffectiveFrom, EffectiveTo, UpdatedFrom, UpdatedTo string
+	Sort, Order                                                                                             string
 }
 type OutbreakInput struct {
 	Title              *string           `json:"title"`
@@ -89,6 +90,10 @@ type TransitionInput struct {
 	LockVersion       int    `json:"lock_version"`
 	Reason            string `json:"reason,omitempty"`
 	OperationalStatus string `json:"operational_status,omitempty"`
+}
+
+type OutbreakReviewCommentInput struct {
+	Comment string `json:"comment" binding:"required,max=4000"`
 }
 
 type OutbreakAdminDTO struct {
@@ -208,6 +213,57 @@ type SituationReportAssetDTO struct {
 	ChecksumSHA256    string    `json:"checksum_sha256"`
 	CreatedAt         time.Time `json:"created_at"`
 }
+type OutbreakAuditDTO struct {
+	ID         uuid.UUID      `json:"id"`
+	ActorID    string         `json:"actor_id"`
+	Action     string         `json:"action"`
+	EntityType string         `json:"entity_type"`
+	EntityID   string         `json:"entity_id"`
+	Metadata   map[string]any `json:"metadata"`
+	CreatedAt  time.Time      `json:"created_at"`
+}
+
+func (s OutbreakAdminService) ListAudit(entityType string, id uuid.UUID, page PageInput) (*PageResult[OutbreakAuditDTO], error) {
+	if !validOutbreakValue(entityType, "outbreak", "situation_report") {
+		return nil, ErrOutbreakInvalid
+	}
+	page = page.Normalize(20, 100)
+	query := s.DB.Model(&models.AuditLog{}).Where("entity_type = ? AND entity_id = ?", entityType, id.String())
+	var total int64
+	if err := query.Count(&total).Error; err != nil {
+		return nil, err
+	}
+	var rows []models.AuditLog
+	if err := query.Order("created_at DESC, id DESC").Offset(page.Offset()).Limit(page.PerPage).Find(&rows).Error; err != nil {
+		return nil, err
+	}
+	items := make([]OutbreakAuditDTO, len(rows))
+	for index, row := range rows {
+		metadata := map[string]any{}
+		_ = json.Unmarshal([]byte(row.MetadataJSON), &metadata)
+		items[index] = OutbreakAuditDTO{ID: row.ID, ActorID: row.ActorID, Action: row.Action, EntityType: row.EntityType, EntityID: row.EntityID, Metadata: metadata, CreatedAt: row.CreatedAt}
+	}
+	return NewPageResult(items, page, total), nil
+}
+
+func (s OutbreakAdminService) AddReviewComment(actor OutbreakActor, entityType string, id uuid.UUID, comment string) error {
+	comment = strings.TrimSpace(comment)
+	if !validOutbreakValue(entityType, "outbreak", "situation_report") || comment == "" || len(comment) > 4000 {
+		return ErrOutbreakInvalid
+	}
+	model := any(&models.Outbreak{})
+	if entityType == "situation_report" {
+		model = &models.SituationReport{}
+	}
+	var count int64
+	if err := s.DB.Model(model).Where("id = ?", id).Count(&count).Error; err != nil {
+		return err
+	}
+	if count == 0 {
+		return gorm.ErrRecordNotFound
+	}
+	return auditOutbreak(s.DB, actor, entityType+".review_comment", entityType, id, map[string]any{"comment": comment})
+}
 
 func (s OutbreakAdminService) ListOutbreaks(q OutbreakAdminQuery) (*PageResult[OutbreakAdminDTO], error) {
 	p := q.Page.Normalize(20, 100)
@@ -224,6 +280,34 @@ func (s OutbreakAdminService) ListOutbreaks(q OutbreakAdminQuery) (*PageResult[O
 	}
 	if v := strings.TrimSpace(q.Area); v != "" {
 		db = db.Where("lower(geographic_area) LIKE ?", "%"+strings.ToLower(v)+"%")
+	}
+	if v := strings.TrimSpace(q.Disease); v != "" {
+		db = db.Where("lower(disease_type) LIKE ?", "%"+strings.ToLower(v)+"%")
+	}
+	if v := strings.TrimSpace(q.RegionID); v != "" {
+		id, err := uuid.Parse(v)
+		if err != nil {
+			return nil, ErrOutbreakInvalid
+		}
+		db = db.Where("region_id = ?", id)
+	}
+	if v := strings.TrimSpace(q.VisualTone); v != "" {
+		if !validOutbreakValue(v, "neutral", "info", "warning", "critical", "success") {
+			return nil, ErrOutbreakInvalid
+		}
+		db = db.Where("visual_tone = ?", v)
+	}
+	for _, filter := range []struct {
+		value, predicate string
+	}{{q.EffectiveFrom, "effective_at >= ?"}, {q.EffectiveTo, "effective_at <= ?"}, {q.UpdatedFrom, "updated_at >= ?"}, {q.UpdatedTo, "updated_at <= ?"}} {
+		if strings.TrimSpace(filter.value) == "" {
+			continue
+		}
+		parsed, err := time.Parse(time.RFC3339, filter.value)
+		if err != nil {
+			return nil, ErrOutbreakInvalid
+		}
+		db = db.Where(filter.predicate, parsed)
 	}
 	var total int64
 	if err := db.Count(&total).Error; err != nil {
@@ -357,6 +441,9 @@ func (s OutbreakAdminService) TransitionOutbreak(actor OutbreakActor, id uuid.UU
 		updates["approved_at"] = now
 	case "publish":
 		if row.Status != "pending_review" || row.ApprovedAt == nil {
+			return nil, ErrOutbreakInvalid
+		}
+		if row.VisualTone == "critical" && row.ApprovedBy != nil && *row.ApprovedBy == actor.ID {
 			return nil, ErrOutbreakInvalid
 		}
 		if err := s.validateOutbreakFields(row, true); err != nil {
@@ -797,6 +884,12 @@ func (s OutbreakAdminService) TransitionReport(actor OutbreakActor, id uuid.UUID
 		if row.Status != "pending_review" || row.ApprovedAt == nil {
 			return nil, ErrOutbreakInvalid
 		}
+		if row.ApprovedBy != nil && *row.ApprovedBy == actor.ID {
+			var parent models.Outbreak
+			if row.OutbreakID != nil && s.DB.Select("visual_tone").First(&parent, "id = ?", *row.OutbreakID).Error == nil && parent.VisualTone == "critical" {
+				return nil, ErrOutbreakInvalid
+			}
+		}
 		if err := s.validatePublishReport(row); err != nil {
 			return nil, err
 		}
@@ -963,7 +1056,7 @@ func publicOutbreakStatus(v string) bool {
 	return validOutbreakValue(v, "published", "active", "monitoring", "contained", "closed")
 }
 func outbreakAdminOrder(sort, order string) (string, error) {
-	cols := map[string]string{"": "updated_at", "title": "title", "status": "status", "last_update": "last_update", "created_at": "created_at", "updated_at": "updated_at"}
+	cols := map[string]string{"": "updated_at", "title": "title", "status": "status", "visual_tone": "visual_tone", "effective_at": "effective_at", "data_as_of": "data_as_of", "last_verified_at": "last_verified_at", "last_update": "last_update", "created_at": "created_at", "updated_at": "updated_at"}
 	c, ok := cols[strings.TrimSpace(sort)]
 	if !ok {
 		return "", ErrOutbreakInvalid

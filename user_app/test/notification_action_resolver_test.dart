@@ -5,6 +5,49 @@ void main() {
   const guidelineId = '11111111-1111-4111-8111-111111111111';
 
   group('NotificationActionResolver', () {
+    test('resolves typed outbreak resources without raw navigation', () {
+      const guidelineId = 'f99ba42c-8e83-4ba0-bdb2-faad4183df43';
+      final guideline = NotificationActionResolver.fromOutbreakResource(
+        type: 'guideline',
+        url: '/public/guidelines/$guidelineId',
+        assetUrl: '',
+      );
+      expect(guideline?.location, '/public/guidelines/$guidelineId');
+
+      const reportId = '8133fdba-25d7-49fa-b12d-76ac6c897afe';
+      final report = NotificationActionResolver.fromOutbreakResource(
+        type: 'situation_report',
+        url: '/situation-reports/$reportId',
+        assetUrl: '',
+      );
+      expect(report?.location, '/situation-reports/$reportId');
+    });
+
+    test('rejects hostile and malformed outbreak resources', () {
+      for (final value in <String>[
+        'javascript:alert(1)',
+        'data:text/html,unsafe',
+        '//evil.example/path',
+        'https://evil.example/redirect?url=https://health.go.ug',
+      ]) {
+        expect(
+          NotificationActionResolver.fromOutbreakResource(
+            type: 'approved_external_url',
+            url: value,
+            assetUrl: '',
+          ),
+          isNull,
+        );
+      }
+      expect(
+        NotificationActionResolver.fromOutbreakResource(
+          type: 'internal_route',
+          url: '/login?redirect=https://evil.example',
+          assetUrl: '',
+        ),
+        isNull,
+      );
+    });
     test('derives resource routes instead of trusting a supplied route', () {
       final target = NotificationActionResolver.resolve(
         action: const {

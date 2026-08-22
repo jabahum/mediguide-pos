@@ -123,7 +123,7 @@ func New(cfg config.Config) (*App, error) {
 	authSvc := services.AuthService{DB: database, Cfg: cfg, Mailer: emailSender}
 	guidelineSvc := services.GuidelineService{DB: database, Store: store, Cache: cacheStore}
 	publicGuidelineSvc := services.PublicGuidelineService{DB: database, Store: store, Cache: cacheStore}
-	outbreakSvc := services.OutbreakService{DB: database}
+	outbreakSvc := services.OutbreakService{DB: database, Store: store}
 	outbreakAdminSvc := services.OutbreakAdminService{DB: database, Store: store, AllowedExternalHosts: cfg.NotificationActionExternalHosts}
 	searchSvc := services.SearchService{DB: database, Cache: cacheStore}
 	ragSvc := services.RAGService{DB: database, Search: searchSvc, Cfg: cfg}
@@ -211,6 +211,7 @@ func New(cfg config.Config) (*App, error) {
 		public.GET("/outbreaks/:id/resources", outbreakReadLimit, outbreakH.Resources)
 		public.GET("/situation-reports", outbreakReadLimit, outbreakH.ListReports)
 		public.GET("/situation-reports/:id", outbreakReadLimit, outbreakH.GetReport)
+		public.GET("/situation-reports/:id/asset", outbreakReadLimit, outbreakH.ReportAsset)
 	}
 
 	v2 := r.Group("/api/v2")
@@ -258,6 +259,8 @@ func New(cfg config.Config) (*App, error) {
 		protected.POST("/outbreaks/:id/publish", middleware.RequirePermission("outbreak.publish"), outbreakAdminH.TransitionOutbreak("publish"))
 		protected.POST("/outbreaks/:id/withdraw", middleware.RequirePermission("outbreak.withdraw"), outbreakAdminH.TransitionOutbreak("withdraw"))
 		protected.POST("/outbreaks/:id/correct", middleware.RequirePermission("outbreak.manage"), outbreakAdminH.CorrectOutbreak)
+		protected.GET("/outbreaks/:id/audit", middleware.RequirePermission("outbreak.read"), outbreakAdminH.ListAudit("outbreak"))
+		protected.POST("/outbreaks/:id/review-comments", middleware.RequirePermission("outbreak.review"), outbreakAdminH.AddReviewComment("outbreak"))
 		protected.GET("/outbreaks/:id/updates", middleware.RequirePermission("outbreak.read"), outbreakAdminH.ListUpdates)
 		protected.POST("/outbreaks/:id/updates", middleware.RequirePermission("outbreak.manage"), outbreakAdminH.CreateUpdate)
 		protected.GET("/outbreaks/:id/updates/:updateId", middleware.RequirePermission("outbreak.read"), outbreakAdminH.GetUpdate)
@@ -289,6 +292,8 @@ func New(cfg config.Config) (*App, error) {
 		protected.POST("/situation-reports/:id/withdraw", middleware.RequirePermission("situation_report.withdraw"), outbreakAdminH.TransitionReport("withdraw"))
 		protected.POST("/situation-reports/:id/correct", middleware.RequirePermission("situation_report.manage"), outbreakAdminH.CorrectReport)
 		protected.POST("/situation-reports/:id/asset", middleware.RequirePermission("situation_report.manage"), outbreakAdminH.UploadReportAsset)
+		protected.GET("/situation-reports/:id/audit", middleware.RequirePermission("situation_report.read"), outbreakAdminH.ListAudit("situation_report"))
+		protected.POST("/situation-reports/:id/review-comments", middleware.RequirePermission("situation_report.review"), outbreakAdminH.AddReviewComment("situation_report"))
 
 		protected.GET("/calculators", middleware.RequireAnyPermission("calculator.read", "guideline.read"), calculatorH.List)
 		protected.GET("/calculators/:id", middleware.RequireAnyPermission("calculator.read", "guideline.read"), calculatorH.Get)
@@ -356,6 +361,8 @@ func New(cfg config.Config) (*App, error) {
 		protected.GET("/notification-campaigns/:id", middleware.RequirePermission("notification.campaign.read"), notificationH.GetCampaign)
 		protected.POST("/notification-campaigns", middleware.RequirePermission("notification.campaign.manage"), rateLimiter.Limit(middleware.Policy("notification-campaign-write", 10, time.Hour, 0), middleware.UserIdentity), notificationH.CreateCampaign)
 		protected.POST("/guidelines/:id/notification-campaign", middleware.RequirePermission("notification.campaign.manage"), rateLimiter.Limit(middleware.Policy("notification-campaign-write", 10, time.Hour, 0), middleware.UserIdentity), notificationH.CreateGuidelineCampaign)
+		protected.POST("/outbreaks/:id/notification-campaign", middleware.RequirePermission("notification.campaign.manage"), middleware.RequirePermission("outbreak.publish"), rateLimiter.Limit(middleware.Policy("outbreak-campaign-write", 10, time.Hour, 0), middleware.UserIdentity), notificationH.CreateOutbreakCampaign)
+		protected.POST("/situation-reports/:id/notification-campaign", middleware.RequirePermission("notification.campaign.manage"), middleware.RequirePermission("situation_report.publish"), rateLimiter.Limit(middleware.Policy("outbreak-campaign-write", 10, time.Hour, 0), middleware.UserIdentity), notificationH.CreateSituationReportCampaign)
 		protected.PATCH("/notification-campaigns/:id", middleware.RequirePermission("notification.campaign.manage"), notificationH.UpdateCampaign)
 		protected.POST("/notification-campaigns/:id/submit", middleware.RequirePermission("notification.campaign.manage"), rateLimiter.Limit(middleware.Policy("notification-campaign-write", 10, time.Hour, 0), middleware.UserIdentity), notificationH.TransitionCampaign)
 		protected.POST("/notification-campaigns/:id/approve", middleware.RequirePermission("notification.campaign.approve"), rateLimiter.Limit(middleware.Policy("notification-campaign-approval", 20, time.Hour, 0), middleware.UserIdentity), notificationH.TransitionCampaign)

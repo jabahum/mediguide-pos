@@ -21,8 +21,9 @@ const (
 )
 
 var (
-	outbreakMetricKey = regexp.MustCompile(`^[a-z][a-z0-9_]{1,63}$`)
-	diseaseName       = regexp.MustCompile(`^[\pL\pN][\pL\pN .,'()/-]{1,119}$`)
+	outbreakMetricKey        = regexp.MustCompile(`^[a-z][a-z0-9_]{1,63}$`)
+	diseaseName              = regexp.MustCompile(`^[\pL\pN][\pL\pN .,'()/-]{1,119}$`)
+	managedOutbreakAssetPath = regexp.MustCompile(`^/api/public/situation-reports/[0-9a-fA-F-]{36}/asset$`)
 )
 
 // OutbreakMetric is the only supported outbreak/report metric transport shape.
@@ -152,21 +153,10 @@ func validateSourceURL(value string, allowedHosts []string) error {
 	if value == "" {
 		return nil
 	}
-	parsed, err := url.ParseRequestURI(value)
-	if err != nil || !strings.EqualFold(parsed.Scheme, "https") || parsed.Hostname() == "" || parsed.User != nil {
+	if !validApprovedHTTPSURL(value, allowedHosts, true) {
 		return ErrOutbreakInvalid
 	}
-	if len(allowedHosts) == 0 {
-		return nil
-	}
-	host := strings.ToLower(parsed.Hostname())
-	for _, candidate := range allowedHosts {
-		candidate = strings.ToLower(strings.TrimSpace(candidate))
-		if host == candidate {
-			return nil
-		}
-	}
-	return ErrOutbreakInvalid
+	return nil
 }
 
 func (s OutbreakAdminService) validateResource(row models.OutbreakResource) error {
@@ -209,6 +199,10 @@ func (s OutbreakAdminService) validateResource(row models.OutbreakResource) erro
 		}
 	case "managed_document", "downloadable_asset":
 		if strings.TrimSpace(row.AssetURL) == "" || strings.TrimSpace(row.URL) != "" {
+			return ErrOutbreakInvalid
+		}
+		asset := strings.TrimSpace(row.AssetURL)
+		if !managedOutbreakAssetPath.MatchString(asset) && validateSourceURL(asset, s.AllowedExternalHosts) != nil {
 			return ErrOutbreakInvalid
 		}
 	default:

@@ -96,6 +96,8 @@ func TestNotificationAdministrativeHandlersRequireFocusedPermissions(t *testing.
 		{name: "get campaign", method: http.MethodGet, path: "/api/v2/notification-campaigns/:id", permission: "notification.campaign.read", handler: notificationHandler.GetCampaign},
 		{name: "create campaign", method: http.MethodPost, path: "/api/v2/notification-campaigns", permission: "notification.campaign.manage", handler: notificationHandler.CreateCampaign},
 		{name: "create guideline campaign", method: http.MethodPost, path: "/api/v2/guidelines/:id/notification-campaign", permission: "notification.campaign.manage", handler: notificationHandler.CreateGuidelineCampaign},
+		{name: "create outbreak campaign", method: http.MethodPost, path: "/api/v2/outbreaks/:id/notification-campaign", permission: "notification.campaign.manage", handler: notificationHandler.CreateOutbreakCampaign},
+		{name: "create situation-report campaign", method: http.MethodPost, path: "/api/v2/situation-reports/:id/notification-campaign", permission: "notification.campaign.manage", handler: notificationHandler.CreateSituationReportCampaign},
 		{name: "update campaign", method: http.MethodPatch, path: "/api/v2/notification-campaigns/:id", permission: "notification.campaign.manage", handler: notificationHandler.UpdateCampaign},
 		{name: "submit campaign", method: http.MethodPost, path: "/api/v2/notification-campaigns/:id/submit", permission: "notification.campaign.manage", handler: notificationHandler.TransitionCampaign},
 		{name: "approve campaign", method: http.MethodPost, path: "/api/v2/notification-campaigns/:id/approve", permission: "notification.campaign.approve", handler: notificationHandler.TransitionCampaign},

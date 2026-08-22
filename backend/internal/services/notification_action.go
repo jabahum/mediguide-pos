@@ -178,12 +178,26 @@ func validNotificationInternalRoute(value string) bool {
 }
 
 func (s NotificationService) validApprovedExternalURL(value string) bool {
+	return validApprovedHTTPSURL(value, s.AllowedActionHosts, false)
+}
+
+// validApprovedHTTPSURL is the shared trust boundary for external navigation
+// used by notifications and outbreak resources.
+func validApprovedHTTPSURL(value string, allowedHosts []string, allowAnyHost bool) bool {
 	parsed, err := url.ParseRequestURI(strings.TrimSpace(value))
-	if err != nil || !strings.EqualFold(parsed.Scheme, "https") || parsed.Hostname() == "" || parsed.User != nil {
+	if err != nil || !strings.EqualFold(parsed.Scheme, "https") || parsed.Hostname() == "" || parsed.User != nil || strings.HasPrefix(strings.TrimSpace(value), "//") {
 		return false
 	}
+	for key := range parsed.Query() {
+		if _, reserved := notificationReservedParameters[strings.ToLower(key)]; reserved {
+			return false
+		}
+	}
+	if allowAnyHost && len(allowedHosts) == 0 {
+		return true
+	}
 	host := strings.ToLower(parsed.Hostname())
-	for _, allowed := range s.AllowedActionHosts {
+	for _, allowed := range allowedHosts {
 		if host == strings.ToLower(strings.TrimSpace(allowed)) {
 			return true
 		}

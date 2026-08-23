@@ -1,22 +1,48 @@
-import { render } from "@testing-library/react"
-import { describe, expect, it } from "vitest"
+import { fireEvent, render, screen } from "@testing-library/react";
+import { describe, expect, it } from "vitest";
+import { renderPreview } from "./page";
+import type { ClinicalToolDefinition } from "@/services/clinical-tool.service";
 
-import { renderPreview } from "./page"
+const definition: ClinicalToolDefinition = {
+  schema_version: "1.0",
+  tool_type: "calculator",
+  title: "BMI",
+  version: "1.0.0",
+  locale: "en",
+  inputs: [{ key: "weight", type: "number", label: "Weight", required: true }],
+  sections: [],
+  calculation: [],
+  rules: [],
+  outputs: [
+    { key: "result", label: "Result", value: { op: "field", field: "weight" } },
+  ],
+  interpretations: [],
+  completion: { mode: "none", reset_confirmation: true },
+  test_cases: [],
+};
 
-describe("contained legacy clinical-tool preview", () => {
-  it("uses an opaque sandbox without forms, popups, or same-origin privileges", () => {
-    const { container } = render(renderPreview({
-      html: "<!doctype html><html><head></head><body>Tool</body></html>",
-      previewError: null,
-      title: "Reviewed tool",
-    }))
-
-    const frame = container.querySelector("iframe")
-    expect(frame).not.toBeNull()
-    expect(frame).toHaveAttribute("sandbox", "allow-scripts")
-    expect(frame).toHaveAttribute("referrerpolicy", "no-referrer")
-    expect(frame?.getAttribute("sandbox")).not.toContain("allow-same-origin")
-    expect(frame?.getAttribute("sandbox")).not.toContain("allow-popups")
-    expect(frame?.getAttribute("sandbox")).not.toContain("allow-forms")
-  })
-})
+describe("native clinical-tool preview", () => {
+  it("renders and evaluates schema controls without an iframe", () => {
+    const { container } = render(
+      renderPreview({ definition, previewError: null }),
+    );
+    fireEvent.change(screen.getByLabelText("Weight *"), {
+      target: { value: "72" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Calculate" }));
+    expect(screen.getByText("Result:")).toBeInTheDocument();
+    expect(screen.getByText("72")).toBeInTheDocument();
+    expect(container.querySelector("iframe")).toBeNull();
+  });
+  it("fails closed without a reviewed schema", () => {
+    render(
+      renderPreview({
+        definition: null,
+        previewError: "A reviewed schema is required.",
+      }),
+    );
+    expect(
+      screen.getByText("Native clinical tool unavailable"),
+    ).toBeInTheDocument();
+  });
+});

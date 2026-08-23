@@ -1,4 +1,3 @@
-import 'package:user_app/core/constants/app_constants.dart';
 import 'package:user_app/shared/models/models.dart';
 import 'package:user_app/core/network/api_client.dart';
 import 'package:user_app/core/network/contracts/generated/backend_contracts.dart';
@@ -86,20 +85,6 @@ final class CalculatorRepository {
     }
   }
 
-  // =========================================================
-  // CONTENT
-  // =========================================================
-  //
-  // HTML persistence is already handled by
-  // FileCalculatorContentLoader, so this remains remote.
-  // =========================================================
-
-  Future<String> content(String id) {
-    return _api.requestText(
-      '/api/v2/calculators/${Uri.encodeComponent(id)}/content',
-    );
-  }
-
   Future<ClinicalToolDefinitionEnvelope> definition(String id) async {
     try {
       final response = await _api.requestJson(
@@ -142,12 +127,6 @@ final class CalculatorRepository {
     checksum: definition.definitionChecksum,
     responses: responses,
   );
-
-  String contentUrl(String id) {
-    return '$mediguideApiBaseUrl'
-        '/api/v2/calculators/'
-        '${Uri.encodeComponent(id)}/content';
-  }
 
   // =========================================================
   // GET

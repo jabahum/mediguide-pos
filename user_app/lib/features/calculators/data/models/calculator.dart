@@ -43,12 +43,9 @@ abstract class Calculator with _$Calculator {
     'archived' => CalculatorStatus.archived,
     _ => CalculatorStatus.draft,
   };
-  String getAppFileUrl(String baseUrl) =>
-      appFile.isEmpty ? '' : '$baseUrl/api/v2/calculators/$id/content';
   bool get isActive => status == CalculatorStatus.active;
   bool get isDraft => status == CalculatorStatus.draft;
   bool get isArchived => status == CalculatorStatus.archived;
-  bool get isNativeSchema => runtimeKind == 'schema_v1';
   String get typeDisplayName => switch (type) {
     CalculatorType.calculator => 'Calculator',
     CalculatorType.decisionTool => 'Decision Tool',

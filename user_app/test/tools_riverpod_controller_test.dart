@@ -39,24 +39,37 @@ final class ToolApi extends BackendApiService {
           'name': 'BMI',
           'type': 'calculator',
           'status': 'active',
-          'app_file_json': {'path': 'bmi.html'},
+          'runtime_type': 'schema_v1',
+        },
+      };
+    }
+    if (path == '/api/v2/calculators/calculator-1/definition') {
+      return {
+        'data': {
+          'calculator_id': 'calculator-1',
+          'version_id': 'version-1',
+          'runtime_type': 'schema_v1',
+          'semantic_version': '1.0.0',
+          'definition_checksum': 'checksum-1',
+          'definition': {
+            'schema_version': '1.0',
+            'tool_type': 'calculator',
+            'title': 'BMI',
+            'version': '1.0.0',
+            'locale': 'en',
+            'inputs': [],
+            'sections': [],
+            'calculation': [],
+            'rules': [],
+            'outputs': [],
+            'interpretations': [],
+            'completion': {'mode': 'none', 'reset_confirmation': true},
+            'test_cases': [],
+          },
         },
       };
     }
     throw StateError('Unexpected request: $method $path');
-  }
-}
-
-final class MemoryCalculatorLoader implements CalculatorContentLoader {
-  Calculator? loaded;
-
-  @override
-  Future<CalculatorContent> load(Calculator calculator) async {
-    loaded = calculator;
-    return const CalculatorContent(
-      html: '<html><body>BMI</body></html>',
-      baseUrl: 'https://api.example.test/calculators/',
-    );
   }
 }
 
@@ -81,42 +94,32 @@ void main() {
     expect(state.hasActiveFilters, isTrue);
   });
 
-  test('calculator runner resolves an id and exposes loaded HTML', () async {
-    final api = ToolApi();
-    final loader = MemoryCalculatorLoader();
-    final store = TestLocalStore();
-    addTearDown(store.close);
-    final container = ProviderContainer(
-      overrides: [
-        backendApiServiceProvider.overrideWithValue(api),
-        authSessionStoreProvider.overrideWithValue(EmptyToolSessionStore()),
-        calculatorContentLoaderProvider.overrideWithValue(loader),
-        calculatorRepositoryProvider.overrideWithValue(
-          CalculatorRepository(api, CalculatorLocalRepository(store.cache)),
-        ),
-      ],
-    );
-    addTearDown(container.dispose);
-    await container.read(authControllerProvider.future);
-    const request = UseCalculatorRequest(id: 'calculator-1');
-    container.listen(useCalculatorControllerProvider(request), (_, _) {});
+  test(
+    'calculator runner resolves an id and exposes a reviewed schema',
+    () async {
+      final api = ToolApi();
+      final store = TestLocalStore();
+      addTearDown(store.close);
+      final container = ProviderContainer(
+        overrides: [
+          backendApiServiceProvider.overrideWithValue(api),
+          authSessionStoreProvider.overrideWithValue(EmptyToolSessionStore()),
+          calculatorRepositoryProvider.overrideWithValue(
+            CalculatorRepository(api, CalculatorLocalRepository(store.cache)),
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+      await container.read(authControllerProvider.future);
+      const request = UseCalculatorRequest(id: 'calculator-1');
+      container.listen(useCalculatorControllerProvider(request), (_, _) {});
 
-    final state = await container.read(
-      useCalculatorControllerProvider(request).future,
-    );
-    expect(state.calculator.name, 'BMI');
-    expect(state.html, contains('<body>BMI</body>'));
-    expect(loader.loaded?.id, 'calculator-1');
-
-    container
-        .read(useCalculatorControllerProvider(request).notifier)
-        .webViewReady();
-    expect(
-      container
-          .read(useCalculatorControllerProvider(request))
-          .value!
-          .isWebViewReady,
-      isTrue,
-    );
-  });
+      final state = await container.read(
+        useCalculatorControllerProvider(request).future,
+      );
+      expect(state.calculator.name, 'BMI');
+      expect(state.definition.versionId, 'version-1');
+      expect(state.definition.definition.title, 'BMI');
+    },
+  );
 }

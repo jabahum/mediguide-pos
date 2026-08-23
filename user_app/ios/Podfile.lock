@@ -109,13 +109,6 @@ PODS:
   - FirebaseRemoteConfigInterop (12.17.0)
   - FirebaseSharedSwift (12.17.0)
   - Flutter (1.0.0)
-  - flutter_inappwebview_ios (0.0.1):
-    - Flutter
-    - flutter_inappwebview_ios/Core (= 0.0.1)
-    - OrderedSet (~> 6.0.3)
-  - flutter_inappwebview_ios/Core (0.0.1):
-    - Flutter
-    - OrderedSet (~> 6.0.3)
   - flutter_keyboard_visibility_temp_fork (0.0.1):
     - Flutter
   - flutter_local_notifications (0.0.1):
@@ -192,7 +185,6 @@ PODS:
     - nanopb/encode (= 3.30910.0)
   - nanopb/decode (3.30910.0)
   - nanopb/encode (3.30910.0)
-  - OrderedSet (6.0.3)
   - package_info_plus (0.4.5):
     - Flutter
   - PromisesObjC (2.4.1)
@@ -216,7 +208,6 @@ DEPENDENCIES:
   - firebase_messaging (from `.symlinks/plugins/firebase_messaging/ios`)
   - firebase_remote_config (from `.symlinks/plugins/firebase_remote_config/ios`)
   - Flutter (from `Flutter`)
-  - flutter_inappwebview_ios (from `.symlinks/plugins/flutter_inappwebview_ios/ios`)
   - flutter_keyboard_visibility_temp_fork (from `.symlinks/plugins/flutter_keyboard_visibility_temp_fork/ios`)
   - flutter_local_notifications (from `.symlinks/plugins/flutter_local_notifications/ios`)
   - flutter_pdfview (from `.symlinks/plugins/flutter_pdfview/ios`)
@@ -247,7 +238,6 @@ SPEC REPOS:
     - GoogleDataTransport
     - GoogleUtilities
     - nanopb
-    - OrderedSet
     - PromisesObjC
     - SDWebImage
     - SwiftyGif
@@ -267,8 +257,6 @@ EXTERNAL SOURCES:
     :path: ".symlinks/plugins/firebase_remote_config/ios"
   Flutter:
     :path: Flutter
-  flutter_inappwebview_ios:
-    :path: ".symlinks/plugins/flutter_inappwebview_ios/ios"
   flutter_keyboard_visibility_temp_fork:
     :path: ".symlinks/plugins/flutter_keyboard_visibility_temp_fork/ios"
   flutter_local_notifications:
@@ -310,7 +298,6 @@ SPEC CHECKSUMS:
   FirebaseRemoteConfigInterop: 785e617ae4cbc778eea97dde952b88fb934e11ff
   FirebaseSharedSwift: 983820e9aa55d2acd6af77f9a1f252ba0afb3150
   Flutter: cabc95a1d2626b1b06e7179b784ebcf0c0cde467
-  flutter_inappwebview_ios: 6f63631e2c62a7c350263b13fa5427aedefe81d4
   flutter_keyboard_visibility_temp_fork: 8a8809c4129e31d25fca77446e0f3fd548122ced
   flutter_local_notifications: eda81afddbf18f8589f6ec069ce593c4c6378769
   flutter_pdfview: 0f3c214d93afc2978e7cd995d922ba67717b3e1f
@@ -322,7 +309,6 @@ SPEC CHECKSUMS:
   in_app_review: 436034b18594851a7328d7f1c2ed5ec235b79cfc
   local_auth_darwin: 63c73d6d28cc3e239be2b6aa460ea6e317cd5100
   nanopb: fad817b59e0457d11a5dfbde799381cd727c1275
-  OrderedSet: e539b66b644ff081c73a262d24ad552a69be3a94
   package_info_plus: c0502532a26c7662a62a356cebe2692ec5fe4ec4
   PromisesObjC: 752c3227f599e3467650e47ea36f433eeb10c273
   SDWebImage: e9fc87c1aab89a8ab1bbd74eba378c6f53be8abf

@@ -1,40 +1,25 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
-
 import 'package:user_app/core/constants/app_spacing.dart';
 import 'package:user_app/core/widgets/app_error_view.dart';
 import 'package:user_app/core/widgets/app_loading_view.dart';
-
 import 'package:user_app/features/calculators/presentation/controllers/use_calculator_controller.dart';
 import 'package:user_app/features/calculators/presentation/widgets/native_clinical_tool.dart';
 import 'package:user_app/shared/models/models.dart';
 
 class UseCalculatorPage extends ConsumerStatefulWidget {
   const UseCalculatorPage({super.key, this.arguments});
-
   final Object? arguments;
-
   @override
   ConsumerState<UseCalculatorPage> createState() => _UseCalculatorPageState();
 }
 
 class _UseCalculatorPageState extends ConsumerState<UseCalculatorPage> {
   late final UseCalculatorRequest _request;
-
-  InAppWebViewController? _webViewController;
-
-  double _pageProgress = 0;
-
-  bool _canGoBack = false;
-  bool _canGoForward = false;
-
   @override
   void initState() {
     super.initState();
-
     _request = _requestFromArguments(widget.arguments);
   }
 
@@ -42,7 +27,6 @@ class _UseCalculatorPageState extends ConsumerState<UseCalculatorPage> {
     if (arguments is Calculator) {
       return UseCalculatorRequest(id: arguments.id, calculator: arguments);
     }
-
     if (arguments is Map) {
       return UseCalculatorRequest(
         id:
@@ -51,20 +35,14 @@ class _UseCalculatorPageState extends ConsumerState<UseCalculatorPage> {
             '',
       );
     }
-
     return UseCalculatorRequest(id: arguments?.toString().trim() ?? '');
   }
 
   @override
   Widget build(BuildContext context) {
     final provider = useCalculatorControllerProvider(_request);
-
     final asyncState = ref.watch(provider);
-
-    final controller = ref.read(provider.notifier);
-
     final calculator = asyncState.valueOrNull?.calculator;
-
     return Scaffold(
       appBar: AppBar(
         titleSpacing: AppSpacing.md,
@@ -72,16 +50,13 @@ class _UseCalculatorPageState extends ConsumerState<UseCalculatorPage> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              calculator?.name ?? 'Clinical Calculator',
+              calculator?.name ?? 'Clinical Tool',
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
             ),
-
             if (calculator != null)
               Text(
-                'Clinical tool',
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
+                'Reviewed JSON schema',
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
                   color: Theme.of(context).colorScheme.onSurfaceVariant,
                 ),
@@ -90,396 +65,46 @@ class _UseCalculatorPageState extends ConsumerState<UseCalculatorPage> {
         ),
         actions: [
           IconButton(
-            tooltip: 'Previous calculator page',
-            onPressed: _canGoBack ? _goBack : null,
-            icon: const Icon(LucideIcons.arrowLeft),
-          ),
-
-          IconButton(
-            tooltip: 'Next calculator page',
-            onPressed: _canGoForward ? _goForward : null,
-            icon: const Icon(LucideIcons.arrowRight),
-          ),
-
-          IconButton(
-            tooltip: 'Reload calculator',
+            tooltip: 'Reload tool',
             icon: const Icon(LucideIcons.refreshCw),
-            onPressed: asyncState.hasValue ? _reloadWebView : null,
+            onPressed: () => ref.invalidate(provider),
           ),
-
           AppSpacing.xs.gap,
         ],
-        bottom: _pageProgress > 0 && _pageProgress < 1
-            ? PreferredSize(
-                preferredSize: const Size.fromHeight(3),
-                child: LinearProgressIndicator(
-                  value: _pageProgress,
-                  minHeight: 3,
-                ),
-              )
-            : null,
       ),
-
       body: asyncState.when(
-        // ----------------------------------------------------
-        // Initial loading
-        // ----------------------------------------------------
-        loading: () {
-          return const AppLoadingView(message: 'Loading calculator...');
-        },
-
-        // ----------------------------------------------------
-        // Controller/content error
-        // ----------------------------------------------------
-        error: (error, stackTrace) {
-          return AppErrorView(
-            error: error,
-            title: 'Failed to load calculator',
-            message: 'The calculator could not be loaded.',
-            onRetry: () {
-              ref.invalidate(provider);
-            },
-          );
-        },
-
-        // ----------------------------------------------------
-        // Calculator content
-        // ----------------------------------------------------
-        data: (state) {
-          if (state.definition != null) {
-            return Column(
-              children: [
-                _CalculatorContextBar(calculator: state.calculator),
-                Expanded(
-                  child: NativeClinicalTool(
-                    definition: state.definition!.definition,
-                    initialValues: state.responses,
-                    onChanged: controller.saveResponses,
-                  ),
-                ),
-              ],
-            );
-          }
-          if (state.webViewError != null) {
-            return AppErrorView(
-              error: state.webViewError!,
-              title: 'Failed to load calculator',
-              message: 'The calculator page could not be displayed.',
-              onRetry: () {
-                _retryWebView(controller);
-              },
-            );
-          }
-
-          return Column(
-            children: [
-              // ------------------------------------------------
-              // Clinical calculator header
-              // ------------------------------------------------
-              _CalculatorContextBar(calculator: state.calculator),
-
-              // ------------------------------------------------
-              // WebView
-              // ------------------------------------------------
-              Expanded(
-                child: Stack(
-                  children: [
-                    InAppWebView(
-                      initialSettings: InAppWebViewSettings(
-                        javaScriptEnabled: true,
-
-                        isInspectable: !kReleaseMode,
-
-                        useShouldOverrideUrlLoading: true,
-
-                        javaScriptCanOpenWindowsAutomatically: false,
-
-                        supportMultipleWindows: false,
-
-                        geolocationEnabled: false,
-
-                        allowContentAccess: false,
-
-                        allowFileAccess: false,
-
-                        allowFileAccessFromFileURLs: false,
-
-                        allowUniversalAccessFromFileURLs: false,
-
-                        thirdPartyCookiesEnabled: false,
-
-                        cacheEnabled: false,
-
-                        domStorageEnabled: false,
-
-                        databaseEnabled: false,
-
-                        mediaPlaybackRequiresUserGesture: true,
-
-                        safeBrowsingEnabled: true,
-
-                        transparentBackground: false,
-                      ),
-
-                      onWebViewCreated: (webViewController) async {
-                        _webViewController = webViewController;
-
-                        await _loadCalculatorHtml(webViewController, state);
-                      },
-
-                      onLoadStart: (controllerInstance, url) {
-                        controller.webViewLoading();
-
-                        if (mounted) {
-                          setState(() {
-                            _pageProgress = 0;
-                          });
-                        }
-                      },
-
-                      onProgressChanged: (_, progress) {
-                        if (!mounted) {
-                          return;
-                        }
-
-                        setState(() {
-                          _pageProgress = progress / 100;
-                        });
-                      },
-
-                      onLoadStop: (webViewController, url) async {
-                        controller.webViewReady();
-
-                        await _updateNavigationState(webViewController);
-
-                        if (!mounted) {
-                          return;
-                        }
-
-                        setState(() {
-                          _pageProgress = 1;
-                        });
-                      },
-
-                      onReceivedError: (_, request, error) {
-                        //
-                        // Some WebView resources such
-                        // as images/fonts can fail without
-                        // making the actual calculator
-                        // unusable.
-                        //
-                        // Only promote a main document
-                        // failure to a full-screen error
-                        // where supported by the package.
-                        //
-                        if (request.isForMainFrame == false) {
-                          return;
-                        }
-
-                        controller.webViewFailed(error.description);
-                      },
-
-                      onReceivedHttpError: (_, request, response) {
-                        if (request.isForMainFrame == false) {
-                          return;
-                        }
-
-                        final statusCode = response.statusCode;
-
-                        if (statusCode != null && statusCode >= 400) {
-                          controller.webViewFailed(
-                            'Calculator returned HTTP $statusCode.',
-                          );
-                        }
-                      },
-
-                      shouldOverrideUrlLoading: (_, action) async {
-                        final requested = action.request.url?.toString();
-
-                        if (requested == null) {
-                          return NavigationActionPolicy.CANCEL;
-                        }
-
-                        final allowed = calculatorNavigationAllowed(
-                          requested,
-                          state.baseUrl,
-                        );
-
-                        return allowed
-                            ? NavigationActionPolicy.ALLOW
-                            : NavigationActionPolicy.CANCEL;
-                      },
-                    ),
-
-                    // ----------------------------------------
-                    // WebView loading overlay
-                    // ----------------------------------------
-                    if (!state.isWebViewReady)
-                      Positioned.fill(
-                        child: ColoredBox(
-                          color: Theme.of(
-                            context,
-                          ).scaffoldBackgroundColor.withValues(alpha: 0.92),
-                          child: const AppLoadingView(
-                            message: 'Preparing calculator...',
-                          ),
-                        ),
-                      ),
-                  ],
-                ),
+        loading: () =>
+            const AppLoadingView(message: 'Loading clinical tool...'),
+        error: (error, stackTrace) => AppErrorView(
+          error: error,
+          title: 'Clinical tool unavailable',
+          message:
+              'A clinically reviewed JSON-schema version has not been published for this tool, or its cached schema is unavailable.',
+          onRetry: () => ref.invalidate(provider),
+        ),
+        data: (state) => Column(
+          children: [
+            _CalculatorContextBar(calculator: state.calculator),
+            Expanded(
+              child: NativeClinicalTool(
+                definition: state.definition.definition,
+                initialValues: state.responses,
+                onChanged: ref.read(provider.notifier).saveResponses,
               ),
-            ],
-          );
-        },
+            ),
+          ],
+        ),
       ),
     );
   }
-
-  // ========================================================================
-  // LOAD CALCULATOR
-  // ========================================================================
-
-  Future<void> _loadCalculatorHtml(
-    InAppWebViewController controller,
-    UseCalculatorState state,
-  ) async {
-    try {
-      await controller.loadData(
-        data: state.html,
-        baseUrl: WebUri(state.baseUrl),
-      );
-    } catch (error) {
-      if (!mounted) {
-        return;
-      }
-
-      ref
-          .read(useCalculatorControllerProvider(_request).notifier)
-          .webViewFailed(error.toString());
-    }
-  }
-
-  // ========================================================================
-  // NAVIGATION
-  // ========================================================================
-
-  Future<void> _updateNavigationState(InAppWebViewController controller) async {
-    final canGoBack = await controller.canGoBack();
-
-    final canGoForward = await controller.canGoForward();
-
-    if (!mounted) {
-      return;
-    }
-
-    setState(() {
-      _canGoBack = canGoBack;
-      _canGoForward = canGoForward;
-    });
-  }
-
-  Future<void> _goBack() async {
-    final controller = _webViewController;
-
-    if (controller == null) {
-      return;
-    }
-
-    if (await controller.canGoBack()) {
-      await controller.goBack();
-
-      await _updateNavigationState(controller);
-    }
-  }
-
-  Future<void> _goForward() async {
-    final controller = _webViewController;
-
-    if (controller == null) {
-      return;
-    }
-
-    if (await controller.canGoForward()) {
-      await controller.goForward();
-
-      await _updateNavigationState(controller);
-    }
-  }
-
-  // ========================================================================
-  // RELOAD
-  // ========================================================================
-
-  Future<void> _reloadWebView() async {
-    final controller = _webViewController;
-
-    if (controller == null) {
-      return;
-    }
-
-    try {
-      ref
-          .read(useCalculatorControllerProvider(_request).notifier)
-          .webViewLoading();
-
-      await controller.reload();
-    } catch (error) {
-      if (!mounted) {
-        return;
-      }
-
-      ref
-          .read(useCalculatorControllerProvider(_request).notifier)
-          .webViewFailed(error.toString());
-    }
-  }
-
-  // ========================================================================
-  // RETRY
-  // ========================================================================
-
-  Future<void> _retryWebView(UseCalculatorController controller) async {
-    final provider = useCalculatorControllerProvider(_request);
-
-    final current = ref.read(provider).valueOrNull;
-
-    if (current == null) {
-      ref.invalidate(provider);
-
-      return;
-    }
-
-    final webViewController = _webViewController;
-
-    if (webViewController == null) {
-      ref.invalidate(provider);
-
-      return;
-    }
-
-    controller.webViewLoading();
-
-    try {
-      await _loadCalculatorHtml(webViewController, current);
-    } catch (error) {
-      controller.webViewFailed(error.toString());
-    }
-  }
 }
-
-// ===========================================================================
-// CALCULATOR CONTEXT
-// ===========================================================================
 
 class _CalculatorContextBar extends StatelessWidget {
   const _CalculatorContextBar({required this.calculator});
-
   final Calculator calculator;
-
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
-
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.symmetric(
@@ -505,9 +130,7 @@ class _CalculatorContextBar extends StatelessWidget {
               color: colors.primary,
             ),
           ),
-
           AppSpacing.hGapSm,
-
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -516,13 +139,10 @@ class _CalculatorContextBar extends StatelessWidget {
                   calculator.name,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: Theme.of(
-                    context,
-                  ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
+                  style: Theme.of(context).textTheme.titleSmall,
                 ),
-
                 Text(
-                  'Enter the required clinical values below.',
+                  '${calculator.type.label} • v${calculator.version}',
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
@@ -536,27 +156,4 @@ class _CalculatorContextBar extends StatelessWidget {
       ),
     );
   }
-}
-
-// ===========================================================================
-// NAVIGATION SECURITY
-// ===========================================================================
-
-@visibleForTesting
-bool calculatorNavigationAllowed(String requestedUrl, String baseUrl) {
-  final requested = Uri.tryParse(requestedUrl);
-
-  if (requested == null || Uri.tryParse(baseUrl) == null) {
-    return false;
-  }
-
-  // WebView startup/navigation internals.
-  if (requested.scheme == 'about') {
-    return requestedUrl == 'about:blank';
-  }
-
-  // Legacy tools are self-contained. All top-level network, data, blob and
-  // platform-scheme navigation is blocked; the injected CSP also blocks
-  // subresource requests.
-  return false;
 }

@@ -6,6 +6,20 @@ decision tools, and checklists. The JSON Schema in
 format. Go, TypeScript, and Dart implementations must pass the same conformance
 fixtures before a schema version can be published.
 
+## Client execution policy
+
+The dashboard test runner and Flutter application execute only published
+`schema_v1` definitions through native controls and the deterministic evaluator
+contract. They do not download, cache, embed, or execute calculator HTML. If a
+reviewed schema is not published (and Flutter has no previously validated
+cached definition), the client fails closed and explains that the tool is
+awaiting clinical publication.
+
+Backend legacy endpoints and artifacts remain temporarily available only for
+controlled parity review and rollback while clinician approval is incomplete.
+They are not a client runtime fallback and must not be reintroduced into
+production UI code.
+
 ## Safety boundary
 
 - Definitions contain data and the restricted expression AST only. They never

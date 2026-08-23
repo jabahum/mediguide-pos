@@ -49,7 +49,7 @@ Default local endpoints:
 | Guidelines | <http://localhost:5173> |
 | Dashboard | <http://localhost:3000/admin> |
 | API | <http://localhost:8080> |
-| API readiness | <http://localhost:8080/readyz> |
+| API readiness | <http://localhost:8080/api/readyz> |
 | MinIO console | <http://localhost:9001> |
 
 Useful commands:
@@ -184,6 +184,8 @@ promotion and store credentials.
 | [`docs/guideline-publication-architecture.md`](docs/guideline-publication-architecture.md) | Guideline ingestion and publication architecture |
 | [`docs/markdown-authoring-workspace.md`](docs/markdown-authoring-workspace.md) | Dashboard Markdown editor and review workflow |
 | [`docs/guideline-editor-permissions.md`](docs/guideline-editor-permissions.md) | Authoring authorization model |
+| [`docs/clinical-tool-runtime.md`](docs/clinical-tool-runtime.md) | Schema tools, reviewer workflow, clinical gates, rehearsal, retirement and audit procedures |
+| [`docs/clinical-tool-validation-status.md`](docs/clinical-tool-validation-status.md) | Latest Phase 11 validation results and release blockers |
 | [`docs/rate-limits-and-cache.md`](docs/rate-limits-and-cache.md) | Redis rate limiting and cache behavior |
 | [`docs/pocketbase-removal.md`](docs/pocketbase-removal.md) | Typed-domain migration and historical compatibility notes |
 

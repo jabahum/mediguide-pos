@@ -9,27 +9,27 @@ import (
 )
 
 type Config struct {
-	AppName              string
-	AppEnv               string
-	Port                 string
+	AppName                string
+	AppEnv                 string
+	Port                   string
 	LegacyClinicalToolsDir string
-	DatabaseURL          string
-	JWTSecret            string
-	JWTIssuer            string
-	JWTTTLMinutes        int
-	JWTRefreshTTLMinutes int
-	StorageDriver        string
-	S3Endpoint           string
-	S3AccessKey          string
-	S3SecretKey          string
-	S3Bucket             string
-	S3UseSSL             bool
-	S3PresignMinutes     int
-	MaxUploadMB          int64
-	AIRAGProvider        string
-	AIWorkerWebhook      string
-	AIWorkerGRPCAddr     string
-	AIWorkerTimeoutSecs  int
+	DatabaseURL            string
+	JWTSecret              string
+	JWTIssuer              string
+	JWTTTLMinutes          int
+	JWTRefreshTTLMinutes   int
+	StorageDriver          string
+	S3Endpoint             string
+	S3AccessKey            string
+	S3SecretKey            string
+	S3Bucket               string
+	S3UseSSL               bool
+	S3PresignMinutes       int
+	MaxUploadMB            int64
+	AIRAGProvider          string
+	AIWorkerWebhook        string
+	AIWorkerGRPCAddr       string
+	AIWorkerTimeoutSecs    int
 	// Shared secret sent as X-Worker-Secret to the ai-worker API.
 	AIWorkerSecret string
 	// Comma-separated list of allowed CORS origins (use "*" for local dev only).

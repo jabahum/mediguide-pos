@@ -109,7 +109,7 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
 
       final messageContext = AppKeys.navigatorKey.currentContext;
 
-      if (messageContext != null) {
+      if (messageContext != null && messageContext.mounted) {
         AppMessage.success(
           messageContext,
           AppTranslationKey.profileUpdatedSuccessfully.tr,
@@ -123,7 +123,7 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
 
       final messageContext = AppKeys.navigatorKey.currentContext;
 
-      if (messageContext != null) {
+      if (messageContext != null && messageContext.mounted) {
         AppMessage.error(
           messageContext,
           AppTranslationKey.failedToUpdateProfile.tr,

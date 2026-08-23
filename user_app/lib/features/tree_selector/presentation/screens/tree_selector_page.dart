@@ -339,8 +339,8 @@ class _TreeSelectorPageState extends ConsumerState<TreeSelectorPage> {
     // Adjust these properties if your model uses different names.
     //
     final searchable = <String>[
-      node.title ?? '',
-      node.subtitle ?? '',
+      node.title,
+      node.subtitle,
     ].join(' ').toLowerCase();
 
     return searchable.contains(needle);
@@ -348,8 +348,8 @@ class _TreeSelectorPageState extends ConsumerState<TreeSelectorPage> {
 
   String _nodeSemanticLabel(TreeSelectorNodeModel node) {
     final parts = <String>[
-      node.title?.trim() ?? '',
-      if (node.subtitle?.trim().isNotEmpty == true) node.subtitle!.trim(),
+      node.title.trim(),
+      if (node.subtitle.trim().isNotEmpty) node.subtitle.trim(),
       if (node.hasChildren) 'Contains child items',
     ];
 

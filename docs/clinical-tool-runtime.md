@@ -123,6 +123,26 @@ rendered as React controls and text; authored HTML and executable source are
 never inserted into the page. The preview is advisory: backend validation and
 the Go evaluator are the publication authority.
 
+### Reviewer queue and protected mobile preview
+
+The dashboard reviewer queue is `/decision-tools/review`; the protected review
+workspace is `/decision-tools/{calculatorId}/review/{versionId}`. The workspace
+loads the read-only preview from
+`GET /api/v2/calculator-versions/{versionId}/preview`, shows saved fixture
+evidence and immutable audit history, and keeps approval and publication as
+separate permission-checked operations. A local checklist helps organize the
+review but is not clinical approval evidence.
+
+The mobile review route is `/clinical-tools/review/{versionId}`. It uses the
+same protected preview endpoint and stores an offline preview only in the
+authenticated reviewer's `user:{id}` cache scope. The copied link contains an
+opaque version UUID, not a bearer token. Opening it on another device still
+requires an authenticated session with `calculator.review`; the API must return
+`401` or `403` before returning an unpublished definition. Do not put access or
+refresh tokens, email addresses, or clinical content in the URL, push payload,
+analytics event, clipboard label, or logs. Public calculator APIs and caches
+never return draft or pending-review versions.
+
 ## Mobile execution and offline state
 
 Flutter fetches a published schema definition through the focused calculator
@@ -246,6 +266,13 @@ The operation atomically clears the active schema pointer, marks the current
 published definition `superseded`, restores `legacy_html`, and writes immutable
 audit events. It does not delete definitions or test evidence. The dashboard
 authoring workspace exposes the same action behind a destructive confirmation.
+
+This rollback exists only while the reviewed legacy artifacts remain packaged.
+After the authentic retirement gate passes and the HTML runtime is removed,
+there is deliberately no HTML rollback. Post-retirement rollback means selecting
+a previously published immutable `schema_v1` version, or shipping a reviewed
+application/database rollback that preserves its audit trail. Never restore an
+HTML artifact ad hoc on a production host.
 
 ### Current clinical gates
 
@@ -437,12 +464,79 @@ Phase 10 contract cleanup remain prohibited until this authentic command prints
 
 ## Operational validation
 
-Before rollout or retirement run backend tests/vet/build, dashboard frozen
-install/lint/typecheck/tests/build, project-pinned Flutter format/analyze/tests
-and debug APK, contract generation/drift checks, migration up/down/up, both
-Compose validations, and API/dashboard image builds. Inspect `/api/readyz` and
-frontend health checks only in a disposable environment. Production services
-must not be restarted by validation.
+Before rollout or retirement run the following from a clean worktree. The
+rehearsal creates a unique Compose project, performs migration `up -> down ->
+up`, seeds fresh volumes, runs the synthetic workflow, verifies the schema-only
+image and removes its containers and volumes on exit.
+
+```bash
+make contracts-check
+make clinical-tools-check
+make clinical-tools-retirement-rehearsal
+
+cd backend
+gofmt -w $(rg --files cmd internal -g '*.go')
+go test ./...
+go vet ./...
+go build ./...
+
+cd ../dashboard
+bun install --frozen-lockfile
+bun run lint
+bun run typecheck
+bun run test
+bun run build
+
+cd ../user_app
+./.fvm/flutter_sdk/bin/flutter pub get
+./.fvm/flutter_sdk/bin/dart run build_runner build --delete-conflicting-outputs
+./.fvm/flutter_sdk/bin/dart format --output=none --set-exit-if-changed lib test
+./.fvm/flutter_sdk/bin/flutter analyze
+./.fvm/flutter_sdk/bin/flutter test
+./.fvm/flutter_sdk/bin/flutter build apk --debug --flavor development \
+  --target lib/main_development.dart
+./.fvm/flutter_sdk/bin/flutter build ios --debug --no-codesign \
+  --flavor development --target lib/main_development.dart
+
+cd ..
+docker compose --env-file infra/development.env \
+  -f infra/docker-compose.yml -f infra/docker-compose.dev.yml config --quiet
+docker compose --env-file infra/production.env.example \
+  -f infra/docker-compose.yml config --quiet
+```
+
+Build production backend and dashboard images with disposable local tags; do
+not push them or restart production during validation. Inspect `/api/readyz`, the
+dashboard health endpoint and the guidelines health endpoint only in the
+disposable stack. Report lint warnings separately from errors. Review golden
+failures through the master, test, isolated-diff and masked-diff artifacts;
+never regenerate baselines simply to make the gate pass.
+
+### Audit and troubleshooting
+
+- A retirement check that prints `BLOCKED` is working as designed. Read every
+  tool-specific reason and obtain genuine parity evidence; do not edit the gate
+  or copy synthetic identities into real reports.
+- If migration `down` or the second `up` fails, retain the disposable logs,
+  identify the migration number, and fix both directions before seeding. Never
+  test rollback first against a shared database.
+- If a fresh seed fails, rerun it in the disposable database to verify
+  idempotency and inspect the conflicting natural key. Never solve seed drift by
+  deleting production volumes.
+- For checksum failures, compare the catalog checksum, persisted definition
+  checksum and client digest. Do not rewrite an expected value until the
+  reviewed source difference is understood.
+- For reviewer access failures, verify authentication and
+  `calculator.review`. A version UUID alone grants no access.
+- For parity differences, compare normalized input, fixed clock, units,
+  precision and rule order in Go, TypeScript and Dart. Go remains the publication
+  authority and disagreement blocks publication.
+- Preserve workflow audit rows, immutable definitions, fixture results, review
+  comments and approved parity reports. Synthetic reports belong only under
+  `artifacts/clinical-tools-retirement-rehearsal/` and are not clinical records.
+
+Production services must not be restarted, reseeded, or have their volumes
+removed by validation.
 
 Rollback of a schema rollout selects the retained legacy runtime through the
 audited publisher-only endpoint documented above. Withdrawal applies to a

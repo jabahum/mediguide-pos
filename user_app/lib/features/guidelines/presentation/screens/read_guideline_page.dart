@@ -474,27 +474,6 @@ class _ReadGuidelinePageState extends ConsumerState<ReadGuidelinePage> {
 }
 
 // ===========================================================================
-// READING PROGRESS
-// ===========================================================================
-
-class _ReadingProgressBar extends StatelessWidget {
-  const _ReadingProgressBar({required this.progress});
-
-  final double progress;
-
-  @override
-  Widget build(BuildContext context) {
-    final value = progress.clamp(0.0, 1.0);
-
-    if (value <= 0) {
-      return const SizedBox.shrink();
-    }
-
-    return LinearProgressIndicator(value: value, minHeight: 3);
-  }
-}
-
-// ===========================================================================
 // SECTION NAVIGATION
 // ===========================================================================
 

@@ -70,6 +70,8 @@ echo "Starting isolated rehearsal project ${project}"
 "${compose[@]}" build api
 "${compose[@]}" up -d --wait postgres redis minio
 "${compose[@]}" run --rm --no-deps api /app/migrate up
+"${compose[@]}" run --rm --no-deps api /app/migrate down
+"${compose[@]}" run --rm --no-deps api /app/migrate up
 "${compose[@]}" run --rm --no-deps api /app/seed
 
 author_id="$("${compose[@]}" exec -T postgres psql -U mediguide_rehearsal -d mediguide_rehearsal -Atc "SELECT id FROM users WHERE email='admin@mediguide.health.go.ug' LIMIT 1")"

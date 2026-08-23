@@ -48,7 +48,9 @@ class OfflineContentPage extends ConsumerWidget {
           return _OfflineContentList(
             items: items,
             onRefresh: () async {
-              await ref.refresh(guidelineDownloadsControllerProvider.future);
+              final _ = await ref.refresh(
+                guidelineDownloadsControllerProvider.future,
+              );
             },
             onCancel: (item) {
               ref

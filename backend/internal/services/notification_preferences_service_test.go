@@ -77,9 +77,9 @@ func TestNotificationPreferencesDisableDevicesAndBlockPerDeviceReenable(t *testi
 	}
 	firebase := FirebaseService{DB: service.DB}
 	registered, err := firebase.RegisterDevice(user.ID, FirebaseDeviceInput{
-		InstallationID:      uuid.NewString(),
-		RegistrationToken:   uuid.NewString(),
-		Platform:            "android",
+		InstallationID:       uuid.NewString(),
+		RegistrationToken:    uuid.NewString(),
+		Platform:             "android",
 		NotificationsEnabled: &trueValue,
 	})
 	if err != nil {

@@ -15,6 +15,7 @@
 !docs/outbreak-operations.md
 !docs/clinical-tool-phase-1-inventory.md
 !docs/clinical-tool-runtime.md
+!docs/clinical-tool-validation-status.md
 !guidelines-platform/src/content/**/*.md
 backend/.env
 backend/.env.local

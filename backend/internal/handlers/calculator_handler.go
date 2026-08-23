@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 
 	"mediguide/internal/httpx"
 	"mediguide/internal/middleware"
@@ -23,6 +24,92 @@ type CalculatorHandler struct {
 
 type CalculatorVersionLockRequest struct {
 	LockVersion int `json:"lock_version" binding:"required,min=1"`
+}
+
+// ReviewQueue godoc
+// @Summary List calculator versions awaiting or undergoing clinical review
+// @Tags calculator-versions
+// @Produce json
+// @Security BearerAuth
+// @Param page query int false "Page number" minimum(1)
+// @Param per_page query int false "Page size" minimum(1) maximum(100)
+// @Param search query string false "Tool name or semantic-version search"
+// @Param status query string false "Comma-separated version statuses"
+// @Param type query string false "Comma-separated tool types"
+// @Param author_id query string false "Author ID" format(uuid)
+// @Param reviewer_id query string false "Reviewer ID" format(uuid)
+// @Param program_area query string false "Clinical owner/program area"
+// @Param created_from query string false "Created from, RFC3339"
+// @Param created_to query string false "Created to, RFC3339"
+// @Param sort query string false "created_at, updated_at, status, semantic_version or tool_name"
+// @Param order query string false "asc or desc"
+// @Success 200 {object} handlers.CalculatorReviewQueueEnvelope
+// @Failure 400 {object} handlers.ErrorResponse
+// @Failure 401 {object} handlers.ErrorResponse
+// @Failure 403 {object} handlers.ErrorResponse
+// @Router /api/v2/calculator-versions/review-queue [get]
+func (h CalculatorHandler) ReviewQueue(c *gin.Context) {
+	page, err := parsePageQuery(c, 20, 100)
+	if err != nil {
+		httpx.Error(c, http.StatusBadRequest, "invalid pagination parameters")
+		return
+	}
+	authorID, err := optionalUUIDQuery(c.Query("author_id"))
+	if err != nil {
+		httpx.Error(c, http.StatusBadRequest, "invalid author_id")
+		return
+	}
+	reviewerID, err := optionalUUIDQuery(c.Query("reviewer_id"))
+	if err != nil {
+		httpx.Error(c, http.StatusBadRequest, "invalid reviewer_id")
+		return
+	}
+	createdFrom, err := optionalRFC3339Query(c.Query("created_from"))
+	if err != nil {
+		httpx.Error(c, http.StatusBadRequest, "invalid created_from")
+		return
+	}
+	createdTo, err := optionalRFC3339Query(c.Query("created_to"))
+	if err != nil {
+		httpx.Error(c, http.StatusBadRequest, "invalid created_to")
+		return
+	}
+	result, err := h.Versions.ReviewQueue(services.CalculatorReviewQueueInput{
+		Page: page, Search: c.Query("search"), Status: c.Query("status"), ToolType: c.Query("type"),
+		AuthorID: authorID, ReviewerID: reviewerID, ClinicalOwner: c.Query("program_area"),
+		CreatedFrom: createdFrom, CreatedTo: createdTo, Sort: c.Query("sort"), Order: c.Query("order"),
+	})
+	if err != nil {
+		h.writeVersionError(c, err, nil)
+		return
+	}
+	httpx.OK(c, result)
+}
+
+// PreviewVersion godoc
+// @Summary Fetch an unpublished calculator version for authenticated clinical review
+// @Description Requires calculator.review and never changes the active published definition.
+// @Tags calculator-versions
+// @Produce json
+// @Security BearerAuth
+// @Param id path string true "Version ID" format(uuid)
+// @Success 200 {object} handlers.CalculatorVersionPreviewEnvelope
+// @Failure 400 {object} handlers.ErrorResponse
+// @Failure 401 {object} handlers.ErrorResponse
+// @Failure 403 {object} handlers.ErrorResponse
+// @Failure 404 {object} handlers.ErrorResponse
+// @Router /api/v2/calculator-versions/{id}/preview [get]
+func (h CalculatorHandler) PreviewVersion(c *gin.Context) {
+	id, ok := calculatorVersionID(c)
+	if !ok {
+		return
+	}
+	item, err := h.Versions.Preview(id)
+	if err != nil {
+		h.writeVersionError(c, err, nil)
+		return
+	}
+	httpx.OK(c, item)
 }
 
 // List godoc
@@ -570,6 +657,30 @@ func calculatorVersionLock(c *gin.Context) (int, bool) {
 
 func calculatorActor(c *gin.Context) uuid.UUID {
 	return c.MustGet(middleware.ClaimsKey).(*security.Claims).UserID
+}
+
+func optionalUUIDQuery(raw string) (*uuid.UUID, error) {
+	raw = strings.TrimSpace(raw)
+	if raw == "" {
+		return nil, nil
+	}
+	value, err := uuid.Parse(raw)
+	if err != nil {
+		return nil, err
+	}
+	return &value, nil
+}
+
+func optionalRFC3339Query(raw string) (*time.Time, error) {
+	raw = strings.TrimSpace(raw)
+	if raw == "" {
+		return nil, nil
+	}
+	value, err := time.Parse(time.RFC3339, raw)
+	if err != nil {
+		return nil, err
+	}
+	return &value, nil
 }
 
 // StartUsage godoc

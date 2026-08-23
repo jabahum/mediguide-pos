@@ -86,4 +86,20 @@ void main() {
     await tester.enterText(find.byType(TextFormField), '50');
     expect(saved?['weight'], 50);
   });
+
+  testWidgets('reset clears inputs and computed results', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: const Scaffold(body: NativeClinicalTool(definition: definition)),
+      ),
+    );
+    await tester.enterText(find.byType(TextFormField), '30');
+    await tester.tap(find.text('Calculate'));
+    await tester.pump();
+    expect(find.textContaining('Dose: 60'), findsOneWidget);
+    await tester.tap(find.text('Reset'));
+    await tester.pump();
+    expect(find.textContaining('Dose: 60'), findsNothing);
+    expect(find.text('30'), findsNothing);
+  });
 }

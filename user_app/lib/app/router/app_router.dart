@@ -20,6 +20,7 @@ import 'package:user_app/features/ai_assistant/presentation/screens/ai_assistant
 import 'package:user_app/features/all_actions/presentation/screens/all_actions_page.dart';
 import 'package:user_app/features/calculators/presentation/screens/tools_page.dart';
 import 'package:user_app/features/calculators/presentation/screens/use_calculator_page.dart';
+import 'package:user_app/features/calculators/presentation/screens/calculator_review_page.dart';
 import 'package:user_app/features/consultants/presentation/screens/consultants_page.dart';
 import 'package:user_app/features/content/presentation/screens/about_us_page.dart';
 import 'package:user_app/features/content/presentation/screens/generic_viewer_page.dart';
@@ -261,6 +262,12 @@ final appRouterProvider = Provider<GoRouter>((ref) {
 
           return UseCalculatorPage(arguments: state.extra ?? calculatorId);
         },
+      ),
+      GoRoute(
+        path: AppRoutes.calculatorReview,
+        builder: (_, state) => CalculatorReviewPage(
+          versionId: state.pathParameters['versionId'] ?? '',
+        ),
       ),
 
       // Health directory

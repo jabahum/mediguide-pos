@@ -382,6 +382,13 @@ definitions:
         example: true
         type: boolean
     type: object
+  handlers.CalculatorReviewQueueEnvelope:
+    properties:
+      data:
+        $ref: '#/definitions/services.PageResult-services_CalculatorReviewQueueItem'
+      success:
+        type: boolean
+    type: object
   handlers.CalculatorUsageEnvelope:
     properties:
       data:
@@ -413,6 +420,13 @@ definitions:
         type: integer
     required:
     - lock_version
+    type: object
+  handlers.CalculatorVersionPreviewEnvelope:
+    properties:
+      data:
+        $ref: '#/definitions/services.CalculatorVersionPreviewDTO'
+      success:
+        type: boolean
     type: object
   handlers.CalculatorVersionTestEnvelope:
     properties:
@@ -3939,6 +3953,75 @@ definitions:
       version_id:
         type: string
     type: object
+  services.CalculatorFixtureReviewDTO:
+    properties:
+      description:
+        type: string
+      expected:
+        additionalProperties: {}
+        type: object
+      input:
+        additionalProperties: {}
+        type: object
+      key:
+        type: string
+      last_passed:
+        type: boolean
+      last_result:
+        additionalProperties: {}
+        type: object
+      last_run_at:
+        type: string
+      numeric_tolerance:
+        type: number
+    type: object
+  services.CalculatorReviewQueueItem:
+    properties:
+      author_id:
+        type: string
+      calculator_id:
+        type: string
+      clinical_owner:
+        type: string
+      clinical_reviewer:
+        type: string
+      created_at:
+        type: string
+      definition_checksum:
+        type: string
+      fixture_count:
+        type: integer
+      fixture_passed_count:
+        type: integer
+      last_audit_action:
+        type: string
+      last_audit_at:
+        type: string
+      lock_version:
+        type: integer
+      review_evidence_status:
+        type: string
+      reviewer_id:
+        type: string
+      semantic_version:
+        type: string
+      tests_passed:
+        type: boolean
+      tool_name:
+        type: string
+      tool_status:
+        type: string
+      tool_type:
+        type: string
+      updated_at:
+        type: string
+      validation_passed:
+        type: boolean
+      version_id:
+        type: string
+      version_status:
+        type: string
+    type: object
   services.CalculatorVersionAuditDTO:
     properties:
       action:
@@ -4007,6 +4090,29 @@ definitions:
         type: string
       validation_passed:
         type: boolean
+    type: object
+  services.CalculatorVersionPreviewDTO:
+    properties:
+      audit:
+        items:
+          $ref: '#/definitions/services.CalculatorVersionAuditDTO'
+        type: array
+      fixtures:
+        items:
+          $ref: '#/definitions/services.CalculatorFixtureReviewDTO'
+        type: array
+      review_evidence_status:
+        type: string
+      runtime_type:
+        type: string
+      tool_name:
+        type: string
+      tool_status:
+        type: string
+      tool_type:
+        type: string
+      version:
+        $ref: '#/definitions/services.CalculatorVersionDTO'
     type: object
   services.CalculatorVersionReviewCommentInput:
     properties:
@@ -6608,6 +6714,21 @@ definitions:
       total_pages:
         type: integer
     type: object
+  services.PageResult-services_CalculatorReviewQueueItem:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/services.CalculatorReviewQueueItem'
+        type: array
+      page:
+        type: integer
+      per_page:
+        type: integer
+      total_items:
+        type: integer
+      total_pages:
+        type: integer
+    type: object
   services.PageResult-services_ConversationView:
     properties:
       items:
@@ -8894,6 +9015,46 @@ paths:
       summary: Duplicate a calculator version into a new draft
       tags:
       - calculator-versions
+  /api/v2/calculator-versions/{id}/preview:
+    get:
+      description: Requires calculator.review and never changes the active published
+        definition.
+      parameters:
+      - description: Version ID
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.CalculatorVersionPreviewEnvelope'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Fetch an unpublished calculator version for authenticated clinical
+        review
+      tags:
+      - calculator-versions
   /api/v2/calculator-versions/{id}/publish:
     post:
       parameters:
@@ -9068,6 +9229,86 @@ paths:
       security:
       - BearerAuth: []
       summary: Withdraw a superseded version
+      tags:
+      - calculator-versions
+  /api/v2/calculator-versions/review-queue:
+    get:
+      parameters:
+      - description: Page number
+        in: query
+        minimum: 1
+        name: page
+        type: integer
+      - description: Page size
+        in: query
+        maximum: 100
+        minimum: 1
+        name: per_page
+        type: integer
+      - description: Tool name or semantic-version search
+        in: query
+        name: search
+        type: string
+      - description: Comma-separated version statuses
+        in: query
+        name: status
+        type: string
+      - description: Comma-separated tool types
+        in: query
+        name: type
+        type: string
+      - description: Author ID
+        format: uuid
+        in: query
+        name: author_id
+        type: string
+      - description: Reviewer ID
+        format: uuid
+        in: query
+        name: reviewer_id
+        type: string
+      - description: Clinical owner/program area
+        in: query
+        name: program_area
+        type: string
+      - description: Created from, RFC3339
+        in: query
+        name: created_from
+        type: string
+      - description: Created to, RFC3339
+        in: query
+        name: created_to
+        type: string
+      - description: created_at, updated_at, status, semantic_version or tool_name
+        in: query
+        name: sort
+        type: string
+      - description: asc or desc
+        in: query
+        name: order
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.CalculatorReviewQueueEnvelope'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: List calculator versions awaiting or undergoing clinical review
       tags:
       - calculator-versions
   /api/v2/calculators:

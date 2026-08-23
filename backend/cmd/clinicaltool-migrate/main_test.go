@@ -109,6 +109,20 @@ func TestLoadParityReportsRejectsFakeApprovalAndUnknownFields(t *testing.T) {
   "tolerance_matches":0,"presentation_differences":[],"logic_differences":[],
   "unresolved_clinical_ambiguities":[],"reviewer_decision":"Changes required","approved_by_system":true
 }`,
+		"synthetic decision": `{
+  "legacy_id":"tool","legacy_file":"tool.html","status":"approved",
+  "reviewer_id":"11111111-1111-4111-8111-111111111111","reviewed_at":"2026-08-23T10:00:00Z",
+  "cases_tested":1,"exact_matches":1,"tolerance_matches":0,
+  "presentation_differences":[],"logic_differences":[],
+  "unresolved_clinical_ambiguities":[],"reviewer_decision":"TEST ONLY synthetic approval"
+}`,
+		"unaccounted cases": `{
+  "legacy_id":"tool","legacy_file":"tool.html","status":"approved",
+  "reviewer_id":"11111111-1111-4111-8111-111111111111","reviewed_at":"2026-08-23T10:00:00Z",
+  "cases_tested":2,"exact_matches":1,"tolerance_matches":0,
+  "presentation_differences":[],"logic_differences":[],
+  "unresolved_clinical_ambiguities":[],"reviewer_decision":"Clinically reviewed and approved."
+}`,
 	}
 	for name, raw := range tests {
 		t.Run(name, func(t *testing.T) {
@@ -120,5 +134,27 @@ func TestLoadParityReportsRejectsFakeApprovalAndUnknownFields(t *testing.T) {
 				t.Fatal("expected parity report rejection")
 			}
 		})
+	}
+}
+
+func TestLoadParityReportsAcceptsCompleteAuthenticApproval(t *testing.T) {
+	directory := t.TempDir()
+	raw := `{
+  "legacy_id":"tool","legacy_file":"tool.html","status":"approved",
+  "reviewer_id":"11111111-1111-4111-8111-111111111111","reviewed_at":"2026-08-23T10:00:00Z",
+  "cases_tested":2,"exact_matches":1,"tolerance_matches":1,
+  "presentation_differences":["Native spacing differs"],"logic_differences":[],
+  "unresolved_clinical_ambiguities":[],
+  "reviewer_decision":"Reviewed the declared behavior, clinical language, thresholds, and safety messages; approved for publication."
+}`
+	if err := os.WriteFile(filepath.Join(directory, "tool.json"), []byte(raw), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	reports, err := loadParityReports(directory)
+	if err != nil {
+		t.Fatalf("expected complete approval to load: %v", err)
+	}
+	if !reports["tool"].approved() {
+		t.Fatal("complete approval must be recognized")
 	}
 }

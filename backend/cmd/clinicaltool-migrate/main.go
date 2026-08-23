@@ -141,7 +141,11 @@ func main() {
 		}
 		if apply {
 			result, importErr := migration.ImportDraft(envelope, actor)
-			fmt.Printf("%s wave=%d tool=%s version=%s\n", strings.ToUpper(result.Status), item.Wave, item.LegacyID, envelope.Definition.Version)
+			if importErr != nil {
+				fmt.Printf("%s wave=%d tool=%s version=%s reason=%q\n", strings.ToUpper(result.Status), item.Wave, item.LegacyID, envelope.Definition.Version, importErr.Error())
+			} else {
+				fmt.Printf("%s wave=%d tool=%s version=%s\n", strings.ToUpper(result.Status), item.Wave, item.LegacyID, envelope.Definition.Version)
+			}
 			failed = failed || importErr != nil
 		} else {
 			result := (services.CalculatorMigrationService{}).Plan(envelope)
@@ -243,7 +247,34 @@ func validateParityReport(report parityReport, filename string) error {
 	if report.Status == "approved" && !report.approved() {
 		return fmt.Errorf("%s: approved reports require a reviewer, review timestamp, and no unresolved ambiguities", filename)
 	}
+	if report.Status == "approved" && report.ExactMatches+report.ToleranceMatch != report.CasesTested {
+		return fmt.Errorf("%s: approved reports must account for every tested case", filename)
+	}
+	if report.Status == "approved" && invalidApprovalDecision(report.Decision) {
+		return fmt.Errorf("%s: approved reports require a genuine, non-placeholder reviewer decision", filename)
+	}
 	return nil
+}
+
+func invalidApprovalDecision(value string) bool {
+	decision := strings.ToLower(strings.TrimSpace(value))
+	if decision == "" {
+		return true
+	}
+	for _, blocked := range []string{
+		"test only",
+		"synthetic",
+		"placeholder",
+		"pending approval",
+		"pending independent",
+		"do not approve",
+		"not approved",
+	} {
+		if strings.Contains(decision, blocked) {
+			return true
+		}
+	}
+	return false
 }
 
 func (report parityReport) approved() bool {
@@ -273,7 +304,8 @@ func loadCatalog(path string) (*catalog, error) {
 	}
 	seenID, seenFile := map[string]bool{}, map[string]bool{}
 	for _, item := range value.Tools {
-		if item.LegacyID == "" || item.LegacyFile == "" || item.Wave < 1 || len(item.SourceChecksum) != 64 || item.ClinicalGate == "" || seenID[item.LegacyID] || seenFile[item.LegacyFile] {
+		validStatus := item.Status == "review_draft_ready" || item.Status == "approved"
+		if item.LegacyID == "" || item.LegacyFile == "" || item.Wave < 1 || len(item.SourceChecksum) != 64 || item.ClinicalGate == "" || !validStatus || seenID[item.LegacyID] || seenFile[item.LegacyFile] {
 			return nil, fmt.Errorf("invalid or duplicate catalog entry %q", item.LegacyID)
 		}
 		seenID[item.LegacyID], seenFile[item.LegacyFile] = true, true

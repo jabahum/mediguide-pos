@@ -67,6 +67,7 @@ abstract final class AppRoutes {
   static const String publicGuidelineAlgorithm =
       '/public/guidelines/:guidelineId/algorithms/:blockId';
   static const String calculatorDetails = '/calculators/:calculatorId';
+  static const String calculatorReview = '/clinical-tools/review/:versionId';
   static const String healthFacilityDetails = '/health-facilities/:facilityId';
   static const String consultantDetails = '/consultants/:consultantId';
   static const String chatDetails = '/chats/:conversationId';
@@ -160,6 +161,10 @@ abstract final class AppRoutes {
 
   static String calculator(String calculatorId) {
     return '/calculators/${Uri.encodeComponent(calculatorId)}';
+  }
+
+  static String reviewCalculator(String versionId) {
+    return '/clinical-tools/review/${Uri.encodeComponent(versionId)}';
   }
 
   static String healthFacility(String facilityId) {

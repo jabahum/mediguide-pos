@@ -214,6 +214,11 @@ export interface HandlersCalculatorEnvelope {
   success?: boolean;
 }
 
+export interface HandlersCalculatorReviewQueueEnvelope {
+  data?: ServicesPageResultServicesCalculatorReviewQueueItem;
+  success?: boolean;
+}
+
 export interface HandlersCalculatorUsageEnvelope {
   data?: ModelsCalculatorUsageLog;
   /** @example true */
@@ -233,6 +238,11 @@ export interface HandlersCalculatorVersionEnvelope {
 export interface HandlersCalculatorVersionLockRequest {
   /** @min 1 */
   lock_version: number;
+}
+
+export interface HandlersCalculatorVersionPreviewEnvelope {
+  data?: ServicesCalculatorVersionPreviewDTO;
+  success?: boolean;
 }
 
 export interface HandlersCalculatorVersionTestEnvelope {
@@ -2368,6 +2378,42 @@ export interface ServicesCalculatorDefinitionDTO {
   version_id?: string;
 }
 
+export interface ServicesCalculatorFixtureReviewDTO {
+  description?: string;
+  expected?: Record<string, any>;
+  input?: Record<string, any>;
+  key?: string;
+  last_passed?: boolean;
+  last_result?: Record<string, any>;
+  last_run_at?: string;
+  numeric_tolerance?: number;
+}
+
+export interface ServicesCalculatorReviewQueueItem {
+  author_id?: string;
+  calculator_id?: string;
+  clinical_owner?: string;
+  clinical_reviewer?: string;
+  created_at?: string;
+  definition_checksum?: string;
+  fixture_count?: number;
+  fixture_passed_count?: number;
+  last_audit_action?: string;
+  last_audit_at?: string;
+  lock_version?: number;
+  review_evidence_status?: string;
+  reviewer_id?: string;
+  semantic_version?: string;
+  tests_passed?: boolean;
+  tool_name?: string;
+  tool_status?: string;
+  tool_type?: string;
+  updated_at?: string;
+  validation_passed?: boolean;
+  version_id?: string;
+  version_status?: string;
+}
+
 export interface ServicesCalculatorVersionAuditDTO {
   action?: string;
   actor_id?: string;
@@ -2403,6 +2449,17 @@ export interface ServicesCalculatorVersionDTO {
   tests_passed?: boolean;
   updated_at?: string;
   validation_passed?: boolean;
+}
+
+export interface ServicesCalculatorVersionPreviewDTO {
+  audit?: ServicesCalculatorVersionAuditDTO[];
+  fixtures?: ServicesCalculatorFixtureReviewDTO[];
+  review_evidence_status?: string;
+  runtime_type?: string;
+  tool_name?: string;
+  tool_status?: string;
+  tool_type?: string;
+  version?: ServicesCalculatorVersionDTO;
 }
 
 export interface ServicesCalculatorVersionReviewCommentInput {
@@ -3818,6 +3875,14 @@ export interface ServicesPageResultModelsSupportTicket {
 
 export interface ServicesPageResultModelsSupportTicketReply {
   items?: ModelsSupportTicketReply[];
+  page?: number;
+  per_page?: number;
+  total_items?: number;
+  total_pages?: number;
+}
+
+export interface ServicesPageResultServicesCalculatorReviewQueueItem {
+  items?: ServicesCalculatorReviewQueueItem[];
   page?: number;
   per_page?: number;
   total_items?: number;

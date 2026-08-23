@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:dio/dio.dart';
 
 import 'package:user_app/features/calculators/data/repositories/calculator_repository.dart';
+import 'package:user_app/features/calculators/data/repositories/calculator_review_repository.dart';
 import 'package:user_app/features/calculators/data/repositories/calculator_local_repository.dart';
 import 'package:user_app/features/consultants/data/repositories/consultant_repository.dart';
 import 'package:user_app/features/consultants/data/repositories/consultant_local_repository.dart';
@@ -114,6 +115,14 @@ final calculatorRepositoryProvider = Provider<CalculatorRepository>(
   (ref) => CalculatorRepository(
     ref.watch(backendApiServiceProvider),
     ref.watch(calculatorLocalRepositoryProvider),
+  ),
+);
+
+final calculatorReviewRepositoryProvider = Provider<CalculatorReviewRepository>(
+  (ref) => CalculatorReviewRepository(
+    ref.watch(backendApiServiceProvider),
+    ref.watch(localCacheServiceProvider),
+    reviewerId: ref.watch(authServiceProvider).currentUser.value?.id ?? '',
   ),
 );
 

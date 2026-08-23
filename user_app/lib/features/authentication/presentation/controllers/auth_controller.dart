@@ -211,5 +211,6 @@ class AuthController extends _$AuthController {
     ref.invalidate(notificationRepositoryProvider);
     ref.invalidate(supportRepositoryProvider);
     ref.invalidate(conversationRepositoryProvider);
+    ref.invalidate(calculatorReviewRepositoryProvider);
   }
 }

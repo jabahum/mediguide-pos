@@ -1522,6 +1522,127 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/v2/calculator-versions/review-queue": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "calculator-versions"
+                ],
+                "summary": "List calculator versions awaiting or undergoing clinical review",
+                "parameters": [
+                    {
+                        "minimum": 1,
+                        "type": "integer",
+                        "description": "Page number",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "maximum": 100,
+                        "minimum": 1,
+                        "type": "integer",
+                        "description": "Page size",
+                        "name": "per_page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Tool name or semantic-version search",
+                        "name": "search",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Comma-separated version statuses",
+                        "name": "status",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Comma-separated tool types",
+                        "name": "type",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "Author ID",
+                        "name": "author_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "Reviewer ID",
+                        "name": "reviewer_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Clinical owner/program area",
+                        "name": "program_area",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Created from, RFC3339",
+                        "name": "created_from",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Created to, RFC3339",
+                        "name": "created_to",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "created_at, updated_at, status, semantic_version or tool_name",
+                        "name": "sort",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "asc or desc",
+                        "name": "order",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.CalculatorReviewQueueEnvelope"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v2/calculator-versions/{id}": {
             "get": {
                 "security": [
@@ -1765,6 +1886,65 @@ const docTemplate = `{
                         "description": "Created",
                         "schema": {
                             "$ref": "#/definitions/handlers.CalculatorVersionEnvelope"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v2/calculator-versions/{id}/preview": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Requires calculator.review and never changes the active published definition.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "calculator-versions"
+                ],
+                "summary": "Fetch an unpublished calculator version for authenticated clinical review",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "Version ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.CalculatorVersionPreviewEnvelope"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
                         }
                     }
                 }
@@ -15002,6 +15182,17 @@ const docTemplate = `{
                 }
             }
         },
+        "handlers.CalculatorReviewQueueEnvelope": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/services.PageResult-services_CalculatorReviewQueueItem"
+                },
+                "success": {
+                    "type": "boolean"
+                }
+            }
+        },
         "handlers.CalculatorUsageEnvelope": {
             "type": "object",
             "properties": {
@@ -15048,6 +15239,17 @@ const docTemplate = `{
                 "lock_version": {
                     "type": "integer",
                     "minimum": 1
+                }
+            }
+        },
+        "handlers.CalculatorVersionPreviewEnvelope": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/services.CalculatorVersionPreviewDTO"
+                },
+                "success": {
+                    "type": "boolean"
                 }
             }
         },
@@ -20351,6 +20553,109 @@ const docTemplate = `{
                 }
             }
         },
+        "services.CalculatorFixtureReviewDTO": {
+            "type": "object",
+            "properties": {
+                "description": {
+                    "type": "string"
+                },
+                "expected": {
+                    "type": "object",
+                    "additionalProperties": {}
+                },
+                "input": {
+                    "type": "object",
+                    "additionalProperties": {}
+                },
+                "key": {
+                    "type": "string"
+                },
+                "last_passed": {
+                    "type": "boolean"
+                },
+                "last_result": {
+                    "type": "object",
+                    "additionalProperties": {}
+                },
+                "last_run_at": {
+                    "type": "string"
+                },
+                "numeric_tolerance": {
+                    "type": "number"
+                }
+            }
+        },
+        "services.CalculatorReviewQueueItem": {
+            "type": "object",
+            "properties": {
+                "author_id": {
+                    "type": "string"
+                },
+                "calculator_id": {
+                    "type": "string"
+                },
+                "clinical_owner": {
+                    "type": "string"
+                },
+                "clinical_reviewer": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "definition_checksum": {
+                    "type": "string"
+                },
+                "fixture_count": {
+                    "type": "integer"
+                },
+                "fixture_passed_count": {
+                    "type": "integer"
+                },
+                "last_audit_action": {
+                    "type": "string"
+                },
+                "last_audit_at": {
+                    "type": "string"
+                },
+                "lock_version": {
+                    "type": "integer"
+                },
+                "review_evidence_status": {
+                    "type": "string"
+                },
+                "reviewer_id": {
+                    "type": "string"
+                },
+                "semantic_version": {
+                    "type": "string"
+                },
+                "tests_passed": {
+                    "type": "boolean"
+                },
+                "tool_name": {
+                    "type": "string"
+                },
+                "tool_status": {
+                    "type": "string"
+                },
+                "tool_type": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                },
+                "validation_passed": {
+                    "type": "boolean"
+                },
+                "version_id": {
+                    "type": "string"
+                },
+                "version_status": {
+                    "type": "string"
+                }
+            }
+        },
         "services.CalculatorVersionAuditDTO": {
             "type": "object",
             "properties": {
@@ -20452,6 +20757,41 @@ const docTemplate = `{
                 },
                 "validation_passed": {
                     "type": "boolean"
+                }
+            }
+        },
+        "services.CalculatorVersionPreviewDTO": {
+            "type": "object",
+            "properties": {
+                "audit": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/services.CalculatorVersionAuditDTO"
+                    }
+                },
+                "fixtures": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/services.CalculatorFixtureReviewDTO"
+                    }
+                },
+                "review_evidence_status": {
+                    "type": "string"
+                },
+                "runtime_type": {
+                    "type": "string"
+                },
+                "tool_name": {
+                    "type": "string"
+                },
+                "tool_status": {
+                    "type": "string"
+                },
+                "tool_type": {
+                    "type": "string"
+                },
+                "version": {
+                    "$ref": "#/definitions/services.CalculatorVersionDTO"
                 }
             }
         },
@@ -24390,6 +24730,29 @@ const docTemplate = `{
                     "type": "array",
                     "items": {
                         "$ref": "#/definitions/models.SupportTicketReply"
+                    }
+                },
+                "page": {
+                    "type": "integer"
+                },
+                "per_page": {
+                    "type": "integer"
+                },
+                "total_items": {
+                    "type": "integer"
+                },
+                "total_pages": {
+                    "type": "integer"
+                }
+            }
+        },
+        "services.PageResult-services_CalculatorReviewQueueItem": {
+            "type": "object",
+            "properties": {
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/services.CalculatorReviewQueueItem"
                     }
                 },
                 "page": {

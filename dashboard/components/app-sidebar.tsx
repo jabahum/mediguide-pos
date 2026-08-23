@@ -171,6 +171,7 @@ const data: { navMain: NavItem[] } = {
       permission: { resource: "content", action: "read:any" },
       items: [
         { title: "All Tools", url: "/decision-tools" },
+        { title: "Clinical Review", url: "/decision-tools/review", backendPermissions: ["calculator.review"] },
         { title: "Calculators", url: "/decision-tools/calculators" },
         { title: "Checklists", url: "/decision-tools/checklists" },
       ],

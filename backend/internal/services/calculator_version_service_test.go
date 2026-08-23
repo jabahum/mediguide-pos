@@ -158,12 +158,8 @@ func TestCalculatorVersionPublishRequiresValidationAndPassingTests(t *testing.T)
 	if err != nil {
 		t.Fatal(err)
 	}
-	submitted, err := service.Submit(draft.ID, actor, draft.LockVersion)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if _, err = service.Approve(draft.ID, actor, submitted.LockVersion); !errors.Is(err, ErrCalculatorVersionTestsFailed) {
-		t.Fatalf("expected approval to require persisted validation and tests, got %v", err)
+	if _, err = service.Submit(draft.ID, actor, draft.LockVersion); !errors.Is(err, ErrCalculatorVersionTestsFailed) {
+		t.Fatalf("expected submission to require persisted validation and tests, got %v", err)
 	}
 }
 

@@ -752,6 +752,30 @@ final class HandlersCalculatorEnvelope {
   Map<String, dynamic> toJson() => Map.of(value);
 }
 
+final class HandlersCalculatorReviewQueueEnvelope {
+  HandlersCalculatorReviewQueueEnvelope(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory HandlersCalculatorReviewQueueEnvelope.fromJson(
+    Map<String, dynamic> json,
+  ) => HandlersCalculatorReviewQueueEnvelope(json);
+
+  static const schemaName = 'handlers.CalculatorReviewQueueEnvelope';
+  final Map<String, dynamic> value;
+
+  ServicesPageResultServicesCalculatorReviewQueueItem? get data {
+    final raw = value['data'];
+    if (raw is! Map) return null;
+    return ServicesPageResultServicesCalculatorReviewQueueItem.fromJson(
+      _jsonMap(raw),
+    );
+  }
+
+  bool? get success => value['success'] as bool?;
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
 final class HandlersCalculatorUsageEnvelope {
   HandlersCalculatorUsageEnvelope(Map<String, dynamic> value)
     : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
@@ -834,6 +858,28 @@ final class HandlersCalculatorVersionLockRequest {
   final Map<String, dynamic> value;
 
   int? get lockVersion => (value['lock_version'] as num?)?.toInt();
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
+final class HandlersCalculatorVersionPreviewEnvelope {
+  HandlersCalculatorVersionPreviewEnvelope(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory HandlersCalculatorVersionPreviewEnvelope.fromJson(
+    Map<String, dynamic> json,
+  ) => HandlersCalculatorVersionPreviewEnvelope(json);
+
+  static const schemaName = 'handlers.CalculatorVersionPreviewEnvelope';
+  final Map<String, dynamic> value;
+
+  ServicesCalculatorVersionPreviewDTO? get data {
+    final raw = value['data'];
+    if (raw is! Map) return null;
+    return ServicesCalculatorVersionPreviewDTO.fromJson(_jsonMap(raw));
+  }
+
+  bool? get success => value['success'] as bool?;
 
   Map<String, dynamic> toJson() => Map.of(value);
 }
@@ -7502,6 +7548,96 @@ final class ServicesCalculatorDefinitionDTO {
   Map<String, dynamic> toJson() => Map.of(value);
 }
 
+final class ServicesCalculatorFixtureReviewDTO {
+  ServicesCalculatorFixtureReviewDTO(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory ServicesCalculatorFixtureReviewDTO.fromJson(
+    Map<String, dynamic> json,
+  ) => ServicesCalculatorFixtureReviewDTO(json);
+
+  static const schemaName = 'services.CalculatorFixtureReviewDTO';
+  final Map<String, dynamic> value;
+
+  String? get description => value['description']?.toString();
+
+  Map<String, dynamic> get expected => _jsonMap(value['expected']);
+
+  Map<String, dynamic> get input => _jsonMap(value['input']);
+
+  String? get key => value['key']?.toString();
+
+  bool? get lastPassed => value['last_passed'] as bool?;
+
+  Map<String, dynamic> get lastResult => _jsonMap(value['last_result']);
+
+  String? get lastRunAt => value['last_run_at']?.toString();
+
+  num? get numericTolerance => value['numeric_tolerance'] as num?;
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
+final class ServicesCalculatorReviewQueueItem {
+  ServicesCalculatorReviewQueueItem(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory ServicesCalculatorReviewQueueItem.fromJson(
+    Map<String, dynamic> json,
+  ) => ServicesCalculatorReviewQueueItem(json);
+
+  static const schemaName = 'services.CalculatorReviewQueueItem';
+  final Map<String, dynamic> value;
+
+  String? get authorId => value['author_id']?.toString();
+
+  String? get calculatorId => value['calculator_id']?.toString();
+
+  String? get clinicalOwner => value['clinical_owner']?.toString();
+
+  String? get clinicalReviewer => value['clinical_reviewer']?.toString();
+
+  String? get createdAt => value['created_at']?.toString();
+
+  String? get definitionChecksum => value['definition_checksum']?.toString();
+
+  int? get fixtureCount => (value['fixture_count'] as num?)?.toInt();
+
+  int? get fixturePassedCount =>
+      (value['fixture_passed_count'] as num?)?.toInt();
+
+  String? get lastAuditAction => value['last_audit_action']?.toString();
+
+  String? get lastAuditAt => value['last_audit_at']?.toString();
+
+  int? get lockVersion => (value['lock_version'] as num?)?.toInt();
+
+  String? get reviewEvidenceStatus =>
+      value['review_evidence_status']?.toString();
+
+  String? get reviewerId => value['reviewer_id']?.toString();
+
+  String? get semanticVersion => value['semantic_version']?.toString();
+
+  bool? get testsPassed => value['tests_passed'] as bool?;
+
+  String? get toolName => value['tool_name']?.toString();
+
+  String? get toolStatus => value['tool_status']?.toString();
+
+  String? get toolType => value['tool_type']?.toString();
+
+  String? get updatedAt => value['updated_at']?.toString();
+
+  bool? get validationPassed => value['validation_passed'] as bool?;
+
+  String? get versionId => value['version_id']?.toString();
+
+  String? get versionStatus => value['version_status']?.toString();
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
 final class ServicesCalculatorVersionAuditDTO {
   ServicesCalculatorVersionAuditDTO(Map<String, dynamic> value)
     : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
@@ -7591,6 +7727,59 @@ final class ServicesCalculatorVersionDTO {
   String? get updatedAt => value['updated_at']?.toString();
 
   bool? get validationPassed => value['validation_passed'] as bool?;
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
+final class ServicesCalculatorVersionPreviewDTO {
+  ServicesCalculatorVersionPreviewDTO(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory ServicesCalculatorVersionPreviewDTO.fromJson(
+    Map<String, dynamic> json,
+  ) => ServicesCalculatorVersionPreviewDTO(json);
+
+  static const schemaName = 'services.CalculatorVersionPreviewDTO';
+  final Map<String, dynamic> value;
+
+  List<ServicesCalculatorVersionAuditDTO> get audit {
+    final raw = value['audit'];
+    if (raw is! List) return const [];
+    return raw
+        .whereType<Map>()
+        .map(
+          (item) => ServicesCalculatorVersionAuditDTO.fromJson(_jsonMap(item)),
+        )
+        .toList(growable: false);
+  }
+
+  List<ServicesCalculatorFixtureReviewDTO> get fixtures {
+    final raw = value['fixtures'];
+    if (raw is! List) return const [];
+    return raw
+        .whereType<Map>()
+        .map(
+          (item) => ServicesCalculatorFixtureReviewDTO.fromJson(_jsonMap(item)),
+        )
+        .toList(growable: false);
+  }
+
+  String? get reviewEvidenceStatus =>
+      value['review_evidence_status']?.toString();
+
+  String? get runtimeTypeField => value['runtime_type']?.toString();
+
+  String? get toolName => value['tool_name']?.toString();
+
+  String? get toolStatus => value['tool_status']?.toString();
+
+  String? get toolType => value['tool_type']?.toString();
+
+  ServicesCalculatorVersionDTO? get version {
+    final raw = value['version'];
+    if (raw is! Map) return null;
+    return ServicesCalculatorVersionDTO.fromJson(_jsonMap(raw));
+  }
 
   Map<String, dynamic> toJson() => Map.of(value);
 }
@@ -11825,6 +12014,41 @@ final class ServicesPageResultModelsSupportTicketReply {
     return raw
         .whereType<Map>()
         .map((item) => ModelsSupportTicketReply.fromJson(_jsonMap(item)))
+        .toList(growable: false);
+  }
+
+  int? get page => (value['page'] as num?)?.toInt();
+
+  int? get perPage => (value['per_page'] as num?)?.toInt();
+
+  int? get totalItems => (value['total_items'] as num?)?.toInt();
+
+  int? get totalPages => (value['total_pages'] as num?)?.toInt();
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
+final class ServicesPageResultServicesCalculatorReviewQueueItem {
+  ServicesPageResultServicesCalculatorReviewQueueItem(
+    Map<String, dynamic> value,
+  ) : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory ServicesPageResultServicesCalculatorReviewQueueItem.fromJson(
+    Map<String, dynamic> json,
+  ) => ServicesPageResultServicesCalculatorReviewQueueItem(json);
+
+  static const schemaName =
+      'services.PageResult-services_CalculatorReviewQueueItem';
+  final Map<String, dynamic> value;
+
+  List<ServicesCalculatorReviewQueueItem> get items {
+    final raw = value['items'];
+    if (raw is! List) return const [];
+    return raw
+        .whereType<Map>()
+        .map(
+          (item) => ServicesCalculatorReviewQueueItem.fromJson(_jsonMap(item)),
+        )
         .toList(growable: false);
   }
 

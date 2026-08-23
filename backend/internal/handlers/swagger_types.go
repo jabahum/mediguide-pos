@@ -88,6 +88,16 @@ type CalculatorVersionsEnvelope struct {
 	Data    []services.CalculatorVersionDTO `json:"data"`
 }
 
+type CalculatorReviewQueueEnvelope struct {
+	Success bool                                                    `json:"success"`
+	Data    services.PageResult[services.CalculatorReviewQueueItem] `json:"data"`
+}
+
+type CalculatorVersionPreviewEnvelope struct {
+	Success bool                                 `json:"success"`
+	Data    services.CalculatorVersionPreviewDTO `json:"data"`
+}
+
 type CalculatorVersionValidationEnvelope struct {
 	Success bool                                    `json:"success"`
 	Data    services.CalculatorVersionValidationDTO `json:"data"`

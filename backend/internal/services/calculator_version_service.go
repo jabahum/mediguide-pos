@@ -332,6 +332,20 @@ func (s CalculatorVersionService) UpdateDraft(versionID, actorID uuid.UUID, in U
 }
 
 func (s CalculatorVersionService) Submit(versionID, actorID uuid.UUID, lockVersion int) (*CalculatorVersionDTO, error) {
+	var row models.CalculatorVersion
+	if err := s.DB.First(&row, "id = ?", versionID).Error; err != nil {
+		return nil, err
+	}
+	if !row.ValidationPassed || !row.TestsPassed {
+		return nil, ErrCalculatorVersionTestsFailed
+	}
+	definition, validation := clinicaltools.ParseAndValidate(row.DefinitionJSON)
+	if !validation.Valid {
+		return nil, ErrCalculatorVersionValidation
+	}
+	if report := clinicaltools.ExecuteTestCases(definition); !report.Passed {
+		return nil, ErrCalculatorVersionTestsFailed
+	}
 	return s.transition(versionID, actorID, lockVersion, "draft", "pending_review", "calculator.version.submitted", nil)
 }
 func (s CalculatorVersionService) Approve(versionID, actorID uuid.UUID, lockVersion int) (*CalculatorVersionDTO, error) {

@@ -37,7 +37,10 @@ describe("clinical-tool migration review drafts", () => {
         const tolerance = fixture.numeric_tolerance ?? 0
         for (const [key, expectedValue] of Object.entries(fixture.expected)) {
           if (outputKeys.has(key)) {
-            if (typeof expectedValue === "number") expect(Number(result.values[key])).toBeCloseTo(expectedValue, tolerance > 0 ? 6 : 10)
+            if (typeof expectedValue === "number") {
+              if (tolerance > 0) expect(Math.abs(Number(result.values[key]) - expectedValue)).toBeLessThanOrEqual(tolerance)
+              else expect(Number(result.values[key])).toBeCloseTo(expectedValue, 10)
+            }
             else expect(result.values[key]).toEqual(expectedValue)
           }
         }
@@ -45,6 +48,7 @@ describe("clinical-tool migration review drafts", () => {
         if (expectedInterpretations) {
           const expected = envelope.definition.interpretations.find((item) => item.key === expectedInterpretations[0])
           expect(result.interpretation).toBe(expected?.label)
+          expect(result.recommendations).toEqual(expected?.recommendations ?? [])
         }
         const expectedWarningKeys = fixture.expected.warnings as string[] | undefined
         if (expectedWarningKeys) {

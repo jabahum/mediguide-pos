@@ -56,6 +56,7 @@ export const clinicalToolService = {
   validate: (id: string, lockVersion: number) => backendClient.send<{ valid: boolean; errors: ValidationIssue[]; lock_version: number }>(`/api/v2/calculator-versions/${id}/validate`, { method: "POST", body: json({ lock_version: lockVersion }) }),
   test: (id: string, lockVersion: number) => backendClient.send<{ report: TestReport; lock_version: number }>(`/api/v2/calculator-versions/${id}/test`, { method: "POST", body: json({ lock_version: lockVersion }) }),
   transition: (id: string, action: "submit" | "approve" | "publish" | "withdraw", lockVersion: number) => backendClient.send<ClinicalToolVersion>(`/api/v2/calculator-versions/${id}/${action}`, { method: "POST", body: json({ lock_version: lockVersion }) }),
+  rollbackToLegacy: (toolId: string) => backendClient.send<void>(`/api/v2/calculators/${toolId}/runtime/legacy`, { method: "POST" }),
   audit: (id: string) => backendClient.send<Array<{ id: string; action: string; created_at: string; actor_id?: string; metadata?: { comment?: string } }>>(`/api/v2/calculator-versions/${id}/audit`),
   reviewComment: (id: string, comment: string) => backendClient.send<void>(`/api/v2/calculator-versions/${id}/review-comments`, { method: "POST", body: json({ comment }) }),
 }

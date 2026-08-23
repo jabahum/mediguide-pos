@@ -11,6 +11,7 @@ RUN CGO_ENABLED=0 GOOS=linux go build \
     -o /out/api ./cmd/api
 RUN CGO_ENABLED=0 GOOS=linux go build -o /out/migrate ./cmd/migrate
 RUN CGO_ENABLED=0 GOOS=linux go build -o /out/notification-worker ./cmd/notification-worker
+RUN CGO_ENABLED=0 GOOS=linux go build -o /out/clinicaltool-migrate ./cmd/clinicaltool-migrate
 
 FROM build AS development-build
 RUN CGO_ENABLED=0 GOOS=linux go build -o /out/seed ./cmd/seed
@@ -30,6 +31,7 @@ RUN apk add --no-cache ca-certificates tzdata curl && \
 COPY --from=build --chown=mediguide:mediguide /out/api /app/api
 COPY --from=build --chown=mediguide:mediguide /out/migrate /app/migrate
 COPY --from=build --chown=mediguide:mediguide /out/notification-worker /app/notification-worker
+COPY --from=build --chown=mediguide:mediguide /out/clinicaltool-migrate /app/clinicaltool-migrate
 COPY --chown=mediguide:mediguide migrations /app/migrations
 COPY --chown=mediguide:mediguide docs /app/docs
 USER 10001:10001

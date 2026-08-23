@@ -23,6 +23,7 @@ var (
 	ErrCalculatorVersionValidation     = errors.New("calculator definition validation failed")
 	ErrCalculatorVersionTestsFailed    = errors.New("calculator definition tests have not passed")
 	ErrCalculatorVersionAuthorApproval = errors.New("author cannot approve this clinically critical version")
+	ErrCalculatorMigrationConflict     = errors.New("clinical tool migration conflicts with an existing version")
 )
 
 type CalculatorVersionService struct {
@@ -439,6 +440,53 @@ func (s CalculatorVersionService) SelectPublished(calculatorID, versionID, actor
 			return err
 		}
 		return writeCalculatorVersionAudit(tx, calculatorID, &versionID, actorID, "calculator.version.selected", nil, calculatorStringPointer("published"), map[string]any{"semantic_version": row.SemanticVersion})
+	})
+}
+
+// SelectLegacyRuntime is the emergency rollback path for a migrated tool. It
+// deliberately keeps every immutable schema version and its audit history, but
+// removes the active schema pointer so clients return to the characterized HTML
+// artifact. A later rollout must go through review and SelectPublished/Publish
+// again; this method never promotes a draft or bypasses lifecycle checks.
+func (s CalculatorVersionService) SelectLegacyRuntime(calculatorID, actorID uuid.UUID) error {
+	return s.DB.Transaction(func(tx *gorm.DB) error {
+		var tool models.Calculator
+		if err := tx.First(&tool, "id = ?", calculatorID).Error; err != nil {
+			return err
+		}
+		if tool.RuntimeType == "legacy_html" && tool.CurrentVersionID == nil {
+			return nil
+		}
+		now := s.now()
+		if tool.CurrentVersionID != nil {
+			var current models.CalculatorVersion
+			if err := tx.First(&current, "id = ? AND calculator_id = ?", *tool.CurrentVersionID, tool.ID).Error; err != nil {
+				return err
+			}
+			if current.Status != "published" {
+				return ErrCalculatorVersionInvalidState
+			}
+			result := tx.Model(&models.CalculatorVersion{}).
+				Where("id = ? AND status = 'published' AND lock_version = ?", current.ID, current.LockVersion).
+				Updates(map[string]any{"status": "superseded", "lock_version": gorm.Expr("lock_version + 1"), "updated_at": now})
+			if result.Error != nil {
+				return result.Error
+			}
+			if result.RowsAffected == 0 {
+				return ErrCalculatorVersionConflict
+			}
+			if err := writeCalculatorVersionAudit(tx, tool.ID, &current.ID, actorID, "calculator.version.superseded_for_legacy_rollback", calculatorStringPointer("published"), calculatorStringPointer("superseded"), nil); err != nil {
+				return err
+			}
+		}
+		if err := tx.Model(&models.Calculator{}).Where("id = ?", tool.ID).Updates(map[string]any{
+			"runtime_type":       "legacy_html",
+			"current_version_id": nil,
+			"updated_at":         now,
+		}).Error; err != nil {
+			return err
+		}
+		return writeCalculatorVersionAudit(tx, tool.ID, nil, actorID, "calculator.runtime.legacy_selected", calculatorStringPointer("schema_v1"), calculatorStringPointer("legacy_html"), nil)
 	})
 }
 

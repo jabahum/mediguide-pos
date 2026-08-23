@@ -322,6 +322,7 @@ func New(cfg config.Config) (*App, error) {
 		protected.POST("/calculator-versions/:id/submit", middleware.RequirePermission("calculator.write"), calculatorH.SubmitVersion)
 		protected.POST("/calculator-versions/:id/approve", middleware.RequirePermission("calculator.review"), calculatorH.ApproveVersion)
 		protected.POST("/calculator-versions/:id/publish", middleware.RequirePermission("calculator.publish"), rateLimiter.Limit(middleware.Policy("calculator-version-publish", 10, time.Hour, 1), middleware.UserIdentity), calculatorH.PublishVersion)
+		protected.POST("/calculators/:id/runtime/legacy", middleware.RequirePermission("calculator.publish"), rateLimiter.Limit(middleware.Policy("calculator-runtime-rollback", 10, time.Hour, 1), middleware.UserIdentity), calculatorH.SelectLegacyRuntime)
 		protected.POST("/calculator-versions/:id/withdraw", middleware.RequirePermission("calculator.withdraw"), calculatorH.WithdrawVersion)
 		protected.GET("/calculator-versions/:id/audit", middleware.RequirePermission("calculator.review"), calculatorH.VersionAudit)
 		protected.POST("/calculator-versions/:id/review-comments", middleware.RequirePermission("calculator.review"), calculatorH.AddVersionReviewComment)

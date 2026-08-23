@@ -437,6 +437,32 @@ func (h CalculatorHandler) PublishVersion(c *gin.Context) {
 	h.runVersionLockAction(c, func(id, actor uuid.UUID, lock int) (any, error) { return h.Versions.Publish(id, actor, lock) })
 }
 
+// SelectLegacyRuntime godoc
+// @Summary Roll a migrated calculator back to its characterized HTML runtime
+// @Description Preserves immutable schema versions and audit history while clearing the active schema pointer.
+// @Tags calculator-versions
+// @Produce json
+// @Security BearerAuth
+// @Param id path string true "Calculator ID" format(uuid)
+// @Success 204
+// @Failure 400 {object} handlers.ErrorResponse
+// @Failure 401 {object} handlers.ErrorResponse
+// @Failure 403 {object} handlers.ErrorResponse
+// @Failure 404 {object} handlers.ErrorResponse
+// @Failure 409 {object} handlers.ErrorResponse
+// @Router /api/v2/calculators/{id}/runtime/legacy [post]
+func (h CalculatorHandler) SelectLegacyRuntime(c *gin.Context) {
+	id, ok := calculatorID(c)
+	if !ok {
+		return
+	}
+	if err := h.Versions.SelectLegacyRuntime(id, calculatorActor(c)); err != nil {
+		h.writeVersionError(c, err, nil)
+		return
+	}
+	c.Status(http.StatusNoContent)
+}
+
 // WithdrawVersion godoc
 // @Summary Withdraw a superseded version
 // @Tags calculator-versions

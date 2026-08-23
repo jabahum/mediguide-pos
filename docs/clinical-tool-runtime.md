@@ -147,3 +147,79 @@ contracts must only be changed by their generators. Backend evaluator fixtures,
 dashboard preview tests, Flutter evaluator/widget/repository tests, static
 analysis, production builds, and the debug APK build form the release gate for
 schema-runtime changes.
+
+## Legacy conversion and rollout
+
+The conversion catalog is
+`clinical-tools/migrations/v1/catalog.json`. It accounts for every one of the
+14 characterized HTML artifacts, pins each artifact by SHA-256, assigns a
+rollout wave, and records the unresolved clinical decision that must be signed
+off before its native definition can enter review. Changing an HTML file
+without updating its characterization and reviewed catalog checksum fails the
+migration check.
+
+Conversion files are JSON envelopes in
+`clinical-tools/migrations/v1/definitions`. Each envelope contains the legacy
+ID/file/checksum, a change summary, and a complete schema-v1 definition. The
+operator tool performs these gates in order:
+
+1. verify that the current HTML bytes match the reviewed checksum;
+2. strictly parse and validate the migration envelope and definition;
+3. execute every saved deterministic fixture with the Go reference evaluator;
+4. resolve exactly one existing calculator by its legacy artifact path;
+5. import the definition idempotently as a validated, tested **draft**.
+
+It never submits, approves, or publishes an imported definition. The normal
+two-person clinical lifecycle remains mandatory, and publishing is the only
+operation that switches a calculator from `legacy_html` to `schema_v1`.
+
+From the repository root, inspect the catalog and source integrity with:
+
+```bash
+make clinical-tools-check
+```
+
+After a clinical owner has resolved the catalog gate and a reviewed conversion
+envelope exists, import all ready definitions as drafts with:
+
+```bash
+DATABASE_URL='postgres://...' \
+  make clinical-tools-import ACTOR_ID='<author-user-uuid>'
+```
+
+Use `--require-all` with `go run ./cmd/clinicaltool-migrate` when the release is
+intended to contain all 14 conversions. It exits non-zero for every missing
+envelope or unresolved source mismatch. A normal catalog check reports blocked
+tools without failing so unrelated releases can retain the existing safe HTML
+runtime.
+
+### Rollout and rollback
+
+Roll out in the catalog order and keep the legacy artifact deployed throughout
+the observation window. For each tool: import draft, review the explicit legacy
+deltas, validate, run fixtures, submit, approve with a different reviewer where
+required, publish, then exercise both dashboard and mobile clients online and
+offline. Usage sessions retain the immutable version ID selected at start.
+
+If a native rollout must be stopped, an authorized publisher can use:
+
+```http
+POST /api/v2/calculators/{id}/runtime/legacy
+Authorization: Bearer <token with calculator.publish>
+```
+
+The operation atomically clears the active schema pointer, marks the current
+published definition `superseded`, restores `legacy_html`, and writes immutable
+audit events. It does not delete definitions or test evidence. The dashboard
+authoring workspace exposes the same action behind a destructive confirmation.
+
+### Current clinical gates
+
+The catalog, rather than this document, is authoritative. At the completion of
+the engineering work, all 14 source artifacts are checksum-pinned and assigned
+to four rollout waves. Conversion envelopes must not be fabricated merely to
+make `--require-all` pass: APGAR/GCS completeness, invalid numeric behavior,
+fluid and fever fallbacks, medication presets, triage thresholds, pregnancy and
+immunization date rules, the wound empty-state, and the locally simplified
+cardiac formulas require explicit clinical/product decisions recorded in the
+catalog.

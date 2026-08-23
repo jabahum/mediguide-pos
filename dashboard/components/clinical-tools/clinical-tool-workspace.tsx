@@ -2,7 +2,7 @@
 
 import * as React from "react"
 import { toast } from "sonner"
-import { AlertTriangle, CheckCircle2, Download, Play, Save, Send, ShieldCheck, Upload } from "lucide-react"
+import { AlertTriangle, CheckCircle2, Download, Play, RotateCcw, Save, Send, ShieldCheck, Upload } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -83,6 +83,11 @@ export function ClinicalToolWorkspace({ toolId, initialVersion, onChanged }: { t
     if (!window.confirm(`Confirm ${name} for version ${version.semantic_version}?`)) return
     updateVersion(await clinicalToolService.transition(version.id, name, version.lock_version)); toast.success(`Version ${name} complete`)
   })
+  const rollbackToLegacy = () => action("legacy rollback", async () => {
+    if (!window.confirm("Switch this tool back to its legacy HTML runtime? The published schema version will be retained as an immutable superseded version.")) return
+    await clinicalToolService.rollbackToLegacy(toolId)
+    toast.success("Legacy runtime restored")
+  })
 
   const runPreview = () => {
     if (!parsed.definition) { setIssues(parsed.issues); return }
@@ -116,7 +121,7 @@ export function ClinicalToolWorkspace({ toolId, initialVersion, onChanged }: { t
         <TabsContent value="json"><Card><CardHeader><CardTitle>Schema v1 definition</CardTitle></CardHeader><CardContent><Textarea aria-label="Clinical tool JSON definition" spellCheck={false} className="min-h-[620px] font-mono text-xs" value={raw} onChange={(event) => setRaw(event.target.value)} /></CardContent></Card></TabsContent>
       </Tabs>
       {(parsed.issues.length > 0 || issues.length > 0) && <Card className="border-destructive"><CardHeader><CardTitle className="flex items-center gap-2"><AlertTriangle className="h-5 w-5" />Validation issues</CardTitle></CardHeader><CardContent><ul className="space-y-2">{[...parsed.issues, ...issues].map((item, index) => <li key={`${item.path}-${index}`} className="text-sm"><code>{item.path}</code>: {item.message}</li>)}</ul></CardContent></Card>}
-      <Card><CardHeader><CardTitle>Clinical workflow</CardTitle></CardHeader><CardContent className="flex flex-wrap gap-2"><Button onClick={() => transition("submit")} disabled={!version || version.status !== "draft"}><Send className="mr-2 h-4 w-4" />Submit</Button><Button variant="outline" onClick={() => transition("approve")} disabled={!version || version.status !== "pending_review"}>Approve</Button><Button variant="outline" onClick={() => transition("publish")} disabled={!version || version.status !== "approved"}><Upload className="mr-2 h-4 w-4" />Publish</Button><Button variant="destructive" onClick={() => transition("withdraw")} disabled={!version || version.status !== "superseded"}>Withdraw</Button></CardContent></Card>
+      <Card><CardHeader><CardTitle>Clinical workflow</CardTitle></CardHeader><CardContent className="flex flex-wrap gap-2"><Button onClick={() => transition("submit")} disabled={!version || version.status !== "draft"}><Send className="mr-2 h-4 w-4" />Submit</Button><Button variant="outline" onClick={() => transition("approve")} disabled={!version || version.status !== "pending_review"}>Approve</Button><Button variant="outline" onClick={() => transition("publish")} disabled={!version || version.status !== "approved"}><Upload className="mr-2 h-4 w-4" />Publish</Button><Button variant="destructive" onClick={() => transition("withdraw")} disabled={!version || version.status !== "superseded"}>Withdraw</Button><Button variant="outline" onClick={rollbackToLegacy} disabled={Boolean(busy)}><RotateCcw className="mr-2 h-4 w-4" />Restore legacy runtime</Button></CardContent></Card>
     </div>
     <Card className="h-fit xl:sticky xl:top-6"><CardHeader><CardTitle>Safe native preview</CardTitle></CardHeader><CardContent className="space-y-5">
       <div className="flex flex-wrap items-center gap-2" aria-label="Preview settings"><select aria-label="Preview width" className="rounded-md border bg-background px-2 py-2 text-sm" value={previewWidth} onChange={(event) => setPreviewWidth(event.target.value as typeof previewWidth)}><option value="mobile">Mobile</option><option value="tablet">Tablet</option><option value="desktop">Desktop</option></select><Button size="sm" variant="outline" onClick={() => setPreviewDark((value) => !value)}>{previewDark ? "Light theme" : "Dark theme"}</Button><Label className="flex items-center gap-2 text-xs">Text scale<input aria-label="Preview text scale" type="range" min="1" max="2" step="0.25" value={previewScale} onChange={(event) => setPreviewScale(Number(event.target.value))} /></Label></div>

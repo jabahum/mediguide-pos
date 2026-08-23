@@ -50,6 +50,8 @@ help:
 		"  migrate-status   Show backend migration status" \
 		"  seed             Seed backend data" \
 		"  importpb         Import PocketBase SQLite data into backend Postgres" \
+		"  clinical-tools-check  Verify legacy tool source checksums and conversion envelopes" \
+		"  clinical-tools-import Import ready clinical-tool conversions as reviewed drafts" \
 		"  ai-test          Run ai-worker tests" \
 		"  ai-api           Run ai-worker FastAPI locally" \
 		"  ai-worker        Run ai-worker loop locally"
@@ -158,6 +160,13 @@ contracts:
 .PHONY: contracts-check
 contracts-check:
 	bash scripts/check-generated-contracts.sh
+
+.PHONY: clinical-tools-check clinical-tools-import
+clinical-tools-check:
+	$(MAKE) -C $(BACKEND_DIR) clinical-tools-check
+
+clinical-tools-import:
+	$(MAKE) -C $(BACKEND_DIR) clinical-tools-import ACTOR_ID="$(ACTOR_ID)"
 
 RELEASE_TAG ?=
 MOBILE_BUILD_NUMBER ?=

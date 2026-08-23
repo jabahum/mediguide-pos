@@ -9298,6 +9298,47 @@ paths:
       summary: Get the current published native calculator definition
       tags:
       - calculator-versions
+  /api/v2/calculators/{id}/runtime/legacy:
+    post:
+      description: Preserves immutable schema versions and audit history while clearing
+        the active schema pointer.
+      parameters:
+      - description: Calculator ID
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Roll a migrated calculator back to its characterized HTML runtime
+      tags:
+      - calculator-versions
   /api/v2/calculators/{id}/usage:
     post:
       consumes:

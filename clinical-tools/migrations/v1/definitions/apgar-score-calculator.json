@@ -1,0 +1,42 @@
+{
+  "legacy_id":"apgar-score-calculator",
+  "legacy_file":"apgar-score-calculator.html",
+  "source_checksum":"4b4ba682704ce5a95e745117e459b8a76a9bb6bce0e960cee57ff7d72106a677",
+  "change_summary":"Review draft: preserve the five APGAR component scores and legacy thresholds while requiring every component. The optional 1-minute/5-minute comparison remains outside the calculation draft pending clinician workflow approval.",
+  "definition":{
+    "schema_version":"1.0",
+    "tool_type":"calculator",
+    "title":"APGAR Score",
+    "description":"Scores five newborn observations from 0 to 2 each. This migration draft is not approved for clinical publication.",
+    "version":"1.0.0-review.1",
+    "locale":"en",
+    "supported_population":["Newborns assessed by an appropriately trained clinician"],
+    "exclusions":[],
+    "warnings":[{"key":"immediate_assessment","text":"A score from 0 to 3 requires immediate assessment and management by an appropriately trained clinician according to the approved neonatal protocol.","severity":"critical","when":{"op":"less_than_or_equal","args":[{"op":"field","field":"total_score"},{"op":"literal","value":3}]}}],
+    "citations":[],
+    "inputs":[
+      {"key":"activity","type":"single_selection","label":"Activity (Muscle Tone)","required":true,"options":[{"value":0,"label":"0 - Limp or flaccid"},{"value":1,"label":"1 - Some flexion of extremities"},{"value":2,"label":"2 - Active motion and well-flexed"}]},
+      {"key":"pulse","type":"single_selection","label":"Pulse (Heart Rate)","required":true,"options":[{"value":0,"label":"0 - Absent"},{"value":1,"label":"1 - Below 100 bpm"},{"value":2,"label":"2 - Above 100 bpm"}]},
+      {"key":"grimace","type":"single_selection","label":"Grimace (Reflex Irritability)","required":true,"options":[{"value":0,"label":"0 - No response to stimulation"},{"value":1,"label":"1 - Grimace or weak cry"},{"value":2,"label":"2 - Vigorous cry or sneeze"}]},
+      {"key":"appearance","type":"single_selection","label":"Appearance (Color)","required":true,"options":[{"value":0,"label":"0 - Blue or pale all over"},{"value":1,"label":"1 - Body pink and extremities blue"},{"value":2,"label":"2 - Pink all over"}]},
+      {"key":"respiration","type":"single_selection","label":"Respiration (Breathing Effort)","required":true,"options":[{"value":0,"label":"0 - Absent"},{"value":1,"label":"1 - Slow, irregular, or weak cry"},{"value":2,"label":"2 - Good and strong cry"}]}
+    ],
+    "sections":[{"key":"assessment","title":"Current Assessment","order":0,"review_before_completion":true}],
+    "calculation":[{"key":"total_score","expression":{"op":"add","args":[{"op":"field","field":"activity"},{"op":"field","field":"pulse"},{"op":"field","field":"grimace"},{"op":"field","field":"appearance"},{"op":"field","field":"respiration"}]},"precision":0,"rounding_mode":"half_up","unit":"points"}],
+    "rules":[],
+    "outputs":[{"key":"total_score","label":"Total APGAR Score","value":{"op":"field","field":"total_score"},"unit":"points","precision":0,"rounding_mode":"half_up"}],
+    "interpretations":[
+      {"key":"severe_depression","when":{"op":"less_than_or_equal","args":[{"op":"field","field":"total_score"},{"op":"literal","value":3}]},"label":"Severe Depression (0-3)","description":"Legacy score classification retained for clinician review.","severity":"critical","recommendations":["Initiate the approved neonatal emergency assessment and management pathway."],"order":0},
+      {"key":"moderate_depression","when":{"op":"and","args":[{"op":"greater_than_or_equal","args":[{"op":"field","field":"total_score"},{"op":"literal","value":4}]},{"op":"less_than_or_equal","args":[{"op":"field","field":"total_score"},{"op":"literal","value":7}]}]},"label":"Moderate Depression (4-7)","description":"Legacy score classification retained for clinician review.","severity":"warning","recommendations":["Reassess and manage according to the approved neonatal protocol."],"order":1},
+      {"key":"excellent","when":{"op":"greater_than_or_equal","args":[{"op":"field","field":"total_score"},{"op":"literal","value":8}]},"label":"Excellent (8-10)","description":"Legacy score classification retained for clinician review.","severity":"normal","recommendations":["Continue routine assessment and care according to the approved neonatal protocol."],"order":2}
+    ],
+    "completion":{"mode":"all_required","allow_resume":false,"require_review":true,"show_percentage":false,"reset_confirmation":true},
+    "test_cases":[
+      {"key":"all_zero","inputs":{"activity":0,"pulse":0,"grimace":0,"appearance":0,"respiration":0},"expected":{"total_score":0,"interpretations":["severe_depression"],"warnings":["immediate_assessment"]}},
+      {"key":"boundary_four","inputs":{"activity":1,"pulse":1,"grimace":1,"appearance":1,"respiration":0},"expected":{"total_score":4,"interpretations":["moderate_depression"],"warnings":[]}},
+      {"key":"boundary_eight","inputs":{"activity":2,"pulse":2,"grimace":2,"appearance":1,"respiration":1},"expected":{"total_score":8,"interpretations":["excellent"],"warnings":[]}},
+      {"key":"maximum_score","inputs":{"activity":2,"pulse":2,"grimace":2,"appearance":2,"respiration":2},"expected":{"total_score":10,"interpretations":["excellent"],"warnings":[]}}
+    ],
+    "minimum_app_version":null
+  }
+}

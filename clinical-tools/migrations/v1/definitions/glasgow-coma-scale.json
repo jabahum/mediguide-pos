@@ -1,0 +1,48 @@
+{
+  "legacy_id": "glasgow-coma-scale",
+  "legacy_file": "glasgow-coma-scale.html",
+  "source_checksum": "5f2ac864c148997e5f126b4691dda1226780e8ca61322637fa57af9de32e99d4",
+  "change_summary": "Review draft: preserve GCS component scoring and severity thresholds while requiring all three components so a partial score below the valid 3–15 range cannot be produced. Requires clinician approval before publication.",
+  "definition": {
+    "schema_version":"1.0",
+    "tool_type":"calculator",
+    "title":"Glasgow Coma Scale (GCS)",
+    "description":"Scores eye, verbal, and motor responses. This migration draft is not approved for clinical publication.",
+    "version":"1.0.0-review.1",
+    "locale":"en",
+    "supported_population":[],
+    "exclusions":[],
+    "warnings":[
+      {"key":"severe_gcs_warning","text":"A total score of 8 or less requires urgent clinical assessment and airway consideration according to the approved local protocol.","severity":"critical","when":{"op":"less_than_or_equal","args":[{"op":"field","field":"total_score"},{"op":"literal","value":8}]}}
+    ],
+    "citations":[],
+    "inputs":[
+      {"key":"eye","type":"single_selection","label":"Eye Opening Response","required":true,"options":[{"value":4,"label":"4 - Spontaneous"},{"value":3,"label":"3 - To verbal command"},{"value":2,"label":"2 - To pain or pressure"},{"value":1,"label":"1 - None"}]},
+      {"key":"verbal","type":"single_selection","label":"Verbal Response","required":true,"options":[{"value":5,"label":"5 - Oriented"},{"value":4,"label":"4 - Confused"},{"value":3,"label":"3 - Inappropriate words"},{"value":2,"label":"2 - Incomprehensible sounds"},{"value":1,"label":"1 - None"}]},
+      {"key":"motor","type":"single_selection","label":"Motor Response","required":true,"options":[{"value":6,"label":"6 - Obeys commands"},{"value":5,"label":"5 - Localizes to pain"},{"value":4,"label":"4 - Withdraws from pain"},{"value":3,"label":"3 - Abnormal flexion"},{"value":2,"label":"2 - Extension"},{"value":1,"label":"1 - None"}]}
+    ],
+    "sections":[{"key":"responses","title":"Responses","order":0}],
+    "calculation":[{"key":"total_score","expression":{"op":"add","args":[{"op":"field","field":"eye"},{"op":"field","field":"verbal"},{"op":"field","field":"motor"}]},"precision":0,"rounding_mode":"half_up","unit":"points"}],
+    "rules":[],
+    "outputs":[
+      {"key":"total_score","label":"Total GCS Score","value":{"op":"field","field":"total_score"},"unit":"points","precision":0,"rounding_mode":"half_up"},
+      {"key":"eye_score","label":"Eye Score","value":{"op":"field","field":"eye"},"unit":"points","precision":0,"rounding_mode":"half_up"},
+      {"key":"verbal_score","label":"Verbal Score","value":{"op":"field","field":"verbal"},"unit":"points","precision":0,"rounding_mode":"half_up"},
+      {"key":"motor_score","label":"Motor Score","value":{"op":"field","field":"motor"},"unit":"points","precision":0,"rounding_mode":"half_up"}
+    ],
+    "interpretations":[
+      {"key":"severe","when":{"op":"less_than_or_equal","args":[{"op":"field","field":"total_score"},{"op":"literal","value":8}]},"label":"Severe","description":"Total GCS score from 3 to 8.","severity":"critical","recommendations":["Escalate urgently and follow the approved airway and neurological assessment protocol."],"order":0},
+      {"key":"moderate","when":{"op":"and","args":[{"op":"greater_than_or_equal","args":[{"op":"field","field":"total_score"},{"op":"literal","value":9}]},{"op":"less_than_or_equal","args":[{"op":"field","field":"total_score"},{"op":"literal","value":12}]}]},"label":"Moderate","description":"Total GCS score from 9 to 12.","severity":"warning","recommendations":["Perform frequent neurological observations and escalate according to local protocol."],"order":1},
+      {"key":"mild","when":{"op":"greater_than_or_equal","args":[{"op":"field","field":"total_score"},{"op":"literal","value":13}]},"label":"Mild","description":"Total GCS score from 13 to 15.","severity":"info","recommendations":["Continue clinical assessment and monitoring according to local protocol."],"order":2}
+    ],
+    "completion":{"mode":"all_required","allow_resume":false,"require_review":false,"show_percentage":false,"reset_confirmation":true},
+    "test_cases":[
+      {"key":"minimum_score","inputs":{"eye":1,"verbal":1,"motor":1},"expected":{"total_score":3,"interpretations":["severe"],"warnings":["severe_gcs_warning"]}},
+      {"key":"boundary_eight","inputs":{"eye":2,"verbal":2,"motor":4},"expected":{"total_score":8,"interpretations":["severe"],"warnings":["severe_gcs_warning"]}},
+      {"key":"boundary_nine","inputs":{"eye":2,"verbal":3,"motor":4},"expected":{"total_score":9,"interpretations":["moderate"],"warnings":[]}},
+      {"key":"boundary_thirteen","inputs":{"eye":3,"verbal":4,"motor":6},"expected":{"total_score":13,"interpretations":["mild"],"warnings":[]}},
+      {"key":"maximum_score","inputs":{"eye":4,"verbal":5,"motor":6},"expected":{"total_score":15,"interpretations":["mild"],"warnings":[]}}
+    ],
+    "minimum_app_version":null
+  }
+}

@@ -7,10 +7,12 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"sort"
 	"strings"
+	"time"
 
 	"mediguide/internal/config"
 	"mediguide/internal/db"
@@ -32,6 +34,21 @@ type catalogTool struct {
 	Wave           int    `json:"wave"`
 	Status         string `json:"status"`
 	ClinicalGate   string `json:"clinical_gate"`
+}
+
+type parityReport struct {
+	LegacyID       string   `json:"legacy_id"`
+	LegacyFile     string   `json:"legacy_file"`
+	Status         string   `json:"status"`
+	ReviewerID     *string  `json:"reviewer_id"`
+	ReviewedAt     *string  `json:"reviewed_at"`
+	CasesTested    int      `json:"cases_tested"`
+	ExactMatches   int      `json:"exact_matches"`
+	ToleranceMatch int      `json:"tolerance_matches"`
+	Presentation   []string `json:"presentation_differences"`
+	Logic          []string `json:"logic_differences"`
+	Ambiguities    []string `json:"unresolved_clinical_ambiguities"`
+	Decision       string   `json:"reviewer_decision"`
 }
 
 func main() {
@@ -58,6 +75,19 @@ func main() {
 	if err != nil {
 		fatal(err)
 	}
+	parityReports, err := loadParityReports(parityDir)
+	if err != nil {
+		fatal(err)
+	}
+	catalogIDs := map[string]bool{}
+	for _, item := range items.Tools {
+		catalogIDs[item.LegacyID] = true
+	}
+	for legacyID := range parityReports {
+		if !catalogIDs[legacyID] {
+			fatal(fmt.Errorf("parity report references unknown legacy tool %q", legacyID))
+		}
+	}
 
 	var migration services.CalculatorMigrationService
 	var actor uuid.UUID
@@ -75,14 +105,6 @@ func main() {
 		}
 		migration = services.CalculatorMigrationService{DB: database, Versions: services.CalculatorVersionService{DB: database}}
 	}
-	parity := map[string]bool{}
-	if retirementCheck {
-		parity, err = loadApprovedParityReports(parityDir)
-		if err != nil {
-			fatal(err)
-		}
-	}
-
 	failed := false
 	for _, item := range items.Tools {
 		source, readErr := os.ReadFile(filepath.Join(sourceDir, item.LegacyFile))
@@ -97,7 +119,13 @@ func main() {
 			failed = failed || requireAll
 			continue
 		}
-		if retirementCheck && !parity[item.LegacyID] {
+		report, hasReport := parityReports[item.LegacyID]
+		if hasReport && report.LegacyFile != item.LegacyFile {
+			fmt.Printf("BLOCKED wave=%d tool=%s reason=parity_catalog_mismatch\n", item.Wave, item.LegacyID)
+			failed = true
+			continue
+		}
+		if retirementCheck && (!hasReport || !report.approved()) {
 			fmt.Printf("BLOCKED wave=%d tool=%s reason=approved_parity_report_missing\n", item.Wave, item.LegacyID)
 			failed = true
 		}
@@ -139,11 +167,11 @@ func main() {
 	}
 }
 
-func loadApprovedParityReports(directory string) (map[string]bool, error) {
-	approved := map[string]bool{}
+func loadParityReports(directory string) (map[string]parityReport, error) {
+	reports := map[string]parityReport{}
 	entries, err := os.ReadDir(directory)
 	if errors.Is(err, os.ErrNotExist) {
-		return approved, nil
+		return reports, nil
 	}
 	if err != nil {
 		return nil, err
@@ -156,21 +184,70 @@ func loadApprovedParityReports(directory string) (map[string]bool, error) {
 		if readErr != nil {
 			return nil, readErr
 		}
-		var report struct {
-			LegacyID    string   `json:"legacy_id"`
-			Status      string   `json:"status"`
-			ReviewerID  string   `json:"reviewer_id"`
-			ReviewedAt  string   `json:"reviewed_at"`
-			Ambiguities []string `json:"unresolved_clinical_ambiguities"`
-		}
-		if err := json.Unmarshal(raw, &report); err != nil {
+		var report parityReport
+		var fields map[string]json.RawMessage
+		if err := json.Unmarshal(raw, &fields); err != nil {
 			return nil, fmt.Errorf("%s: %w", entry.Name(), err)
 		}
-		if report.Status == "approved" && report.ReviewerID != "" && report.ReviewedAt != "" && len(report.Ambiguities) == 0 {
-			approved[report.LegacyID] = true
+		for _, required := range []string{"legacy_id", "legacy_file", "status", "reviewer_id", "reviewed_at", "cases_tested", "exact_matches", "tolerance_matches", "presentation_differences", "logic_differences", "unresolved_clinical_ambiguities", "reviewer_decision"} {
+			if _, found := fields[required]; !found {
+				return nil, fmt.Errorf("%s: required field %q is missing", entry.Name(), required)
+			}
+		}
+		decoder := json.NewDecoder(strings.NewReader(string(raw)))
+		decoder.DisallowUnknownFields()
+		if err := decoder.Decode(&report); err != nil {
+			return nil, fmt.Errorf("%s: %w", entry.Name(), err)
+		}
+		if err := decoder.Decode(&struct{}{}); !errors.Is(err, io.EOF) {
+			return nil, fmt.Errorf("%s: trailing JSON data is not allowed", entry.Name())
+		}
+		if err := validateParityReport(report, entry.Name()); err != nil {
+			return nil, err
+		}
+		if _, exists := reports[report.LegacyID]; exists {
+			return nil, fmt.Errorf("duplicate parity report %q", report.LegacyID)
+		}
+		reports[report.LegacyID] = report
+	}
+	return reports, nil
+}
+
+func validateParityReport(report parityReport, filename string) error {
+	if report.LegacyID == "" || report.LegacyFile == "" || filepath.Base(report.LegacyFile) != report.LegacyFile || filepath.Ext(report.LegacyFile) != ".html" {
+		return fmt.Errorf("%s: invalid legacy identity", filename)
+	}
+	if filename != report.LegacyID+".json" {
+		return fmt.Errorf("%s: filename must match legacy_id", filename)
+	}
+	if report.Status != "draft" && report.Status != "changes_required" && report.Status != "approved" {
+		return fmt.Errorf("%s: invalid parity status %q", filename, report.Status)
+	}
+	if report.CasesTested < 1 || report.ExactMatches < 0 || report.ToleranceMatch < 0 || report.ExactMatches+report.ToleranceMatch > report.CasesTested {
+		return fmt.Errorf("%s: invalid parity case counts", filename)
+	}
+	if strings.TrimSpace(report.Decision) == "" {
+		return fmt.Errorf("%s: reviewer_decision is required", filename)
+	}
+	if (report.ReviewerID == nil) != (report.ReviewedAt == nil) {
+		return fmt.Errorf("%s: reviewer_id and reviewed_at must both be null or both be set", filename)
+	}
+	if report.ReviewerID != nil {
+		if _, err := uuid.Parse(strings.TrimSpace(*report.ReviewerID)); err != nil {
+			return fmt.Errorf("%s: reviewer_id must be a valid UUID", filename)
+		}
+		if _, err := time.Parse(time.RFC3339, strings.TrimSpace(*report.ReviewedAt)); err != nil {
+			return fmt.Errorf("%s: reviewed_at must be RFC 3339", filename)
 		}
 	}
-	return approved, nil
+	if report.Status == "approved" && !report.approved() {
+		return fmt.Errorf("%s: approved reports require a reviewer, review timestamp, and no unresolved ambiguities", filename)
+	}
+	return nil
+}
+
+func (report parityReport) approved() bool {
+	return report.Status == "approved" && report.ReviewerID != nil && report.ReviewedAt != nil && len(report.Ambiguities) == 0
 }
 
 func firstExisting(paths ...string) string {

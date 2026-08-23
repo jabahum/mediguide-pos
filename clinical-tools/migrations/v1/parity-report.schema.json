@@ -9,8 +9,8 @@
     "legacy_id": {"type": "string", "minLength": 1},
     "legacy_file": {"type": "string", "pattern": "^[a-z0-9-]+\\.html$"},
     "status": {"enum": ["draft", "changes_required", "approved"]},
-    "reviewer_id": {"type": "string", "format": "uuid"},
-    "reviewed_at": {"type": "string", "format": "date-time"},
+    "reviewer_id": {"type": ["string", "null"], "format": "uuid"},
+    "reviewed_at": {"type": ["string", "null"], "format": "date-time"},
     "cases_tested": {"type": "integer", "minimum": 1},
     "exact_matches": {"type": "integer", "minimum": 0},
     "tolerance_matches": {"type": "integer", "minimum": 0},
@@ -18,5 +18,17 @@
     "logic_differences": {"type": "array", "items": {"type": "string"}},
     "unresolved_clinical_ambiguities": {"type": "array", "items": {"type": "string"}},
     "reviewer_decision": {"type": "string", "minLength": 1}
-  }
+  },
+  "allOf": [
+    {
+      "if": {"properties": {"status": {"const": "approved"}}},
+      "then": {
+        "properties": {
+          "reviewer_id": {"type": "string", "format": "uuid"},
+          "reviewed_at": {"type": "string", "format": "date-time"},
+          "unresolved_clinical_ambiguities": {"maxItems": 0}
+        }
+      }
+    }
+  ]
 }

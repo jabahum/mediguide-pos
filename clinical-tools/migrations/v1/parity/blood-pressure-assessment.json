@@ -1,0 +1,14 @@
+{
+  "legacy_id":"blood-pressure-assessment",
+  "legacy_file":"blood-pressure-assessment.html",
+  "status":"changes_required",
+  "reviewer_id":null,
+  "reviewed_at":null,
+  "cases_tested":6,
+  "exact_matches":4,
+  "tolerance_matches":0,
+  "presentation_differences":["The ten legacy checkboxes are represented as typed boolean inputs and the reading is returned as separate systolic and diastolic outputs."],
+  "logic_differences":["The draft enforces the HTML-declared ranges of 70–250 mmHg systolic and 40–150 mmHg diastolic; direct legacy JavaScript invocation did not enforce them.","Missing and non-integer readings are rejected by the typed evaluator instead of relying on browser alerts and parseInt truncation."],
+  "unresolved_clinical_ambiguities":["Approve or replace the proposed input ranges for the intended population.","Approve category thresholds, confirmation requirements, risk-factor definitions, and escalation wording against the governing clinical guideline.","Confirm whether the adult-only population statement and all ten risk factors are appropriate.","Provide and approve citations plus effective/review dates."],
+  "reviewer_decision":"Pending independent clinician approval. Do not approve or publish this review draft."
+}

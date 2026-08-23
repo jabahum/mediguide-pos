@@ -1,0 +1,14 @@
+{
+  "legacy_id":"apgar-score-calculator",
+  "legacy_file":"apgar-score-calculator.html",
+  "status":"changes_required",
+  "reviewer_id":null,
+  "reviewed_at":null,
+  "cases_tested":5,
+  "exact_matches":3,
+  "tolerance_matches":0,
+  "presentation_differences":["The legacy optional 1-minute versus 5-minute comparison panel is not represented in this initial calculation definition and requires an approved workflow decision."],
+  "logic_differences":["All five components are required; the legacy page treated every unanswered component as zero and produced a partial score."],
+  "unresolved_clinical_ambiguities":["Confirm that incomplete component sets must be rejected rather than scored as zero.","Confirm approved interpretation terminology, management wording, assessment timing, and whether comparison belongs in the tool or longitudinal patient records.","Provide and approve the governing neonatal clinical source and effective/review dates."],
+  "reviewer_decision":"Pending independent clinician approval. Do not approve or publish this review draft."
+}

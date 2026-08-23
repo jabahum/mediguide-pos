@@ -1,0 +1,48 @@
+{
+  "legacy_id": "bmi-calculator",
+  "legacy_file": "bmi-calculator.html",
+  "source_checksum": "5317c90a25a1e1f00df9f3bfdb934e5f91c1e5944e8bde266497640804d98391",
+  "change_summary": "Review draft: preserve BMI conversion, rounding, and classification while rejecting missing, zero, non-finite, and out-of-range measurements. Requires clinician approval before publication.",
+  "definition": {
+    "schema_version": "1.0",
+    "tool_type": "calculator",
+    "title": "BMI Calculator",
+    "description": "Calculates adult body mass index from weight and height. This migration draft is not approved for clinical publication.",
+    "version": "1.0.0-review.1",
+    "locale": "en",
+    "supported_population": ["Adults, subject to clinician confirmation"],
+    "exclusions": ["Do not use as the sole assessment of nutritional or health status."],
+    "warnings": [],
+    "citations": [],
+    "inputs": [
+      {"key":"weight","type":"measurement","label":"Weight","required":true,"minimum":1,"maximum":500,"allowed_units":["kg","lb"],"default_unit":"kg"},
+      {"key":"height","type":"measurement","label":"Height","required":true,"minimum":0.5,"maximum":3,"allowed_units":["m","cm","ft","in"],"default_unit":"m"}
+    ],
+    "sections": [
+      {"key":"measurements","title":"Measurements","order":0}
+    ],
+    "calculation": [
+      {"key":"height_squared","expression":{"op":"power","args":[{"op":"field","field":"height"},{"op":"literal","value":2}]}},
+      {"key":"bmi_raw","expression":{"op":"divide","args":[{"op":"field","field":"weight"},{"op":"field","field":"height_squared"}]}},
+      {"key":"bmi","expression":{"op":"round","args":[{"op":"field","field":"bmi_raw"}],"precision":1,"rounding_mode":"half_up"},"precision":1,"rounding_mode":"half_up"}
+    ],
+    "rules": [],
+    "outputs": [
+      {"key":"bmi","label":"Body Mass Index","value":{"op":"field","field":"bmi"},"unit":"kg/m²","precision":1,"rounding_mode":"half_up"}
+    ],
+    "interpretations": [
+      {"key":"underweight","when":{"op":"less_than","args":[{"op":"field","field":"bmi"},{"op":"literal","value":18.5}]},"label":"Underweight","description":"BMI is below 18.5.","severity":"warning","recommendations":["Arrange an appropriate clinical and nutritional assessment."],"order":0},
+      {"key":"normal_weight","when":{"op":"and","args":[{"op":"greater_than_or_equal","args":[{"op":"field","field":"bmi"},{"op":"literal","value":18.5}]},{"op":"less_than","args":[{"op":"field","field":"bmi"},{"op":"literal","value":25}]}]},"label":"Normal Weight","description":"BMI is from 18.5 to below 25.","severity":"normal","recommendations":["Maintain a balanced diet and regular physical activity."],"order":1},
+      {"key":"overweight","when":{"op":"and","args":[{"op":"greater_than_or_equal","args":[{"op":"field","field":"bmi"},{"op":"literal","value":25}]},{"op":"less_than","args":[{"op":"field","field":"bmi"},{"op":"literal","value":30}]}]},"label":"Overweight","description":"BMI is from 25 to below 30.","severity":"warning","recommendations":["Consider an appropriate clinical assessment and sustainable lifestyle support."],"order":2},
+      {"key":"obese","when":{"op":"greater_than_or_equal","args":[{"op":"field","field":"bmi"},{"op":"literal","value":30}]},"label":"Obese","description":"BMI is 30 or above.","severity":"warning","recommendations":["Arrange an appropriate clinical assessment; BMI alone does not diagnose health status."],"order":3}
+    ],
+    "completion":{"mode":"all_required","allow_resume":false,"require_review":false,"show_percentage":false,"reset_confirmation":true},
+    "test_cases":[
+      {"key":"metric_normal","inputs":{"weight":{"value":70,"unit":"kg"},"height":{"value":1.75,"unit":"m"}},"expected":{"bmi":22.9,"interpretations":["normal_weight"]},"numeric_tolerance":0.01},
+      {"key":"imperial_normal","inputs":{"weight":{"value":154.324,"unit":"lb"},"height":{"value":68.8976,"unit":"in"}},"expected":{"bmi":22.9,"interpretations":["normal_weight"]},"numeric_tolerance":0.01},
+      {"key":"boundary_twenty_five","inputs":{"weight":{"value":81,"unit":"kg"},"height":{"value":1.8,"unit":"m"}},"expected":{"bmi":25,"interpretations":["overweight"]},"numeric_tolerance":0.01},
+      {"key":"boundary_thirty","inputs":{"weight":{"value":30,"unit":"kg"},"height":{"value":1,"unit":"m"}},"expected":{"bmi":30,"interpretations":["obese"]},"numeric_tolerance":0.01}
+    ],
+    "minimum_app_version": null
+  }
+}

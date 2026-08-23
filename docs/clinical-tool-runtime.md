@@ -169,9 +169,12 @@ operator tool performs these gates in order:
 4. resolve exactly one existing calculator by its legacy artifact path;
 5. import the definition idempotently as a validated, tested **draft**.
 
-It never submits, approves, or publishes an imported definition. The normal
-two-person clinical lifecycle remains mandatory, and publishing is the only
-operation that switches a calculator from `legacy_html` to `schema_v1`.
+It never submits, approves, or publishes an imported definition. A catalog
+status of `review_draft_ready` means engineering fixtures pass and the draft may
+be imported so a clinician can review the actual native tool. It does **not**
+mean that the clinical gate is resolved. The normal two-person clinical
+lifecycle remains mandatory, and publishing is the only operation that switches
+a calculator from `legacy_html` to `schema_v1`.
 
 From the repository root, inspect the catalog and source integrity with:
 
@@ -179,13 +182,26 @@ From the repository root, inspect the catalog and source integrity with:
 make clinical-tools-check
 ```
 
-After a clinical owner has resolved the catalog gate and a reviewed conversion
-envelope exists, import all ready definitions as drafts with:
+After engineering has produced a `review_draft_ready` envelope, import it as a
+draft for clinical review with:
 
 ```bash
 DATABASE_URL='postgres://...' \
   make clinical-tools-import ACTOR_ID='<author-user-uuid>'
 ```
+
+The author then validates/tests and submits the draft. A different authorized
+clinician reviews the source, every declared difference, clinical language,
+citations, effective date and review date. The clinician records their decision
+in the matching file under `clinical-tools/migrations/v1/parity/`. Draft parity
+files use `reviewer_id: null` and `reviewed_at: null`; an approved report must
+contain the real reviewer UUID and RFC 3339 review timestamp and must have no
+unresolved clinical ambiguities. Never insert placeholder identities or dates.
+
+Wave 1 currently contains review drafts for BMI, APGAR, blood-pressure
+assessment and GCS. Their parity reports remain `changes_required`; therefore
+none of these files is evidence of approval and none is eligible for legacy
+retirement yet.
 
 Use `--require-all` with `go run ./cmd/clinicaltool-migrate` when the release is
 intended to contain all 14 conversions. It exits non-zero for every missing

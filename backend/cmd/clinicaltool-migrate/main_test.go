@@ -59,3 +59,66 @@ func TestLoadEnvelopesTreatsMissingDirectoryAsNoReadyConversions(t *testing.T) {
 		t.Fatalf("unexpected envelopes: %#v", values)
 	}
 }
+
+func TestLoadParityReportsAcceptsUnsignedReviewDraft(t *testing.T) {
+	directory := t.TempDir()
+	raw := `{
+  "legacy_id":"bmi-calculator",
+  "legacy_file":"bmi-calculator.html",
+  "status":"changes_required",
+  "reviewer_id":null,
+  "reviewed_at":null,
+  "cases_tested":4,
+  "exact_matches":3,
+  "tolerance_matches":1,
+  "presentation_differences":[],
+  "logic_differences":["invalid inputs are rejected"],
+  "unresolved_clinical_ambiguities":["clinician review required"],
+  "reviewer_decision":"Pending independent clinician approval."
+}`
+	if err := os.WriteFile(filepath.Join(directory, "bmi-calculator.json"), []byte(raw), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	reports, err := loadParityReports(directory)
+	if err != nil {
+		t.Fatalf("expected valid review draft: %v", err)
+	}
+	if reports["bmi-calculator"].approved() {
+		t.Fatal("unsigned review draft must not count as approved")
+	}
+}
+
+func TestLoadParityReportsRejectsFakeApprovalAndUnknownFields(t *testing.T) {
+	tests := map[string]string{
+		"missing reviewer": `{
+  "legacy_id":"tool","legacy_file":"tool.html","status":"approved",
+  "reviewer_id":null,"reviewed_at":null,"cases_tested":1,"exact_matches":1,
+  "tolerance_matches":0,"presentation_differences":[],"logic_differences":[],
+  "unresolved_clinical_ambiguities":[],"reviewer_decision":"Approved"
+}`,
+		"unresolved ambiguity": `{
+  "legacy_id":"tool","legacy_file":"tool.html","status":"approved",
+  "reviewer_id":"11111111-1111-4111-8111-111111111111","reviewed_at":"2026-08-23T10:00:00Z",
+  "cases_tested":1,"exact_matches":1,"tolerance_matches":0,
+  "presentation_differences":[],"logic_differences":[],
+  "unresolved_clinical_ambiguities":["still unresolved"],"reviewer_decision":"Approved"
+}`,
+		"unknown field": `{
+  "legacy_id":"tool","legacy_file":"tool.html","status":"changes_required",
+  "reviewer_id":null,"reviewed_at":null,"cases_tested":1,"exact_matches":1,
+  "tolerance_matches":0,"presentation_differences":[],"logic_differences":[],
+  "unresolved_clinical_ambiguities":[],"reviewer_decision":"Changes required","approved_by_system":true
+}`,
+	}
+	for name, raw := range tests {
+		t.Run(name, func(t *testing.T) {
+			directory := t.TempDir()
+			if err := os.WriteFile(filepath.Join(directory, "tool.json"), []byte(raw), 0o600); err != nil {
+				t.Fatal(err)
+			}
+			if _, err := loadParityReports(directory); err == nil {
+				t.Fatal("expected parity report rejection")
+			}
+		})
+	}
+}

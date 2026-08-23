@@ -1,0 +1,14 @@
+{
+  "legacy_id":"glasgow-coma-scale",
+  "legacy_file":"glasgow-coma-scale.html",
+  "status":"changes_required",
+  "reviewer_id":null,
+  "reviewed_at":null,
+  "cases_tested":5,
+  "exact_matches":3,
+  "tolerance_matches":0,
+  "presentation_differences":["The typed runtime returns component scores as structured outputs rather than updating individual DOM elements."],
+  "logic_differences":["Eye, verbal, and motor components are all required; the legacy page treated unanswered components as zero and could produce totals below the valid scale minimum of 3."],
+  "unresolved_clinical_ambiguities":["Approve mandatory-completeness behavior and any supported adaptations for intubated, preverbal, or otherwise non-testable patients.","Approve severity labels, airway escalation wording, recommendations, and intended population.","Provide and approve the governing GCS source plus effective/review dates."],
+  "reviewer_decision":"Pending independent clinician approval. Do not approve or publish this review draft."
+}

@@ -1,0 +1,14 @@
+{
+  "legacy_id":"bmi-calculator",
+  "legacy_file":"bmi-calculator.html",
+  "status":"changes_required",
+  "reviewer_id":null,
+  "reviewed_at":null,
+  "cases_tested":6,
+  "exact_matches":3,
+  "tolerance_matches":1,
+  "presentation_differences":["Weight and height units are carried in typed measurement values rather than separate unit selectors."],
+  "logic_differences":["Missing, zero, non-finite, unsupported-unit, and out-of-range measurements are rejected; the legacy function could display NaN or Infinity and classify invalid results as obese."],
+  "unresolved_clinical_ambiguities":["Approve supported population, measurement bounds, classification labels, and recommendations.","Confirm whether the accepted imperial-to-metric conversion tolerances are sufficient across all runtimes.","Provide and approve the governing BMI source plus effective/review dates."],
+  "reviewer_decision":"Pending independent clinician approval. Do not approve or publish this review draft."
+}

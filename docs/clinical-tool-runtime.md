@@ -223,3 +223,106 @@ fluid and fever fallbacks, medication presets, triage thresholds, pregnancy and
 immunization date rules, the wound empty-state, and the locally simplified
 cardiac formulas require explicit clinical/product decisions recorded in the
 catalog.
+
+## Temporary legacy containment
+
+Legacy HTML is a quarantined compatibility runtime, not an upload format. Only
+the 14 artifact filenames and SHA-256 values recorded in the migration catalog
+can execute. Inline HTML and unknown filenames are rejected. Each artifact is
+limited to 256 KiB, must be self-contained, and is rejected if it contains a
+remote script/resource declaration or a network API such as `fetch`,
+`XMLHttpRequest`, `WebSocket`, or `EventSource`.
+
+The API image deliberately packages these reviewed files at
+`/app/legacy-tools`; it does not mount or read dashboard source at runtime. The
+content endpoint verifies the source checksum on every read, injects the
+restrictive CSP into the document, and returns CSP, Permissions-Policy,
+no-referrer, no-sniff, no-store, and checksum headers. The dashboard uses an
+opaque `sandbox="allow-scripts"` iframe with no forms, popups, or same-origin
+privilege. Flutter uses an isolated invalid origin, disables storage/file/media
+privileges, blocks every top-level navigation except `about:blank`, and verifies
+the digest of its private offline cache.
+
+Migration `00041_pin_legacy_calculator_artifacts.sql` adds checksum metadata to
+known records. Inline HTML may remain as historical database data during the
+migration window, but the service rejects it and it cannot execute.
+
+## Shared conformance fixtures
+
+`clinical-tools/conformance/v1/runtime-fixtures.json` is read directly by Go,
+TypeScript, and Dart tests. It currently covers normalized measurements,
+allowlisted conversion, rounding, threshold equality, interpretation selection,
+recommendations, fixed-clock date differences, and checklist completion. Add a case here whenever an
+operator semantic changes; do not create runtime-specific copies.
+
+To diagnose a difference:
+
+1. Run the failing shared fixture in all three runtimes.
+2. Compare normalized inputs before comparing outputs.
+3. Confirm the injected `fixed_now`, precision, rounding mode, unit, and rule
+   order.
+4. Treat the Go evaluator as the publication authority.
+5. Block publication until TypeScript and Dart agree; never adjust an expected
+   clinical result merely to make a test green.
+
+## Adding a calculator or decision tool
+
+1. Create the non-executable base tool record in the dashboard.
+2. Open `/decision-tools/{id}/author` and create/import schema JSON.
+3. Add stable inputs, expressions, rules, outputs, warnings, citations, and
+   boundary fixtures.
+4. Validate and run fixtures, then submit for review.
+5. Have an authorized independent reviewer approve clinically critical tools.
+6. Publish only after all gates pass, then verify dashboard, Flutter, and
+   offline behavior.
+
+Executable HTML, JavaScript, TypeScript, JSX, Vue, and Svelte files are not
+accepted.
+
+## Adding a checklist
+
+Use `tool_type: checklist`, ordered sections, stable checklist-item keys,
+explicit dependencies, critical/escalation messages, and completion rules.
+Test incomplete required items, critical items, review-before-completion, reset,
+and version/checksum-bound resume. Checklist responses remain local and scoped
+to the signed-in user; analytics must not contain responses or patient data.
+
+## Adding test cases
+
+Saved publication fixtures belong in the immutable definition. Cross-runtime
+semantic cases belong in the shared conformance file. Clinical parity evidence
+belongs under `clinical-tools/migrations/v1/parity/` and must conform to
+`parity-report.schema.json`. Normal, boundary, immediately-below,
+immediately-above, invalid, warning, reset, and fixed-clock cases are mandatory;
+medication, emergency, and triage tools require expanded critical cases.
+
+## Legacy retirement procedure
+
+Phase 13 is allowed only after every catalog item has a reviewed conversion
+envelope, an approved parity report with no unresolved ambiguity, and an active
+published schema version whose validation/tests passed:
+
+```bash
+DATABASE_URL='postgres://...' make clinical-tools-retirement-check
+```
+
+The command must print `READY`. A `BLOCKED` line is a release blocker, not an
+instruction to bypass the gate. Once ready, remove the content endpoint,
+`legacy_html` model/contract values, iframe, WebView, artifact normalization,
+packaged files and Compose variable in one reviewed change; archive the original
+files and retain characterization/conformance/parity evidence. Regenerate
+OpenAPI, TypeScript and Dart contracts and confirm repository searches show no
+production HTML execution.
+
+## Operational validation
+
+Before rollout or retirement run backend tests/vet/build, dashboard frozen
+install/lint/typecheck/tests/build, project-pinned Flutter format/analyze/tests
+and debug APK, contract generation/drift checks, migration up/down/up, both
+Compose validations, and API/dashboard image builds. Inspect `/api/readyz` and
+frontend health checks only in a disposable environment. Production services
+must not be restarted by validation.
+
+Rollback of a schema rollout selects the retained legacy runtime through the
+audited publisher-only endpoint documented above. Withdrawal applies to a
+non-current immutable version; it does not overwrite published evidence.

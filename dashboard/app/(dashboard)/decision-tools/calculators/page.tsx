@@ -36,7 +36,6 @@ import {
   FileText,
   Target,
   Loader2,
-  ExternalLink,
   Play,
 } from "lucide-react";
 import { useState, useEffect, useCallback } from "react";
@@ -45,9 +44,7 @@ import { useRouter } from "next/navigation";
 import { getCurrentUser } from "@/lib/backend-client";
 import type { CalculatorsResponse } from "@/types/backend-types";
 import { showToast } from "@/lib/toast";
-import { Skeleton } from "@/components/ui/skeleton";
 import { usePermissionContext } from "@/lib/permission-context";
-import { getBundledAppFileUrl } from "../app-file";
 import { calculatorService } from "@/services/calculator.service";
 import { SupportTicketsService } from "@/services/support-tickets.service";
 import { SupportTicketsPriorityOptions } from "@/types/backend-types";
@@ -850,25 +847,7 @@ export default function CalculatorsPage() {
                       );
                       return;
                     }
-                    const fileUrl = getBundledAppFileUrl(calculator.appFile);
-                    if (!fileUrl) {
-                      showToast.error(
-                        "Launch failed",
-                        "The attached application file is not a supported HTML tool",
-                      );
-                      return;
-                    }
-                    const win = window.open(
-                      fileUrl,
-                      "_blank",
-                      "noopener,noreferrer",
-                    );
-                    if (!win) {
-                      showToast.error(
-                        "Popup blocked",
-                        "Allow popups for this site to launch the calculator",
-                      );
-                    }
+                    router.push(`/decision-tools/${record.id}/test`);
                   }}
                 >
                   <Play className="h-4 w-4 mr-2" />

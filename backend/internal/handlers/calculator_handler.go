@@ -174,7 +174,7 @@ func (h CalculatorHandler) Delete(c *gin.Context) {
 
 // Content godoc
 // @Summary Load executable calculator content
-// @Description Returns embedded HTML or a safely resolved static calculator artifact.
+// @Description Returns a checksum-pinned, locally packaged legacy HTML artifact under a restrictive execution policy.
 // @Tags calculators
 // @Produce text/html
 // @Security BearerAuth
@@ -193,6 +193,12 @@ func (h CalculatorHandler) Content(c *gin.Context) {
 		return
 	}
 	c.Header("Content-Disposition", `inline; filename="`+artifact.Filename+`"`)
+	c.Header("Content-Security-Policy", services.LegacyCalculatorContentSecurityPolicy())
+	c.Header("Permissions-Policy", "accelerometer=(), autoplay=(), camera=(), clipboard-read=(), clipboard-write=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()")
+	c.Header("Referrer-Policy", "no-referrer")
+	c.Header("X-Content-Type-Options", "nosniff")
+	c.Header("X-Clinical-Tool-Checksum", artifact.Checksum)
+	c.Header("Cache-Control", "private, no-store")
 	c.Data(http.StatusOK, artifact.ContentType, artifact.Content)
 }
 
@@ -643,7 +649,7 @@ func (h CalculatorHandler) writeError(c *gin.Context, err error) {
 		httpx.Error(c, http.StatusBadRequest, services.CalculatorErrorMessage(err))
 	case errors.Is(err, services.ErrCalculatorUsageForbidden):
 		httpx.Error(c, http.StatusForbidden, services.CalculatorErrorMessage(err))
-	case errors.Is(err, services.ErrCalculatorArtifactMissing), errors.Is(err, services.ErrCalculatorArtifactUnsafe), errors.Is(err, gorm.ErrRecordNotFound):
+	case errors.Is(err, services.ErrCalculatorArtifactMissing), errors.Is(err, services.ErrCalculatorArtifactUnsafe), errors.Is(err, services.ErrCalculatorArtifactChecksum), errors.Is(err, services.ErrCalculatorArtifactDependency), errors.Is(err, gorm.ErrRecordNotFound):
 		httpx.Error(c, http.StatusNotFound, services.CalculatorErrorMessage(err))
 	case errors.Is(err, services.ErrCalculatorLegacyOnly):
 		httpx.Error(c, http.StatusConflict, err.Error())

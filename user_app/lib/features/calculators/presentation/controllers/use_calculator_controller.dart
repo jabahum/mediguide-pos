@@ -2,12 +2,13 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:crypto/crypto.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import 'package:user_app/app/providers/app_providers.dart';
-import 'package:user_app/core/constants/app_constants.dart';
 import 'package:user_app/features/authentication/presentation/controllers/auth_controller.dart';
 import 'package:user_app/features/calculators/data/repositories/calculator_repository.dart';
 import 'package:user_app/features/calculators/data/models/clinical_tool_definition.dart';
@@ -83,7 +84,7 @@ final class FileCalculatorContentLoader implements CalculatorContentLoader {
 
     final downloadUrl = _repository.contentUrl(calculator.id);
 
-    final baseUrl = _baseUrl(downloadUrl);
+    const baseUrl = 'https://legacy-tools.invalid/';
 
     String? fallback;
 
@@ -94,7 +95,7 @@ final class FileCalculatorContentLoader implements CalculatorContentLoader {
     if (await htmlFile.exists()) {
       final cached = await htmlFile.readAsString();
 
-      if (cached.trim().startsWith('<')) {
+      if (cached.trim().startsWith('<') && legacyCalculatorCacheValid(cached)) {
         fallback = cached;
 
         final metadata = await _metadata(metadataFile);
@@ -102,7 +103,9 @@ final class FileCalculatorContentLoader implements CalculatorContentLoader {
         final cacheIsCurrent =
             metadata?['version']?.toString() == calculator.version &&
             metadata?['appFile']?.toString() == calculator.appFile &&
-            metadata?['downloadUrl']?.toString() == downloadUrl;
+            metadata?['downloadUrl']?.toString() == downloadUrl &&
+            metadata?['sha256']?.toString() ==
+                legacyCalculatorCacheDigest(cached);
 
         if (cacheIsCurrent) {
           return CalculatorContent(html: cached, baseUrl: baseUrl);
@@ -127,6 +130,12 @@ final class FileCalculatorContentLoader implements CalculatorContentLoader {
         throw const FormatException('Invalid calculator HTML');
       }
 
+      if (!legacyCalculatorCacheValid(html)) {
+        throw const FormatException(
+          'Calculator HTML exceeds the contained artifact limit',
+        );
+      }
+
       await htmlFile.writeAsString(html);
 
       await metadataFile.writeAsString(
@@ -134,6 +143,7 @@ final class FileCalculatorContentLoader implements CalculatorContentLoader {
           'version': calculator.version,
           'appFile': calculator.appFile,
           'downloadUrl': downloadUrl,
+          'sha256': legacyCalculatorCacheDigest(html),
         }),
       );
 
@@ -166,27 +176,18 @@ final class FileCalculatorContentLoader implements CalculatorContentLoader {
       return null;
     }
   }
-
-  String _baseUrl(String downloadUrl) {
-    final uri = Uri.parse(downloadUrl);
-
-    final segments = uri.pathSegments.toList();
-
-    if (segments.isEmpty) {
-      return mediguideApiBaseUrl;
-    }
-
-    segments.removeLast();
-
-    return uri
-        .replace(
-          path: segments.isEmpty ? '/' : '/${segments.join('/')}',
-          query: null,
-          fragment: null,
-        )
-        .toString();
-  }
 }
+
+const int _maxLegacyCalculatorBytes = 256 << 10;
+
+@visibleForTesting
+String legacyCalculatorCacheDigest(String html) =>
+    sha256.convert(utf8.encode(html)).toString();
+
+@visibleForTesting
+bool legacyCalculatorCacheValid(String html) =>
+    html.trimLeft().startsWith('<') &&
+    utf8.encode(html).length <= _maxLegacyCalculatorBytes;
 
 /// ======================================================
 /// STATE

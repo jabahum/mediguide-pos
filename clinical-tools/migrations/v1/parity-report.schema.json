@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://mediguide.health.go.ug/schemas/clinical-tools/parity-report-v1.json",
+  "title": "Clinical tool legacy parity report",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["legacy_id", "legacy_file", "status", "reviewer_id", "reviewed_at", "cases_tested", "exact_matches", "tolerance_matches", "presentation_differences", "logic_differences", "unresolved_clinical_ambiguities", "reviewer_decision"],
+  "properties": {
+    "legacy_id": {"type": "string", "minLength": 1},
+    "legacy_file": {"type": "string", "pattern": "^[a-z0-9-]+\\.html$"},
+    "status": {"enum": ["draft", "changes_required", "approved"]},
+    "reviewer_id": {"type": "string", "format": "uuid"},
+    "reviewed_at": {"type": "string", "format": "date-time"},
+    "cases_tested": {"type": "integer", "minimum": 1},
+    "exact_matches": {"type": "integer", "minimum": 0},
+    "tolerance_matches": {"type": "integer", "minimum": 0},
+    "presentation_differences": {"type": "array", "items": {"type": "string"}},
+    "logic_differences": {"type": "array", "items": {"type": "string"}},
+    "unresolved_clinical_ambiguities": {"type": "array", "items": {"type": "string"}},
+    "reviewer_decision": {"type": "string", "minLength": 1}
+  }
+}

@@ -13,7 +13,7 @@ const definition: ClinicalToolDefinition = {
 
 describe("clinical tool preview", () => {
   it("evaluates restricted expressions without authored code", () => {
-    expect(previewClinicalTool(definition, { weight: 80, height: 1.7 })).toEqual({ values: { result: 27.7 }, interpretation: "Above healthy range", recommendations: ["Review clinically"], warnings: [] })
+    expect(previewClinicalTool(definition, { weight: 80, height: 1.7 })).toEqual({ values: { result: 27.7 }, normalizedInputs: { weight: 80, height: 1.7 }, interpretation: "Above healthy range", recommendations: ["Review clinically"], warnings: [] })
   })
   it("rejects operations outside the allowlist", () => {
     const unsafe = structuredClone(definition); unsafe.outputs[0].value = { op: "eval", value: "alert(1)" }

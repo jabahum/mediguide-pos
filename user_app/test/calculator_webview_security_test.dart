@@ -5,19 +5,8 @@ void main() {
   group('calculator WebView navigation policy', () {
     const base = 'https://api.mediguide.test/api/v2/calculators/';
 
-    test('allows only the packaged calculator origin', () {
-      expect(
-        calculatorNavigationAllowed(
-          'https://api.mediguide.test/api/v2/calculators/style.css',
-          base,
-        ),
-        isTrue,
-      );
+    test('allows only the inert WebView bootstrap document', () {
       expect(calculatorNavigationAllowed('about:blank', base), isTrue);
-      expect(
-        calculatorNavigationAllowed('data:text/plain,calculator', base),
-        isTrue,
-      );
     });
 
     test('blocks external origins and unsafe schemes', () {
@@ -31,6 +20,15 @@ void main() {
         isFalse,
       );
       expect(calculatorNavigationAllowed('tel:+256700000000', base), isFalse);
+      expect(
+        calculatorNavigationAllowed('data:text/plain,calculator', base),
+        isFalse,
+      );
+      expect(
+        calculatorNavigationAllowed('blob:https://api.mediguide.test/id', base),
+        isFalse,
+      );
+      expect(calculatorNavigationAllowed('${base}style.css', base), isFalse);
     });
   });
 }

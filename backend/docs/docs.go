@@ -2327,7 +2327,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Returns embedded HTML or a safely resolved static calculator artifact.",
+                "description": "Returns a checksum-pinned, locally packaged legacy HTML artifact under a restrictive execution policy.",
                 "produces": [
                     "text/html"
                 ],

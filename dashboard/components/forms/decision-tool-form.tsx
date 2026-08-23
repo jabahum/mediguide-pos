@@ -17,7 +17,6 @@ import {
 } from "@/components/ui/select"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { FileUpload } from "@/components/ui/file-upload"
 import { CalculatorsResponse, CalculatorsTypeOptions, CalculatorsStatusOptions, CalculatorsCategoryOptions, CalculatorsPriorityOptions } from "@/types/backend-types"
 import { Calculator, Brain, CheckSquare, Palette, Settings, Info } from "lucide-react"
 
@@ -41,17 +40,7 @@ const decisionToolSchema = z.object({
     "general",
   ]),
   priority: z.enum(["critical", "high", "medium", "low"]),
-  appFile: z.any().refine(
-    (value) => {
-      // Check if value exists and is not empty
-      if (!value || value === "" || value === null || value === undefined) {
-        return false
-      }
-      // Accept strings (existing file paths) or File objects
-      return typeof value === 'string' || (value && typeof value === 'object' && value.constructor && value.constructor.name === 'File')
-    },
-    "App file is required"
-  ),
+  appFile: z.string().optional(),
   icon: z.string().optional(),
   color: z.string().optional(),
   backgroundColor: z.string().optional(),
@@ -123,7 +112,7 @@ export function DecisionToolForm({
   mode 
 }: DecisionToolFormProps) {
   const [activeTab, setActiveTab] = React.useState("basic")
-  const [appFile, setAppFile] = React.useState<File | string | null>(initialData?.appFile || null)
+  const appFile = typeof initialData?.appFile === "string" ? initialData.appFile : ""
 
   const {
     register,
@@ -141,7 +130,7 @@ export function DecisionToolForm({
       status: initialData?.status || CalculatorsStatusOptions.draft,
       category: initialData?.category || CalculatorsCategoryOptions.general,
       priority: initialData?.priority || CalculatorsPriorityOptions.medium,
-      appFile: initialData?.appFile || null,
+      appFile,
       icon: initialData?.icon || "",
       color: initialData?.color || "",
       backgroundColor: initialData?.backgroundColor || "",
@@ -158,7 +147,7 @@ export function DecisionToolForm({
       // Include the app file from state
       const submitData = {
         ...data,
-        appFile: appFile
+        appFile,
       }
       await onSubmit(submitData)
     } catch (error) {
@@ -368,24 +357,15 @@ export function DecisionToolForm({
                 )}
               </div>
 
-              {/* App File */}
+              {/* Legacy execution is intentionally read-only during migration. */}
               <div className="space-y-2">
-                <Label>App File *</Label>
-                <FileUpload
-                  value={appFile || undefined}
-                  onValueChange={(file) => {
-                    setAppFile(file)
-                    setValue("appFile", file)
-                  }}
-                  accept=".html,.htm,.js,.jsx,.ts,.tsx,.vue,.svelte"
-                  maxSize={50}
-                  placeholder="Upload your decision tool application file"
-                  disabled={isFormLoading}
-                  error={errors.appFile?.message as string}
-                />
-                <p className="text-sm text-muted-foreground">
-                  Upload the HTML, JavaScript, or web application file for this tool
-                </p>
+                <Label>Clinical tool definition</Label>
+                <div className="rounded-lg border border-dashed p-4 text-sm text-muted-foreground">
+                  Executable HTML and JavaScript uploads are disabled. Create the
+                  tool record, then use its schema authoring workspace to import or
+                  build a reviewed Clinical Tool Schema v1 definition.
+                  {appFile ? <span className="mt-2 block font-mono text-xs">Contained legacy artifact: {appFile}</span> : null}
+                </div>
               </div>
 
               {/* Icon */}

@@ -116,7 +116,7 @@ jobs:
         include:
           - name: API
             package: mediguide-pos-api
-            context: ./backend
+            context: .
             dockerfile: ./backend/Dockerfile
             target: production
           - name: AI worker

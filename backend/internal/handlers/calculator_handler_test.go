@@ -61,14 +61,18 @@ func TestCalculatorHandlerListContract(t *testing.T) {
 
 func TestCalculatorHandlerContentContract(t *testing.T) {
 	handler, database := testCalculatorHandler(t)
-	root := handler.Service.StaticSamplesDir
-	if err := os.WriteFile(filepath.Join(root, "triage.html"), []byte("<h1>Triage</h1>"), 0o600); err != nil {
+	root := handler.Service.LegacyClinicalToolsDir
+	content, err := os.ReadFile(filepath.Join("..", "..", "..", "dashboard", "samples", "bmi-calculator.html"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(root, "bmi-calculator.html"), content, 0o600); err != nil {
 		t.Fatal(err)
 	}
 	calculator := models.Calculator{
 		AddedByUserID: uuid.New(),
 		Name:          "Emergency Triage",
-		AppFileJSON:   datatypes.JSON([]byte(`{"path":"triage.html"}`)),
+		AppFileJSON:   datatypes.JSON([]byte(`{"path":"bmi-calculator.html"}`)),
 		Version:       "1",
 		Type:          "decision_tool",
 		Status:        "active",
@@ -83,11 +87,14 @@ func TestCalculatorHandlerContentContract(t *testing.T) {
 	response := httptest.NewRecorder()
 	router.ServeHTTP(response, request)
 
-	if response.Code != http.StatusOK || response.Body.String() != "<h1>Triage</h1>" {
+	if response.Code != http.StatusOK || !strings.Contains(response.Body.String(), "Content-Security-Policy") {
 		t.Fatalf("unexpected content response %d: %s", response.Code, response.Body.String())
 	}
 	if got := response.Header().Get("Content-Type"); got != "text/html; charset=utf-8" {
 		t.Fatalf("unexpected content type: %s", got)
+	}
+	if response.Header().Get("X-Clinical-Tool-Checksum") == "" || response.Header().Get("Permissions-Policy") == "" || response.Header().Get("Content-Security-Policy") == "" {
+		t.Fatalf("legacy containment headers are incomplete: %#v", response.Header())
 	}
 }
 
@@ -102,7 +109,7 @@ func TestCalculatorHandlerCreateUsesAuthenticatedUser(t *testing.T) {
 	request := httptest.NewRequest(
 		http.MethodPost,
 		"/api/v2/calculators",
-		strings.NewReader(`{"name":"BMI","version":"1","type":"calculator","status":"draft","app_file_json":{"html":"<h1>BMI</h1>"}}`),
+		strings.NewReader(`{"name":"BMI","version":"1","type":"calculator","status":"draft","app_file_json":{"path":"bmi-calculator.html"}}`),
 	)
 	request.Header.Set("Content-Type", "application/json")
 	response := httptest.NewRecorder()
@@ -132,6 +139,6 @@ func testCalculatorHandler(t *testing.T) (CalculatorHandler, *gorm.DB) {
 		t.Fatal(err)
 	}
 	return CalculatorHandler{
-		Service: services.CalculatorService{DB: database, StaticSamplesDir: t.TempDir()},
+		Service: services.CalculatorService{DB: database, LegacyClinicalToolsDir: t.TempDir()},
 	}, database
 }

@@ -161,12 +161,15 @@ contracts:
 contracts-check:
 	bash scripts/check-generated-contracts.sh
 
-.PHONY: clinical-tools-check clinical-tools-import
+.PHONY: clinical-tools-check clinical-tools-import clinical-tools-retirement-check
 clinical-tools-check:
 	$(MAKE) -C $(BACKEND_DIR) clinical-tools-check
 
 clinical-tools-import:
 	$(MAKE) -C $(BACKEND_DIR) clinical-tools-import ACTOR_ID="$(ACTOR_ID)"
+
+clinical-tools-retirement-check:
+	$(MAKE) -C $(BACKEND_DIR) clinical-tools-retirement-check
 
 RELEASE_TAG ?=
 MOBILE_BUILD_NUMBER ?=

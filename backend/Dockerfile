@@ -3,9 +3,11 @@ ARG BUILD_VERSION=development
 ARG BUILD_REVISION=unknown
 WORKDIR /src
 RUN apk add --no-cache git ca-certificates
-COPY go.mod go.sum* ./
+COPY backend/go.mod backend/go.sum* ./
 RUN go mod download
-COPY . .
+COPY backend/ .
+COPY dashboard/samples/*.html /out/legacy-tools/
+COPY clinical-tools /out/clinical-tools
 RUN CGO_ENABLED=0 GOOS=linux go build \
     -ldflags "-X mediguide/internal/buildinfo.Version=${BUILD_VERSION} -X mediguide/internal/buildinfo.Revision=${BUILD_REVISION}" \
     -o /out/api ./cmd/api
@@ -26,14 +28,16 @@ WORKDIR /app
 RUN apk add --no-cache ca-certificates tzdata curl && \
     addgroup -S -g 10001 mediguide && \
     adduser -S -D -H -u 10001 -G mediguide mediguide && \
-    mkdir -p /app/dashboard/samples && \
+    mkdir -p /app/legacy-tools && \
     chown -R mediguide:mediguide /app
 COPY --from=build --chown=mediguide:mediguide /out/api /app/api
 COPY --from=build --chown=mediguide:mediguide /out/migrate /app/migrate
 COPY --from=build --chown=mediguide:mediguide /out/notification-worker /app/notification-worker
 COPY --from=build --chown=mediguide:mediguide /out/clinicaltool-migrate /app/clinicaltool-migrate
-COPY --chown=mediguide:mediguide migrations /app/migrations
-COPY --chown=mediguide:mediguide docs /app/docs
+COPY --from=build --chown=mediguide:mediguide /out/legacy-tools /app/legacy-tools
+COPY --from=build --chown=mediguide:mediguide /out/clinical-tools /app/clinical-tools
+COPY --chown=mediguide:mediguide backend/migrations /app/migrations
+COPY --chown=mediguide:mediguide backend/docs /app/docs
 USER 10001:10001
 EXPOSE 8080
 HEALTHCHECK --interval=10s --timeout=3s --start-period=15s --retries=6 \

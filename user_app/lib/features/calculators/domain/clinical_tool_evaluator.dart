@@ -5,24 +5,58 @@ import 'package:user_app/features/calculators/data/models/clinical_tool_definiti
 final class ClinicalToolResult {
   const ClinicalToolResult({
     required this.values,
+    required this.normalizedInputs,
     this.interpretation,
     this.recommendations = const [],
     this.warnings = const [],
+    this.checklist,
   });
   final Map<String, Object?> values;
+  final Map<String, Object?> normalizedInputs;
   final ClinicalToolInterpretation? interpretation;
   final List<String> recommendations;
   final List<ClinicalToolMessage> warnings;
+  final ClinicalToolChecklistProgress? checklist;
+}
+
+final class ClinicalToolChecklistProgress {
+  const ClinicalToolChecklistProgress({
+    required this.completedRequired,
+    required this.totalRequired,
+    required this.percentage,
+    required this.complete,
+    required this.needsReview,
+    required this.criticalPending,
+  });
+
+  final int completedRequired;
+  final int totalRequired;
+  final double percentage;
+  final bool complete;
+  final bool needsReview;
+  final List<String> criticalPending;
+
+  Map<String, Object?> toJson() => {
+    'completed_required': completedRequired,
+    'total_required': totalRequired,
+    'percentage': percentage,
+    'complete': complete,
+    'needs_review': needsReview,
+    'critical_pending': criticalPending,
+  };
 }
 
 final class ClinicalToolEvaluator {
-  const ClinicalToolEvaluator();
+  const ClinicalToolEvaluator({this.fixedNow});
+
+  final DateTime? fixedNow;
 
   ClinicalToolResult evaluate(
     ClinicalToolDefinition definition,
     Map<String, Object?> input,
   ) {
     final values = <String, Object?>{...input};
+    final normalizedInputs = <String, Object?>{};
     for (final field in definition.inputs) {
       if (field.required && !values.containsKey(field.key)) {
         throw FormatException('${field.label} is required');
@@ -35,6 +69,12 @@ final class ClinicalToolEvaluator {
           unit,
           field.defaultUnit,
         );
+        normalizedInputs[field.key] = {
+          'value': values[field.key],
+          'unit': field.defaultUnit,
+        };
+      } else {
+        normalizedInputs[field.key] = value;
       }
       if (value is num && field.minimum != null && value < field.minimum!) {
         throw FormatException('${field.label} is below the minimum');
@@ -129,11 +169,48 @@ final class ClinicalToolEvaluator {
         _appendUnique(recommendations, item.recommendations);
       }
     }
+    ClinicalToolChecklistProgress? checklist;
+    if (definition.toolType == 'checklist') {
+      final required = definition.inputs
+          .where((field) => field.type == 'checklist_item' && field.required)
+          .toList(growable: false);
+      bool responseComplete(Object? value) =>
+          value == true ||
+          value is num ||
+          (value is String && value.isNotEmpty) ||
+          (value is List && value.isNotEmpty);
+      final completed = required
+          .where((field) => responseComplete(input[field.key]))
+          .length;
+      final criticalPending = required
+          .where(
+            (field) => field.critical && !responseComplete(input[field.key]),
+          )
+          .map((field) => field.key)
+          .toList(growable: false);
+      final needsReview = definition.completion.requireReview;
+      checklist = ClinicalToolChecklistProgress(
+        completedRequired: completed,
+        totalRequired: required.length,
+        percentage: required.isEmpty
+            ? 100
+            : (completed / required.length * 10000).round() / 100,
+        complete:
+            definition.completion.mode == 'all_required' &&
+            completed == required.length &&
+            !needsReview &&
+            criticalPending.isEmpty,
+        needsReview: needsReview,
+        criticalPending: List.unmodifiable(criticalPending),
+      );
+    }
     return ClinicalToolResult(
       values: outputs,
+      normalizedInputs: Map.unmodifiable(normalizedInputs),
       interpretation: interpretation,
       recommendations: List.unmodifiable(recommendations),
       warnings: List.unmodifiable(warnings),
+      checklist: checklist,
     );
   }
 
@@ -211,7 +288,7 @@ final class ClinicalToolEvaluator {
         final scale = math.pow(10, expression.precision ?? 0);
         return (value * scale).round() / scale;
       case 'now':
-        return DateTime.now().toUtc().toIso8601String();
+        return (fixedNow ?? DateTime.now()).toUtc().toIso8601String();
       case 'date_difference':
         final value = args();
         final from = DateTime.parse(value[0].toString()).toUtc();

@@ -11,20 +11,17 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Play } from "lucide-react";
-import { getBackendClient } from "@/lib/backend-client";
-import { calculatorService } from "@/services/calculator.service";
+import { calculatorService, getCalculatorContent } from "@/services/calculator.service";
 import { showToast } from "@/lib/toast";
 import { DecisionToolWithRelations } from "../../types";
 import { usePermissionContext } from "@/lib/permission-context";
-import { getAppFileLabel, getBundledAppFileUrl } from "../../app-file";
+import { getAppFileLabel } from "../../app-file";
 
 interface DecisionToolTestPageProps {
   params: Promise<{ id: string }>;
 }
 
-function renderPreview({
+export function renderPreview({
   html,
   previewError,
   title,
@@ -54,7 +51,8 @@ function renderPreview({
       srcDoc={html}
       title={`${title} preview`}
       className="h-[70vh] w-full"
-      sandbox="allow-scripts allow-forms allow-popups allow-same-origin"
+      sandbox="allow-scripts"
+      referrerPolicy="no-referrer"
     />
   );
 }
@@ -100,12 +98,8 @@ export default function DecisionToolTestPage({
     fetchTool();
   }, [id, router]);
 
-  const fileUrl = React.useMemo(() => {
-    return getBundledAppFileUrl(tool?.appFile) || null;
-  }, [tool]);
-
   React.useEffect(() => {
-    if (!fileUrl) {
+    if (!tool?.id) {
       setHtml(null);
       setPreviewError(null);
       return;
@@ -115,19 +109,7 @@ export default function DecisionToolTestPage({
     setHtml(null);
     setPreviewError(null);
 
-    const backend = getBackendClient();
-    const headers: HeadersInit = {};
-    if (backend.authStore.token) {
-      headers.Authorization = backend.authStore.token;
-    }
-
-    fetch(fileUrl, { headers })
-      .then(async (res) => {
-        if (!res.ok) {
-          throw new Error(`Request failed with status ${res.status}`);
-        }
-        return res.text();
-      })
+    getCalculatorContent(tool.id)
       .then((text) => {
         if (!cancelled) setHtml(text);
       })
@@ -143,7 +125,7 @@ export default function DecisionToolTestPage({
     return () => {
       cancelled = true;
     };
-  }, [fileUrl]);
+  }, [tool?.id]);
 
   if (loading) {
     return (
@@ -190,32 +172,6 @@ export default function DecisionToolTestPage({
           {tool.id ? (
             <>
               <div className="flex items-center gap-3">
-                <Button
-                  type="button"
-                  disabled={html === null}
-                  onClick={() => {
-                    if (html === null) return;
-                    const blob = new Blob([html], { type: "text/html" });
-                    const url = URL.createObjectURL(blob);
-                    const win = window.open(
-                      url,
-                      "_blank",
-                      "noopener,noreferrer",
-                    );
-                    if (!win) {
-                      URL.revokeObjectURL(url);
-                      showToast.error(
-                        "Popup Blocked",
-                        "Allow popups for this site to launch the tool in a new tab.",
-                      );
-                      return;
-                    }
-                    setTimeout(() => URL.revokeObjectURL(url), 60_000);
-                  }}
-                >
-                  <Play className="mr-2 h-4 w-4" />
-                  Launch Tool
-                </Button>
                 <span className="text-sm text-muted-foreground">
                   {appFileLabel}
                 </span>

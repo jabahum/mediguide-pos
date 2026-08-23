@@ -35,15 +35,20 @@ type catalogTool struct {
 }
 
 func main() {
-	var catalogPath, sourceDir, definitionDir, actorText string
-	var apply, requireAll bool
-	flag.StringVar(&catalogPath, "catalog", "../clinical-tools/migrations/v1/catalog.json", "migration catalog path")
-	flag.StringVar(&sourceDir, "source-dir", "../dashboard/samples", "legacy HTML source directory")
-	flag.StringVar(&definitionDir, "definition-dir", "../clinical-tools/migrations/v1/definitions", "migration envelope directory")
+	var catalogPath, sourceDir, definitionDir, parityDir, actorText string
+	var apply, requireAll, retirementCheck bool
+	flag.StringVar(&catalogPath, "catalog", firstExisting("/app/clinical-tools/migrations/v1/catalog.json", "../clinical-tools/migrations/v1/catalog.json"), "migration catalog path")
+	flag.StringVar(&sourceDir, "source-dir", firstExisting("/app/legacy-tools", "../dashboard/samples"), "legacy HTML source directory")
+	flag.StringVar(&definitionDir, "definition-dir", firstExisting("/app/clinical-tools/migrations/v1/definitions", "../clinical-tools/migrations/v1/definitions"), "migration envelope directory")
+	flag.StringVar(&parityDir, "parity-dir", firstExisting("/app/clinical-tools/migrations/v1/parity", "../clinical-tools/migrations/v1/parity"), "approved parity-report directory")
 	flag.StringVar(&actorText, "actor", "", "author UUID required with --apply")
 	flag.BoolVar(&apply, "apply", false, "import validated conversions as drafts")
 	flag.BoolVar(&requireAll, "require-all", false, "fail when a catalog tool has no conversion envelope")
+	flag.BoolVar(&retirementCheck, "retirement-check", false, "require approved parity evidence and published schema replacements for all tools")
 	flag.Parse()
+	if retirementCheck {
+		requireAll = true
+	}
 
 	items, err := loadCatalog(catalogPath)
 	if err != nil {
@@ -56,10 +61,12 @@ func main() {
 
 	var migration services.CalculatorMigrationService
 	var actor uuid.UUID
-	if apply {
-		actor, err = uuid.Parse(strings.TrimSpace(actorText))
-		if err != nil {
-			fatal(errors.New("--actor must be a valid UUID with --apply"))
+	if apply || retirementCheck {
+		if apply {
+			actor, err = uuid.Parse(strings.TrimSpace(actorText))
+			if err != nil {
+				fatal(errors.New("--actor must be a valid UUID with --apply"))
+			}
 		}
 		cfg := config.Load()
 		database, connectErr := db.Connect(cfg.DatabaseURL)
@@ -67,6 +74,13 @@ func main() {
 			fatal(connectErr)
 		}
 		migration = services.CalculatorMigrationService{DB: database, Versions: services.CalculatorVersionService{DB: database}}
+	}
+	parity := map[string]bool{}
+	if retirementCheck {
+		parity, err = loadApprovedParityReports(parityDir)
+		if err != nil {
+			fatal(err)
+		}
 	}
 
 	failed := false
@@ -82,6 +96,10 @@ func main() {
 			fmt.Printf("BLOCKED wave=%d tool=%s status=%s gate=%q\n", item.Wave, item.LegacyID, item.Status, item.ClinicalGate)
 			failed = failed || requireAll
 			continue
+		}
+		if retirementCheck && !parity[item.LegacyID] {
+			fmt.Printf("BLOCKED wave=%d tool=%s reason=approved_parity_report_missing\n", item.Wave, item.LegacyID)
+			failed = true
 		}
 		if envelope.LegacyFile != item.LegacyFile || envelope.SourceChecksum != item.SourceChecksum {
 			fmt.Printf("BLOCKED wave=%d tool=%s reason=envelope_catalog_mismatch\n", item.Wave, item.LegacyID)
@@ -103,9 +121,65 @@ func main() {
 			failed = failed || result.Status != "ready_for_draft_import"
 		}
 	}
+	if retirementCheck {
+		blockers, readinessErr := migration.RetirementReadiness()
+		if readinessErr != nil {
+			fatal(readinessErr)
+		}
+		for _, blocker := range blockers {
+			fmt.Printf("BLOCKED retirement=%q\n", blocker)
+		}
+		failed = failed || len(blockers) > 0
+		if !failed {
+			fmt.Println("READY legacy_html production execution may be removed")
+		}
+	}
 	if failed {
 		os.Exit(1)
 	}
+}
+
+func loadApprovedParityReports(directory string) (map[string]bool, error) {
+	approved := map[string]bool{}
+	entries, err := os.ReadDir(directory)
+	if errors.Is(err, os.ErrNotExist) {
+		return approved, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	for _, entry := range entries {
+		if entry.IsDir() || filepath.Ext(entry.Name()) != ".json" {
+			continue
+		}
+		raw, readErr := os.ReadFile(filepath.Join(directory, entry.Name()))
+		if readErr != nil {
+			return nil, readErr
+		}
+		var report struct {
+			LegacyID    string   `json:"legacy_id"`
+			Status      string   `json:"status"`
+			ReviewerID  string   `json:"reviewer_id"`
+			ReviewedAt  string   `json:"reviewed_at"`
+			Ambiguities []string `json:"unresolved_clinical_ambiguities"`
+		}
+		if err := json.Unmarshal(raw, &report); err != nil {
+			return nil, fmt.Errorf("%s: %w", entry.Name(), err)
+		}
+		if report.Status == "approved" && report.ReviewerID != "" && report.ReviewedAt != "" && len(report.Ambiguities) == 0 {
+			approved[report.LegacyID] = true
+		}
+	}
+	return approved, nil
+}
+
+func firstExisting(paths ...string) string {
+	for _, path := range paths {
+		if _, err := os.Stat(path); err == nil {
+			return path
+		}
+	}
+	return paths[len(paths)-1]
 }
 
 func loadCatalog(path string) (*catalog, error) {

@@ -5,7 +5,9 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"errors"
+	"strings"
 	"testing"
+	"time"
 
 	"mediguide/internal/clinicaltools"
 	"mediguide/internal/models"
@@ -133,5 +135,40 @@ func TestSelectLegacyRuntimeIsAuditedAndReversible(t *testing.T) {
 	database.Model(&models.CalculatorVersionAudit{}).Where("action = ?", "calculator.runtime.legacy_selected").Count(&count)
 	if count != 1 {
 		t.Fatalf("expected rollback audit, got %d", count)
+	}
+}
+
+func TestCalculatorMigrationRetirementReadinessRequiresEveryPublishedReplacement(t *testing.T) {
+	database, err := gorm.Open(sqlite.Open("file:"+uuid.NewString()+"?mode=memory&cache=shared"), &gorm.Config{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err = database.AutoMigrate(&models.Calculator{}, &models.CalculatorVersion{}); err != nil {
+		t.Fatal(err)
+	}
+	service := CalculatorMigrationService{DB: database}
+	blockers, err := service.RetirementReadiness()
+	if err != nil || len(blockers) != len(reviewedLegacyCalculatorChecksums) {
+		t.Fatalf("expected every missing reviewed tool to block retirement: blockers=%d err=%v", len(blockers), err)
+	}
+
+	actor := uuid.New()
+	now := time.Now().UTC()
+	for file := range reviewedLegacyCalculatorChecksums {
+		tool := models.Calculator{AddedByUserID: actor, Name: file, AppFileJSON: datatypes.JSON([]byte(`{"path":"` + file + `"}`)), Version: "legacy", Type: "calculator", Status: "active", RuntimeType: "schema_v1"}
+		if err = database.Create(&tool).Error; err != nil {
+			t.Fatal(err)
+		}
+		version := models.CalculatorVersion{CalculatorID: tool.ID, SemanticVersion: "1.0.0", SchemaVersion: "1.0", DefinitionJSON: datatypes.JSON(`{}`), DefinitionChecksum: strings.Repeat("a", 64), Status: "published", ValidationPassed: true, TestsPassed: true, ApprovedBy: &actor, PublishedAt: &now}
+		if err = database.Create(&version).Error; err != nil {
+			t.Fatal(err)
+		}
+		if err = database.Model(&tool).Update("current_version_id", version.ID).Error; err != nil {
+			t.Fatal(err)
+		}
+	}
+	blockers, err = service.RetirementReadiness()
+	if err != nil || len(blockers) != 0 {
+		t.Fatalf("expected retirement readiness, blockers=%#v err=%v", blockers, err)
 	}
 }

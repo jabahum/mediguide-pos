@@ -85,22 +85,13 @@ async function calculatorPayload(
 
   const artifact = values.app_file_json ?? values.appFile ?? values.app_file
   if (typeof File !== "undefined" && artifact instanceof File) {
-    const content = await artifact.text()
-    if (artifact.name.toLowerCase().endsWith(".html")) {
-      payload.app_file_json = { name: artifact.name, path: artifact.name, html: content }
-    } else {
-      try {
-        payload.app_file_json = JSON.parse(content)
-      } catch {
-        throw new Error("Calculator artifact must be an HTML file or valid JSON")
-      }
-    }
+    throw new Error("Executable clinical-tool uploads are disabled; use the schema authoring workspace")
   } else if (typeof artifact === "string" && artifact.trim()) {
     payload.app_file_json = { path: artifact.trim(), name: artifact.trim() }
   } else if (artifact && typeof artifact === "object") {
     payload.app_file_json = artifact
   } else if (requireArtifact) {
-    throw new Error("Calculator artifact is required")
+    payload.app_file_json = {}
   }
   return payload
 }
@@ -154,7 +145,7 @@ export const calculatorService = {
   async create(input: CalculatorInput): Promise<CalculatorRecord> {
     return normalizeCalculator(await backendClient.send<ModelsCalculator>("/api/v2/calculators", {
       method: "POST",
-      body: JSON.stringify(await calculatorPayload(input, true)),
+      body: JSON.stringify(await calculatorPayload(input, false)),
     }))
   },
 

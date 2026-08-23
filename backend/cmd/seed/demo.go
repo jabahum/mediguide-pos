@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"mediguide/internal/models"
+	"mediguide/internal/services"
 	"mediguide/internal/storage"
 
 	"github.com/google/uuid"
@@ -120,7 +121,11 @@ func seedDemoReferenceContent(database *gorm.DB) error {
 
 func seedDemoCalculators(database *gorm.DB, adminID uuid.UUID) error {
 	for _, sample := range seededCalculatorSamples() {
-		artifact, _ := json.Marshal(map[string]string{"name": sample.Name, "path": sample.FileName})
+		checksum, ok := services.ReviewedLegacyCalculatorChecksum(sample.FileName)
+		if !ok {
+			return fmt.Errorf("calculator seed artifact is not reviewed: %s", sample.FileName)
+		}
+		artifact, _ := json.Marshal(map[string]string{"name": sample.Name, "path": sample.FileName, "sha256": checksum})
 		if err := upsertByID(database, "calculators", map[string]any{
 			"id": sample.ID, "added_by_user_id": adminID, "name": sample.Name,
 			"description": sample.Description, "icon": sample.Icon, "color": sample.Color,

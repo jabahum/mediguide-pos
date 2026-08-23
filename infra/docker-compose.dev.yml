@@ -3,8 +3,6 @@ services:
     build:
       target: development
     command: ["sh", "-c", "/app/migrate up && /app/api"]
-    volumes:
-      - ../dashboard/samples:/app/dashboard/samples:ro
 
   postgres:
     ports:

@@ -12,7 +12,7 @@ type Config struct {
 	AppName              string
 	AppEnv               string
 	Port                 string
-	StaticSamplesDir     string
+	LegacyClinicalToolsDir string
 	DatabaseURL          string
 	JWTSecret            string
 	JWTIssuer            string
@@ -69,7 +69,7 @@ func Load() Config {
 		AppName:                         get("APP_NAME", "mediguide-api"),
 		AppEnv:                          get("APP_ENV", "development"),
 		Port:                            getAny([]string{"PORT", "HTTP_PORT"}, "8080"),
-		StaticSamplesDir:                get("STATIC_SAMPLES_DIR", "../dashboard/samples"),
+		LegacyClinicalToolsDir:          getAny([]string{"LEGACY_CLINICAL_TOOLS_DIR", "STATIC_SAMPLES_DIR"}, "../dashboard/samples"),
 		DatabaseURL:                     get("DATABASE_URL", "postgres://mediguide:mediguide@localhost:5432/mediguide?sslmode=disable"),
 		JWTSecret:                       get("JWT_SECRET", "change-this-secret-ernrjtjtpckrmcjwieutalldjjr8373n1y1y2n2y3y4bdnzmzmz2u"),
 		JWTIssuer:                       get("JWT_ISSUER", "mediguide"),

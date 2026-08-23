@@ -19,16 +19,18 @@ import (
 )
 
 var (
-	ErrCalculatorInvalidPayload  = errors.New("invalid calculator payload")
-	ErrCalculatorArtifactMissing = errors.New("calculator artifact is missing")
-	ErrCalculatorArtifactUnsafe  = errors.New("calculator artifact path is unsafe")
-	ErrCalculatorLegacyOnly      = errors.New("HTML content is unavailable for native schema tools")
-	ErrCalculatorUsageForbidden  = errors.New("calculator usage session is not owned by the user")
+	ErrCalculatorInvalidPayload     = errors.New("invalid calculator payload")
+	ErrCalculatorArtifactMissing    = errors.New("calculator artifact is missing")
+	ErrCalculatorArtifactUnsafe     = errors.New("calculator artifact path is unsafe")
+	ErrCalculatorArtifactChecksum   = errors.New("calculator artifact checksum does not match the reviewed source")
+	ErrCalculatorArtifactDependency = errors.New("calculator artifact contains a remote dependency")
+	ErrCalculatorLegacyOnly         = errors.New("HTML content is unavailable for native schema tools")
+	ErrCalculatorUsageForbidden     = errors.New("calculator usage session is not owned by the user")
 )
 
 type CalculatorService struct {
-	DB               *gorm.DB
-	StaticSamplesDir string
+	DB                     *gorm.DB
+	LegacyClinicalToolsDir string
 }
 
 type CalculatorListInput struct {
@@ -80,12 +82,14 @@ type CalculatorArtifact struct {
 	Content     []byte
 	ContentType string
 	Filename    string
+	Checksum    string
 }
 
 type calculatorArtifactMetadata struct {
-	Name string `json:"name"`
-	Path string `json:"path"`
-	HTML string `json:"html"`
+	Name   string `json:"name"`
+	Path   string `json:"path"`
+	HTML   string `json:"html"`
+	SHA256 string `json:"sha256"`
 }
 
 func (s CalculatorService) List(in CalculatorListInput) (*PageResult[models.Calculator], error) {
@@ -137,6 +141,9 @@ func (s CalculatorService) Get(id uuid.UUID) (*models.Calculator, error) {
 }
 
 func (s CalculatorService) Create(userID uuid.UUID, in CreateCalculatorInput) (*models.Calculator, error) {
+	if len(bytes.TrimSpace(in.AppFileJSON)) == 0 {
+		in.AppFileJSON = json.RawMessage(`{}`)
+	}
 	if err := validateCalculatorInput(in.Name, in.Version, in.Type, in.Status, in.AppFileJSON); err != nil {
 		return nil, err
 	}
@@ -232,7 +239,7 @@ func (s CalculatorService) Artifact(id uuid.UUID) (*CalculatorArtifact, error) {
 	if calculator.RuntimeType != "legacy_html" {
 		return nil, ErrCalculatorLegacyOnly
 	}
-	return resolveCalculatorArtifact(calculator.AppFileJSON, s.StaticSamplesDir)
+	return resolveCalculatorArtifact(calculator.AppFileJSON, s.LegacyClinicalToolsDir)
 }
 
 func (s CalculatorService) StartUsage(userID, calculatorID uuid.UUID, in StartCalculatorUsageInput) (*models.CalculatorUsageLog, error) {
@@ -299,14 +306,7 @@ func validateCalculatorInput(name, version, toolType, status string, artifact js
 }
 
 func validCalculatorArtifact(raw json.RawMessage) bool {
-	if len(bytes.TrimSpace(raw)) == 0 || !json.Valid(raw) {
-		return false
-	}
-	var value any
-	if err := json.Unmarshal(raw, &value); err != nil {
-		return false
-	}
-	return value != nil
+	return validateCalculatorArtifactMetadata(raw)
 }
 
 func validCalculatorType(value string) bool {
@@ -376,12 +376,8 @@ func resolveCalculatorArtifact(raw []byte, root string) (*CalculatorArtifact, er
 		}
 		metadata.Path = path
 	}
-	if html := strings.TrimSpace(metadata.HTML); html != "" {
-		return &CalculatorArtifact{
-			Content:     []byte(html),
-			ContentType: "text/html; charset=utf-8",
-			Filename:    safeCalculatorFilename(metadata.Name, "calculator.html"),
-		}, nil
+	if strings.TrimSpace(metadata.HTML) != "" {
+		return nil, ErrCalculatorArtifactUnsafe
 	}
 
 	path := strings.TrimSpace(metadata.Path)
@@ -402,11 +398,22 @@ func resolveCalculatorArtifact(raw []byte, root string) (*CalculatorArtifact, er
 	if err != nil {
 		return nil, err
 	}
+	checksum, err := verifyLegacyCalculatorArtifact(clean, content)
+	if err != nil {
+		return nil, err
+	}
+	if metadata.SHA256 != "" && !strings.EqualFold(metadata.SHA256, checksum) {
+		return nil, ErrCalculatorArtifactChecksum
+	}
+	content, err = containLegacyCalculatorHTML(content)
+	if err != nil {
+		return nil, err
+	}
 	contentType := mime.TypeByExtension(filepath.Ext(clean))
 	if contentType == "" {
 		contentType = "application/octet-stream"
 	}
-	return &CalculatorArtifact{Content: content, ContentType: contentType, Filename: clean}, nil
+	return &CalculatorArtifact{Content: content, ContentType: contentType, Filename: clean, Checksum: checksum}, nil
 }
 
 func safeCalculatorFilename(value, fallback string) string {
@@ -425,6 +432,10 @@ func CalculatorErrorMessage(err error) string {
 		return "calculator content is unavailable"
 	case errors.Is(err, ErrCalculatorArtifactUnsafe):
 		return "calculator content path is invalid"
+	case errors.Is(err, ErrCalculatorArtifactChecksum):
+		return "calculator content failed integrity verification"
+	case errors.Is(err, ErrCalculatorArtifactDependency):
+		return "calculator content contains a prohibited remote dependency"
 	case errors.Is(err, ErrCalculatorUsageForbidden):
 		return "calculator usage session is not accessible"
 	default:

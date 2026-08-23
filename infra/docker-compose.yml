@@ -49,8 +49,8 @@ services:
   api:
     image: "${API_IMAGE:-mediguide-api:production}"
     build:
-      context: ../backend
-      dockerfile: Dockerfile
+      context: ..
+      dockerfile: backend/Dockerfile
       target: production
       args:
         BUILD_VERSION: "${BUILD_VERSION:-development}"
@@ -61,7 +61,7 @@ services:
       HTTP_PORT: 8080
       AUTO_SEED: "false"
       AUTO_IMPORT: "false"
-      STATIC_SAMPLES_DIR: /app/dashboard/samples
+      LEGACY_CLINICAL_TOOLS_DIR: /app/legacy-tools
       DATABASE_URL: "${DATABASE_URL:-postgres://mediguide:mediguide@postgres:5432/mediguide?sslmode=disable}"
       JWT_SECRET: "${JWT_SECRET:-development-only-change-this-secret-before-production}"
       JWT_ACCESS_TTL_MINUTES: "${JWT_ACCESS_TTL_MINUTES:-60}"

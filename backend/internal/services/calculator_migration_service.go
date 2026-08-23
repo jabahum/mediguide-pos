@@ -45,6 +45,50 @@ type CalculatorMigrationService struct {
 	Versions CalculatorVersionService
 }
 
+// RetirementReadiness proves that every reviewed legacy artifact has an active,
+// immutable schema replacement. It is deliberately strict: an empty blocker
+// list is required before production HTML execution may be removed.
+func (s CalculatorMigrationService) RetirementReadiness() ([]string, error) {
+	var tools []models.Calculator
+	if err := s.DB.Find(&tools).Error; err != nil {
+		return nil, err
+	}
+	byFile := make(map[string][]models.Calculator)
+	for _, tool := range tools {
+		var artifact calculatorArtifactMetadata
+		if json.Unmarshal(tool.AppFileJSON, &artifact) == nil && strings.TrimSpace(artifact.Path) != "" {
+			byFile[strings.TrimSpace(artifact.Path)] = append(byFile[strings.TrimSpace(artifact.Path)], tool)
+		}
+	}
+	files := make([]string, 0, len(reviewedLegacyCalculatorChecksums))
+	for file := range reviewedLegacyCalculatorChecksums {
+		files = append(files, file)
+	}
+	sort.Strings(files)
+	blockers := make([]string, 0)
+	for _, file := range files {
+		matches := byFile[file]
+		if len(matches) != 1 {
+			blockers = append(blockers, fmt.Sprintf("%s: expected exactly one calculator, found %d", file, len(matches)))
+			continue
+		}
+		tool := matches[0]
+		if tool.RuntimeType != "schema_v1" || tool.CurrentVersionID == nil {
+			blockers = append(blockers, fmt.Sprintf("%s: schema_v1 is not active", file))
+			continue
+		}
+		var version models.CalculatorVersion
+		if err := s.DB.First(&version, "id = ? AND calculator_id = ?", *tool.CurrentVersionID, tool.ID).Error; err != nil {
+			blockers = append(blockers, fmt.Sprintf("%s: active version is unavailable", file))
+			continue
+		}
+		if version.Status != "published" || !version.ValidationPassed || !version.TestsPassed || version.PublishedAt == nil || version.ApprovedBy == nil {
+			blockers = append(blockers, fmt.Sprintf("%s: active version lacks immutable publication evidence", file))
+		}
+	}
+	return blockers, nil
+}
+
 func ParseCalculatorMigrationEnvelope(raw []byte) (*CalculatorMigrationEnvelope, error) {
 	decoder := json.NewDecoder(bytes.NewReader(raw))
 	decoder.DisallowUnknownFields()

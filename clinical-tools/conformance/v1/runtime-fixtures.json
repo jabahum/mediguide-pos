@@ -1,0 +1,67 @@
+{
+  "fixture_version": "1.0",
+  "tools": [
+    {
+      "definition": {
+        "schema_version": "1.0",
+        "tool_type": "calculator",
+        "title": "BMI conformance",
+        "description": "Cross-runtime measurement, rounding, and interpretation fixture.",
+        "version": "1.0.0",
+        "locale": "en",
+        "warnings": [],
+        "citations": [],
+        "inputs": [
+          {"key":"weight","type":"measurement","label":"Weight","required":true,"minimum":1,"maximum":500,"allowed_units":["kg","lb"],"default_unit":"kg"},
+          {"key":"height","type":"measurement","label":"Height","required":true,"minimum":0.3,"maximum":3,"allowed_units":["m","cm"],"default_unit":"m"}
+        ],
+        "sections": [],
+        "calculation": [
+          {"key":"bmi","expression":{"op":"divide","args":[{"op":"field","field":"weight"},{"op":"multiply","args":[{"op":"field","field":"height"},{"op":"field","field":"height"}]}]}}
+        ],
+        "rules": [],
+        "outputs": [
+          {"key":"result","label":"BMI","value":{"op":"round","precision":1,"rounding_mode":"half_up","args":[{"op":"field","field":"bmi"}]}}
+        ],
+        "interpretations": [
+          {"key":"normal","label":"Healthy range","severity":"normal","order":1,"when":{"op":"less_than","args":[{"op":"field","field":"bmi"},{"op":"literal","value":25}]},"recommendations":["Maintain healthy habits"]},
+          {"key":"high","label":"Above healthy range","severity":"warning","order":2,"when":{"op":"greater_than_or_equal","args":[{"op":"field","field":"bmi"},{"op":"literal","value":25}]},"recommendations":["Review clinically"]}
+        ],
+        "completion": {"mode":"none","reset_confirmation":true},
+        "test_cases": []
+      },
+      "cases": [
+        {"key":"metric_high","input":{"weight":{"value":80,"unit":"kg"},"height":{"value":1.7,"unit":"m"}},"expected_normalized_input":{"weight":{"value":80,"unit":"kg"},"height":{"value":1.7,"unit":"m"}},"expected_outputs":{"result":27.7},"expected_interpretation":"Above healthy range","expected_recommendations":["Review clinically"],"expected_warnings":[]},
+        {"key":"exact_threshold_high","input":{"weight":{"value":25,"unit":"kg"},"height":{"value":1,"unit":"m"}},"expected_normalized_input":{"weight":{"value":25,"unit":"kg"},"height":{"value":1,"unit":"m"}},"expected_outputs":{"result":25},"expected_interpretation":"Above healthy range","expected_recommendations":["Review clinically"],"expected_warnings":[]},
+        {"key":"required_input_error","input":{"height":{"value":1.7,"unit":"m"}},"expected_error":"required_input"},
+        {"key":"imperial_metric_normal","input":{"weight":{"value":154.324,"unit":"lb"},"height":{"value":175,"unit":"cm"}},"expected_normalized_input":{"weight":{"value":70.00018890788002,"unit":"kg"},"height":{"value":1.75,"unit":"m"}},"expected_outputs":{"result":22.9},"expected_interpretation":"Healthy range","expected_recommendations":["Maintain healthy habits"],"expected_warnings":[],"numeric_tolerance":0.000001}
+      ]
+    },
+    {
+      "definition": {
+        "schema_version":"1.0","tool_type":"calculator","title":"Date conformance","version":"1.0.0","locale":"en","warnings":[],"citations":[],
+        "inputs":[{"key":"start_date","type":"date","label":"Start date","required":true}],"sections":[],"calculation":[],"rules":[],
+        "outputs":[{"key":"elapsed_days","label":"Elapsed days","value":{"op":"date_difference","date_unit":"days","args":[{"op":"field","field":"start_date"},{"op":"now"}]}}],
+        "interpretations":[],"completion":{"mode":"none","reset_confirmation":true},"test_cases":[]
+      },
+      "cases":[
+        {"key":"fixed_clock_days","input":{"start_date":"2026-08-20"},"fixed_now":"2026-08-22T00:00:00Z","expected_normalized_input":{"start_date":"2026-08-20"},"expected_outputs":{"elapsed_days":2},"expected_recommendations":[],"expected_warnings":[]}
+      ]
+    },
+    {
+      "definition": {
+        "schema_version":"1.0","tool_type":"checklist","title":"Safety checklist conformance","version":"1.0.0","locale":"en","warnings":[],"citations":[],
+        "inputs":[
+          {"key":"confirm_identity","type":"checklist_item","label":"Confirm identity","required":true,"section_key":"safety","checklist_kind":"action","critical":true},
+          {"key":"confirm_allergy","type":"checklist_item","label":"Confirm allergy status","required":true,"section_key":"safety","checklist_kind":"action"}
+        ],
+        "sections":[{"key":"safety","title":"Safety","order":0}],"calculation":[],"rules":[],"outputs":[],"interpretations":[],
+        "completion":{"mode":"all_required","allow_resume":true,"require_review":false,"show_percentage":true,"reset_confirmation":true},"test_cases":[]
+      },
+      "cases":[
+        {"key":"checklist_incomplete","input":{"confirm_identity":true,"confirm_allergy":false},"expected_normalized_input":{"confirm_identity":true,"confirm_allergy":false},"expected_outputs":{},"expected_recommendations":[],"expected_warnings":[],"expected_checklist":{"completed_required":1,"total_required":2,"percentage":50,"complete":false,"needs_review":false,"critical_pending":[]}},
+        {"key":"checklist_complete","input":{"confirm_identity":true,"confirm_allergy":true},"expected_normalized_input":{"confirm_identity":true,"confirm_allergy":true},"expected_outputs":{},"expected_recommendations":[],"expected_warnings":[],"expected_checklist":{"completed_required":2,"total_required":2,"percentage":100,"complete":true,"needs_review":false,"critical_pending":[]}}
+      ]
+    }
+  ]
+}

@@ -332,6 +332,86 @@ medication, emergency, and triage tools require expanded critical cases.
 
 ## Legacy retirement procedure
 
+### Persistent development activation
+
+Development may use all 14 schema-native tools before genuine clinical approval
+so the remaining application, client, deployment and removal work can be tested.
+Run the guarded activation against the standard local Compose database:
+
+```bash
+make clinical-tools-development-activate
+```
+
+This target rebuilds the development API image, starts only the local data
+dependencies, applies migrations, runs the idempotent development seed, imports
+the canonical envelopes, and drives each version through submit, synthetic
+review and synthetic publication with three separate development users. It is
+safe to rerun: already-active versions are reported as unchanged.
+
+The command is accepted only when all of the following are true:
+
+- `APP_ENV=development`;
+- the explicit `CLINICAL_TOOLS_DEVELOPMENT_ACTIVATION=1` marker is present;
+- PostgreSQL is reached through `postgres`, `localhost`, or a loopback address;
+- the database name does not resemble staging or production; and
+- author, reviewer and publisher resolve to three distinct users.
+
+Every generated workflow audit is marked `synthetic_test_evidence: true` and
+`clinical_approval: false`. The authentic retirement gate inspects that evidence
+and remains blocked even though the development runtime is technically ready.
+Synthetic evidence must never be exported into staging or production.
+
+After activation, run the entire local stack with an API image that contains no
+executable legacy calculator HTML:
+
+```bash
+make clinical-tools-development-schema-up
+```
+
+This adds `infra/docker-compose.schema-tools.dev.yml`, builds the
+`schema-only-development` target, and clears `LEGACY_CLINICAL_TOOLS_DIR` in that
+container. It provides the development proving ground for removal phases while
+the normal production image retains the rollback runtime. If local actors do
+not exist, run the standard development seed or supply the command's
+`--author-email`, `--reviewer-email`, and `--publisher-email` flags directly.
+
+Expected final activation output is:
+
+```text
+READY development schema runtime active for 14 tools; production retirement remains BLOCKED pending genuine clinician approval
+```
+
+Any `BLOCKED` output must be fixed; it must not be bypassed by changing the
+environment or pointing the command at a shared database.
+
+### Disposable rehearsal
+
+Run the complete synthetic workflow only through the guarded disposable target:
+
+```bash
+make clinical-tools-retirement-rehearsal
+```
+
+The target creates a uniquely named Compose project, isolated PostgreSQL,
+Redis and MinIO volumes, applies migrations, runs the deterministic demo seed,
+imports all 14 schema definitions, and submits, synthetically approves and
+publishes them with three separate test actors. Workflow audit metadata contains
+both `synthetic_test_evidence: true` and `clinical_approval: false`.
+
+The command rejects inherited database URLs, staging/production environments,
+remote database hosts, shared Compose project names and database names that do
+not contain `rehearsal`. It copies parity files to a temporary directory without
+editing the source-controlled evidence, writes JSON and text reports under
+`artifacts/clinical-tools-retirement-rehearsal/`, builds the schema-only backend
+image variant, verifies that variant contains no HTML, and always removes its
+containers, volumes and temporary images.
+
+Synthetic success proves only that the technical workflow and removal image can
+operate. It never satisfies genuine clinical review and must never be copied
+into real parity reports.
+
+### Authentic retirement gate
+
 Phase 13 is allowed only after every catalog item has a reviewed conversion
 envelope, an approved parity report with no unresolved ambiguity, and an active
 published schema version whose validation/tests passed:
@@ -347,6 +427,13 @@ packaged files and Compose variable in one reviewed change; archive the original
 files and retain characterization/conformance/parity evidence. Regenerate
 OpenAPI, TypeScript and Dart contracts and confirm repository searches show no
 production HTML execution.
+
+The gate also verifies `approved_by`, `approved_at`, `published_by`,
+`published_at`, validation and fixture status, the active `current_version_id`,
+the `schema_v1` runtime, a fresh checksum of the immutable persisted definition,
+and the absence of synthetic non-clinical workflow evidence. Phase 9 removal and
+Phase 10 contract cleanup remain prohibited until this authentic command prints
+`READY` against the intended database.
 
 ## Operational validation
 

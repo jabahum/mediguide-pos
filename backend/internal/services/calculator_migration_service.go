@@ -10,6 +10,7 @@ import (
 	"io"
 	"sort"
 	"strings"
+	"time"
 
 	"mediguide/internal/clinicaltools"
 	"mediguide/internal/models"
@@ -49,6 +50,17 @@ type CalculatorMigrationService struct {
 // immutable schema replacement. It is deliberately strict: an empty blocker
 // list is required before production HTML execution may be removed.
 func (s CalculatorMigrationService) RetirementReadiness() ([]string, error) {
+	return s.runtimeReadiness(false)
+}
+
+// SyntheticRuntimeReadiness verifies that schema tools are technically active
+// while deliberately allowing synthetic development/rehearsal evidence. It is
+// never an authorization to remove the production legacy runtime.
+func (s CalculatorMigrationService) SyntheticRuntimeReadiness() ([]string, error) {
+	return s.runtimeReadiness(true)
+}
+
+func (s CalculatorMigrationService) runtimeReadiness(allowSynthetic bool) ([]string, error) {
 	var tools []models.Calculator
 	if err := s.DB.Find(&tools).Error; err != nil {
 		return nil, err
@@ -82,11 +94,65 @@ func (s CalculatorMigrationService) RetirementReadiness() ([]string, error) {
 			blockers = append(blockers, fmt.Sprintf("%s: active version is unavailable", file))
 			continue
 		}
-		if version.Status != "published" || !version.ValidationPassed || !version.TestsPassed || version.PublishedAt == nil || version.ApprovedBy == nil {
-			blockers = append(blockers, fmt.Sprintf("%s: active version lacks immutable publication evidence", file))
+		issues := make([]string, 0, 8)
+		definition, validation := clinicaltools.ParseAndValidate(version.DefinitionJSON)
+		canonicalDefinition, marshalErr := json.Marshal(definition)
+		checksumMatches := validation.Valid && marshalErr == nil && strings.EqualFold(version.DefinitionChecksum, definitionChecksum(canonicalDefinition))
+		if version.Status != "published" {
+			issues = append(issues, "status is not published")
+		}
+		if !version.ValidationPassed {
+			issues = append(issues, "validation did not pass")
+		}
+		if !version.TestsPassed {
+			issues = append(issues, "fixtures did not pass")
+		}
+		if version.ApprovedBy == nil {
+			issues = append(issues, "approved_by is missing")
+		}
+		if version.ApprovedAt == nil {
+			issues = append(issues, "approved_at is missing")
+		}
+		if version.PublishedBy == nil {
+			issues = append(issues, "published_by is missing")
+		}
+		if version.PublishedAt == nil {
+			issues = append(issues, "published_at is missing")
+		}
+		if !checksumMatches {
+			issues = append(issues, "definition checksum does not match canonical persisted definition")
+		}
+		if !allowSynthetic {
+			synthetic, err := s.versionHasSyntheticEvidence(version.ID)
+			if err != nil {
+				return nil, err
+			}
+			if synthetic {
+				issues = append(issues, "approval or publication uses synthetic non-clinical evidence")
+			}
+		}
+		if len(issues) > 0 {
+			blockers = append(blockers, fmt.Sprintf("%s: %s", file, strings.Join(issues, "; ")))
 		}
 	}
 	return blockers, nil
+}
+
+func (s CalculatorMigrationService) versionHasSyntheticEvidence(versionID uuid.UUID) (bool, error) {
+	if !s.DB.Migrator().HasTable(&models.CalculatorVersionAudit{}) {
+		return false, nil
+	}
+	var rows []models.CalculatorVersionAudit
+	if err := s.DB.Where("calculator_version_id = ? AND action IN ?", versionID, []string{"calculator.version.submitted", "calculator.version.approved", "calculator.version.published"}).Find(&rows).Error; err != nil {
+		return false, err
+	}
+	for _, row := range rows {
+		var metadata map[string]any
+		if json.Unmarshal(row.MetadataJSON, &metadata) == nil && metadata["synthetic_test_evidence"] == true {
+			return true, nil
+		}
+	}
+	return false, nil
 }
 
 func ParseCalculatorMigrationEnvelope(raw []byte) (*CalculatorMigrationEnvelope, error) {
@@ -171,8 +237,7 @@ func (s CalculatorMigrationService) ImportDraft(envelope CalculatorMigrationEnve
 	err = s.DB.Where("calculator_id = ? AND semantic_version = ?", tool.ID, envelope.Definition.Version).First(&existing).Error
 	if err == nil {
 		raw, _ := json.Marshal(envelope.Definition)
-		checksum := sha256.Sum256(raw)
-		if existing.DefinitionChecksum != hex.EncodeToString(checksum[:]) {
+		if existing.DefinitionChecksum != definitionChecksum(raw) {
 			result.Message = ErrCalculatorMigrationConflict.Error()
 			return result, ErrCalculatorMigrationConflict
 		}
@@ -206,6 +271,78 @@ func (s CalculatorMigrationService) ImportDraft(envelope CalculatorMigrationEnve
 	}
 	result.VersionID = &draft.ID
 	result.Status = "draft_imported"
+	return result, nil
+}
+
+// ReconcileSyntheticDevelopmentDraft replaces only an unapproved, unpublished
+// development candidate whose semantic version predates the current canonical
+// envelope. It preserves the audit trail and is deliberately unavailable unless
+// the guarded caller supplies the explicit synthetic-development marker.
+func (s CalculatorMigrationService) ReconcileSyntheticDevelopmentDraft(envelope CalculatorMigrationEnvelope, actorID uuid.UUID, enabled bool) (CalculatorMigrationResult, error) {
+	result := s.Plan(envelope)
+	if !enabled {
+		return result, errors.New("synthetic development reconciliation is not enabled")
+	}
+	if result.Status != "ready_for_draft_import" {
+		return result, errors.New(result.Message)
+	}
+	tool, err := s.findLegacyTool(envelope.LegacyFile)
+	if err != nil {
+		return result, err
+	}
+	result.CalculatorID = &tool.ID
+	var existing models.CalculatorVersion
+	if err = s.DB.Where("calculator_id = ? AND semantic_version = ?", tool.ID, envelope.Definition.Version).First(&existing).Error; err != nil {
+		return result, err
+	}
+	if existing.Status != "draft" && existing.Status != "pending_review" {
+		return result, ErrCalculatorMigrationConflict
+	}
+	if existing.ApprovedBy != nil || existing.ApprovedAt != nil || existing.PublishedBy != nil || existing.PublishedAt != nil {
+		return result, ErrCalculatorMigrationConflict
+	}
+	if existing.Status == "pending_review" {
+		err = s.DB.Transaction(func(tx *gorm.DB) error {
+			update := tx.Model(&models.CalculatorVersion{}).
+				Where("id = ? AND status = ? AND lock_version = ?", existing.ID, "pending_review", existing.LockVersion).
+				Updates(map[string]any{"status": "draft", "lock_version": gorm.Expr("lock_version + 1"), "updated_at": time.Now().UTC()})
+			if update.Error != nil {
+				return update.Error
+			}
+			if update.RowsAffected != 1 {
+				return ErrCalculatorVersionConflict
+			}
+			return writeCalculatorVersionAudit(tx, tool.ID, &existing.ID, actorID, "calculator.version.synthetic_development_reopened", calculatorStringPointer("pending_review"), calculatorStringPointer("draft"), map[string]any{"synthetic_test_evidence": true, "clinical_approval": false})
+		})
+		if err != nil {
+			return result, err
+		}
+		if err = s.DB.First(&existing, "id = ?", existing.ID).Error; err != nil {
+			return result, err
+		}
+	}
+	raw, _ := json.Marshal(envelope.Definition)
+	updated, _, err := s.Versions.UpdateDraft(existing.ID, actorID, UpdateCalculatorVersionInput{
+		Definition:    raw,
+		ChangeSummary: strings.TrimSpace(envelope.ChangeSummary) + " [synthetic development reconciliation] [legacy_sha256:" + envelope.SourceChecksum + "]",
+		LockVersion:   existing.LockVersion,
+	})
+	if err != nil {
+		return result, err
+	}
+	validated, err := s.Versions.ValidateVersion(updated.ID, actorID, updated.LockVersion)
+	if err != nil {
+		return result, err
+	}
+	tested, err := s.Versions.RunTests(updated.ID, actorID, validated.LockVersion)
+	if err != nil || !tested.Report.Passed {
+		if err == nil {
+			err = ErrCalculatorVersionTestsFailed
+		}
+		return result, err
+	}
+	result.VersionID = &existing.ID
+	result.Status = "development_draft_reconciled"
 	return result, nil
 }
 

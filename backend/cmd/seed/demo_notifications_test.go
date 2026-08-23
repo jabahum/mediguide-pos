@@ -26,6 +26,21 @@ func TestSeedDemoNotificationsIsIdempotentAndUserScoped(t *testing.T) {
 	); err != nil {
 		t.Fatal(err)
 	}
+	if err := database.Create(&models.NotificationTemplate{
+		Base: models.Base{ID: notificationTemplateID}, Name: "Existing migration template",
+		TemplateKey: "clinical-content-published", CurrentVersion: 1, Locale: "en",
+		Type: "in-app", Category: "Content Updates", Status: "published",
+	}).Error; err != nil {
+		t.Fatal(err)
+	}
+	existingVersionID := uuid.New()
+	if err := database.Create(&models.NotificationTemplateVersion{
+		Base: models.Base{ID: existingVersionID}, TemplateID: notificationTemplateID,
+		Version: 1, Channel: "in-app", BodyTemplate: "Existing immutable body",
+		Category: "Content Updates", Locale: "en", Status: "published",
+	}).Error; err != nil {
+		t.Fatal(err)
+	}
 
 	clinicianID := uuid.New()
 	for range 2 {
@@ -59,5 +74,12 @@ func TestSeedDemoNotificationsIsIdempotentAndUserScoped(t *testing.T) {
 	database.Model(&models.NotificationCampaign{}).Count(&campaigns)
 	if templates != 1 || versions != 1 || campaigns != 1 {
 		t.Fatalf("expected one template version and campaign, got %d, %d and %d", templates, versions, campaigns)
+	}
+	var retained models.NotificationTemplateVersion
+	if err := database.First(&retained, "template_id = ? AND version = ?", notificationTemplateID, 1).Error; err != nil {
+		t.Fatal(err)
+	}
+	if retained.ID != existingVersionID || retained.BodyTemplate != "Existing immutable body" {
+		t.Fatal("seed must retain an existing immutable template version selected by its natural key")
 	}
 }

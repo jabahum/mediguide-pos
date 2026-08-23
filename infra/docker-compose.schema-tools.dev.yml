@@ -1,0 +1,6 @@
+services:
+  api:
+    build:
+      target: schema-only-development
+    environment:
+      LEGACY_CLINICAL_TOOLS_DIR: ""

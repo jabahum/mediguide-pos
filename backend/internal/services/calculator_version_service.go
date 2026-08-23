@@ -1,6 +1,7 @@
 package services
 
 import (
+	"bytes"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
@@ -27,8 +28,9 @@ var (
 )
 
 type CalculatorVersionService struct {
-	DB  *gorm.DB
-	Now func() time.Time
+	DB                         *gorm.DB
+	Now                        func() time.Time
+	SyntheticRehearsalEvidence bool
 }
 
 type CalculatorVersionDTO struct {
@@ -178,7 +180,11 @@ func (s CalculatorVersionService) ValidateVersion(versionID, actorID uuid.UUID, 
 			return ErrCalculatorVersionImmutable
 		}
 		_, validation := clinicaltools.ParseAndValidate(row.DefinitionJSON)
-		result := tx.Model(&models.CalculatorVersion{}).Where("id = ? AND status = 'draft' AND lock_version = ?", row.ID, lockVersion).Updates(map[string]any{"validation_passed": validation.Valid, "tests_passed": false, "lock_version": gorm.Expr("lock_version + 1"), "updated_at": s.now()})
+		updates := map[string]any{"validation_passed": validation.Valid, "tests_passed": false, "lock_version": gorm.Expr("lock_version + 1"), "updated_at": s.now()}
+		if validation.Valid {
+			updates["definition_checksum"] = definitionChecksum(row.DefinitionJSON)
+		}
+		result := tx.Model(&models.CalculatorVersion{}).Where("id = ? AND status = 'draft' AND lock_version = ?", row.ID, lockVersion).Updates(updates)
 		if result.Error != nil {
 			return result.Error
 		}
@@ -417,7 +423,7 @@ func (s CalculatorVersionService) Publish(versionID, actorID uuid.UUID, lockVers
 		if err := tx.Model(&models.Calculator{}).Where("id = ?", row.CalculatorID).Updates(map[string]any{"current_version_id": row.ID, "runtime_type": "schema_v1", "version": row.SemanticVersion, "updated_at": now}).Error; err != nil {
 			return err
 		}
-		if err := writeCalculatorVersionAudit(tx, row.CalculatorID, &row.ID, actorID, "calculator.version.published", calculatorStringPointer("approved"), calculatorStringPointer("published"), map[string]any{"checksum": row.DefinitionChecksum}); err != nil {
+		if err := writeCalculatorVersionAudit(tx, row.CalculatorID, &row.ID, actorID, "calculator.version.published", calculatorStringPointer("approved"), calculatorStringPointer("published"), s.auditMetadata(map[string]any{"checksum": row.DefinitionChecksum})); err != nil {
 			return err
 		}
 		return tx.First(&published, "id = ?", row.ID).Error
@@ -581,7 +587,7 @@ func (s CalculatorVersionService) transition(versionID, actorID uuid.UUID, lockV
 		if result.RowsAffected == 0 {
 			return ErrCalculatorVersionConflict
 		}
-		if err := writeCalculatorVersionAudit(tx, row.CalculatorID, &row.ID, actorID, action, calculatorStringPointer(from), calculatorStringPointer(to), nil); err != nil {
+		if err := writeCalculatorVersionAudit(tx, row.CalculatorID, &row.ID, actorID, action, calculatorStringPointer(from), calculatorStringPointer(to), s.auditMetadata(nil)); err != nil {
 			return err
 		}
 		return tx.First(&updated, "id = ?", versionID).Error
@@ -591,6 +597,16 @@ func (s CalculatorVersionService) transition(versionID, actorID uuid.UUID, lockV
 	}
 	return calculatorVersionDTO(updated)
 }
+func (s CalculatorVersionService) auditMetadata(metadata map[string]any) map[string]any {
+	if metadata == nil {
+		metadata = map[string]any{}
+	}
+	if s.SyntheticRehearsalEvidence {
+		metadata["synthetic_test_evidence"] = true
+		metadata["clinical_approval"] = false
+	}
+	return metadata
+}
 func (s CalculatorVersionService) now() time.Time {
 	if s.Now != nil {
 		return s.Now().UTC()
@@ -598,8 +614,41 @@ func (s CalculatorVersionService) now() time.Time {
 	return time.Now().UTC()
 }
 func definitionChecksum(value []byte) string {
-	sum := sha256.Sum256(value)
+	canonical := value
+	decoder := json.NewDecoder(bytes.NewReader(value))
+	decoder.UseNumber()
+	var decoded any
+	if decoder.Decode(&decoded) == nil {
+		if normalized, err := json.Marshal(normalizeChecksumJSON(decoded)); err == nil {
+			canonical = normalized
+		}
+	}
+	sum := sha256.Sum256(canonical)
 	return hex.EncodeToString(sum[:])
+}
+func normalizeChecksumJSON(value any) any {
+	switch typed := value.(type) {
+	case json.Number:
+		if integer, err := typed.Int64(); err == nil {
+			return integer
+		}
+		if decimal, err := typed.Float64(); err == nil {
+			return decimal
+		}
+		return typed.String()
+	case []any:
+		for index := range typed {
+			typed[index] = normalizeChecksumJSON(typed[index])
+		}
+		return typed
+	case map[string]any:
+		for key := range typed {
+			typed[key] = normalizeChecksumJSON(typed[key])
+		}
+		return typed
+	default:
+		return value
+	}
 }
 func clinicallyCriticalTool(tool models.Calculator) bool {
 	name := strings.ToLower(tool.Name)

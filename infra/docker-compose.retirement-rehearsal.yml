@@ -1,0 +1,23 @@
+services:
+  api:
+    image: "${REHEARSAL_API_IMAGE}"
+    build:
+      target: development
+    restart: "no"
+    environment:
+      APP_ENV: test
+      CLINICAL_TOOLS_REHEARSAL: "1"
+      COMPOSE_PROJECT_NAME: "${COMPOSE_PROJECT_NAME}"
+      DATABASE_URL: "${DATABASE_URL}"
+      AUTO_SEED: "false"
+      AUTO_IMPORT: "false"
+      SEED_SCOPE: clinical-tools-rehearsal
+
+  postgres:
+    restart: "no"
+
+  redis:
+    restart: "no"
+
+  minio:
+    restart: "no"

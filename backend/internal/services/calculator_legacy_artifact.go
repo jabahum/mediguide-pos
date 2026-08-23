@@ -8,6 +8,7 @@ import (
 	"errors"
 	"path/filepath"
 	"regexp"
+	"sort"
 	"strings"
 )
 
@@ -45,6 +46,17 @@ func reviewedLegacyCalculatorChecksum(filename string) (string, bool) {
 // migration tooling without making arbitrary artifacts executable.
 func ReviewedLegacyCalculatorChecksum(filename string) (string, bool) {
 	return reviewedLegacyCalculatorChecksum(filename)
+}
+
+// ReviewedLegacyCalculatorFiles returns a sorted copy of the immutable legacy
+// artifact allowlist. Callers cannot mutate the publication safety map.
+func ReviewedLegacyCalculatorFiles() []string {
+	files := make([]string, 0, len(reviewedLegacyCalculatorChecksums))
+	for filename := range reviewedLegacyCalculatorChecksums {
+		files = append(files, filename)
+	}
+	sort.Strings(files)
+	return files
 }
 
 func validateCalculatorArtifactMetadata(raw json.RawMessage) bool {

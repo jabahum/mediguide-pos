@@ -163,6 +163,14 @@ func TestCalculatorVersionPublishRequiresValidationAndPassingTests(t *testing.T)
 	}
 }
 
+func TestDefinitionChecksumNormalizesEquivalentJSONNumbers(t *testing.T) {
+	integer := []byte(`{"value":1,"nested":{"amount":0}}`)
+	decimal := []byte(`{"nested":{"amount":0.0},"value":1.0}`)
+	if definitionChecksum(integer) != definitionChecksum(decimal) {
+		t.Fatal("semantically equivalent JSON numbers and key order must produce one checksum")
+	}
+}
+
 func versionDefinitionJSON(t *testing.T, toolType, version string) json.RawMessage {
 	t.Helper()
 	definition := clinicaltools.Definition{SchemaVersion: "1.0", ToolType: toolType, Title: "Test tool", Version: version, Locale: "en", Inputs: []clinicaltools.Input{{Key: "value", Type: "number", Label: "Value", Required: true}}, Sections: []clinicaltools.Section{}, Calculation: []clinicaltools.Calculation{}, Rules: []clinicaltools.Rule{}, Outputs: []clinicaltools.Output{{Key: "result", Label: "Result", Value: clinicaltools.Expression{Op: "field", Field: "value"}}}, Interpretations: []clinicaltools.Interpretation{}, Completion: clinicaltools.Completion{Mode: "none", ResetConfirmation: true}, TestCases: []clinicaltools.TestCase{{Key: "normal", Inputs: map[string]json.RawMessage{"value": json.RawMessage(`1`)}, Expected: map[string]json.RawMessage{"result": json.RawMessage(`1`)}}}}

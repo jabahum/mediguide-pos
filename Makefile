@@ -161,15 +161,24 @@ contracts:
 contracts-check:
 	bash scripts/check-generated-contracts.sh
 
-.PHONY: clinical-tools-check clinical-tools-import clinical-tools-retirement-check
+.PHONY: clinical-tools-check clinical-tools-import clinical-tools-development-activate clinical-tools-development-schema-up clinical-tools-retirement-check clinical-tools-retirement-rehearsal
 clinical-tools-check:
 	$(MAKE) -C $(BACKEND_DIR) clinical-tools-check
 
 clinical-tools-import:
 	$(MAKE) -C $(BACKEND_DIR) clinical-tools-import ACTOR_ID="$(ACTOR_ID)"
 
+clinical-tools-development-activate:
+	bash scripts/clinical-tools-development-activate.sh
+
+clinical-tools-development-schema-up:
+	bash scripts/clinical-tools-development-schema-up.sh
+
 clinical-tools-retirement-check:
 	$(MAKE) -C $(BACKEND_DIR) clinical-tools-retirement-check
+
+clinical-tools-retirement-rehearsal:
+	bash scripts/clinical-tools-retirement-rehearsal.sh
 
 RELEASE_TAG ?=
 MOBILE_BUILD_NUMBER ?=

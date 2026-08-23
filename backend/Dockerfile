@@ -14,6 +14,8 @@ RUN CGO_ENABLED=0 GOOS=linux go build \
 RUN CGO_ENABLED=0 GOOS=linux go build -o /out/migrate ./cmd/migrate
 RUN CGO_ENABLED=0 GOOS=linux go build -o /out/notification-worker ./cmd/notification-worker
 RUN CGO_ENABLED=0 GOOS=linux go build -o /out/clinicaltool-migrate ./cmd/clinicaltool-migrate
+RUN CGO_ENABLED=0 GOOS=linux go build -o /out/clinicaltool-rehearsal ./cmd/clinicaltool-rehearsal
+RUN CGO_ENABLED=0 GOOS=linux go build -o /out/clinicaltool-development-activate ./cmd/clinicaltool-development-activate
 
 FROM build AS development-build
 RUN CGO_ENABLED=0 GOOS=linux go build -o /out/seed ./cmd/seed
@@ -34,6 +36,8 @@ COPY --from=build --chown=mediguide:mediguide /out/api /app/api
 COPY --from=build --chown=mediguide:mediguide /out/migrate /app/migrate
 COPY --from=build --chown=mediguide:mediguide /out/notification-worker /app/notification-worker
 COPY --from=build --chown=mediguide:mediguide /out/clinicaltool-migrate /app/clinicaltool-migrate
+COPY --from=build --chown=mediguide:mediguide /out/clinicaltool-rehearsal /app/clinicaltool-rehearsal
+COPY --from=build --chown=mediguide:mediguide /out/clinicaltool-development-activate /app/clinicaltool-development-activate
 COPY --from=build --chown=mediguide:mediguide /out/legacy-tools /app/legacy-tools
 COPY --from=build --chown=mediguide:mediguide /out/clinical-tools /app/clinical-tools
 COPY --chown=mediguide:mediguide backend/migrations /app/migrations
@@ -44,7 +48,44 @@ HEALTHCHECK --interval=10s --timeout=3s --start-period=15s --retries=6 \
   CMD curl --fail --silent http://127.0.0.1:8080/api/readyz >/dev/null || exit 1
 CMD ["/app/api"]
 
+# Rehearsal-only image variant proving that the runtime image can be assembled
+# without executable legacy calculator HTML. It is not the production target
+# until the authentic retirement gate succeeds.
+FROM alpine:3.23 AS schema-only
+ARG BUILD_VERSION=development
+ARG BUILD_REVISION=unknown
+LABEL org.opencontainers.image.title="MediGuide Backend API (schema-only rehearsal)" \
+      org.opencontainers.image.version="${BUILD_VERSION}" \
+      org.opencontainers.image.revision="${BUILD_REVISION}"
+WORKDIR /app
+RUN apk add --no-cache ca-certificates tzdata curl && \
+    addgroup -S -g 10001 mediguide && \
+    adduser -S -D -H -u 10001 -G mediguide mediguide && \
+    chown -R mediguide:mediguide /app
+COPY --from=build --chown=mediguide:mediguide /out/api /app/api
+COPY --from=build --chown=mediguide:mediguide /out/migrate /app/migrate
+COPY --from=build --chown=mediguide:mediguide /out/notification-worker /app/notification-worker
+COPY --from=build --chown=mediguide:mediguide /out/clinicaltool-migrate /app/clinicaltool-migrate
+COPY --from=build --chown=mediguide:mediguide /out/clinicaltool-rehearsal /app/clinicaltool-rehearsal
+COPY --from=build --chown=mediguide:mediguide /out/clinicaltool-development-activate /app/clinicaltool-development-activate
+COPY --from=build --chown=mediguide:mediguide /out/clinical-tools /app/clinical-tools
+COPY --chown=mediguide:mediguide backend/migrations /app/migrations
+COPY --chown=mediguide:mediguide backend/docs /app/docs
+USER 10001:10001
+EXPOSE 8080
+HEALTHCHECK --interval=10s --timeout=3s --start-period=15s --retries=6 \
+  CMD curl --fail --silent http://127.0.0.1:8080/api/readyz >/dev/null || exit 1
+CMD ["/app/api"]
+
 FROM production AS development
+USER root
+COPY --from=development-build --chown=mediguide:mediguide /out/seed /app/seed
+USER 10001:10001
+
+# Persistent local-development variant with no executable calculator HTML.
+# Use only after the guarded development activation command has published all
+# schema tools in the local database.
+FROM schema-only AS schema-only-development
 USER root
 COPY --from=development-build --chown=mediguide:mediguide /out/seed /app/seed
 USER 10001:10001

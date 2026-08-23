@@ -29,6 +29,7 @@ __pycache__/
 infra/production.env
 infra/release.env
 infra/backups/
+artifacts/clinical-tools-retirement-rehearsal/
 user_app/.env
 user_app/firebase-dart-defines.json
 user_app/fastlane/report.xml

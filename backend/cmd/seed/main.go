@@ -14,6 +14,7 @@ import (
 	"time"
 	"unicode"
 
+	"mediguide/internal/clinicaltools"
 	"mediguide/internal/config"
 	"mediguide/internal/db"
 	"mediguide/internal/models"
@@ -98,6 +99,19 @@ func main() {
 
 	scope := strings.ToLower(strings.TrimSpace(os.Getenv("SEED_SCOPE")))
 	switch scope {
+	case "clinical-tools-rehearsal":
+		if err := clinicaltools.ValidateRehearsalTarget(cfg.DatabaseURL, cfg.AppEnv, os.Getenv("COMPOSE_PROJECT_NAME"), os.Getenv("CLINICAL_TOOLS_REHEARSAL")); err != nil {
+			log.Fatal().Err(err).Msg("unsafe clinical-tool rehearsal seed target")
+		}
+		admin, _, err := seedSecurity(database)
+		if err != nil {
+			log.Fatal().Err(err).Msg("seed rehearsal actors failed")
+		}
+		if err = database.Transaction(func(tx *gorm.DB) error { return seedDemoCalculators(tx, admin.ID) }); err != nil {
+			log.Fatal().Err(err).Msg("seed rehearsal calculators failed")
+		}
+		log.Info().Msg("clinical-tool rehearsal seed completed")
+		return
 	case "admin":
 		input, err := productionAdminInputFromEnv()
 		if err != nil {
@@ -1351,6 +1365,12 @@ func upsertByID(database *gorm.DB, table string, row map[string]any) error {
 		if requestedID != uuid.Nil && requestedID != existingID {
 			seedIDAliases[requestedID] = existingID
 		}
+		// Published notification template versions are immutable by database
+		// trigger. Their natural key is (template_id, version), so an existing
+		// row is already the idempotent seed result and must not be updated.
+		if table == "notification_template_versions" {
+			return nil
+		}
 	}
 
 	assignments := map[string]any{}
@@ -1393,6 +1413,23 @@ func lookupExistingSeedRowID(database *gorm.DB, table string, row map[string]any
 		return lookupRowIDByColumn(database, table, "code", row["code"])
 	case "faq_tags":
 		return lookupRowIDByColumn(database, table, "slug", row["slug"])
+	case "notification_template_versions":
+		type versionRow struct {
+			ID uuid.UUID `gorm:"column:id"`
+		}
+		var found versionRow
+		err := database.Table(table).
+			Select("id").
+			Where("deleted_at IS NULL").
+			Where("template_id = ? AND version = ?", row["template_id"], row["version"]).
+			Take(&found).Error
+		if err == nil {
+			return found.ID, true, nil
+		}
+		if err == gorm.ErrRecordNotFound {
+			return uuid.Nil, false, nil
+		}
+		return uuid.Nil, false, err
 	case "ownership_types", "facility_levels":
 		return lookupRowIDByCodeOrName(
 			database,

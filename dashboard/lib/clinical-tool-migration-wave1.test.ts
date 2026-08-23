@@ -7,13 +7,19 @@ import { previewClinicalTool } from "./clinical-tool-evaluator"
 
 type MigrationEnvelope = {
   definition: ClinicalToolDefinition & {
-    test_cases: Array<{ key: string; inputs: Record<string, unknown>; expected: Record<string, unknown>; numeric_tolerance?: number }>
+    test_cases: Array<{ key: string; inputs: Record<string, unknown>; expected: Record<string, unknown>; fixed_now?: string; numeric_tolerance?: number }>
   }
 }
 
-const files = ["apgar-score-calculator", "blood-pressure-assessment", "bmi-calculator", "glasgow-coma-scale"]
+const files = [
+  "apgar-score-calculator", "blood-pressure-assessment", "bmi-calculator", "glasgow-coma-scale",
+  "fluid-balance-calculator", "pain-assessment-scale", "pregnancy-due-date-calculator",
+  "dehydration-assessment", "pediatric-fever-management", "wound-assessment-tool",
+  "cardiac-risk-assessment", "emergency-triage-assessment", "immunization-schedule-checker",
+  "medication-dosage-calculator",
+]
 
-describe("Wave 1 clinical-tool migration drafts", () => {
+describe("clinical-tool migration review drafts", () => {
   for (const file of files) {
     const envelope = JSON.parse(readFileSync(join(process.cwd(), "..", "clinical-tools", "migrations", "v1", "definitions", `${file}.json`), "utf8")) as MigrationEnvelope
     const parity = JSON.parse(readFileSync(join(process.cwd(), "..", "clinical-tools", "migrations", "v1", "parity", `${file}.json`), "utf8")) as { status: string; reviewer_id: string | null; reviewed_at: string | null }
@@ -26,7 +32,7 @@ describe("Wave 1 clinical-tool migration drafts", () => {
 
     for (const fixture of envelope.definition.test_cases) {
       it(`${file}: ${fixture.key}`, () => {
-        const result = previewClinicalTool(envelope.definition, fixture.inputs)
+        const result = previewClinicalTool(envelope.definition, fixture.inputs, { fixedNow: fixture.fixed_now })
         const outputKeys = new Set(envelope.definition.outputs.map((output) => output.key))
         const tolerance = fixture.numeric_tolerance ?? 0
         for (const [key, expectedValue] of Object.entries(fixture.expected)) {

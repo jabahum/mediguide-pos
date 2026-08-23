@@ -1,0 +1,862 @@
+{
+  "legacy_id": "fluid-balance-calculator",
+  "legacy_file": "fluid-balance-calculator.html",
+  "source_checksum": "6aaf110ccee6d2032c0ada4a16e60c7247641372317e69f7bead65cb9269f090",
+  "change_summary": "Review draft: preserve 24-hour intake/output totals, balance thresholds, age-adjusted urine threshold, and condition selection. Age zero is rejected and clinical recommendations require approval.",
+  "definition": {
+    "schema_version": "1.0",
+    "tool_type": "calculator",
+    "title": "Fluid Balance Calculator",
+    "description": "Summarizes recorded 24-hour fluid intake and output. Review draft only; not approved for clinical publication.",
+    "version": "1.0.0-review.1",
+    "locale": "en",
+    "supported_population": [],
+    "exclusions": [
+      "Do not infer fluid status from this calculation without clinical assessment."
+    ],
+    "warnings": [
+      {
+        "key": "critical_oliguria",
+        "text": "Critically low recorded urine output requires immediate clinical assessment.",
+        "severity": "critical",
+        "when": {
+          "op": "less_than",
+          "args": [
+            {
+              "op": "field",
+              "field": "urine_per_kg_hour"
+            },
+            {
+              "op": "literal",
+              "value": 0.3
+            }
+          ]
+        }
+      },
+      {
+        "key": "significant_imbalance",
+        "text": "The recorded balance meets a legacy significant fluid-imbalance threshold and requires clinical review.",
+        "severity": "critical",
+        "when": {
+          "op": "or",
+          "args": [
+            {
+              "op": "greater_than",
+              "args": [
+                {
+                  "op": "field",
+                  "field": "net_balance"
+                },
+                {
+                  "op": "literal",
+                  "value": 1500
+                }
+              ]
+            },
+            {
+              "op": "greater_than",
+              "args": [
+                {
+                  "op": "field",
+                  "field": "balance_per_kg"
+                },
+                {
+                  "op": "literal",
+                  "value": 20
+                }
+              ]
+            },
+            {
+              "op": "less_than",
+              "args": [
+                {
+                  "op": "field",
+                  "field": "net_balance"
+                },
+                {
+                  "op": "literal",
+                  "value": -1500
+                }
+              ]
+            },
+            {
+              "op": "less_than",
+              "args": [
+                {
+                  "op": "field",
+                  "field": "balance_per_kg"
+                },
+                {
+                  "op": "literal",
+                  "value": -20
+                }
+              ]
+            }
+          ]
+        }
+      }
+    ],
+    "citations": [],
+    "inputs": [
+      {
+        "key": "weight",
+        "type": "measurement",
+        "label": "Weight",
+        "required": true,
+        "minimum": 1,
+        "maximum": 300,
+        "allowed_units": [
+          "kg"
+        ],
+        "default_unit": "kg"
+      },
+      {
+        "key": "age",
+        "type": "integer",
+        "label": "Age",
+        "required": true,
+        "minimum": 1,
+        "maximum": 120
+      },
+      {
+        "key": "clinical_condition",
+        "type": "single_selection",
+        "label": "Clinical condition",
+        "required": true,
+        "default": "normal",
+        "options": [
+          {
+            "value": "normal",
+            "label": "Normal or stable"
+          },
+          {
+            "value": "heart_failure",
+            "label": "Heart failure"
+          },
+          {
+            "value": "kidney_disease",
+            "label": "Kidney disease"
+          },
+          {
+            "value": "liver_disease",
+            "label": "Liver disease"
+          },
+          {
+            "value": "diabetes",
+            "label": "Diabetes"
+          },
+          {
+            "value": "surgery",
+            "label": "Post-surgical"
+          },
+          {
+            "value": "fever",
+            "label": "Fever or infection"
+          },
+          {
+            "value": "burns",
+            "label": "Burns"
+          },
+          {
+            "value": "pregnancy",
+            "label": "Pregnancy"
+          }
+        ]
+      },
+      {
+        "key": "oral_fluids",
+        "type": "number",
+        "label": "Oral fluids",
+        "required": false,
+        "minimum": 0,
+        "maximum": 10000,
+        "default": 0
+      },
+      {
+        "key": "iv_fluids",
+        "type": "number",
+        "label": "IV fluids",
+        "required": false,
+        "minimum": 0,
+        "maximum": 5000,
+        "default": 0
+      },
+      {
+        "key": "tube_feeding",
+        "type": "number",
+        "label": "Tube feeding",
+        "required": false,
+        "minimum": 0,
+        "maximum": 3000,
+        "default": 0
+      },
+      {
+        "key": "food_moisture",
+        "type": "number",
+        "label": "Food moisture",
+        "required": false,
+        "minimum": 0,
+        "maximum": 1500,
+        "default": 800
+      },
+      {
+        "key": "medications",
+        "type": "number",
+        "label": "Medication fluids",
+        "required": false,
+        "minimum": 0,
+        "maximum": 500,
+        "default": 0
+      },
+      {
+        "key": "urine_output",
+        "type": "number",
+        "label": "Urine output",
+        "required": false,
+        "minimum": 0,
+        "maximum": 5000,
+        "default": 0
+      },
+      {
+        "key": "vomiting",
+        "type": "number",
+        "label": "Vomiting",
+        "required": false,
+        "minimum": 0,
+        "maximum": 2000,
+        "default": 0
+      },
+      {
+        "key": "diarrhea",
+        "type": "number",
+        "label": "Diarrhea",
+        "required": false,
+        "minimum": 0,
+        "maximum": 3000,
+        "default": 0
+      },
+      {
+        "key": "drainage",
+        "type": "number",
+        "label": "Drainage",
+        "required": false,
+        "minimum": 0,
+        "maximum": 2000,
+        "default": 0
+      },
+      {
+        "key": "insensible",
+        "type": "number",
+        "label": "Insensible losses",
+        "required": false,
+        "minimum": 0,
+        "maximum": 2000,
+        "default": 800
+      },
+      {
+        "key": "other_losses",
+        "type": "number",
+        "label": "Other losses",
+        "required": false,
+        "minimum": 0,
+        "maximum": 1000,
+        "default": 0
+      }
+    ],
+    "sections": [
+      {
+        "key": "patient",
+        "title": "Patient",
+        "order": 0
+      },
+      {
+        "key": "intake",
+        "title": "24-hour intake",
+        "order": 1
+      },
+      {
+        "key": "output",
+        "title": "24-hour output",
+        "order": 2,
+        "review_before_completion": true
+      }
+    ],
+    "calculation": [
+      {
+        "key": "total_intake",
+        "expression": {
+          "op": "add",
+          "args": [
+            {
+              "op": "field",
+              "field": "oral_fluids"
+            },
+            {
+              "op": "field",
+              "field": "iv_fluids"
+            },
+            {
+              "op": "field",
+              "field": "tube_feeding"
+            },
+            {
+              "op": "field",
+              "field": "food_moisture"
+            },
+            {
+              "op": "field",
+              "field": "medications"
+            }
+          ]
+        }
+      },
+      {
+        "key": "total_output",
+        "expression": {
+          "op": "add",
+          "args": [
+            {
+              "op": "field",
+              "field": "urine_output"
+            },
+            {
+              "op": "field",
+              "field": "vomiting"
+            },
+            {
+              "op": "field",
+              "field": "diarrhea"
+            },
+            {
+              "op": "field",
+              "field": "drainage"
+            },
+            {
+              "op": "field",
+              "field": "insensible"
+            },
+            {
+              "op": "field",
+              "field": "other_losses"
+            }
+          ]
+        }
+      },
+      {
+        "key": "net_balance",
+        "expression": {
+          "op": "subtract",
+          "args": [
+            {
+              "op": "field",
+              "field": "total_intake"
+            },
+            {
+              "op": "field",
+              "field": "total_output"
+            }
+          ]
+        }
+      },
+      {
+        "key": "balance_per_kg",
+        "expression": {
+          "op": "round",
+          "precision": 1,
+          "rounding_mode": "half_up",
+          "args": [
+            {
+              "op": "divide",
+              "args": [
+                {
+                  "op": "field",
+                  "field": "net_balance"
+                },
+                {
+                  "op": "field",
+                  "field": "weight"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "key": "urine_per_kg_hour",
+        "expression": {
+          "op": "round",
+          "precision": 2,
+          "rounding_mode": "half_up",
+          "args": [
+            {
+              "op": "divide",
+              "args": [
+                {
+                  "op": "field",
+                  "field": "urine_output"
+                },
+                {
+                  "op": "multiply",
+                  "args": [
+                    {
+                      "op": "field",
+                      "field": "weight"
+                    },
+                    {
+                      "op": "literal",
+                      "value": 24
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      }
+    ],
+    "rules": [],
+    "outputs": [
+      {
+        "key": "total_intake",
+        "label": "Total intake",
+        "value": {
+          "op": "field",
+          "field": "total_intake"
+        },
+        "unit": "mL"
+      },
+      {
+        "key": "total_output",
+        "label": "Total output",
+        "value": {
+          "op": "field",
+          "field": "total_output"
+        },
+        "unit": "mL"
+      },
+      {
+        "key": "net_balance",
+        "label": "Net balance",
+        "value": {
+          "op": "field",
+          "field": "net_balance"
+        },
+        "unit": "mL"
+      },
+      {
+        "key": "balance_per_kg",
+        "label": "Balance per kg",
+        "value": {
+          "op": "field",
+          "field": "balance_per_kg"
+        },
+        "unit": "mL/kg",
+        "precision": 1
+      },
+      {
+        "key": "urine_per_kg_hour",
+        "label": "Urine output",
+        "value": {
+          "op": "field",
+          "field": "urine_per_kg_hour"
+        },
+        "unit": "mL/kg/hour",
+        "precision": 2
+      }
+    ],
+    "interpretations": [
+      {
+        "key": "significant_retention",
+        "when": {
+          "op": "or",
+          "args": [
+            {
+              "op": "greater_than",
+              "args": [
+                {
+                  "op": "field",
+                  "field": "net_balance"
+                },
+                {
+                  "op": "literal",
+                  "value": 1500
+                }
+              ]
+            },
+            {
+              "op": "greater_than",
+              "args": [
+                {
+                  "op": "field",
+                  "field": "balance_per_kg"
+                },
+                {
+                  "op": "literal",
+                  "value": 20
+                }
+              ]
+            }
+          ]
+        },
+        "label": "Significant Fluid Retention",
+        "description": "Legacy significant positive-balance threshold.",
+        "severity": "critical",
+        "recommendations": [
+          "Assess clinically for fluid overload and follow the approved condition-specific protocol."
+        ],
+        "order": 0
+      },
+      {
+        "key": "positive_balance",
+        "when": {
+          "op": "and",
+          "args": [
+            {
+              "op": "greater_than",
+              "args": [
+                {
+                  "op": "field",
+                  "field": "net_balance"
+                },
+                {
+                  "op": "literal",
+                  "value": 500
+                }
+              ]
+            },
+            {
+              "op": "less_than_or_equal",
+              "args": [
+                {
+                  "op": "field",
+                  "field": "net_balance"
+                },
+                {
+                  "op": "literal",
+                  "value": 1500
+                }
+              ]
+            },
+            {
+              "op": "less_than_or_equal",
+              "args": [
+                {
+                  "op": "field",
+                  "field": "balance_per_kg"
+                },
+                {
+                  "op": "literal",
+                  "value": 20
+                }
+              ]
+            }
+          ]
+        },
+        "label": "Positive Balance",
+        "description": "Legacy mild-to-moderate positive balance.",
+        "severity": "warning",
+        "recommendations": [
+          "Review the record and assess clinically for fluid retention."
+        ],
+        "order": 1
+      },
+      {
+        "key": "significant_dehydration",
+        "when": {
+          "op": "or",
+          "args": [
+            {
+              "op": "less_than",
+              "args": [
+                {
+                  "op": "field",
+                  "field": "net_balance"
+                },
+                {
+                  "op": "literal",
+                  "value": -1500
+                }
+              ]
+            },
+            {
+              "op": "less_than",
+              "args": [
+                {
+                  "op": "field",
+                  "field": "balance_per_kg"
+                },
+                {
+                  "op": "literal",
+                  "value": -20
+                }
+              ]
+            }
+          ]
+        },
+        "label": "Significant Dehydration",
+        "description": "Legacy significant negative-balance threshold.",
+        "severity": "critical",
+        "recommendations": [
+          "Assess urgently and follow the approved fluid-replacement protocol."
+        ],
+        "order": 2
+      },
+      {
+        "key": "negative_balance",
+        "when": {
+          "op": "and",
+          "args": [
+            {
+              "op": "less_than",
+              "args": [
+                {
+                  "op": "field",
+                  "field": "net_balance"
+                },
+                {
+                  "op": "literal",
+                  "value": -500
+                }
+              ]
+            },
+            {
+              "op": "greater_than_or_equal",
+              "args": [
+                {
+                  "op": "field",
+                  "field": "net_balance"
+                },
+                {
+                  "op": "literal",
+                  "value": -1500
+                }
+              ]
+            },
+            {
+              "op": "greater_than_or_equal",
+              "args": [
+                {
+                  "op": "field",
+                  "field": "balance_per_kg"
+                },
+                {
+                  "op": "literal",
+                  "value": -20
+                }
+              ]
+            }
+          ]
+        },
+        "label": "Negative Balance",
+        "description": "Legacy mild-to-moderate negative balance.",
+        "severity": "warning",
+        "recommendations": [
+          "Review intake and losses and assess clinically for dehydration."
+        ],
+        "order": 3
+      },
+      {
+        "key": "critical_balanced",
+        "when": {
+          "op": "and",
+          "args": [
+            {
+              "op": "less_than_or_equal",
+              "args": [
+                {
+                  "op": "abs",
+                  "args": [
+                    {
+                      "op": "field",
+                      "field": "net_balance"
+                    }
+                  ]
+                },
+                {
+                  "op": "literal",
+                  "value": 500
+                }
+              ]
+            },
+            {
+              "op": "less_than_or_equal",
+              "args": [
+                {
+                  "op": "abs",
+                  "args": [
+                    {
+                      "op": "field",
+                      "field": "balance_per_kg"
+                    }
+                  ]
+                },
+                {
+                  "op": "literal",
+                  "value": 7
+                }
+              ]
+            },
+            {
+              "op": "less_than",
+              "args": [
+                {
+                  "op": "field",
+                  "field": "urine_per_kg_hour"
+                },
+                {
+                  "op": "literal",
+                  "value": 0.3
+                }
+              ]
+            }
+          ]
+        },
+        "label": "Critical",
+        "description": "Balance is within the legacy range but urine output is critically low.",
+        "severity": "critical",
+        "recommendations": [
+          "Seek immediate clinical assessment for critically low urine output."
+        ],
+        "order": 4
+      },
+      {
+        "key": "balanced",
+        "when": {
+          "op": "and",
+          "args": [
+            {
+              "op": "less_than_or_equal",
+              "args": [
+                {
+                  "op": "abs",
+                  "args": [
+                    {
+                      "op": "field",
+                      "field": "net_balance"
+                    }
+                  ]
+                },
+                {
+                  "op": "literal",
+                  "value": 500
+                }
+              ]
+            },
+            {
+              "op": "less_than_or_equal",
+              "args": [
+                {
+                  "op": "abs",
+                  "args": [
+                    {
+                      "op": "field",
+                      "field": "balance_per_kg"
+                    }
+                  ]
+                },
+                {
+                  "op": "literal",
+                  "value": 7
+                }
+              ]
+            },
+            {
+              "op": "greater_than_or_equal",
+              "args": [
+                {
+                  "op": "field",
+                  "field": "urine_per_kg_hour"
+                },
+                {
+                  "op": "literal",
+                  "value": 0.3
+                }
+              ]
+            }
+          ]
+        },
+        "label": "Balanced",
+        "description": "Recorded balance is within the legacy range.",
+        "severity": "normal",
+        "recommendations": [
+          "Continue monitoring according to the clinical plan."
+        ],
+        "order": 5
+      }
+    ],
+    "completion": {
+      "mode": "all_required",
+      "allow_resume": false,
+      "require_review": true,
+      "show_percentage": false,
+      "reset_confirmation": true
+    },
+    "test_cases": [
+      {
+        "key": "balanced",
+        "inputs": {
+          "weight": {
+            "value": 70,
+            "unit": "kg"
+          },
+          "age": 40,
+          "oral_fluids": 800,
+          "urine_output": 800
+        },
+        "expected": {
+          "total_intake": 1600,
+          "total_output": 1600,
+          "net_balance": 0,
+          "interpretations": [
+            "balanced"
+          ]
+        }
+      },
+      {
+        "key": "critical_retention",
+        "inputs": {
+          "weight": {
+            "value": 70,
+            "unit": "kg"
+          },
+          "age": 70,
+          "iv_fluids": 3000,
+          "urine_output": 0
+        },
+        "expected": {
+          "net_balance": 3000,
+          "interpretations": [
+            "significant_retention"
+          ],
+          "warnings": [
+            "critical_oliguria",
+            "significant_imbalance"
+          ]
+        }
+      },
+      {
+        "key": "significant_deficit",
+        "inputs": {
+          "weight": {
+            "value": 70,
+            "unit": "kg"
+          },
+          "age": 40,
+          "food_moisture": 0,
+          "insensible": 1600
+        },
+        "expected": {
+          "net_balance": -1600,
+          "interpretations": [
+            "significant_dehydration"
+          ],
+          "warnings": [
+            "critical_oliguria",
+            "significant_imbalance"
+          ]
+        }
+      }
+    ],
+    "minimum_app_version": null
+  }
+}

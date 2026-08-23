@@ -619,6 +619,8 @@ func (runtime *evaluator) expression(expression Expression, path string, depth i
 		result = membership(args[0], args[1:])
 	case "date_difference":
 		result, err = dateDifference(args[0], args[1], expression.DateUnit)
+	case "date_add":
+		result, err = dateAdd(args[0], args[1], expression.DateUnit)
 	case "convert_unit":
 		number, numberErr := numberValue(args[0])
 		if numberErr != nil {
@@ -876,6 +878,30 @@ func dateDifference(left, right any, unit string) (float64, error) {
 	default:
 		return 0, errors.New("unsupported date difference unit")
 	}
+}
+
+func dateAdd(dateValue, amountValue any, unit string) (string, error) {
+	date, err := parseDateValue(dateValue)
+	if err != nil {
+		return "", err
+	}
+	amount, err := numberValue(amountValue)
+	if err != nil || math.Trunc(amount) != amount {
+		return "", errors.New("date addition requires an integer amount")
+	}
+	switch unit {
+	case "days":
+		date = date.AddDate(0, 0, int(amount))
+	case "weeks":
+		date = date.AddDate(0, 0, int(amount)*7)
+	case "months":
+		date = date.AddDate(0, int(amount), 0)
+	case "years":
+		date = date.AddDate(int(amount), 0, 0)
+	default:
+		return "", errors.New("unsupported date addition unit")
+	}
+	return date.Format("2006-01-02"), nil
 }
 
 func parseDateValue(value any) (time.Time, error) {

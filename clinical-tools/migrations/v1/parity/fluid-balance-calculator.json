@@ -1,0 +1,23 @@
+{
+  "legacy_id": "fluid-balance-calculator",
+  "legacy_file": "fluid-balance-calculator.html",
+  "status": "changes_required",
+  "reviewer_id": null,
+  "reviewed_at": null,
+  "cases_tested": 5,
+  "exact_matches": 3,
+  "tolerance_matches": 0,
+  "presentation_differences": [
+    "The six optional four-hour urine interval boxes are not included because the legacy result ignores them; the 24-hour urine output remains typed."
+  ],
+  "logic_differences": [
+    "Age zero is rejected instead of passing HTML validation and then failing the legacy JavaScript truthiness check.",
+    "All numeric bounds and defaults are enforced by the runtime rather than only by browser controls."
+  ],
+  "unresolved_clinical_ambiguities": [
+    "Approve supported populations, intake/output defaults, balance thresholds, age-adjusted urine thresholds, and condition-specific recommendations.",
+    "Confirm whether interval urine entries should affect the calculation or be removed from the replacement UI.",
+    "Provide governing citations and effective/review dates."
+  ],
+  "reviewer_decision": "Pending independent clinician approval. Do not approve or publish this review draft."
+}

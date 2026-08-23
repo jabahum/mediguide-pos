@@ -11,6 +11,16 @@ void main() {
     'blood-pressure-assessment',
     'bmi-calculator',
     'glasgow-coma-scale',
+    'fluid-balance-calculator',
+    'pain-assessment-scale',
+    'pregnancy-due-date-calculator',
+    'dehydration-assessment',
+    'pediatric-fever-management',
+    'wound-assessment-tool',
+    'cardiac-risk-assessment',
+    'emergency-triage-assessment',
+    'immunization-schedule-checker',
+    'medication-dosage-calculator',
   ];
 
   for (final file in files) {
@@ -44,13 +54,14 @@ void main() {
     for (final caseValue in definitionJson['test_cases'] as List<dynamic>) {
       final fixture = Map<String, dynamic>.from(caseValue as Map);
       test('$file: ${fixture['key']}', () {
-        final result = const ClinicalToolEvaluator().evaluate(
+        final fixedNow = fixture['fixed_now'] == null
+            ? null
+            : DateTime.parse(fixture['fixed_now'].toString());
+        final result = ClinicalToolEvaluator(fixedNow: fixedNow).evaluate(
           definition,
           Map<String, Object?>.from(fixture['inputs'] as Map),
         );
-        final expected = Map<String, dynamic>.from(
-          fixture['expected'] as Map,
-        );
+        final expected = Map<String, dynamic>.from(fixture['expected'] as Map);
         final outputKeys = definition.outputs
             .map((output) => output.key)
             .toSet();
@@ -77,10 +88,7 @@ void main() {
         }
         final warningKeys = expected['warnings'] as List?;
         if (warningKeys != null) {
-          expect(
-            result.warnings.map((warning) => warning.key),
-            warningKeys,
-          );
+          expect(result.warnings.map((warning) => warning.key), warningKeys);
         }
       });
     }

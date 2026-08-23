@@ -1,0 +1,592 @@
+{
+  "legacy_id": "pregnancy-due-date-calculator",
+  "legacy_file": "pregnancy-due-date-calculator.html",
+  "source_checksum": "4298a2ee251e8d9f0a6ec74d748cb37c1c694dae78aedc67c1ecf490fa4d4e5a",
+  "change_summary": "Review draft: preserve the legacy LMP, conception, and ultrasound dating formulas using deterministic date_add/date_difference operations. Validation, cycle adjustment, milestones, and clinical wording require clinician approval.",
+  "definition": {
+    "schema_version": "1.0",
+    "tool_type": "calculator",
+    "title": "Pregnancy Due Date Calculator",
+    "description": "Estimates pregnancy dates from LMP, conception date, or ultrasound dating. Review draft only; not approved for clinical publication.",
+    "version": "1.0.0-review.1",
+    "locale": "en",
+    "supported_population": [
+      "Pregnant patients with an appropriate dating history or ultrasound assessment"
+    ],
+    "exclusions": [
+      "Do not use as a substitute for clinician-confirmed pregnancy dating."
+    ],
+    "warnings": [],
+    "citations": [],
+    "inputs": [
+      {
+        "key": "method",
+        "type": "single_selection",
+        "label": "Dating method",
+        "required": true,
+        "default": "lmp",
+        "options": [
+          {
+            "value": "lmp",
+            "label": "Last menstrual period"
+          },
+          {
+            "value": "conception",
+            "label": "Known conception date"
+          },
+          {
+            "value": "ultrasound",
+            "label": "Ultrasound dating"
+          }
+        ]
+      },
+      {
+        "key": "lmp_date",
+        "type": "date",
+        "label": "First day of last menstrual period",
+        "required": true,
+        "visible_when": {
+          "op": "equal",
+          "args": [
+            {
+              "op": "field",
+              "field": "method"
+            },
+            {
+              "op": "literal",
+              "value": "lmp"
+            }
+          ]
+        }
+      },
+      {
+        "key": "cycle_length",
+        "type": "integer",
+        "label": "Cycle length",
+        "required": false,
+        "minimum": 21,
+        "maximum": 35,
+        "default": 28
+      },
+      {
+        "key": "conception_date",
+        "type": "date",
+        "label": "Conception date",
+        "required": true,
+        "visible_when": {
+          "op": "equal",
+          "args": [
+            {
+              "op": "field",
+              "field": "method"
+            },
+            {
+              "op": "literal",
+              "value": "conception"
+            }
+          ]
+        }
+      },
+      {
+        "key": "ultrasound_date",
+        "type": "date",
+        "label": "Ultrasound date",
+        "required": true,
+        "visible_when": {
+          "op": "equal",
+          "args": [
+            {
+              "op": "field",
+              "field": "method"
+            },
+            {
+              "op": "literal",
+              "value": "ultrasound"
+            }
+          ]
+        }
+      },
+      {
+        "key": "ultrasound_weeks",
+        "type": "integer",
+        "label": "Gestational weeks at ultrasound",
+        "required": true,
+        "minimum": 0,
+        "maximum": 42,
+        "visible_when": {
+          "op": "equal",
+          "args": [
+            {
+              "op": "field",
+              "field": "method"
+            },
+            {
+              "op": "literal",
+              "value": "ultrasound"
+            }
+          ]
+        }
+      },
+      {
+        "key": "ultrasound_days",
+        "type": "integer",
+        "label": "Additional gestational days",
+        "required": false,
+        "minimum": 0,
+        "maximum": 6,
+        "default": 0,
+        "visible_when": {
+          "op": "equal",
+          "args": [
+            {
+              "op": "field",
+              "field": "method"
+            },
+            {
+              "op": "literal",
+              "value": "ultrasound"
+            }
+          ]
+        }
+      }
+    ],
+    "sections": [
+      {
+        "key": "dating",
+        "title": "Pregnancy dating",
+        "order": 0,
+        "review_before_completion": true
+      }
+    ],
+    "calculation": [
+      {
+        "key": "ultrasound_gestation_days",
+        "expression": {
+          "op": "if",
+          "args": [
+            {
+              "op": "equal",
+              "args": [
+                {
+                  "op": "field",
+                  "field": "method"
+                },
+                {
+                  "op": "literal",
+                  "value": "ultrasound"
+                }
+              ]
+            },
+            {
+              "op": "add",
+              "args": [
+                {
+                  "op": "multiply",
+                  "args": [
+                    {
+                      "op": "field",
+                      "field": "ultrasound_weeks"
+                    },
+                    {
+                      "op": "literal",
+                      "value": 7
+                    }
+                  ]
+                },
+                {
+                  "op": "field",
+                  "field": "ultrasound_days"
+                }
+              ]
+            },
+            {
+              "op": "literal",
+              "value": 0
+            }
+          ]
+        }
+      },
+      {
+        "key": "estimated_lmp",
+        "expression": {
+          "op": "if",
+          "args": [
+            {
+              "op": "equal",
+              "args": [
+                {
+                  "op": "field",
+                  "field": "method"
+                },
+                {
+                  "op": "literal",
+                  "value": "ultrasound"
+                }
+              ]
+            },
+            {
+              "op": "date_add",
+              "date_unit": "days",
+              "args": [
+                {
+                  "op": "field",
+                  "field": "ultrasound_date"
+                },
+                {
+                  "op": "subtract",
+                  "args": [
+                    {
+                      "op": "literal",
+                      "value": 0
+                    },
+                    {
+                      "op": "field",
+                      "field": "ultrasound_gestation_days"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "op": "field",
+              "field": "lmp_date"
+            }
+          ]
+        }
+      },
+      {
+        "key": "due_date",
+        "expression": {
+          "op": "if",
+          "args": [
+            {
+              "op": "equal",
+              "args": [
+                {
+                  "op": "field",
+                  "field": "method"
+                },
+                {
+                  "op": "literal",
+                  "value": "conception"
+                }
+              ]
+            },
+            {
+              "op": "date_add",
+              "date_unit": "days",
+              "args": [
+                {
+                  "op": "field",
+                  "field": "conception_date"
+                },
+                {
+                  "op": "literal",
+                  "value": 266
+                }
+              ]
+            },
+            {
+              "op": "date_add",
+              "date_unit": "days",
+              "args": [
+                {
+                  "op": "field",
+                  "field": "estimated_lmp"
+                },
+                {
+                  "op": "literal",
+                  "value": 280
+                }
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "key": "gestational_days",
+        "expression": {
+          "op": "if",
+          "args": [
+            {
+              "op": "equal",
+              "args": [
+                {
+                  "op": "field",
+                  "field": "method"
+                },
+                {
+                  "op": "literal",
+                  "value": "conception"
+                }
+              ]
+            },
+            {
+              "op": "add",
+              "args": [
+                {
+                  "op": "date_difference",
+                  "date_unit": "days",
+                  "args": [
+                    {
+                      "op": "field",
+                      "field": "conception_date"
+                    },
+                    {
+                      "op": "now"
+                    }
+                  ]
+                },
+                {
+                  "op": "literal",
+                  "value": 14
+                }
+              ]
+            },
+            {
+              "op": "date_difference",
+              "date_unit": "days",
+              "args": [
+                {
+                  "op": "field",
+                  "field": "estimated_lmp"
+                },
+                {
+                  "op": "now"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "key": "gestational_weeks",
+        "expression": {
+          "op": "divide",
+          "args": [
+            {
+              "op": "field",
+              "field": "gestational_days"
+            },
+            {
+              "op": "literal",
+              "value": 7
+            }
+          ]
+        },
+        "precision": 1,
+        "rounding_mode": "floor"
+      },
+      {
+        "key": "days_remaining",
+        "expression": {
+          "op": "date_difference",
+          "date_unit": "days",
+          "args": [
+            {
+              "op": "now"
+            },
+            {
+              "op": "field",
+              "field": "due_date"
+            }
+          ]
+        },
+        "precision": 0,
+        "rounding_mode": "half_up"
+      }
+    ],
+    "rules": [],
+    "outputs": [
+      {
+        "key": "due_date",
+        "label": "Estimated due date",
+        "value": {
+          "op": "field",
+          "field": "due_date"
+        }
+      },
+      {
+        "key": "gestational_days",
+        "label": "Current gestational age in days",
+        "value": {
+          "op": "field",
+          "field": "gestational_days"
+        },
+        "unit": "days",
+        "precision": 0,
+        "rounding_mode": "floor"
+      },
+      {
+        "key": "gestational_weeks",
+        "label": "Current gestational age in weeks",
+        "value": {
+          "op": "field",
+          "field": "gestational_weeks"
+        },
+        "unit": "weeks",
+        "precision": 1,
+        "rounding_mode": "floor"
+      },
+      {
+        "key": "days_remaining",
+        "label": "Days remaining",
+        "value": {
+          "op": "field",
+          "field": "days_remaining"
+        },
+        "unit": "days",
+        "precision": 0,
+        "rounding_mode": "half_up"
+      }
+    ],
+    "interpretations": [
+      {
+        "key": "first_trimester",
+        "when": {
+          "op": "less_than",
+          "args": [
+            {
+              "op": "field",
+              "field": "gestational_weeks"
+            },
+            {
+              "op": "literal",
+              "value": 13
+            }
+          ]
+        },
+        "label": "First trimester",
+        "description": "Estimated gestational age is below 13 weeks.",
+        "severity": "info",
+        "recommendations": [
+          "Confirm dating and antenatal care milestones with a clinician."
+        ],
+        "order": 0
+      },
+      {
+        "key": "second_trimester",
+        "when": {
+          "op": "and",
+          "args": [
+            {
+              "op": "greater_than_or_equal",
+              "args": [
+                {
+                  "op": "field",
+                  "field": "gestational_weeks"
+                },
+                {
+                  "op": "literal",
+                  "value": 13
+                }
+              ]
+            },
+            {
+              "op": "less_than",
+              "args": [
+                {
+                  "op": "field",
+                  "field": "gestational_weeks"
+                },
+                {
+                  "op": "literal",
+                  "value": 27
+                }
+              ]
+            }
+          ]
+        },
+        "label": "Second trimester",
+        "description": "Estimated gestational age is from 13 to below 27 weeks.",
+        "severity": "info",
+        "recommendations": [
+          "Continue antenatal care according to the approved schedule."
+        ],
+        "order": 1
+      },
+      {
+        "key": "third_trimester",
+        "when": {
+          "op": "greater_than_or_equal",
+          "args": [
+            {
+              "op": "field",
+              "field": "gestational_weeks"
+            },
+            {
+              "op": "literal",
+              "value": 27
+            }
+          ]
+        },
+        "label": "Third trimester",
+        "description": "Estimated gestational age is 27 weeks or more.",
+        "severity": "info",
+        "recommendations": [
+          "Confirm birth planning and follow-up with a clinician."
+        ],
+        "order": 2
+      }
+    ],
+    "completion": {
+      "mode": "all_required",
+      "allow_resume": false,
+      "require_review": true,
+      "show_percentage": false,
+      "reset_confirmation": true
+    },
+    "test_cases": [
+      {
+        "key": "lmp_fixed_clock",
+        "fixed_now": "2026-01-15T12:00:00Z",
+        "inputs": {
+          "method": "lmp",
+          "lmp_date": "2025-12-01",
+          "cycle_length": 28
+        },
+        "expected": {
+          "due_date": "2026-09-07",
+          "gestational_days": 45,
+          "days_remaining": 235,
+          "interpretations": [
+            "first_trimester"
+          ]
+        }
+      },
+      {
+        "key": "conception_fixed_clock",
+        "fixed_now": "2026-01-15T12:00:00Z",
+        "inputs": {
+          "method": "conception",
+          "conception_date": "2025-12-15"
+        },
+        "expected": {
+          "due_date": "2026-09-07",
+          "gestational_days": 45,
+          "interpretations": [
+            "first_trimester"
+          ]
+        }
+      },
+      {
+        "key": "ultrasound_fixed_clock",
+        "fixed_now": "2026-01-15T12:00:00Z",
+        "inputs": {
+          "method": "ultrasound",
+          "ultrasound_date": "2026-01-01",
+          "ultrasound_weeks": 8,
+          "ultrasound_days": 0
+        },
+        "expected": {
+          "due_date": "2026-08-13",
+          "gestational_days": 70,
+          "interpretations": [
+            "first_trimester"
+          ]
+        }
+      }
+    ],
+    "minimum_app_version": null
+  }
+}

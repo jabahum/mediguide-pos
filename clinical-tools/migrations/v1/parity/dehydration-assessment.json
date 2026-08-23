@@ -1,0 +1,21 @@
+{
+  "legacy_id": "dehydration-assessment",
+  "legacy_file": "dehydration-assessment.html",
+  "status": "changes_required",
+  "reviewer_id": null,
+  "reviewed_at": null,
+  "cases_tested": 5,
+  "exact_matches": 3,
+  "tolerance_matches": 0,
+  "presentation_differences": [
+    "Additional symptoms are currently represented as an explicit count; the native UI must retain the named symptom checklist."
+  ],
+  "logic_differences": [
+    "All six signs and measured weight are required; the legacy page treated unanswered signs as zero and silently substituted 10 kg."
+  ],
+  "unresolved_clinical_ambiguities": [
+    "Approve sign mappings, mandatory completeness, age applicability, symptom modifier, thresholds, fluid-loss labels, and treatment calculations.",
+    "Approve whether fluid amounts may be displayed before clinician review and provide governing citations/effective dates."
+  ],
+  "reviewer_decision": "Pending independent clinician approval. Do not approve or publish this review draft."
+}

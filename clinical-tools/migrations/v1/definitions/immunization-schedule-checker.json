@@ -1,0 +1,577 @@
+{
+  "legacy_id": "immunization-schedule-checker",
+  "legacy_file": "immunization-schedule-checker.html",
+  "source_checksum": "6a5bf25184ccc0c9df9b666d1a50346851ff36d755cff146180536a7dac54030",
+  "change_summary": "Clinician review draft: deterministically reproduce legacy age derivation and candidate-row count while blocking dose-status and catch-up recommendations until a jurisdiction-owned versioned schedule model is approved.",
+  "definition": {
+    "schema_version": "1.0",
+    "tool_type": "decision_tool",
+    "title": "Immunization Schedule Intake (Clinical Review Required)",
+    "description": "Captures the patient and jurisdiction inputs used by the legacy page and exposes its candidate-row count for parity review. It intentionally does not issue vaccine-due or catch-up advice.",
+    "version": "1.0.0-review.1",
+    "locale": "en",
+    "supported_population": [],
+    "exclusions": [
+      "Do not use this draft to decide whether a vaccine is due, overdue, indicated, or contraindicated."
+    ],
+    "warnings": [
+      {
+        "key": "schedule_blocked",
+        "text": "No jurisdiction-specific vaccine schedule is approved in this definition. Verify immunization status with the current authorized schedule and a qualified clinician.",
+        "severity": "critical"
+      },
+      {
+        "key": "pregnancy_review",
+        "text": "Pregnancy requires individualized review against the current authorized immunization schedule; this draft does not issue vaccine advice.",
+        "severity": "warning",
+        "when": {
+          "op": "field",
+          "field": "pregnancy"
+        }
+      },
+      {
+        "key": "immunocompromised_review",
+        "text": "Immunocompromised status requires specialist review against the current authorized schedule; this draft does not issue vaccine advice.",
+        "severity": "warning",
+        "when": {
+          "op": "or",
+          "args": [
+            {
+              "op": "equal",
+              "args": [
+                {
+                  "op": "field",
+                  "field": "risk_category"
+                },
+                {
+                  "op": "literal",
+                  "value": "immunocompromised"
+                }
+              ]
+            },
+            {
+              "op": "field",
+              "field": "hiv_or_immunocompromised"
+            },
+            {
+              "op": "field",
+              "field": "cancer"
+            }
+          ]
+        }
+      }
+    ],
+    "citations": [],
+    "inputs": [
+      {
+        "key": "birth_date",
+        "type": "date",
+        "label": "Date of birth",
+        "required": true
+      },
+      {
+        "key": "sex",
+        "type": "single_selection",
+        "label": "Sex recorded by legacy form",
+        "required": true,
+        "default": "other",
+        "options": [
+          {
+            "value": "male",
+            "label": "Male"
+          },
+          {
+            "value": "female",
+            "label": "Female"
+          },
+          {
+            "value": "other",
+            "label": "Other or unknown"
+          }
+        ]
+      },
+      {
+        "key": "jurisdiction",
+        "type": "single_selection",
+        "label": "Schedule jurisdiction",
+        "required": true,
+        "options": [
+          {
+            "value": "usa",
+            "label": "United States"
+          },
+          {
+            "value": "who",
+            "label": "WHO global"
+          },
+          {
+            "value": "canada",
+            "label": "Canada"
+          },
+          {
+            "value": "uk",
+            "label": "United Kingdom"
+          },
+          {
+            "value": "australia",
+            "label": "Australia"
+          }
+        ]
+      },
+      {
+        "key": "risk_category",
+        "type": "single_selection",
+        "label": "Risk category",
+        "required": true,
+        "default": "standard",
+        "options": [
+          {
+            "value": "standard",
+            "label": "Standard risk"
+          },
+          {
+            "value": "immunocompromised",
+            "label": "Immunocompromised"
+          },
+          {
+            "value": "chronic_conditions",
+            "label": "Chronic conditions"
+          },
+          {
+            "value": "healthcare_worker",
+            "label": "Healthcare worker"
+          },
+          {
+            "value": "travel",
+            "label": "International travel"
+          }
+        ]
+      },
+      {
+        "key": "has_pneumococcal_risk_condition",
+        "type": "boolean",
+        "label": "Asthma, diabetes, or heart disease recorded",
+        "required": false,
+        "default": false
+      },
+      {
+        "key": "pregnancy",
+        "type": "boolean",
+        "label": "Pregnancy recorded",
+        "required": false,
+        "default": false
+      },
+      {
+        "key": "hiv_or_immunocompromised",
+        "type": "boolean",
+        "label": "HIV or immunocompromised status recorded",
+        "required": false,
+        "default": false
+      },
+      {
+        "key": "cancer",
+        "type": "boolean",
+        "label": "Cancer recorded",
+        "required": false,
+        "default": false
+      }
+    ],
+    "sections": [
+      {
+        "key": "patient",
+        "title": "Patient and jurisdiction",
+        "order": 0,
+        "review_before_completion": true
+      },
+      {
+        "key": "risk",
+        "title": "Risk review",
+        "order": 1,
+        "review_before_completion": true
+      }
+    ],
+    "calculation": [
+      {
+        "key": "age_days",
+        "expression": {
+          "op": "round",
+          "precision": 0,
+          "rounding_mode": "floor",
+          "args": [
+            {
+              "op": "date_difference",
+              "date_unit": "days",
+              "args": [
+                {
+                  "op": "field",
+                  "field": "birth_date"
+                },
+                {
+                  "op": "now"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "key": "age_months",
+        "expression": {
+          "op": "round",
+          "precision": 0,
+          "rounding_mode": "floor",
+          "args": [
+            {
+              "op": "divide",
+              "args": [
+                {
+                  "op": "field",
+                  "field": "age_days"
+                },
+                {
+                  "op": "literal",
+                  "value": 30.44
+                }
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "key": "age_years",
+        "expression": {
+          "op": "round",
+          "precision": 0,
+          "rounding_mode": "floor",
+          "args": [
+            {
+              "op": "divide",
+              "args": [
+                {
+                  "op": "field",
+                  "field": "age_days"
+                },
+                {
+                  "op": "literal",
+                  "value": 365.25
+                }
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "key": "legacy_candidate_rows",
+        "expression": {
+          "op": "add",
+          "args": [
+            {
+              "op": "literal",
+              "value": 6
+            },
+            {
+              "op": "if",
+              "args": [
+                {
+                  "op": "or",
+                  "args": [
+                    {
+                      "op": "greater_than_or_equal",
+                      "args": [
+                        {
+                          "op": "field",
+                          "field": "age_years"
+                        },
+                        {
+                          "op": "literal",
+                          "value": 1
+                        }
+                      ]
+                    },
+                    {
+                      "op": "greater_than_or_equal",
+                      "args": [
+                        {
+                          "op": "field",
+                          "field": "age_months"
+                        },
+                        {
+                          "op": "literal",
+                          "value": 12
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "op": "literal",
+                  "value": 3
+                },
+                {
+                  "op": "literal",
+                  "value": 0
+                }
+              ]
+            },
+            {
+              "op": "if",
+              "args": [
+                {
+                  "op": "greater_than_or_equal",
+                  "args": [
+                    {
+                      "op": "field",
+                      "field": "age_years"
+                    },
+                    {
+                      "op": "literal",
+                      "value": 11
+                    }
+                  ]
+                },
+                {
+                  "op": "literal",
+                  "value": 3
+                },
+                {
+                  "op": "literal",
+                  "value": 0
+                }
+              ]
+            },
+            {
+              "op": "if",
+              "args": [
+                {
+                  "op": "greater_than_or_equal",
+                  "args": [
+                    {
+                      "op": "field",
+                      "field": "age_years"
+                    },
+                    {
+                      "op": "literal",
+                      "value": 18
+                    }
+                  ]
+                },
+                {
+                  "op": "literal",
+                  "value": 3
+                },
+                {
+                  "op": "literal",
+                  "value": 0
+                }
+              ]
+            },
+            {
+              "op": "if",
+              "args": [
+                {
+                  "op": "greater_than_or_equal",
+                  "args": [
+                    {
+                      "op": "field",
+                      "field": "age_years"
+                    },
+                    {
+                      "op": "literal",
+                      "value": 50
+                    }
+                  ]
+                },
+                {
+                  "op": "literal",
+                  "value": 1
+                },
+                {
+                  "op": "literal",
+                  "value": 0
+                }
+              ]
+            },
+            {
+              "op": "if",
+              "args": [
+                {
+                  "op": "greater_than_or_equal",
+                  "args": [
+                    {
+                      "op": "field",
+                      "field": "age_years"
+                    },
+                    {
+                      "op": "literal",
+                      "value": 65
+                    }
+                  ]
+                },
+                {
+                  "op": "literal",
+                  "value": 1
+                },
+                {
+                  "op": "literal",
+                  "value": 0
+                }
+              ]
+            },
+            {
+              "op": "if",
+              "args": [
+                {
+                  "op": "equal",
+                  "args": [
+                    {
+                      "op": "field",
+                      "field": "risk_category"
+                    },
+                    {
+                      "op": "literal",
+                      "value": "healthcare_worker"
+                    }
+                  ]
+                },
+                {
+                  "op": "literal",
+                  "value": 1
+                },
+                {
+                  "op": "literal",
+                  "value": 0
+                }
+              ]
+            },
+            {
+              "op": "if",
+              "args": [
+                {
+                  "op": "field",
+                  "field": "has_pneumococcal_risk_condition"
+                },
+                {
+                  "op": "literal",
+                  "value": 1
+                },
+                {
+                  "op": "literal",
+                  "value": 0
+                }
+              ]
+            }
+          ]
+        }
+      }
+    ],
+    "rules": [],
+    "outputs": [
+      {
+        "key": "age_days",
+        "label": "Age in elapsed days",
+        "value": {
+          "op": "field",
+          "field": "age_days"
+        },
+        "unit": "days"
+      },
+      {
+        "key": "age_months",
+        "label": "Legacy age in months",
+        "value": {
+          "op": "field",
+          "field": "age_months"
+        },
+        "unit": "months"
+      },
+      {
+        "key": "age_years",
+        "label": "Legacy age in years",
+        "value": {
+          "op": "field",
+          "field": "age_years"
+        },
+        "unit": "years"
+      },
+      {
+        "key": "legacy_candidate_rows",
+        "label": "Legacy candidate rows for parity review",
+        "value": {
+          "op": "field",
+          "field": "legacy_candidate_rows"
+        }
+      }
+    ],
+    "interpretations": [
+      {
+        "key": "schedule_not_approved",
+        "when": {
+          "op": "literal",
+          "value": true
+        },
+        "label": "Clinical schedule required",
+        "description": "A versioned, effective-dated, jurisdiction-owned schedule has not yet been supplied. No due, overdue, future, catch-up, or contraindication result is produced.",
+        "severity": "critical",
+        "recommendations": [
+          "Use the current authorized schedule and document the schedule version used.",
+          "Obtain clinician review for risk conditions, pregnancy, immunocompromise, prior doses, contraindications, and catch-up planning."
+        ],
+        "order": 0
+      }
+    ],
+    "completion": {
+      "mode": "all_required",
+      "allow_resume": false,
+      "require_review": true,
+      "show_percentage": false,
+      "reset_confirmation": true
+    },
+    "test_cases": [
+      {
+        "key": "fixed_clock_child",
+        "fixed_now": "2026-01-15T12:00:00Z",
+        "inputs": {
+          "birth_date": "2025-01-15",
+          "jurisdiction": "who",
+          "sex": "female",
+          "risk_category": "standard"
+        },
+        "expected": {
+          "age_days": 365,
+          "age_months": 11,
+          "age_years": 0,
+          "legacy_candidate_rows": 6,
+          "interpretations": [
+            "schedule_not_approved"
+          ],
+          "warnings": [
+            "schedule_blocked"
+          ]
+        }
+      },
+      {
+        "key": "fixed_clock_risk",
+        "fixed_now": "2026-01-15T12:00:00Z",
+        "inputs": {
+          "birth_date": "1950-01-15",
+          "jurisdiction": "usa",
+          "risk_category": "immunocompromised",
+          "has_pneumococcal_risk_condition": true,
+          "hiv_or_immunocompromised": true
+        },
+        "expected": {
+          "age_years": 76,
+          "legacy_candidate_rows": 18,
+          "interpretations": [
+            "schedule_not_approved"
+          ],
+          "warnings": [
+            "schedule_blocked",
+            "immunocompromised_review"
+          ]
+        }
+      }
+    ],
+    "minimum_app_version": null
+  }
+}

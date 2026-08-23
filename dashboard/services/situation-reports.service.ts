@@ -1,4 +1,4 @@
-"use client"
+"use client";
 
 // Kept as a dedicated import boundary so situation-report consumers do not
 // depend on the outbreak editor's service surface.
@@ -8,4 +8,4 @@ export {
   type SituationReportRecord,
   type OutbreakAuditRecord,
   type OutbreakListQuery as SituationReportListQuery,
-} from "./outbreaks.service"
+} from "./outbreaks.service";

@@ -58,10 +58,22 @@ final class ClinicalToolEvaluator {
     final values = <String, Object?>{...input};
     final normalizedInputs = <String, Object?>{};
     for (final field in definition.inputs) {
-      if (field.required && !values.containsKey(field.key)) {
+      if ((!values.containsKey(field.key) || values[field.key] == null) &&
+          field.defaultValue != null) {
+        values[field.key] = field.defaultValue;
+      }
+    }
+    for (final field in definition.inputs) {
+      final visible =
+          field.visibleWhen == null ||
+          _truth(_expression(field.visibleWhen!, values));
+      if (visible &&
+          field.required &&
+          (!values.containsKey(field.key) || values[field.key] == null)) {
         throw FormatException('${field.label} is required');
       }
       final value = values[field.key];
+      if (value == null) continue;
       if (value is Map && value['value'] is num) {
         final unit = value['unit']?.toString() ?? field.defaultUnit;
         values[field.key] = _convert(
@@ -84,11 +96,19 @@ final class ClinicalToolEvaluator {
       }
     }
     for (final item in definition.calculations) {
-      values[item.key] = _expression(item.expression, values);
+      values[item.key] = _applyPrecision(
+        _expression(item.expression, values),
+        item.precision,
+        item.roundingMode,
+      );
     }
     final outputs = <String, Object?>{};
     for (final item in definition.outputs) {
-      outputs[item.key] = _expression(item.value, values);
+      outputs[item.key] = _applyPrecision(
+        _expression(item.value, values),
+        item.precision,
+        item.roundingMode,
+      );
     }
     final context = <String, Object?>{...values, ...outputs};
     final interpretationByKey = {
@@ -285,23 +305,49 @@ final class ClinicalToolEvaluator {
         return value.skip(1).contains(value.first);
       case 'round':
         final value = _number(_expression(expression.args.first, values));
-        final scale = math.pow(10, expression.precision ?? 0);
-        return (value * scale).round() / scale;
+        return _applyPrecision(
+          value,
+          expression.precision ?? 0,
+          expression.roundingMode,
+        );
       case 'now':
         return (fixedNow ?? DateTime.now()).toUtc().toIso8601String();
       case 'date_difference':
         final value = args();
-        final from = DateTime.parse(value[0].toString()).toUtc();
-        final to = DateTime.parse(value[1].toString()).toUtc();
+        final from = _parseDate(value[0]);
+        final to = _parseDate(value[1]);
         final difference = to.difference(from);
         return switch (expression.dateUnit) {
           'minutes' => difference.inMinutes,
           'hours' => difference.inHours,
-          'weeks' => difference.inDays / 7,
-          'months' => difference.inDays / 30.436875,
-          'years' => difference.inDays / 365.2425,
-          _ => difference.inDays,
+          'weeks' => difference.inMilliseconds / 86400000 / 7,
+          'months' => _calendarMonths(from, to),
+          'years' => _calendarYears(from, to),
+          _ => difference.inMilliseconds / 86400000,
         };
+      case 'date_add':
+        final value = args();
+        final source = _parseDate(value[0]);
+        final amount = _number(value[1]);
+        if (amount.truncateToDouble() != amount) {
+          throw const FormatException('date_add requires an integer amount');
+        }
+        final result = switch (expression.dateUnit) {
+          'days' => source.add(Duration(days: amount.toInt())),
+          'weeks' => source.add(Duration(days: amount.toInt() * 7)),
+          'months' => DateTime.utc(
+            source.year,
+            source.month + amount.toInt(),
+            source.day,
+          ),
+          'years' => DateTime.utc(
+            source.year + amount.toInt(),
+            source.month,
+            source.day,
+          ),
+          _ => throw const FormatException('Unsupported date_add unit'),
+        };
+        return '${result.year.toString().padLeft(4, '0')}-${result.month.toString().padLeft(2, '0')}-${result.day.toString().padLeft(2, '0')}';
       case 'convert_unit':
         return _convert(
           _number(_expression(expression.args.first, values)),
@@ -318,6 +364,49 @@ final class ClinicalToolEvaluator {
   double _number(Object? value) {
     if (value is num) return value.toDouble();
     throw const FormatException('Expected a numeric value');
+  }
+
+  DateTime _parseDate(Object? value) {
+    final text = value.toString();
+    return DateTime.parse(
+      text.length == 10 ? '${text}T00:00:00Z' : text,
+    ).toUtc();
+  }
+
+  int _calendarMonths(DateTime from, DateTime to) {
+    var months = (to.year - from.year) * 12 + to.month - from.month;
+    if (to.day < from.day) months--;
+    return months;
+  }
+
+  int _calendarYears(DateTime from, DateTime to) {
+    var years = to.year - from.year;
+    if (to.month < from.month ||
+        (to.month == from.month && to.day < from.day)) {
+      years--;
+    }
+    return years;
+  }
+
+  Object? _applyPrecision(Object? value, int? precision, String? mode) {
+    if (precision == null || value is! num || !value.isFinite) return value;
+    final scale = math.pow(10, precision).toDouble();
+    final scaled = value.toDouble() * scale;
+    final rounded = switch (mode) {
+      'floor' => scaled.floorToDouble(),
+      'ceil' => scaled.ceilToDouble(),
+      'truncate' => scaled.truncateToDouble(),
+      'half_even' => _roundHalfEven(scaled),
+      _ => scaled.sign * (scaled.abs() + 0.5).floorToDouble(),
+    };
+    return rounded / scale;
+  }
+
+  double _roundHalfEven(double value) {
+    final lower = value.floorToDouble();
+    final fraction = value - lower;
+    if (fraction == 0.5) return lower.toInt().isEven ? lower : lower + 1;
+    return value.roundToDouble();
   }
 
   bool _truth(Object? value) => value == true;

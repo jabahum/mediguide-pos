@@ -198,10 +198,28 @@ files use `reviewer_id: null` and `reviewed_at: null`; an approved report must
 contain the real reviewer UUID and RFC 3339 review timestamp and must have no
 unresolved clinical ambiguities. Never insert placeholder identities or dates.
 
-Wave 1 currently contains review drafts for BMI, APGAR, blood-pressure
-assessment and GCS. Their parity reports remain `changes_required`; therefore
-none of these files is evidence of approval and none is eligible for legacy
-retirement yet.
+All four engineering waves now contain review drafts for all 14 catalogued
+legacy tools. Every matching parity report remains `changes_required`, with a
+null reviewer identity and timestamp; therefore none of these files is evidence
+of approval and none is eligible for legacy retirement yet.
+
+Wave 4 has additional safety constraints:
+
+- the cardiac draft calls its results legacy points/coefficient estimates and
+  does not claim to implement Framingham or ASCVD;
+- the medication draft labels every preset and cap as unapproved and requires
+  pharmacist as well as clinician review;
+- the triage draft is not represented as a validated Manchester Triage System
+  implementation and must never delay emergency care; and
+- the immunization draft only exposes deterministic age and legacy row-count
+  parity. It intentionally produces no due/overdue, catch-up, indication, or
+  contraindication advice until an immunization-program owner supplies a
+  versioned, effective-dated jurisdiction schedule.
+
+Cross-runtime migration tests execute every embedded case in Go, TypeScript,
+and Dart. Date-only values are interpreted at UTC midnight, calendar
+month/year differences match the Go reference evaluator, and calculation plus
+output precision/rounding modes are applied consistently.
 
 Use `--require-all` with `go run ./cmd/clinicaltool-migrate` when the release is
 intended to contain all 14 conversions. It exits non-zero for every missing

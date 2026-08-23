@@ -73,11 +73,13 @@ abstract class ClinicalToolInput with _$ClinicalToolInput {
     double? minimum,
     double? maximum,
     double? step,
+    @JsonKey(name: 'default') Object? defaultValue,
     @JsonKey(name: 'allowed_units') @Default([]) List<String> allowedUnits,
     @JsonKey(name: 'default_unit') @Default('') String defaultUnit,
     @Default([]) List<ClinicalToolOption> options,
     @JsonKey(name: 'help_text') @Default('') String helpText,
     @JsonKey(name: 'clinical_warning') @Default('') String clinicalWarning,
+    @JsonKey(name: 'visible_when') ClinicalToolExpression? visibleWhen,
     @JsonKey(name: 'section_key') @Default('') String sectionKey,
     @JsonKey(name: 'checklist_kind') @Default('') String checklistKind,
     @Default(false) bool critical,
@@ -117,6 +119,7 @@ abstract class ClinicalToolCalculation with _$ClinicalToolCalculation {
     required String key,
     required ClinicalToolExpression expression,
     int? precision,
+    @JsonKey(name: 'rounding_mode') String? roundingMode,
     @Default('') String unit,
   }) = _ClinicalToolCalculation;
   factory ClinicalToolCalculation.fromJson(Map<String, dynamic> json) =>
@@ -156,6 +159,7 @@ abstract class ClinicalToolOutput with _$ClinicalToolOutput {
     required ClinicalToolExpression value,
     @Default('') String unit,
     int? precision,
+    @JsonKey(name: 'rounding_mode') String? roundingMode,
     @JsonKey(name: 'accessibility_label')
     @Default('')
     String accessibilityLabel,

@@ -24,14 +24,14 @@ export type ClinicalToolDefinition = Omit<ClinicaltoolsDefinition, "schema_versi
   clinical_reviewer?: string
   warnings?: Array<{ key: string; text: string; severity: string; when?: ClinicalToolExpression }>
   citations?: Array<{ key: string; title: string; organization?: string; url?: string }>
-  inputs: Array<{ key: string; type: string; label: string; required: boolean; minimum?: number; maximum?: number; default_unit?: string; allowed_units?: string[]; options?: Array<{ value: unknown; label: string }>; critical?: boolean }>
+  inputs: Array<{ key: string; type: string; label: string; required: boolean; minimum?: number; maximum?: number; default?: unknown; default_unit?: string; allowed_units?: string[]; options?: Array<{ value: unknown; label: string }>; visible_when?: ClinicalToolExpression; critical?: boolean }>
   sections: Array<{ key: string; title: string; order: number }>
-  calculation: Array<{ key: string; expression: ClinicalToolExpression; precision?: number; unit?: string }>
+  calculation: Array<{ key: string; expression: ClinicalToolExpression; precision?: number; rounding_mode?: string; unit?: string }>
   rules: Array<{ key: string; when: ClinicalToolExpression; actions: Array<{ type: string; target?: string; value?: ClinicalToolExpression; message_key?: string }>; order: number; stop?: boolean }>
-  outputs: Array<{ key: string; label: string; value: ClinicalToolExpression; unit?: string; precision?: number }>
+  outputs: Array<{ key: string; label: string; value: ClinicalToolExpression; unit?: string; precision?: number; rounding_mode?: string }>
   interpretations: Array<{ key: string; when: ClinicalToolExpression; label: string; description?: string; severity: string; recommendations: string[]; order: number }>
   completion: { mode: string; allow_resume?: boolean; require_review?: boolean; show_percentage?: boolean; reset_confirmation: boolean }
-  test_cases: Array<{ key: string; inputs: Record<string, unknown>; expected: Record<string, unknown>; numeric_tolerance?: number }>
+  test_cases: Array<{ key: string; inputs: Record<string, unknown>; expected: Record<string, unknown>; fixed_now?: string; numeric_tolerance?: number }>
   minimum_app_version?: string
 }
 

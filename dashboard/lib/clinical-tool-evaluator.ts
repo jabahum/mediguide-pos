@@ -12,6 +12,26 @@ function convertUnit(value: number, from = "", to = ""): number {
   return value * unitFactors[from] / unitFactors[to]
 }
 
+function applyPrecision(value: unknown, precision?: number, mode = "half_up"): unknown {
+  if (precision === undefined || typeof value !== "number" || !Number.isFinite(value)) return value
+  const scale = 10 ** precision
+  const scaled = value * scale
+  let rounded: number
+  switch (mode) {
+    case "floor": rounded = Math.floor(scaled); break
+    case "ceil": rounded = Math.ceil(scaled); break
+    case "truncate": rounded = Math.trunc(scaled); break
+    case "half_even": {
+      const lower = Math.floor(scaled)
+      const fraction = scaled - lower
+      rounded = fraction === 0.5 ? (lower % 2 === 0 ? lower : lower + 1) : Math.round(scaled)
+      break
+    }
+    default: rounded = Math.sign(scaled) * Math.floor(Math.abs(scaled) + 0.5)
+  }
+  return rounded / scale
+}
+
 function evaluate(expression: ClinicalToolExpression, values: Record<string, unknown>, now: string): unknown {
   const args = () => (expression.args ?? []).map((item) => evaluate(item, values, now))
   switch (expression.op) {
@@ -36,12 +56,39 @@ function evaluate(expression: ClinicalToolExpression, values: Record<string, unk
     case "not": return !Boolean(evaluate((expression.args ?? [])[0], values, now))
     case "if": return Boolean(evaluate((expression.args ?? [])[0], values, now)) ? evaluate((expression.args ?? [])[1], values, now) : evaluate((expression.args ?? [])[2], values, now)
     case "in": { const [needle, ...haystack] = args(); return haystack.some((item) => Object.is(item, needle)) }
-    case "round": { const [value] = args(); const places = expression.precision ?? 0; const scale = 10 ** places; return Math.round(Number(value) * scale) / scale }
+    case "round": { const [value] = args(); return applyPrecision(Number(value), expression.precision ?? 0, expression.rounding_mode) }
     case "now": return now
     case "date_difference": {
       const [fromValue, toValue] = args(); const milliseconds = Date.parse(String(toValue)) - Date.parse(String(fromValue)); const days = milliseconds / 86_400_000
       if (!Number.isFinite(days)) throw new Error("Invalid date_difference operands")
-      switch (expression.date_unit) { case "minutes": return days * 1440; case "hours": return days * 24; case "weeks": return days / 7; case "months": return days / 30.436875; case "years": return days / 365.2425; default: return days }
+      if (expression.date_unit === "months" || expression.date_unit === "years") {
+        const from = new Date(String(fromValue)); const to = new Date(String(toValue))
+        if (expression.date_unit === "months") {
+          let months = (to.getUTCFullYear() - from.getUTCFullYear()) * 12 + to.getUTCMonth() - from.getUTCMonth()
+          if (to.getUTCDate() < from.getUTCDate()) months--
+          return months
+        }
+        let years = to.getUTCFullYear() - from.getUTCFullYear()
+        if (to.getUTCMonth() < from.getUTCMonth() || (to.getUTCMonth() === from.getUTCMonth() && to.getUTCDate() < from.getUTCDate())) years--
+        return years
+      }
+      switch (expression.date_unit) { case "minutes": return days * 1440; case "hours": return days * 24; case "weeks": return days / 7; default: return days }
+    }
+    case "date_add": {
+      const [dateValue, amountValue] = args()
+      const source = String(dateValue)
+      const amount = Number(amountValue)
+      if (!Number.isInteger(amount)) throw new Error("date_add requires an integer amount")
+      const date = new Date(source.length === 10 ? `${source}T00:00:00Z` : source)
+      if (!Number.isFinite(date.getTime())) throw new Error("Invalid date_add date")
+      switch (expression.date_unit) {
+        case "days": date.setUTCDate(date.getUTCDate() + amount); break
+        case "weeks": date.setUTCDate(date.getUTCDate() + amount * 7); break
+        case "months": date.setUTCMonth(date.getUTCMonth() + amount); break
+        case "years": date.setUTCFullYear(date.getUTCFullYear() + amount); break
+        default: throw new Error("Unsupported date_add unit")
+      }
+      return date.toISOString().slice(0, 10)
     }
     case "convert_unit": return convertUnit(Number(args()[0]), expression.from_unit, expression.to_unit)
     default: throw new Error(`Unsupported preview operation: ${expression.op}`)
@@ -55,8 +102,13 @@ export function previewClinicalTool(definition: ClinicalToolDefinition, input: R
   const knownInputs = new Set(definition.inputs.map((field) => field.key))
   for (const key of Object.keys(input)) if (!knownInputs.has(key)) throw new Error(`Unknown input: ${key}`)
   for (const field of definition.inputs) {
+    if ((values[field.key] === undefined || values[field.key] === null) && field.default !== undefined && field.default !== null) values[field.key] = field.default
+  }
+  for (const field of definition.inputs) {
     const candidate = values[field.key]
-    if (field.required && (candidate === undefined || candidate === null || candidate === "")) throw new Error(`Required input: ${field.key}`)
+    const visible = !field.visible_when || Boolean(evaluate(field.visible_when, values, now))
+    if (visible && field.required && (candidate === undefined || candidate === null || candidate === "")) throw new Error(`Required input: ${field.key}`)
+    if (candidate === undefined || candidate === null) continue
     if (candidate && typeof candidate === "object" && "value" in candidate) {
       const measurement = candidate as { value: unknown; unit?: string }
       values[field.key] = convertUnit(Number(measurement.value), measurement.unit, field.default_unit)
@@ -65,9 +117,9 @@ export function previewClinicalTool(definition: ClinicalToolDefinition, input: R
       normalizedInputs[field.key] = candidate
     }
   }
-  for (const calculation of definition.calculation) values[calculation.key] = evaluate(calculation.expression, values, now)
+  for (const calculation of definition.calculation) values[calculation.key] = applyPrecision(evaluate(calculation.expression, values, now), calculation.precision, calculation.rounding_mode)
   const output: Record<string, unknown> = {}
-  for (const item of definition.outputs) output[item.key] = evaluate(item.value, values, now)
+  for (const item of definition.outputs) output[item.key] = applyPrecision(evaluate(item.value, values, now), item.precision, item.rounding_mode)
   const context = { ...values, ...output }
   const interpretationByKey = new Map(definition.interpretations.map((item) => [item.key, item]))
   const warningByKey = new Map((definition.warnings ?? []).map((item) => [item.key, item]))

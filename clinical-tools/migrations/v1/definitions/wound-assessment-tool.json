@@ -1,0 +1,968 @@
+{
+  "legacy_id": "wound-assessment-tool",
+  "legacy_file": "wound-assessment-tool.html",
+  "source_checksum": "5fa5f696c90a583d61e8363068b914e1e1d5fadc57af7b7389a2609aff511675",
+  "change_summary": "Review draft: preserve legacy severity, infection-risk, and healing-potential rules while requiring wound location/type and typed assessment values. Completeness and care guidance require clinician approval.",
+  "definition": {
+    "schema_version": "1.0",
+    "tool_type": "decision_tool",
+    "title": "Wound Assessment",
+    "description": "Classifies recorded wound characteristics using the legacy thresholds. Review draft only; not approved for clinical publication.",
+    "version": "1.0.0-review.1",
+    "locale": "en",
+    "supported_population": [],
+    "exclusions": [
+      "Do not delay emergency wound care or referral to complete this tool."
+    ],
+    "warnings": [
+      {
+        "key": "urgent_wound",
+        "text": "The recorded wound meets a legacy major-wound or high-infection-risk threshold and requires urgent clinical assessment.",
+        "severity": "critical",
+        "when": {
+          "op": "or",
+          "args": [
+            {
+              "op": "equal",
+              "args": [
+                {
+                  "op": "field",
+                  "field": "severity"
+                },
+                {
+                  "op": "literal",
+                  "value": "Major Wound"
+                }
+              ]
+            },
+            {
+              "op": "equal",
+              "args": [
+                {
+                  "op": "field",
+                  "field": "infection_risk"
+                },
+                {
+                  "op": "literal",
+                  "value": "High"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "key": "tetanus_review",
+        "text": "Review tetanus prophylaxis according to the approved wound-management protocol.",
+        "severity": "warning",
+        "when": {
+          "op": "in",
+          "args": [
+            {
+              "op": "field",
+              "field": "tetanus_status"
+            },
+            {
+              "op": "literal",
+              "value": "overdue"
+            },
+            {
+              "op": "literal",
+              "value": "never"
+            },
+            {
+              "op": "literal",
+              "value": "unknown"
+            }
+          ]
+        }
+      }
+    ],
+    "citations": [],
+    "inputs": [
+      {
+        "key": "location",
+        "type": "single_selection",
+        "label": "Wound location",
+        "required": true,
+        "options": [
+          {
+            "value": "head_neck",
+            "label": "Head or neck"
+          },
+          {
+            "value": "chest",
+            "label": "Chest"
+          },
+          {
+            "value": "abdomen",
+            "label": "Abdomen"
+          },
+          {
+            "value": "back",
+            "label": "Back"
+          },
+          {
+            "value": "arm",
+            "label": "Arm or hand"
+          },
+          {
+            "value": "leg",
+            "label": "Leg or foot"
+          },
+          {
+            "value": "genitals",
+            "label": "Genital area"
+          }
+        ]
+      },
+      {
+        "key": "wound_type",
+        "type": "single_selection",
+        "label": "Wound type",
+        "required": true,
+        "options": [
+          {
+            "value": "laceration",
+            "label": "Laceration"
+          },
+          {
+            "value": "abrasion",
+            "label": "Abrasion"
+          },
+          {
+            "value": "puncture",
+            "label": "Puncture"
+          },
+          {
+            "value": "burn",
+            "label": "Burn"
+          },
+          {
+            "value": "ulcer",
+            "label": "Ulcer"
+          },
+          {
+            "value": "surgical",
+            "label": "Surgical"
+          }
+        ]
+      },
+      {
+        "key": "length",
+        "type": "measurement",
+        "label": "Length",
+        "required": true,
+        "minimum": 0,
+        "maximum": 50,
+        "allowed_units": [
+          "cm"
+        ],
+        "default_unit": "cm"
+      },
+      {
+        "key": "width",
+        "type": "measurement",
+        "label": "Width",
+        "required": true,
+        "minimum": 0,
+        "maximum": 50,
+        "allowed_units": [
+          "cm"
+        ],
+        "default_unit": "cm"
+      },
+      {
+        "key": "depth",
+        "type": "measurement",
+        "label": "Depth",
+        "required": true,
+        "minimum": 0,
+        "maximum": 10,
+        "allowed_units": [
+          "cm"
+        ],
+        "default_unit": "cm"
+      },
+      {
+        "key": "has_necrotic",
+        "type": "boolean",
+        "label": "Necrotic tissue",
+        "required": false,
+        "default": false
+      },
+      {
+        "key": "has_slough",
+        "type": "boolean",
+        "label": "Slough",
+        "required": false,
+        "default": false
+      },
+      {
+        "key": "bone_visible",
+        "type": "boolean",
+        "label": "Bone or tendon visible",
+        "required": false,
+        "default": false
+      },
+      {
+        "key": "exudate_amount",
+        "type": "single_selection",
+        "label": "Exudate amount",
+        "required": true,
+        "options": [
+          {
+            "value": "none",
+            "label": "None"
+          },
+          {
+            "value": "minimal",
+            "label": "Minimal"
+          },
+          {
+            "value": "moderate",
+            "label": "Moderate"
+          },
+          {
+            "value": "heavy",
+            "label": "Heavy"
+          }
+        ]
+      },
+      {
+        "key": "exudate_type",
+        "type": "single_selection",
+        "label": "Exudate type",
+        "required": true,
+        "options": [
+          {
+            "value": "serous",
+            "label": "Serous"
+          },
+          {
+            "value": "sanguineous",
+            "label": "Sanguineous"
+          },
+          {
+            "value": "purulent",
+            "label": "Purulent"
+          },
+          {
+            "value": "malodorous",
+            "label": "Malodorous"
+          }
+        ]
+      },
+      {
+        "key": "infection_sign_count",
+        "type": "integer",
+        "label": "Infection signs present",
+        "required": false,
+        "minimum": 0,
+        "maximum": 8,
+        "default": 0
+      },
+      {
+        "key": "red_streaking",
+        "type": "boolean",
+        "label": "Red streaking",
+        "required": false,
+        "default": false
+      },
+      {
+        "key": "risk_factor_count",
+        "type": "integer",
+        "label": "Healing risk factors present",
+        "required": false,
+        "minimum": 0,
+        "maximum": 6,
+        "default": 0
+      },
+      {
+        "key": "tetanus_status",
+        "type": "single_selection",
+        "label": "Tetanus status",
+        "required": true,
+        "options": [
+          {
+            "value": "unknown",
+            "label": "Unknown"
+          },
+          {
+            "value": "current",
+            "label": "Up to date"
+          },
+          {
+            "value": "dirty_current",
+            "label": "Up to date for dirty wounds"
+          },
+          {
+            "value": "overdue",
+            "label": "Overdue"
+          },
+          {
+            "value": "never",
+            "label": "Never vaccinated"
+          }
+        ]
+      }
+    ],
+    "sections": [
+      {
+        "key": "wound",
+        "title": "Wound characteristics",
+        "order": 0
+      },
+      {
+        "key": "risk",
+        "title": "Infection and healing risk",
+        "order": 1,
+        "review_before_completion": true
+      }
+    ],
+    "calculation": [
+      {
+        "key": "area",
+        "expression": {
+          "op": "multiply",
+          "args": [
+            {
+              "op": "field",
+              "field": "length"
+            },
+            {
+              "op": "field",
+              "field": "width"
+            }
+          ]
+        }
+      },
+      {
+        "key": "major",
+        "expression": {
+          "op": "or",
+          "args": [
+            {
+              "op": "field",
+              "field": "bone_visible"
+            },
+            {
+              "op": "greater_than_or_equal",
+              "args": [
+                {
+                  "op": "field",
+                  "field": "infection_sign_count"
+                },
+                {
+                  "op": "literal",
+                  "value": 3
+                }
+              ]
+            },
+            {
+              "op": "greater_than",
+              "args": [
+                {
+                  "op": "field",
+                  "field": "depth"
+                },
+                {
+                  "op": "literal",
+                  "value": 3
+                }
+              ]
+            },
+            {
+              "op": "and",
+              "args": [
+                {
+                  "op": "greater_than",
+                  "args": [
+                    {
+                      "op": "field",
+                      "field": "area"
+                    },
+                    {
+                      "op": "literal",
+                      "value": 25
+                    }
+                  ]
+                },
+                {
+                  "op": "greater_than",
+                  "args": [
+                    {
+                      "op": "field",
+                      "field": "depth"
+                    },
+                    {
+                      "op": "literal",
+                      "value": 1
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "op": "equal",
+              "args": [
+                {
+                  "op": "field",
+                  "field": "exudate_type"
+                },
+                {
+                  "op": "literal",
+                  "value": "purulent"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "key": "moderate",
+        "expression": {
+          "op": "or",
+          "args": [
+            {
+              "op": "greater_than_or_equal",
+              "args": [
+                {
+                  "op": "field",
+                  "field": "infection_sign_count"
+                },
+                {
+                  "op": "literal",
+                  "value": 1
+                }
+              ]
+            },
+            {
+              "op": "field",
+              "field": "has_necrotic"
+            },
+            {
+              "op": "field",
+              "field": "has_slough"
+            },
+            {
+              "op": "greater_than",
+              "args": [
+                {
+                  "op": "field",
+                  "field": "depth"
+                },
+                {
+                  "op": "literal",
+                  "value": 1
+                }
+              ]
+            },
+            {
+              "op": "greater_than",
+              "args": [
+                {
+                  "op": "field",
+                  "field": "area"
+                },
+                {
+                  "op": "literal",
+                  "value": 10
+                }
+              ]
+            },
+            {
+              "op": "equal",
+              "args": [
+                {
+                  "op": "field",
+                  "field": "exudate_amount"
+                },
+                {
+                  "op": "literal",
+                  "value": "heavy"
+                }
+              ]
+            },
+            {
+              "op": "greater_than_or_equal",
+              "args": [
+                {
+                  "op": "field",
+                  "field": "risk_factor_count"
+                },
+                {
+                  "op": "literal",
+                  "value": 2
+                }
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "key": "severity",
+        "expression": {
+          "op": "if",
+          "args": [
+            {
+              "op": "field",
+              "field": "major"
+            },
+            {
+              "op": "literal",
+              "value": "Major Wound"
+            },
+            {
+              "op": "if",
+              "args": [
+                {
+                  "op": "field",
+                  "field": "moderate"
+                },
+                {
+                  "op": "literal",
+                  "value": "Moderate Wound"
+                },
+                {
+                  "op": "literal",
+                  "value": "Minor Wound"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "key": "infection_high",
+        "expression": {
+          "op": "or",
+          "args": [
+            {
+              "op": "greater_than_or_equal",
+              "args": [
+                {
+                  "op": "field",
+                  "field": "infection_sign_count"
+                },
+                {
+                  "op": "literal",
+                  "value": 2
+                }
+              ]
+            },
+            {
+              "op": "equal",
+              "args": [
+                {
+                  "op": "field",
+                  "field": "exudate_type"
+                },
+                {
+                  "op": "literal",
+                  "value": "purulent"
+                }
+              ]
+            },
+            {
+              "op": "field",
+              "field": "red_streaking"
+            }
+          ]
+        }
+      },
+      {
+        "key": "infection_moderate",
+        "expression": {
+          "op": "or",
+          "args": [
+            {
+              "op": "greater_than_or_equal",
+              "args": [
+                {
+                  "op": "field",
+                  "field": "infection_sign_count"
+                },
+                {
+                  "op": "literal",
+                  "value": 1
+                }
+              ]
+            },
+            {
+              "op": "greater_than_or_equal",
+              "args": [
+                {
+                  "op": "field",
+                  "field": "risk_factor_count"
+                },
+                {
+                  "op": "literal",
+                  "value": 2
+                }
+              ]
+            },
+            {
+              "op": "equal",
+              "args": [
+                {
+                  "op": "field",
+                  "field": "exudate_type"
+                },
+                {
+                  "op": "literal",
+                  "value": "malodorous"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "key": "infection_risk",
+        "expression": {
+          "op": "if",
+          "args": [
+            {
+              "op": "field",
+              "field": "infection_high"
+            },
+            {
+              "op": "literal",
+              "value": "High"
+            },
+            {
+              "op": "if",
+              "args": [
+                {
+                  "op": "field",
+                  "field": "infection_moderate"
+                },
+                {
+                  "op": "literal",
+                  "value": "Moderate"
+                },
+                {
+                  "op": "literal",
+                  "value": "Low"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "key": "healing_potential",
+        "expression": {
+          "op": "if",
+          "args": [
+            {
+              "op": "or",
+              "args": [
+                {
+                  "op": "greater_than_or_equal",
+                  "args": [
+                    {
+                      "op": "field",
+                      "field": "risk_factor_count"
+                    },
+                    {
+                      "op": "literal",
+                      "value": 3
+                    }
+                  ]
+                },
+                {
+                  "op": "field",
+                  "field": "has_necrotic"
+                },
+                {
+                  "op": "field",
+                  "field": "bone_visible"
+                },
+                {
+                  "op": "field",
+                  "field": "infection_high"
+                }
+              ]
+            },
+            {
+              "op": "literal",
+              "value": "Poor"
+            },
+            {
+              "op": "if",
+              "args": [
+                {
+                  "op": "or",
+                  "args": [
+                    {
+                      "op": "greater_than_or_equal",
+                      "args": [
+                        {
+                          "op": "field",
+                          "field": "risk_factor_count"
+                        },
+                        {
+                          "op": "literal",
+                          "value": 1
+                        }
+                      ]
+                    },
+                    {
+                      "op": "greater_than_or_equal",
+                      "args": [
+                        {
+                          "op": "field",
+                          "field": "infection_sign_count"
+                        },
+                        {
+                          "op": "literal",
+                          "value": 1
+                        }
+                      ]
+                    },
+                    {
+                      "op": "field",
+                      "field": "has_slough"
+                    }
+                  ]
+                },
+                {
+                  "op": "literal",
+                  "value": "Fair"
+                },
+                {
+                  "op": "literal",
+                  "value": "Good"
+                }
+              ]
+            }
+          ]
+        }
+      }
+    ],
+    "rules": [],
+    "outputs": [
+      {
+        "key": "severity",
+        "label": "Wound severity",
+        "value": {
+          "op": "field",
+          "field": "severity"
+        }
+      },
+      {
+        "key": "infection_risk",
+        "label": "Infection risk",
+        "value": {
+          "op": "field",
+          "field": "infection_risk"
+        }
+      },
+      {
+        "key": "healing_potential",
+        "label": "Healing potential",
+        "value": {
+          "op": "field",
+          "field": "healing_potential"
+        }
+      },
+      {
+        "key": "area",
+        "label": "Wound area",
+        "value": {
+          "op": "field",
+          "field": "area"
+        },
+        "unit": "cm²"
+      }
+    ],
+    "interpretations": [
+      {
+        "key": "major",
+        "when": {
+          "op": "field",
+          "field": "major"
+        },
+        "label": "Major Wound",
+        "description": "Meets one or more legacy major-wound conditions.",
+        "severity": "critical",
+        "recommendations": [
+          "Arrange urgent clinical wound assessment and follow the approved protocol."
+        ],
+        "order": 0
+      },
+      {
+        "key": "moderate",
+        "when": {
+          "op": "and",
+          "args": [
+            {
+              "op": "not",
+              "args": [
+                {
+                  "op": "field",
+                  "field": "major"
+                }
+              ]
+            },
+            {
+              "op": "field",
+              "field": "moderate"
+            }
+          ]
+        },
+        "label": "Moderate Wound",
+        "description": "Meets one or more legacy moderate-wound conditions.",
+        "severity": "warning",
+        "recommendations": [
+          "Arrange timely clinical assessment and wound care."
+        ],
+        "order": 1
+      },
+      {
+        "key": "minor",
+        "when": {
+          "op": "and",
+          "args": [
+            {
+              "op": "not",
+              "args": [
+                {
+                  "op": "field",
+                  "field": "major"
+                }
+              ]
+            },
+            {
+              "op": "not",
+              "args": [
+                {
+                  "op": "field",
+                  "field": "moderate"
+                }
+              ]
+            }
+          ]
+        },
+        "label": "Minor Wound",
+        "description": "Does not meet a legacy moderate or major condition.",
+        "severity": "info",
+        "recommendations": [
+          "Provide appropriate wound care and safety-net advice."
+        ],
+        "order": 2
+      }
+    ],
+    "completion": {
+      "mode": "all_required",
+      "allow_resume": true,
+      "require_review": true,
+      "show_percentage": true,
+      "reset_confirmation": true
+    },
+    "test_cases": [
+      {
+        "key": "minor_complete",
+        "inputs": {
+          "location": "arm",
+          "wound_type": "abrasion",
+          "length": {
+            "value": 1,
+            "unit": "cm"
+          },
+          "width": {
+            "value": 1,
+            "unit": "cm"
+          },
+          "depth": {
+            "value": 0,
+            "unit": "cm"
+          },
+          "exudate_amount": "none",
+          "exudate_type": "serous",
+          "tetanus_status": "current"
+        },
+        "expected": {
+          "severity": "Minor Wound",
+          "infection_risk": "Low",
+          "healing_potential": "Good",
+          "interpretations": [
+            "minor"
+          ],
+          "warnings": []
+        }
+      },
+      {
+        "key": "moderate_area",
+        "inputs": {
+          "location": "leg",
+          "wound_type": "laceration",
+          "length": {
+            "value": 11,
+            "unit": "cm"
+          },
+          "width": {
+            "value": 1,
+            "unit": "cm"
+          },
+          "depth": {
+            "value": 0,
+            "unit": "cm"
+          },
+          "exudate_amount": "none",
+          "exudate_type": "serous",
+          "tetanus_status": "overdue"
+        },
+        "expected": {
+          "severity": "Moderate Wound",
+          "interpretations": [
+            "moderate"
+          ],
+          "warnings": [
+            "tetanus_review"
+          ]
+        }
+      },
+      {
+        "key": "major_infected",
+        "inputs": {
+          "location": "leg",
+          "wound_type": "puncture",
+          "length": {
+            "value": 1,
+            "unit": "cm"
+          },
+          "width": {
+            "value": 1,
+            "unit": "cm"
+          },
+          "depth": {
+            "value": 1,
+            "unit": "cm"
+          },
+          "bone_visible": true,
+          "infection_sign_count": 3,
+          "exudate_amount": "heavy",
+          "exudate_type": "purulent",
+          "risk_factor_count": 3,
+          "tetanus_status": "unknown"
+        },
+        "expected": {
+          "severity": "Major Wound",
+          "infection_risk": "High",
+          "healing_potential": "Poor",
+          "interpretations": [
+            "major"
+          ],
+          "warnings": [
+            "urgent_wound",
+            "tetanus_review"
+          ]
+        }
+      }
+    ],
+    "minimum_app_version": null
+  }
+}

@@ -1,0 +1,23 @@
+{
+  "legacy_id": "pain-assessment-scale",
+  "legacy_file": "pain-assessment-scale.html",
+  "status": "changes_required",
+  "reviewer_id": null,
+  "reviewed_at": null,
+  "cases_tested": 6,
+  "exact_matches": 4,
+  "tolerance_matches": 0,
+  "presentation_differences": [
+    "Each scale is represented by typed conditional fields rather than DOM tabs; PQRST uses a recorded 0–10 severity score plus contextual fields."
+  ],
+  "logic_differences": [
+    "Every component required by the selected BPS or FLACC scale is mandatory; the legacy page treated unanswered behavioral components as zero."
+  ],
+  "unresolved_clinical_ambiguities": [
+    "Approve scale-selection guidance by age and communication status.",
+    "Verify every BPS and FLACC component mapping, thresholds, terminology, escalation, and management recommendations.",
+    "Confirm whether PQRST requires additional structured fields before completion.",
+    "Provide governing citations and effective/review dates."
+  ],
+  "reviewer_decision": "Pending independent clinician approval. Do not approve or publish this review draft."
+}

@@ -1,0 +1,1739 @@
+{
+  "legacy_id": "cardiac-risk-assessment",
+  "legacy_file": "cardiac-risk-assessment.html",
+  "source_checksum": "3f801e2205c368fdda49af1b428a6fc00bd9235cf3e59e62564fc4bf6e1e9f6a",
+  "change_summary": "Clinician review draft: reproduce the two simplified legacy calculations and overall categorization while removing unsupported Framingham and ASCVD branding.",
+  "definition": {
+    "schema_version": "1.0",
+    "tool_type": "calculator",
+    "title": "Legacy Cardiac Risk Estimate (Unvalidated)",
+    "description": "Reproduces two simplified local formulas for comparison and retirement review. These outputs are not validated Framingham or ASCVD scores.",
+    "version": "1.0.0-review.1",
+    "locale": "en",
+    "supported_population": [],
+    "exclusions": [
+      "Not for diagnosis, treatment thresholds, prescribing, or prevention decisions."
+    ],
+    "warnings": [
+      {
+        "key": "unvalidated_formula",
+        "text": "These are unvalidated legacy estimates, not Framingham or ASCVD results. Use an approved calculator and current guideline.",
+        "severity": "critical"
+      },
+      {
+        "key": "high_legacy_result",
+        "text": "The legacy combined estimate is elevated. Arrange appropriate clinician assessment using an approved cardiovascular-risk method.",
+        "severity": "warning",
+        "when": {
+          "op": "greater_than_or_equal",
+          "args": [
+            {
+              "op": "field",
+              "field": "average_risk"
+            },
+            {
+              "op": "literal",
+              "value": 10
+            }
+          ]
+        }
+      }
+    ],
+    "citations": [],
+    "inputs": [
+      {
+        "key": "age",
+        "type": "integer",
+        "label": "Age",
+        "required": true,
+        "minimum": 20,
+        "maximum": 100
+      },
+      {
+        "key": "sex",
+        "type": "single_selection",
+        "label": "Sex used by legacy formula",
+        "required": true,
+        "options": [
+          {
+            "value": "male",
+            "label": "Male"
+          },
+          {
+            "value": "female",
+            "label": "Female"
+          }
+        ]
+      },
+      {
+        "key": "ethnicity",
+        "type": "single_selection",
+        "label": "Ethnicity used by legacy modifier",
+        "required": true,
+        "default": "other",
+        "options": [
+          {
+            "value": "white",
+            "label": "White"
+          },
+          {
+            "value": "black",
+            "label": "Black"
+          },
+          {
+            "value": "hispanic",
+            "label": "Hispanic"
+          },
+          {
+            "value": "asian",
+            "label": "Asian"
+          },
+          {
+            "value": "other",
+            "label": "Other"
+          }
+        ]
+      },
+      {
+        "key": "systolic_bp",
+        "type": "integer",
+        "label": "Systolic blood pressure",
+        "required": true,
+        "minimum": 90,
+        "maximum": 250
+      },
+      {
+        "key": "diastolic_bp",
+        "type": "integer",
+        "label": "Diastolic blood pressure",
+        "required": true,
+        "minimum": 50,
+        "maximum": 150
+      },
+      {
+        "key": "total_cholesterol",
+        "type": "integer",
+        "label": "Total cholesterol",
+        "required": true,
+        "minimum": 100,
+        "maximum": 400
+      },
+      {
+        "key": "hdl_cholesterol",
+        "type": "integer",
+        "label": "HDL cholesterol",
+        "required": true,
+        "minimum": 20,
+        "maximum": 100
+      },
+      {
+        "key": "bp_treatment",
+        "type": "boolean",
+        "label": "Blood-pressure treatment",
+        "required": false,
+        "default": false
+      },
+      {
+        "key": "family_history",
+        "type": "boolean",
+        "label": "Strong family history",
+        "required": false,
+        "default": false
+      },
+      {
+        "key": "smoking",
+        "type": "boolean",
+        "label": "Smoking",
+        "required": false,
+        "default": false
+      },
+      {
+        "key": "diabetes",
+        "type": "boolean",
+        "label": "Diabetes",
+        "required": false,
+        "default": false
+      },
+      {
+        "key": "chronic_kidney_disease",
+        "type": "boolean",
+        "label": "Chronic kidney disease",
+        "required": false,
+        "default": false
+      },
+      {
+        "key": "risk_factor_count",
+        "type": "integer",
+        "label": "Total selected legacy risk factors",
+        "required": false,
+        "minimum": 0,
+        "maximum": 10,
+        "default": 0
+      }
+    ],
+    "sections": [
+      {
+        "key": "patient",
+        "title": "Patient and measurements",
+        "order": 0,
+        "review_before_completion": true
+      },
+      {
+        "key": "risk",
+        "title": "Legacy risk factors",
+        "order": 1,
+        "review_before_completion": true
+      }
+    ],
+    "calculation": [
+      {
+        "key": "age_points",
+        "expression": {
+          "op": "if",
+          "args": [
+            {
+              "op": "equal",
+              "args": [
+                {
+                  "op": "field",
+                  "field": "sex"
+                },
+                {
+                  "op": "literal",
+                  "value": "male"
+                }
+              ]
+            },
+            {
+              "op": "if",
+              "args": [
+                {
+                  "op": "greater_than_or_equal",
+                  "args": [
+                    {
+                      "op": "field",
+                      "field": "age"
+                    },
+                    {
+                      "op": "literal",
+                      "value": 70
+                    }
+                  ]
+                },
+                {
+                  "op": "literal",
+                  "value": 11
+                },
+                {
+                  "op": "if",
+                  "args": [
+                    {
+                      "op": "greater_than_or_equal",
+                      "args": [
+                        {
+                          "op": "field",
+                          "field": "age"
+                        },
+                        {
+                          "op": "literal",
+                          "value": 65
+                        }
+                      ]
+                    },
+                    {
+                      "op": "literal",
+                      "value": 10
+                    },
+                    {
+                      "op": "if",
+                      "args": [
+                        {
+                          "op": "greater_than_or_equal",
+                          "args": [
+                            {
+                              "op": "field",
+                              "field": "age"
+                            },
+                            {
+                              "op": "literal",
+                              "value": 60
+                            }
+                          ]
+                        },
+                        {
+                          "op": "literal",
+                          "value": 8
+                        },
+                        {
+                          "op": "if",
+                          "args": [
+                            {
+                              "op": "greater_than_or_equal",
+                              "args": [
+                                {
+                                  "op": "field",
+                                  "field": "age"
+                                },
+                                {
+                                  "op": "literal",
+                                  "value": 55
+                                }
+                              ]
+                            },
+                            {
+                              "op": "literal",
+                              "value": 6
+                            },
+                            {
+                              "op": "if",
+                              "args": [
+                                {
+                                  "op": "greater_than_or_equal",
+                                  "args": [
+                                    {
+                                      "op": "field",
+                                      "field": "age"
+                                    },
+                                    {
+                                      "op": "literal",
+                                      "value": 50
+                                    }
+                                  ]
+                                },
+                                {
+                                  "op": "literal",
+                                  "value": 4
+                                },
+                                {
+                                  "op": "if",
+                                  "args": [
+                                    {
+                                      "op": "greater_than_or_equal",
+                                      "args": [
+                                        {
+                                          "op": "field",
+                                          "field": "age"
+                                        },
+                                        {
+                                          "op": "literal",
+                                          "value": 45
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "op": "literal",
+                                      "value": 3
+                                    },
+                                    {
+                                      "op": "if",
+                                      "args": [
+                                        {
+                                          "op": "greater_than_or_equal",
+                                          "args": [
+                                            {
+                                              "op": "field",
+                                              "field": "age"
+                                            },
+                                            {
+                                              "op": "literal",
+                                              "value": 40
+                                            }
+                                          ]
+                                        },
+                                        {
+                                          "op": "literal",
+                                          "value": 2
+                                        },
+                                        {
+                                          "op": "if",
+                                          "args": [
+                                            {
+                                              "op": "greater_than_or_equal",
+                                              "args": [
+                                                {
+                                                  "op": "field",
+                                                  "field": "age"
+                                                },
+                                                {
+                                                  "op": "literal",
+                                                  "value": 35
+                                                }
+                                              ]
+                                            },
+                                            {
+                                              "op": "literal",
+                                              "value": 1
+                                            },
+                                            {
+                                              "op": "literal",
+                                              "value": 0
+                                            }
+                                          ]
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "op": "if",
+              "args": [
+                {
+                  "op": "greater_than_or_equal",
+                  "args": [
+                    {
+                      "op": "field",
+                      "field": "age"
+                    },
+                    {
+                      "op": "literal",
+                      "value": 75
+                    }
+                  ]
+                },
+                {
+                  "op": "literal",
+                  "value": 16
+                },
+                {
+                  "op": "if",
+                  "args": [
+                    {
+                      "op": "greater_than_or_equal",
+                      "args": [
+                        {
+                          "op": "field",
+                          "field": "age"
+                        },
+                        {
+                          "op": "literal",
+                          "value": 70
+                        }
+                      ]
+                    },
+                    {
+                      "op": "literal",
+                      "value": 12
+                    },
+                    {
+                      "op": "if",
+                      "args": [
+                        {
+                          "op": "greater_than_or_equal",
+                          "args": [
+                            {
+                              "op": "field",
+                              "field": "age"
+                            },
+                            {
+                              "op": "literal",
+                              "value": 65
+                            }
+                          ]
+                        },
+                        {
+                          "op": "literal",
+                          "value": 9
+                        },
+                        {
+                          "op": "if",
+                          "args": [
+                            {
+                              "op": "greater_than_or_equal",
+                              "args": [
+                                {
+                                  "op": "field",
+                                  "field": "age"
+                                },
+                                {
+                                  "op": "literal",
+                                  "value": 60
+                                }
+                              ]
+                            },
+                            {
+                              "op": "literal",
+                              "value": 7
+                            },
+                            {
+                              "op": "if",
+                              "args": [
+                                {
+                                  "op": "greater_than_or_equal",
+                                  "args": [
+                                    {
+                                      "op": "field",
+                                      "field": "age"
+                                    },
+                                    {
+                                      "op": "literal",
+                                      "value": 55
+                                    }
+                                  ]
+                                },
+                                {
+                                  "op": "literal",
+                                  "value": 5
+                                },
+                                {
+                                  "op": "if",
+                                  "args": [
+                                    {
+                                      "op": "greater_than_or_equal",
+                                      "args": [
+                                        {
+                                          "op": "field",
+                                          "field": "age"
+                                        },
+                                        {
+                                          "op": "literal",
+                                          "value": 50
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "op": "literal",
+                                      "value": 3
+                                    },
+                                    {
+                                      "op": "if",
+                                      "args": [
+                                        {
+                                          "op": "greater_than_or_equal",
+                                          "args": [
+                                            {
+                                              "op": "field",
+                                              "field": "age"
+                                            },
+                                            {
+                                              "op": "literal",
+                                              "value": 45
+                                            }
+                                          ]
+                                        },
+                                        {
+                                          "op": "literal",
+                                          "value": 2
+                                        },
+                                        {
+                                          "op": "if",
+                                          "args": [
+                                            {
+                                              "op": "greater_than_or_equal",
+                                              "args": [
+                                                {
+                                                  "op": "field",
+                                                  "field": "age"
+                                                },
+                                                {
+                                                  "op": "literal",
+                                                  "value": 40
+                                                }
+                                              ]
+                                            },
+                                            {
+                                              "op": "literal",
+                                              "value": 1
+                                            },
+                                            {
+                                              "op": "literal",
+                                              "value": 0
+                                            }
+                                          ]
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "key": "cholesterol_points",
+        "expression": {
+          "op": "if",
+          "args": [
+            {
+              "op": "greater_than_or_equal",
+              "args": [
+                {
+                  "op": "field",
+                  "field": "total_cholesterol"
+                },
+                {
+                  "op": "literal",
+                  "value": 280
+                }
+              ]
+            },
+            {
+              "op": "literal",
+              "value": 3
+            },
+            {
+              "op": "if",
+              "args": [
+                {
+                  "op": "greater_than_or_equal",
+                  "args": [
+                    {
+                      "op": "field",
+                      "field": "total_cholesterol"
+                    },
+                    {
+                      "op": "literal",
+                      "value": 240
+                    }
+                  ]
+                },
+                {
+                  "op": "literal",
+                  "value": 2
+                },
+                {
+                  "op": "if",
+                  "args": [
+                    {
+                      "op": "greater_than_or_equal",
+                      "args": [
+                        {
+                          "op": "field",
+                          "field": "total_cholesterol"
+                        },
+                        {
+                          "op": "literal",
+                          "value": 200
+                        }
+                      ]
+                    },
+                    {
+                      "op": "literal",
+                      "value": 1
+                    },
+                    {
+                      "op": "literal",
+                      "value": 0
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "key": "hdl_points",
+        "expression": {
+          "op": "if",
+          "args": [
+            {
+              "op": "less_than",
+              "args": [
+                {
+                  "op": "field",
+                  "field": "hdl_cholesterol"
+                },
+                {
+                  "op": "literal",
+                  "value": 35
+                }
+              ]
+            },
+            {
+              "op": "literal",
+              "value": 2
+            },
+            {
+              "op": "if",
+              "args": [
+                {
+                  "op": "less_than",
+                  "args": [
+                    {
+                      "op": "field",
+                      "field": "hdl_cholesterol"
+                    },
+                    {
+                      "op": "literal",
+                      "value": 45
+                    }
+                  ]
+                },
+                {
+                  "op": "literal",
+                  "value": 1
+                },
+                {
+                  "op": "if",
+                  "args": [
+                    {
+                      "op": "greater_than_or_equal",
+                      "args": [
+                        {
+                          "op": "field",
+                          "field": "hdl_cholesterol"
+                        },
+                        {
+                          "op": "literal",
+                          "value": 60
+                        }
+                      ]
+                    },
+                    {
+                      "op": "literal",
+                      "value": -1
+                    },
+                    {
+                      "op": "literal",
+                      "value": 0
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "key": "bp_points",
+        "expression": {
+          "op": "if",
+          "args": [
+            {
+              "op": "greater_than_or_equal",
+              "args": [
+                {
+                  "op": "field",
+                  "field": "systolic_bp"
+                },
+                {
+                  "op": "literal",
+                  "value": 160
+                }
+              ]
+            },
+            {
+              "op": "literal",
+              "value": 2
+            },
+            {
+              "op": "if",
+              "args": [
+                {
+                  "op": "greater_than_or_equal",
+                  "args": [
+                    {
+                      "op": "field",
+                      "field": "systolic_bp"
+                    },
+                    {
+                      "op": "literal",
+                      "value": 140
+                    }
+                  ]
+                },
+                {
+                  "op": "literal",
+                  "value": 1
+                },
+                {
+                  "op": "literal",
+                  "value": 0
+                }
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "key": "legacy_points",
+        "expression": {
+          "op": "add",
+          "args": [
+            {
+              "op": "field",
+              "field": "age_points"
+            },
+            {
+              "op": "field",
+              "field": "cholesterol_points"
+            },
+            {
+              "op": "field",
+              "field": "hdl_points"
+            },
+            {
+              "op": "field",
+              "field": "bp_points"
+            },
+            {
+              "op": "if",
+              "args": [
+                {
+                  "op": "field",
+                  "field": "smoking"
+                },
+                {
+                  "op": "literal",
+                  "value": 2
+                },
+                {
+                  "op": "literal",
+                  "value": 0
+                }
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "key": "legacy_points_risk",
+        "expression": {
+          "op": "if",
+          "args": [
+            {
+              "op": "less_than_or_equal",
+              "args": [
+                {
+                  "op": "field",
+                  "field": "legacy_points"
+                },
+                {
+                  "op": "literal",
+                  "value": 2
+                }
+              ]
+            },
+            {
+              "op": "literal",
+              "value": 2
+            },
+            {
+              "op": "if",
+              "args": [
+                {
+                  "op": "less_than_or_equal",
+                  "args": [
+                    {
+                      "op": "field",
+                      "field": "legacy_points"
+                    },
+                    {
+                      "op": "literal",
+                      "value": 4
+                    }
+                  ]
+                },
+                {
+                  "op": "literal",
+                  "value": 4
+                },
+                {
+                  "op": "if",
+                  "args": [
+                    {
+                      "op": "less_than_or_equal",
+                      "args": [
+                        {
+                          "op": "field",
+                          "field": "legacy_points"
+                        },
+                        {
+                          "op": "literal",
+                          "value": 6
+                        }
+                      ]
+                    },
+                    {
+                      "op": "literal",
+                      "value": 8
+                    },
+                    {
+                      "op": "if",
+                      "args": [
+                        {
+                          "op": "less_than_or_equal",
+                          "args": [
+                            {
+                              "op": "field",
+                              "field": "legacy_points"
+                            },
+                            {
+                              "op": "literal",
+                              "value": 8
+                            }
+                          ]
+                        },
+                        {
+                          "op": "literal",
+                          "value": 12
+                        },
+                        {
+                          "op": "if",
+                          "args": [
+                            {
+                              "op": "less_than_or_equal",
+                              "args": [
+                                {
+                                  "op": "field",
+                                  "field": "legacy_points"
+                                },
+                                {
+                                  "op": "literal",
+                                  "value": 10
+                                }
+                              ]
+                            },
+                            {
+                              "op": "literal",
+                              "value": 16
+                            },
+                            {
+                              "op": "if",
+                              "args": [
+                                {
+                                  "op": "less_than_or_equal",
+                                  "args": [
+                                    {
+                                      "op": "field",
+                                      "field": "legacy_points"
+                                    },
+                                    {
+                                      "op": "literal",
+                                      "value": 12
+                                    }
+                                  ]
+                                },
+                                {
+                                  "op": "literal",
+                                  "value": 22
+                                },
+                                {
+                                  "op": "if",
+                                  "args": [
+                                    {
+                                      "op": "less_than_or_equal",
+                                      "args": [
+                                        {
+                                          "op": "field",
+                                          "field": "legacy_points"
+                                        },
+                                        {
+                                          "op": "literal",
+                                          "value": 14
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "op": "literal",
+                                      "value": 28
+                                    },
+                                    {
+                                      "op": "literal",
+                                      "value": 35
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "key": "ratio",
+        "expression": {
+          "op": "divide",
+          "args": [
+            {
+              "op": "field",
+              "field": "total_cholesterol"
+            },
+            {
+              "op": "field",
+              "field": "hdl_cholesterol"
+            }
+          ]
+        }
+      },
+      {
+        "key": "legacy_coefficient_risk",
+        "expression": {
+          "op": "min",
+          "args": [
+            {
+              "op": "literal",
+              "value": 50
+            },
+            {
+              "op": "max",
+              "args": [
+                {
+                  "op": "literal",
+                  "value": 0
+                },
+                {
+                  "op": "add",
+                  "args": [
+                    {
+                      "op": "if",
+                      "args": [
+                        {
+                          "op": "equal",
+                          "args": [
+                            {
+                              "op": "field",
+                              "field": "sex"
+                            },
+                            {
+                              "op": "literal",
+                              "value": "male"
+                            }
+                          ]
+                        },
+                        {
+                          "op": "subtract",
+                          "args": [
+                            {
+                              "op": "multiply",
+                              "args": [
+                                {
+                                  "op": "field",
+                                  "field": "age"
+                                },
+                                {
+                                  "op": "literal",
+                                  "value": 0.5
+                                }
+                              ]
+                            },
+                            {
+                              "op": "literal",
+                              "value": 15
+                            }
+                          ]
+                        },
+                        {
+                          "op": "subtract",
+                          "args": [
+                            {
+                              "op": "multiply",
+                              "args": [
+                                {
+                                  "op": "field",
+                                  "field": "age"
+                                },
+                                {
+                                  "op": "literal",
+                                  "value": 0.4
+                                }
+                              ]
+                            },
+                            {
+                              "op": "literal",
+                              "value": 12
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "op": "if",
+                      "args": [
+                        {
+                          "op": "greater_than",
+                          "args": [
+                            {
+                              "op": "field",
+                              "field": "ratio"
+                            },
+                            {
+                              "op": "literal",
+                              "value": 5
+                            }
+                          ]
+                        },
+                        {
+                          "op": "literal",
+                          "value": 4
+                        },
+                        {
+                          "op": "if",
+                          "args": [
+                            {
+                              "op": "greater_than",
+                              "args": [
+                                {
+                                  "op": "field",
+                                  "field": "ratio"
+                                },
+                                {
+                                  "op": "literal",
+                                  "value": 4
+                                }
+                              ]
+                            },
+                            {
+                              "op": "literal",
+                              "value": 2
+                            },
+                            {
+                              "op": "if",
+                              "args": [
+                                {
+                                  "op": "greater_than",
+                                  "args": [
+                                    {
+                                      "op": "field",
+                                      "field": "ratio"
+                                    },
+                                    {
+                                      "op": "literal",
+                                      "value": 3.5
+                                    }
+                                  ]
+                                },
+                                {
+                                  "op": "literal",
+                                  "value": 1
+                                },
+                                {
+                                  "op": "literal",
+                                  "value": 0
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "op": "if",
+                      "args": [
+                        {
+                          "op": "greater_than_or_equal",
+                          "args": [
+                            {
+                              "op": "field",
+                              "field": "systolic_bp"
+                            },
+                            {
+                              "op": "literal",
+                              "value": 160
+                            }
+                          ]
+                        },
+                        {
+                          "op": "literal",
+                          "value": 4
+                        },
+                        {
+                          "op": "if",
+                          "args": [
+                            {
+                              "op": "greater_than_or_equal",
+                              "args": [
+                                {
+                                  "op": "field",
+                                  "field": "systolic_bp"
+                                },
+                                {
+                                  "op": "literal",
+                                  "value": 140
+                                }
+                              ]
+                            },
+                            {
+                              "op": "literal",
+                              "value": 2
+                            },
+                            {
+                              "op": "if",
+                              "args": [
+                                {
+                                  "op": "greater_than_or_equal",
+                                  "args": [
+                                    {
+                                      "op": "field",
+                                      "field": "systolic_bp"
+                                    },
+                                    {
+                                      "op": "literal",
+                                      "value": 130
+                                    }
+                                  ]
+                                },
+                                {
+                                  "op": "literal",
+                                  "value": 1
+                                },
+                                {
+                                  "op": "literal",
+                                  "value": 0
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "op": "if",
+                      "args": [
+                        {
+                          "op": "field",
+                          "field": "bp_treatment"
+                        },
+                        {
+                          "op": "literal",
+                          "value": 1
+                        },
+                        {
+                          "op": "literal",
+                          "value": 0
+                        }
+                      ]
+                    },
+                    {
+                      "op": "if",
+                      "args": [
+                        {
+                          "op": "field",
+                          "field": "smoking"
+                        },
+                        {
+                          "op": "literal",
+                          "value": 3
+                        },
+                        {
+                          "op": "literal",
+                          "value": 0
+                        }
+                      ]
+                    },
+                    {
+                      "op": "if",
+                      "args": [
+                        {
+                          "op": "field",
+                          "field": "diabetes"
+                        },
+                        {
+                          "op": "literal",
+                          "value": 3
+                        },
+                        {
+                          "op": "literal",
+                          "value": 0
+                        }
+                      ]
+                    },
+                    {
+                      "op": "if",
+                      "args": [
+                        {
+                          "op": "equal",
+                          "args": [
+                            {
+                              "op": "field",
+                              "field": "ethnicity"
+                            },
+                            {
+                              "op": "literal",
+                              "value": "black"
+                            }
+                          ]
+                        },
+                        {
+                          "op": "literal",
+                          "value": 2
+                        },
+                        {
+                          "op": "if",
+                          "args": [
+                            {
+                              "op": "equal",
+                              "args": [
+                                {
+                                  "op": "field",
+                                  "field": "ethnicity"
+                                },
+                                {
+                                  "op": "literal",
+                                  "value": "hispanic"
+                                }
+                              ]
+                            },
+                            {
+                              "op": "literal",
+                              "value": -0.5
+                            },
+                            {
+                              "op": "literal",
+                              "value": 0
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "key": "average_risk",
+        "expression": {
+          "op": "round",
+          "precision": 1,
+          "rounding_mode": "half_up",
+          "args": [
+            {
+              "op": "divide",
+              "args": [
+                {
+                  "op": "add",
+                  "args": [
+                    {
+                      "op": "field",
+                      "field": "legacy_points_risk"
+                    },
+                    {
+                      "op": "field",
+                      "field": "legacy_coefficient_risk"
+                    }
+                  ]
+                },
+                {
+                  "op": "literal",
+                  "value": 2
+                }
+              ]
+            }
+          ]
+        }
+      }
+    ],
+    "rules": [],
+    "outputs": [
+      {
+        "key": "legacy_points_risk",
+        "label": "Legacy points estimate",
+        "value": {
+          "op": "field",
+          "field": "legacy_points_risk"
+        },
+        "unit": "%"
+      },
+      {
+        "key": "legacy_coefficient_risk",
+        "label": "Legacy coefficient estimate",
+        "value": {
+          "op": "field",
+          "field": "legacy_coefficient_risk"
+        },
+        "unit": "%",
+        "precision": 1,
+        "rounding_mode": "half_up"
+      },
+      {
+        "key": "average_risk",
+        "label": "Legacy combined estimate",
+        "value": {
+          "op": "field",
+          "field": "average_risk"
+        },
+        "unit": "%",
+        "precision": 1,
+        "rounding_mode": "half_up"
+      },
+      {
+        "key": "risk_factor_count",
+        "label": "Recorded legacy risk factors",
+        "value": {
+          "op": "field",
+          "field": "risk_factor_count"
+        }
+      }
+    ],
+    "interpretations": [
+      {
+        "key": "very_high",
+        "when": {
+          "op": "or",
+          "args": [
+            {
+              "op": "field",
+              "field": "diabetes"
+            },
+            {
+              "op": "field",
+              "field": "chronic_kidney_disease"
+            },
+            {
+              "op": "greater_than_or_equal",
+              "args": [
+                {
+                  "op": "field",
+                  "field": "average_risk"
+                },
+                {
+                  "op": "literal",
+                  "value": 20
+                }
+              ]
+            },
+            {
+              "op": "and",
+              "args": [
+                {
+                  "op": "field",
+                  "field": "family_history"
+                },
+                {
+                  "op": "greater_than_or_equal",
+                  "args": [
+                    {
+                      "op": "field",
+                      "field": "average_risk"
+                    },
+                    {
+                      "op": "literal",
+                      "value": 10
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        "label": "Very High Legacy Category",
+        "description": "Legacy categorization only; not a validated cardiovascular-risk class.",
+        "severity": "critical",
+        "recommendations": [
+          "Recalculate with an approved method and current guideline."
+        ],
+        "order": 0
+      },
+      {
+        "key": "high",
+        "when": {
+          "op": "and",
+          "args": [
+            {
+              "op": "not",
+              "args": [
+                {
+                  "op": "or",
+                  "args": [
+                    {
+                      "op": "field",
+                      "field": "diabetes"
+                    },
+                    {
+                      "op": "field",
+                      "field": "chronic_kidney_disease"
+                    },
+                    {
+                      "op": "greater_than_or_equal",
+                      "args": [
+                        {
+                          "op": "field",
+                          "field": "average_risk"
+                        },
+                        {
+                          "op": "literal",
+                          "value": 20
+                        }
+                      ]
+                    },
+                    {
+                      "op": "and",
+                      "args": [
+                        {
+                          "op": "field",
+                          "field": "family_history"
+                        },
+                        {
+                          "op": "greater_than_or_equal",
+                          "args": [
+                            {
+                              "op": "field",
+                              "field": "average_risk"
+                            },
+                            {
+                              "op": "literal",
+                              "value": 10
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "op": "or",
+              "args": [
+                {
+                  "op": "greater_than_or_equal",
+                  "args": [
+                    {
+                      "op": "field",
+                      "field": "average_risk"
+                    },
+                    {
+                      "op": "literal",
+                      "value": 10
+                    }
+                  ]
+                },
+                {
+                  "op": "greater_than_or_equal",
+                  "args": [
+                    {
+                      "op": "field",
+                      "field": "risk_factor_count"
+                    },
+                    {
+                      "op": "literal",
+                      "value": 3
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        "label": "High Legacy Category",
+        "severity": "warning",
+        "recommendations": [
+          "Recalculate with an approved method."
+        ],
+        "order": 1
+      },
+      {
+        "key": "moderate",
+        "when": {
+          "op": "and",
+          "args": [
+            {
+              "op": "less_than",
+              "args": [
+                {
+                  "op": "field",
+                  "field": "average_risk"
+                },
+                {
+                  "op": "literal",
+                  "value": 10
+                }
+              ]
+            },
+            {
+              "op": "less_than",
+              "args": [
+                {
+                  "op": "field",
+                  "field": "risk_factor_count"
+                },
+                {
+                  "op": "literal",
+                  "value": 3
+                }
+              ]
+            },
+            {
+              "op": "or",
+              "args": [
+                {
+                  "op": "greater_than_or_equal",
+                  "args": [
+                    {
+                      "op": "field",
+                      "field": "average_risk"
+                    },
+                    {
+                      "op": "literal",
+                      "value": 5
+                    }
+                  ]
+                },
+                {
+                  "op": "greater_than_or_equal",
+                  "args": [
+                    {
+                      "op": "field",
+                      "field": "risk_factor_count"
+                    },
+                    {
+                      "op": "literal",
+                      "value": 2
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        "label": "Moderate Legacy Category",
+        "severity": "warning",
+        "recommendations": [
+          "Recalculate with an approved method."
+        ],
+        "order": 2
+      },
+      {
+        "key": "low",
+        "when": {
+          "op": "and",
+          "args": [
+            {
+              "op": "less_than",
+              "args": [
+                {
+                  "op": "field",
+                  "field": "average_risk"
+                },
+                {
+                  "op": "literal",
+                  "value": 5
+                }
+              ]
+            },
+            {
+              "op": "less_than",
+              "args": [
+                {
+                  "op": "field",
+                  "field": "risk_factor_count"
+                },
+                {
+                  "op": "literal",
+                  "value": 2
+                }
+              ]
+            },
+            {
+              "op": "not",
+              "args": [
+                {
+                  "op": "field",
+                  "field": "diabetes"
+                }
+              ]
+            },
+            {
+              "op": "not",
+              "args": [
+                {
+                  "op": "field",
+                  "field": "chronic_kidney_disease"
+                }
+              ]
+            }
+          ]
+        },
+        "label": "Low Legacy Category",
+        "severity": "normal",
+        "recommendations": [
+          "This label does not replace an approved risk assessment."
+        ],
+        "order": 3
+      }
+    ],
+    "completion": {
+      "mode": "all_required",
+      "allow_resume": false,
+      "require_review": true,
+      "show_percentage": false,
+      "reset_confirmation": true
+    },
+    "test_cases": [
+      {
+        "key": "baseline",
+        "inputs": {
+          "age": 40,
+          "sex": "male",
+          "ethnicity": "white",
+          "systolic_bp": 120,
+          "diastolic_bp": 80,
+          "total_cholesterol": 180,
+          "hdl_cholesterol": 55
+        },
+        "expected": {
+          "legacy_points_risk": 2,
+          "legacy_coefficient_risk": 5,
+          "average_risk": 3.5,
+          "interpretations": [
+            "low"
+          ],
+          "warnings": [
+            "unvalidated_formula"
+          ]
+        }
+      },
+      {
+        "key": "risk_heavy",
+        "inputs": {
+          "age": 75,
+          "sex": "male",
+          "ethnicity": "black",
+          "systolic_bp": 180,
+          "diastolic_bp": 120,
+          "total_cholesterol": 300,
+          "hdl_cholesterol": 30,
+          "family_history": true,
+          "bp_treatment": true,
+          "diabetes": true,
+          "smoking": true,
+          "chronic_kidney_disease": false,
+          "risk_factor_count": 3
+        },
+        "expected": {
+          "legacy_points_risk": 35,
+          "legacy_coefficient_risk": 39.5,
+          "average_risk": 37.3,
+          "interpretations": [
+            "very_high"
+          ],
+          "warnings": [
+            "unvalidated_formula",
+            "high_legacy_result"
+          ]
+        },
+        "numeric_tolerance": 0.1
+      }
+    ],
+    "minimum_app_version": null
+  }
+}

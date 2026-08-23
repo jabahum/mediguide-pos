@@ -1,0 +1,22 @@
+{
+  "legacy_id": "cardiac-risk-assessment",
+  "legacy_file": "cardiac-risk-assessment.html",
+  "status": "changes_required",
+  "reviewer_id": null,
+  "reviewed_at": null,
+  "cases_tested": 3,
+  "exact_matches": 2,
+  "tolerance_matches": 0,
+  "presentation_differences": [
+    "Unsupported Framingham and ASCVD names are replaced with Legacy points estimate and Legacy coefficient estimate.",
+    "The native UI must retain named risk-factor selections and derive risk_factor_count rather than ask users for the count."
+  ],
+  "logic_differences": [
+    "Unused LDL and statin inputs are omitted from the definition; diastolic pressure remains required only to characterize legacy inputs although the formula does not use it."
+  ],
+  "unresolved_clinical_ambiguities": [
+    "A cardiovascular clinician must either replace both simplified formulas with a validated implementation and governing citations or retire this tool.",
+    "Approve the supported population, variables, units, risk-enhancer behavior, categories, and clinical recommendations."
+  ],
+  "reviewer_decision": "Pending independent cardiovascular-clinician approval. Do not approve or publish this review draft."
+}

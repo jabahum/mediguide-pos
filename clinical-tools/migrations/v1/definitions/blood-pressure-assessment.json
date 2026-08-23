@@ -1,81 +1,824 @@
 {
-  "legacy_id":"blood-pressure-assessment",
-  "legacy_file":"blood-pressure-assessment.html",
-  "source_checksum":"7a3ca6bb79e40c2ca14124287f025c375ba10809134a7c63f794a9102b0c4e2a",
-  "change_summary":"Review draft: preserve the legacy category and risk-count behavior while enforcing 70–250 mmHg systolic and 40–150 mmHg diastolic bounds. Escalation wording and ranges require clinician approval before publication.",
-  "definition":{
-    "schema_version":"1.0",
-    "tool_type":"calculator",
-    "title":"Blood Pressure Risk Assessment",
-    "description":"Classifies a blood-pressure reading and summarizes selected risk factors. This migration draft is not approved for clinical publication.",
-    "version":"1.0.0-review.1",
-    "locale":"en",
-    "supported_population":["Adults, subject to clinician confirmation"],
-    "exclusions":["Do not use a single reading as the sole basis for diagnosis or treatment."],
-    "warnings":[{"key":"crisis_warning","text":"This reading meets the legacy hypertensive-crisis threshold. Seek immediate clinical assessment according to the approved local escalation protocol.","severity":"critical","when":{"op":"or","args":[{"op":"greater_than_or_equal","args":[{"op":"field","field":"systolic"},{"op":"literal","value":180}]},{"op":"greater_than_or_equal","args":[{"op":"field","field":"diastolic"},{"op":"literal","value":120}]}]}}],
-    "citations":[],
-    "inputs":[
-      {"key":"systolic","type":"integer","label":"Systolic blood pressure","required":true,"minimum":70,"maximum":250,"step":1,"clinical_warning":"Confirm the reading and use an appropriately sized cuff.","accessibility_label":"Systolic blood pressure in millimetres of mercury"},
-      {"key":"diastolic","type":"integer","label":"Diastolic blood pressure","required":true,"minimum":40,"maximum":150,"step":1,"clinical_warning":"Confirm the reading and use an appropriately sized cuff.","accessibility_label":"Diastolic blood pressure in millimetres of mercury"},
-      {"key":"age_over_65","type":"boolean","label":"Age over 65 years","required":false,"default":false},
-      {"key":"family_history","type":"boolean","label":"Family history of heart disease or stroke","required":false,"default":false},
-      {"key":"diabetes","type":"boolean","label":"Diabetes","required":false,"default":false},
-      {"key":"smoking","type":"boolean","label":"Current smoker","required":false,"default":false},
-      {"key":"overweight","type":"boolean","label":"Overweight or obese (BMI above 25)","required":false,"default":false},
-      {"key":"sedentary","type":"boolean","label":"Sedentary lifestyle","required":false,"default":false},
-      {"key":"heavy_alcohol","type":"boolean","label":"Heavy alcohol consumption","required":false,"default":false},
-      {"key":"high_stress","type":"boolean","label":"High stress levels","required":false,"default":false},
-      {"key":"poor_sleep","type":"boolean","label":"Sleep disorder or poor sleep quality","required":false,"default":false},
-      {"key":"high_sodium","type":"boolean","label":"High sodium diet","required":false,"default":false}
+  "legacy_id": "blood-pressure-assessment",
+  "legacy_file": "blood-pressure-assessment.html",
+  "source_checksum": "7a3ca6bb79e40c2ca14124287f025c375ba10809134a7c63f794a9102b0c4e2a",
+  "change_summary": "Review draft: preserve the legacy category and risk-count behavior while enforcing 70–250 mmHg systolic and 40–150 mmHg diastolic bounds. Escalation wording and ranges require clinician approval before publication.",
+  "definition": {
+    "schema_version": "1.0",
+    "tool_type": "calculator",
+    "title": "Blood Pressure Risk Assessment",
+    "description": "Classifies a blood-pressure reading and summarizes selected risk factors. This migration draft is not approved for clinical publication.",
+    "version": "1.0.0-review.1",
+    "locale": "en",
+    "supported_population": [
+      "Adults, subject to clinician confirmation"
     ],
-    "sections":[{"key":"reading","title":"Blood Pressure Reading","order":0},{"key":"risk_factors","title":"Risk Factors","order":1,"review_before_completion":true}],
-    "calculation":[
-      {"key":"risk_count","expression":{"op":"add","args":[
-        {"op":"if","args":[{"op":"field","field":"age_over_65"},{"op":"literal","value":1},{"op":"literal","value":0}]},
-        {"op":"if","args":[{"op":"field","field":"family_history"},{"op":"literal","value":1},{"op":"literal","value":0}]},
-        {"op":"if","args":[{"op":"field","field":"diabetes"},{"op":"literal","value":1},{"op":"literal","value":0}]},
-        {"op":"if","args":[{"op":"field","field":"smoking"},{"op":"literal","value":1},{"op":"literal","value":0}]},
-        {"op":"if","args":[{"op":"field","field":"overweight"},{"op":"literal","value":1},{"op":"literal","value":0}]},
-        {"op":"if","args":[{"op":"field","field":"sedentary"},{"op":"literal","value":1},{"op":"literal","value":0}]},
-        {"op":"if","args":[{"op":"field","field":"heavy_alcohol"},{"op":"literal","value":1},{"op":"literal","value":0}]},
-        {"op":"if","args":[{"op":"field","field":"high_stress"},{"op":"literal","value":1},{"op":"literal","value":0}]},
-        {"op":"if","args":[{"op":"field","field":"poor_sleep"},{"op":"literal","value":1},{"op":"literal","value":0}]},
-        {"op":"if","args":[{"op":"field","field":"high_sodium"},{"op":"literal","value":1},{"op":"literal","value":0}]}
-      ]},"precision":0,"rounding_mode":"half_up"}
+    "exclusions": [
+      "Do not use a single reading as the sole basis for diagnosis or treatment."
     ],
-    "rules":[],
-    "outputs":[
-      {"key":"systolic","label":"Systolic","value":{"op":"field","field":"systolic"},"unit":"mmHg","precision":0,"rounding_mode":"half_up"},
-      {"key":"diastolic","label":"Diastolic","value":{"op":"field","field":"diastolic"},"unit":"mmHg","precision":0,"rounding_mode":"half_up"},
-      {"key":"risk_count","label":"Risk factors identified","value":{"op":"field","field":"risk_count"},"precision":0,"rounding_mode":"half_up"},
-      {"key":"risk_level","label":"Risk Level","value":{"op":"if","args":[
-        {"op":"equal","args":[{"op":"field","field":"risk_count"},{"op":"literal","value":0}]},
-        {"op":"literal","value":"Low Risk"},
-        {"op":"if","args":[
-          {"op":"less_than_or_equal","args":[{"op":"field","field":"risk_count"},{"op":"literal","value":2}]},
-          {"op":"literal","value":"Moderate Risk"},
-          {"op":"if","args":[
-            {"op":"less_than_or_equal","args":[{"op":"field","field":"risk_count"},{"op":"literal","value":4}]},
-            {"op":"literal","value":"High Risk"},
-            {"op":"literal","value":"Very High Risk"}
-          ]}
-        ]}
-      ]}}
+    "warnings": [
+      {
+        "key": "crisis_warning",
+        "text": "This reading meets the legacy hypertensive-crisis threshold. Seek immediate clinical assessment according to the approved local escalation protocol.",
+        "severity": "critical",
+        "when": {
+          "op": "or",
+          "args": [
+            {
+              "op": "greater_than_or_equal",
+              "args": [
+                {
+                  "op": "field",
+                  "field": "systolic"
+                },
+                {
+                  "op": "literal",
+                  "value": 180
+                }
+              ]
+            },
+            {
+              "op": "greater_than_or_equal",
+              "args": [
+                {
+                  "op": "field",
+                  "field": "diastolic"
+                },
+                {
+                  "op": "literal",
+                  "value": 120
+                }
+              ]
+            }
+          ]
+        }
+      }
     ],
-    "interpretations":[
-      {"key":"hypertensive_crisis","when":{"op":"or","args":[{"op":"greater_than_or_equal","args":[{"op":"field","field":"systolic"},{"op":"literal","value":180}]},{"op":"greater_than_or_equal","args":[{"op":"field","field":"diastolic"},{"op":"literal","value":120}]}]},"label":"Hypertensive Crisis","description":"Legacy highest-threshold classification.","severity":"critical","recommendations":["Seek immediate clinical assessment according to the approved local escalation protocol."],"order":0},
-      {"key":"stage_two","when":{"op":"and","args":[{"op":"not","args":[{"op":"or","args":[{"op":"greater_than_or_equal","args":[{"op":"field","field":"systolic"},{"op":"literal","value":180}]},{"op":"greater_than_or_equal","args":[{"op":"field","field":"diastolic"},{"op":"literal","value":120}]}]}]},{"op":"or","args":[{"op":"greater_than_or_equal","args":[{"op":"field","field":"systolic"},{"op":"literal","value":140}]},{"op":"greater_than_or_equal","args":[{"op":"field","field":"diastolic"},{"op":"literal","value":90}]}]}]},"label":"Stage 2 High Blood Pressure","description":"Legacy category retained for clinician review.","severity":"warning","recommendations":["Arrange timely clinical review and confirm with repeat measurements according to local protocol."],"order":1},
-      {"key":"stage_one","when":{"op":"and","args":[{"op":"less_than","args":[{"op":"field","field":"systolic"},{"op":"literal","value":140}]},{"op":"less_than","args":[{"op":"field","field":"diastolic"},{"op":"literal","value":90}]},{"op":"or","args":[{"op":"greater_than_or_equal","args":[{"op":"field","field":"systolic"},{"op":"literal","value":130}]},{"op":"greater_than_or_equal","args":[{"op":"field","field":"diastolic"},{"op":"literal","value":80}]}]}]},"label":"Stage 1 High Blood Pressure","description":"Legacy category retained for clinician review.","severity":"warning","recommendations":["Confirm the reading and arrange clinical follow-up according to local protocol."],"order":2},
-      {"key":"elevated","when":{"op":"and","args":[{"op":"greater_than_or_equal","args":[{"op":"field","field":"systolic"},{"op":"literal","value":120}]},{"op":"less_than","args":[{"op":"field","field":"systolic"},{"op":"literal","value":130}]},{"op":"less_than","args":[{"op":"field","field":"diastolic"},{"op":"literal","value":80}]}]},"label":"Elevated Blood Pressure","description":"Legacy category retained for clinician review.","severity":"info","recommendations":["Confirm with repeat measurements and review modifiable risk factors."],"order":3},
-      {"key":"normal","when":{"op":"and","args":[{"op":"less_than","args":[{"op":"field","field":"systolic"},{"op":"literal","value":120}]},{"op":"less_than","args":[{"op":"field","field":"diastolic"},{"op":"literal","value":80}]}]},"label":"Normal Blood Pressure","description":"Legacy category retained for clinician review.","severity":"normal","recommendations":["Maintain healthy habits and monitor according to local guidance."],"order":4}
+    "citations": [],
+    "inputs": [
+      {
+        "key": "systolic",
+        "type": "integer",
+        "label": "Systolic blood pressure",
+        "required": true,
+        "minimum": 70,
+        "maximum": 250,
+        "step": 1,
+        "clinical_warning": "Confirm the reading and use an appropriately sized cuff.",
+        "accessibility_label": "Systolic blood pressure in millimetres of mercury"
+      },
+      {
+        "key": "diastolic",
+        "type": "integer",
+        "label": "Diastolic blood pressure",
+        "required": true,
+        "minimum": 40,
+        "maximum": 150,
+        "step": 1,
+        "clinical_warning": "Confirm the reading and use an appropriately sized cuff.",
+        "accessibility_label": "Diastolic blood pressure in millimetres of mercury"
+      },
+      {
+        "key": "age_over_65",
+        "type": "boolean",
+        "label": "Age over 65 years",
+        "required": false,
+        "default": false
+      },
+      {
+        "key": "family_history",
+        "type": "boolean",
+        "label": "Family history of heart disease or stroke",
+        "required": false,
+        "default": false
+      },
+      {
+        "key": "diabetes",
+        "type": "boolean",
+        "label": "Diabetes",
+        "required": false,
+        "default": false
+      },
+      {
+        "key": "smoking",
+        "type": "boolean",
+        "label": "Current smoker",
+        "required": false,
+        "default": false
+      },
+      {
+        "key": "overweight",
+        "type": "boolean",
+        "label": "Overweight or obese (BMI above 25)",
+        "required": false,
+        "default": false
+      },
+      {
+        "key": "sedentary",
+        "type": "boolean",
+        "label": "Sedentary lifestyle",
+        "required": false,
+        "default": false
+      },
+      {
+        "key": "heavy_alcohol",
+        "type": "boolean",
+        "label": "Heavy alcohol consumption",
+        "required": false,
+        "default": false
+      },
+      {
+        "key": "high_stress",
+        "type": "boolean",
+        "label": "High stress levels",
+        "required": false,
+        "default": false
+      },
+      {
+        "key": "poor_sleep",
+        "type": "boolean",
+        "label": "Sleep disorder or poor sleep quality",
+        "required": false,
+        "default": false
+      },
+      {
+        "key": "high_sodium",
+        "type": "boolean",
+        "label": "High sodium diet",
+        "required": false,
+        "default": false
+      }
     ],
-    "completion":{"mode":"all_required","allow_resume":false,"require_review":true,"show_percentage":false,"reset_confirmation":true},
-    "test_cases":[
-      {"key":"normal_reading","inputs":{"systolic":119,"diastolic":79},"expected":{"risk_count":0,"risk_level":"Low Risk","interpretations":["normal"],"warnings":[]}},
-      {"key":"stage_one_three_risks","inputs":{"systolic":130,"diastolic":79,"age_over_65":true,"family_history":true,"diabetes":true},"expected":{"risk_count":3,"risk_level":"High Risk","interpretations":["stage_one"],"warnings":[]}},
-      {"key":"crisis_boundary","inputs":{"systolic":180,"diastolic":80},"expected":{"risk_count":0,"risk_level":"Low Risk","interpretations":["hypertensive_crisis"],"warnings":["crisis_warning"]}},
-      {"key":"diastolic_stage_two","inputs":{"systolic":120,"diastolic":90},"expected":{"risk_count":0,"risk_level":"Low Risk","interpretations":["stage_two"],"warnings":[]}}
+    "sections": [
+      {
+        "key": "reading",
+        "title": "Blood Pressure Reading",
+        "order": 0
+      },
+      {
+        "key": "risk_factors",
+        "title": "Risk Factors",
+        "order": 1,
+        "review_before_completion": true
+      }
     ],
-    "minimum_app_version":null
+    "calculation": [
+      {
+        "key": "risk_count",
+        "expression": {
+          "op": "add",
+          "args": [
+            {
+              "op": "if",
+              "args": [
+                {
+                  "op": "field",
+                  "field": "age_over_65"
+                },
+                {
+                  "op": "literal",
+                  "value": 1
+                },
+                {
+                  "op": "literal",
+                  "value": 0
+                }
+              ]
+            },
+            {
+              "op": "if",
+              "args": [
+                {
+                  "op": "field",
+                  "field": "family_history"
+                },
+                {
+                  "op": "literal",
+                  "value": 1
+                },
+                {
+                  "op": "literal",
+                  "value": 0
+                }
+              ]
+            },
+            {
+              "op": "if",
+              "args": [
+                {
+                  "op": "field",
+                  "field": "diabetes"
+                },
+                {
+                  "op": "literal",
+                  "value": 1
+                },
+                {
+                  "op": "literal",
+                  "value": 0
+                }
+              ]
+            },
+            {
+              "op": "if",
+              "args": [
+                {
+                  "op": "field",
+                  "field": "smoking"
+                },
+                {
+                  "op": "literal",
+                  "value": 1
+                },
+                {
+                  "op": "literal",
+                  "value": 0
+                }
+              ]
+            },
+            {
+              "op": "if",
+              "args": [
+                {
+                  "op": "field",
+                  "field": "overweight"
+                },
+                {
+                  "op": "literal",
+                  "value": 1
+                },
+                {
+                  "op": "literal",
+                  "value": 0
+                }
+              ]
+            },
+            {
+              "op": "if",
+              "args": [
+                {
+                  "op": "field",
+                  "field": "sedentary"
+                },
+                {
+                  "op": "literal",
+                  "value": 1
+                },
+                {
+                  "op": "literal",
+                  "value": 0
+                }
+              ]
+            },
+            {
+              "op": "if",
+              "args": [
+                {
+                  "op": "field",
+                  "field": "heavy_alcohol"
+                },
+                {
+                  "op": "literal",
+                  "value": 1
+                },
+                {
+                  "op": "literal",
+                  "value": 0
+                }
+              ]
+            },
+            {
+              "op": "if",
+              "args": [
+                {
+                  "op": "field",
+                  "field": "high_stress"
+                },
+                {
+                  "op": "literal",
+                  "value": 1
+                },
+                {
+                  "op": "literal",
+                  "value": 0
+                }
+              ]
+            },
+            {
+              "op": "if",
+              "args": [
+                {
+                  "op": "field",
+                  "field": "poor_sleep"
+                },
+                {
+                  "op": "literal",
+                  "value": 1
+                },
+                {
+                  "op": "literal",
+                  "value": 0
+                }
+              ]
+            },
+            {
+              "op": "if",
+              "args": [
+                {
+                  "op": "field",
+                  "field": "high_sodium"
+                },
+                {
+                  "op": "literal",
+                  "value": 1
+                },
+                {
+                  "op": "literal",
+                  "value": 0
+                }
+              ]
+            }
+          ]
+        },
+        "precision": 0,
+        "rounding_mode": "half_up"
+      }
+    ],
+    "rules": [],
+    "outputs": [
+      {
+        "key": "systolic",
+        "label": "Systolic",
+        "value": {
+          "op": "field",
+          "field": "systolic"
+        },
+        "unit": "mmHg",
+        "precision": 0,
+        "rounding_mode": "half_up"
+      },
+      {
+        "key": "diastolic",
+        "label": "Diastolic",
+        "value": {
+          "op": "field",
+          "field": "diastolic"
+        },
+        "unit": "mmHg",
+        "precision": 0,
+        "rounding_mode": "half_up"
+      },
+      {
+        "key": "risk_count",
+        "label": "Risk factors identified",
+        "value": {
+          "op": "field",
+          "field": "risk_count"
+        },
+        "precision": 0,
+        "rounding_mode": "half_up"
+      },
+      {
+        "key": "risk_level",
+        "label": "Risk Level",
+        "value": {
+          "op": "if",
+          "args": [
+            {
+              "op": "equal",
+              "args": [
+                {
+                  "op": "field",
+                  "field": "risk_count"
+                },
+                {
+                  "op": "literal",
+                  "value": 0
+                }
+              ]
+            },
+            {
+              "op": "literal",
+              "value": "Low Risk"
+            },
+            {
+              "op": "if",
+              "args": [
+                {
+                  "op": "less_than_or_equal",
+                  "args": [
+                    {
+                      "op": "field",
+                      "field": "risk_count"
+                    },
+                    {
+                      "op": "literal",
+                      "value": 2
+                    }
+                  ]
+                },
+                {
+                  "op": "literal",
+                  "value": "Moderate Risk"
+                },
+                {
+                  "op": "if",
+                  "args": [
+                    {
+                      "op": "less_than_or_equal",
+                      "args": [
+                        {
+                          "op": "field",
+                          "field": "risk_count"
+                        },
+                        {
+                          "op": "literal",
+                          "value": 4
+                        }
+                      ]
+                    },
+                    {
+                      "op": "literal",
+                      "value": "High Risk"
+                    },
+                    {
+                      "op": "literal",
+                      "value": "Very High Risk"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      }
+    ],
+    "interpretations": [
+      {
+        "key": "hypertensive_crisis",
+        "when": {
+          "op": "or",
+          "args": [
+            {
+              "op": "greater_than_or_equal",
+              "args": [
+                {
+                  "op": "field",
+                  "field": "systolic"
+                },
+                {
+                  "op": "literal",
+                  "value": 180
+                }
+              ]
+            },
+            {
+              "op": "greater_than_or_equal",
+              "args": [
+                {
+                  "op": "field",
+                  "field": "diastolic"
+                },
+                {
+                  "op": "literal",
+                  "value": 120
+                }
+              ]
+            }
+          ]
+        },
+        "label": "Hypertensive Crisis",
+        "description": "Legacy highest-threshold classification.",
+        "severity": "critical",
+        "recommendations": [
+          "Seek immediate clinical assessment according to the approved local escalation protocol."
+        ],
+        "order": 0
+      },
+      {
+        "key": "stage_two",
+        "when": {
+          "op": "and",
+          "args": [
+            {
+              "op": "not",
+              "args": [
+                {
+                  "op": "or",
+                  "args": [
+                    {
+                      "op": "greater_than_or_equal",
+                      "args": [
+                        {
+                          "op": "field",
+                          "field": "systolic"
+                        },
+                        {
+                          "op": "literal",
+                          "value": 180
+                        }
+                      ]
+                    },
+                    {
+                      "op": "greater_than_or_equal",
+                      "args": [
+                        {
+                          "op": "field",
+                          "field": "diastolic"
+                        },
+                        {
+                          "op": "literal",
+                          "value": 120
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "op": "or",
+              "args": [
+                {
+                  "op": "greater_than_or_equal",
+                  "args": [
+                    {
+                      "op": "field",
+                      "field": "systolic"
+                    },
+                    {
+                      "op": "literal",
+                      "value": 140
+                    }
+                  ]
+                },
+                {
+                  "op": "greater_than_or_equal",
+                  "args": [
+                    {
+                      "op": "field",
+                      "field": "diastolic"
+                    },
+                    {
+                      "op": "literal",
+                      "value": 90
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        "label": "Stage 2 High Blood Pressure",
+        "description": "Legacy category retained for clinician review.",
+        "severity": "warning",
+        "recommendations": [
+          "Arrange timely clinical review and confirm with repeat measurements according to local protocol."
+        ],
+        "order": 1
+      },
+      {
+        "key": "stage_one",
+        "when": {
+          "op": "and",
+          "args": [
+            {
+              "op": "less_than",
+              "args": [
+                {
+                  "op": "field",
+                  "field": "systolic"
+                },
+                {
+                  "op": "literal",
+                  "value": 140
+                }
+              ]
+            },
+            {
+              "op": "less_than",
+              "args": [
+                {
+                  "op": "field",
+                  "field": "diastolic"
+                },
+                {
+                  "op": "literal",
+                  "value": 90
+                }
+              ]
+            },
+            {
+              "op": "or",
+              "args": [
+                {
+                  "op": "greater_than_or_equal",
+                  "args": [
+                    {
+                      "op": "field",
+                      "field": "systolic"
+                    },
+                    {
+                      "op": "literal",
+                      "value": 130
+                    }
+                  ]
+                },
+                {
+                  "op": "greater_than_or_equal",
+                  "args": [
+                    {
+                      "op": "field",
+                      "field": "diastolic"
+                    },
+                    {
+                      "op": "literal",
+                      "value": 80
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        "label": "Stage 1 High Blood Pressure",
+        "description": "Legacy category retained for clinician review.",
+        "severity": "warning",
+        "recommendations": [
+          "Confirm the reading and arrange clinical follow-up according to local protocol."
+        ],
+        "order": 2
+      },
+      {
+        "key": "elevated",
+        "when": {
+          "op": "and",
+          "args": [
+            {
+              "op": "greater_than_or_equal",
+              "args": [
+                {
+                  "op": "field",
+                  "field": "systolic"
+                },
+                {
+                  "op": "literal",
+                  "value": 120
+                }
+              ]
+            },
+            {
+              "op": "less_than",
+              "args": [
+                {
+                  "op": "field",
+                  "field": "systolic"
+                },
+                {
+                  "op": "literal",
+                  "value": 130
+                }
+              ]
+            },
+            {
+              "op": "less_than",
+              "args": [
+                {
+                  "op": "field",
+                  "field": "diastolic"
+                },
+                {
+                  "op": "literal",
+                  "value": 80
+                }
+              ]
+            }
+          ]
+        },
+        "label": "Elevated Blood Pressure",
+        "description": "Legacy category retained for clinician review.",
+        "severity": "info",
+        "recommendations": [
+          "Confirm with repeat measurements and review modifiable risk factors."
+        ],
+        "order": 3
+      },
+      {
+        "key": "normal",
+        "when": {
+          "op": "and",
+          "args": [
+            {
+              "op": "less_than",
+              "args": [
+                {
+                  "op": "field",
+                  "field": "systolic"
+                },
+                {
+                  "op": "literal",
+                  "value": 120
+                }
+              ]
+            },
+            {
+              "op": "less_than",
+              "args": [
+                {
+                  "op": "field",
+                  "field": "diastolic"
+                },
+                {
+                  "op": "literal",
+                  "value": 80
+                }
+              ]
+            }
+          ]
+        },
+        "label": "Normal Blood Pressure",
+        "description": "Legacy category retained for clinician review.",
+        "severity": "normal",
+        "recommendations": [
+          "Maintain healthy habits and monitor according to local guidance."
+        ],
+        "order": 4
+      }
+    ],
+    "completion": {
+      "mode": "all_required",
+      "allow_resume": false,
+      "require_review": true,
+      "show_percentage": false,
+      "reset_confirmation": true
+    },
+    "test_cases": [
+      {
+        "key": "normal_reading",
+        "inputs": {
+          "systolic": 119,
+          "diastolic": 79
+        },
+        "expected": {
+          "risk_count": 0,
+          "risk_level": "Low Risk",
+          "interpretations": [
+            "normal"
+          ],
+          "warnings": []
+        }
+      },
+      {
+        "key": "stage_one_three_risks",
+        "inputs": {
+          "systolic": 130,
+          "diastolic": 79,
+          "age_over_65": true,
+          "family_history": true,
+          "diabetes": true
+        },
+        "expected": {
+          "risk_count": 3,
+          "risk_level": "High Risk",
+          "interpretations": [
+            "stage_one"
+          ],
+          "warnings": []
+        }
+      },
+      {
+        "key": "crisis_boundary",
+        "inputs": {
+          "systolic": 180,
+          "diastolic": 80
+        },
+        "expected": {
+          "risk_count": 0,
+          "risk_level": "Low Risk",
+          "interpretations": [
+            "hypertensive_crisis"
+          ],
+          "warnings": [
+            "crisis_warning"
+          ]
+        }
+      },
+      {
+        "key": "diastolic_stage_two",
+        "inputs": {
+          "systolic": 120,
+          "diastolic": 90
+        },
+        "expected": {
+          "risk_count": 0,
+          "risk_level": "Low Risk",
+          "interpretations": [
+            "stage_two"
+          ],
+          "warnings": []
+        }
+      }
+    ],
+    "minimum_app_version": null
   }
 }

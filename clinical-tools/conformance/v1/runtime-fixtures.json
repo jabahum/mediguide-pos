@@ -41,11 +41,11 @@
       "definition": {
         "schema_version":"1.0","tool_type":"calculator","title":"Date conformance","version":"1.0.0","locale":"en","warnings":[],"citations":[],
         "inputs":[{"key":"start_date","type":"date","label":"Start date","required":true}],"sections":[],"calculation":[],"rules":[],
-        "outputs":[{"key":"elapsed_days","label":"Elapsed days","value":{"op":"date_difference","date_unit":"days","args":[{"op":"field","field":"start_date"},{"op":"now"}]}}],
+        "outputs":[{"key":"elapsed_days","label":"Elapsed days","value":{"op":"date_difference","date_unit":"days","args":[{"op":"field","field":"start_date"},{"op":"now"}]}},{"key":"plus_280_days","label":"Date plus 280 days","value":{"op":"date_add","date_unit":"days","args":[{"op":"field","field":"start_date"},{"op":"literal","value":280}]}}],
         "interpretations":[],"completion":{"mode":"none","reset_confirmation":true},"test_cases":[]
       },
       "cases":[
-        {"key":"fixed_clock_days","input":{"start_date":"2026-08-20"},"fixed_now":"2026-08-22T00:00:00Z","expected_normalized_input":{"start_date":"2026-08-20"},"expected_outputs":{"elapsed_days":2},"expected_recommendations":[],"expected_warnings":[]}
+        {"key":"fixed_clock_days","input":{"start_date":"2026-08-20"},"fixed_now":"2026-08-22T00:00:00Z","expected_normalized_input":{"start_date":"2026-08-20"},"expected_outputs":{"elapsed_days":2,"plus_280_days":"2027-05-27"},"expected_recommendations":[],"expected_warnings":[]}
       ]
     },
     {

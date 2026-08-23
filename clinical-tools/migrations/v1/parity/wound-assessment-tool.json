@@ -1,0 +1,22 @@
+{
+  "legacy_id": "wound-assessment-tool",
+  "legacy_file": "wound-assessment-tool.html",
+  "status": "changes_required",
+  "reviewer_id": null,
+  "reviewed_at": null,
+  "cases_tested": 5,
+  "exact_matches": 3,
+  "tolerance_matches": 0,
+  "presentation_differences": [
+    "Named tissue, infection, and risk-factor checklists are summarized as typed booleans/counts in the calculation draft; the native UI must preserve each named item."
+  ],
+  "logic_differences": [
+    "Location, wound type, dimensions, exudate, and tetanus status are mandatory; the legacy empty form returned a minor unspecified wound."
+  ],
+  "unresolved_clinical_ambiguities": [
+    "Approve mandatory fields and every severity, infection-risk, and healing-potential condition.",
+    "Approve tetanus workflow, urgent criteria, care recommendations, and supported populations.",
+    "Provide governing wound-care citations and effective/review dates."
+  ],
+  "reviewer_decision": "Pending independent clinician approval. Do not approve or publish this review draft."
+}

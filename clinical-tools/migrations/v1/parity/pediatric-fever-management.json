@@ -1,0 +1,23 @@
+{
+  "legacy_id": "pediatric-fever-management",
+  "legacy_file": "pediatric-fever-management.html",
+  "status": "changes_required",
+  "reviewer_id": null,
+  "reviewed_at": null,
+  "cases_tested": 5,
+  "exact_matches": 3,
+  "tolerance_matches": 1,
+  "presentation_differences": [
+    "Danger signs are represented as a typed count in the calculation draft; the native UI must retain the eight named signs."
+  ],
+  "logic_differences": [
+    "An explicit age of zero months is accepted rather than rejected by JavaScript truthiness.",
+    "Measured weight is mandatory and the legacy rough weight estimate is removed."
+  ],
+  "unresolved_clinical_ambiguities": [
+    "Clinician must approve every age/temperature threshold, danger sign, urgency level, and safety-net instruction.",
+    "Pharmacist/clinician must approve dose, frequency, maximum, contraindication, and age restrictions before medicine outputs can publish.",
+    "Provide governing citations and effective/review dates."
+  ],
+  "reviewer_decision": "Pending independent clinician and pharmacist approval. Do not approve or publish this review draft."
+}

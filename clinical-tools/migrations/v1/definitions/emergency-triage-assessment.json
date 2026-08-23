@@ -1,0 +1,1520 @@
+{
+  "legacy_id": "emergency-triage-assessment",
+  "legacy_file": "emergency-triage-assessment.html",
+  "source_checksum": "086efb599f8c535faa94f589d19b477e0bef3afd635ca0a0ccb7ee3c061c7420",
+  "change_summary": "Clinician review draft: preserve the legacy minimum-priority calculation, age conversion, vital thresholds, and pain escalation while requiring age and representing named signs as explicit priority groups.",
+  "definition": {
+    "schema_version": "1.0",
+    "tool_type": "decision_tool",
+    "title": "Legacy Emergency Triage Classification (Unapproved)",
+    "description": "Reproduces the legacy priority matrix for clinical review. It is not a validated Manchester Triage System implementation and must not delay emergency care.",
+    "version": "1.0.0-review.1",
+    "locale": "en",
+    "supported_population": [],
+    "exclusions": [
+      "Do not use as the sole basis for triage, diagnosis, disposition, or treatment."
+    ],
+    "warnings": [
+      {
+        "key": "not_validated",
+        "text": "This legacy priority matrix has not been validated or clinically approved. Use the approved local triage protocol and clinical judgment.",
+        "severity": "critical"
+      },
+      {
+        "key": "immediate_escalation",
+        "text": "The recorded findings meet the legacy Priority 1 or 2 threshold. Initiate the approved emergency response without delaying for this tool.",
+        "severity": "critical",
+        "when": {
+          "op": "less_than_or_equal",
+          "args": [
+            {
+              "op": "field",
+              "field": "priority"
+            },
+            {
+              "op": "literal",
+              "value": 2
+            }
+          ]
+        }
+      }
+    ],
+    "citations": [],
+    "inputs": [
+      {
+        "key": "age_value",
+        "type": "number",
+        "label": "Age",
+        "required": true,
+        "minimum": 0,
+        "maximum": 120
+      },
+      {
+        "key": "age_unit",
+        "type": "single_selection",
+        "label": "Age unit",
+        "required": true,
+        "default": "years",
+        "options": [
+          {
+            "value": "years",
+            "label": "Years"
+          },
+          {
+            "value": "months",
+            "label": "Months"
+          },
+          {
+            "value": "days",
+            "label": "Days"
+          }
+        ]
+      },
+      {
+        "key": "heart_rate",
+        "type": "integer",
+        "label": "Heart rate",
+        "required": false,
+        "minimum": 20,
+        "maximum": 250,
+        "default": 80
+      },
+      {
+        "key": "respiratory_rate",
+        "type": "integer",
+        "label": "Respiratory rate",
+        "required": false,
+        "minimum": 5,
+        "maximum": 60,
+        "default": 16
+      },
+      {
+        "key": "systolic_bp",
+        "type": "integer",
+        "label": "Systolic blood pressure",
+        "required": false,
+        "minimum": 50,
+        "maximum": 250,
+        "default": 120
+      },
+      {
+        "key": "diastolic_bp",
+        "type": "integer",
+        "label": "Diastolic blood pressure",
+        "required": false,
+        "minimum": 30,
+        "maximum": 150,
+        "default": 80
+      },
+      {
+        "key": "temperature_c",
+        "type": "number",
+        "label": "Temperature",
+        "required": false,
+        "minimum": 30,
+        "maximum": 45,
+        "default": 37
+      },
+      {
+        "key": "oxygen_saturation",
+        "type": "integer",
+        "label": "Oxygen saturation",
+        "required": false,
+        "minimum": 70,
+        "maximum": 100,
+        "default": 98
+      },
+      {
+        "key": "pain_score",
+        "type": "integer",
+        "label": "Pain score",
+        "required": false,
+        "minimum": 0,
+        "maximum": 10,
+        "default": 0
+      },
+      {
+        "key": "has_priority_1_sign",
+        "type": "boolean",
+        "label": "Any immediate-threat sign recorded",
+        "required": false,
+        "default": false,
+        "help_text": "Cardiac/respiratory arrest or imminent arrest, complete airway obstruction, severe shock, or unconscious/unresponsive."
+      },
+      {
+        "key": "has_priority_2_sign",
+        "type": "boolean",
+        "label": "Any very-urgent sign recorded",
+        "required": false,
+        "default": false,
+        "help_text": "Severe breathing difficulty, cardiac-feature chest pain, altered consciousness, severe hemorrhage, anaphylaxis, or acute stroke signs."
+      },
+      {
+        "key": "has_priority_3_sign",
+        "type": "boolean",
+        "label": "Any urgent sign recorded",
+        "required": false,
+        "default": false,
+        "help_text": "Moderate breathing difficulty, severe pain, persistent vomiting with dehydration, concerning high fever, or significant injury."
+      },
+      {
+        "key": "has_priority_4_sign",
+        "type": "boolean",
+        "label": "Any standard-priority sign recorded",
+        "required": false,
+        "default": false,
+        "help_text": "Stable condition needing assessment, moderate pain, minor injury, or routine symptoms."
+      }
+    ],
+    "sections": [
+      {
+        "key": "patient",
+        "title": "Patient and vital signs",
+        "order": 0,
+        "review_before_completion": true
+      },
+      {
+        "key": "signs",
+        "title": "Priority signs",
+        "order": 1,
+        "review_before_completion": true
+      }
+    ],
+    "calculation": [
+      {
+        "key": "age_years",
+        "expression": {
+          "op": "if",
+          "args": [
+            {
+              "op": "equal",
+              "args": [
+                {
+                  "op": "field",
+                  "field": "age_unit"
+                },
+                {
+                  "op": "literal",
+                  "value": "months"
+                }
+              ]
+            },
+            {
+              "op": "divide",
+              "args": [
+                {
+                  "op": "field",
+                  "field": "age_value"
+                },
+                {
+                  "op": "literal",
+                  "value": 12
+                }
+              ]
+            },
+            {
+              "op": "if",
+              "args": [
+                {
+                  "op": "equal",
+                  "args": [
+                    {
+                      "op": "field",
+                      "field": "age_unit"
+                    },
+                    {
+                      "op": "literal",
+                      "value": "days"
+                    }
+                  ]
+                },
+                {
+                  "op": "divide",
+                  "args": [
+                    {
+                      "op": "field",
+                      "field": "age_value"
+                    },
+                    {
+                      "op": "literal",
+                      "value": 365
+                    }
+                  ]
+                },
+                {
+                  "op": "field",
+                  "field": "age_value"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "key": "heart_priority",
+        "expression": {
+          "op": "min",
+          "args": [
+            {
+              "op": "if",
+              "args": [
+                {
+                  "op": "and",
+                  "args": [
+                    {
+                      "op": "less_than",
+                      "args": [
+                        {
+                          "op": "field",
+                          "field": "age_years"
+                        },
+                        {
+                          "op": "literal",
+                          "value": 1
+                        }
+                      ]
+                    },
+                    {
+                      "op": "or",
+                      "args": [
+                        {
+                          "op": "less_than",
+                          "args": [
+                            {
+                              "op": "field",
+                              "field": "heart_rate"
+                            },
+                            {
+                              "op": "literal",
+                              "value": 80
+                            }
+                          ]
+                        },
+                        {
+                          "op": "greater_than",
+                          "args": [
+                            {
+                              "op": "field",
+                              "field": "heart_rate"
+                            },
+                            {
+                              "op": "literal",
+                              "value": 180
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "op": "literal",
+                  "value": 2
+                },
+                {
+                  "op": "literal",
+                  "value": 5
+                }
+              ]
+            },
+            {
+              "op": "if",
+              "args": [
+                {
+                  "op": "and",
+                  "args": [
+                    {
+                      "op": "greater_than_or_equal",
+                      "args": [
+                        {
+                          "op": "field",
+                          "field": "age_years"
+                        },
+                        {
+                          "op": "literal",
+                          "value": 1
+                        }
+                      ]
+                    },
+                    {
+                      "op": "less_than",
+                      "args": [
+                        {
+                          "op": "field",
+                          "field": "age_years"
+                        },
+                        {
+                          "op": "literal",
+                          "value": 5
+                        }
+                      ]
+                    },
+                    {
+                      "op": "or",
+                      "args": [
+                        {
+                          "op": "less_than",
+                          "args": [
+                            {
+                              "op": "field",
+                              "field": "heart_rate"
+                            },
+                            {
+                              "op": "literal",
+                              "value": 70
+                            }
+                          ]
+                        },
+                        {
+                          "op": "greater_than",
+                          "args": [
+                            {
+                              "op": "field",
+                              "field": "heart_rate"
+                            },
+                            {
+                              "op": "literal",
+                              "value": 150
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "op": "literal",
+                  "value": 3
+                },
+                {
+                  "op": "literal",
+                  "value": 5
+                }
+              ]
+            },
+            {
+              "op": "if",
+              "args": [
+                {
+                  "op": "and",
+                  "args": [
+                    {
+                      "op": "greater_than_or_equal",
+                      "args": [
+                        {
+                          "op": "field",
+                          "field": "age_years"
+                        },
+                        {
+                          "op": "literal",
+                          "value": 5
+                        }
+                      ]
+                    },
+                    {
+                      "op": "less_than",
+                      "args": [
+                        {
+                          "op": "field",
+                          "field": "age_years"
+                        },
+                        {
+                          "op": "literal",
+                          "value": 12
+                        }
+                      ]
+                    },
+                    {
+                      "op": "or",
+                      "args": [
+                        {
+                          "op": "less_than",
+                          "args": [
+                            {
+                              "op": "field",
+                              "field": "heart_rate"
+                            },
+                            {
+                              "op": "literal",
+                              "value": 60
+                            }
+                          ]
+                        },
+                        {
+                          "op": "greater_than",
+                          "args": [
+                            {
+                              "op": "field",
+                              "field": "heart_rate"
+                            },
+                            {
+                              "op": "literal",
+                              "value": 130
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "op": "literal",
+                  "value": 3
+                },
+                {
+                  "op": "literal",
+                  "value": 5
+                }
+              ]
+            },
+            {
+              "op": "if",
+              "args": [
+                {
+                  "op": "and",
+                  "args": [
+                    {
+                      "op": "greater_than_or_equal",
+                      "args": [
+                        {
+                          "op": "field",
+                          "field": "age_years"
+                        },
+                        {
+                          "op": "literal",
+                          "value": 12
+                        }
+                      ]
+                    },
+                    {
+                      "op": "or",
+                      "args": [
+                        {
+                          "op": "less_than",
+                          "args": [
+                            {
+                              "op": "field",
+                              "field": "heart_rate"
+                            },
+                            {
+                              "op": "literal",
+                              "value": 40
+                            }
+                          ]
+                        },
+                        {
+                          "op": "greater_than",
+                          "args": [
+                            {
+                              "op": "field",
+                              "field": "heart_rate"
+                            },
+                            {
+                              "op": "literal",
+                              "value": 150
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "op": "literal",
+                  "value": 2
+                },
+                {
+                  "op": "literal",
+                  "value": 5
+                }
+              ]
+            },
+            {
+              "op": "if",
+              "args": [
+                {
+                  "op": "and",
+                  "args": [
+                    {
+                      "op": "greater_than_or_equal",
+                      "args": [
+                        {
+                          "op": "field",
+                          "field": "age_years"
+                        },
+                        {
+                          "op": "literal",
+                          "value": 12
+                        }
+                      ]
+                    },
+                    {
+                      "op": "or",
+                      "args": [
+                        {
+                          "op": "less_than",
+                          "args": [
+                            {
+                              "op": "field",
+                              "field": "heart_rate"
+                            },
+                            {
+                              "op": "literal",
+                              "value": 50
+                            }
+                          ]
+                        },
+                        {
+                          "op": "greater_than",
+                          "args": [
+                            {
+                              "op": "field",
+                              "field": "heart_rate"
+                            },
+                            {
+                              "op": "literal",
+                              "value": 120
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "op": "literal",
+                  "value": 3
+                },
+                {
+                  "op": "literal",
+                  "value": 5
+                }
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "key": "respiratory_priority",
+        "expression": {
+          "op": "min",
+          "args": [
+            {
+              "op": "if",
+              "args": [
+                {
+                  "op": "and",
+                  "args": [
+                    {
+                      "op": "less_than",
+                      "args": [
+                        {
+                          "op": "field",
+                          "field": "age_years"
+                        },
+                        {
+                          "op": "literal",
+                          "value": 1
+                        }
+                      ]
+                    },
+                    {
+                      "op": "or",
+                      "args": [
+                        {
+                          "op": "less_than",
+                          "args": [
+                            {
+                              "op": "field",
+                              "field": "respiratory_rate"
+                            },
+                            {
+                              "op": "literal",
+                              "value": 15
+                            }
+                          ]
+                        },
+                        {
+                          "op": "greater_than",
+                          "args": [
+                            {
+                              "op": "field",
+                              "field": "respiratory_rate"
+                            },
+                            {
+                              "op": "literal",
+                              "value": 50
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "op": "literal",
+                  "value": 2
+                },
+                {
+                  "op": "literal",
+                  "value": 5
+                }
+              ]
+            },
+            {
+              "op": "if",
+              "args": [
+                {
+                  "op": "and",
+                  "args": [
+                    {
+                      "op": "less_than",
+                      "args": [
+                        {
+                          "op": "field",
+                          "field": "age_years"
+                        },
+                        {
+                          "op": "literal",
+                          "value": 1
+                        }
+                      ]
+                    },
+                    {
+                      "op": "or",
+                      "args": [
+                        {
+                          "op": "less_than",
+                          "args": [
+                            {
+                              "op": "field",
+                              "field": "respiratory_rate"
+                            },
+                            {
+                              "op": "literal",
+                              "value": 20
+                            }
+                          ]
+                        },
+                        {
+                          "op": "greater_than",
+                          "args": [
+                            {
+                              "op": "field",
+                              "field": "respiratory_rate"
+                            },
+                            {
+                              "op": "literal",
+                              "value": 40
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "op": "literal",
+                  "value": 3
+                },
+                {
+                  "op": "literal",
+                  "value": 5
+                }
+              ]
+            },
+            {
+              "op": "if",
+              "args": [
+                {
+                  "op": "and",
+                  "args": [
+                    {
+                      "op": "greater_than_or_equal",
+                      "args": [
+                        {
+                          "op": "field",
+                          "field": "age_years"
+                        },
+                        {
+                          "op": "literal",
+                          "value": 1
+                        }
+                      ]
+                    },
+                    {
+                      "op": "less_than",
+                      "args": [
+                        {
+                          "op": "field",
+                          "field": "age_years"
+                        },
+                        {
+                          "op": "literal",
+                          "value": 5
+                        }
+                      ]
+                    },
+                    {
+                      "op": "or",
+                      "args": [
+                        {
+                          "op": "less_than",
+                          "args": [
+                            {
+                              "op": "field",
+                              "field": "respiratory_rate"
+                            },
+                            {
+                              "op": "literal",
+                              "value": 15
+                            }
+                          ]
+                        },
+                        {
+                          "op": "greater_than",
+                          "args": [
+                            {
+                              "op": "field",
+                              "field": "respiratory_rate"
+                            },
+                            {
+                              "op": "literal",
+                              "value": 30
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "op": "literal",
+                  "value": 3
+                },
+                {
+                  "op": "literal",
+                  "value": 5
+                }
+              ]
+            },
+            {
+              "op": "if",
+              "args": [
+                {
+                  "op": "and",
+                  "args": [
+                    {
+                      "op": "greater_than_or_equal",
+                      "args": [
+                        {
+                          "op": "field",
+                          "field": "age_years"
+                        },
+                        {
+                          "op": "literal",
+                          "value": 5
+                        }
+                      ]
+                    },
+                    {
+                      "op": "or",
+                      "args": [
+                        {
+                          "op": "less_than",
+                          "args": [
+                            {
+                              "op": "field",
+                              "field": "respiratory_rate"
+                            },
+                            {
+                              "op": "literal",
+                              "value": 8
+                            }
+                          ]
+                        },
+                        {
+                          "op": "greater_than",
+                          "args": [
+                            {
+                              "op": "field",
+                              "field": "respiratory_rate"
+                            },
+                            {
+                              "op": "literal",
+                              "value": 35
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "op": "literal",
+                  "value": 2
+                },
+                {
+                  "op": "literal",
+                  "value": 5
+                }
+              ]
+            },
+            {
+              "op": "if",
+              "args": [
+                {
+                  "op": "and",
+                  "args": [
+                    {
+                      "op": "greater_than_or_equal",
+                      "args": [
+                        {
+                          "op": "field",
+                          "field": "age_years"
+                        },
+                        {
+                          "op": "literal",
+                          "value": 5
+                        }
+                      ]
+                    },
+                    {
+                      "op": "or",
+                      "args": [
+                        {
+                          "op": "less_than",
+                          "args": [
+                            {
+                              "op": "field",
+                              "field": "respiratory_rate"
+                            },
+                            {
+                              "op": "literal",
+                              "value": 12
+                            }
+                          ]
+                        },
+                        {
+                          "op": "greater_than",
+                          "args": [
+                            {
+                              "op": "field",
+                              "field": "respiratory_rate"
+                            },
+                            {
+                              "op": "literal",
+                              "value": 25
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "op": "literal",
+                  "value": 3
+                },
+                {
+                  "op": "literal",
+                  "value": 5
+                }
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "key": "bp_priority",
+        "expression": {
+          "op": "if",
+          "args": [
+            {
+              "op": "less_than",
+              "args": [
+                {
+                  "op": "field",
+                  "field": "systolic_bp"
+                },
+                {
+                  "op": "literal",
+                  "value": 70
+                }
+              ]
+            },
+            {
+              "op": "literal",
+              "value": 1
+            },
+            {
+              "op": "if",
+              "args": [
+                {
+                  "op": "less_than",
+                  "args": [
+                    {
+                      "op": "field",
+                      "field": "systolic_bp"
+                    },
+                    {
+                      "op": "literal",
+                      "value": 90
+                    }
+                  ]
+                },
+                {
+                  "op": "literal",
+                  "value": 2
+                },
+                {
+                  "op": "if",
+                  "args": [
+                    {
+                      "op": "greater_than",
+                      "args": [
+                        {
+                          "op": "field",
+                          "field": "systolic_bp"
+                        },
+                        {
+                          "op": "literal",
+                          "value": 180
+                        }
+                      ]
+                    },
+                    {
+                      "op": "literal",
+                      "value": 3
+                    },
+                    {
+                      "op": "literal",
+                      "value": 5
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "key": "temperature_priority",
+        "expression": {
+          "op": "if",
+          "args": [
+            {
+              "op": "or",
+              "args": [
+                {
+                  "op": "less_than",
+                  "args": [
+                    {
+                      "op": "field",
+                      "field": "temperature_c"
+                    },
+                    {
+                      "op": "literal",
+                      "value": 35
+                    }
+                  ]
+                },
+                {
+                  "op": "greater_than",
+                  "args": [
+                    {
+                      "op": "field",
+                      "field": "temperature_c"
+                    },
+                    {
+                      "op": "literal",
+                      "value": 40
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "op": "literal",
+              "value": 2
+            },
+            {
+              "op": "if",
+              "args": [
+                {
+                  "op": "greater_than",
+                  "args": [
+                    {
+                      "op": "field",
+                      "field": "temperature_c"
+                    },
+                    {
+                      "op": "literal",
+                      "value": 38.5
+                    }
+                  ]
+                },
+                {
+                  "op": "literal",
+                  "value": 3
+                },
+                {
+                  "op": "literal",
+                  "value": 5
+                }
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "key": "oxygen_priority",
+        "expression": {
+          "op": "if",
+          "args": [
+            {
+              "op": "less_than",
+              "args": [
+                {
+                  "op": "field",
+                  "field": "oxygen_saturation"
+                },
+                {
+                  "op": "literal",
+                  "value": 85
+                }
+              ]
+            },
+            {
+              "op": "literal",
+              "value": 1
+            },
+            {
+              "op": "if",
+              "args": [
+                {
+                  "op": "less_than",
+                  "args": [
+                    {
+                      "op": "field",
+                      "field": "oxygen_saturation"
+                    },
+                    {
+                      "op": "literal",
+                      "value": 92
+                    }
+                  ]
+                },
+                {
+                  "op": "literal",
+                  "value": 2
+                },
+                {
+                  "op": "if",
+                  "args": [
+                    {
+                      "op": "less_than",
+                      "args": [
+                        {
+                          "op": "field",
+                          "field": "oxygen_saturation"
+                        },
+                        {
+                          "op": "literal",
+                          "value": 95
+                        }
+                      ]
+                    },
+                    {
+                      "op": "literal",
+                      "value": 3
+                    },
+                    {
+                      "op": "literal",
+                      "value": 5
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "key": "vital_priority",
+        "expression": {
+          "op": "min",
+          "args": [
+            {
+              "op": "field",
+              "field": "heart_priority"
+            },
+            {
+              "op": "field",
+              "field": "respiratory_priority"
+            },
+            {
+              "op": "field",
+              "field": "bp_priority"
+            },
+            {
+              "op": "field",
+              "field": "temperature_priority"
+            },
+            {
+              "op": "field",
+              "field": "oxygen_priority"
+            }
+          ]
+        }
+      },
+      {
+        "key": "sign_priority",
+        "expression": {
+          "op": "if",
+          "args": [
+            {
+              "op": "field",
+              "field": "has_priority_1_sign"
+            },
+            {
+              "op": "literal",
+              "value": 1
+            },
+            {
+              "op": "if",
+              "args": [
+                {
+                  "op": "field",
+                  "field": "has_priority_2_sign"
+                },
+                {
+                  "op": "literal",
+                  "value": 2
+                },
+                {
+                  "op": "if",
+                  "args": [
+                    {
+                      "op": "field",
+                      "field": "has_priority_3_sign"
+                    },
+                    {
+                      "op": "literal",
+                      "value": 3
+                    },
+                    {
+                      "op": "if",
+                      "args": [
+                        {
+                          "op": "field",
+                          "field": "has_priority_4_sign"
+                        },
+                        {
+                          "op": "literal",
+                          "value": 4
+                        },
+                        {
+                          "op": "literal",
+                          "value": 5
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "key": "pain_priority",
+        "expression": {
+          "op": "if",
+          "args": [
+            {
+              "op": "greater_than_or_equal",
+              "args": [
+                {
+                  "op": "field",
+                  "field": "pain_score"
+                },
+                {
+                  "op": "literal",
+                  "value": 8
+                }
+              ]
+            },
+            {
+              "op": "literal",
+              "value": 3
+            },
+            {
+              "op": "if",
+              "args": [
+                {
+                  "op": "greater_than_or_equal",
+                  "args": [
+                    {
+                      "op": "field",
+                      "field": "pain_score"
+                    },
+                    {
+                      "op": "literal",
+                      "value": 6
+                    }
+                  ]
+                },
+                {
+                  "op": "literal",
+                  "value": 4
+                },
+                {
+                  "op": "literal",
+                  "value": 5
+                }
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "key": "priority",
+        "expression": {
+          "op": "min",
+          "args": [
+            {
+              "op": "field",
+              "field": "vital_priority"
+            },
+            {
+              "op": "field",
+              "field": "sign_priority"
+            },
+            {
+              "op": "field",
+              "field": "pain_priority"
+            }
+          ]
+        }
+      }
+    ],
+    "rules": [],
+    "outputs": [
+      {
+        "key": "priority",
+        "label": "Legacy priority",
+        "value": {
+          "op": "field",
+          "field": "priority"
+        }
+      },
+      {
+        "key": "age_years",
+        "label": "Age used by legacy matrix",
+        "value": {
+          "op": "field",
+          "field": "age_years"
+        },
+        "unit": "years",
+        "precision": 3,
+        "rounding_mode": "half_up"
+      }
+    ],
+    "interpretations": [
+      {
+        "key": "priority_1",
+        "when": {
+          "op": "equal",
+          "args": [
+            {
+              "op": "field",
+              "field": "priority"
+            },
+            {
+              "op": "literal",
+              "value": 1
+            }
+          ]
+        },
+        "label": "IMMEDIATE (Legacy Priority 1)",
+        "description": "Legacy target: immediate resuscitation.",
+        "severity": "critical",
+        "recommendations": [
+          "Activate the approved emergency response immediately."
+        ],
+        "order": 0
+      },
+      {
+        "key": "priority_2",
+        "when": {
+          "op": "equal",
+          "args": [
+            {
+              "op": "field",
+              "field": "priority"
+            },
+            {
+              "op": "literal",
+              "value": 2
+            }
+          ]
+        },
+        "label": "VERY URGENT (Legacy Priority 2)",
+        "description": "Legacy target: assessment within 10 minutes.",
+        "severity": "critical",
+        "recommendations": [
+          "Escalate immediately under the approved local protocol."
+        ],
+        "order": 1
+      },
+      {
+        "key": "priority_3",
+        "when": {
+          "op": "equal",
+          "args": [
+            {
+              "op": "field",
+              "field": "priority"
+            },
+            {
+              "op": "literal",
+              "value": 3
+            }
+          ]
+        },
+        "label": "URGENT (Legacy Priority 3)",
+        "description": "Legacy target: assessment within 60 minutes.",
+        "severity": "warning",
+        "recommendations": [
+          "Arrange prompt clinical assessment and reassessment."
+        ],
+        "order": 2
+      },
+      {
+        "key": "priority_4",
+        "when": {
+          "op": "equal",
+          "args": [
+            {
+              "op": "field",
+              "field": "priority"
+            },
+            {
+              "op": "literal",
+              "value": 4
+            }
+          ]
+        },
+        "label": "STANDARD (Legacy Priority 4)",
+        "description": "Legacy target: assessment within 120 minutes.",
+        "severity": "info",
+        "recommendations": [
+          "Follow the approved local triage process."
+        ],
+        "order": 3
+      },
+      {
+        "key": "priority_5",
+        "when": {
+          "op": "equal",
+          "args": [
+            {
+              "op": "field",
+              "field": "priority"
+            },
+            {
+              "op": "literal",
+              "value": 5
+            }
+          ]
+        },
+        "label": "NON-URGENT (Legacy Priority 5)",
+        "description": "Legacy target: assessment within 240 minutes.",
+        "severity": "normal",
+        "recommendations": [
+          "A clinician must still assess suitability for routine care."
+        ],
+        "order": 4
+      }
+    ],
+    "completion": {
+      "mode": "all_required",
+      "allow_resume": false,
+      "require_review": true,
+      "show_percentage": false,
+      "reset_confirmation": true
+    },
+    "test_cases": [
+      {
+        "key": "default_nonurgent",
+        "inputs": {
+          "age_value": 35,
+          "age_unit": "years"
+        },
+        "expected": {
+          "priority": 5,
+          "interpretations": [
+            "priority_5"
+          ],
+          "warnings": [
+            "not_validated"
+          ]
+        }
+      },
+      {
+        "key": "priority_one_sign",
+        "inputs": {
+          "age_value": 35,
+          "has_priority_1_sign": true
+        },
+        "expected": {
+          "priority": 1,
+          "interpretations": [
+            "priority_1"
+          ],
+          "warnings": [
+            "not_validated",
+            "immediate_escalation"
+          ]
+        }
+      },
+      {
+        "key": "oxygen_boundary",
+        "inputs": {
+          "age_value": 35,
+          "oxygen_saturation": 91
+        },
+        "expected": {
+          "priority": 2,
+          "interpretations": [
+            "priority_2"
+          ],
+          "warnings": [
+            "not_validated",
+            "immediate_escalation"
+          ]
+        }
+      },
+      {
+        "key": "infant_respiratory",
+        "inputs": {
+          "age_value": 6,
+          "age_unit": "months",
+          "respiratory_rate": 51
+        },
+        "expected": {
+          "priority": 2,
+          "interpretations": [
+            "priority_2"
+          ],
+          "warnings": [
+            "not_validated",
+            "immediate_escalation"
+          ]
+        }
+      }
+    ],
+    "minimum_app_version": null
+  }
+}

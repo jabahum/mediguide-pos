@@ -4,63 +4,862 @@
   "title": "MediGuide Clinical Tool Definition v1",
   "type": "object",
   "additionalProperties": false,
-  "required": ["schema_version", "tool_type", "title", "version", "locale", "inputs", "sections", "calculation", "rules", "outputs", "interpretations", "completion", "test_cases"],
+  "required": [
+    "schema_version",
+    "tool_type",
+    "title",
+    "version",
+    "locale",
+    "inputs",
+    "sections",
+    "calculation",
+    "rules",
+    "outputs",
+    "interpretations",
+    "completion",
+    "test_cases"
+  ],
   "properties": {
-    "schema_version": {"const": "1.0"},
-    "tool_type": {"enum": ["calculator", "decision_tool", "checklist"]},
-    "title": {"type": "string", "minLength": 1, "maxLength": 200},
-    "description": {"type": "string", "maxLength": 4000},
-    "version": {"type": "string", "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)(?:-[0-9A-Za-z.-]+)?$"},
-    "locale": {"type": "string", "pattern": "^[A-Za-z]{2,3}(?:-[A-Za-z0-9]{2,8})*$"},
-    "clinical_owner": {"type": "string", "maxLength": 200},
-    "clinical_reviewer": {"type": "string", "maxLength": 200},
-    "effective_at": {"type": ["string", "null"], "format": "date-time"},
-    "review_at": {"type": ["string", "null"], "format": "date-time"},
-    "supported_population": {"type": "array", "items": {"type": "string", "maxLength": 500}, "uniqueItems": true},
-    "exclusions": {"type": "array", "items": {"type": "string", "maxLength": 1000}},
-    "warnings": {"type": "array", "items": {"$ref": "#/$defs/message"}},
-    "citations": {"type": "array", "items": {"$ref": "#/$defs/citation"}},
-    "inputs": {"type": "array", "items": {"$ref": "#/$defs/input"}},
-    "sections": {"type": "array", "items": {"$ref": "#/$defs/section"}},
-    "calculation": {"type": "array", "items": {"$ref": "#/$defs/calculation"}},
-    "rules": {"type": "array", "items": {"$ref": "#/$defs/rule"}},
-    "outputs": {"type": "array", "items": {"$ref": "#/$defs/output"}},
-    "interpretations": {"type": "array", "items": {"$ref": "#/$defs/interpretation"}},
-    "completion": {"$ref": "#/$defs/completion"},
-    "test_cases": {"type": "array", "items": {"$ref": "#/$defs/testCase"}},
-    "minimum_app_version": {"type": ["string", "null"], "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$"}
+    "schema_version": {
+      "const": "1.0"
+    },
+    "tool_type": {
+      "enum": [
+        "calculator",
+        "decision_tool",
+        "checklist"
+      ]
+    },
+    "title": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 200
+    },
+    "description": {
+      "type": "string",
+      "maxLength": 4000
+    },
+    "version": {
+      "type": "string",
+      "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)(?:-[0-9A-Za-z.-]+)?$"
+    },
+    "locale": {
+      "type": "string",
+      "pattern": "^[A-Za-z]{2,3}(?:-[A-Za-z0-9]{2,8})*$"
+    },
+    "clinical_owner": {
+      "type": "string",
+      "maxLength": 200
+    },
+    "clinical_reviewer": {
+      "type": "string",
+      "maxLength": 200
+    },
+    "effective_at": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "date-time"
+    },
+    "review_at": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "date-time"
+    },
+    "supported_population": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "maxLength": 500
+      },
+      "uniqueItems": true
+    },
+    "exclusions": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "maxLength": 1000
+      }
+    },
+    "warnings": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/message"
+      }
+    },
+    "citations": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/citation"
+      }
+    },
+    "inputs": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/input"
+      }
+    },
+    "sections": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/section"
+      }
+    },
+    "calculation": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/calculation"
+      }
+    },
+    "rules": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/rule"
+      }
+    },
+    "outputs": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/output"
+      }
+    },
+    "interpretations": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/interpretation"
+      }
+    },
+    "completion": {
+      "$ref": "#/$defs/completion"
+    },
+    "test_cases": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/testCase"
+      }
+    },
+    "minimum_app_version": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$"
+    }
   },
   "$defs": {
     "message": {
-      "type": "object", "additionalProperties": false,
-      "required": ["key", "text", "severity"],
-      "properties": {"key":{"$ref":"#/$defs/key"},"text":{"type":"string","minLength":1,"maxLength":2000},"severity":{"enum":["info","warning","critical"]},"when":{"$ref":"#/$defs/expression"}}
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "key",
+        "text",
+        "severity"
+      ],
+      "properties": {
+        "key": {
+          "$ref": "#/$defs/key"
+        },
+        "text": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 2000
+        },
+        "severity": {
+          "enum": [
+            "info",
+            "warning",
+            "critical"
+          ]
+        },
+        "when": {
+          "$ref": "#/$defs/expression"
+        }
+      }
     },
     "citation": {
-      "type":"object","additionalProperties":false,"required":["key","title"],
-      "properties":{"key":{"$ref":"#/$defs/key"},"title":{"type":"string","minLength":1,"maxLength":500},"organization":{"type":"string","maxLength":300},"url":{"type":"string","format":"uri","maxLength":2000},"published_at":{"type":"string","format":"date"},"accessed_at":{"type":"string","format":"date"}}
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "key",
+        "title"
+      ],
+      "properties": {
+        "key": {
+          "$ref": "#/$defs/key"
+        },
+        "title": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 500
+        },
+        "organization": {
+          "type": "string",
+          "maxLength": 300
+        },
+        "url": {
+          "type": "string",
+          "format": "uri",
+          "maxLength": 2000
+        },
+        "published_at": {
+          "type": "string",
+          "format": "date"
+        },
+        "accessed_at": {
+          "type": "string",
+          "format": "date"
+        }
+      }
     },
-    "key": {"type":"string","pattern":"^[a-z][a-z0-9_]{0,63}$"},
-    "option": {"type":"object","additionalProperties":false,"required":["value","label"],"properties":{"value":{"type":["string","number","boolean"]},"label":{"type":"string","minLength":1,"maxLength":300},"description":{"type":"string","maxLength":1000},"score":{"type":"number"}}},
+    "key": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_]{0,63}$"
+    },
+    "option": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "value",
+        "label"
+      ],
+      "properties": {
+        "value": {
+          "type": [
+            "string",
+            "number",
+            "boolean"
+          ]
+        },
+        "label": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 300
+        },
+        "description": {
+          "type": "string",
+          "maxLength": 1000
+        },
+        "score": {
+          "type": "number"
+        }
+      }
+    },
     "input": {
-      "type":"object","additionalProperties":false,"required":["key","type","label","required"],
-      "properties":{
-        "key":{"$ref":"#/$defs/key"},"type":{"enum":["number","integer","text","date","time","boolean","single_selection","multiple_selection","measurement","checklist_item"]},"label":{"type":"string","minLength":1,"maxLength":300},"description":{"type":"string","maxLength":2000},"required":{"type":"boolean"},"minimum":{"type":"number"},"maximum":{"type":"number"},"step":{"type":"number","exclusiveMinimum":0},"default":{"type":["number","integer","string","boolean","array","null"]},"allowed_units":{"type":"array","items":{"enum":["kg","lb","g","mg","mcg","m","cm","mm","ft","in","celsius","fahrenheit","mmHg","mL","L","bpm","percent","years","months","weeks","days","hours","minutes"]},"uniqueItems":true},"default_unit":{"type":"string"},"options":{"type":"array","items":{"$ref":"#/$defs/option"}},"help_text":{"type":"string","maxLength":2000},"clinical_warning":{"type":"string","maxLength":2000},"visible_when":{"$ref":"#/$defs/expression"},"accessibility_label":{"type":"string","maxLength":500},"section_key":{"$ref":"#/$defs/key"},"checklist_kind":{"enum":["action","information","single_selection","multiple_selection"]},"critical":{"type":"boolean","default":false},"allow_note":{"type":"boolean","default":false},"depends_on":{"type":"array","items":{"$ref":"#/$defs/key"},"uniqueItems":true},"stop_when":{"$ref":"#/$defs/expression"},"escalation_message_keys":{"type":"array","items":{"$ref":"#/$defs/key"},"uniqueItems":true}
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "key",
+        "type",
+        "label",
+        "required"
+      ],
+      "properties": {
+        "key": {
+          "$ref": "#/$defs/key"
+        },
+        "type": {
+          "enum": [
+            "number",
+            "integer",
+            "text",
+            "date",
+            "time",
+            "boolean",
+            "single_selection",
+            "multiple_selection",
+            "measurement",
+            "checklist_item"
+          ]
+        },
+        "label": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 300
+        },
+        "description": {
+          "type": "string",
+          "maxLength": 2000
+        },
+        "required": {
+          "type": "boolean"
+        },
+        "minimum": {
+          "type": "number"
+        },
+        "maximum": {
+          "type": "number"
+        },
+        "step": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "default": {
+          "type": [
+            "number",
+            "integer",
+            "string",
+            "boolean",
+            "array",
+            "null"
+          ]
+        },
+        "allowed_units": {
+          "type": "array",
+          "items": {
+            "enum": [
+              "kg",
+              "lb",
+              "g",
+              "mg",
+              "mcg",
+              "m",
+              "cm",
+              "mm",
+              "ft",
+              "in",
+              "celsius",
+              "fahrenheit",
+              "mmHg",
+              "mL",
+              "L",
+              "bpm",
+              "percent",
+              "years",
+              "months",
+              "weeks",
+              "days",
+              "hours",
+              "minutes"
+            ]
+          },
+          "uniqueItems": true
+        },
+        "default_unit": {
+          "type": "string"
+        },
+        "options": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/option"
+          }
+        },
+        "help_text": {
+          "type": "string",
+          "maxLength": 2000
+        },
+        "clinical_warning": {
+          "type": "string",
+          "maxLength": 2000
+        },
+        "visible_when": {
+          "$ref": "#/$defs/expression"
+        },
+        "accessibility_label": {
+          "type": "string",
+          "maxLength": 500
+        },
+        "section_key": {
+          "$ref": "#/$defs/key"
+        },
+        "checklist_kind": {
+          "enum": [
+            "action",
+            "information",
+            "single_selection",
+            "multiple_selection"
+          ]
+        },
+        "critical": {
+          "type": "boolean",
+          "default": false
+        },
+        "allow_note": {
+          "type": "boolean",
+          "default": false
+        },
+        "depends_on": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/key"
+          },
+          "uniqueItems": true
+        },
+        "stop_when": {
+          "$ref": "#/$defs/expression"
+        },
+        "escalation_message_keys": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/key"
+          },
+          "uniqueItems": true
+        }
       },
-      "allOf":[{"if":{"properties":{"type":{"const":"measurement"}}},"then":{"required":["allowed_units","default_unit"]}},{"if":{"properties":{"type":{"enum":["single_selection","multiple_selection"]}}},"then":{"required":["options"]}},{"if":{"properties":{"type":{"const":"checklist_item"}}},"then":{"required":["section_key","checklist_kind"]}}]
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "measurement"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "allowed_units",
+              "default_unit"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "enum": [
+                  "single_selection",
+                  "multiple_selection"
+                ]
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "options"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "checklist_item"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "section_key",
+              "checklist_kind"
+            ]
+          }
+        }
+      ]
     },
-    "section": {"type":"object","additionalProperties":false,"required":["key","title","order"],"properties":{"key":{"$ref":"#/$defs/key"},"title":{"type":"string","minLength":1,"maxLength":300},"description":{"type":"string","maxLength":2000},"order":{"type":"integer","minimum":0},"visible_when":{"$ref":"#/$defs/expression"},"review_before_completion":{"type":"boolean","default":false}}},
+    "section": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "key",
+        "title",
+        "order"
+      ],
+      "properties": {
+        "key": {
+          "$ref": "#/$defs/key"
+        },
+        "title": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 300
+        },
+        "description": {
+          "type": "string",
+          "maxLength": 2000
+        },
+        "order": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "visible_when": {
+          "$ref": "#/$defs/expression"
+        },
+        "review_before_completion": {
+          "type": "boolean",
+          "default": false
+        }
+      }
+    },
     "expression": {
-      "type":"object","additionalProperties":false,"required":["op"],
-      "properties":{"op":{"enum":["literal","field","now","add","subtract","multiply","divide","power","min","max","abs","round","equal","not_equal","less_than","less_than_or_equal","greater_than","greater_than_or_equal","and","or","not","if","in","date_difference","convert_unit"]},"value":{},"field":{"$ref":"#/$defs/key"},"args":{"type":"array","items":{"$ref":"#/$defs/expression"},"maxItems":32},"precision":{"type":"integer","minimum":0,"maximum":12},"rounding_mode":{"enum":["half_up","half_even","floor","ceil","truncate"]},"from_unit":{"type":"string"},"to_unit":{"type":"string"},"date_unit":{"enum":["days","weeks","months","years"]}},
-      "allOf":[{"if":{"properties":{"op":{"const":"literal"}}},"then":{"required":["value"]}},{"if":{"properties":{"op":{"const":"field"}}},"then":{"required":["field"]}},{"if":{"properties":{"op":{"not":{"enum":["literal","field","now"]}}}},"then":{"required":["args"]}}]
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "op"
+      ],
+      "properties": {
+        "op": {
+          "enum": [
+            "literal",
+            "field",
+            "now",
+            "add",
+            "subtract",
+            "multiply",
+            "divide",
+            "power",
+            "min",
+            "max",
+            "abs",
+            "round",
+            "equal",
+            "not_equal",
+            "less_than",
+            "less_than_or_equal",
+            "greater_than",
+            "greater_than_or_equal",
+            "and",
+            "or",
+            "not",
+            "if",
+            "in",
+            "date_difference",
+            "date_add",
+            "convert_unit"
+          ]
+        },
+        "value": {},
+        "field": {
+          "$ref": "#/$defs/key"
+        },
+        "args": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/expression"
+          },
+          "maxItems": 32
+        },
+        "precision": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 12
+        },
+        "rounding_mode": {
+          "enum": [
+            "half_up",
+            "half_even",
+            "floor",
+            "ceil",
+            "truncate"
+          ]
+        },
+        "from_unit": {
+          "type": "string"
+        },
+        "to_unit": {
+          "type": "string"
+        },
+        "date_unit": {
+          "enum": [
+            "days",
+            "weeks",
+            "months",
+            "years"
+          ]
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "op": {
+                "const": "literal"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "value"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "op": {
+                "const": "field"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "field"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "op": {
+                "not": {
+                  "enum": [
+                    "literal",
+                    "field",
+                    "now"
+                  ]
+                }
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "args"
+            ]
+          }
+        }
+      ]
     },
-    "calculation": {"type":"object","additionalProperties":false,"required":["key","expression"],"properties":{"key":{"$ref":"#/$defs/key"},"expression":{"$ref":"#/$defs/expression"},"precision":{"type":"integer","minimum":0,"maximum":12},"rounding_mode":{"enum":["half_up","half_even","floor","ceil","truncate"]},"unit":{"type":"string"}}},
-    "rule": {"type":"object","additionalProperties":false,"required":["key","when","actions","order"],"properties":{"key":{"$ref":"#/$defs/key"},"when":{"$ref":"#/$defs/expression"},"actions":{"type":"array","minItems":1,"items":{"$ref":"#/$defs/action"}},"order":{"type":"integer","minimum":0},"stop":{"type":"boolean","default":false}}},
-    "action": {"type":"object","additionalProperties":false,"required":["type"],"properties":{"type":{"enum":["set_output","add_interpretation","add_recommendation","add_warning","escalate","stop"]},"target":{"$ref":"#/$defs/key"},"value":{"$ref":"#/$defs/expression"},"message_key":{"$ref":"#/$defs/key"}}},
-    "output": {"type":"object","additionalProperties":false,"required":["key","label","value"],"properties":{"key":{"$ref":"#/$defs/key"},"label":{"type":"string","minLength":1,"maxLength":300},"value":{"$ref":"#/$defs/expression"},"unit":{"type":"string"},"precision":{"type":"integer","minimum":0,"maximum":12},"rounding_mode":{"enum":["half_up","half_even","floor","ceil","truncate"]},"accessibility_label":{"type":"string","maxLength":500}}},
-    "interpretation": {"type":"object","additionalProperties":false,"required":["key","when","label","severity","order"],"properties":{"key":{"$ref":"#/$defs/key"},"when":{"$ref":"#/$defs/expression"},"label":{"type":"string","minLength":1,"maxLength":500},"description":{"type":"string","maxLength":3000},"severity":{"enum":["normal","info","warning","critical"]},"recommendations":{"type":"array","items":{"type":"string","maxLength":2000}},"order":{"type":"integer","minimum":0}}},
-    "completion": {"type":"object","additionalProperties":false,"required":["mode"],"properties":{"mode":{"enum":["none","all_required","expression"]},"expression":{"$ref":"#/$defs/expression"},"allow_resume":{"type":"boolean","default":false},"require_review":{"type":"boolean","default":false},"show_percentage":{"type":"boolean","default":false},"reset_confirmation":{"type":"boolean","default":true}}},
-    "testCase": {"type":"object","additionalProperties":false,"required":["key","inputs","expected"],"properties":{"key":{"$ref":"#/$defs/key"},"description":{"type":"string","maxLength":1000},"fixed_now":{"type":"string","format":"date-time"},"inputs":{"type":"object"},"expected":{"type":"object"},"numeric_tolerance":{"type":"number","minimum":0}}}
+    "calculation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "key",
+        "expression"
+      ],
+      "properties": {
+        "key": {
+          "$ref": "#/$defs/key"
+        },
+        "expression": {
+          "$ref": "#/$defs/expression"
+        },
+        "precision": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 12
+        },
+        "rounding_mode": {
+          "enum": [
+            "half_up",
+            "half_even",
+            "floor",
+            "ceil",
+            "truncate"
+          ]
+        },
+        "unit": {
+          "type": "string"
+        }
+      }
+    },
+    "rule": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "key",
+        "when",
+        "actions",
+        "order"
+      ],
+      "properties": {
+        "key": {
+          "$ref": "#/$defs/key"
+        },
+        "when": {
+          "$ref": "#/$defs/expression"
+        },
+        "actions": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/action"
+          }
+        },
+        "order": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "stop": {
+          "type": "boolean",
+          "default": false
+        }
+      }
+    },
+    "action": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "type"
+      ],
+      "properties": {
+        "type": {
+          "enum": [
+            "set_output",
+            "add_interpretation",
+            "add_recommendation",
+            "add_warning",
+            "escalate",
+            "stop"
+          ]
+        },
+        "target": {
+          "$ref": "#/$defs/key"
+        },
+        "value": {
+          "$ref": "#/$defs/expression"
+        },
+        "message_key": {
+          "$ref": "#/$defs/key"
+        }
+      }
+    },
+    "output": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "key",
+        "label",
+        "value"
+      ],
+      "properties": {
+        "key": {
+          "$ref": "#/$defs/key"
+        },
+        "label": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 300
+        },
+        "value": {
+          "$ref": "#/$defs/expression"
+        },
+        "unit": {
+          "type": "string"
+        },
+        "precision": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 12
+        },
+        "rounding_mode": {
+          "enum": [
+            "half_up",
+            "half_even",
+            "floor",
+            "ceil",
+            "truncate"
+          ]
+        },
+        "accessibility_label": {
+          "type": "string",
+          "maxLength": 500
+        }
+      }
+    },
+    "interpretation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "key",
+        "when",
+        "label",
+        "severity",
+        "order"
+      ],
+      "properties": {
+        "key": {
+          "$ref": "#/$defs/key"
+        },
+        "when": {
+          "$ref": "#/$defs/expression"
+        },
+        "label": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 500
+        },
+        "description": {
+          "type": "string",
+          "maxLength": 3000
+        },
+        "severity": {
+          "enum": [
+            "normal",
+            "info",
+            "warning",
+            "critical"
+          ]
+        },
+        "recommendations": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "maxLength": 2000
+          }
+        },
+        "order": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "completion": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "mode"
+      ],
+      "properties": {
+        "mode": {
+          "enum": [
+            "none",
+            "all_required",
+            "expression"
+          ]
+        },
+        "expression": {
+          "$ref": "#/$defs/expression"
+        },
+        "allow_resume": {
+          "type": "boolean",
+          "default": false
+        },
+        "require_review": {
+          "type": "boolean",
+          "default": false
+        },
+        "show_percentage": {
+          "type": "boolean",
+          "default": false
+        },
+        "reset_confirmation": {
+          "type": "boolean",
+          "default": true
+        }
+      }
+    },
+    "testCase": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "key",
+        "inputs",
+        "expected"
+      ],
+      "properties": {
+        "key": {
+          "$ref": "#/$defs/key"
+        },
+        "description": {
+          "type": "string",
+          "maxLength": 1000
+        },
+        "fixed_now": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "inputs": {
+          "type": "object"
+        },
+        "expected": {
+          "type": "object"
+        },
+        "numeric_tolerance": {
+          "type": "number",
+          "minimum": 0
+        }
+      }
+    }
   }
 }

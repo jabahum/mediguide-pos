@@ -1,0 +1,23 @@
+{
+  "legacy_id": "immunization-schedule-checker",
+  "legacy_file": "immunization-schedule-checker.html",
+  "status": "changes_required",
+  "reviewer_id": null,
+  "reviewed_at": null,
+  "cases_tested": 3,
+  "exact_matches": 1,
+  "tolerance_matches": 0,
+  "presentation_differences": [
+    "The review draft reports only deterministic age and legacy candidate-row count; it deliberately suppresses vaccine rows, status labels, alerts, catch-up advice, and contraindication claims.",
+    "The named condition checklist must be retained in native UI and mapped to typed risk inputs."
+  ],
+  "logic_differences": [
+    "The legacy country selector did not alter its hard-coded schedule, risk-category immunocompromise was not connected to condition checks, prior dose history was absent, and future birth dates were not rejected.",
+    "The unversioned CDC/WHO-style schedule and wall-clock seasonal assumptions are not migrated as clinical recommendations."
+  ],
+  "unresolved_clinical_ambiguities": [
+    "A designated immunization-program clinical owner must provide authoritative jurisdiction-specific schedules with source URL, edition, effective date, review date, revision policy, age/dose rules, prior-dose history, catch-up logic, contraindications, and risk-population rules.",
+    "Engineering must then introduce a typed versioned schedule resource and deterministic row renderer before publication."
+  ],
+  "reviewer_decision": "Blocked pending an authoritative schedule and independent immunization-clinician approval. Do not approve or publish this review draft."
+}

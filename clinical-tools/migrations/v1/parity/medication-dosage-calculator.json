@@ -1,0 +1,21 @@
+{
+  "legacy_id": "medication-dosage-calculator",
+  "legacy_file": "medication-dosage-calculator.html",
+  "status": "changes_required",
+  "reviewer_id": null,
+  "reviewed_at": null,
+  "cases_tested": 4,
+  "exact_matches": 2,
+  "tolerance_matches": 1,
+  "presentation_differences": [
+    "Preset values are labelled as unapproved legacy arithmetic and the custom fields are conditionally required."
+  ],
+  "logic_differences": [
+    "Pediatric aspirin returns zero-valued review output plus a critical block instead of ending before outputs; publication remains prohibited."
+  ],
+  "unresolved_clinical_ambiguities": [
+    "An authorized pharmacist must approve every preset, age rule, frequency, maximum, contraindication, interaction warning, formulation assumption, and citation.",
+    "Decide whether custom dose arithmetic is permitted and what independent verification workflow is mandatory."
+  ],
+  "reviewer_decision": "Pending independent pharmacist and clinician approval. Do not approve or publish this review draft."
+}

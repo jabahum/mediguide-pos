@@ -22,7 +22,7 @@ var (
 	localePattern   = regexp.MustCompile(`^[A-Za-z]{2,3}(?:-[A-Za-z0-9]{2,8})*$`)
 	validToolTypes  = set("calculator", "decision_tool", "checklist")
 	validInputTypes = set("number", "integer", "text", "date", "time", "boolean", "single_selection", "multiple_selection", "measurement", "checklist_item")
-	validOperators  = set("literal", "field", "now", "add", "subtract", "multiply", "divide", "power", "min", "max", "abs", "round", "equal", "not_equal", "less_than", "less_than_or_equal", "greater_than", "greater_than_or_equal", "and", "or", "not", "if", "in", "date_difference", "convert_unit")
+	validOperators  = set("literal", "field", "now", "add", "subtract", "multiply", "divide", "power", "min", "max", "abs", "round", "equal", "not_equal", "less_than", "less_than_or_equal", "greater_than", "greater_than_or_equal", "and", "or", "not", "if", "in", "date_difference", "date_add", "convert_unit")
 	validCompletion = set("none", "all_required", "expression")
 	validChecklist  = set("action", "information", "single_selection", "multiple_selection")
 	validSeverity   = set("normal", "info", "warning", "critical")
@@ -443,7 +443,7 @@ func operatorArity(operator string) (int, int) {
 		return 0, 0
 	case "abs", "round", "not", "convert_unit":
 		return 1, 1
-	case "subtract", "divide", "power", "equal", "not_equal", "less_than", "less_than_or_equal", "greater_than", "greater_than_or_equal", "date_difference":
+	case "subtract", "divide", "power", "equal", "not_equal", "less_than", "less_than_or_equal", "greater_than", "greater_than_or_equal", "date_difference", "date_add":
 		return 2, 2
 	case "if":
 		return 3, 3

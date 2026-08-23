@@ -4,20 +4,102 @@
   "title": "MediGuide Local Checklist Session State v1",
   "type": "object",
   "additionalProperties": false,
-  "required": ["schema_version", "tool_id", "version_id", "definition_checksum", "responses", "reviewed", "started_at", "updated_at", "completed"],
+  "required": [
+    "schema_version",
+    "tool_id",
+    "version_id",
+    "definition_checksum",
+    "responses",
+    "reviewed",
+    "started_at",
+    "updated_at",
+    "completed"
+  ],
   "properties": {
-    "schema_version": {"const": "1.0"},
-    "tool_id": {"type": "string", "format": "uuid"},
-    "version_id": {"type": "string", "format": "uuid"},
-    "definition_checksum": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
-    "responses": {"type": "object", "propertyNames": {"pattern": "^[a-z][a-z0-9_]{0,63}$"}, "additionalProperties": {"type": ["boolean", "string", "number", "array", "null"]}},
-    "notes": {"type": "object", "propertyNames": {"pattern": "^[a-z][a-z0-9_]{0,63}$"}, "additionalProperties": {"type": "string", "maxLength": 4000}},
-    "reviewed": {"type": "boolean", "default": false},
-    "started_at": {"type": "string", "format": "date-time"},
-    "updated_at": {"type": "string", "format": "date-time"},
-    "completed_at": {"type": ["string", "null"], "format": "date-time"},
-    "completed": {"type": "boolean"}
+    "schema_version": {
+      "const": "1.0"
+    },
+    "tool_id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "version_id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "definition_checksum": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "responses": {
+      "type": "object",
+      "propertyNames": {
+        "pattern": "^[a-z][a-z0-9_]{0,63}$"
+      },
+      "additionalProperties": {
+        "type": [
+          "boolean",
+          "string",
+          "number",
+          "array",
+          "null"
+        ]
+      }
+    },
+    "notes": {
+      "type": "object",
+      "propertyNames": {
+        "pattern": "^[a-z][a-z0-9_]{0,63}$"
+      },
+      "additionalProperties": {
+        "type": "string",
+        "maxLength": 4000
+      }
+    },
+    "reviewed": {
+      "type": "boolean",
+      "default": false
+    },
+    "started_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "updated_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "completed_at": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "date-time"
+    },
+    "completed": {
+      "type": "boolean"
+    }
   },
-  "allOf": [{"if": {"properties": {"completed": {"const": true}}}, "then": {"required": ["completed_at"], "properties": {"completed_at": {"type": "string", "format": "date-time"}}}}],
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "completed": {
+            "const": true
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "completed_at"
+        ],
+        "properties": {
+          "completed_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      }
+    }
+  ],
   "description": "Local workflow state only. It must not contain patient identifiers and is not part of calculator analytics or the immutable definition."
 }

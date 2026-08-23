@@ -1,0 +1,574 @@
+{
+  "legacy_id": "dehydration-assessment",
+  "legacy_file": "dehydration-assessment.html",
+  "source_checksum": "1e007a6d5908a4f25739e73a7424df0c44b14b81216258c800f6ec161e4d9597",
+  "change_summary": "Review draft: preserve the six-sign 0–12 score and symptom modifier while requiring every sign and a measured weight. Fluid recommendations require clinician approval.",
+  "definition": {
+    "schema_version": "1.0",
+    "tool_type": "calculator",
+    "title": "Dehydration Assessment",
+    "description": "Scores six observed signs and additional symptoms. Review draft only; not approved for clinical publication.",
+    "version": "1.0.0-review.1",
+    "locale": "en",
+    "supported_population": [],
+    "exclusions": [
+      "Use only with an appropriate clinical assessment and approved age-specific protocol."
+    ],
+    "warnings": [
+      {
+        "key": "severe_warning",
+        "text": "Severe dehydration requires urgent clinical assessment and resuscitation according to the approved protocol.",
+        "severity": "critical",
+        "when": {
+          "op": "greater_than",
+          "args": [
+            {
+              "op": "field",
+              "field": "total_score"
+            },
+            {
+              "op": "literal",
+              "value": 6
+            }
+          ]
+        }
+      }
+    ],
+    "citations": [],
+    "inputs": [
+      {
+        "key": "age_group",
+        "type": "single_selection",
+        "label": "Age group",
+        "required": true,
+        "options": [
+          {
+            "value": "infant",
+            "label": "Infant (0–12 months)"
+          },
+          {
+            "value": "child",
+            "label": "Child (1–12 years)"
+          },
+          {
+            "value": "adolescent",
+            "label": "Adolescent (13–17 years)"
+          },
+          {
+            "value": "adult",
+            "label": "Adult"
+          }
+        ]
+      },
+      {
+        "key": "weight",
+        "type": "measurement",
+        "label": "Measured weight",
+        "required": true,
+        "minimum": 1,
+        "maximum": 200,
+        "allowed_units": [
+          "kg"
+        ],
+        "default_unit": "kg"
+      },
+      {
+        "key": "appearance",
+        "type": "integer",
+        "label": "General appearance score",
+        "required": true,
+        "minimum": 0,
+        "maximum": 2
+      },
+      {
+        "key": "eyes",
+        "type": "integer",
+        "label": "Eyes score",
+        "required": true,
+        "minimum": 0,
+        "maximum": 2
+      },
+      {
+        "key": "mouth",
+        "type": "integer",
+        "label": "Mouth score",
+        "required": true,
+        "minimum": 0,
+        "maximum": 2
+      },
+      {
+        "key": "tears",
+        "type": "integer",
+        "label": "Tears score",
+        "required": true,
+        "minimum": 0,
+        "maximum": 2
+      },
+      {
+        "key": "skin",
+        "type": "integer",
+        "label": "Skin turgor score",
+        "required": true,
+        "minimum": 0,
+        "maximum": 2
+      },
+      {
+        "key": "urine",
+        "type": "integer",
+        "label": "Urine output score",
+        "required": true,
+        "minimum": 0,
+        "maximum": 2
+      },
+      {
+        "key": "additional_symptoms",
+        "type": "integer",
+        "label": "Additional symptoms present",
+        "required": false,
+        "minimum": 0,
+        "maximum": 5,
+        "default": 0
+      }
+    ],
+    "sections": [
+      {
+        "key": "patient",
+        "title": "Patient",
+        "order": 0
+      },
+      {
+        "key": "signs",
+        "title": "Clinical signs",
+        "order": 1,
+        "review_before_completion": true
+      }
+    ],
+    "calculation": [
+      {
+        "key": "total_score",
+        "expression": {
+          "op": "add",
+          "args": [
+            {
+              "op": "field",
+              "field": "appearance"
+            },
+            {
+              "op": "field",
+              "field": "eyes"
+            },
+            {
+              "op": "field",
+              "field": "mouth"
+            },
+            {
+              "op": "field",
+              "field": "tears"
+            },
+            {
+              "op": "field",
+              "field": "skin"
+            },
+            {
+              "op": "field",
+              "field": "urine"
+            }
+          ]
+        }
+      },
+      {
+        "key": "maintenance_replacement",
+        "expression": {
+          "op": "multiply",
+          "args": [
+            {
+              "op": "field",
+              "field": "weight"
+            },
+            {
+              "op": "literal",
+              "value": 10
+            }
+          ]
+        }
+      },
+      {
+        "key": "ors_four_hours",
+        "expression": {
+          "op": "multiply",
+          "args": [
+            {
+              "op": "field",
+              "field": "weight"
+            },
+            {
+              "op": "literal",
+              "value": 75
+            }
+          ]
+        }
+      },
+      {
+        "key": "iv_bolus",
+        "expression": {
+          "op": "multiply",
+          "args": [
+            {
+              "op": "field",
+              "field": "weight"
+            },
+            {
+              "op": "literal",
+              "value": 20
+            }
+          ]
+        }
+      }
+    ],
+    "rules": [],
+    "outputs": [
+      {
+        "key": "total_score",
+        "label": "Clinical signs score",
+        "value": {
+          "op": "field",
+          "field": "total_score"
+        },
+        "unit": "points"
+      },
+      {
+        "key": "additional_symptoms",
+        "label": "Additional symptoms",
+        "value": {
+          "op": "field",
+          "field": "additional_symptoms"
+        }
+      },
+      {
+        "key": "maintenance_replacement",
+        "label": "Legacy replacement per episode",
+        "value": {
+          "op": "field",
+          "field": "maintenance_replacement"
+        },
+        "unit": "mL"
+      },
+      {
+        "key": "ors_four_hours",
+        "label": "Legacy ORS amount over four hours",
+        "value": {
+          "op": "field",
+          "field": "ors_four_hours"
+        },
+        "unit": "mL"
+      },
+      {
+        "key": "iv_bolus",
+        "label": "Legacy IV bolus amount",
+        "value": {
+          "op": "field",
+          "field": "iv_bolus"
+        },
+        "unit": "mL"
+      }
+    ],
+    "interpretations": [
+      {
+        "key": "severe",
+        "when": {
+          "op": "greater_than",
+          "args": [
+            {
+              "op": "field",
+              "field": "total_score"
+            },
+            {
+              "op": "literal",
+              "value": 6
+            }
+          ]
+        },
+        "label": "Severe Dehydration",
+        "description": "Legacy score above 6.",
+        "severity": "critical",
+        "recommendations": [
+          "Urgently assess and follow the approved resuscitation protocol."
+        ],
+        "order": 0
+      },
+      {
+        "key": "moderate_to_severe",
+        "when": {
+          "op": "and",
+          "args": [
+            {
+              "op": "greater_than_or_equal",
+              "args": [
+                {
+                  "op": "field",
+                  "field": "total_score"
+                },
+                {
+                  "op": "literal",
+                  "value": 3
+                }
+              ]
+            },
+            {
+              "op": "less_than_or_equal",
+              "args": [
+                {
+                  "op": "field",
+                  "field": "total_score"
+                },
+                {
+                  "op": "literal",
+                  "value": 6
+                }
+              ]
+            },
+            {
+              "op": "greater_than_or_equal",
+              "args": [
+                {
+                  "op": "field",
+                  "field": "additional_symptoms"
+                },
+                {
+                  "op": "literal",
+                  "value": 3
+                }
+              ]
+            }
+          ]
+        },
+        "label": "Moderate to Severe Dehydration",
+        "description": "Legacy moderate score with three or more additional symptoms.",
+        "severity": "critical",
+        "recommendations": [
+          "Arrange urgent clinical review and follow the approved rehydration protocol."
+        ],
+        "order": 1
+      },
+      {
+        "key": "moderate",
+        "when": {
+          "op": "and",
+          "args": [
+            {
+              "op": "greater_than_or_equal",
+              "args": [
+                {
+                  "op": "field",
+                  "field": "total_score"
+                },
+                {
+                  "op": "literal",
+                  "value": 3
+                }
+              ]
+            },
+            {
+              "op": "less_than_or_equal",
+              "args": [
+                {
+                  "op": "field",
+                  "field": "total_score"
+                },
+                {
+                  "op": "literal",
+                  "value": 6
+                }
+              ]
+            },
+            {
+              "op": "less_than",
+              "args": [
+                {
+                  "op": "field",
+                  "field": "additional_symptoms"
+                },
+                {
+                  "op": "literal",
+                  "value": 3
+                }
+              ]
+            }
+          ]
+        },
+        "label": "Moderate Dehydration",
+        "description": "Legacy score 3–6.",
+        "severity": "warning",
+        "recommendations": [
+          "Start approved oral rehydration management and reassess clinically."
+        ],
+        "order": 2
+      },
+      {
+        "key": "mild_to_moderate",
+        "when": {
+          "op": "and",
+          "args": [
+            {
+              "op": "less_than_or_equal",
+              "args": [
+                {
+                  "op": "field",
+                  "field": "total_score"
+                },
+                {
+                  "op": "literal",
+                  "value": 2
+                }
+              ]
+            },
+            {
+              "op": "greater_than_or_equal",
+              "args": [
+                {
+                  "op": "field",
+                  "field": "additional_symptoms"
+                },
+                {
+                  "op": "literal",
+                  "value": 3
+                }
+              ]
+            }
+          ]
+        },
+        "label": "Mild to Moderate Dehydration",
+        "description": "Legacy low score with three or more additional symptoms.",
+        "severity": "warning",
+        "recommendations": [
+          "Assess clinically and follow the approved oral rehydration protocol."
+        ],
+        "order": 3
+      },
+      {
+        "key": "none_or_mild",
+        "when": {
+          "op": "and",
+          "args": [
+            {
+              "op": "less_than_or_equal",
+              "args": [
+                {
+                  "op": "field",
+                  "field": "total_score"
+                },
+                {
+                  "op": "literal",
+                  "value": 2
+                }
+              ]
+            },
+            {
+              "op": "less_than",
+              "args": [
+                {
+                  "op": "field",
+                  "field": "additional_symptoms"
+                },
+                {
+                  "op": "literal",
+                  "value": 3
+                }
+              ]
+            }
+          ]
+        },
+        "label": "No or Mild Dehydration",
+        "description": "Legacy score 0–2.",
+        "severity": "normal",
+        "recommendations": [
+          "Continue fluids and reassess if symptoms persist or worsen."
+        ],
+        "order": 4
+      }
+    ],
+    "completion": {
+      "mode": "all_required",
+      "allow_resume": true,
+      "require_review": true,
+      "show_percentage": false,
+      "reset_confirmation": true
+    },
+    "test_cases": [
+      {
+        "key": "minimum",
+        "inputs": {
+          "age_group": "child",
+          "weight": {
+            "value": 10,
+            "unit": "kg"
+          },
+          "appearance": 0,
+          "eyes": 0,
+          "mouth": 0,
+          "tears": 0,
+          "skin": 0,
+          "urine": 0
+        },
+        "expected": {
+          "total_score": 0,
+          "interpretations": [
+            "none_or_mild"
+          ],
+          "warnings": []
+        }
+      },
+      {
+        "key": "moderate_boundary",
+        "inputs": {
+          "age_group": "child",
+          "weight": {
+            "value": 20,
+            "unit": "kg"
+          },
+          "appearance": 1,
+          "eyes": 1,
+          "mouth": 1,
+          "tears": 0,
+          "skin": 0,
+          "urine": 0
+        },
+        "expected": {
+          "total_score": 3,
+          "ors_four_hours": 1500,
+          "interpretations": [
+            "moderate"
+          ],
+          "warnings": []
+        }
+      },
+      {
+        "key": "severe",
+        "inputs": {
+          "age_group": "child",
+          "weight": {
+            "value": 10,
+            "unit": "kg"
+          },
+          "appearance": 2,
+          "eyes": 2,
+          "mouth": 2,
+          "tears": 2,
+          "skin": 0,
+          "urine": 0
+        },
+        "expected": {
+          "total_score": 8,
+          "iv_bolus": 200,
+          "interpretations": [
+            "severe"
+          ],
+          "warnings": [
+            "severe_warning"
+          ]
+        }
+      }
+    ],
+    "minimum_app_version": null
+  }
+}

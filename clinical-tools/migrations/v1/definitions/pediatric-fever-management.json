@@ -1,0 +1,761 @@
+{
+  "legacy_id": "pediatric-fever-management",
+  "legacy_file": "pediatric-fever-management.html",
+  "source_checksum": "db1ae667c44ebe12a1cd6227e9faa033e2cd04e07d56b1d02f96cdf7f244e39d",
+  "change_summary": "Review draft: preserve age/temperature conversion and risk thresholds while requiring measured weight for any dose output and accepting an explicit age of zero months. All thresholds, danger signs, and doses require clinician/pharmacist approval.",
+  "definition": {
+    "schema_version": "1.0",
+    "tool_type": "decision_tool",
+    "title": "Pediatric Fever Assessment",
+    "description": "Classifies pediatric fever using age, temperature, and recorded danger signs. Review draft only; not approved for clinical publication.",
+    "version": "1.0.0-review.1",
+    "locale": "en",
+    "supported_population": [
+      "Children from birth through 18 years, subject to clinician confirmation"
+    ],
+    "exclusions": [
+      "Do not delay urgent assessment to complete this tool."
+    ],
+    "warnings": [
+      {
+        "key": "urgent_warning",
+        "text": "The recorded age, temperature, or danger signs meet a legacy urgent-assessment threshold. Seek urgent clinical care according to the approved local protocol.",
+        "severity": "critical",
+        "when": {
+          "op": "or",
+          "args": [
+            {
+              "op": "greater_than",
+              "args": [
+                {
+                  "op": "field",
+                  "field": "danger_sign_count"
+                },
+                {
+                  "op": "literal",
+                  "value": 0
+                }
+              ]
+            },
+            {
+              "op": "and",
+              "args": [
+                {
+                  "op": "less_than",
+                  "args": [
+                    {
+                      "op": "field",
+                      "field": "age_months"
+                    },
+                    {
+                      "op": "literal",
+                      "value": 3
+                    }
+                  ]
+                },
+                {
+                  "op": "greater_than_or_equal",
+                  "args": [
+                    {
+                      "op": "field",
+                      "field": "temperature_c"
+                    },
+                    {
+                      "op": "literal",
+                      "value": 38
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      }
+    ],
+    "citations": [],
+    "inputs": [
+      {
+        "key": "age_value",
+        "type": "number",
+        "label": "Age",
+        "required": true,
+        "minimum": 0,
+        "maximum": 216
+      },
+      {
+        "key": "age_unit",
+        "type": "single_selection",
+        "label": "Age unit",
+        "required": true,
+        "default": "months",
+        "options": [
+          {
+            "value": "months",
+            "label": "Months"
+          },
+          {
+            "value": "years",
+            "label": "Years"
+          }
+        ]
+      },
+      {
+        "key": "weight",
+        "type": "measurement",
+        "label": "Measured weight",
+        "required": true,
+        "minimum": 1,
+        "maximum": 50,
+        "allowed_units": [
+          "kg"
+        ],
+        "default_unit": "kg"
+      },
+      {
+        "key": "temperature",
+        "type": "measurement",
+        "label": "Temperature",
+        "required": true,
+        "minimum": 35,
+        "maximum": 45,
+        "allowed_units": [
+          "celsius",
+          "fahrenheit"
+        ],
+        "default_unit": "celsius"
+      },
+      {
+        "key": "danger_sign_count",
+        "type": "integer",
+        "label": "Danger signs present",
+        "required": false,
+        "minimum": 0,
+        "maximum": 8,
+        "default": 0,
+        "help_text": "Difficulty breathing, poor feeding, persistent vomiting, lethargy, irritability, rash, neck stiffness, or convulsions."
+      }
+    ],
+    "sections": [
+      {
+        "key": "patient",
+        "title": "Child assessment",
+        "order": 0,
+        "review_before_completion": true
+      }
+    ],
+    "calculation": [
+      {
+        "key": "age_months",
+        "expression": {
+          "op": "if",
+          "args": [
+            {
+              "op": "equal",
+              "args": [
+                {
+                  "op": "field",
+                  "field": "age_unit"
+                },
+                {
+                  "op": "literal",
+                  "value": "years"
+                }
+              ]
+            },
+            {
+              "op": "multiply",
+              "args": [
+                {
+                  "op": "field",
+                  "field": "age_value"
+                },
+                {
+                  "op": "literal",
+                  "value": 12
+                }
+              ]
+            },
+            {
+              "op": "field",
+              "field": "age_value"
+            }
+          ]
+        }
+      },
+      {
+        "key": "temperature_c",
+        "expression": {
+          "op": "field",
+          "field": "temperature"
+        },
+        "precision": 1,
+        "rounding_mode": "half_up"
+      },
+      {
+        "key": "paracetamol_mg",
+        "expression": {
+          "op": "round",
+          "precision": 0,
+          "rounding_mode": "half_up",
+          "args": [
+            {
+              "op": "multiply",
+              "args": [
+                {
+                  "op": "field",
+                  "field": "weight"
+                },
+                {
+                  "op": "literal",
+                  "value": 15
+                }
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "key": "ibuprofen_mg",
+        "expression": {
+          "op": "round",
+          "precision": 0,
+          "rounding_mode": "half_up",
+          "args": [
+            {
+              "op": "multiply",
+              "args": [
+                {
+                  "op": "field",
+                  "field": "weight"
+                },
+                {
+                  "op": "literal",
+                  "value": 10
+                }
+              ]
+            }
+          ]
+        }
+      }
+    ],
+    "rules": [],
+    "outputs": [
+      {
+        "key": "age_months",
+        "label": "Age in months",
+        "value": {
+          "op": "field",
+          "field": "age_months"
+        },
+        "unit": "months"
+      },
+      {
+        "key": "temperature_c",
+        "label": "Temperature",
+        "value": {
+          "op": "field",
+          "field": "temperature_c"
+        },
+        "unit": "°C",
+        "precision": 1
+      },
+      {
+        "key": "danger_sign_count",
+        "label": "Danger signs",
+        "value": {
+          "op": "field",
+          "field": "danger_sign_count"
+        }
+      },
+      {
+        "key": "paracetamol_mg",
+        "label": "Legacy paracetamol single dose",
+        "value": {
+          "op": "field",
+          "field": "paracetamol_mg"
+        },
+        "unit": "mg"
+      },
+      {
+        "key": "ibuprofen_mg",
+        "label": "Legacy ibuprofen single dose",
+        "value": {
+          "op": "field",
+          "field": "ibuprofen_mg"
+        },
+        "unit": "mg"
+      }
+    ],
+    "interpretations": [
+      {
+        "key": "urgent_danger",
+        "when": {
+          "op": "greater_than",
+          "args": [
+            {
+              "op": "field",
+              "field": "danger_sign_count"
+            },
+            {
+              "op": "literal",
+              "value": 0
+            }
+          ]
+        },
+        "label": "HIGH RISK - Urgent Medical Attention",
+        "description": "One or more recorded danger signs.",
+        "severity": "critical",
+        "recommendations": [
+          "Seek urgent clinical assessment and monitor airway, breathing, and circulation."
+        ],
+        "order": 0
+      },
+      {
+        "key": "urgent_young_infant",
+        "when": {
+          "op": "and",
+          "args": [
+            {
+              "op": "equal",
+              "args": [
+                {
+                  "op": "field",
+                  "field": "danger_sign_count"
+                },
+                {
+                  "op": "literal",
+                  "value": 0
+                }
+              ]
+            },
+            {
+              "op": "less_than",
+              "args": [
+                {
+                  "op": "field",
+                  "field": "age_months"
+                },
+                {
+                  "op": "literal",
+                  "value": 3
+                }
+              ]
+            },
+            {
+              "op": "greater_than_or_equal",
+              "args": [
+                {
+                  "op": "field",
+                  "field": "temperature_c"
+                },
+                {
+                  "op": "literal",
+                  "value": 38
+                }
+              ]
+            }
+          ]
+        },
+        "label": "URGENT - Immediate Medical Attention Required",
+        "description": "Legacy fever threshold for infants below 3 months.",
+        "severity": "critical",
+        "recommendations": [
+          "Seek immediate clinical assessment; do not delay for medication administration."
+        ],
+        "order": 1
+      },
+      {
+        "key": "young_infant_high",
+        "when": {
+          "op": "and",
+          "args": [
+            {
+              "op": "equal",
+              "args": [
+                {
+                  "op": "field",
+                  "field": "danger_sign_count"
+                },
+                {
+                  "op": "literal",
+                  "value": 0
+                }
+              ]
+            },
+            {
+              "op": "greater_than_or_equal",
+              "args": [
+                {
+                  "op": "field",
+                  "field": "age_months"
+                },
+                {
+                  "op": "literal",
+                  "value": 3
+                }
+              ]
+            },
+            {
+              "op": "less_than",
+              "args": [
+                {
+                  "op": "field",
+                  "field": "age_months"
+                },
+                {
+                  "op": "literal",
+                  "value": 6
+                }
+              ]
+            },
+            {
+              "op": "greater_than_or_equal",
+              "args": [
+                {
+                  "op": "field",
+                  "field": "temperature_c"
+                },
+                {
+                  "op": "literal",
+                  "value": 39
+                }
+              ]
+            }
+          ]
+        },
+        "label": "HIGH RISK - Urgent Medical Evaluation",
+        "description": "Legacy threshold for ages 3 to below 6 months.",
+        "severity": "critical",
+        "recommendations": [
+          "Contact an appropriate clinician immediately."
+        ],
+        "order": 2
+      },
+      {
+        "key": "young_infant_moderate",
+        "when": {
+          "op": "and",
+          "args": [
+            {
+              "op": "equal",
+              "args": [
+                {
+                  "op": "field",
+                  "field": "danger_sign_count"
+                },
+                {
+                  "op": "literal",
+                  "value": 0
+                }
+              ]
+            },
+            {
+              "op": "greater_than_or_equal",
+              "args": [
+                {
+                  "op": "field",
+                  "field": "age_months"
+                },
+                {
+                  "op": "literal",
+                  "value": 3
+                }
+              ]
+            },
+            {
+              "op": "less_than",
+              "args": [
+                {
+                  "op": "field",
+                  "field": "age_months"
+                },
+                {
+                  "op": "literal",
+                  "value": 6
+                }
+              ]
+            },
+            {
+              "op": "greater_than_or_equal",
+              "args": [
+                {
+                  "op": "field",
+                  "field": "temperature_c"
+                },
+                {
+                  "op": "literal",
+                  "value": 38
+                }
+              ]
+            },
+            {
+              "op": "less_than",
+              "args": [
+                {
+                  "op": "field",
+                  "field": "temperature_c"
+                },
+                {
+                  "op": "literal",
+                  "value": 39
+                }
+              ]
+            }
+          ]
+        },
+        "label": "Moderate Risk",
+        "description": "Legacy moderate threshold for ages 3 to below 6 months.",
+        "severity": "warning",
+        "recommendations": [
+          "Arrange clinical review within the approved timeframe."
+        ],
+        "order": 3
+      },
+      {
+        "key": "older_high",
+        "when": {
+          "op": "and",
+          "args": [
+            {
+              "op": "equal",
+              "args": [
+                {
+                  "op": "field",
+                  "field": "danger_sign_count"
+                },
+                {
+                  "op": "literal",
+                  "value": 0
+                }
+              ]
+            },
+            {
+              "op": "greater_than_or_equal",
+              "args": [
+                {
+                  "op": "field",
+                  "field": "age_months"
+                },
+                {
+                  "op": "literal",
+                  "value": 6
+                }
+              ]
+            },
+            {
+              "op": "greater_than_or_equal",
+              "args": [
+                {
+                  "op": "field",
+                  "field": "temperature_c"
+                },
+                {
+                  "op": "literal",
+                  "value": 39.5
+                }
+              ]
+            }
+          ]
+        },
+        "label": "High Fever - Medical Evaluation Recommended",
+        "description": "Legacy high-fever threshold from 6 months.",
+        "severity": "warning",
+        "recommendations": [
+          "Arrange medical evaluation according to the approved protocol."
+        ],
+        "order": 4
+      },
+      {
+        "key": "older_moderate",
+        "when": {
+          "op": "and",
+          "args": [
+            {
+              "op": "equal",
+              "args": [
+                {
+                  "op": "field",
+                  "field": "danger_sign_count"
+                },
+                {
+                  "op": "literal",
+                  "value": 0
+                }
+              ]
+            },
+            {
+              "op": "greater_than_or_equal",
+              "args": [
+                {
+                  "op": "field",
+                  "field": "age_months"
+                },
+                {
+                  "op": "literal",
+                  "value": 6
+                }
+              ]
+            },
+            {
+              "op": "greater_than_or_equal",
+              "args": [
+                {
+                  "op": "field",
+                  "field": "temperature_c"
+                },
+                {
+                  "op": "literal",
+                  "value": 38
+                }
+              ]
+            },
+            {
+              "op": "less_than",
+              "args": [
+                {
+                  "op": "field",
+                  "field": "temperature_c"
+                },
+                {
+                  "op": "literal",
+                  "value": 39.5
+                }
+              ]
+            }
+          ]
+        },
+        "label": "Moderate Fever - Home Management",
+        "description": "Legacy moderate-fever threshold from 6 months.",
+        "severity": "warning",
+        "recommendations": [
+          "Provide fluids, comfort, monitoring, and safety-net advice according to the approved protocol."
+        ],
+        "order": 5
+      },
+      {
+        "key": "low_risk",
+        "when": {
+          "op": "and",
+          "args": [
+            {
+              "op": "equal",
+              "args": [
+                {
+                  "op": "field",
+                  "field": "danger_sign_count"
+                },
+                {
+                  "op": "literal",
+                  "value": 0
+                }
+              ]
+            },
+            {
+              "op": "less_than",
+              "args": [
+                {
+                  "op": "field",
+                  "field": "temperature_c"
+                },
+                {
+                  "op": "literal",
+                  "value": 38
+                }
+              ]
+            }
+          ]
+        },
+        "label": "Low Risk",
+        "description": "No danger signs and temperature below the legacy fever threshold.",
+        "severity": "normal",
+        "recommendations": [
+          "Continue observation and follow approved safety-net advice."
+        ],
+        "order": 6
+      }
+    ],
+    "completion": {
+      "mode": "all_required",
+      "allow_resume": false,
+      "require_review": true,
+      "show_percentage": false,
+      "reset_confirmation": true
+    },
+    "test_cases": [
+      {
+        "key": "fahrenheit_conversion",
+        "inputs": {
+          "age_value": 12,
+          "age_unit": "months",
+          "weight": {
+            "value": 10,
+            "unit": "kg"
+          },
+          "temperature": {
+            "value": 100.4,
+            "unit": "fahrenheit"
+          }
+        },
+        "expected": {
+          "age_months": 12,
+          "temperature_c": 38,
+          "paracetamol_mg": 150,
+          "ibuprofen_mg": 100,
+          "interpretations": [
+            "older_moderate"
+          ],
+          "warnings": []
+        },
+        "numeric_tolerance": 0.01
+      },
+      {
+        "key": "infant_boundary",
+        "inputs": {
+          "age_value": 2,
+          "age_unit": "months",
+          "weight": {
+            "value": 5,
+            "unit": "kg"
+          },
+          "temperature": {
+            "value": 38,
+            "unit": "celsius"
+          }
+        },
+        "expected": {
+          "interpretations": [
+            "urgent_young_infant"
+          ],
+          "warnings": [
+            "urgent_warning"
+          ]
+        }
+      },
+      {
+        "key": "danger_sign",
+        "inputs": {
+          "age_value": 24,
+          "age_unit": "months",
+          "weight": {
+            "value": 12,
+            "unit": "kg"
+          },
+          "temperature": {
+            "value": 37.5,
+            "unit": "celsius"
+          },
+          "danger_sign_count": 1
+        },
+        "expected": {
+          "interpretations": [
+            "urgent_danger"
+          ],
+          "warnings": [
+            "urgent_warning"
+          ]
+        }
+      }
+    ],
+    "minimum_app_version": null
+  }
+}

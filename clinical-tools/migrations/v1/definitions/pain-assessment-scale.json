@@ -1,0 +1,906 @@
+{
+  "legacy_id": "pain-assessment-scale",
+  "legacy_file": "pain-assessment-scale.html",
+  "source_checksum": "6f4231a0c9e348aa4479511328d683f81db3c6fc3b066322a076a47578dc7db5",
+  "change_summary": "Review draft: represent Numeric, FACES, BPS, FLACC, and PQRST branches with typed conditional inputs and require every component used by the selected scale. Management wording and completeness rules require clinician approval.",
+  "definition": {
+    "schema_version": "1.0",
+    "tool_type": "calculator",
+    "title": "Pain Assessment",
+    "description": "Records a selected pain scale and classifies its score. Review draft only; not approved for clinical publication.",
+    "version": "1.0.0-review.1",
+    "locale": "en",
+    "supported_population": [],
+    "exclusions": [
+      "Select a scale appropriate to the patient's age, communication ability, and clinical context."
+    ],
+    "warnings": [
+      {
+        "key": "severe_pain_warning",
+        "text": "Severe pain requires prompt clinical assessment and management according to the approved protocol.",
+        "severity": "critical",
+        "when": {
+          "op": "and",
+          "args": [
+            {
+              "op": "not_equal",
+              "args": [
+                {
+                  "op": "field",
+                  "field": "scale"
+                },
+                {
+                  "op": "literal",
+                  "value": "bps"
+                }
+              ]
+            },
+            {
+              "op": "greater_than_or_equal",
+              "args": [
+                {
+                  "op": "field",
+                  "field": "score"
+                },
+                {
+                  "op": "literal",
+                  "value": 7
+                }
+              ]
+            }
+          ]
+        }
+      }
+    ],
+    "citations": [],
+    "inputs": [
+      {
+        "key": "patient_age",
+        "type": "number",
+        "label": "Patient age",
+        "required": false,
+        "minimum": 0,
+        "maximum": 120
+      },
+      {
+        "key": "cognitive_status",
+        "type": "text",
+        "label": "Cognitive or communication status",
+        "required": false
+      },
+      {
+        "key": "pain_duration",
+        "type": "single_selection",
+        "label": "Pain duration",
+        "required": false,
+        "options": [
+          {
+            "value": "acute",
+            "label": "Acute"
+          },
+          {
+            "value": "chronic",
+            "label": "Chronic"
+          }
+        ]
+      },
+      {
+        "key": "pain_location",
+        "type": "text",
+        "label": "Pain location",
+        "required": false
+      },
+      {
+        "key": "scale",
+        "type": "single_selection",
+        "label": "Pain scale",
+        "required": true,
+        "options": [
+          {
+            "value": "numeric",
+            "label": "Numeric Rating Scale (0–10)"
+          },
+          {
+            "value": "faces",
+            "label": "Wong-Baker FACES"
+          },
+          {
+            "value": "bps",
+            "label": "Behavioral Pain Scale"
+          },
+          {
+            "value": "flacc",
+            "label": "FLACC"
+          },
+          {
+            "value": "pqrst",
+            "label": "PQRST"
+          }
+        ]
+      },
+      {
+        "key": "direct_score",
+        "type": "integer",
+        "label": "Pain score",
+        "required": true,
+        "minimum": 0,
+        "maximum": 10,
+        "visible_when": {
+          "op": "in",
+          "args": [
+            {
+              "op": "field",
+              "field": "scale"
+            },
+            {
+              "op": "literal",
+              "value": "numeric"
+            },
+            {
+              "op": "literal",
+              "value": "faces"
+            },
+            {
+              "op": "literal",
+              "value": "pqrst"
+            }
+          ]
+        }
+      },
+      {
+        "key": "bps_facial",
+        "type": "integer",
+        "label": "BPS facial expression",
+        "required": true,
+        "minimum": 1,
+        "maximum": 4,
+        "visible_when": {
+          "op": "equal",
+          "args": [
+            {
+              "op": "field",
+              "field": "scale"
+            },
+            {
+              "op": "literal",
+              "value": "bps"
+            }
+          ]
+        }
+      },
+      {
+        "key": "bps_upper_limbs",
+        "type": "integer",
+        "label": "BPS upper limbs",
+        "required": true,
+        "minimum": 1,
+        "maximum": 4,
+        "visible_when": {
+          "op": "equal",
+          "args": [
+            {
+              "op": "field",
+              "field": "scale"
+            },
+            {
+              "op": "literal",
+              "value": "bps"
+            }
+          ]
+        }
+      },
+      {
+        "key": "bps_ventilation",
+        "type": "integer",
+        "label": "BPS ventilation compliance",
+        "required": true,
+        "minimum": 1,
+        "maximum": 4,
+        "visible_when": {
+          "op": "equal",
+          "args": [
+            {
+              "op": "field",
+              "field": "scale"
+            },
+            {
+              "op": "literal",
+              "value": "bps"
+            }
+          ]
+        }
+      },
+      {
+        "key": "flacc_face",
+        "type": "integer",
+        "label": "FLACC face",
+        "required": true,
+        "minimum": 0,
+        "maximum": 2,
+        "visible_when": {
+          "op": "equal",
+          "args": [
+            {
+              "op": "field",
+              "field": "scale"
+            },
+            {
+              "op": "literal",
+              "value": "flacc"
+            }
+          ]
+        }
+      },
+      {
+        "key": "flacc_legs",
+        "type": "integer",
+        "label": "FLACC legs",
+        "required": true,
+        "minimum": 0,
+        "maximum": 2,
+        "visible_when": {
+          "op": "equal",
+          "args": [
+            {
+              "op": "field",
+              "field": "scale"
+            },
+            {
+              "op": "literal",
+              "value": "flacc"
+            }
+          ]
+        }
+      },
+      {
+        "key": "flacc_activity",
+        "type": "integer",
+        "label": "FLACC activity",
+        "required": true,
+        "minimum": 0,
+        "maximum": 2,
+        "visible_when": {
+          "op": "equal",
+          "args": [
+            {
+              "op": "field",
+              "field": "scale"
+            },
+            {
+              "op": "literal",
+              "value": "flacc"
+            }
+          ]
+        }
+      },
+      {
+        "key": "flacc_cry",
+        "type": "integer",
+        "label": "FLACC cry",
+        "required": true,
+        "minimum": 0,
+        "maximum": 2,
+        "visible_when": {
+          "op": "equal",
+          "args": [
+            {
+              "op": "field",
+              "field": "scale"
+            },
+            {
+              "op": "literal",
+              "value": "flacc"
+            }
+          ]
+        }
+      },
+      {
+        "key": "flacc_consolability",
+        "type": "integer",
+        "label": "FLACC consolability",
+        "required": true,
+        "minimum": 0,
+        "maximum": 2,
+        "visible_when": {
+          "op": "equal",
+          "args": [
+            {
+              "op": "field",
+              "field": "scale"
+            },
+            {
+              "op": "literal",
+              "value": "flacc"
+            }
+          ]
+        }
+      }
+    ],
+    "sections": [
+      {
+        "key": "context",
+        "title": "Patient context",
+        "order": 0
+      },
+      {
+        "key": "assessment",
+        "title": "Selected assessment scale",
+        "order": 1,
+        "review_before_completion": true
+      }
+    ],
+    "calculation": [
+      {
+        "key": "bps_score",
+        "expression": {
+          "op": "if",
+          "args": [
+            {
+              "op": "equal",
+              "args": [
+                {
+                  "op": "field",
+                  "field": "scale"
+                },
+                {
+                  "op": "literal",
+                  "value": "bps"
+                }
+              ]
+            },
+            {
+              "op": "add",
+              "args": [
+                {
+                  "op": "field",
+                  "field": "bps_facial"
+                },
+                {
+                  "op": "field",
+                  "field": "bps_upper_limbs"
+                },
+                {
+                  "op": "field",
+                  "field": "bps_ventilation"
+                }
+              ]
+            },
+            {
+              "op": "literal",
+              "value": 0
+            }
+          ]
+        }
+      },
+      {
+        "key": "flacc_score",
+        "expression": {
+          "op": "if",
+          "args": [
+            {
+              "op": "equal",
+              "args": [
+                {
+                  "op": "field",
+                  "field": "scale"
+                },
+                {
+                  "op": "literal",
+                  "value": "flacc"
+                }
+              ]
+            },
+            {
+              "op": "add",
+              "args": [
+                {
+                  "op": "field",
+                  "field": "flacc_face"
+                },
+                {
+                  "op": "field",
+                  "field": "flacc_legs"
+                },
+                {
+                  "op": "field",
+                  "field": "flacc_activity"
+                },
+                {
+                  "op": "field",
+                  "field": "flacc_cry"
+                },
+                {
+                  "op": "field",
+                  "field": "flacc_consolability"
+                }
+              ]
+            },
+            {
+              "op": "literal",
+              "value": 0
+            }
+          ]
+        }
+      },
+      {
+        "key": "score",
+        "expression": {
+          "op": "if",
+          "args": [
+            {
+              "op": "equal",
+              "args": [
+                {
+                  "op": "field",
+                  "field": "scale"
+                },
+                {
+                  "op": "literal",
+                  "value": "bps"
+                }
+              ]
+            },
+            {
+              "op": "field",
+              "field": "bps_score"
+            },
+            {
+              "op": "if",
+              "args": [
+                {
+                  "op": "equal",
+                  "args": [
+                    {
+                      "op": "field",
+                      "field": "scale"
+                    },
+                    {
+                      "op": "literal",
+                      "value": "flacc"
+                    }
+                  ]
+                },
+                {
+                  "op": "field",
+                  "field": "flacc_score"
+                },
+                {
+                  "op": "field",
+                  "field": "direct_score"
+                }
+              ]
+            }
+          ]
+        }
+      }
+    ],
+    "rules": [],
+    "outputs": [
+      {
+        "key": "score",
+        "label": "Pain score",
+        "value": {
+          "op": "field",
+          "field": "score"
+        },
+        "unit": "points",
+        "precision": 0
+      },
+      {
+        "key": "scale",
+        "label": "Scale used",
+        "value": {
+          "op": "field",
+          "field": "scale"
+        }
+      }
+    ],
+    "interpretations": [
+      {
+        "key": "bps_minimal",
+        "when": {
+          "op": "and",
+          "args": [
+            {
+              "op": "equal",
+              "args": [
+                {
+                  "op": "field",
+                  "field": "scale"
+                },
+                {
+                  "op": "literal",
+                  "value": "bps"
+                }
+              ]
+            },
+            {
+              "op": "less_than_or_equal",
+              "args": [
+                {
+                  "op": "field",
+                  "field": "score"
+                },
+                {
+                  "op": "literal",
+                  "value": 5
+                }
+              ]
+            }
+          ]
+        },
+        "label": "Minimal Pain",
+        "description": "Legacy BPS score 3–5.",
+        "severity": "normal",
+        "recommendations": [
+          "Continue assessment and monitoring."
+        ],
+        "order": 0
+      },
+      {
+        "key": "bps_moderate",
+        "when": {
+          "op": "and",
+          "args": [
+            {
+              "op": "equal",
+              "args": [
+                {
+                  "op": "field",
+                  "field": "scale"
+                },
+                {
+                  "op": "literal",
+                  "value": "bps"
+                }
+              ]
+            },
+            {
+              "op": "greater_than_or_equal",
+              "args": [
+                {
+                  "op": "field",
+                  "field": "score"
+                },
+                {
+                  "op": "literal",
+                  "value": 6
+                }
+              ]
+            },
+            {
+              "op": "less_than_or_equal",
+              "args": [
+                {
+                  "op": "field",
+                  "field": "score"
+                },
+                {
+                  "op": "literal",
+                  "value": 8
+                }
+              ]
+            }
+          ]
+        },
+        "label": "Moderate Pain",
+        "description": "Legacy BPS score 6–8.",
+        "severity": "warning",
+        "recommendations": [
+          "Assess causes and manage according to the approved pain protocol."
+        ],
+        "order": 1
+      },
+      {
+        "key": "bps_severe",
+        "when": {
+          "op": "and",
+          "args": [
+            {
+              "op": "equal",
+              "args": [
+                {
+                  "op": "field",
+                  "field": "scale"
+                },
+                {
+                  "op": "literal",
+                  "value": "bps"
+                }
+              ]
+            },
+            {
+              "op": "greater_than_or_equal",
+              "args": [
+                {
+                  "op": "field",
+                  "field": "score"
+                },
+                {
+                  "op": "literal",
+                  "value": 9
+                }
+              ]
+            }
+          ]
+        },
+        "label": "Severe Pain",
+        "description": "Legacy BPS score 9–12.",
+        "severity": "critical",
+        "recommendations": [
+          "Escalate for prompt clinical assessment and management."
+        ],
+        "order": 2
+      },
+      {
+        "key": "no_pain",
+        "when": {
+          "op": "and",
+          "args": [
+            {
+              "op": "not_equal",
+              "args": [
+                {
+                  "op": "field",
+                  "field": "scale"
+                },
+                {
+                  "op": "literal",
+                  "value": "bps"
+                }
+              ]
+            },
+            {
+              "op": "equal",
+              "args": [
+                {
+                  "op": "field",
+                  "field": "score"
+                },
+                {
+                  "op": "literal",
+                  "value": 0
+                }
+              ]
+            }
+          ]
+        },
+        "label": "No Pain",
+        "description": "Score 0.",
+        "severity": "normal",
+        "recommendations": [
+          "Continue monitoring as appropriate."
+        ],
+        "order": 3
+      },
+      {
+        "key": "mild_pain",
+        "when": {
+          "op": "and",
+          "args": [
+            {
+              "op": "not_equal",
+              "args": [
+                {
+                  "op": "field",
+                  "field": "scale"
+                },
+                {
+                  "op": "literal",
+                  "value": "bps"
+                }
+              ]
+            },
+            {
+              "op": "greater_than_or_equal",
+              "args": [
+                {
+                  "op": "field",
+                  "field": "score"
+                },
+                {
+                  "op": "literal",
+                  "value": 1
+                }
+              ]
+            },
+            {
+              "op": "less_than_or_equal",
+              "args": [
+                {
+                  "op": "field",
+                  "field": "score"
+                },
+                {
+                  "op": "literal",
+                  "value": 3
+                }
+              ]
+            }
+          ]
+        },
+        "label": "Mild Pain",
+        "description": "Score 1–3.",
+        "severity": "info",
+        "recommendations": [
+          "Assess cause and offer appropriate comfort measures."
+        ],
+        "order": 4
+      },
+      {
+        "key": "moderate_pain",
+        "when": {
+          "op": "and",
+          "args": [
+            {
+              "op": "not_equal",
+              "args": [
+                {
+                  "op": "field",
+                  "field": "scale"
+                },
+                {
+                  "op": "literal",
+                  "value": "bps"
+                }
+              ]
+            },
+            {
+              "op": "greater_than_or_equal",
+              "args": [
+                {
+                  "op": "field",
+                  "field": "score"
+                },
+                {
+                  "op": "literal",
+                  "value": 4
+                }
+              ]
+            },
+            {
+              "op": "less_than_or_equal",
+              "args": [
+                {
+                  "op": "field",
+                  "field": "score"
+                },
+                {
+                  "op": "literal",
+                  "value": 6
+                }
+              ]
+            }
+          ]
+        },
+        "label": "Moderate Pain",
+        "description": "Score 4–6.",
+        "severity": "warning",
+        "recommendations": [
+          "Assess and manage according to the approved pain protocol."
+        ],
+        "order": 5
+      },
+      {
+        "key": "severe_pain",
+        "when": {
+          "op": "and",
+          "args": [
+            {
+              "op": "not_equal",
+              "args": [
+                {
+                  "op": "field",
+                  "field": "scale"
+                },
+                {
+                  "op": "literal",
+                  "value": "bps"
+                }
+              ]
+            },
+            {
+              "op": "greater_than_or_equal",
+              "args": [
+                {
+                  "op": "field",
+                  "field": "score"
+                },
+                {
+                  "op": "literal",
+                  "value": 7
+                }
+              ]
+            }
+          ]
+        },
+        "label": "Severe Pain",
+        "description": "Score 7–10.",
+        "severity": "critical",
+        "recommendations": [
+          "Escalate for prompt clinical assessment and management."
+        ],
+        "order": 6
+      }
+    ],
+    "completion": {
+      "mode": "all_required",
+      "allow_resume": true,
+      "require_review": true,
+      "show_percentage": false,
+      "reset_confirmation": true
+    },
+    "test_cases": [
+      {
+        "key": "numeric_six",
+        "inputs": {
+          "scale": "numeric",
+          "direct_score": 6,
+          "patient_age": 70,
+          "pain_duration": "chronic",
+          "pain_location": "back"
+        },
+        "expected": {
+          "score": 6,
+          "interpretations": [
+            "moderate_pain"
+          ],
+          "warnings": []
+        }
+      },
+      {
+        "key": "numeric_seven",
+        "inputs": {
+          "scale": "numeric",
+          "direct_score": 7
+        },
+        "expected": {
+          "score": 7,
+          "interpretations": [
+            "severe_pain"
+          ],
+          "warnings": [
+            "severe_pain_warning"
+          ]
+        }
+      },
+      {
+        "key": "bps_minimum",
+        "inputs": {
+          "scale": "bps",
+          "bps_facial": 1,
+          "bps_upper_limbs": 1,
+          "bps_ventilation": 1
+        },
+        "expected": {
+          "score": 3,
+          "interpretations": [
+            "bps_minimal"
+          ],
+          "warnings": []
+        }
+      },
+      {
+        "key": "flacc_maximum",
+        "inputs": {
+          "scale": "flacc",
+          "flacc_face": 2,
+          "flacc_legs": 2,
+          "flacc_activity": 2,
+          "flacc_cry": 2,
+          "flacc_consolability": 2
+        },
+        "expected": {
+          "score": 10,
+          "interpretations": [
+            "severe_pain"
+          ],
+          "warnings": [
+            "severe_pain_warning"
+          ]
+        }
+      }
+    ],
+    "minimum_app_version": null
+  }
+}

@@ -1,0 +1,21 @@
+{
+  "legacy_id": "emergency-triage-assessment",
+  "legacy_file": "emergency-triage-assessment.html",
+  "status": "changes_required",
+  "reviewer_id": null,
+  "reviewed_at": null,
+  "cases_tested": 4,
+  "exact_matches": 4,
+  "tolerance_matches": 0,
+  "presentation_differences": [
+    "The definition evaluates four explicit sign-group confirmations; native UI must retain every named sign and derive the groups without trusting a user-entered priority."
+  ],
+  "logic_differences": [
+    "Age is required and absent optional vital signs receive documented normal defaults instead of JavaScript NaN behavior."
+  ],
+  "unresolved_clinical_ambiguities": [
+    "A qualified emergency clinician must approve the sign groupings, age-specific vital thresholds, pain escalation, priority labels, time targets, actions, monitoring, and local escalation workflow.",
+    "The legacy page calls itself Manchester Triage System based without a governing citation or validation evidence; that claim is removed."
+  ],
+  "reviewer_decision": "Pending independent emergency-clinician approval. Do not approve or publish this review draft."
+}

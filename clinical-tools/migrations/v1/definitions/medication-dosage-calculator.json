@@ -1,0 +1,1016 @@
+{
+  "legacy_id": "medication-dosage-calculator",
+  "legacy_file": "medication-dosage-calculator.html",
+  "source_checksum": "0b97e86b8cf06fb99e090afa852dc824b6f19e296d032ce24516c178974850bb",
+  "change_summary": "Pharmacist review draft: preserve the legacy weight conversion, preset selection, single-dose caps, frequency, and daily-total calculation. No preset is approved for clinical use.",
+  "definition": {
+    "schema_version": "1.0",
+    "tool_type": "calculator",
+    "title": "Legacy Medication Dose Calculation (Unapproved)",
+    "description": "Reproduces the legacy educational dose arithmetic for pharmacist review. It must not be published or used to prescribe or administer medication before approval.",
+    "version": "1.0.0-review.1",
+    "locale": "en",
+    "supported_population": [],
+    "exclusions": [
+      "Not for prescribing, dispensing, administration, or independent clinical decision-making."
+    ],
+    "warnings": [
+      {
+        "key": "unapproved_presets",
+        "text": "The medication presets and limits are unapproved legacy values. Verify independently with an authorized pharmacist and current formulary.",
+        "severity": "critical"
+      },
+      {
+        "key": "aspirin_child",
+        "text": "The legacy tool blocks aspirin for patients under 18. Follow an approved pediatric protocol and obtain pharmacist/clinician review.",
+        "severity": "critical",
+        "when": {
+          "op": "and",
+          "args": [
+            {
+              "op": "equal",
+              "args": [
+                {
+                  "op": "field",
+                  "field": "medication"
+                },
+                {
+                  "op": "literal",
+                  "value": "aspirin"
+                }
+              ]
+            },
+            {
+              "op": "less_than",
+              "args": [
+                {
+                  "op": "field",
+                  "field": "age_years"
+                },
+                {
+                  "op": "literal",
+                  "value": 18
+                }
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "key": "single_cap",
+        "text": "The calculated amount exceeded the legacy single-dose cap and was capped. This cap requires pharmacist approval.",
+        "severity": "warning",
+        "when": {
+          "op": "greater_than",
+          "args": [
+            {
+              "op": "field",
+              "field": "raw_single_dose"
+            },
+            {
+              "op": "field",
+              "field": "max_single_dose"
+            }
+          ]
+        }
+      },
+      {
+        "key": "daily_max",
+        "text": "The legacy calculated daily total exceeds its preset daily maximum. Do not administer; obtain pharmacist review.",
+        "severity": "critical",
+        "when": {
+          "op": "greater_than",
+          "args": [
+            {
+              "op": "field",
+              "field": "daily_dose"
+            },
+            {
+              "op": "field",
+              "field": "max_daily_dose"
+            }
+          ]
+        }
+      }
+    ],
+    "citations": [],
+    "inputs": [
+      {
+        "key": "medication",
+        "type": "single_selection",
+        "label": "Medication preset",
+        "required": true,
+        "options": [
+          {
+            "value": "paracetamol",
+            "label": "Paracetamol / acetaminophen (legacy preset)"
+          },
+          {
+            "value": "ibuprofen",
+            "label": "Ibuprofen (legacy preset)"
+          },
+          {
+            "value": "amoxicillin",
+            "label": "Amoxicillin (legacy preset)"
+          },
+          {
+            "value": "aspirin",
+            "label": "Aspirin low-dose (legacy preset)"
+          },
+          {
+            "value": "prednisolone",
+            "label": "Prednisolone (legacy preset)"
+          },
+          {
+            "value": "custom",
+            "label": "Custom arithmetic only"
+          }
+        ]
+      },
+      {
+        "key": "weight",
+        "type": "measurement",
+        "label": "Measured weight",
+        "required": true,
+        "minimum": 0.5,
+        "maximum": 200,
+        "allowed_units": [
+          "kg",
+          "lb"
+        ],
+        "default_unit": "kg"
+      },
+      {
+        "key": "age_years",
+        "type": "integer",
+        "label": "Age",
+        "required": true,
+        "minimum": 0,
+        "maximum": 120
+      },
+      {
+        "key": "custom_mg_per_kg",
+        "type": "number",
+        "label": "Custom amount per kg",
+        "required": true,
+        "minimum": 0.01,
+        "maximum": 100,
+        "visible_when": {
+          "op": "equal",
+          "args": [
+            {
+              "op": "field",
+              "field": "medication"
+            },
+            {
+              "op": "literal",
+              "value": "custom"
+            }
+          ]
+        }
+      },
+      {
+        "key": "custom_frequency",
+        "type": "single_selection",
+        "label": "Custom doses per day",
+        "required": true,
+        "options": [
+          {
+            "value": 1,
+            "label": "Once daily"
+          },
+          {
+            "value": 2,
+            "label": "Twice daily"
+          },
+          {
+            "value": 3,
+            "label": "Three times daily"
+          },
+          {
+            "value": 4,
+            "label": "Four times daily"
+          },
+          {
+            "value": 6,
+            "label": "Every four hours"
+          }
+        ],
+        "visible_when": {
+          "op": "equal",
+          "args": [
+            {
+              "op": "field",
+              "field": "medication"
+            },
+            {
+              "op": "literal",
+              "value": "custom"
+            }
+          ]
+        }
+      }
+    ],
+    "sections": [
+      {
+        "key": "patient",
+        "title": "Patient and calculation inputs",
+        "order": 0,
+        "review_before_completion": true
+      }
+    ],
+    "calculation": [
+      {
+        "key": "dose_per_kg",
+        "expression": {
+          "op": "if",
+          "args": [
+            {
+              "op": "equal",
+              "args": [
+                {
+                  "op": "field",
+                  "field": "medication"
+                },
+                {
+                  "op": "literal",
+                  "value": "custom"
+                }
+              ]
+            },
+            {
+              "op": "field",
+              "field": "custom_mg_per_kg"
+            },
+            {
+              "op": "if",
+              "args": [
+                {
+                  "op": "equal",
+                  "args": [
+                    {
+                      "op": "field",
+                      "field": "medication"
+                    },
+                    {
+                      "op": "literal",
+                      "value": "paracetamol"
+                    }
+                  ]
+                },
+                {
+                  "op": "literal",
+                  "value": 15
+                },
+                {
+                  "op": "if",
+                  "args": [
+                    {
+                      "op": "equal",
+                      "args": [
+                        {
+                          "op": "field",
+                          "field": "medication"
+                        },
+                        {
+                          "op": "literal",
+                          "value": "ibuprofen"
+                        }
+                      ]
+                    },
+                    {
+                      "op": "if",
+                      "args": [
+                        {
+                          "op": "less_than",
+                          "args": [
+                            {
+                              "op": "field",
+                              "field": "age_years"
+                            },
+                            {
+                              "op": "literal",
+                              "value": 18
+                            }
+                          ]
+                        },
+                        {
+                          "op": "literal",
+                          "value": 10
+                        },
+                        {
+                          "op": "literal",
+                          "value": 7.5
+                        }
+                      ]
+                    },
+                    {
+                      "op": "if",
+                      "args": [
+                        {
+                          "op": "equal",
+                          "args": [
+                            {
+                              "op": "field",
+                              "field": "medication"
+                            },
+                            {
+                              "op": "literal",
+                              "value": "amoxicillin"
+                            }
+                          ]
+                        },
+                        {
+                          "op": "if",
+                          "args": [
+                            {
+                              "op": "less_than",
+                              "args": [
+                                {
+                                  "op": "field",
+                                  "field": "age_years"
+                                },
+                                {
+                                  "op": "literal",
+                                  "value": 18
+                                }
+                              ]
+                            },
+                            {
+                              "op": "literal",
+                              "value": 40
+                            },
+                            {
+                              "op": "literal",
+                              "value": 25
+                            }
+                          ]
+                        },
+                        {
+                          "op": "if",
+                          "args": [
+                            {
+                              "op": "equal",
+                              "args": [
+                                {
+                                  "op": "field",
+                                  "field": "medication"
+                                },
+                                {
+                                  "op": "literal",
+                                  "value": "aspirin"
+                                }
+                              ]
+                            },
+                            {
+                              "op": "if",
+                              "args": [
+                                {
+                                  "op": "less_than",
+                                  "args": [
+                                    {
+                                      "op": "field",
+                                      "field": "age_years"
+                                    },
+                                    {
+                                      "op": "literal",
+                                      "value": 18
+                                    }
+                                  ]
+                                },
+                                {
+                                  "op": "literal",
+                                  "value": 0
+                                },
+                                {
+                                  "op": "literal",
+                                  "value": 1.5
+                                }
+                              ]
+                            },
+                            {
+                              "op": "literal",
+                              "value": 1
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "key": "frequency",
+        "expression": {
+          "op": "if",
+          "args": [
+            {
+              "op": "equal",
+              "args": [
+                {
+                  "op": "field",
+                  "field": "medication"
+                },
+                {
+                  "op": "literal",
+                  "value": "custom"
+                }
+              ]
+            },
+            {
+              "op": "field",
+              "field": "custom_frequency"
+            },
+            {
+              "op": "if",
+              "args": [
+                {
+                  "op": "equal",
+                  "args": [
+                    {
+                      "op": "field",
+                      "field": "medication"
+                    },
+                    {
+                      "op": "literal",
+                      "value": "paracetamol"
+                    }
+                  ]
+                },
+                {
+                  "op": "literal",
+                  "value": 4
+                },
+                {
+                  "op": "if",
+                  "args": [
+                    {
+                      "op": "equal",
+                      "args": [
+                        {
+                          "op": "field",
+                          "field": "medication"
+                        },
+                        {
+                          "op": "literal",
+                          "value": "ibuprofen"
+                        }
+                      ]
+                    },
+                    {
+                      "op": "literal",
+                      "value": 3
+                    },
+                    {
+                      "op": "if",
+                      "args": [
+                        {
+                          "op": "equal",
+                          "args": [
+                            {
+                              "op": "field",
+                              "field": "medication"
+                            },
+                            {
+                              "op": "literal",
+                              "value": "amoxicillin"
+                            }
+                          ]
+                        },
+                        {
+                          "op": "literal",
+                          "value": 2
+                        },
+                        {
+                          "op": "literal",
+                          "value": 1
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "key": "raw_single_dose",
+        "expression": {
+          "op": "multiply",
+          "args": [
+            {
+              "op": "field",
+              "field": "dose_per_kg"
+            },
+            {
+              "op": "field",
+              "field": "weight"
+            }
+          ]
+        },
+        "precision": 6,
+        "rounding_mode": "half_up"
+      },
+      {
+        "key": "max_single_dose",
+        "expression": {
+          "op": "if",
+          "args": [
+            {
+              "op": "equal",
+              "args": [
+                {
+                  "op": "field",
+                  "field": "medication"
+                },
+                {
+                  "op": "literal",
+                  "value": "custom"
+                }
+              ]
+            },
+            {
+              "op": "field",
+              "field": "raw_single_dose"
+            },
+            {
+              "op": "if",
+              "args": [
+                {
+                  "op": "equal",
+                  "args": [
+                    {
+                      "op": "field",
+                      "field": "medication"
+                    },
+                    {
+                      "op": "literal",
+                      "value": "paracetamol"
+                    }
+                  ]
+                },
+                {
+                  "op": "literal",
+                  "value": 1000
+                },
+                {
+                  "op": "if",
+                  "args": [
+                    {
+                      "op": "equal",
+                      "args": [
+                        {
+                          "op": "field",
+                          "field": "medication"
+                        },
+                        {
+                          "op": "literal",
+                          "value": "ibuprofen"
+                        }
+                      ]
+                    },
+                    {
+                      "op": "literal",
+                      "value": 400
+                    },
+                    {
+                      "op": "if",
+                      "args": [
+                        {
+                          "op": "equal",
+                          "args": [
+                            {
+                              "op": "field",
+                              "field": "medication"
+                            },
+                            {
+                              "op": "literal",
+                              "value": "amoxicillin"
+                            }
+                          ]
+                        },
+                        {
+                          "op": "literal",
+                          "value": 1000
+                        },
+                        {
+                          "op": "if",
+                          "args": [
+                            {
+                              "op": "equal",
+                              "args": [
+                                {
+                                  "op": "field",
+                                  "field": "medication"
+                                },
+                                {
+                                  "op": "literal",
+                                  "value": "aspirin"
+                                }
+                              ]
+                            },
+                            {
+                              "op": "literal",
+                              "value": 100
+                            },
+                            {
+                              "op": "literal",
+                              "value": 60
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "key": "single_dose",
+        "expression": {
+          "op": "round",
+          "precision": 1,
+          "rounding_mode": "half_up",
+          "args": [
+            {
+              "op": "min",
+              "args": [
+                {
+                  "op": "field",
+                  "field": "raw_single_dose"
+                },
+                {
+                  "op": "field",
+                  "field": "max_single_dose"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "key": "daily_dose",
+        "expression": {
+          "op": "round",
+          "precision": 1,
+          "rounding_mode": "half_up",
+          "args": [
+            {
+              "op": "multiply",
+              "args": [
+                {
+                  "op": "field",
+                  "field": "single_dose"
+                },
+                {
+                  "op": "field",
+                  "field": "frequency"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "key": "max_daily_dose",
+        "expression": {
+          "op": "if",
+          "args": [
+            {
+              "op": "equal",
+              "args": [
+                {
+                  "op": "field",
+                  "field": "medication"
+                },
+                {
+                  "op": "literal",
+                  "value": "custom"
+                }
+              ]
+            },
+            {
+              "op": "field",
+              "field": "daily_dose"
+            },
+            {
+              "op": "if",
+              "args": [
+                {
+                  "op": "equal",
+                  "args": [
+                    {
+                      "op": "field",
+                      "field": "medication"
+                    },
+                    {
+                      "op": "literal",
+                      "value": "paracetamol"
+                    }
+                  ]
+                },
+                {
+                  "op": "literal",
+                  "value": 4000
+                },
+                {
+                  "op": "if",
+                  "args": [
+                    {
+                      "op": "equal",
+                      "args": [
+                        {
+                          "op": "field",
+                          "field": "medication"
+                        },
+                        {
+                          "op": "literal",
+                          "value": "ibuprofen"
+                        }
+                      ]
+                    },
+                    {
+                      "op": "literal",
+                      "value": 1200
+                    },
+                    {
+                      "op": "if",
+                      "args": [
+                        {
+                          "op": "equal",
+                          "args": [
+                            {
+                              "op": "field",
+                              "field": "medication"
+                            },
+                            {
+                              "op": "literal",
+                              "value": "amoxicillin"
+                            }
+                          ]
+                        },
+                        {
+                          "op": "literal",
+                          "value": 3000
+                        },
+                        {
+                          "op": "if",
+                          "args": [
+                            {
+                              "op": "equal",
+                              "args": [
+                                {
+                                  "op": "field",
+                                  "field": "medication"
+                                },
+                                {
+                                  "op": "literal",
+                                  "value": "aspirin"
+                                }
+                              ]
+                            },
+                            {
+                              "op": "literal",
+                              "value": 100
+                            },
+                            {
+                              "op": "literal",
+                              "value": 60
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      }
+    ],
+    "rules": [],
+    "outputs": [
+      {
+        "key": "single_dose",
+        "label": "Legacy single-dose arithmetic",
+        "value": {
+          "op": "field",
+          "field": "single_dose"
+        },
+        "unit": "mg",
+        "precision": 1,
+        "rounding_mode": "half_up"
+      },
+      {
+        "key": "frequency",
+        "label": "Legacy doses per day",
+        "value": {
+          "op": "field",
+          "field": "frequency"
+        }
+      },
+      {
+        "key": "daily_dose",
+        "label": "Legacy daily-total arithmetic",
+        "value": {
+          "op": "field",
+          "field": "daily_dose"
+        },
+        "unit": "mg",
+        "precision": 1,
+        "rounding_mode": "half_up"
+      },
+      {
+        "key": "max_single_dose",
+        "label": "Legacy maximum single dose",
+        "value": {
+          "op": "field",
+          "field": "max_single_dose"
+        },
+        "unit": "mg"
+      },
+      {
+        "key": "max_daily_dose",
+        "label": "Legacy maximum daily dose",
+        "value": {
+          "op": "field",
+          "field": "max_daily_dose"
+        },
+        "unit": "mg"
+      }
+    ],
+    "interpretations": [
+      {
+        "key": "blocked_pediatric_aspirin",
+        "when": {
+          "op": "and",
+          "args": [
+            {
+              "op": "equal",
+              "args": [
+                {
+                  "op": "field",
+                  "field": "medication"
+                },
+                {
+                  "op": "literal",
+                  "value": "aspirin"
+                }
+              ]
+            },
+            {
+              "op": "less_than",
+              "args": [
+                {
+                  "op": "field",
+                  "field": "age_years"
+                },
+                {
+                  "op": "literal",
+                  "value": 18
+                }
+              ]
+            }
+          ]
+        },
+        "label": "Calculation blocked for pediatric aspirin",
+        "description": "The legacy tool returned an alert rather than a dose.",
+        "severity": "critical",
+        "recommendations": [
+          "Do not use this result; consult an authorized pharmacist and approved protocol."
+        ],
+        "order": 0
+      },
+      {
+        "key": "review_only",
+        "when": {
+          "op": "not",
+          "args": [
+            {
+              "op": "and",
+              "args": [
+                {
+                  "op": "equal",
+                  "args": [
+                    {
+                      "op": "field",
+                      "field": "medication"
+                    },
+                    {
+                      "op": "literal",
+                      "value": "aspirin"
+                    }
+                  ]
+                },
+                {
+                  "op": "less_than",
+                  "args": [
+                    {
+                      "op": "field",
+                      "field": "age_years"
+                    },
+                    {
+                      "op": "literal",
+                      "value": 18
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        "label": "Unapproved arithmetic for pharmacist review",
+        "description": "This output reproduces legacy arithmetic only.",
+        "severity": "warning",
+        "recommendations": [
+          "Verify the drug, indication, dose, interval, cap, contraindications, interactions, organ function, and formulation independently."
+        ],
+        "order": 1
+      }
+    ],
+    "completion": {
+      "mode": "all_required",
+      "allow_resume": false,
+      "require_review": true,
+      "show_percentage": false,
+      "reset_confirmation": true
+    },
+    "test_cases": [
+      {
+        "key": "paracetamol_child",
+        "inputs": {
+          "medication": "paracetamol",
+          "weight": {
+            "value": 20,
+            "unit": "kg"
+          },
+          "age_years": 8
+        },
+        "expected": {
+          "single_dose": 300,
+          "daily_dose": 1200,
+          "frequency": 4,
+          "interpretations": [
+            "review_only"
+          ],
+          "warnings": [
+            "unapproved_presets"
+          ]
+        }
+      },
+      {
+        "key": "pounds_conversion",
+        "inputs": {
+          "medication": "ibuprofen",
+          "weight": {
+            "value": 44.0924,
+            "unit": "lb"
+          },
+          "age_years": 20
+        },
+        "expected": {
+          "single_dose": 150,
+          "daily_dose": 450,
+          "interpretations": [
+            "review_only"
+          ],
+          "warnings": [
+            "unapproved_presets"
+          ]
+        },
+        "numeric_tolerance": 0.1
+      },
+      {
+        "key": "aspirin_child",
+        "inputs": {
+          "medication": "aspirin",
+          "weight": {
+            "value": 30,
+            "unit": "kg"
+          },
+          "age_years": 12
+        },
+        "expected": {
+          "single_dose": 0,
+          "interpretations": [
+            "blocked_pediatric_aspirin"
+          ],
+          "warnings": [
+            "unapproved_presets",
+            "aspirin_child"
+          ]
+        }
+      }
+    ],
+    "minimum_app_version": null
+  }
+}

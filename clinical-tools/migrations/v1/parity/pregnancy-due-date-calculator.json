@@ -1,0 +1,23 @@
+{
+  "legacy_id": "pregnancy-due-date-calculator",
+  "legacy_file": "pregnancy-due-date-calculator.html",
+  "status": "changes_required",
+  "reviewer_id": null,
+  "reviewed_at": null,
+  "cases_tested": 5,
+  "exact_matches": 2,
+  "tolerance_matches": 1,
+  "presentation_differences": [
+    "Dates are returned as deterministic ISO calendar dates and milestones are deferred until an approved milestone set exists."
+  ],
+  "logic_differences": [
+    "Method-specific dates and ultrasound week/day values are strictly required and bounded; the legacy code could continue with NaN ultrasound input.",
+    "Cycle length is captured but does not alter the due date, matching the legacy due-date behavior while leaving the inconsistency explicit."
+  ],
+  "unresolved_clinical_ambiguities": [
+    "Approve LMP, conception, ultrasound, cycle adjustment, trimester, future-date, and implausible gestation validation rules.",
+    "Approve the milestone schedule and presentation timezone.",
+    "Provide governing obstetric citations and effective/review dates."
+  ],
+  "reviewer_decision": "Pending independent clinician approval. Do not approve or publish this review draft."
+}

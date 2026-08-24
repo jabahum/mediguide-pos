@@ -2,21 +2,32 @@
   font-family:
     Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI",
     sans-serif;
-  color: #24312c;
-  background: #ffffff;
+  color: oklch(0.147 0.004 49.25);
+  background: oklch(1 0 0);
   font-synthesis: none;
   text-rendering: optimizeLegibility;
 
-  --color-ink: #1c2e27;
-  --color-text: #3f4d47;
-  --color-muted: #6f7c76;
-  --color-soft: #f4f7f5;
-  --color-surface: #ffffff;
-  --color-line: #dfe7e2;
-  --color-green-900: #0d4536;
-  --color-green-800: #115542;
-  --color-green-700: #176b54;
-  --color-green-100: #e8f3ee;
+  --background: oklch(1 0 0);
+  --foreground: oklch(0.147 0.004 49.25);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.147 0.004 49.25);
+  --primary: oklch(0.216 0.006 56.043);
+  --primary-foreground: oklch(0.985 0.001 106.423);
+  --muted: oklch(0.97 0.001 106.424);
+  --muted-foreground: oklch(0.553 0.013 58.071);
+  --accent: oklch(0.97 0.001 106.424);
+  --border: oklch(0.923 0.003 48.717);
+  --ring: oklch(0.709 0.01 56.259);
+  --color-ink: var(--foreground);
+  --color-text: oklch(0.268 0.007 34.298);
+  --color-muted: var(--muted-foreground);
+  --color-soft: var(--muted);
+  --color-surface: var(--background);
+  --color-line: var(--border);
+  --color-green-900: var(--primary);
+  --color-green-800: var(--primary);
+  --color-green-700: var(--primary);
+  --color-green-100: var(--accent);
   --color-gold: #d6a62e;
   --color-blue: #236fbe;
   --shadow-card: 0 18px 48px rgba(22, 49, 38, 0.09);
@@ -27,4 +38,31 @@
   --page-width: 1180px;
   --reader-sidebar: 320px;
   --reader-header: 64px;
+}
+
+:root.dark {
+  --background: oklch(0.147 0.004 49.25);
+  --foreground: oklch(0.985 0.001 106.423);
+  --card: oklch(0.216 0.006 56.043);
+  --card-foreground: oklch(0.985 0.001 106.423);
+  --primary: oklch(0.923 0.003 48.717);
+  --primary-foreground: oklch(0.216 0.006 56.043);
+  --muted: oklch(0.268 0.007 34.298);
+  --muted-foreground: oklch(0.709 0.01 56.259);
+  --accent: oklch(0.268 0.007 34.298);
+  --border: oklch(1 0 0 / 12%);
+  --ring: oklch(0.553 0.013 58.071);
+  --color-ink: var(--foreground);
+  --color-text: oklch(0.93 0.003 48.717);
+  --color-muted: var(--muted-foreground);
+  --color-soft: var(--muted);
+  --color-surface: var(--background);
+  --color-line: var(--border);
+  --color-green-900: var(--primary);
+  --color-green-800: var(--primary);
+  --color-green-700: var(--primary);
+  --color-green-100: var(--accent);
+  --color-blue: oklch(0.72 0.14 250);
+  --shadow-card: 0 18px 48px rgb(0 0 0 / 24%);
+  --shadow-float: 0 24px 60px rgb(0 0 0 / 38%);
 }

@@ -1,6 +1,6 @@
 * { box-sizing: border-box; }
 html { scroll-behavior: smooth; }
-body { min-width: 320px; min-height: 100vh; margin: 0; color: var(--color-text); background: var(--color-surface); }
+body { min-width: 320px; min-height: 100vh; margin: 0; color: var(--color-text); background: var(--color-surface); transition: color 160ms, background 160ms; }
 button, input { font: inherit; }
 a { color: inherit; }
 svg { width: 1.25rem; height: 1.25rem; }

@@ -24,14 +24,17 @@ import {
 import { Brand } from "../../components/common/Brand";
 import { PageLoading } from "../../components/common/PageLoading";
 import { dashboardLoginUrl } from "../../config";
-import { SecureMarkdown } from "./components/SecureMarkdown";
+import {
+  BookGuidelineReader,
+  type SupplementalReaderView,
+} from "./components/BookGuidelineReader";
 import {
   GuidelineBlockRenderer,
   StructuredAlgorithm,
   StructuredTable,
 } from "./components/GuidelineBlockRenderer";
 
-type ReaderView = "overview" | "chapters" | "tables" | "figures" | "algorithms" | "markdown";
+type ReaderView = "read" | SupplementalReaderView;
 
 type ReaderData = {
   guideline: PublicGuideline;
@@ -118,7 +121,7 @@ export function PublicGuidelineReaderPage() {
 
   const { data } = state;
   const tabs = availableViews(data);
-  const view = tabs.includes(requestedView) ? requestedView : "overview";
+  const view = tabs.includes(requestedView) ? requestedView : tabs[0];
   const selectView = (nextView: ReaderView) => {
     const next = new URLSearchParams(searchParams);
     next.set("view", nextView);
@@ -129,6 +132,18 @@ export function PublicGuidelineReaderPage() {
     const next = new URLSearchParams(searchParams);
     next.set("view", "chapters"); next.set("section", sectionId); setSearchParams(next);
   };
+
+  if (view === "read" && data.markdown) {
+    return <BookGuidelineReader
+      guideline={data.guideline}
+      manifest={data.manifest}
+      markdown={data.markdown}
+      supplementalViews={tabs.filter((tab): tab is SupplementalReaderView => tab !== "read")}
+      partial={data.partial}
+      onSelectView={selectView}
+      onOpenOriginal={() => openOriginal(guidelineId)}
+    />;
+  }
 
   return (
     <div className="backend-reader structured-reader">
@@ -162,7 +177,6 @@ export function PublicGuidelineReaderPage() {
             {view === "tables" && <TablesView items={data.tables} onOpenSourcePage={(page) => openOriginal(guidelineId, page)} />}
             {view === "figures" && <FiguresView items={data.figures} onOpenSourcePage={(page) => openOriginal(guidelineId, page)} />}
             {view === "algorithms" && <AlgorithmsView items={data.algorithms} onOpenSourcePage={(page) => openOriginal(guidelineId, page)} />}
-            {view === "markdown" && <MarkdownView markdown={data.markdown} />}
           </div>
         </div>
       </main>
@@ -199,11 +213,10 @@ async function loadReaderData(id: string, signal: AbortSignal): Promise<ReaderDa
     if (manifest.has_algorithms) { const result = results[cursor]; if (result.status === "fulfilled") algorithms = (result.value as Awaited<ReturnType<typeof listPublicGuidelineAlgorithms>>).items; else partial = true; }
   }
   let markdown: PublicMarkdown | undefined;
-  if (!structured || sections.length === 0) {
-    try { markdown = await getPublicGuidelineMarkdown(id, signal); } catch (error) {
-      if (!(error instanceof PublicApiError) || error.kind !== "not-found") throw error;
-      partial = true;
-    }
+  try { markdown = await getPublicGuidelineMarkdown(id, signal); } catch (error) {
+    if (signal.aborted) throw error;
+    if (error instanceof PublicApiError && error.kind === "rate-limited") throw error;
+    if (!(error instanceof PublicApiError) || error.kind !== "not-found") partial = true;
   }
   return { guideline, manifest, sections, tables, figures, algorithms, markdown, partial };
 }
@@ -286,22 +299,16 @@ function AlgorithmsView({ items, onOpenSourcePage }: { items: PublicGuidelineAlg
   return <section className="content-collection"><header><span className="eyebrow">Algorithms</span><h2>Reviewed clinical pathways</h2><p>These diagrams present published guidance and are not executable decision tools.</p></header>{items.map((item) => <article key={item.id} id={`block-${item.id}`}><StructuredAlgorithm content={item.content} />{item.page_start && <button className="block-source" onClick={() => onOpenSourcePage(item.page_start!)}>Source page {sourcePages(item.page_start, item.page_end)}</button>}</article>)}</section>;
 }
 
-function MarkdownView({ markdown }: { markdown?: PublicMarkdown }) {
-  if (!markdown?.content.trim()) return <ContentState title="Compatibility content unavailable" message="Open the original document when it is available." />;
-  return <article className="markdown-content compatibility-markdown"><div className="compatibility-label">Published Markdown compatibility view{markdown.fromCache ? " · validated cached copy" : ""}</div><SecureMarkdown content={markdown.content} /></article>;
-}
-
 function ContentState({ title, message }: { title: string; message: string }) { return <div className="library-state"><h2>{title}</h2><p>{message}</p></div>; }
 function Meta({ label, value }: { label: string; value?: string }) { return value ? <div><dt>{label}</dt><dd>{value}</dd></div> : null; }
 function ReaderMessage({ title, message, children }: { title: string; message: string; children?: React.ReactNode }) { return <main className="reader-message"><Brand /><h1>{title}</h1><p>{message}</p>{children}<Link to="/">Return to guideline library</Link></main>; }
 
 function availableViews(data: ReaderData): ReaderView[] {
-  const views: ReaderView[] = ["overview"];
+  const views: ReaderView[] = data.markdown?.content.trim() ? ["read", "overview"] : ["overview"];
   if (data.manifest?.has_chapters && data.sections.length) views.push("chapters");
   if (data.manifest?.has_tables) views.push("tables");
   if (data.manifest?.has_figures) views.push("figures");
   if (data.manifest?.has_algorithms) views.push("algorithms");
-  if (data.markdown) views.push("markdown");
   return views;
 }
 function sectionDisplayState(state: SectionState, selectedId: string, sections: PublicGuidelineSection[]): SectionDisplayState {
@@ -310,8 +317,8 @@ function sectionDisplayState(state: SectionState, selectedId: string, sections: 
   if (state.status !== "idle" && state.sectionId === selectedId) return state;
   return { status: "loading" };
 }
-function parseView(value: string | null): ReaderView { return (["overview", "chapters", "tables", "figures", "algorithms", "markdown"] as ReaderView[]).includes(value as ReaderView) ? value as ReaderView : "overview"; }
-function viewLabel(view: ReaderView) { return view === "chapters" ? "Chapters" : view.charAt(0).toUpperCase() + view.slice(1); }
+function parseView(value: string | null): ReaderView { return (["read", "overview", "chapters", "tables", "figures", "algorithms"] as ReaderView[]).includes(value as ReaderView) ? value as ReaderView : "read"; }
+function viewLabel(view: ReaderView) { return view === "read" ? "Read" : view === "chapters" ? "Chapters" : view.charAt(0).toUpperCase() + view.slice(1); }
 function qualityLabel(value?: string) { return value ? value.replaceAll("_", " ") : "Compatibility mode"; }
 function sourcePages(start?: number, end?: number) { return start ? `Page${end && end !== start ? "s" : ""} ${end && end !== start ? `${start}–${end}` : start}` : ""; }
 function formatDate(value?: string) { if (!value) return ""; const parsed = new Date(value); return Number.isNaN(parsed.valueOf()) ? value : new Intl.DateTimeFormat(undefined, { dateStyle: "medium" }).format(parsed); }

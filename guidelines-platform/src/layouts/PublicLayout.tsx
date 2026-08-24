@@ -1,6 +1,7 @@
 import { Outlet } from "react-router-dom";
 
 import { Brand } from "../components/common/Brand";
+import { ThemeToggle } from "../components/common/ThemeToggle";
 import { dashboardLoginUrl } from "../config";
 
 export function PublicLayout() {
@@ -15,6 +16,7 @@ export function PublicLayout() {
           <nav className="public-nav" aria-label="Main navigation">
             <a href="#guidelines">Guidelines</a>
             <a href="#about">About</a>
+            <ThemeToggle />
             <a className="button button-small button-outline" href={dashboardLoginUrl}>
               Staff login
             </a>

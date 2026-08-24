@@ -167,3 +167,54 @@
 @media (max-width:900px) { .guideline-home-grid, .structured-reader-body.has-sections { grid-template-columns: 1fr; }.structured-section-nav { position: static; max-height: none; }.structured-section-nav nav { grid-template-columns: repeat(2,minmax(0,1fr)); }.guideline-tabs-shell { top: 68px; } }
 @media (max-width:620px) { .guideline-facts, .structured-section-nav nav { grid-template-columns: 1fr; }.guideline-tabs { gap: 1.15rem; }.structured-reader-body, .guideline-home { width: min(calc(100% - 28px),var(--page-width)); }.guideline-block { font-size: .95rem; }.content-collection > article { padding: .85rem; } }
 @media print { .guideline-tabs-shell, .structured-section-nav, .guideline-home-actions, .partial-extraction-notice, .block-source { display: none !important; }.structured-reader-body, .structured-reader-body.has-sections { width: 100%; display: block; padding: 1rem 0; }.guideline-home { width: 100%; padding: 1rem 0; }.guideline-facts { box-shadow: none; } }
+
+/* Dashboard-themed, backend Markdown handbook reader. */
+.book-reader { background: var(--color-surface); }
+.book-reader .reader-header { background: color-mix(in oklab, var(--color-surface) 94%, transparent); }
+.book-reader .reader-sidebar { background: var(--color-soft); }
+.book-reader .reader-sidebar-brand { background: var(--card); }
+.book-reader .reader-title > span, .book-reader .brand-mark { color: var(--primary-foreground); background: var(--primary); }
+.book-reader .reader-search input { color: var(--color-text); background: var(--card); border-color: var(--color-line); }
+.book-reader .reader-search input:focus { border-color: var(--ring); box-shadow: 0 0 0 3px color-mix(in oklab, var(--ring) 28%, transparent); }
+.book-reader .contents-navigation button { width: 100%; color: var(--color-muted); text-align: left; background: transparent; border: 0; cursor: pointer; }
+.book-reader .front-matter-link, .book-reader .toc-link { display: block; padding: .62rem 1.25rem; font-size: .72rem; line-height: 1.4; border-left: 3px solid transparent; }
+.book-reader .toc-depth-3 { padding-left: 2rem; }
+.book-reader .toc-depth-4 { padding-left: 2.75rem; font-size: .68rem; }
+.book-reader .front-matter-link:hover, .book-reader .toc-link:hover { color: var(--color-ink); background: var(--accent); }
+.book-reader .front-matter-link.active, .book-reader .toc-link.active { color: var(--color-ink); background: var(--accent); border-left-color: var(--primary); font-weight: 750; }
+.book-reader .search-results button { display: flex; flex-direction: column; padding: .68rem 1.25rem; border-left: 3px solid transparent; }
+.book-reader .search-results button:hover, .book-reader .search-results button:focus-visible { color: var(--color-ink); background: var(--accent); border-left-color: var(--primary); }
+.book-reader .search-results button small { color: var(--color-ink); font-size: .7rem; font-weight: 750; }
+.book-reader .search-results button span { display: -webkit-box; overflow: hidden; margin-top: .22rem; color: var(--color-muted); font-size: .62rem; line-height: 1.45; -webkit-box-orient: vertical; -webkit-line-clamp: 3; }
+.book-reader .reader-main { background: var(--color-surface); }
+.book-reader .reader-column { width: min(100%, 960px); }
+.book-reader .guideline-metadata { margin-bottom: 3.5rem; padding-bottom: 2rem; }
+.book-reader .guideline-metadata h1 { font-family: inherit; font-weight: 760; letter-spacing: -.045em; }
+.book-reader .guideline-metadata dl { padding: 1rem 0; }
+.book-reader-links { display: flex; flex-wrap: wrap; gap: .55rem; margin-top: 1.35rem; }
+.book-reader-links button { min-height: 2.15rem; padding: 0 .8rem; color: var(--color-text); background: var(--card); border: 1px solid var(--color-line); border-radius: var(--radius-sm); font-size: .68rem; font-weight: 720; cursor: pointer; }
+.book-reader-links button:hover { color: var(--primary-foreground); background: var(--primary); border-color: var(--primary); }
+.book-reader .partial-extraction-notice { width: 100%; margin: -1.8rem 0 2.5rem; }
+.book-reader .book-markdown { font-size: calc(1rem * var(--reader-font-scale, 1)); }
+.book-reader .book-markdown h1, .book-reader .book-markdown h2, .book-reader .book-markdown h3, .book-reader .book-markdown h4 { font-family: inherit; font-weight: 750; letter-spacing: -.025em; }
+.book-reader .book-markdown h2 { padding-bottom: .55rem; border-bottom: 1px solid var(--color-line); }
+.book-reader .book-markdown blockquote { color: var(--color-text); background: var(--color-soft); }
+.book-reader .book-markdown :not(pre) > code { color: var(--color-ink); background: var(--color-soft); }
+.book-reader .book-markdown th { background: var(--color-soft); }
+.book-reader .book-markdown th, .book-reader .book-markdown td { border-color: var(--color-line); }
+.reader-font-button { font-family: Georgia, serif; font-size: 1.05rem; font-weight: 700; }
+:root.dark .book-reader .reader-scrim { background: rgb(0 0 0 / 62%); }
+:root.dark .backend-reader, :root.dark .structured-reader { background: var(--color-surface); }
+:root.dark .backend-reader-header, :root.dark .guideline-tabs-shell { background: color-mix(in oklab, var(--color-surface) 94%, transparent); }
+:root.dark .guideline-facts, :root.dark .capability-grid button, :root.dark .section-welcome, :root.dark .content-collection > article, :root.dark .figure-grid > figure, :root.dark .structured-algorithm li { background: var(--card); }
+@media (max-width:640px) {
+  .book-reader .reader-actions { gap: .15rem; }
+  .book-reader .reader-actions .theme-toggle, .book-reader .reader-actions .reader-font-button, .book-reader .reader-actions button:last-child { display: none; }
+  .book-reader .guideline-metadata { margin-bottom: 2.2rem; }
+  .book-reader .guideline-metadata h1 { font-size: clamp(2rem, 11vw, 3.25rem); }
+}
+@media print {
+  .book-reader .reader-header, .book-reader .reader-sidebar, .book-reader .reader-scrim, .book-reader-links { display: none !important; }
+  .book-reader .reader-main { margin: 0; padding: 0; }
+  .book-reader .reader-column { width: 100%; }
+}

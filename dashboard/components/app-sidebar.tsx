@@ -4,6 +4,7 @@ import * as React from "react"
 import Image from "next/image"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
+import { withDashboardBasePath } from "@/lib/dashboard-path"
 import {
   Activity,
   Users,
@@ -310,7 +311,14 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
             <SidebarMenuButton size="lg" asChild>
               <Link href="/">
                 <div className="flex aspect-square size-8 items-center justify-center">
-                  <Image src="/coat_of_arms.png" alt="" width={32} height={34} className="h-8 w-auto object-contain" priority />
+                  <Image
+                    src={withDashboardBasePath("/coat_of_arms.png")}
+                    alt="Uganda coat of arms"
+                    width={32}
+                    height={34}
+                    className="h-8 w-auto object-contain"
+                    priority
+                  />
                 </div>
                 <div className="flex flex-col gap-0.5 leading-none">
                   <span className="font-medium">MediGuide</span>

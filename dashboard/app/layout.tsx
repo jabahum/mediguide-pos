@@ -4,14 +4,15 @@ import { ThemeProvider } from "@/components/theme-provider";
 import { BackendClientInit } from "@/components/backend-client-init";
 import { Toaster } from "@/components/ui/sonner";
 import { QueryProvider } from "@/components/query-provider";
+import { withDashboardBasePath } from "@/lib/dashboard-path";
 import "./globals.css";
 
 export const metadata: Metadata = {
   title: "MediGuide Dashboard",
   description: "Administrative dashboard for MediGuide health platform",
   icons: {
-    icon: "/coat_of_arms.png",
-    apple: "/coat_of_arms.png",
+    icon: withDashboardBasePath("/coat_of_arms.png"),
+    apple: withDashboardBasePath("/coat_of_arms.png"),
   },
 };
 

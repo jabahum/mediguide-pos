@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
+import { withDashboardBasePath } from "@/lib/dashboard-path"
 import { showToast } from "@/lib/toast"
 import Image from "next/image"
 import { Eye, EyeOff, Mail, Lock } from 'lucide-react'
@@ -43,7 +44,7 @@ export default function LoginPage() {
     <Card className="w-full max-w-md mx-auto">
       <CardHeader className="space-y-1 text-center">
         <Image
-          src="/coat_of_arms.png"
+          src={withDashboardBasePath("/coat_of_arms.png")}
           alt="Uganda coat of arms"
           width={112}
           height={120}

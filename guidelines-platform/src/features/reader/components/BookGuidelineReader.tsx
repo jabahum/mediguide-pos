@@ -150,7 +150,7 @@ export function BookGuidelineReader({
           <div className="markdown-content book-markdown"><SecureMarkdown content={content} /></div>
         </article>
       </main>
-      <button className="assistant-fab" type="button" aria-label="Ask AI about this guideline" onClick={() => setAssistantOpen(true)}><SparkleIcon /><span>Ask AI</span></button>
+      {!assistantOpen && <button className="assistant-fab" type="button" aria-label="Ask AI about this guideline" onClick={() => setAssistantOpen(true)}><SparkleIcon /><span>Ask AI</span></button>}
       <GuidelineAssistant key={guideline.id} guideline={guideline} open={assistantOpen} onClose={() => setAssistantOpen(false)} onCitation={(citation) => { setAssistantOpen(false); onCitation(citation); }} />
     </div>
   );

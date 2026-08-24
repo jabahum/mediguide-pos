@@ -68,10 +68,48 @@ type AskResponse struct {
 const assistantUserEmail = "assistant@mediguide.local"
 
 var (
-	ErrInvalidRAGQuestion = errors.New("question must be between 2 and 12000 characters")
-	ErrInvalidRAGSession  = errors.New("invalid RAG session id")
-	ErrRAGSessionNotFound = errors.New("RAG session not found")
+	ErrInvalidRAGQuestion            = errors.New("question must be between 2 and 12000 characters")
+	ErrInvalidPublicRAGQuestion      = errors.New("question must be between 2 and 1200 characters")
+	ErrInvalidRAGSession             = errors.New("invalid RAG session id")
+	ErrRAGSessionNotFound            = errors.New("RAG session not found")
+	ErrPublishedRAGGuidelineNotFound = errors.New("published guideline not found")
 )
+
+// AskPublishedGuideline provides a stateless, citation-first assistant for the
+// public reader. Retrieval is constrained to one current published guideline;
+// draft and superseded chunks cannot enter the response.
+func (s RAGService) AskPublishedGuideline(ctx context.Context, guidelineID uuid.UUID, req AskRequest) (*AskResponse, error) {
+	req.Question = strings.TrimSpace(req.Question)
+	if utf8.RuneCountInString(req.Question) < 2 || utf8.RuneCountInString(req.Question) > 1200 {
+		return nil, ErrInvalidPublicRAGQuestion
+	}
+	var published int64
+	err := s.DB.WithContext(ctx).Table("guideline_documents AS gd").
+		Joins("JOIN guideline_versions gv ON gv.id = gd.current_version_id AND gv.deleted_at IS NULL").
+		Where("gd.id = ? AND gd.deleted_at IS NULL AND LOWER(gv.status) = ?", guidelineID, "published").
+		Count(&published).Error
+	if err != nil {
+		return nil, err
+	}
+	if published == 0 {
+		return nil, ErrPublishedRAGGuidelineNotFound
+	}
+	results, err := s.Search.SearchPublishedGuidelineContext(ctx, guidelineID, req.Question, 5)
+	if err != nil {
+		return nil, err
+	}
+	citations := make([]Citation, 0, len(results))
+	parts := make([]string, 0, len(results))
+	for _, result := range results {
+		citations = append(citations, Citation{ChunkID: result.ID, GuidelineID: result.GuidelineID, SectionID: result.SectionID, BlockID: result.BlockID, Title: result.Title, SourceName: result.SourceName, SourceVersion: result.SourceVersion, PageStart: result.PageStart, PageEnd: result.PageEnd})
+		parts = append(parts, "- "+result.Snippet)
+	}
+	answer := "I could not find an answer in this published guideline. Review the guideline or consult a senior clinician."
+	if len(parts) > 0 {
+		answer = "I found the following relevant content in this published guideline. Verify the cited sections before clinical use:\n\n" + strings.Join(parts, "\n")
+	}
+	return &AskResponse{Answer: answer, Citations: citations}, nil
+}
 
 func (s RAGService) Ask(userID *uuid.UUID, req AskRequest) (*AskResponse, error) {
 	req.Question = strings.TrimSpace(req.Question)

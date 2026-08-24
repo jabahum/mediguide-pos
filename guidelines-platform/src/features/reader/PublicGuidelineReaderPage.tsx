@@ -13,6 +13,7 @@ import {
   listPublicGuidelineTables,
   PublicApiError,
   type PublicGuideline,
+  type PublicAICitation,
   type PublicGuidelineAlgorithm,
   type PublicGuidelineFigure,
   type PublicGuidelineManifest,
@@ -141,7 +142,8 @@ export function PublicGuidelineReaderPage() {
       supplementalViews={tabs.filter((tab): tab is SupplementalReaderView => tab !== "read")}
       partial={data.partial}
       onSelectView={selectView}
-      onOpenOriginal={() => openOriginal(guidelineId)}
+      onOpenOriginal={(page) => openOriginal(guidelineId, page)}
+      onCitation={(citation) => openCitation(citation, data.sections, selectSection, () => openOriginal(guidelineId, citation.page_start))}
     />;
   }
 
@@ -325,3 +327,13 @@ function formatDate(value?: string) { if (!value) return ""; const parsed = new 
 function safeExternalAssetUrl(value: string) { return /^https?:\/\//i.test(value) ? value : undefined; }
 async function openOriginal(id: string, page?: number) { try { const asset = await getPublicGuidelineOriginal(id); const url = new URL(asset.url); if (page) url.hash = `page=${page}`; window.open(url.toString(), "_blank", "noopener,noreferrer"); } catch { window.alert("The original document is currently unavailable. Please try again."); } }
 function updateMetaDescription(description: string) { let element = document.querySelector<HTMLMetaElement>('meta[name="description"]'); if (!element) { element = document.createElement("meta"); element.name = "description"; document.head.appendChild(element); } element.content = description || "Published clinical guidance from MediGuide."; }
+function openCitation(citation: PublicAICitation, sections: PublicGuidelineSection[], selectSection: (id: string) => void, openSource: () => void) {
+  if (citation.section_id && sections.some((section) => section.id === citation.section_id)) {
+    selectSection(citation.section_id);
+    // The section may still need to be fetched. The reader's hash effect waits
+    // for that request and scrolls once the cited block exists in the DOM.
+    if (citation.block_id) window.location.hash = `block-${encodeURIComponent(citation.block_id)}`;
+    return;
+  }
+  if (citation.page_start) openSource();
+}

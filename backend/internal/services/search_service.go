@@ -6,10 +6,12 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"unicode"
 
 	cachepkg "mediguide/internal/cache"
 	"mediguide/internal/models"
 
+	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
 
@@ -139,6 +141,70 @@ func (s SearchService) PublicSearchContext(ctx context.Context, q, programArea s
 		results = results[:limit]
 	}
 	return results, nil
+}
+
+// SearchPublishedGuidelineContext is the public-assistant retrieval boundary.
+// It only returns approved chunks from the exact current published version.
+func (s SearchService) SearchPublishedGuidelineContext(ctx context.Context, guidelineID uuid.UUID, question string, limit int) ([]SearchResult, error) {
+	if limit <= 0 || limit > 10 {
+		limit = 5
+	}
+	terms := publicAssistantTerms(question)
+	if len(terms) == 0 {
+		return []SearchResult{}, nil
+	}
+	type row struct {
+		ID, GuidelineID, SectionID, BlockID, Title, Snippet, SourceName, SourceVersion string
+		PageStart, PageEnd                                                             *int
+	}
+	snippetExpression := "LEFT(gc.content, 350)"
+	if s.DB.Dialector.Name() != "postgres" {
+		snippetExpression = "substr(gc.content, 1, 350)"
+	}
+	query := s.DB.WithContext(ctx).Table("guideline_chunks AS gc").
+		Select(`CAST(gc.id AS TEXT) AS id, CAST(gc.document_id AS TEXT) AS guideline_id,
+			COALESCE(CAST(gc.section_id AS TEXT), '') AS section_id,
+			COALESCE(CAST(gc.block_id AS TEXT), '') AS block_id,
+			gc.title, `+snippetExpression+` AS snippet, gc.source_name, gc.source_version,
+			gc.page_start, gc.page_end`).
+		Joins("JOIN guideline_documents gd ON gd.id = gc.document_id AND gd.deleted_at IS NULL").
+		Joins("JOIN guideline_versions gv ON gv.id = gc.version_id AND gv.deleted_at IS NULL AND gd.current_version_id = gv.id").
+		Where("gc.deleted_at IS NULL AND gc.review_status = ? AND LOWER(gv.status) = ? AND gc.document_id = ?", "approved", "published", guidelineID)
+	conditions := make([]string, 0, len(terms))
+	arguments := make([]any, 0, len(terms)*2)
+	for _, term := range terms {
+		conditions = append(conditions, "(LOWER(gc.content) LIKE ? OR LOWER(gc.title) LIKE ?)")
+		pattern := "%" + strings.ToLower(term) + "%"
+		arguments = append(arguments, pattern, pattern)
+	}
+	query = query.Where("("+strings.Join(conditions, " OR ")+")", arguments...)
+	var rows []row
+	if err := query.Order("gc.updated_at DESC, gc.id ASC").Limit(limit).Scan(&rows).Error; err != nil {
+		return nil, err
+	}
+	results := make([]SearchResult, 0, len(rows))
+	for _, value := range rows {
+		results = append(results, SearchResult{ID: value.ID, ResultType: "guideline", GuidelineID: value.GuidelineID, SectionID: value.SectionID, BlockID: value.BlockID, Title: value.Title, Snippet: value.Snippet, SourceName: value.SourceName, SourceVersion: value.SourceVersion, PageStart: value.PageStart, PageEnd: value.PageEnd})
+	}
+	return results, nil
+}
+
+func publicAssistantTerms(question string) []string {
+	stop := map[string]bool{"about": true, "and": true, "are": true, "can": true, "does": true, "for": true, "from": true, "how": true, "into": true, "should": true, "that": true, "the": true, "this": true, "what": true, "when": true, "where": true, "which": true, "with": true, "would": true, "you": true}
+	seen := map[string]bool{}
+	terms := make([]string, 0, 8)
+	for _, field := range strings.Fields(strings.ToLower(question)) {
+		term := strings.TrimFunc(field, func(r rune) bool { return !unicode.IsLetter(r) && !unicode.IsDigit(r) })
+		if len([]rune(term)) < 3 || stop[term] || seen[term] {
+			continue
+		}
+		seen[term] = true
+		terms = append(terms, term)
+		if len(terms) == 8 {
+			break
+		}
+	}
+	return terms
 }
 
 func discoveryStale(status string, verified *time.Time) bool {

@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
+  askPublicGuideline,
   clearPublicMarkdownCache,
   getPublicGuidelineManifest,
   getPublicGuidelineMarkdown,
@@ -146,5 +147,21 @@ describe("public guideline API client", () => {
       status: 429,
       retryAfterSeconds: 17,
     });
+  });
+
+  it("asks the exact encoded published guideline and validates citations", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify({
+      success: true,
+      data: { answer: "Use the cited recommendation.", citations: [{ chunk_id: "chunk-1", guideline_id: "guide/id", title: "Treatment", source_name: "MoH", source_version: "2" }] },
+    }), { status: 200, headers: { "Content-Type": "application/json" } }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const answer = await askPublicGuideline("guide/id", "  What is the treatment?  ");
+
+    expect(answer.citations[0].title).toBe("Treatment");
+    expect(String(fetchMock.mock.calls[0][0])).toContain("guidelines/guide%2Fid/ask");
+    const options = fetchMock.mock.calls[0][1] as RequestInit;
+    expect(options.method).toBe("POST");
+    expect(JSON.parse(String(options.body))).toEqual({ question: "What is the treatment?" });
   });
 });

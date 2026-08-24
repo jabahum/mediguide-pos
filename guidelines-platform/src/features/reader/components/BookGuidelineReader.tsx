@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 
 import type {
+  PublicAICitation,
   PublicGuideline,
   PublicGuidelineManifest,
   PublicMarkdown,
@@ -14,6 +15,7 @@ import {
   searchMarkdown,
 } from "../../../lib/markdown/search";
 import { SecureMarkdown } from "./SecureMarkdown";
+import { GuidelineAssistant } from "./GuidelineAssistant";
 
 export type SupplementalReaderView =
   | "overview"
@@ -29,7 +31,8 @@ type BookGuidelineReaderProps = {
   supplementalViews: SupplementalReaderView[];
   partial: boolean;
   onSelectView: (view: SupplementalReaderView) => void;
-  onOpenOriginal: () => void;
+  onOpenOriginal: (page?: number) => void;
+  onCitation: (citation: PublicAICitation) => void;
 };
 
 export function BookGuidelineReader({
@@ -40,11 +43,13 @@ export function BookGuidelineReader({
   partial,
   onSelectView,
   onOpenOriginal,
+  onCitation,
 }: BookGuidelineReaderProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [activeHeading, setActiveHeading] = useState("");
   const [fontScale, setFontScale] = useState(1);
+  const [assistantOpen, setAssistantOpen] = useState(false);
   const searchInput = useRef<HTMLInputElement>(null);
   const headings = useMemo(() => getMarkdownHeadings(markdown.content), [markdown.content]);
   const searchIndex = useMemo(() => buildMarkdownSearchIndex(markdown.content), [markdown.content]);
@@ -98,6 +103,7 @@ export function BookGuidelineReader({
           <Link to="/">Guideline library</Link>
           <button className="icon-button" type="button" aria-label="Search this guideline" onClick={openSearch}><SearchIcon /></button>
           <button className="reader-font-button icon-button" type="button" aria-label="Change text size" title="Change text size" onClick={() => setFontScale((value) => value >= 1.2 ? 1 : Number((value + .1).toFixed(1)))}>A</button>
+          <button className="reader-ai-button" type="button" onClick={() => setAssistantOpen(true)}><SparkleIcon /> Ask AI</button>
           <ThemeToggle />
           <button className="icon-button" type="button" aria-label="Share guideline" onClick={share}><ShareIcon /></button>
           <button className="icon-button" type="button" aria-label="Print guideline" onClick={() => window.print()}><PrintIcon /></button>
@@ -137,13 +143,15 @@ export function BookGuidelineReader({
             </dl>
             <div className="book-reader-links">
               {supplementalViews.map((view) => <button type="button" key={view} onClick={() => onSelectView(view)}>{viewLabel(view)}</button>)}
-              {manifest?.has_original_pdf !== false && <button type="button" onClick={onOpenOriginal}>Original PDF</button>}
+              {manifest?.has_original_pdf !== false && <button type="button" onClick={() => onOpenOriginal()}>Original PDF</button>}
             </div>
           </header>
           {partial && <div className="partial-extraction-notice" role="status">Some supplemental structured content is unavailable. This published Markdown remains searchable; use the original document as the fidelity reference.</div>}
           <div className="markdown-content book-markdown"><SecureMarkdown content={content} /></div>
         </article>
       </main>
+      <button className="assistant-fab" type="button" aria-label="Ask AI about this guideline" onClick={() => setAssistantOpen(true)}><SparkleIcon /><span>Ask AI</span></button>
+      <GuidelineAssistant key={guideline.id} guideline={guideline} open={assistantOpen} onClose={() => setAssistantOpen(false)} onCitation={(citation) => { setAssistantOpen(false); onCitation(citation); }} />
     </div>
   );
 }
@@ -173,3 +181,4 @@ function MenuIcon() { return <svg viewBox="0 0 24 24" aria-hidden="true" fill="n
 function SearchIcon() { return <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="7" /><path d="m20 20-4-4" /></svg>; }
 function ShareIcon() { return <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.8"><circle cx="18" cy="5" r="2.5" /><circle cx="6" cy="12" r="2.5" /><circle cx="18" cy="19" r="2.5" /><path d="m8.2 10.8 7.6-4.5M8.2 13.2l7.6 4.5" /></svg>; }
 function PrintIcon() { return <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M7 9V3h10v6M7 17H5a2 2 0 0 1-2-2v-4a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2h-2" /><path d="M7 14h10v7H7z" /></svg>; }
+function SparkleIcon() { return <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="m12 3 1.3 3.7L17 8l-3.7 1.3L12 13l-1.3-3.7L7 8l3.7-1.3L12 3ZM18.5 13l.8 2.2 2.2.8-2.2.8-.8 2.2-.8-2.2-2.2-.8 2.2-.8.8-2.2ZM5 13l.7 1.8 1.8.7-1.8.7L5 18l-.7-1.8-1.8-.7 1.8-.7L5 13Z" /></svg>; }

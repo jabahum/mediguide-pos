@@ -7975,6 +7975,50 @@ paths:
       summary: List reviewed algorithms in a published guideline
       tags:
       - Public Guidelines
+  /api/public/guidelines/{id}/ask:
+    post:
+      consumes:
+      - application/json
+      description: Returns citation-first content scoped to the exact current published
+        guideline. It does not replace clinical judgement.
+      parameters:
+      - description: Guideline ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Question payload
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/services.AskRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.AskEnvelope'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "429":
+          description: Too Many Requests
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+      summary: Ask the public assistant about one published guideline
+      tags:
+      - public-guidelines
   /api/public/guidelines/{id}/figures:
     get:
       parameters:

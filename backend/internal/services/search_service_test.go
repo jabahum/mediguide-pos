@@ -1,6 +1,7 @@
 package services
 
 import (
+	"strings"
 	"testing"
 	"time"
 
@@ -62,5 +63,55 @@ func TestPublicDiscoverySearchIncludesOnlyPublishedOutbreakContent(t *testing.T)
 		if result.ID == draft.ID.String() || result.ID == withdrawn.ID.String() {
 			t.Fatalf("non-public result leaked: %#v", result)
 		}
+	}
+}
+
+func TestPublishedGuidelineAssistantSearchStaysInsideCurrentPublishedVersion(t *testing.T) {
+	database, err := gorm.Open(sqlite.Open("file:"+uuid.NewString()+"?mode=memory&cache=shared"), &gorm.Config{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, statement := range []string{
+		`CREATE TABLE guideline_documents (id text primary key, current_version_id text, deleted_at datetime)`,
+		`CREATE TABLE guideline_versions (id text primary key, document_id text, status text, deleted_at datetime)`,
+		`CREATE TABLE guideline_chunks (id text primary key, document_id text, version_id text, section_id text, block_id text, title text, content text, source_name text, source_version text, page_start integer, page_end integer, review_status text, updated_at datetime, deleted_at datetime)`,
+	} {
+		if err := database.Exec(statement).Error; err != nil {
+			t.Fatal(err)
+		}
+	}
+	targetID, otherID := uuid.New(), uuid.New()
+	targetVersion, oldVersion, otherVersion := uuid.New(), uuid.New(), uuid.New()
+	for _, statement := range []struct {
+		query string
+		args  []any
+	}{
+		{`INSERT INTO guideline_documents(id,current_version_id) VALUES (?,?)`, []any{targetID, targetVersion}},
+		{`INSERT INTO guideline_documents(id,current_version_id) VALUES (?,?)`, []any{otherID, otherVersion}},
+		{`INSERT INTO guideline_versions(id,document_id,status) VALUES (?,?,?)`, []any{targetVersion, targetID, "published"}},
+		{`INSERT INTO guideline_versions(id,document_id,status) VALUES (?,?,?)`, []any{oldVersion, targetID, "published"}},
+		{`INSERT INTO guideline_versions(id,document_id,status) VALUES (?,?,?)`, []any{otherVersion, otherID, "published"}},
+		{`INSERT INTO guideline_chunks(id,document_id,version_id,title,content,source_name,source_version,review_status,updated_at) VALUES (?,?,?,?,?,?,?,?,?)`, []any{uuid.New(), targetID, targetVersion, "Current treatment", "Give intravenous artesunate for severe malaria", "MoH", "2", "approved", time.Now()}},
+		{`INSERT INTO guideline_chunks(id,document_id,version_id,title,content,source_name,source_version,review_status,updated_at) VALUES (?,?,?,?,?,?,?,?,?)`, []any{uuid.New(), targetID, oldVersion, "Superseded", "Old severe malaria recommendation", "MoH", "1", "approved", time.Now()}},
+		{`INSERT INTO guideline_chunks(id,document_id,version_id,title,content,source_name,source_version,review_status,updated_at) VALUES (?,?,?,?,?,?,?,?,?)`, []any{uuid.New(), otherID, otherVersion, "Other guideline", "Artesunate from another document", "Other", "1", "approved", time.Now()}},
+	} {
+		if err := database.Exec(statement.query, statement.args...).Error; err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	results, err := (SearchService{DB: database}).SearchPublishedGuidelineContext(t.Context(), targetID, "What is the severe malaria treatment?", 5)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(results) != 1 || results[0].Title != "Current treatment" || results[0].GuidelineID != targetID.String() {
+		t.Fatalf("assistant search escaped the current publication: %#v", results)
+	}
+}
+
+func TestPublicAssistantTermsRemovesQuestionNoise(t *testing.T) {
+	terms := publicAssistantTerms("What is the treatment for severe malaria, and when should I refer?")
+	if strings.Join(terms, ",") != "treatment,severe,malaria,refer" {
+		t.Fatalf("unexpected terms: %#v", terms)
 	}
 }

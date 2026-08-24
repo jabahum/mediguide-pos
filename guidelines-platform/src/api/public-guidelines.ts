@@ -180,6 +180,24 @@ export type PublicMarkdown = {
   fromCache: boolean;
 };
 
+export type PublicAICitation = {
+  chunk_id: string;
+  guideline_id?: string;
+  section_id?: string;
+  block_id?: string;
+  title: string;
+  source_name: string;
+  source_version: string;
+  page_start?: number;
+  page_end?: number;
+};
+
+export type PublicAIAnswer = {
+  answer: string;
+  citations: PublicAICitation[];
+  session_id?: string;
+};
+
 export type PublicApiErrorKind =
   | "not-found"
   | "timeout"
@@ -276,6 +294,21 @@ async function requestJson<T>(url: string, signal?: AbortSignal): Promise<T> {
   if (!envelope.success || envelope.data === undefined) {
     throw new PublicApiError("invalid-response", response.status);
   }
+  return envelope.data;
+}
+
+async function postJson<T>(url: string, body: unknown, signal?: AbortSignal): Promise<T> {
+  const response = await request(url, {
+    method: "POST",
+    headers: { Accept: "application/json", "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  }, signal);
+  if (response.status === 404) throw new PublicApiError("not-found", 404);
+  if (response.status === 429) throw new PublicApiError("rate-limited", 429, parseRetryAfter(response.headers.get("Retry-After")));
+  if (!response.ok) throw new PublicApiError(response.status >= 500 ? "server" : "invalid-response", response.status);
+  let envelope: ApiEnvelope<T>;
+  try { envelope = (await response.json()) as ApiEnvelope<T>; } catch { throw new PublicApiError("invalid-response", response.status); }
+  if (!envelope.success || envelope.data === undefined) throw new PublicApiError("invalid-response", response.status);
   return envelope.data;
 }
 
@@ -498,6 +531,20 @@ export async function getPublicGuidelineMarkdown(
   return result;
 }
 
+export async function askPublicGuideline(
+  id: string,
+  question: string,
+  signal?: AbortSignal,
+): Promise<PublicAIAnswer> {
+  const answer = await postJson<unknown>(
+    publicUrl(`/guidelines/${encodeURIComponent(id)}/ask`),
+    { question: question.trim() },
+    signal,
+  );
+  if (!isAIAnswer(answer)) throw new PublicApiError("invalid-response");
+  return answer;
+}
+
 export function clearPublicMarkdownCache() {
   markdownCache.clear();
   listCache.clear();
@@ -520,6 +567,14 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 function isString(value: unknown): value is string { return typeof value === "string"; }
 function isNumber(value: unknown): value is number { return typeof value === "number" && Number.isFinite(value); }
 function isBoolean(value: unknown): value is boolean { return typeof value === "boolean"; }
+function isAICitation(value: unknown): value is PublicAICitation {
+  return isRecord(value) && isString(value.chunk_id) && isString(value.title)
+    && isString(value.source_name) && isString(value.source_version);
+}
+function isAIAnswer(value: unknown): value is PublicAIAnswer {
+  return isRecord(value) && isString(value.answer) && Array.isArray(value.citations)
+    && value.citations.every(isAICitation);
+}
 
 function isManifest(value: unknown): value is PublicGuidelineManifest {
   if (!isRecord(value)) return false;

@@ -43,12 +43,12 @@ export default function LoginPage() {
     <Card className="w-full max-w-md mx-auto">
       <CardHeader className="space-y-1 text-center">
         <Image
-          src="/logo.png"
-          alt="MediGuide logo"
-          width={128}
-          height={128}
+          src="/coat_of_arms.png"
+          alt="Uganda coat of arms"
+          width={112}
+          height={120}
           priority
-          className="mx-auto mb-4"
+          className="mx-auto mb-4 h-[120px] w-[112px] object-contain"
         />
         <CardTitle className="text-2xl">Welcome Back</CardTitle>
         <CardDescription>

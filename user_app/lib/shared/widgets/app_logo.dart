@@ -33,7 +33,7 @@ class AppLogo extends StatelessWidget {
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
         UniversalImage(
-          'assets/logo.png',
+          'assets/coat_of_arms.png',
           width: effectiveLogoSize,
           height: effectiveLogoSize,
           fit: BoxFit.contain,

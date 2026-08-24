@@ -255,7 +255,10 @@ class _AboutHero extends StatelessWidget {
               borderRadius: BorderRadius.circular(20),
               border: Border.all(color: colors.outlineVariant),
             ),
-            child: Image.asset('assets/logo.png', fit: BoxFit.contain),
+            child: Image.asset(
+              'assets/coat_of_arms.png',
+              fit: BoxFit.contain,
+            ),
           ),
 
           AppSpacing.hGapLg,

@@ -3,7 +3,7 @@
 A React platform for reading the clinical guidelines published by MediGuide.
 
 The platform is the public entry point to the MediGuide ecosystem. Clinical
-publications are available without authentication, while the staff login links
+publications are available without authentication, while the  login links
 to the separately deployed MediGuide administration dashboard.
 
 ## Architecture

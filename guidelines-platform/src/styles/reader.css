@@ -173,7 +173,7 @@
 .book-reader .reader-header { background: color-mix(in oklab, var(--color-surface) 94%, transparent); }
 .book-reader .reader-sidebar { background: var(--color-soft); }
 .book-reader .reader-sidebar-brand { background: var(--card); }
-.book-reader .reader-title > span, .book-reader .brand-mark { color: var(--primary-foreground); background: var(--primary); }
+.book-reader .reader-title > span { color: var(--primary-foreground); background: var(--primary); }
 .book-reader .reader-search input { color: var(--color-text); background: var(--card); border-color: var(--color-line); }
 .book-reader .reader-search input:focus { border-color: var(--ring); box-shadow: 0 0 0 3px color-mix(in oklab, var(--ring) 28%, transparent); }
 .book-reader .contents-navigation button { width: 100%; color: var(--color-muted); text-align: left; background: transparent; border: 0; cursor: pointer; }

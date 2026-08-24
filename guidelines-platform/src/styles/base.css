@@ -10,7 +10,7 @@ svg { width: 1.25rem; height: 1.25rem; }
 .skip-link:focus { transform: translateY(0); }
 .visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; }
 .brand { display: inline-flex; gap: .7rem; align-items: center; color: var(--color-ink); text-decoration: none; }
-.brand-mark { width: 2.25rem; height: 2.25rem; display: grid; place-items: center; color: white; font-family: Georgia, serif; font-size: 1.7rem; line-height: 1; background: var(--color-green-700); border-radius: 50%; }
+.brand-mark { width: 2.25rem; height: 2.4rem; flex: 0 0 auto; object-fit: contain; }
 .brand > span:last-child { display: flex; flex-direction: column; }
 .brand strong { font-family: Georgia, "Times New Roman", serif; font-size: 1rem; }
 .brand small { color: var(--color-muted); font-size: .65rem; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; }

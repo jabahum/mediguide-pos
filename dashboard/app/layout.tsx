@@ -9,6 +9,10 @@ import "./globals.css";
 export const metadata: Metadata = {
   title: "MediGuide Dashboard",
   description: "Administrative dashboard for MediGuide health platform",
+  icons: {
+    icon: "/coat_of_arms.png",
+    apple: "/coat_of_arms.png",
+  },
 };
 
 export default function RootLayout({

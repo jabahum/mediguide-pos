@@ -38,6 +38,7 @@ func main() {
 		MaxAge:        time.Duration(cfg.NotificationWorkerMaxAgeHours) * time.Hour,
 		LeaseDuration: time.Duration(cfg.NotificationWorkerLeaseSeconds) * time.Second,
 	}
+	reminders := services.OutbreakDocumentNotificationService{DB: database, AllowedActionHosts: cfg.NotificationActionExternalHosts}
 
 	ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer cancel()
@@ -54,13 +55,20 @@ func main() {
 	}
 	ticker := time.NewTicker(poll)
 	pruneTicker := time.NewTicker(24 * time.Hour)
+	reminderTicker := time.NewTicker(6 * time.Hour)
 	defer ticker.Stop()
 	defer pruneTicker.Stop()
+	defer reminderTicker.Stop()
 	log.Info().Str("worker_id", worker.WorkerID).Int("batch_size", worker.BatchSize).Int("concurrency", worker.MaxConcurrency).Msg("notification delivery worker started")
 	if count, err := worker.PruneStaleDevices(); err != nil {
 		log.Error().Err(err).Msg("initial stale Firebase device pruning failed")
 	} else if count > 0 {
 		log.Info().Int64("pruned_devices", count).Msg("stale Firebase devices disabled")
+	}
+	if count, err := reminders.ProcessReviewReminders(); err != nil {
+		log.Error().Err(err).Msg("initial outbreak document reminder scan failed")
+	} else if count > 0 {
+		log.Info().Int("notifications", count).Msg("outbreak document reminders created")
 	}
 	for {
 		select {
@@ -85,6 +93,13 @@ func main() {
 				log.Error().Err(err).Msg("stale Firebase device pruning failed")
 			} else if count > 0 {
 				log.Info().Int64("pruned_devices", count).Msg("stale Firebase devices disabled")
+			}
+		case <-reminderTicker.C:
+			count, err := reminders.ProcessReviewReminders()
+			if err != nil {
+				log.Error().Err(err).Msg("outbreak document reminder scan failed")
+			} else if count > 0 {
+				log.Info().Int("notifications", count).Msg("outbreak document reminders created")
 			}
 		}
 	}

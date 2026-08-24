@@ -60,6 +60,23 @@ class FakeOutbreakApi extends BackendApiService {
         },
       };
     }
+    if (path.endsWith('/documents/document-1')) {
+      return {
+        'data': {
+          'id': 'document-1',
+          'outbreak_id': 'outbreak-1',
+          'title': 'Ebola response SOP',
+          'description': 'Isolation and notification procedure',
+          'document_kind': 'sop',
+          'issuing_authority': 'Ministry of Health',
+          'document_number': 'SOP-001',
+          'version': '2.0',
+          'language': 'en',
+          'mime_type': 'application/pdf',
+          'published_at': '2026-08-01T00:00:00Z',
+        },
+      };
+    }
     if (path.endsWith('/documents')) {
       return {
         'data': {
@@ -191,6 +208,44 @@ void main() {
     expect(api.calls, contains('/api/public/outbreaks/outbreak-1/updates'));
     expect(api.calls, contains('/api/public/outbreaks/outbreak-1/resources'));
     expect(api.calls, contains('/api/public/outbreaks/outbreak-1/documents'));
+  });
+
+  test('document list and detail remain searchable offline', () async {
+    final store = TestLocalStore();
+    addTearDown(store.close);
+    final api = FakeOutbreakApi();
+    final repository = OutbreakRepository(api, store.cache);
+
+    final online = await repository.refreshDocuments('outbreak-1');
+    expect(online.items.single.documentKind, 'sop');
+    final detail = await repository.document('outbreak-1', 'document-1');
+    expect(detail.value.documentNumber, 'SOP-001');
+
+    api.offline = true;
+    final cached = await repository.documents(
+      'outbreak-1',
+      query: const OutbreakDocumentQuery(
+        search: 'Ministry',
+        documentKind: 'sop',
+      ),
+    );
+    expect(cached.items.single.id, 'document-1');
+    expect(cached.cache.isOffline, isTrue);
+    final cachedDetail = await repository.document('outbreak-1', 'document-1');
+    expect(cachedDetail.cache.isOffline, isTrue);
+  });
+
+  test('full document sync reconciles published offline versions', () async {
+    final store = TestLocalStore();
+    addTearDown(store.close);
+    final versions = <Map<String, String>>[];
+    final repository = OutbreakRepository(
+      FakeOutbreakApi(),
+      store.cache,
+      reconcileDocumentDownloads: (value) async => versions.add(value),
+    );
+    await repository.refreshDocuments('outbreak-1');
+    expect(versions.single, {'document-1': '2.0'});
   });
 
   test('malformed server payload is not hidden by a cached response', () async {

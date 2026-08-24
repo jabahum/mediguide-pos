@@ -1,6 +1,6 @@
 import { OutbreakEditor } from "../outbreak-editor"
 
-export default async function OutbreakWorkspacePage({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = await params
-  return <OutbreakEditor id={id} />
+export default async function OutbreakWorkspacePage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ document?: string }> }) {
+  const [{ id }, query] = await Promise.all([params, searchParams])
+  return <OutbreakEditor id={id} initialDocumentId={query.document} />
 }

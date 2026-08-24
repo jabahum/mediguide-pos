@@ -618,10 +618,13 @@ class _OutbreakDetail extends StatelessWidget {
         if (detail.documents.isNotEmpty) ...[
           AppSpacing.gapLg,
 
-          const SectionHeader(
+          SectionHeader(
             title: 'Official documents and SOPs',
             subtitle: 'Clinically reviewed response guidance',
             icon: LucideIcons.files,
+            onSeeAll: () => context.push(
+              AppRoutes.outbreakDocumentsFor(detail.outbreak.id),
+            ),
           ),
 
           AppSpacing.gapSm,
@@ -629,7 +632,9 @@ class _OutbreakDetail extends StatelessWidget {
           for (final document in detail.documents)
             _OutbreakDocumentTile(
               document: document,
-              onTap: () => _openOutbreakDocument(context, document),
+              onTap: () => context.push(
+                AppRoutes.outbreakDocument(document.outbreakId, document.id),
+              ),
             ),
         ],
 
@@ -1578,45 +1583,6 @@ Future<void> _openOutbreakResource(
   if (context.mounted) {
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('This resource link is unavailable.')),
-    );
-  }
-}
-
-Future<void> _openOutbreakDocument(
-  BuildContext context,
-  PublicOutbreakDocument document,
-) async {
-  final relative = Uri.tryParse(document.downloadUrl.trim());
-  if (relative == null || relative.hasAuthority || relative.hasFragment) {
-    if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('This document is unavailable.')),
-      );
-    }
-    return;
-  }
-  final base = Uri.parse('${AppConfig.current.apiBaseUrl}/');
-  final target = base.resolveUri(relative);
-  if (document.mimeType == 'application/pdf' ||
-      document.originalFilename.toLowerCase().endsWith('.pdf')) {
-    if (context.mounted) {
-      context.push(
-        AppRoutes.documentReader,
-        extra: DocumentReaderArgs(
-          title: document.title,
-          source: target.toString(),
-        ),
-      );
-    }
-    return;
-  }
-  final launched = await launchUrl(
-    target,
-    mode: LaunchMode.externalApplication,
-  );
-  if (!launched && context.mounted) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Unable to open this document.')),
     );
   }
 }

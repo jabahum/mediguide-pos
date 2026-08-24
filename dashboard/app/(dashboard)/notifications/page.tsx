@@ -2,7 +2,7 @@
 
 import * as React from "react"
 import Link from "next/link"
-import { Bell, Check, Inbox, Loader2, RefreshCw, Settings } from "lucide-react"
+import { Bell, Check, ExternalLink, Inbox, Loader2, RefreshCw, Settings } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -77,6 +77,18 @@ export default function NotificationsInboxPage() {
     }
   }
 
+  function dashboardRoute(item: NotificationDto): string | null {
+    const value = item.action?.parameters?.dashboard_route?.trim()
+    if (!value || !value.startsWith("/") || value.startsWith("//") || value.includes("\\")) return null
+    try {
+      const parsed = new URL(value, "https://dashboard.mediguide.invalid")
+      if (parsed.origin !== "https://dashboard.mediguide.invalid") return null
+      return `${parsed.pathname}${parsed.search}${parsed.hash}`
+    } catch {
+      return null
+    }
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
@@ -122,7 +134,16 @@ export default function NotificationsInboxPage() {
                   <TableCell className="font-medium">{item.title}</TableCell>
                   <TableCell className="max-w-md whitespace-normal text-muted-foreground">{item.message}</TableCell>
                   <TableCell>{item.type}</TableCell><TableCell>{item.priority}</TableCell><TableCell>{new Date(item.created_at).toLocaleString()}</TableCell>
-                  <TableCell className="text-right"><Button variant="ghost" size="sm" disabled={item.is_read || updatingId !== null} onClick={() => void markRead(item)} aria-label={`Mark ${item.title} as read`}>{updatingId === item.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Bell className="h-4 w-4" />}</Button></TableCell>
+                  <TableCell className="text-right">
+                    <div className="flex justify-end gap-1">
+                      {dashboardRoute(item) ? (
+                        <Button asChild variant="ghost" size="sm" onClick={() => void markRead(item)}>
+                          <Link href={dashboardRoute(item)!} aria-label={`Open ${item.title}`}><ExternalLink className="h-4 w-4" /></Link>
+                        </Button>
+                      ) : null}
+                      <Button variant="ghost" size="sm" disabled={item.is_read || updatingId !== null} onClick={() => void markRead(item)} aria-label={`Mark ${item.title} as read`}>{updatingId === item.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Bell className="h-4 w-4" />}</Button>
+                    </div>
+                  </TableCell>
                 </TableRow>
               ))}
             </TableBody>

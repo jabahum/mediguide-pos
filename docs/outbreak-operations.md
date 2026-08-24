@@ -66,4 +66,20 @@ Use this lifecycle:
 
 The document audit endpoint records uploads, comments and every lifecycle transition. Never overwrite an object or directly update a published database row. Malware scanning is an infrastructure concern in addition to the API's structural validation; configure object-storage scanning/quarantine before accepting files from untrusted external contributors.
 
-Public clients load governed documents from `GET /api/public/outbreaks/:id/documents`; they do not infer them from legacy resource links. The API returns only the current published, effective and non-expired version and exposes downloads through the scoped redirect endpoint. The mobile outbreak repository caches this typed metadata with the outbreak detail, so users can still identify previously synchronized SOPs while offline. PDF documents open in the in-app reader when reachable; other approved formats use the operating system's trusted document handler. A cached metadata record is not represented as an offline file—the user must explicitly download content before relying on it without connectivity.
+Public clients load governed documents from `GET /api/public/outbreaks/:id/documents`; they do not infer them from legacy resource links. The API returns only current published, effective and non-expired versions and exposes downloads through the scoped redirect endpoint. Mobile provides searchable/filterable document list and detail screens, an embedded PDF reader, a Markdown preview, controlled operating-system handling for other approved formats, progress/cancel/retry states and explicit storage removal.
+
+Metadata and files use the `public` cache scope only. A completed unfiltered sync reconciles the canonical document set: withdrawn/revoked downloads are deleted, newer versions are marked as updates, and a failed replacement download preserves the previous checksum-verified file. Downloads use managed app storage, SHA-256 verification and `.part`/staged/backup atomic replacement. Never cache an admin draft or use an authenticated user's scope as a public document source.
+
+## Document discovery and notifications
+
+PostgreSQL performs all document filtering, sorting and pagination. Search covers title, description, document number, authority, kind, audience and the parent outbreak name. Weighted full-text ranking places exact title and document-number matches ahead of authority/outbreak matches and body text. Expression GIN and trigram indexes are installed by migration `00043`; client sort fields remain allowlisted. Public queries apply publication/effective/expiry visibility before returning results, while admin search remains permission protected.
+
+Document transitions create typed, idempotent notifications in the same database transaction as the audit and state transition:
+
+- submission/review request goes to active users with `outbreak.review` (or `admin.all`);
+- clinician approval goes to active users with `outbreak.publish` (or `admin.all`);
+- publication and replacement publication use a public `outbreak_document` deep link;
+- withdrawal links to the still-public outbreak rather than the withdrawn document;
+- review-date and expiry reminders go only to reviewers.
+
+The notification worker scans reminders every six hours and on startup. Deduplication keys include document, event/due state, due date and recipient, so repeated scans are safe. Staff actions include the dashboard route `/outbreaks/:id?document=:documentId`; mobile discards that staff-only parameter. Public mobile deep links are resolved from typed IDs and never trust a caller-supplied route. Templates for the lifecycle catalogue are installed by migration `00044`.

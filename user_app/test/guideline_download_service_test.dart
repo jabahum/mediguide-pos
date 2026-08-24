@@ -116,6 +116,36 @@ void main() {
       'Private metadata',
     );
   });
+
+  test(
+    'outbreak reconciliation flags updates and removes revoked files',
+    () async {
+      final current = await service.download(
+        guidelineId: 'document-current',
+        title: 'Current SOP',
+        version: '1',
+        assetType: 'outbreak_document',
+        asset: asset(),
+        scope: 'public',
+      );
+      final revoked = await service.download(
+        guidelineId: 'document-revoked',
+        title: 'Revoked SOP',
+        version: '1',
+        assetType: 'outbreak_document',
+        asset: asset(),
+        scope: 'public',
+      );
+
+      await service.reconcileOutbreakDocuments({'document-current': '2'});
+
+      final rows = await service.list('public');
+      expect(rows.single.guidelineId, 'document-current');
+      expect(rows.single.status, OfflineDownloadStatus.updateAvailable);
+      expect(await File(current.localPath).exists(), isTrue);
+      expect(await File(revoked.localPath).exists(), isFalse);
+    },
+  );
 }
 
 final class _BytesAdapter implements HttpClientAdapter {

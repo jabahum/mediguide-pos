@@ -43,6 +43,7 @@ import 'package:user_app/features/library/presentation/screens/my_library_page.d
 import 'package:user_app/features/navigation/presentation/screens/guest_more_page.dart';
 import 'package:user_app/features/navigation/presentation/screens/main_page.dart';
 import 'package:user_app/features/outbreaks/presentation/screens/outbreak_screens.dart';
+import 'package:user_app/features/outbreaks/presentation/screens/outbreak_document_screens.dart';
 import 'package:user_app/features/notifications/presentation/screens/notifications_page.dart';
 import 'package:user_app/features/notifications/presentation/screens/notification_preferences_page.dart';
 import 'package:user_app/features/profile/presentation/screens/profile_page.dart';
@@ -165,6 +166,19 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         path: AppRoutes.outbreakDetails,
         builder: (_, state) => OutbreakDetailPage(
           outbreakId: state.pathParameters['outbreakId'] ?? '',
+        ),
+      ),
+      GoRoute(
+        path: AppRoutes.outbreakDocuments,
+        builder: (_, state) => OutbreakDocumentsPage(
+          outbreakId: state.pathParameters['outbreakId'] ?? '',
+        ),
+      ),
+      GoRoute(
+        path: AppRoutes.outbreakDocumentDetails,
+        builder: (_, state) => OutbreakDocumentPage(
+          outbreakId: state.pathParameters['outbreakId'] ?? '',
+          documentId: state.pathParameters['documentId'] ?? '',
         ),
       ),
       GoRoute(

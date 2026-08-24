@@ -101,14 +101,74 @@ final class SituationReportQuery {
   }
 }
 
+final class OutbreakDocumentQuery {
+  const OutbreakDocumentQuery({
+    this.search = '',
+    this.documentKind = '',
+    this.authority = '',
+    this.language = '',
+    this.audience = '',
+    this.sort = 'sort_order',
+    this.order = 'asc',
+  });
+
+  final String search;
+  final String documentKind;
+  final String authority;
+  final String language;
+  final String audience;
+  final String sort;
+  final String order;
+
+  Map<String, String> toQuery() => {
+    if (search.trim().isNotEmpty) 'search': search.trim(),
+    if (documentKind.trim().isNotEmpty) 'document_kind': documentKind.trim(),
+    if (authority.trim().isNotEmpty) 'issuing_authority': authority.trim(),
+    if (language.trim().isNotEmpty) 'language': language.trim(),
+    if (audience.trim().isNotEmpty) 'audience': audience.trim(),
+    'sort': sort,
+    'order': order,
+  };
+
+  String get identity {
+    final entries = toQuery().entries.toList()
+      ..sort((left, right) => left.key.compareTo(right.key));
+    return entries
+        .map(
+          (entry) =>
+              '${Uri.encodeQueryComponent(entry.key)}=${Uri.encodeQueryComponent(entry.value)}',
+        )
+        .join('&');
+  }
+
+  bool matches(PublicOutbreakDocument item) {
+    final needle = search.trim().toLowerCase();
+    final searchable =
+        '${item.title} ${item.description} ${item.documentNumber} ${item.issuingAuthority} ${item.documentKind} ${item.audience}'
+            .toLowerCase();
+    return (needle.isEmpty || searchable.contains(needle)) &&
+        (documentKind.trim().isEmpty ||
+            item.documentKind == documentKind.trim()) &&
+        (authority.trim().isEmpty ||
+            item.issuingAuthority.toLowerCase() ==
+                authority.trim().toLowerCase()) &&
+        (language.trim().isEmpty ||
+            item.language.toLowerCase() == language.trim().toLowerCase()) &&
+        (audience.trim().isEmpty ||
+            item.audience.toLowerCase() == audience.trim().toLowerCase());
+  }
+}
+
 final class OutbreakRepository {
   OutbreakRepository(
     this._api,
     this._cache, {
     DateTime Function()? clock,
     Future<void> Function(String, Map<String, Object>)? recordMetric,
+    Future<void> Function(Map<String, String>)? reconcileDocumentDownloads,
   }) : _clock = clock ?? DateTime.now,
-       _recordMetric = recordMetric;
+       _recordMetric = recordMetric,
+       _reconcileDocumentDownloads = reconcileDocumentDownloads;
 
   static const _scope = 'public';
   static const _outbreakType = 'public_outbreak';
@@ -116,6 +176,8 @@ final class OutbreakRepository {
   static const _detailType = 'public_outbreak_detail';
   static const _reportType = 'public_situation_report';
   static const _reportSnapshotType = 'public_situation_report_snapshot';
+  static const _documentType = 'public_outbreak_document';
+  static const _documentSnapshotType = 'public_outbreak_document_snapshot';
   static const _ttl = Duration(hours: 6);
   static const _pageSize = 20;
 
@@ -123,6 +185,144 @@ final class OutbreakRepository {
   final LocalCacheService _cache;
   final DateTime Function() _clock;
   final Future<void> Function(String, Map<String, Object>)? _recordMetric;
+  final Future<void> Function(Map<String, String>)? _reconcileDocumentDownloads;
+
+  Future<PublicPage<PublicOutbreakDocument>> documents(
+    String outbreakId, {
+    int page = 1,
+    int perPage = _pageSize,
+    OutbreakDocumentQuery query = const OutbreakDocumentQuery(),
+  }) async {
+    final parent = _id(outbreakId);
+    final safePage = page < 1 ? 1 : page;
+    final safePerPage = perPage.clamp(1, 50);
+    final snapshotId =
+        '$parent|${query.identity}|page=$safePage|per_page=$safePerPage';
+    try {
+      final result = await _remoteDocumentPage(
+        parent,
+        safePage,
+        safePerPage,
+        query,
+      );
+      await _bestEffortCache(
+        () => _cache.replaceSnapshot(
+          type: _documentType,
+          snapshotType: _documentSnapshotType,
+          snapshotId: snapshotId,
+          scope: _scope,
+          ttl: _ttl,
+          entities: result.items.map(_documentCacheInput),
+          snapshotData: _pageMetadata(result),
+        ),
+      );
+      return result;
+    } catch (error, stackTrace) {
+      if (!_canUseCache(error)) {
+        _recordMalformed('outbreak-document-list', error, stackTrace);
+        rethrow;
+      }
+      final cached = await _cachedDocumentPage(
+        parent,
+        snapshotId,
+        safePage,
+        safePerPage,
+        query,
+      );
+      if (cached == null) {
+        _observeCacheMiss('outbreak_document_list');
+        rethrow;
+      }
+      _observeCacheUse('outbreak_document_list', cached.cache);
+      return cached;
+    }
+  }
+
+  Future<PublicPage<PublicOutbreakDocument>> refreshDocuments(
+    String outbreakId, {
+    OutbreakDocumentQuery query = const OutbreakDocumentQuery(),
+    int perPage = _pageSize,
+  }) async {
+    final parent = _id(outbreakId);
+    final safePerPage = perPage.clamp(1, 50);
+    final first = await _remoteDocumentPage(parent, 1, safePerPage, query);
+    final all = <PublicOutbreakDocument>[...first.items];
+    for (var page = 2; page <= first.totalPages; page++) {
+      all.addAll(
+        (await _remoteDocumentPage(parent, page, safePerPage, query)).items,
+      );
+    }
+    await _cache.replaceSnapshot(
+      type: _documentType,
+      snapshotType: _documentSnapshotType,
+      snapshotId: '$parent|${query.identity}|full',
+      scope: _scope,
+      ttl: _ttl,
+      entities: all.map(_documentCacheInput),
+      reconcileMissing:
+          query.identity == const OutbreakDocumentQuery().identity,
+    );
+    if (query.identity == const OutbreakDocumentQuery().identity) {
+      await _reconcileDocumentDownloads?.call({
+        for (final document in all) document.id: document.version,
+      });
+    }
+    return first;
+  }
+
+  Future<PublicContent<PublicOutbreakDocument>> document(
+    String outbreakId,
+    String documentId,
+  ) async {
+    final parent = _id(outbreakId);
+    final id = _id(documentId);
+    try {
+      final response = await _public(
+        '/api/public/outbreaks/$parent/documents/$id',
+      );
+      final value = _parseDocument(_data(response));
+      await _bestEffortCache(
+        () => _cache.put(
+          type: _documentType,
+          id: id,
+          scope: _scope,
+          ttl: _ttl,
+          data: value.toJson(),
+          searchableText: _documentSearchText(value),
+          remoteUpdatedAt: value.publishedAt,
+        ),
+      );
+      return PublicContent(
+        value: value,
+        cache: const PublicCacheMetadata.online(),
+      );
+    } catch (error, stackTrace) {
+      if (error is BackendApiException && error.statusCode == 404) {
+        await _bestEffortCache(
+          () => _cache.tombstone(type: _documentType, id: id, scope: _scope),
+        );
+        throw const PublicContentUnavailableException(
+          'This document was withdrawn, expired, or is no longer public.',
+          isWithdrawn: true,
+        );
+      }
+      if (!_canUseCache(error)) {
+        _recordMalformed('outbreak-document-detail', error, stackTrace);
+        rethrow;
+      }
+      final cached = await _cache.getEntry(
+        type: _documentType,
+        id: id,
+        scope: _scope,
+      );
+      if (cached == null || cached.isDeleted) rethrow;
+      final value = PublicOutbreakDocument.fromJson(cached.data);
+      return PublicContent(
+        value: value,
+        cache: _cacheMetadata(cached, maxAge: _ttl),
+      );
+    }
+  }
 
   Future<PublicPage<PublicOutbreak>> outbreaks({
     int page = 1,
@@ -277,6 +477,23 @@ final class OutbreakRepository {
     }
     try {
       documents = await _allDocuments(normalized);
+      await _bestEffortCache(
+        () => _cache.replaceSnapshot(
+          type: _documentType,
+          snapshotType: _documentSnapshotType,
+          snapshotId:
+              '$normalized|${const OutbreakDocumentQuery().identity}|full',
+          scope: _scope,
+          ttl: _ttl,
+          entities: documents.map(_documentCacheInput),
+          reconcileMissing: true,
+        ),
+      );
+      await _bestEffortCache(() async {
+        await _reconcileDocumentDownloads?.call({
+          for (final document in documents) document.id: document.version,
+        });
+      });
     } catch (error, stackTrace) {
       if (!_canUseCache(error)) {
         _recordMalformed('outbreak-documents', error, stackTrace);
@@ -503,6 +720,30 @@ final class OutbreakRepository {
     );
   }
 
+  Future<PublicPage<PublicOutbreakDocument>> _remoteDocumentPage(
+    String outbreakId,
+    int page,
+    int perPage,
+    OutbreakDocumentQuery query,
+  ) async {
+    final response = await _public(
+      '/api/public/outbreaks/$outbreakId/documents',
+      query: {'page': '$page', 'per_page': '$perPage', ...query.toQuery()},
+    );
+    final data = _data(response);
+    final items = _maps(
+      data['items'],
+    ).map(_parseDocument).toList(growable: false);
+    return PublicPage(
+      items: items,
+      page: _integer(data['page'], page),
+      perPage: _integer(data['per_page'], perPage),
+      totalItems: _integer(data['total_items'], items.length),
+      totalPages: _integer(data['total_pages'], items.isEmpty ? 0 : 1),
+      cache: const PublicCacheMetadata.online(),
+    );
+  }
+
   Future<List<PublicOutbreakUpdate>> _allUpdates(String id) => _allChildPages(
     '/api/public/outbreaks/$id/updates',
     (map) => PublicOutbreakUpdate.fromJson(
@@ -679,6 +920,58 @@ final class OutbreakRepository {
     );
   }
 
+  Future<PublicPage<PublicOutbreakDocument>?> _cachedDocumentPage(
+    String outbreakId,
+    String snapshotId,
+    int page,
+    int perPage,
+    OutbreakDocumentQuery query,
+  ) async {
+    var exact = true;
+    var snapshot = await _cache.getEntry(
+      type: _documentSnapshotType,
+      id: snapshotId,
+      scope: _scope,
+    );
+    if (snapshot == null) {
+      exact = false;
+      snapshot = await _cache.getEntry(
+        type: _documentSnapshotType,
+        id: '$outbreakId|${const OutbreakDocumentQuery().identity}|full',
+        scope: _scope,
+      );
+    }
+    if (snapshot == null) return null;
+    final entries = await _entriesForSnapshot(_documentType, snapshot);
+    final filtered = entries
+        .map((entry) => PublicOutbreakDocument.fromJson(entry.data))
+        .where((item) => item.outbreakId == outbreakId && query.matches(item))
+        .toList(growable: false);
+    final offset = exact ? 0 : (page - 1) * perPage;
+    final values = offset >= filtered.length
+        ? const <PublicOutbreakDocument>[]
+        : filtered.skip(offset).take(perPage).toList(growable: false);
+    final totalItems = exact
+        ? _integer(snapshot.data['total_items'], filtered.length)
+        : filtered.length;
+    return PublicPage(
+      items: values,
+      page: page,
+      perPage: perPage,
+      totalItems: totalItems,
+      totalPages: exact
+          ? _integer(snapshot.data['total_pages'], values.isEmpty ? 0 : 1)
+          : (totalItems == 0 ? 0 : (totalItems / perPage).ceil()),
+      cache: PublicCacheMetadata(
+        cachedAt: snapshot.cachedAt,
+        lastVerifiedAt: null,
+        isStale: _clock().toUtc().difference(snapshot.cachedAt.toUtc()) > _ttl,
+        isWithdrawn: false,
+        isOffline: true,
+      ),
+    );
+  }
+
   Future<List<CachedEntityValue>> _entriesForSnapshot(
     String type,
     CachedEntityValue snapshot,
@@ -714,6 +1007,17 @@ final class OutbreakRepository {
     remoteUpdatedAt: item.publicationDate,
   );
 
+  CachedEntityInput _documentCacheInput(PublicOutbreakDocument item) =>
+      CachedEntityInput(
+        id: item.id,
+        data: item.toJson(),
+        searchableText: _documentSearchText(item),
+        remoteUpdatedAt: item.publishedAt,
+      );
+
+  String _documentSearchText(PublicOutbreakDocument item) =>
+      '${item.title} ${item.description} ${item.documentNumber} ${item.issuingAuthority} ${item.documentKind} ${item.audience}';
+
   PublicOutbreak _parseOutbreak(Map<String, dynamic> value) =>
       PublicOutbreak.fromJson(
         _normalizeMetrics(ServicesPublicOutbreak.fromJson(value).toJson()),
@@ -724,6 +1028,11 @@ final class OutbreakRepository {
         _normalizeMetrics(
           ServicesPublicSituationReport.fromJson(value).toJson(),
         ),
+      );
+
+  PublicOutbreakDocument _parseDocument(Map<String, dynamic> value) =>
+      PublicOutbreakDocument.fromJson(
+        ServicesPublicOutbreakDocument.fromJson(value).toJson(),
       );
 
   PublicOutbreakDetail _detailFromCache(Map<String, dynamic> cached) =>

@@ -116,30 +116,30 @@ func (s OutbreakAdminService) ListDocuments(id uuid.UUID, in OutbreakDocumentQue
 	}
 	page := in.Page.Normalize(20, 100)
 	query := s.DB.Model(&models.OutbreakResource{}).
-		Where("outbreak_id = ? AND resource_type IN ?", id, []string{"managed_document", "downloadable_asset"})
+		Where("outbreak_resources.outbreak_id = ? AND outbreak_resources.resource_type IN ?", id, []string{"managed_document", "downloadable_asset"})
 	if value := strings.TrimSpace(in.Search); value != "" {
 		if s.DB.Dialector.Name() == "postgres" {
-			query = query.Where("to_tsvector('simple', coalesce(title, '') || ' ' || coalesce(description, '') || ' ' || coalesce(document_number, '') || ' ' || coalesce(issuing_authority, '') || ' ' || coalesce(document_kind, '') || ' ' || coalesce(audience, '')) @@ plainto_tsquery('simple', ?)", value)
+			query = outbreakDocumentPostgresSearch(query, value)
 		} else {
 			like := "%" + strings.ToLower(value) + "%"
-			query = query.Where("lower(title) LIKE ? OR lower(description) LIKE ? OR lower(document_number) LIKE ? OR lower(issuing_authority) LIKE ?", like, like, like, like)
+			query = query.Joins("JOIN outbreaks outbreak_search_parent ON outbreak_search_parent.id = outbreak_resources.outbreak_id").Where("lower(outbreak_resources.title) LIKE ? OR lower(outbreak_resources.description) LIKE ? OR lower(outbreak_resources.document_number) LIKE ? OR lower(outbreak_resources.issuing_authority) LIKE ? OR lower(outbreak_search_parent.title) LIKE ?", like, like, like, like, like)
 		}
 	}
 	if value := strings.TrimSpace(in.DocumentKind); value != "" {
 		if !validOutbreakValue(value, outbreakDocumentKinds...) {
 			return nil, ErrOutbreakInvalid
 		}
-		query = query.Where("document_kind = ?", value)
+		query = query.Where("outbreak_resources.document_kind = ?", value)
 	}
 	if value := strings.TrimSpace(in.Status); value != "" {
 		if !validOutbreakValue(value, "draft", "pending_review", "published", "archived", "withdrawn") {
 			return nil, ErrOutbreakInvalid
 		}
-		query = query.Where("status = ?", value)
+		query = query.Where("outbreak_resources.status = ?", value)
 	}
 	for _, filter := range []struct{ value, column string }{{in.Authority, "issuing_authority"}, {in.Language, "language"}, {in.Audience, "audience"}} {
 		if value := strings.TrimSpace(filter.value); value != "" {
-			query = query.Where("lower("+filter.column+") = ?", strings.ToLower(value))
+			query = query.Where("lower(outbreak_resources."+filter.column+") = ?", strings.ToLower(value))
 		}
 	}
 	if in.EffectiveFrom != nil {
@@ -157,6 +157,9 @@ func (s OutbreakAdminService) ListDocuments(id uuid.UUID, in OutbreakDocumentQue
 		return nil, err
 	}
 	var rows []models.OutbreakResource
+	if value := strings.TrimSpace(in.Search); value != "" && s.DB.Dialector.Name() == "postgres" {
+		query = outbreakDocumentRank(query, value)
+	}
 	if err := query.Order(order).Offset(page.Offset()).Limit(page.PerPage).Find(&rows).Error; err != nil {
 		return nil, err
 	}
@@ -270,7 +273,13 @@ func (s OutbreakAdminService) TransitionDocument(actor OutbreakActor, outbreakID
 			return nil, ErrOutbreakInvalid
 		}
 	}
-	if err := s.transitionChild(actor, outbreakID, documentID, action, in, "outbreak_document", &models.OutbreakResource{}); err != nil {
+	var hook func(*gorm.DB) error
+	if s.DocumentNotifications != nil {
+		hook = func(tx *gorm.DB) error {
+			return s.DocumentNotifications.NotifyTransitionTx(tx, actor, outbreakID, documentID, action)
+		}
+	}
+	if err := s.transitionChildWithHook(actor, outbreakID, documentID, action, in, "outbreak_document", &models.OutbreakResource{}, hook); err != nil {
 		return nil, err
 	}
 	return s.GetDocument(outbreakID, documentID)
@@ -332,24 +341,24 @@ func (s OutbreakService) Documents(outbreakID uuid.UUID, in OutbreakDocumentQuer
 	}
 	page := in.Page.Normalize(20, 100)
 	now := time.Now().UTC()
-	query := s.DB.Model(&models.OutbreakResource{}).Where("outbreak_id = ? AND resource_type IN ? AND status = 'published' AND published_at IS NOT NULL AND published_at <= ? AND withdrawn_at IS NULL AND (effective_date IS NULL OR effective_date <= ?) AND (expires_at IS NULL OR expires_at > ?)", outbreakID, []string{"managed_document", "downloadable_asset"}, now, now, now)
+	query := s.DB.Model(&models.OutbreakResource{}).Where("outbreak_resources.outbreak_id = ? AND outbreak_resources.resource_type IN ? AND outbreak_resources.status = 'published' AND outbreak_resources.published_at IS NOT NULL AND outbreak_resources.published_at <= ? AND outbreak_resources.withdrawn_at IS NULL AND (outbreak_resources.effective_date IS NULL OR outbreak_resources.effective_date <= ?) AND (outbreak_resources.expires_at IS NULL OR outbreak_resources.expires_at > ?)", outbreakID, []string{"managed_document", "downloadable_asset"}, now, now, now)
 	if value := strings.TrimSpace(in.Search); value != "" {
 		if s.DB.Dialector.Name() == "postgres" {
-			query = query.Where("to_tsvector('simple', coalesce(title, '') || ' ' || coalesce(description, '') || ' ' || coalesce(document_number, '') || ' ' || coalesce(issuing_authority, '') || ' ' || coalesce(document_kind, '') || ' ' || coalesce(audience, '')) @@ plainto_tsquery('simple', ?)", value)
+			query = outbreakDocumentPostgresSearch(query, value)
 		} else {
 			like := "%" + strings.ToLower(value) + "%"
-			query = query.Where("lower(title) LIKE ? OR lower(description) LIKE ? OR lower(document_number) LIKE ? OR lower(issuing_authority) LIKE ?", like, like, like, like)
+			query = query.Joins("JOIN outbreaks outbreak_search_parent ON outbreak_search_parent.id = outbreak_resources.outbreak_id").Where("lower(outbreak_resources.title) LIKE ? OR lower(outbreak_resources.description) LIKE ? OR lower(outbreak_resources.document_number) LIKE ? OR lower(outbreak_resources.issuing_authority) LIKE ? OR lower(outbreak_search_parent.title) LIKE ?", like, like, like, like, like)
 		}
 	}
 	if value := strings.TrimSpace(in.DocumentKind); value != "" {
 		if !validOutbreakValue(value, outbreakDocumentKinds...) {
 			return nil, ErrOutbreakInvalid
 		}
-		query = query.Where("document_kind = ?", value)
+		query = query.Where("outbreak_resources.document_kind = ?", value)
 	}
 	for _, filter := range []struct{ value, column string }{{in.Authority, "issuing_authority"}, {in.Language, "language"}, {in.Audience, "audience"}} {
 		if value := strings.TrimSpace(filter.value); value != "" {
-			query = query.Where("lower("+filter.column+") = ?", strings.ToLower(value))
+			query = query.Where("lower(outbreak_resources."+filter.column+") = ?", strings.ToLower(value))
 		}
 	}
 	if in.EffectiveFrom != nil {
@@ -367,6 +376,9 @@ func (s OutbreakService) Documents(outbreakID uuid.UUID, in OutbreakDocumentQuer
 		return nil, err
 	}
 	var rows []models.OutbreakResource
+	if value := strings.TrimSpace(in.Search); value != "" && s.DB.Dialector.Name() == "postgres" {
+		query = outbreakDocumentRank(query, value)
+	}
 	if err := query.Order(order).Offset(page.Offset()).Limit(page.PerPage).Find(&rows).Error; err != nil {
 		return nil, err
 	}
@@ -485,7 +497,7 @@ func applyOutbreakDocument(row *models.OutbreakResource, in OutbreakDocumentInpu
 }
 
 func outbreakDocumentOrder(sort, order string) (string, error) {
-	columns := map[string]string{"": "sort_order", "title": "title", "document_kind": "document_kind", "issuing_authority": "issuing_authority", "version": "version", "effective_date": "effective_date", "review_date": "review_date", "published_at": "published_at", "created_at": "created_at", "updated_at": "updated_at"}
+	columns := map[string]string{"": "outbreak_resources.sort_order", "title": "outbreak_resources.title", "document_kind": "outbreak_resources.document_kind", "issuing_authority": "outbreak_resources.issuing_authority", "version": "outbreak_resources.version", "effective_date": "outbreak_resources.effective_date", "review_date": "outbreak_resources.review_date", "published_at": "outbreak_resources.published_at", "created_at": "outbreak_resources.created_at", "updated_at": "outbreak_resources.updated_at"}
 	column, ok := columns[strings.TrimSpace(sort)]
 	if !ok {
 		return "", ErrOutbreakInvalid
@@ -497,7 +509,28 @@ func outbreakDocumentOrder(sort, order string) (string, error) {
 	if direction != "ASC" && direction != "DESC" {
 		return "", ErrOutbreakInvalid
 	}
-	return column + " " + direction + ", id " + direction, nil
+	return column + " " + direction + ", outbreak_resources.id " + direction, nil
+}
+
+const outbreakDocumentSearchVector = `
+setweight(to_tsvector('simple', coalesce(outbreak_resources.title, '')), 'A') ||
+setweight(to_tsvector('simple', coalesce(outbreak_resources.document_number, '')), 'A') ||
+setweight(to_tsvector('simple', coalesce(outbreak_resources.issuing_authority, '') || ' ' || coalesce(outbreak_resources.document_kind, '') || ' ' || coalesce(outbreak_resources.audience, '')), 'B') ||
+setweight(to_tsvector('simple', coalesce(outbreak_resources.description, '')), 'C')`
+
+const outbreakParentSearchVector = `setweight(to_tsvector('simple', coalesce(outbreak_search_parent.title, '')), 'B')`
+
+func outbreakDocumentPostgresSearch(query *gorm.DB, value string) *gorm.DB {
+	return query.
+		Joins("JOIN outbreaks outbreak_search_parent ON outbreak_search_parent.id = outbreak_resources.outbreak_id AND outbreak_search_parent.deleted_at IS NULL").
+		Where("("+outbreakDocumentSearchVector+") @@ websearch_to_tsquery('simple', ?) OR ("+outbreakParentSearchVector+") @@ websearch_to_tsquery('simple', ?)", value, value)
+}
+
+func outbreakDocumentRank(query *gorm.DB, value string) *gorm.DB {
+	return query.Select(
+		"outbreak_resources.*, CASE WHEN lower(outbreak_resources.title) = lower(?) THEN 2.0 WHEN lower(outbreak_resources.document_number) = lower(?) THEN 1.5 ELSE 0 END + ts_rank_cd(("+outbreakDocumentSearchVector+" || "+outbreakParentSearchVector+"), websearch_to_tsquery('simple', ?)) AS document_search_rank",
+		value, value, value,
+	).Order("document_search_rank DESC")
 }
 
 func outbreakDocumentAdminDTO(row models.OutbreakResource) OutbreakDocumentAdminDTO {

@@ -192,6 +192,13 @@ abstract final class NotificationActionResolver {
         if (!_validUUID(resourceId)) return null;
         location = AppRoutes.outbreak(resourceId!);
         break;
+      case 'outbreak_document':
+        if (!_validUUID(resourceId)) return null;
+        final outbreakId = parameters.remove('outbreak_id');
+        parameters.remove('dashboard_route');
+        if (!_validUUID(outbreakId)) return null;
+        location = AppRoutes.outbreakDocument(outbreakId!, resourceId!);
+        break;
       case 'situation_report':
         if (!_validUUID(resourceId)) return null;
         location = AppRoutes.situationReport(resourceId!);

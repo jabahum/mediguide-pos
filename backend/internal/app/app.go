@@ -141,6 +141,7 @@ func New(cfg config.Config) (*App, error) {
 	drugReferenceSvc := services.DrugReferenceService{DB: database, Cache: cacheStore}
 	userSvc := services.UserService{DB: database}
 	notificationSvc := services.NotificationService{DB: database, AllowedActionHosts: cfg.NotificationActionExternalHosts, DeviceStaleAfter: time.Duration(cfg.FirebaseDeviceStaleDays) * 24 * time.Hour}
+	outbreakAdminSvc.DocumentNotifications = &services.OutbreakDocumentNotificationService{DB: database, AllowedActionHosts: cfg.NotificationActionExternalHosts}
 	supportSvc := services.SupportService{DB: database}
 	helpContentSvc := services.HelpContentService{DB: database, Cache: cacheStore}
 	guidelineContentSvc := services.GuidelineContentService{DB: database, Cache: cacheStore}

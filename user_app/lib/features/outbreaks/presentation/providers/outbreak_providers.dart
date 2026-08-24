@@ -24,6 +24,21 @@ final publicSituationReportProvider = FutureProvider.autoDispose.family(
   (ref, String id) => ref.watch(outbreakRepositoryProvider).report(id),
 );
 
+typedef OutbreakDocumentKey = ({String outbreakId, String documentId});
+
+final publicOutbreakDocumentsProvider = AsyncNotifierProvider.autoDispose
+    .family<
+      PublicOutbreakDocumentsController,
+      PublicPage<PublicOutbreakDocument>,
+      String
+    >(PublicOutbreakDocumentsController.new);
+
+final publicOutbreakDocumentProvider = FutureProvider.autoDispose.family(
+  (ref, OutbreakDocumentKey key) => ref
+      .watch(outbreakRepositoryProvider)
+      .document(key.outbreakId, key.documentId),
+);
+
 class PublicOutbreaksController
     extends AutoDisposeAsyncNotifier<PublicPage<PublicOutbreak>> {
   OutbreakQuery _query = const OutbreakQuery();
@@ -112,6 +127,61 @@ class PublicSituationReportsController
     final next = await ref
         .read(outbreakRepositoryProvider)
         .reports(
+          page: current.page + 1,
+          perPage: current.perPage,
+          query: _query,
+        );
+    state = AsyncData(
+      PublicPage(
+        items: [...current.items, ...next.items],
+        page: next.page,
+        perPage: next.perPage,
+        totalItems: next.totalItems,
+        totalPages: next.totalPages,
+        cache: next.cache,
+      ),
+    );
+  }
+}
+
+class PublicOutbreakDocumentsController
+    extends
+        AutoDisposeFamilyAsyncNotifier<
+          PublicPage<PublicOutbreakDocument>,
+          String
+        > {
+  OutbreakDocumentQuery _query = const OutbreakDocumentQuery();
+
+  @override
+  Future<PublicPage<PublicOutbreakDocument>> build(String arg) =>
+      ref.watch(outbreakRepositoryProvider).documents(arg, query: _query);
+
+  Future<void> applyQuery(OutbreakDocumentQuery query) async {
+    _query = query;
+    state = const AsyncLoading<PublicPage<PublicOutbreakDocument>>()
+        .copyWithPrevious(state);
+    state = await AsyncValue.guard(
+      () => ref.read(outbreakRepositoryProvider).documents(arg, query: _query),
+    );
+  }
+
+  Future<void> refresh() async {
+    state = const AsyncLoading<PublicPage<PublicOutbreakDocument>>()
+        .copyWithPrevious(state);
+    state = await AsyncValue.guard(
+      () => ref
+          .read(outbreakRepositoryProvider)
+          .refreshDocuments(arg, query: _query),
+    );
+  }
+
+  Future<void> loadMore() async {
+    final current = state.valueOrNull;
+    if (current == null || !current.hasMore || state.isLoading) return;
+    final next = await ref
+        .read(outbreakRepositoryProvider)
+        .documents(
+          arg,
           page: current.page + 1,
           perPage: current.perPage,
           query: _query,

@@ -10,7 +10,7 @@ import (
 )
 
 type NotificationAction struct {
-	Type       string            `json:"type" enums:"none,guideline,outbreak,situation_report,drug,calculator,facility,support_ticket,internal_route,approved_external_url"`
+	Type       string            `json:"type" enums:"none,guideline,outbreak,outbreak_document,situation_report,drug,calculator,facility,support_ticket,internal_route,approved_external_url"`
 	ResourceID *string           `json:"resource_id,omitempty"`
 	Route      *string           `json:"route,omitempty"`
 	Parameters map[string]string `json:"parameters"`

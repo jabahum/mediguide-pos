@@ -293,6 +293,30 @@ final class GuidelineDownloadService {
     );
   }
 
+  /// Reconciles public outbreak downloads only after a complete unfiltered
+  /// sync. Revoked files are removed and newer versions are flagged without
+  /// replacing the last checksum-verified copy.
+  Future<void> reconcileOutbreakDocuments(
+    Map<String, String> publishedVersions,
+  ) async {
+    final downloads = await list('public');
+    for (final item in downloads.where(
+      (value) => value.assetType == 'outbreak_document',
+    )) {
+      final currentVersion = publishedVersions[item.guidelineId];
+      if (currentVersion == null) {
+        await remove(item);
+      } else if (currentVersion != item.version) {
+        await markUpdateAvailable(
+          scope: 'public',
+          guidelineId: item.guidelineId,
+          assetType: item.assetType,
+          latestVersion: currentVersion,
+        );
+      }
+    }
+  }
+
   Future<void> _save(OfflineDownload item) async {
     await _cache.put(
       type: _cacheType,

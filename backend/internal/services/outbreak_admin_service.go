@@ -29,9 +29,10 @@ type OutbreakActor struct {
 }
 
 type OutbreakAdminService struct {
-	DB                   *gorm.DB
-	Store                storage.ObjectStore
-	AllowedExternalHosts []string
+	DB                    *gorm.DB
+	Store                 storage.ObjectStore
+	AllowedExternalHosts  []string
+	DocumentNotifications *OutbreakDocumentNotificationService
 }
 
 type OutbreakAdminQuery struct {
@@ -1258,6 +1259,10 @@ func (s OutbreakAdminService) deleteChild(a OutbreakActor, parent, id uuid.UUID,
 	})
 }
 func (s OutbreakAdminService) transitionChild(a OutbreakActor, parent, id uuid.UUID, action string, in TransitionInput, kind string, model any) error {
+	return s.transitionChildWithHook(a, parent, id, action, in, kind, model, nil)
+}
+
+func (s OutbreakAdminService) transitionChildWithHook(a OutbreakActor, parent, id uuid.UUID, action string, in TransitionInput, kind string, model any, hook func(*gorm.DB) error) error {
 	var row struct {
 		Status      string
 		AuthorID    *uuid.UUID
@@ -1313,6 +1318,12 @@ func (s OutbreakAdminService) transitionChild(a OutbreakActor, parent, id uuid.U
 		if r.RowsAffected == 0 {
 			return ErrOutbreakConflict
 		}
-		return auditOutbreak(tx, a, kind+"."+action, kind, id, map[string]any{"reason": in.Reason})
+		if err := auditOutbreak(tx, a, kind+"."+action, kind, id, map[string]any{"reason": in.Reason}); err != nil {
+			return err
+		}
+		if hook != nil {
+			return hook(tx)
+		}
+		return nil
 	})
 }

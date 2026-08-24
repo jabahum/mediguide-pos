@@ -5,6 +5,7 @@ import (
 	"net/url"
 	"regexp"
 	"strings"
+	"time"
 
 	"mediguide/internal/models"
 
@@ -12,16 +13,17 @@ import (
 )
 
 const (
-	NotificationActionNone            = "none"
-	NotificationActionGuideline       = "guideline"
-	NotificationActionOutbreak        = "outbreak"
-	NotificationActionSituationReport = "situation_report"
-	NotificationActionDrug            = "drug"
-	NotificationActionCalculator      = "calculator"
-	NotificationActionFacility        = "facility"
-	NotificationActionSupportTicket   = "support_ticket"
-	NotificationActionInternalRoute   = "internal_route"
-	NotificationActionExternalURL     = "approved_external_url"
+	NotificationActionNone             = "none"
+	NotificationActionGuideline        = "guideline"
+	NotificationActionOutbreak         = "outbreak"
+	NotificationActionOutbreakDocument = "outbreak_document"
+	NotificationActionSituationReport  = "situation_report"
+	NotificationActionDrug             = "drug"
+	NotificationActionCalculator       = "calculator"
+	NotificationActionFacility         = "facility"
+	NotificationActionSupportTicket    = "support_ticket"
+	NotificationActionInternalRoute    = "internal_route"
+	NotificationActionExternalURL      = "approved_external_url"
 )
 
 type NotificationAction = models.NotificationAction
@@ -45,13 +47,14 @@ var notificationInternalRoutes = map[string]struct{}{
 }
 
 var notificationResourceTables = map[string]string{
-	NotificationActionGuideline:       "guideline_documents",
-	NotificationActionOutbreak:        "outbreaks",
-	NotificationActionSituationReport: "situation_reports",
-	NotificationActionDrug:            "drugs",
-	NotificationActionCalculator:      "calculators",
-	NotificationActionFacility:        "health_facilities",
-	NotificationActionSupportTicket:   "support_tickets",
+	NotificationActionGuideline:        "guideline_documents",
+	NotificationActionOutbreak:         "outbreaks",
+	NotificationActionOutbreakDocument: "outbreak_resources",
+	NotificationActionSituationReport:  "situation_reports",
+	NotificationActionDrug:             "drugs",
+	NotificationActionCalculator:       "calculators",
+	NotificationActionFacility:         "health_facilities",
+	NotificationActionSupportTicket:    "support_tickets",
 }
 
 func (s NotificationService) ResolveAction(input *NotificationAction, legacyURL *string, recipientID *uuid.UUID) (NotificationAction, *string, error) {
@@ -111,6 +114,9 @@ func (s NotificationService) ResolveAction(input *NotificationAction, legacyURL 
 			return NotificationAction{}, nil, ErrNotificationInvalid
 		}
 		query := s.DB.Table(table).Where("id = ? AND deleted_at IS NULL", id)
+		if action.Type == NotificationActionOutbreakDocument {
+			query = query.Where("resource_type IN ? AND status = 'published' AND withdrawn_at IS NULL AND (expires_at IS NULL OR expires_at > ?)", []string{"managed_document", "downloadable_asset"}, time.Now().UTC())
+		}
 		if action.Type == NotificationActionSupportTicket {
 			if recipientID == nil {
 				return NotificationAction{}, nil, ErrNotificationInvalid
@@ -125,6 +131,17 @@ func (s NotificationService) ResolveAction(input *NotificationAction, legacyURL 
 			return NotificationAction{}, nil, ErrNotificationInvalid
 		}
 		route := notificationResourceRoute(action.Type, id)
+		if action.Type == NotificationActionOutbreakDocument {
+			var parentValue string
+			if err := s.DB.Table(table).Select("outbreak_id").Where("id = ?", id).Scan(&parentValue).Error; err != nil {
+				return NotificationAction{}, nil, ErrNotificationInvalid
+			}
+			parentID, err := uuid.Parse(parentValue)
+			if err != nil {
+				return NotificationAction{}, nil, ErrNotificationInvalid
+			}
+			route = "/outbreak-hub/" + url.PathEscape(parentID.String()) + "/documents/" + url.PathEscape(id.String())
+		}
 		action.ResourceID = stringPointer(id.String())
 		action.Route = &route
 		return action, action.Route, nil
@@ -212,6 +229,8 @@ func notificationResourceRoute(actionType string, id uuid.UUID) string {
 		return "/public/guidelines/" + encoded
 	case NotificationActionOutbreak:
 		return "/outbreak-hub/" + encoded
+	case NotificationActionOutbreakDocument:
+		return "/outbreak-hub"
 	case NotificationActionSituationReport:
 		return "/situation-reports/" + encoded
 	case NotificationActionDrug:

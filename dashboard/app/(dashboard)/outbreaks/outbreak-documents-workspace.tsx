@@ -17,7 +17,7 @@ const documentKinds = ["sop", "case_definition", "ipc_protocol", "laboratory_pro
 type Draft = { title: string; description: string; document_kind: string; issuing_authority: string; document_number: string; version: string; language: string; audience: string; effective_date: string; review_date: string; expires_at: string }
 const emptyDraft = (): Draft => ({ title: "", description: "", document_kind: "sop", issuing_authority: "Ministry of Health Uganda", document_number: "", version: "1.0", language: "en", audience: "Healthcare workers", effective_date: "", review_date: "", expires_at: "" })
 
-export function OutbreakDocumentsWorkspace({ outbreakId }: { outbreakId: string }) {
+export function OutbreakDocumentsWorkspace({ outbreakId, initialDocumentId }: { outbreakId: string; initialDocumentId?: string }) {
   const [documents, setDocuments] = React.useState<OutbreakDocumentRecord[]>([])
   const [draft, setDraft] = React.useState<Draft>(emptyDraft)
   const [editingId, setEditingId] = React.useState<string | null>(null)
@@ -33,6 +33,11 @@ export function OutbreakDocumentsWorkspace({ outbreakId }: { outbreakId: string 
     catch (value) { setError(message(value)) }
   }, [outbreakId])
   React.useEffect(() => { void refresh() }, [refresh])
+  React.useEffect(() => {
+    if (!initialDocumentId || !documents.some(value => value.id === initialDocumentId)) return
+    setAuditId(initialDocumentId)
+    void outbreaksService.documentAudit(outbreakId, initialDocumentId).then(page => setAudit(page.items || [])).catch(value => setError(message(value)))
+  }, [documents, initialDocumentId, outbreakId])
 
   function field(key: keyof Draft, value: string) { setDraft(current => ({ ...current, [key]: value })) }
   function resetForm() { setDraft(emptyDraft()); setEditingId(null); setShowForm(false) }

@@ -65,6 +65,25 @@ void main() {
       expect(target?.externalUri, isNull);
     });
 
+    test('resolves published outbreak documents without dashboard leakage', () {
+      const outbreakId = '22222222-2222-4222-8222-222222222222';
+      const documentId = '33333333-3333-4333-8333-333333333333';
+      final target = NotificationActionResolver.resolve(
+        action: const {
+          'type': 'outbreak_document',
+          'resource_id': documentId,
+          'parameters': {
+            'outbreak_id': outbreakId,
+            'dashboard_route': '/outbreaks/private',
+          },
+        },
+      );
+      expect(
+        target?.location,
+        '/outbreak-hub/$outbreakId/documents/$documentId',
+      );
+    });
+
     test('rejects malformed, hostile, and unsupported internal actions', () {
       for (final route in [
         'javascript:alert(1)',

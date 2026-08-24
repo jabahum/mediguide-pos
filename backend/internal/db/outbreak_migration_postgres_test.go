@@ -54,7 +54,7 @@ func TestOutbreakAdministrationMigrationUpDownUp(t *testing.T) {
 	if err := goose.DownTo(testDB, "../../migrations", 35); err != nil {
 		t.Fatal(err)
 	}
-	if err := goose.UpTo(testDB, "../../migrations", 39); err != nil {
+	if err := goose.UpTo(testDB, "../../migrations", 44); err != nil {
 		t.Fatal(err)
 	}
 	var count int
@@ -69,6 +69,12 @@ func TestOutbreakAdministrationMigrationUpDownUp(t *testing.T) {
 	}
 	if err := testDB.QueryRowContext(ctx, `SELECT count(*) FROM notification_templates WHERE template_key IN ('outbreak-alert','outbreak-update','outbreak-status-change','situation-report-publication') AND status = 'published'`).Scan(&count); err != nil || count != 4 {
 		t.Fatalf("outbreak notification templates missing after up/down/up: count=%d err=%v", count, err)
+	}
+	if err := testDB.QueryRowContext(ctx, `SELECT count(*) FROM pg_indexes WHERE schemaname = $1 AND indexname IN ('idx_outbreak_resources_document_search_weighted','idx_outbreak_resources_document_title_trgm','idx_outbreaks_title_search')`, schema).Scan(&count); err != nil || count != 3 {
+		t.Fatalf("outbreak document discovery indexes missing after up/down/up: count=%d err=%v", count, err)
+	}
+	if err := testDB.QueryRowContext(ctx, `SELECT count(*) FROM notification_templates WHERE template_key LIKE 'outbreak-document-%' AND status = 'published'`).Scan(&count); err != nil || count != 7 {
+		t.Fatalf("outbreak document notification templates missing after up/down/up: count=%d err=%v", count, err)
 	}
 	if err := testDB.QueryRowContext(ctx, `SELECT count(*) FROM information_schema.columns WHERE table_schema = $1 AND table_name = 'calculators' AND column_name IN ('runtime_type','current_version_id')`, schema).Scan(&count); err != nil || count != 2 {
 		t.Fatalf("calculator version columns missing after up/down/up: count=%d err=%v", count, err)

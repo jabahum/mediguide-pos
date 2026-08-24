@@ -513,9 +513,11 @@ class _DownloadTile extends StatelessWidget {
                         runSpacing: 6,
                         children: [
                           _MetadataChip(
-                            label: item.assetType == 'original_pdf'
-                                ? 'Original PDF'
-                                : 'Offline package',
+                            label: switch (item.assetType) {
+                              'original_pdf' => 'Original PDF',
+                              'outbreak_document' => 'Outbreak document',
+                              _ => 'Offline package',
+                            },
                           ),
 
                           if (item.version.trim().isNotEmpty)

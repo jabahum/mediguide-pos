@@ -224,7 +224,7 @@ type OutbreakAuditDTO struct {
 }
 
 func (s OutbreakAdminService) ListAudit(entityType string, id uuid.UUID, page PageInput) (*PageResult[OutbreakAuditDTO], error) {
-	if !validOutbreakValue(entityType, "outbreak", "situation_report") {
+	if !validOutbreakValue(entityType, "outbreak", "situation_report", "outbreak_document") {
 		return nil, ErrOutbreakInvalid
 	}
 	page = page.Normalize(20, 100)
@@ -248,12 +248,14 @@ func (s OutbreakAdminService) ListAudit(entityType string, id uuid.UUID, page Pa
 
 func (s OutbreakAdminService) AddReviewComment(actor OutbreakActor, entityType string, id uuid.UUID, comment string) error {
 	comment = strings.TrimSpace(comment)
-	if !validOutbreakValue(entityType, "outbreak", "situation_report") || comment == "" || len(comment) > 4000 {
+	if !validOutbreakValue(entityType, "outbreak", "situation_report", "outbreak_document") || comment == "" || len(comment) > 4000 {
 		return ErrOutbreakInvalid
 	}
 	model := any(&models.Outbreak{})
 	if entityType == "situation_report" {
 		model = &models.SituationReport{}
+	} else if entityType == "outbreak_document" {
+		model = &models.OutbreakResource{}
 	}
 	var count int64
 	if err := s.DB.Model(model).Where("id = ?", id).Count(&count).Error; err != nil {

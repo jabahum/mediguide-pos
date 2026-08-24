@@ -11685,6 +11685,27 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/v2/outbreaks/{id}/documents/{documentId}/audit": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "outbreak-document-administration"
+                ],
+                "summary": "List immutable audit history for an outbreak document",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/services.PageResult-services_OutbreakAuditDTO"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v2/outbreaks/{id}/documents/{documentId}/corrections": {
             "post": {
                 "security": [
@@ -11710,6 +11731,60 @@ const docTemplate = `{
                 "responses": {
                     "201": {
                         "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/services.OutbreakDocumentAdminDTO"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v2/outbreaks/{id}/documents/{documentId}/file": {
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "multipart/form-data"
+                ],
+                "tags": [
+                    "outbreak-document-administration"
+                ],
+                "summary": "Upload or replace the managed file for an outbreak document draft",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Outbreak UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Document UUID",
+                        "name": "documentId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Current optimistic lock version",
+                        "name": "lock_version",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "file",
+                        "description": "PDF, DOCX, XLSX, Markdown, or text document",
+                        "name": "file",
+                        "in": "formData",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
                         "schema": {
                             "$ref": "#/definitions/services.OutbreakDocumentAdminDTO"
                         }
@@ -11745,6 +11820,35 @@ const docTemplate = `{
                         "schema": {
                             "$ref": "#/definitions/services.OutbreakDocumentAdminDTO"
                         }
+                    }
+                }
+            }
+        },
+        "/api/v2/outbreaks/{id}/documents/{documentId}/review-comments": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "outbreak-document-administration"
+                ],
+                "summary": "Add an auditable clinical-review comment to an outbreak document",
+                "parameters": [
+                    {
+                        "description": "Review comment",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/services.OutbreakReviewCommentInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
                     }
                 }
             }

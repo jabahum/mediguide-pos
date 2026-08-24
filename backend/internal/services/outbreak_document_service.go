@@ -235,11 +235,16 @@ func (s OutbreakAdminService) UpdateDocument(actor OutbreakActor, outbreakID, do
 	return s.GetDocument(outbreakID, documentID)
 }
 
-func (s OutbreakAdminService) DeleteDocument(actor OutbreakActor, outbreakID, documentID uuid.UUID, lock int) error {
-	if _, err := s.GetDocument(outbreakID, documentID); err != nil {
+func (s OutbreakAdminService) DeleteDocument(ctx context.Context, actor OutbreakActor, outbreakID, documentID uuid.UUID, lock int) error {
+	var row models.OutbreakResource
+	if err := s.DB.Where("id = ? AND outbreak_id = ? AND resource_type IN ?", documentID, outbreakID, []string{"managed_document", "downloadable_asset"}).First(&row).Error; err != nil {
 		return err
 	}
-	return s.deleteChild(actor, outbreakID, documentID, lock, "outbreak_document", &models.OutbreakResource{})
+	if err := s.deleteChild(actor, outbreakID, documentID, lock, "outbreak_document", &models.OutbreakResource{}); err != nil {
+		return err
+	}
+	s.deleteUnreferencedDocumentObject(ctx, row.StorageKey)
+	return nil
 }
 
 func (s OutbreakAdminService) TransitionDocument(actor OutbreakActor, outbreakID, documentID uuid.UUID, action string, in TransitionInput) (*OutbreakDocumentAdminDTO, error) {
@@ -249,6 +254,12 @@ func (s OutbreakAdminService) TransitionDocument(actor OutbreakActor, outbreakID
 	}
 	if err := s.validateDocument(row, action == "submit" || action == "approve" || action == "publish"); err != nil {
 		return nil, err
+	}
+	if action == "approve" && strings.TrimSpace(in.Reason) == "" {
+		return nil, ErrOutbreakInvalid
+	}
+	if action == "publish" && (row.AuthorID != nil && *row.AuthorID == actor.ID || row.ApprovedBy != nil && *row.ApprovedBy == actor.ID) {
+		return nil, ErrOutbreakInvalid
 	}
 	if action == "publish" && row.DocumentNumber != "" && row.Version != "" {
 		var count int64
@@ -299,6 +310,20 @@ func (s OutbreakAdminService) DocumentVersions(outbreakID, documentID uuid.UUID)
 		items[i] = outbreakDocumentAdminDTO(rows[i])
 	}
 	return items, nil
+}
+
+func (s OutbreakAdminService) DocumentAudit(outbreakID, documentID uuid.UUID, page PageInput) (*PageResult[OutbreakAuditDTO], error) {
+	if _, err := s.GetDocument(outbreakID, documentID); err != nil {
+		return nil, err
+	}
+	return s.ListAudit("outbreak_document", documentID, page)
+}
+
+func (s OutbreakAdminService) AddDocumentReviewComment(actor OutbreakActor, outbreakID, documentID uuid.UUID, comment string) error {
+	if _, err := s.GetDocument(outbreakID, documentID); err != nil {
+		return err
+	}
+	return s.AddReviewComment(actor, "outbreak_document", documentID, comment)
 }
 
 func (s OutbreakService) Documents(outbreakID uuid.UUID, in OutbreakDocumentQuery) (*PageResult[PublicOutbreakDocument], error) {
@@ -403,8 +428,13 @@ func (s OutbreakAdminService) validateDocument(row models.OutbreakResource, read
 	if row.AssetURL != "" && validateSourceURL(row.AssetURL, s.AllowedExternalHosts) != nil && !managedOutbreakAssetPath.MatchString(row.AssetURL) {
 		return ErrOutbreakInvalid
 	}
-	if readyForReview && row.StorageKey == "" && row.AssetURL == "" {
-		return ErrOutbreakInvalid
+	if readyForReview {
+		if strings.TrimSpace(row.IssuingAuthority) == "" || strings.TrimSpace(row.Version) == "" || row.StorageKey == "" && row.AssetURL == "" {
+			return ErrOutbreakInvalid
+		}
+		if row.ExpiresAt != nil && !row.ExpiresAt.After(time.Now().UTC()) {
+			return ErrOutbreakInvalid
+		}
 	}
 	return nil
 }

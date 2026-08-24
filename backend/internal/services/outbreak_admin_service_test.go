@@ -265,9 +265,12 @@ func TestOutbreakDocumentLifecycleRequiresReviewAndPublishedParent(t *testing.T)
 	if _, err := service.TransitionDocument(author, parent.ID, document.ID, "approve", TransitionInput{LockVersion: 2}); !errors.Is(err, ErrOutbreakInvalid) {
 		t.Fatalf("author self-approved document: %v", err)
 	}
-	approved, err := service.TransitionDocument(reviewer, parent.ID, document.ID, "approve", TransitionInput{LockVersion: 2})
+	approved, err := service.TransitionDocument(reviewer, parent.ID, document.ID, "approve", TransitionInput{LockVersion: 2, Reason: "Clinical content verified against the current response protocol"})
 	if err != nil || approved.ApprovedBy == nil || *approved.ApprovedBy != reviewer.ID {
 		t.Fatalf("approve document: %#v err=%v", approved, err)
+	}
+	if _, err := service.TransitionDocument(reviewer, parent.ID, document.ID, "publish", TransitionInput{LockVersion: 3}); !errors.Is(err, ErrOutbreakInvalid) {
+		t.Fatalf("clinical approver also published document: %v", err)
 	}
 	published, err := service.TransitionDocument(publisher, parent.ID, document.ID, "publish", TransitionInput{LockVersion: 3})
 	if err != nil || published.Status != "published" || published.PublishedAt == nil {
@@ -288,7 +291,7 @@ func TestOutbreakDocumentLifecycleRequiresReviewAndPublishedParent(t *testing.T)
 	if _, err := service.TransitionDocument(author, parent.ID, correction.ID, "submit", TransitionInput{LockVersion: 1}); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := service.TransitionDocument(reviewer, parent.ID, correction.ID, "approve", TransitionInput{LockVersion: 2}); err != nil {
+	if _, err := service.TransitionDocument(reviewer, parent.ID, correction.ID, "approve", TransitionInput{LockVersion: 2, Reason: "Correction reviewed"}); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := service.TransitionDocument(publisher, parent.ID, correction.ID, "publish", TransitionInput{LockVersion: 3}); !errors.Is(err, ErrOutbreakInvalid) {

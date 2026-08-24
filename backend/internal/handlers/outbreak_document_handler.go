@@ -119,11 +119,46 @@ func (h OutbreakAdminHandler) DeleteDocument(c *gin.Context) {
 	if !ok {
 		return
 	}
-	if err := h.Service.DeleteDocument(outbreakActor(c), id, documentID, lock); err != nil {
+	if err := h.Service.DeleteDocument(c.Request.Context(), outbreakActor(c), id, documentID, lock); err != nil {
 		h.result(c, 0, nil, err)
 		return
 	}
 	c.Status(http.StatusNoContent)
+}
+
+// UploadDocument godoc
+// @Summary Upload or replace the managed file for an outbreak document draft
+// @Tags outbreak-document-administration
+// @Security BearerAuth
+// @Accept multipart/form-data
+// @Param id path string true "Outbreak UUID"
+// @Param documentId path string true "Document UUID"
+// @Param lock_version query integer true "Current optimistic lock version"
+// @Param file formData file true "PDF, DOCX, XLSX, Markdown, or text document"
+// @Success 200 {object} services.OutbreakDocumentAdminDTO
+// @Router /api/v2/outbreaks/{id}/documents/{documentId}/file [put]
+func (h OutbreakAdminHandler) UploadDocument(c *gin.Context) {
+	id, documentID, ok := twoOutbreakIDs(c, "documentId")
+	if !ok {
+		return
+	}
+	lock, ok := outbreakLock(c)
+	if !ok {
+		return
+	}
+	maxBytes := h.MaxUploadMB << 20
+	if maxBytes <= 0 {
+		maxBytes = 25 << 20
+	}
+	c.Request.Body = http.MaxBytesReader(c.Writer, c.Request.Body, maxBytes+(1<<20))
+	file, header, err := c.Request.FormFile("file")
+	if err != nil {
+		httpx.Error(c, http.StatusBadRequest, "valid document file is required")
+		return
+	}
+	defer file.Close()
+	result, err := h.Service.UploadDocument(c.Request.Context(), outbreakActor(c), id, documentID, lock, file, header, maxBytes)
+	h.result(c, http.StatusOK, result, err)
 }
 
 // TransitionDocument godoc
@@ -184,6 +219,49 @@ func (h OutbreakAdminHandler) DocumentVersions(c *gin.Context) {
 	}
 	result, err := h.Service.DocumentVersions(id, documentID)
 	h.result(c, http.StatusOK, result, err)
+}
+
+// DocumentAudit godoc
+// @Summary List immutable audit history for an outbreak document
+// @Tags outbreak-document-administration
+// @Security BearerAuth
+// @Success 200 {object} services.PageResult[services.OutbreakAuditDTO]
+// @Router /api/v2/outbreaks/{id}/documents/{documentId}/audit [get]
+func (h OutbreakAdminHandler) DocumentAudit(c *gin.Context) {
+	id, documentID, ok := twoOutbreakIDs(c, "documentId")
+	if !ok {
+		return
+	}
+	page, ok := outbreakAdminPage(c)
+	if !ok {
+		return
+	}
+	result, err := h.Service.DocumentAudit(id, documentID, page)
+	h.result(c, http.StatusOK, result, err)
+}
+
+// AddDocumentReviewComment godoc
+// @Summary Add an auditable clinical-review comment to an outbreak document
+// @Tags outbreak-document-administration
+// @Security BearerAuth
+// @Param payload body services.OutbreakReviewCommentInput true "Review comment"
+// @Success 204
+// @Router /api/v2/outbreaks/{id}/documents/{documentId}/review-comments [post]
+func (h OutbreakAdminHandler) AddDocumentReviewComment(c *gin.Context) {
+	id, documentID, ok := twoOutbreakIDs(c, "documentId")
+	if !ok {
+		return
+	}
+	var input services.OutbreakReviewCommentInput
+	if c.ShouldBindJSON(&input) != nil {
+		httpx.Error(c, http.StatusBadRequest, "valid review comment is required")
+		return
+	}
+	if err := h.Service.AddDocumentReviewComment(outbreakActor(c), id, documentID, input.Comment); err != nil {
+		h.result(c, 0, nil, err)
+		return
+	}
+	c.Status(http.StatusNoContent)
 }
 
 // Documents godoc

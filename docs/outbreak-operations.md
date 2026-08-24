@@ -49,3 +49,19 @@ Withdrawal is the immediate public rollback mechanism. It preserves audit histor
 5. Verify the audit trail, notification state, public endpoint, cache behaviour, and metrics before resolving the incident.
 
 Database rollback is not a content-withdrawal mechanism. Use database restore only for infrastructure disaster recovery, following backups and migration compatibility checks.
+
+## Managed outbreak documents
+
+Outbreak records can carry governed supporting material such as SOPs, response plans, checklists, forms, situation-report annexes and training material. Create and manage these records in the outbreak editor. Public readers only receive a document when its status is `published`, its effective date has arrived and it has not expired.
+
+The managed upload endpoint accepts PDF, DOCX, XLSX, Markdown and UTF-8 text files up to `MAX_UPLOAD_MB` (25 MB by default). The API validates the actual PDF or OOXML structure rather than trusting the filename or browser MIME type, rejects unsafe archives, stores a SHA-256 checksum and writes the object under an immutable content-addressed key. Replacing a draft file advances its optimistic lock and deletes the previous object only when no document version still references it.
+
+Use this lifecycle:
+
+1. A user with `outbreak.manage` creates a draft, completes authority, document number, version, language, audience and effective/review metadata, then uploads the file.
+2. The author submits the draft for review. Submission fails when required governance metadata or the file is missing, or the document is already expired.
+3. A different user with `outbreak.review` records review comments and approves with a required clinical rationale. Authors cannot approve their own work.
+4. A third user with `outbreak.publish` publishes the approved version. The publisher cannot be its author or clinical approver.
+5. A user with `outbreak.withdraw` may withdraw a published version with a reason. Published records are immutable; content changes must start through the correction endpoint and complete the full review cycle again.
+
+The document audit endpoint records uploads, comments and every lifecycle transition. Never overwrite an object or directly update a published database row. Malware scanning is an infrastructure concern in addition to the API's structural validation; configure object-storage scanning/quarantine before accepting files from untrusted external contributors.

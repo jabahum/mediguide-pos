@@ -7,6 +7,8 @@ import type {
   ServicesOutbreakInput,
   ServicesOutbreakNotificationCampaignInput,
   ServicesOutbreakMetric,
+  ServicesOutbreakDocumentAdminDTO,
+  ServicesOutbreakDocumentInput,
   ServicesOutbreakResourceAdminDTO,
   ServicesOutbreakUpdateAdminDTO,
   ServicesSituationReportAdminDTO,
@@ -26,6 +28,8 @@ export type SituationReportInput = ServicesSituationReportInput;
 export type ChildContentInput = ServicesChildContentInput;
 export type OutbreakCampaignInput = ServicesOutbreakNotificationCampaignInput;
 export type OutbreakMetric = ServicesOutbreakMetric;
+export type OutbreakDocumentRecord = ServicesOutbreakDocumentAdminDTO;
+export type OutbreakDocumentInput = ServicesOutbreakDocumentInput;
 export type PublishedGuidelineRecord = ServicesPublicGuideline;
 
 export interface PagedResult<T> {
@@ -59,6 +63,21 @@ export interface OutbreakListQuery {
   effective_to?: string;
   updated_from?: string;
   updated_to?: string;
+  sort?: string;
+  order?: "asc" | "desc";
+}
+
+export interface OutbreakDocumentQuery {
+  page?: number;
+  per_page?: number;
+  search?: string;
+  document_kind?: string;
+  issuing_authority?: string;
+  language?: string;
+  audience?: string;
+  status?: string;
+  effective_from?: string;
+  effective_to?: string;
   sort?: string;
   order?: "asc" | "desc";
 }
@@ -187,6 +206,72 @@ export const outbreaksService = {
       `/api/v2/outbreaks/${id}/resources/${childId}/correct`,
       input,
     ) as Promise<OutbreakResourceRecord>;
+  },
+  listDocuments(id: string, query: OutbreakDocumentQuery = {}) {
+    return client().send<PagedResult<OutbreakDocumentRecord>>(
+      `/api/v2/outbreaks/${id}/documents`,
+      { query: { page: 1, per_page: 100, ...query } },
+    );
+  },
+  createDocument(id: string, input: OutbreakDocumentInput) {
+    return client().send<OutbreakDocumentRecord>(
+      `/api/v2/outbreaks/${id}/documents`,
+      { method: "POST", body: JSON.stringify(input) },
+    );
+  },
+  updateDocument(id: string, documentId: string, input: OutbreakDocumentInput) {
+    return client().send<OutbreakDocumentRecord>(
+      `/api/v2/outbreaks/${id}/documents/${documentId}`,
+      { method: "PATCH", body: JSON.stringify(input) },
+    );
+  },
+  removeDocument(id: string, documentId: string, lockVersion: number) {
+    return client().send<void>(
+      `/api/v2/outbreaks/${id}/documents/${documentId}`,
+      { method: "DELETE", query: { lock_version: lockVersion } },
+    );
+  },
+  uploadDocument(id: string, documentId: string, lockVersion: number, file: File) {
+    const body = new FormData();
+    body.append("file", file);
+    return client().send<OutbreakDocumentRecord>(
+      `/api/v2/outbreaks/${id}/documents/${documentId}/file`,
+      { method: "PUT", query: { lock_version: lockVersion }, body },
+    );
+  },
+  transitionDocument(
+    id: string,
+    documentId: string,
+    action: "submit" | "approve" | "publish" | "withdraw",
+    input: ServicesTransitionInput,
+  ) {
+    return transition(
+      `/api/v2/outbreaks/${id}/documents/${documentId}/${action}`,
+      input,
+    ) as Promise<OutbreakDocumentRecord>;
+  },
+  correctDocument(id: string, documentId: string, input: ServicesTransitionInput) {
+    return client().send<OutbreakDocumentRecord>(
+      `/api/v2/outbreaks/${id}/documents/${documentId}/corrections`,
+      { method: "POST", body: JSON.stringify(input) },
+    );
+  },
+  documentVersions(id: string, documentId: string) {
+    return client().send<OutbreakDocumentRecord[]>(
+      `/api/v2/outbreaks/${id}/documents/${documentId}/versions`,
+    );
+  },
+  documentAudit(id: string, documentId: string) {
+    return client().send<PagedResult<OutbreakAuditRecord>>(
+      `/api/v2/outbreaks/${id}/documents/${documentId}/audit`,
+      { query: { page: 1, per_page: 100 } },
+    );
+  },
+  addDocumentReviewComment(id: string, documentId: string, comment: string) {
+    return client().send<void>(
+      `/api/v2/outbreaks/${id}/documents/${documentId}/review-comments`,
+      { method: "POST", body: JSON.stringify({ comment }) },
+    );
   },
   createCampaign(id: string, input: OutbreakCampaignInput) {
     return client().send<ServicesNotificationCampaignDTO>(

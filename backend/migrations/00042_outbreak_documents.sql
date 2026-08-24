@@ -59,7 +59,10 @@ CREATE UNIQUE INDEX idx_outbreak_resources_published_document_version
   WHERE deleted_at IS NULL AND status = 'published'
     AND resource_type IN ('managed_document','downloadable_asset')
     AND document_number <> '' AND version <> '';
-CREATE UNIQUE INDEX idx_outbreak_resources_storage_key
+-- A correction draft may initially reference the immutable source file. Keep
+-- this index non-unique and let the document service generate collision-safe
+-- object keys for newly uploaded files.
+CREATE INDEX idx_outbreak_resources_storage_key
   ON outbreak_resources (storage_key)
   WHERE deleted_at IS NULL AND storage_key <> '';
 

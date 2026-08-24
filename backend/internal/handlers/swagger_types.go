@@ -998,6 +998,16 @@ type PaginatedOutbreakResourcesEnvelope struct {
 	Data    services.PageResult[services.PublicOutbreakResource] `json:"data"`
 }
 
+type OutbreakDocumentEnvelope struct {
+	Success bool                            `json:"success"`
+	Data    services.PublicOutbreakDocument `json:"data"`
+}
+
+type PaginatedOutbreakDocumentsEnvelope struct {
+	Success bool                                                 `json:"success"`
+	Data    services.PageResult[services.PublicOutbreakDocument] `json:"data"`
+}
+
 type SituationReportEnvelope struct {
 	Success bool                           `json:"success"`
 	Data    services.PublicSituationReport `json:"data"`

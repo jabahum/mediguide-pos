@@ -235,3 +235,98 @@ func TestSituationReportPublicationValidatesStandaloneAndSource(t *testing.T) {
 		t.Fatalf("report without source/asset published: %v", err)
 	}
 }
+
+func TestOutbreakDocumentLifecycleRequiresReviewAndPublishedParent(t *testing.T) {
+	service := outbreakAdminTestService(t)
+	now := time.Now().UTC().Truncate(time.Second)
+	parent := models.Outbreak{Title: "Ebola response", DiseaseType: "Ebola", Status: "active", PublishedAt: &now, LastUpdate: now, LockVersion: 1}
+	if err := service.DB.Create(&parent).Error; err != nil {
+		t.Fatal(err)
+	}
+	author := OutbreakActor{ID: uuid.New()}
+	reviewer := OutbreakActor{ID: uuid.New()}
+	publisher := OutbreakActor{ID: uuid.New()}
+	title, kind := "Ebola case-management SOP", "sop"
+	number, version := "MOH-EVD-SOP-001", "2.0"
+	authority, language := "Ministry of Health Uganda", "en-UG"
+	effective, review := now.Add(-time.Hour), now.AddDate(1, 0, 0)
+	assetURL := "https://health.go.ug/documents/ebola-sop-v2.pdf"
+	document, err := service.CreateDocument(author, parent.ID, OutbreakDocumentInput{
+		Title: &title, DocumentKind: &kind, DocumentNumber: &number, Version: &version,
+		IssuingAuthority: &authority, Language: &language, EffectiveDate: &effective,
+		ReviewDate: &review, AssetURL: &assetURL,
+	})
+	if err != nil || document.Status != "draft" || document.LockVersion != 1 {
+		t.Fatalf("create document: %#v err=%v", document, err)
+	}
+	if _, err := service.TransitionDocument(author, parent.ID, document.ID, "submit", TransitionInput{LockVersion: 1}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := service.TransitionDocument(author, parent.ID, document.ID, "approve", TransitionInput{LockVersion: 2}); !errors.Is(err, ErrOutbreakInvalid) {
+		t.Fatalf("author self-approved document: %v", err)
+	}
+	approved, err := service.TransitionDocument(reviewer, parent.ID, document.ID, "approve", TransitionInput{LockVersion: 2})
+	if err != nil || approved.ApprovedBy == nil || *approved.ApprovedBy != reviewer.ID {
+		t.Fatalf("approve document: %#v err=%v", approved, err)
+	}
+	published, err := service.TransitionDocument(publisher, parent.ID, document.ID, "publish", TransitionInput{LockVersion: 3})
+	if err != nil || published.Status != "published" || published.PublishedAt == nil {
+		t.Fatalf("publish document: %#v err=%v", published, err)
+	}
+	if _, err := service.UpdateDocument(author, parent.ID, document.ID, OutbreakDocumentInput{Title: ptr("silent edit"), LockVersion: &published.LockVersion}); !errors.Is(err, ErrOutbreakImmutable) {
+		t.Fatalf("published document edited: %v", err)
+	}
+
+	correction, err := service.CorrectDocument(author, parent.ID, document.ID, TransitionInput{LockVersion: published.LockVersion, Reason: "Correct dosage table"})
+	if err != nil || correction.Status != "draft" || correction.SupersedesID == nil || *correction.SupersedesID != document.ID {
+		t.Fatalf("correct document: %#v err=%v", correction, err)
+	}
+	versions, err := service.DocumentVersions(parent.ID, document.ID)
+	if err != nil || len(versions) != 2 {
+		t.Fatalf("document versions: %#v err=%v", versions, err)
+	}
+	if _, err := service.TransitionDocument(author, parent.ID, correction.ID, "submit", TransitionInput{LockVersion: 1}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := service.TransitionDocument(reviewer, parent.ID, correction.ID, "approve", TransitionInput{LockVersion: 2}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := service.TransitionDocument(publisher, parent.ID, correction.ID, "publish", TransitionInput{LockVersion: 3}); !errors.Is(err, ErrOutbreakInvalid) {
+		t.Fatalf("duplicate published document number/version accepted: %v", err)
+	}
+}
+
+func TestOutbreakDocumentValidationAndTypedFilters(t *testing.T) {
+	service := outbreakAdminTestService(t)
+	now := time.Now().UTC()
+	parent := models.Outbreak{Title: "Response", Status: "draft", LastUpdate: now, LockVersion: 1}
+	if err := service.DB.Create(&parent).Error; err != nil {
+		t.Fatal(err)
+	}
+	title, invalidKind := "Invalid", "word_document"
+	if _, err := service.CreateDocument(OutbreakActor{ID: uuid.New()}, parent.ID, OutbreakDocumentInput{Title: &title, DocumentKind: &invalidKind}); !errors.Is(err, ErrOutbreakInvalid) {
+		t.Fatalf("invalid document kind accepted: %v", err)
+	}
+	effective, review := now, now.Add(-time.Hour)
+	if _, err := service.CreateDocument(OutbreakActor{ID: uuid.New()}, parent.ID, OutbreakDocumentInput{Title: &title, EffectiveDate: &effective, ReviewDate: &review}); !errors.Is(err, ErrOutbreakInvalid) {
+		t.Fatalf("invalid document dates accepted: %v", err)
+	}
+
+	sop, checklist := "sop", "checklist"
+	authority, language := "Ministry of Health", "en"
+	for index, input := range []OutbreakDocumentInput{
+		{Title: ptr("Ebola triage SOP"), DocumentKind: &sop, IssuingAuthority: &authority, Language: &language},
+		{Title: ptr("Contact tracing checklist"), DocumentKind: &checklist, IssuingAuthority: &authority, Language: &language},
+	} {
+		if _, err := service.CreateDocument(OutbreakActor{ID: uuid.New()}, parent.ID, input); err != nil {
+			t.Fatalf("create document %d: %v", index, err)
+		}
+	}
+	page, err := service.ListDocuments(parent.ID, OutbreakDocumentQuery{Page: PageInput{Page: 1, PerPage: 1}, Search: "triage", DocumentKind: "sop", Authority: "ministry of health", Language: "EN", Sort: "title", Order: "asc"})
+	if err != nil || page.TotalItems != 1 || len(page.Items) != 1 || page.Items[0].Title != "Ebola triage SOP" {
+		t.Fatalf("typed document filters: %#v err=%v", page, err)
+	}
+	if _, err := service.ListDocuments(parent.ID, OutbreakDocumentQuery{Sort: "title; DROP TABLE outbreak_resources"}); !errors.Is(err, ErrOutbreakInvalid) {
+		t.Fatalf("unsafe sort accepted: %v", err)
+	}
+}

@@ -2591,6 +2591,28 @@ final class HandlersNotificationTemplateVersionsEnvelope {
   Map<String, dynamic> toJson() => Map.of(value);
 }
 
+final class HandlersOutbreakDocumentEnvelope {
+  HandlersOutbreakDocumentEnvelope(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory HandlersOutbreakDocumentEnvelope.fromJson(
+    Map<String, dynamic> json,
+  ) => HandlersOutbreakDocumentEnvelope(json);
+
+  static const schemaName = 'handlers.OutbreakDocumentEnvelope';
+  final Map<String, dynamic> value;
+
+  ServicesPublicOutbreakDocument? get data {
+    final raw = value['data'];
+    if (raw is! Map) return null;
+    return ServicesPublicOutbreakDocument.fromJson(_jsonMap(raw));
+  }
+
+  bool? get success => value['success'] as bool?;
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
 final class HandlersOutbreakEnvelope {
   HandlersOutbreakEnvelope(Map<String, dynamic> value)
     : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
@@ -3765,6 +3787,30 @@ final class HandlersPaginatedNotificationsEnvelope {
     final raw = value['data'];
     if (raw is! Map) return null;
     return HandlersPaginatedNotifications.fromJson(_jsonMap(raw));
+  }
+
+  bool? get success => value['success'] as bool?;
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
+final class HandlersPaginatedOutbreakDocumentsEnvelope {
+  HandlersPaginatedOutbreakDocumentsEnvelope(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory HandlersPaginatedOutbreakDocumentsEnvelope.fromJson(
+    Map<String, dynamic> json,
+  ) => HandlersPaginatedOutbreakDocumentsEnvelope(json);
+
+  static const schemaName = 'handlers.PaginatedOutbreakDocumentsEnvelope';
+  final Map<String, dynamic> value;
+
+  ServicesPageResultServicesPublicOutbreakDocument? get data {
+    final raw = value['data'];
+    if (raw is! Map) return null;
+    return ServicesPageResultServicesPublicOutbreakDocument.fromJson(
+      _jsonMap(raw),
+    );
   }
 
   bool? get success => value['success'] as bool?;
@@ -11358,6 +11404,131 @@ final class ServicesOutbreakAuditDTO {
   Map<String, dynamic> toJson() => Map.of(value);
 }
 
+final class ServicesOutbreakDocumentAdminDTO {
+  ServicesOutbreakDocumentAdminDTO(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory ServicesOutbreakDocumentAdminDTO.fromJson(
+    Map<String, dynamic> json,
+  ) => ServicesOutbreakDocumentAdminDTO(json);
+
+  static const schemaName = 'services.OutbreakDocumentAdminDTO';
+  final Map<String, dynamic> value;
+
+  String? get approvedAt => value['approved_at']?.toString();
+
+  String? get approvedBy => value['approved_by']?.toString();
+
+  String? get assetUrl => value['asset_url']?.toString();
+
+  String? get audience => value['audience']?.toString();
+
+  String? get authorId => value['author_id']?.toString();
+
+  String? get checksumSha256 => value['checksum_sha256']?.toString();
+
+  String? get createdAt => value['created_at']?.toString();
+
+  String? get description => value['description']?.toString();
+
+  String? get documentKind => value['document_kind']?.toString();
+
+  String? get documentNumber => value['document_number']?.toString();
+
+  String? get effectiveDate => value['effective_date']?.toString();
+
+  String? get expiresAt => value['expires_at']?.toString();
+
+  int? get fileSize => (value['file_size'] as num?)?.toInt();
+
+  String? get id => value['id']?.toString();
+
+  String? get issuingAuthority => value['issuing_authority']?.toString();
+
+  String? get language => value['language']?.toString();
+
+  int? get lockVersion => (value['lock_version'] as num?)?.toInt();
+
+  String? get mimeType => value['mime_type']?.toString();
+
+  String? get originalFilename => value['original_filename']?.toString();
+
+  String? get outbreakId => value['outbreak_id']?.toString();
+
+  int? get pageCount => (value['page_count'] as num?)?.toInt();
+
+  String? get publishedAt => value['published_at']?.toString();
+
+  String? get resourceType => value['resource_type']?.toString();
+
+  String? get reviewDate => value['review_date']?.toString();
+
+  String? get reviewedAt => value['reviewed_at']?.toString();
+
+  String? get reviewedBy => value['reviewed_by']?.toString();
+
+  int? get sortOrder => (value['sort_order'] as num?)?.toInt();
+
+  String? get status => value['status']?.toString();
+
+  String? get supersedesId => value['supersedes_id']?.toString();
+
+  String? get title => value['title']?.toString();
+
+  String? get updatedAt => value['updated_at']?.toString();
+
+  String? get version => value['version']?.toString();
+
+  String? get withdrawalReason => value['withdrawal_reason']?.toString();
+
+  String? get withdrawnAt => value['withdrawn_at']?.toString();
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
+final class ServicesOutbreakDocumentInput {
+  ServicesOutbreakDocumentInput(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory ServicesOutbreakDocumentInput.fromJson(Map<String, dynamic> json) =>
+      ServicesOutbreakDocumentInput(json);
+
+  static const schemaName = 'services.OutbreakDocumentInput';
+  final Map<String, dynamic> value;
+
+  String? get assetUrl => value['asset_url']?.toString();
+
+  String? get audience => value['audience']?.toString();
+
+  String? get description => value['description']?.toString();
+
+  String? get documentKind => value['document_kind']?.toString();
+
+  String? get documentNumber => value['document_number']?.toString();
+
+  String? get effectiveDate => value['effective_date']?.toString();
+
+  String? get expiresAt => value['expires_at']?.toString();
+
+  String? get issuingAuthority => value['issuing_authority']?.toString();
+
+  String? get language => value['language']?.toString();
+
+  int? get lockVersion => (value['lock_version'] as num?)?.toInt();
+
+  String? get resourceType => value['resource_type']?.toString();
+
+  String? get reviewDate => value['review_date']?.toString();
+
+  int? get sortOrder => (value['sort_order'] as num?)?.toInt();
+
+  String? get title => value['title']?.toString();
+
+  String? get version => value['version']?.toString();
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
 final class ServicesOutbreakInput {
   ServicesOutbreakInput(Map<String, dynamic> value)
     : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
@@ -12219,6 +12390,40 @@ final class ServicesPageResultServicesOutbreakAuditDTO {
   Map<String, dynamic> toJson() => Map.of(value);
 }
 
+final class ServicesPageResultServicesOutbreakDocumentAdminDTO {
+  ServicesPageResultServicesOutbreakDocumentAdminDTO(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory ServicesPageResultServicesOutbreakDocumentAdminDTO.fromJson(
+    Map<String, dynamic> json,
+  ) => ServicesPageResultServicesOutbreakDocumentAdminDTO(json);
+
+  static const schemaName =
+      'services.PageResult-services_OutbreakDocumentAdminDTO';
+  final Map<String, dynamic> value;
+
+  List<ServicesOutbreakDocumentAdminDTO> get items {
+    final raw = value['items'];
+    if (raw is! List) return const [];
+    return raw
+        .whereType<Map>()
+        .map(
+          (item) => ServicesOutbreakDocumentAdminDTO.fromJson(_jsonMap(item)),
+        )
+        .toList(growable: false);
+  }
+
+  int? get page => (value['page'] as num?)?.toInt();
+
+  int? get perPage => (value['per_page'] as num?)?.toInt();
+
+  int? get totalItems => (value['total_items'] as num?)?.toInt();
+
+  int? get totalPages => (value['total_pages'] as num?)?.toInt();
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
 final class ServicesPageResultServicesOutbreakResourceAdminDTO {
   ServicesPageResultServicesOutbreakResourceAdminDTO(Map<String, dynamic> value)
     : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
@@ -12302,6 +12507,38 @@ final class ServicesPageResultServicesPublicOutbreak {
     return raw
         .whereType<Map>()
         .map((item) => ServicesPublicOutbreak.fromJson(_jsonMap(item)))
+        .toList(growable: false);
+  }
+
+  int? get page => (value['page'] as num?)?.toInt();
+
+  int? get perPage => (value['per_page'] as num?)?.toInt();
+
+  int? get totalItems => (value['total_items'] as num?)?.toInt();
+
+  int? get totalPages => (value['total_pages'] as num?)?.toInt();
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
+final class ServicesPageResultServicesPublicOutbreakDocument {
+  ServicesPageResultServicesPublicOutbreakDocument(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory ServicesPageResultServicesPublicOutbreakDocument.fromJson(
+    Map<String, dynamic> json,
+  ) => ServicesPageResultServicesPublicOutbreakDocument(json);
+
+  static const schemaName =
+      'services.PageResult-services_PublicOutbreakDocument';
+  final Map<String, dynamic> value;
+
+  List<ServicesPublicOutbreakDocument> get items {
+    final raw = value['items'];
+    if (raw is! List) return const [];
+    return raw
+        .whereType<Map>()
+        .map((item) => ServicesPublicOutbreakDocument.fromJson(_jsonMap(item)))
         .toList(growable: false);
   }
 
@@ -12897,6 +13134,59 @@ final class ServicesPublicOutbreak {
   String? get title => value['title']?.toString();
 
   String? get visualTone => value['visual_tone']?.toString();
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
+final class ServicesPublicOutbreakDocument {
+  ServicesPublicOutbreakDocument(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory ServicesPublicOutbreakDocument.fromJson(Map<String, dynamic> json) =>
+      ServicesPublicOutbreakDocument(json);
+
+  static const schemaName = 'services.PublicOutbreakDocument';
+  final Map<String, dynamic> value;
+
+  String? get audience => value['audience']?.toString();
+
+  String? get checksumSha256 => value['checksum_sha256']?.toString();
+
+  String? get description => value['description']?.toString();
+
+  String? get documentKind => value['document_kind']?.toString();
+
+  String? get documentNumber => value['document_number']?.toString();
+
+  String? get downloadUrl => value['download_url']?.toString();
+
+  String? get effectiveDate => value['effective_date']?.toString();
+
+  String? get expiresAt => value['expires_at']?.toString();
+
+  int? get fileSize => (value['file_size'] as num?)?.toInt();
+
+  String? get id => value['id']?.toString();
+
+  String? get issuingAuthority => value['issuing_authority']?.toString();
+
+  String? get language => value['language']?.toString();
+
+  String? get mimeType => value['mime_type']?.toString();
+
+  String? get originalFilename => value['original_filename']?.toString();
+
+  String? get outbreakId => value['outbreak_id']?.toString();
+
+  int? get pageCount => (value['page_count'] as num?)?.toInt();
+
+  String? get publishedAt => value['published_at']?.toString();
+
+  String? get reviewDate => value['review_date']?.toString();
+
+  String? get title => value['title']?.toString();
+
+  String? get version => value['version']?.toString();
 
   Map<String, dynamic> toJson() => Map.of(value);
 }

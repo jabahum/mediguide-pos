@@ -268,6 +268,14 @@ func outbreakLastModified(value any) time.Time {
 			value = latest(value, typed.Items[i].PublishedAt)
 		}
 		return value
+	case *services.PublicOutbreakDocument:
+		return latest(time.Time{}, typed.PublishedAt)
+	case *services.PageResult[services.PublicOutbreakDocument]:
+		var value time.Time
+		for i := range typed.Items {
+			value = latest(value, typed.Items[i].PublishedAt)
+		}
+		return value
 	case *services.PublicSituationReport:
 		return latest(typed.PublicationDate, typed.PublishedAt, typed.LastVerifiedAt)
 	case *services.PageResult[services.PublicSituationReport]:

@@ -615,6 +615,24 @@ class _OutbreakDetail extends StatelessWidget {
             ),
         ],
 
+        if (detail.documents.isNotEmpty) ...[
+          AppSpacing.gapLg,
+
+          const SectionHeader(
+            title: 'Official documents and SOPs',
+            subtitle: 'Clinically reviewed response guidance',
+            icon: LucideIcons.files,
+          ),
+
+          AppSpacing.gapSm,
+
+          for (final document in detail.documents)
+            _OutbreakDocumentTile(
+              document: document,
+              onTap: () => _openOutbreakDocument(context, document),
+            ),
+        ],
+
         if (detail.resources.isNotEmpty) ...[
           AppSpacing.gapLg,
 
@@ -878,6 +896,62 @@ class _ResourceTile extends StatelessWidget {
         subtitle: type.trim().isEmpty ? null : Text(type),
         trailing: const Icon(LucideIcons.chevronRight),
         onTap: onTap,
+      ),
+    );
+  }
+}
+
+class _OutbreakDocumentTile extends StatelessWidget {
+  const _OutbreakDocumentTile({required this.document, required this.onTap});
+
+  final PublicOutbreakDocument document;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    final metadata = <String>[
+      if (document.issuingAuthority.trim().isNotEmpty)
+        document.issuingAuthority,
+      if (document.version.trim().isNotEmpty) 'Version ${document.version}',
+      if (document.language.trim().isNotEmpty) document.language.toUpperCase(),
+      if (document.fileSize > 0) _fileSize(document.fileSize),
+    ];
+    return Card(
+      margin: const EdgeInsets.only(bottom: AppSpacing.sm),
+      child: ListTile(
+        minVerticalPadding: AppSpacing.md,
+        leading: ClinicalIconTile(
+          icon: document.mimeType == 'application/pdf'
+              ? LucideIcons.fileText
+              : LucideIcons.file,
+        ),
+        title: Text(
+          document.title,
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
+        ),
+        subtitle: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const SizedBox(height: 3),
+            Text(
+              document.documentKind.split('_').map(_capitalize).join(' '),
+              style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                color: colors.primary,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            if (metadata.isNotEmpty)
+              Text(
+                metadata.join(' • '),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+          ],
+        ),
+        trailing: const Icon(LucideIcons.download, size: 19),
+        onTap: document.downloadUrl.trim().isEmpty ? null : onTap,
       ),
     );
   }
@@ -1506,6 +1580,52 @@ Future<void> _openOutbreakResource(
       const SnackBar(content: Text('This resource link is unavailable.')),
     );
   }
+}
+
+Future<void> _openOutbreakDocument(
+  BuildContext context,
+  PublicOutbreakDocument document,
+) async {
+  final relative = Uri.tryParse(document.downloadUrl.trim());
+  if (relative == null || relative.hasAuthority || relative.hasFragment) {
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('This document is unavailable.')),
+      );
+    }
+    return;
+  }
+  final base = Uri.parse('${AppConfig.current.apiBaseUrl}/');
+  final target = base.resolveUri(relative);
+  if (document.mimeType == 'application/pdf' ||
+      document.originalFilename.toLowerCase().endsWith('.pdf')) {
+    if (context.mounted) {
+      context.push(
+        AppRoutes.documentReader,
+        extra: DocumentReaderArgs(
+          title: document.title,
+          source: target.toString(),
+        ),
+      );
+    }
+    return;
+  }
+  final launched = await launchUrl(
+    target,
+    mode: LaunchMode.externalApplication,
+  );
+  if (!launched && context.mounted) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Unable to open this document.')),
+    );
+  }
+}
+
+String _fileSize(int bytes) {
+  if (bytes < 1024) return '$bytes B';
+  final kilobytes = bytes / 1024;
+  if (kilobytes < 1024) return '${kilobytes.toStringAsFixed(1)} KB';
+  return '${(kilobytes / 1024).toStringAsFixed(1)} MB';
 }
 
 bool _isManagedOutbreakAssetPath(String value) {

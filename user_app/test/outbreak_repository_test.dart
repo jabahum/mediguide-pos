@@ -60,6 +60,34 @@ class FakeOutbreakApi extends BackendApiService {
         },
       };
     }
+    if (path.endsWith('/documents')) {
+      return {
+        'data': {
+          'items': [
+            {
+              'id': 'document-1',
+              'outbreak_id': 'outbreak-1',
+              'title': 'Ebola response SOP',
+              'document_kind': 'sop',
+              'issuing_authority': 'Ministry of Health',
+              'version': '2.0',
+              'language': 'en',
+              'mime_type': 'application/pdf',
+              'file_size': 4096,
+              'checksum_sha256':
+                  'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+              'download_url':
+                  '/api/public/outbreaks/outbreak-1/documents/document-1/download',
+              'published_at': '2026-08-01T00:00:00Z',
+            },
+          ],
+          'page': 1,
+          'per_page': 20,
+          'total_items': 1,
+          'total_pages': 1,
+        },
+      };
+    }
     if (path == '/api/public/situation-reports') {
       return {
         'data': {
@@ -157,9 +185,12 @@ void main() {
 
     expect(detail.value.updates.single.title, 'Published update');
     expect(detail.value.resources.single.title, 'Clinical guidance');
+    expect(detail.value.documents.single.title, 'Ebola response SOP');
+    expect(detail.value.documents.single.documentKind, 'sop');
     expect(detail.value.reports.single.title, 'Situation report');
     expect(api.calls, contains('/api/public/outbreaks/outbreak-1/updates'));
     expect(api.calls, contains('/api/public/outbreaks/outbreak-1/resources'));
+    expect(api.calls, contains('/api/public/outbreaks/outbreak-1/documents'));
   });
 
   test('malformed server payload is not hidden by a cached response', () async {
@@ -233,6 +264,27 @@ void main() {
     expect(partial.partialFailures, contains('resources'));
     expect(partial.value.resources.single.title, 'Clinical guidance');
   });
+
+  test(
+    'published documents remain discoverable from cached outbreak detail',
+    () async {
+      final store = TestLocalStore();
+      addTearDown(store.close);
+      final api = FakeOutbreakApi();
+      final repository = OutbreakRepository(api, store.cache);
+      await repository.outbreak('outbreak-1');
+      api.offline = true;
+
+      final cached = await repository.outbreak('outbreak-1');
+
+      expect(cached.cache.isOffline, isTrue);
+      expect(cached.value.documents.single.id, 'document-1');
+      expect(
+        cached.value.documents.single.checksumSha256,
+        'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+      );
+    },
+  );
 
   test(
     'withdrawn details are tombstoned and never served as active cache',

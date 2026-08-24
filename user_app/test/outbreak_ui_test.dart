@@ -109,4 +109,53 @@ void main() {
     expect(find.text('Publication withdrawn'), findsOneWidget);
     expect(find.text('No longer public.'), findsOneWidget);
   });
+
+  testWidgets('outbreak detail presents governed documents separately', (
+    tester,
+  ) async {
+    const detail = PublicOutbreakDetail(
+      outbreak: _outbreak,
+      documents: [
+        PublicOutbreakDocument(
+          id: 'document-1',
+          outbreakId: 'outbreak-1',
+          title: 'Ebola response SOP',
+          documentKind: 'ipc_protocol',
+          issuingAuthority: 'Ministry of Health',
+          version: '2.0',
+          language: 'en',
+          mimeType: 'application/pdf',
+          fileSize: 4096,
+          downloadUrl:
+              '/api/public/outbreaks/outbreak-1/documents/document-1/download',
+        ),
+      ],
+    );
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          publicOutbreakProvider('outbreak-1').overrideWith(
+            (_) async => const PublicContent(
+              value: detail,
+              cache: PublicCacheMetadata.online(),
+            ),
+          ),
+        ],
+        child: const MaterialApp(
+          home: OutbreakDetailPage(outbreakId: 'outbreak-1'),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Official documents and SOPs'), findsOneWidget);
+    await tester.scrollUntilVisible(
+      find.text('Ebola response SOP'),
+      250,
+      scrollable: find.byType(Scrollable).last,
+    );
+    expect(find.text('Ebola response SOP'), findsOneWidget);
+    expect(find.text('Ipc Protocol'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
 }

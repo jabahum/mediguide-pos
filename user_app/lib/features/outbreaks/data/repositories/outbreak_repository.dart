@@ -253,6 +253,7 @@ final class OutbreakRepository {
     final cachedDetail = cached == null ? null : _detailFromCache(cached.data);
     var updates = cachedDetail?.updates ?? const <PublicOutbreakUpdate>[];
     var resources = cachedDetail?.resources ?? const <PublicOutbreakResource>[];
+    var documents = cachedDetail?.documents ?? const <PublicOutbreakDocument>[];
     var reports = cachedDetail?.reports ?? const <PublicSituationReport>[];
     final failures = <String>[];
 
@@ -275,6 +276,15 @@ final class OutbreakRepository {
       failures.add('resources');
     }
     try {
+      documents = await _allDocuments(normalized);
+    } catch (error, stackTrace) {
+      if (!_canUseCache(error)) {
+        _recordMalformed('outbreak-documents', error, stackTrace);
+        rethrow;
+      }
+      failures.add('documents');
+    }
+    try {
       reports = await _allReports(
         SituationReportQuery(outbreakId: normalized),
         maxPages: 5,
@@ -291,6 +301,7 @@ final class OutbreakRepository {
       outbreak: outbreak,
       updates: updates,
       resources: resources,
+      documents: documents,
       reports: reports,
     );
     await _bestEffortCache(
@@ -507,6 +518,14 @@ final class OutbreakRepository {
         ),
       );
 
+  Future<List<PublicOutbreakDocument>> _allDocuments(String id) =>
+      _allChildPages(
+        '/api/public/outbreaks/$id/documents',
+        (map) => PublicOutbreakDocument.fromJson(
+          ServicesPublicOutbreakDocument.fromJson(map).toJson(),
+        ),
+      );
+
   Future<List<T>> _allChildPages<T>(
     String path,
     T Function(Map<String, dynamic>) parse,
@@ -716,6 +735,9 @@ final class OutbreakRepository {
         resources: _maps(
           cached['resources'],
         ).map(PublicOutbreakResource.fromJson).toList(),
+        documents: _maps(
+          cached['documents'],
+        ).map(PublicOutbreakDocument.fromJson).toList(),
         reports: _maps(
           cached['reports'],
         ).map(PublicSituationReport.fromJson).toList(),
@@ -725,6 +747,7 @@ final class OutbreakRepository {
     'outbreak': value.outbreak.toJson(),
     'updates': value.updates.map((item) => item.toJson()).toList(),
     'resources': value.resources.map((item) => item.toJson()).toList(),
+    'documents': value.documents.map((item) => item.toJson()).toList(),
     'reports': value.reports.map((item) => item.toJson()).toList(),
   };
 

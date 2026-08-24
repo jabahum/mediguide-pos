@@ -75,6 +75,34 @@ abstract class PublicOutbreakResource with _$PublicOutbreakResource {
 }
 
 @freezed
+abstract class PublicOutbreakDocument with _$PublicOutbreakDocument {
+  const factory PublicOutbreakDocument({
+    required String id,
+    @JsonKey(name: 'outbreak_id') required String outbreakId,
+    @Default('') String title,
+    @Default('') String description,
+    @JsonKey(name: 'document_kind') @Default('other') String documentKind,
+    @JsonKey(name: 'issuing_authority') @Default('') String issuingAuthority,
+    @JsonKey(name: 'document_number') @Default('') String documentNumber,
+    @Default('') String version,
+    @Default('en') String language,
+    @Default('') String audience,
+    @JsonKey(name: 'effective_date') DateTime? effectiveDate,
+    @JsonKey(name: 'review_date') DateTime? reviewDate,
+    @JsonKey(name: 'expires_at') DateTime? expiresAt,
+    @JsonKey(name: 'original_filename') @Default('') String originalFilename,
+    @JsonKey(name: 'mime_type') @Default('') String mimeType,
+    @JsonKey(name: 'file_size') @Default(0) int fileSize,
+    @JsonKey(name: 'checksum_sha256') @Default('') String checksumSha256,
+    @JsonKey(name: 'page_count') int? pageCount,
+    @JsonKey(name: 'download_url') @Default('') String downloadUrl,
+    @JsonKey(name: 'published_at') DateTime? publishedAt,
+  }) = _PublicOutbreakDocument;
+  factory PublicOutbreakDocument.fromJson(Map<String, dynamic> json) =>
+      _$PublicOutbreakDocumentFromJson(json);
+}
+
+@freezed
 abstract class PublicSituationReport with _$PublicSituationReport {
   const factory PublicSituationReport({
     required String id,
@@ -108,6 +136,7 @@ abstract class PublicOutbreakDetail with _$PublicOutbreakDetail {
     required PublicOutbreak outbreak,
     @Default(<PublicOutbreakUpdate>[]) List<PublicOutbreakUpdate> updates,
     @Default(<PublicOutbreakResource>[]) List<PublicOutbreakResource> resources,
+    @Default(<PublicOutbreakDocument>[]) List<PublicOutbreakDocument> documents,
     @Default(<PublicSituationReport>[]) List<PublicSituationReport> reports,
   }) = _PublicOutbreakDetail;
 }

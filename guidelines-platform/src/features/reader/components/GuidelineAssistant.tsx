@@ -38,7 +38,15 @@ export function GuidelineAssistant({ guideline, open, onClose, onCitation }: Gui
   const endRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (open) window.setTimeout(() => inputRef.current?.focus(), 0);
+    if (!open) return undefined;
+
+    const timer = window.setTimeout(() => {
+      inputRef.current?.focus();
+    }, 0);
+
+    return () => {
+      window.clearTimeout(timer);
+    };
   }, [open]);
   useEffect(() => {
     if (!open) {
@@ -56,8 +64,15 @@ export function GuidelineAssistant({ guideline, open, onClose, onCitation }: Gui
       document.body.style.overflow = previousOverflow;
     };
   }, [onClose, open]);
-  useEffect(() => endRef.current?.scrollIntoView({ block: "end" }), [messages, pending]);
-  useEffect(() => () => abortRef.current?.abort(), []);
+  useEffect(() => {
+    endRef.current?.scrollIntoView({ block: "end" });
+  }, [messages, pending]);
+
+  useEffect(() => {
+    return () => {
+      abortRef.current?.abort();
+    };
+  }, []);
   if (!open) return null;
 
   const ask = async (value: string) => {

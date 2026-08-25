@@ -16,6 +16,7 @@
 !docs/clinical-tool-phase-1-inventory.md
 !docs/clinical-tool-runtime.md
 !docs/clinical-tool-validation-status.md
+!docs/seeding.md
 !guidelines-platform/src/content/**/*.md
 !backend/cmd/seed/fixtures/outbreak-documents/*.md
 backend/.env

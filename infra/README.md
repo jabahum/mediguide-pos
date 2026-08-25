@@ -3,6 +3,8 @@
 For versioning, tag creation, mobile signing, GHCR publication, production
 deployment, verification, and rollback, see
 [`docs/release-process.md`](../docs/release-process.md).
+For local demo data and guarded production metadata or administrator seeding,
+see [`docs/seeding.md`](../docs/seeding.md).
 
 The `infra` directory is the single deployment entry point for the MediGuide
 backend, AI workers, dashboard, data services, Ollama, and public Clinical

@@ -59,7 +59,7 @@ make logs                 # follow all containers
 make guidelines-logs      # follow the public frontend
 make down                 # stop and preserve data
 make reset                # destructive: stop and delete development volumes
-make seed                 # seed a locally configured backend
+make seed                 # seed a locally configured backend (see seeding guide)
 make contracts            # regenerate Go/TypeScript/Dart contracts
 make contracts-check      # verify contract drift
 make test                 # backend and AI-worker tests
@@ -67,6 +67,8 @@ make test                 # backend and AI-worker tests
 
 See [`infra/README.md`](infra/README.md) for ports, health checks, volumes,
 production Compose, reverse-proxy routing and deployment.
+Use [`docs/seeding.md`](docs/seeding.md) for deterministic local demo data and
+guarded production administrator/facility metadata seeding.
 
 ## Mobile environments
 
@@ -181,6 +183,7 @@ promotion and store credentials.
 | [`docs/mobile-alpha-release.md`](docs/mobile-alpha-release.md) | Alpha, beta and production mobile delivery |
 | [`docs/mobile-visual-regression.md`](docs/mobile-visual-regression.md) | Golden-image matrix and accessibility sizes |
 | [`docs/release-process.md`](docs/release-process.md) | Unified release, deployment and rollback |
+| [`docs/seeding.md`](docs/seeding.md) | Local demo data and guarded production metadata/admin seeding |
 | [`docs/guideline-publication-architecture.md`](docs/guideline-publication-architecture.md) | Guideline ingestion and publication architecture |
 | [`docs/markdown-authoring-workspace.md`](docs/markdown-authoring-workspace.md) | Dashboard Markdown editor and review workflow |
 | [`docs/guideline-editor-permissions.md`](docs/guideline-editor-permissions.md) | Authoring authorization model |

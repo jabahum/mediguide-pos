@@ -16,9 +16,9 @@ RUN CGO_ENABLED=0 GOOS=linux go build -o /out/notification-worker ./cmd/notifica
 RUN CGO_ENABLED=0 GOOS=linux go build -o /out/clinicaltool-migrate ./cmd/clinicaltool-migrate
 RUN CGO_ENABLED=0 GOOS=linux go build -o /out/clinicaltool-rehearsal ./cmd/clinicaltool-rehearsal
 RUN CGO_ENABLED=0 GOOS=linux go build -o /out/clinicaltool-development-activate ./cmd/clinicaltool-development-activate
+RUN CGO_ENABLED=0 GOOS=linux go build -o /out/seed ./cmd/seed
 
 FROM build AS development-build
-RUN CGO_ENABLED=0 GOOS=linux go build -o /out/seed ./cmd/seed
 
 FROM alpine:3.23 AS production
 ARG BUILD_VERSION=development
@@ -38,6 +38,7 @@ COPY --from=build --chown=mediguide:mediguide /out/notification-worker /app/noti
 COPY --from=build --chown=mediguide:mediguide /out/clinicaltool-migrate /app/clinicaltool-migrate
 COPY --from=build --chown=mediguide:mediguide /out/clinicaltool-rehearsal /app/clinicaltool-rehearsal
 COPY --from=build --chown=mediguide:mediguide /out/clinicaltool-development-activate /app/clinicaltool-development-activate
+COPY --from=build --chown=mediguide:mediguide /out/seed /app/seed
 COPY --from=build --chown=mediguide:mediguide /out/legacy-tools /app/legacy-tools
 COPY --from=build --chown=mediguide:mediguide /out/clinical-tools /app/clinical-tools
 COPY --chown=mediguide:mediguide backend/migrations /app/migrations
@@ -78,14 +79,11 @@ HEALTHCHECK --interval=10s --timeout=3s --start-period=15s --retries=6 \
 CMD ["/app/api"]
 
 FROM production AS development
-USER root
-COPY --from=development-build --chown=mediguide:mediguide /out/seed /app/seed
-USER 10001:10001
 
 # Persistent local-development variant with no executable calculator HTML.
 # Use only after the guarded development activation command has published all
 # schema tools in the local database.
 FROM schema-only AS schema-only-development
 USER root
-COPY --from=development-build --chown=mediguide:mediguide /out/seed /app/seed
+COPY --from=build --chown=mediguide:mediguide /out/seed /app/seed
 USER 10001:10001

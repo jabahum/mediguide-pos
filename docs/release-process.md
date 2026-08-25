@@ -422,6 +422,11 @@ match those inspected in GHCR.
 
 ## Bootstrap a production administrator
 
+The complete local and production seed runbook, including prerequisites,
+backups, manual fallback, SQL verification and troubleshooting, is in
+[`seeding.md`](seeding.md). This section is the abbreviated release-operator
+path.
+
 The general `/app/seed` command contains development fixtures and is blocked
 when `APP_ENV=production`. Production supports only the explicit `admin` and
 `facilities` scopes. Configure these values inside the `PRODUCTION_ENV_FILE`

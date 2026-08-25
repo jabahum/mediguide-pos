@@ -55,7 +55,7 @@ func seedDemoData(ctx context.Context, database *gorm.DB, store storage.ObjectSt
 			func() error { return seedDemoCalculators(tx, admin.ID) },
 			func() error { return seedDemoDrugs(tx) },
 			func() error { return seedDemoGuidelines(ctx, tx, store, admin.ID) },
-			func() error { return seedDemoOutbreaks(tx) },
+			func() error { return seedDemoOutbreaks(ctx, tx, store, admin.ID, clinician.ID) },
 			func() error { return seedDemoPeopleAndHelp(tx, admin.ID, clinician.ID) },
 		}
 		for _, step := range steps {
@@ -461,7 +461,7 @@ func demoOfflinePackage(g demoGuideline, markdown []byte) ([]byte, error) {
 	return output.Bytes(), nil
 }
 
-func seedDemoOutbreaks(database *gorm.DB) error {
+func seedDemoOutbreaks(ctx context.Context, database *gorm.DB, store storage.ObjectStore, authorID, clinicianID uuid.UUID) error {
 	// This fixture mirrors the public WHO/MoH record available when the seed was
 	// authored. Keep the dates and figures fixed: using time.Now here would make
 	// historical surveillance data appear current after every seed run.
@@ -519,6 +519,9 @@ func seedDemoOutbreaks(database *gorm.DB) error {
 		if err := upsertByID(database, "outbreak_resources", row); err != nil {
 			return err
 		}
+	}
+	if err := seedDemoOutbreakDocuments(ctx, database, store, ebolaID, authorID, clinicianID); err != nil {
+		return err
 	}
 	if err := upsertByID(database, "situation_reports", map[string]any{
 		"id": demoID("situation-report", "who-bvd-11-2026-07-26"), "outbreak_id": ebolaID, "title": "Bundibugyo virus disease weekly external situation report 11",

@@ -83,3 +83,11 @@ Document transitions create typed, idempotent notifications in the same database
 - review-date and expiry reminders go only to reviewers.
 
 The notification worker scans reminders every six hours and on startup. Deduplication keys include document, event/due state, due date and recipient, so repeated scans are safe. Staff actions include the dashboard route `/outbreaks/:id?document=:documentId`; mobile discards that staff-only parameter. Public mobile deep links are resolved from typed IDs and never trust a caller-supplied route. Templates for the lifecycle catalogue are installed by migration `00044`.
+
+## Demo and staging document seed
+
+The standard `SEED_SCOPE=demo` seed publishes six deterministic Markdown fixtures for the Bundibugyo virus disease demonstration outbreak: a case-management SOP, IPC protocol, laboratory specimen-handling protocol, contact-tracing guide, frontline checklist and risk-communication guide. The source files live in `backend/cmd/seed/fixtures/outbreak-documents` and are embedded in the seed binary. Each database record therefore has a corresponding object uploaded to the configured MinIO/S3 bucket under a deterministic `demo/outbreaks/...` key.
+
+Rerunning the seed is safe: document UUIDs, document numbers, versions and storage keys are stable; object contents are replaced from the repository fixture; and SHA-256 checksum and size metadata are recalculated. The fixtures are clearly marked as demonstration content and are not clinician-approved operational guidance.
+
+Demo seeding is blocked when `APP_ENV=production` unless an operator explicitly sets `SEED_ALLOW_DEMO=true`. That override is intended only for a controlled demo/staging server whose environment happens to use the production Compose profile. Real production deployments should seed only approved scopes such as `SEED_SCOPE=admin` or `SEED_SCOPE=facilities`, then publish clinician-approved documents through the governed dashboard workflow.

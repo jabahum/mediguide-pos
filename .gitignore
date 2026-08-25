@@ -17,6 +17,7 @@
 !docs/clinical-tool-runtime.md
 !docs/clinical-tool-validation-status.md
 !guidelines-platform/src/content/**/*.md
+!backend/cmd/seed/fixtures/outbreak-documents/*.md
 backend/.env
 backend/.env.local
 .DS_Store

@@ -1,0 +1,96 @@
+package main
+
+import (
+	"bytes"
+	"context"
+	"crypto/sha256"
+	"embed"
+	"encoding/hex"
+	"fmt"
+	"path"
+	"time"
+
+	"mediguide/internal/storage"
+
+	"github.com/google/uuid"
+	"gorm.io/gorm"
+)
+
+// Repository-owned fixtures are embedded into /app/seed. A seed can therefore
+// never create a published database row whose source file was omitted from the
+// runtime image.
+//
+//go:embed fixtures/outbreak-documents/*.md
+var demoOutbreakDocumentFiles embed.FS
+
+type demoOutbreakDocument struct {
+	Key            string
+	Fixture        string
+	Title          string
+	Description    string
+	Kind           string
+	DocumentNumber string
+	Version        string
+	Audience       string
+	EffectiveDate  time.Time
+	ReviewDate     time.Time
+	ExpiresAt      time.Time
+	SortOrder      int
+}
+
+func demoOutbreakDocuments() []demoOutbreakDocument {
+	effective := time.Date(2026, time.May, 16, 0, 0, 0, 0, time.UTC)
+	review := time.Date(2027, time.May, 16, 0, 0, 0, 0, time.UTC)
+	expires := time.Date(2028, time.May, 16, 0, 0, 0, 0, time.UTC)
+	return []demoOutbreakDocument{
+		{Key: "ebola-case-management-sop", Fixture: "ebola-case-management-sop.md", Title: "Ebola case-management standard operating procedure", Description: "Demonstration workflow for safe reception, isolation, assessment, escalation and referral of a suspected Ebola case.", Kind: "sop", DocumentNumber: "DEMO-EVD-SOP-001", Version: "1.0", Audience: "Clinicians and Ebola treatment-unit teams", EffectiveDate: effective, ReviewDate: review, ExpiresAt: expires, SortOrder: 10},
+		{Key: "ebola-ipc-sop", Fixture: "ebola-ipc-sop.md", Title: "Ebola infection prevention and control SOP", Description: "Demonstration operational controls for zoning, PPE, hand hygiene, environmental cleaning and exposure reporting.", Kind: "ipc_protocol", DocumentNumber: "DEMO-EVD-IPC-001", Version: "1.0", Audience: "Health workers, IPC focal persons and support staff", EffectiveDate: effective, ReviewDate: review, ExpiresAt: expires, SortOrder: 20},
+		{Key: "ebola-specimen-handling", Fixture: "ebola-specimen-handling-protocol.md", Title: "Ebola laboratory specimen-handling protocol", Description: "Demonstration protocol for authorization, collection, triple packaging, transport and laboratory handover.", Kind: "laboratory_protocol", DocumentNumber: "DEMO-EVD-LAB-001", Version: "1.0", Audience: "Clinicians, laboratory personnel and specimen couriers", EffectiveDate: effective, ReviewDate: review, ExpiresAt: expires, SortOrder: 30},
+		{Key: "ebola-contact-tracing", Fixture: "ebola-contact-tracing-guide.md", Title: "Ebola contact-tracing field guide", Description: "Demonstration guide for contact identification, registration, follow-up, alert escalation and closure.", Kind: "contact_tracing_guide", DocumentNumber: "DEMO-EVD-CT-001", Version: "1.0", Audience: "Surveillance officers and contact-tracing teams", EffectiveDate: effective, ReviewDate: review, ExpiresAt: expires, SortOrder: 40},
+		{Key: "ebola-health-worker-checklist", Fixture: "ebola-health-worker-checklist.md", Title: "Suspected Ebola case health-worker checklist", Description: "Demonstration point-of-care checklist for immediate isolation, IPC, notification and safe referral actions.", Kind: "checklist", DocumentNumber: "DEMO-EVD-CHK-001", Version: "1.0", Audience: "Frontline health workers", EffectiveDate: effective, ReviewDate: review, ExpiresAt: expires, SortOrder: 50},
+		{Key: "ebola-communication-guide", Fixture: "ebola-communication-guide.md", Title: "Ebola outbreak risk-communication guide", Description: "Demonstration guide for coordinated, accessible and privacy-preserving public communication during an outbreak.", Kind: "communication_material", DocumentNumber: "DEMO-EVD-COMMS-001", Version: "1.0", Audience: "Risk-communication teams, spokespersons and district leaders", EffectiveDate: effective, ReviewDate: review, ExpiresAt: expires, SortOrder: 60},
+	}
+}
+
+func seedDemoOutbreakDocuments(ctx context.Context, database *gorm.DB, store storage.ObjectStore, outbreakID, authorID, clinicianID uuid.UUID) error {
+	if store == nil {
+		return fmt.Errorf("outbreak document seed requires object storage")
+	}
+	publishedAt := time.Date(2026, time.May, 16, 12, 0, 0, 0, time.UTC)
+	for _, document := range demoOutbreakDocuments() {
+		fixturePath := path.Join("fixtures/outbreak-documents", document.Fixture)
+		content, err := demoOutbreakDocumentFiles.ReadFile(fixturePath)
+		if err != nil {
+			return fmt.Errorf("read outbreak document fixture %q: %w", fixturePath, err)
+		}
+		if len(bytes.TrimSpace(content)) == 0 {
+			return fmt.Errorf("outbreak document fixture %q is empty", fixturePath)
+		}
+
+		documentID := demoID("outbreak-document", document.Key)
+		storageKey := fmt.Sprintf("demo/outbreaks/%s/documents/%s/%s", outbreakID, documentID, document.Fixture)
+		checksum := sha256.Sum256(content)
+		if err := store.Put(ctx, storageKey, bytes.NewReader(content), int64(len(content)), "text/markdown; charset=utf-8"); err != nil {
+			return fmt.Errorf("store outbreak document fixture %q: %w", document.Fixture, err)
+		}
+
+		if err := upsertByID(database, "outbreak_resources", map[string]any{
+			"id": documentID, "outbreak_id": outbreakID, "title": document.Title,
+			"description": document.Description, "resource_type": "managed_document",
+			"document_kind": document.Kind, "issuing_authority": "Ministry of Health Uganda",
+			"document_number": document.DocumentNumber, "version": document.Version,
+			"language": "en", "audience": document.Audience,
+			"effective_date": document.EffectiveDate, "review_date": document.ReviewDate,
+			"expires_at": document.ExpiresAt, "storage_key": storageKey,
+			"original_filename": document.Fixture, "mime_type": "text/markdown; charset=utf-8",
+			"file_size": int64(len(content)), "checksum_sha256": hex.EncodeToString(checksum[:]),
+			"url": "", "asset_url": "", "sort_order": document.SortOrder,
+			"status": "published", "author_id": authorID, "reviewed_by": clinicianID,
+			"reviewed_at": publishedAt, "approved_by": clinicianID, "approved_at": publishedAt,
+			"published_at": publishedAt, "lock_version": 1,
+		}); err != nil {
+			return fmt.Errorf("upsert outbreak document %q: %w", document.Key, err)
+		}
+	}
+	return nil
+}

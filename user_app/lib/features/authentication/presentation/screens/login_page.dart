@@ -4,8 +4,8 @@ import 'package:flutter/services.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:form_builder_validators/form_builder_validators.dart';
-import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:go_router/go_router.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import 'package:user_app/app/router/app_navigator.dart';
 import 'package:user_app/app/router/app_router.dart';
@@ -40,58 +40,161 @@ class _LoginPageState extends ConsumerState<LoginPage> {
 
   final GlobalKey<FormBuilderState> _formKey = GlobalKey<FormBuilderState>();
 
+  bool _isSubmitting = false;
+
+  // ==========================================================================
+  // ROUTE CONTEXT
+  // ==========================================================================
+
+  String? get _redirect {
+    final value = GoRouterState.of(
+      context,
+    ).uri.queryParameters['redirect']?.trim();
+
+    if (value == null || value.isEmpty) {
+      return null;
+    }
+
+    return value;
+  }
+
+  String? get _reason {
+    final value = GoRouterState.of(
+      context,
+    ).uri.queryParameters['reason']?.trim();
+
+    if (value == null || value.isEmpty) {
+      return null;
+    }
+
+    return value;
+  }
+
+  bool get _authenticationRequired {
+    return _reason == 'authentication_required';
+  }
+
+  // ==========================================================================
+  // LOGIN
+  // ==========================================================================
+
   Future<void> _submit() async {
+    if (_isSubmitting) {
+      return;
+    }
+
     final form = _formKey.currentState;
 
     if (form == null) {
       return;
     }
 
-    if (!(form.saveAndValidate())) {
+    FocusScope.of(context).unfocus();
+
+    final valid = form.saveAndValidate();
+
+    if (!valid) {
       return;
     }
 
-    final email = form.value[_emailField]?.toString().trim();
+    final email = form.value[_emailField]?.toString().trim() ?? '';
 
     final password = form.value[_passwordField]?.toString() ?? '';
 
-    if (email == null || email.isEmpty || password.isEmpty) {
+    if (email.isEmpty || password.isEmpty) {
       return;
     }
 
-    FocusScope.of(context).unfocus();
+    setState(() {
+      _isSubmitting = true;
+    });
 
     try {
       final loggedIn = await ref
           .read(authControllerProvider.notifier)
           .login(email: email, password: password);
 
-      if (!mounted || !loggedIn) {
-        return;
-      }
-
-      final redirect = GoRouterState.of(
-        context,
-      ).uri.queryParameters['redirect'];
-      AppNavigator.go(AppRoutes.safeDestination(redirect));
-    } catch (error) {
       if (!mounted) {
         return;
       }
 
-      _showLoginError(error);
+      if (!loggedIn) {
+        _showLoginError();
+
+        return;
+      }
+
+      // Tell Android/iOS that the autofill login session completed.
+      TextInput.finishAutofillContext();
+
+      final destination = AppRoutes.safeDestination(_redirect);
+
+      AppNavigator.go(destination);
+    } catch (_) {
+      if (!mounted) {
+        return;
+      }
+
+      _showLoginError();
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isSubmitting = false;
+        });
+      }
     }
   }
 
-  void _showLoginError(Object error) {
+  void _showLoginError() {
     final navigatorContext = AppKeys.navigatorKey.currentContext;
 
-    if (navigatorContext == null) {
+    if (navigatorContext == null || !navigatorContext.mounted) {
       return;
     }
 
-    AppMessage.error(navigatorContext, '${'loginFailed'.tr}: $error');
+    AppMessage.error(
+      navigatorContext,
+      'Unable to sign in. Check your email and password and try again.',
+    );
   }
+
+  // ==========================================================================
+  // NAVIGATION
+  // ==========================================================================
+
+  void _openForgotPassword() {
+    final redirect = _redirect;
+
+    if (redirect == null) {
+      AppNavigator.push(AppRoutes.forgotPassword);
+
+      return;
+    }
+
+    AppNavigator.push(
+      '${AppRoutes.forgotPassword}'
+      '?redirect=${Uri.encodeQueryComponent(redirect)}',
+    );
+  }
+
+  void _openRegister() {
+    final redirect = _redirect;
+
+    if (redirect == null) {
+      AppNavigator.push(AppRoutes.register);
+
+      return;
+    }
+
+    AppNavigator.push(
+      '${AppRoutes.register}'
+      '?redirect=${Uri.encodeQueryComponent(redirect)}',
+    );
+  }
+
+  // ==========================================================================
+  // BUILD
+  // ==========================================================================
 
   @override
   Widget build(BuildContext context) {
@@ -99,13 +202,15 @@ class _LoginPageState extends ConsumerState<LoginPage> {
 
     final auth = authState.valueOrNull;
 
-    final isLoading = auth?.phase == AuthPhase.authenticating;
+    final controllerLoading = auth?.phase == AuthPhase.authenticating;
+
+    final isLoading = controllerLoading || _isSubmitting;
 
     final isPasswordVisible = ref.watch(_passwordVisibleProvider);
 
     final theme = context.theme;
-    final cs = theme.colorScheme;
-    final size = MediaQuery.sizeOf(context);
+
+    final colors = theme.colorScheme;
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: FlexColorScheme.themedSystemNavigationBar(
@@ -115,6 +220,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
       ),
       child: Scaffold(
         resizeToAvoidBottomInset: true,
+        backgroundColor: colors.surface,
         body: GestureDetector(
           behavior: HitTestBehavior.opaque,
           onTap: () {
@@ -126,222 +232,278 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
                 colors: [
-                  cs.primary.withValues(alpha: 0.10),
-                  cs.secondary.withValues(alpha: 0.05),
-                  cs.surface,
+                  colors.primary.withValues(alpha: 0.10),
+                  colors.secondary.withValues(alpha: 0.05),
+                  colors.surface,
                 ],
-                stops: const [0.0, 0.45, 1.0],
+                stops: const [0, 0.45, 1],
               ),
             ),
-            child: SizedBox(
-              width: size.width,
-              height: size.height,
-              child: SafeArea(
-                child: Center(
-                  child: SingleChildScrollView(
+            child: SafeArea(
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  return SingleChildScrollView(
                     keyboardDismissBehavior:
                         ScrollViewKeyboardDismissBehavior.onDrag,
                     padding: EdgeInsets.symmetric(
-                      vertical: Responsive.verticalPadding(context),
                       horizontal: Responsive.horizontalPadding(context),
+                      vertical: Responsive.verticalPadding(context),
                     ),
                     child: ConstrainedBox(
                       constraints: BoxConstraints(
-                        maxWidth: Responsive.value<double>(
-                          context,
-                          mobile: double.infinity,
-                          tablet: 500,
-                          desktop: 460,
-                        ),
+                        minHeight:
+                            constraints.maxHeight -
+                            (Responsive.verticalPadding(context) * 2),
                       ),
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          const AppLogo(logoSize: 180),
-
-                          if (GoRouterState.of(
-                                context,
-                              ).uri.queryParameters['reason'] ==
-                              'authentication_required') ...[
-                            AppSpacing.gapMd,
-                            Semantics(
-                              liveRegion: true,
-                              child: Text(
-                                'Sign in to use this private feature. You will return to it after authentication.',
-                                textAlign: TextAlign.center,
-                                style: theme.textTheme.bodyMedium?.copyWith(
-                                  color: cs.onSurfaceVariant,
-                                ),
-                              ),
-                            ),
-                          ],
-
-                          AppSpacing.gapLg,
-
-                          GlassCard.auth(
-                            child: FormBuilder(
-                              key: _formKey,
-                              enabled: !isLoading,
-                              autovalidateMode:
-                                  AutovalidateMode.onUserInteraction,
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.stretch,
-                                children: [
-                                  Text(
-                                    AppTranslationKey.signIn.tr,
-                                    style: theme.textTheme.headlineSmall
-                                        ?.copyWith(
-                                          fontWeight: FontWeight.w700,
-                                          color: cs.onSurface,
-                                          fontSize: Responsive.fontSize(
-                                            context,
-                                            mobile: 24,
-                                            tablet: 28,
-                                            desktop: 30,
-                                          ),
-                                        ),
-                                  ),
-
-                                  AppSpacing.contentGap,
-
-                                  FormBuilderTextField(
-                                    name: _emailField,
-                                    keyboardType: TextInputType.emailAddress,
-                                    textInputAction: TextInputAction.next,
-                                    autofillHints: const [
-                                      AutofillHints.username,
-                                      AutofillHints.email,
-                                    ],
-                                    autocorrect: false,
-                                    enableSuggestions: false,
-                                    decoration: _inputDecoration(
-                                      context,
-                                      label: AppTranslationKey.email.tr,
-                                      icon: LucideIcons.mail,
-                                    ),
-                                    validator: FormBuilderValidators.compose([
-                                      FormBuilderValidators.required(),
-                                      FormBuilderValidators.email(),
-                                    ]),
-                                  ),
-
-                                  AppSpacing.fieldGap,
-
-                                  FormBuilderTextField(
-                                    name: _passwordField,
-                                    obscureText: !isPasswordVisible,
-                                    textInputAction: TextInputAction.done,
-                                    autofillHints: const [
-                                      AutofillHints.password,
-                                    ],
-                                    onSubmitted: (_) {
-                                      if (!isLoading) {
-                                        _submit();
-                                      }
-                                    },
-                                    decoration: _inputDecoration(
-                                      context,
-                                      label: AppTranslationKey.password.tr,
-                                      icon: LucideIcons.lock,
-                                      suffixIcon: IconButton(
-                                        tooltip: isPasswordVisible
-                                            ? 'Hide password'
-                                            : 'Show password',
-                                        icon: Icon(
-                                          isPasswordVisible
-                                              ? LucideIcons.eyeOff
-                                              : LucideIcons.eye,
-                                          color: cs.primary,
-                                        ),
-                                        onPressed: isLoading
-                                            ? null
-                                            : () {
-                                                final notifier = ref.read(
-                                                  _passwordVisibleProvider
-                                                      .notifier,
-                                                );
-
-                                                notifier.state =
-                                                    !isPasswordVisible;
-                                              },
-                                      ),
-                                    ),
-                                    validator: FormBuilderValidators.compose([
-                                      FormBuilderValidators.required(),
-                                      FormBuilderValidators.minLength(6),
-                                    ]),
-                                  ),
-
-                                  AppSpacing.gapSm,
-
-                                  Align(
-                                    alignment: Alignment.centerRight,
-                                    child: TextButton(
-                                      onPressed: isLoading
-                                          ? null
-                                          : () {
-                                              AppNavigator.push(
-                                                AppRoutes.forgotPassword,
-                                              );
-                                            },
-                                      child: Text(
-                                        AppTranslationKey.forgotPassword.tr,
-                                        style: TextStyle(
-                                          color: cs.primary,
-                                          fontWeight: FontWeight.w600,
-                                          fontSize: Responsive.fontSize(
-                                            context,
-                                            mobile: 14,
-                                            tablet: 15,
-                                            desktop: 16,
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-
-                                  AppSpacing.elementGap,
-
-                                  AppButton.large(
-                                    text: AppTranslationKey.signIn.tr,
-                                    onPressed: isLoading ? null : _submit,
-                                    isLoading: isLoading,
-                                    loadingText: AppTranslationKey.signingIn.tr,
-                                    width: double.infinity,
-                                  ),
-
-                                  AppSpacing.fieldGap,
-
-                                  AppButtonVariants.outlined(
-                                    text: AppTranslationKey.createAccount.tr,
-                                    onPressed: isLoading
-                                        ? null
-                                        : () {
-                                            AppNavigator.push(
-                                              AppRoutes.register,
-                                            );
-                                          },
-                                    width: double.infinity,
-                                    height: Responsive.doubleValue(
-                                      context,
-                                      mobile: 52.0,
-                                      tablet: 56.0,
-                                      desktop: 60.0,
-                                    ),
-                                  ),
-                                ],
-                              ),
+                      child: Center(
+                        child: ConstrainedBox(
+                          constraints: BoxConstraints(
+                            maxWidth: Responsive.value<double>(
+                              context,
+                              mobile: double.infinity,
+                              tablet: 500,
+                              desktop: 460,
                             ),
                           ),
+                          child: AutofillGroup(
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                // ============================================
+                                // LOGO
+                                // ============================================
+                                const Center(child: AppLogo(logoSize: 160)),
 
-                          AppSpacing.gapXl,
+                                AppSpacing.gapLg,
 
-                          const CopyrightTermsWidget(),
-                        ],
+                                // ============================================
+                                // AUTHENTICATION REQUIRED
+                                // ============================================
+                                if (_authenticationRequired) ...[
+                                  const _AuthenticationRequiredBanner(),
+
+                                  AppSpacing.gapMd,
+                                ],
+
+                                // ============================================
+                                // LOGIN CARD
+                                // ============================================
+                                GlassCard.auth(
+                                  child: FormBuilder(
+                                    key: _formKey,
+                                    enabled: !isLoading,
+                                    autovalidateMode:
+                                        AutovalidateMode.onUserInteraction,
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.stretch,
+                                      children: [
+                                        // ------------------------------------
+                                        // HEADER
+                                        // ------------------------------------
+                                        Text(
+                                          AppTranslationKey.signIn.tr,
+                                          style: theme.textTheme.headlineSmall
+                                              ?.copyWith(
+                                                fontWeight: FontWeight.w800,
+                                                color: colors.onSurface,
+                                                fontSize: Responsive.fontSize(
+                                                  context,
+                                                  mobile: 24,
+                                                  tablet: 28,
+                                                  desktop: 30,
+                                                ),
+                                              ),
+                                        ),
+
+                                        const SizedBox(height: 5),
+
+                                        Text(
+                                          'Sign in to access your saved guidelines, '
+                                          'notes, downloads and clinical tools.',
+                                          style: theme.textTheme.bodyMedium
+                                              ?.copyWith(
+                                                color: colors.onSurfaceVariant,
+                                                height: 1.4,
+                                              ),
+                                        ),
+
+                                        AppSpacing.gapLg,
+
+                                        // ------------------------------------
+                                        // EMAIL
+                                        // ------------------------------------
+                                        FormBuilderTextField(
+                                          name: _emailField,
+                                          keyboardType:
+                                              TextInputType.emailAddress,
+                                          textInputAction: TextInputAction.next,
+                                          autofillHints: const [
+                                            AutofillHints.username,
+                                            AutofillHints.email,
+                                          ],
+                                          autocorrect: false,
+                                          enableSuggestions: false,
+                                          decoration: _inputDecoration(
+                                            context,
+                                            label: AppTranslationKey.email.tr,
+                                            hint: 'name@example.com',
+                                            icon: LucideIcons.mail,
+                                          ),
+                                          validator: FormBuilderValidators.compose([
+                                            FormBuilderValidators.required(
+                                              errorText: 'Email is required.',
+                                            ),
+                                            FormBuilderValidators.email(
+                                              errorText:
+                                                  'Enter a valid email address.',
+                                            ),
+                                          ]),
+                                        ),
+
+                                        AppSpacing.fieldGap,
+
+                                        // ------------------------------------
+                                        // PASSWORD
+                                        // ------------------------------------
+                                        FormBuilderTextField(
+                                          name: _passwordField,
+                                          obscureText: !isPasswordVisible,
+                                          textInputAction: TextInputAction.done,
+                                          autofillHints: const [
+                                            AutofillHints.password,
+                                          ],
+                                          enableSuggestions: false,
+                                          autocorrect: false,
+                                          onSubmitted: (_) {
+                                            if (!isLoading) {
+                                              _submit();
+                                            }
+                                          },
+                                          decoration: _inputDecoration(
+                                            context,
+                                            label:
+                                                AppTranslationKey.password.tr,
+                                            hint: 'Enter your password',
+                                            icon: LucideIcons.lock,
+                                            suffixIcon: IconButton(
+                                              tooltip: isPasswordVisible
+                                                  ? 'Hide password'
+                                                  : 'Show password',
+                                              onPressed: isLoading
+                                                  ? null
+                                                  : () {
+                                                      final notifier = ref.read(
+                                                        _passwordVisibleProvider
+                                                            .notifier,
+                                                      );
+
+                                                      notifier.state =
+                                                          !isPasswordVisible;
+                                                    },
+                                              icon: Icon(
+                                                isPasswordVisible
+                                                    ? LucideIcons.eyeOff
+                                                    : LucideIcons.eye,
+                                                color: colors.primary,
+                                              ),
+                                            ),
+                                          ),
+
+                                          // Login should generally not enforce
+                                          // the password creation policy.
+                                          validator:
+                                              FormBuilderValidators.required(
+                                                errorText:
+                                                    'Password is required.',
+                                              ),
+                                        ),
+
+                                        // ------------------------------------
+                                        // FORGOT PASSWORD
+                                        // ------------------------------------
+                                        Align(
+                                          alignment: Alignment.centerRight,
+                                          child: TextButton(
+                                            onPressed: isLoading
+                                                ? null
+                                                : _openForgotPassword,
+                                            child: Text(
+                                              AppTranslationKey
+                                                  .forgotPassword
+                                                  .tr,
+                                              style: TextStyle(
+                                                color: colors.primary,
+                                                fontWeight: FontWeight.w600,
+                                                fontSize: Responsive.fontSize(
+                                                  context,
+                                                  mobile: 14,
+                                                  tablet: 15,
+                                                  desktop: 16,
+                                                ),
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+
+                                        AppSpacing.gapSm,
+
+                                        // ------------------------------------
+                                        // SIGN IN
+                                        // ------------------------------------
+                                        AppButton.large(
+                                          text: AppTranslationKey.signIn.tr,
+                                          onPressed: isLoading ? null : _submit,
+                                          isLoading: isLoading,
+                                          loadingText:
+                                              AppTranslationKey.signingIn.tr,
+                                          width: double.infinity,
+                                        ),
+
+                                        AppSpacing.gapMd,
+
+                                        // ------------------------------------
+                                        // DIVIDER
+                                        // ------------------------------------
+                                        const _OrDivider(),
+
+                                        AppSpacing.gapMd,
+
+                                        // ------------------------------------
+                                        // REGISTER
+                                        // ------------------------------------
+                                        AppButtonVariants.outlined(
+                                          text: AppTranslationKey
+                                              .createAccount
+                                              .tr,
+                                          onPressed: isLoading
+                                              ? null
+                                              : _openRegister,
+                                          width: double.infinity,
+                                          height: Responsive.doubleValue(
+                                            context,
+                                            mobile: 52,
+                                            tablet: 56,
+                                            desktop: 60,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+
+                                AppSpacing.gapXl,
+
+                                const CopyrightTermsWidget(),
+                              ],
+                            ),
+                          ),
+                        ),
                       ),
                     ),
-                  ),
-                ),
+                  );
+                },
               ),
             ),
           ),
@@ -350,29 +512,35 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     );
   }
 
+  // ==========================================================================
+  // INPUT DECORATION
+  // ==========================================================================
+
   InputDecoration _inputDecoration(
     BuildContext context, {
     required String label,
     required IconData icon,
+    String? hint,
     Widget? suffixIcon,
   }) {
-    final cs = context.theme.colorScheme;
+    final colors = context.theme.colorScheme;
 
     return InputDecoration(
       labelText: label,
+      hintText: hint,
       filled: true,
-      fillColor: cs.surface.withValues(alpha: 0.72),
+      fillColor: colors.surface.withValues(alpha: 0.76),
       prefixIcon: Icon(
         icon,
-        color: cs.primary,
+        color: colors.primary,
         size: Responsive.iconSize(context, mobile: 20, tablet: 22, desktop: 24),
       ),
       suffixIcon: suffixIcon,
       border: _border(context),
       enabledBorder: _border(context),
-      focusedBorder: _border(context, color: cs.primary, width: 2),
-      errorBorder: _border(context, color: cs.error),
-      focusedErrorBorder: _border(context, color: cs.error, width: 2),
+      focusedBorder: _border(context, color: colors.primary, width: 1.7),
+      errorBorder: _border(context, color: colors.error),
+      focusedErrorBorder: _border(context, color: colors.error, width: 1.7),
     );
   }
 
@@ -381,14 +549,119 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     Color? color,
     double width = 1,
   }) {
-    final cs = context.theme.colorScheme;
+    final colors = context.theme.colorScheme;
 
     return OutlineInputBorder(
       borderRadius: BorderRadius.circular(14),
       borderSide: BorderSide(
-        color: color ?? cs.outlineVariant.withValues(alpha: 0.7),
+        color: color ?? colors.outlineVariant.withValues(alpha: 0.7),
         width: width,
       ),
+    );
+  }
+}
+
+// ============================================================================
+// AUTHENTICATION REQUIRED BANNER
+// ============================================================================
+
+class _AuthenticationRequiredBanner extends StatelessWidget {
+  const _AuthenticationRequiredBanner();
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+
+    return Semantics(
+      liveRegion: true,
+      container: true,
+      label:
+          'Authentication required. Sign in to continue to the requested feature.',
+      child: Container(
+        padding: const EdgeInsets.all(AppSpacing.md),
+        decoration: BoxDecoration(
+          color: colors.secondaryContainer.withValues(alpha: 0.7),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: colors.secondary.withValues(alpha: 0.12)),
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              width: 38,
+              height: 38,
+              decoration: BoxDecoration(
+                color: colors.secondary.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(11),
+              ),
+              child: Icon(
+                LucideIcons.lockKeyhole,
+                size: 19,
+                color: colors.secondary,
+              ),
+            ),
+
+            AppSpacing.hGapSm,
+
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Sign in required',
+                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.w700,
+                      color: colors.onSecondaryContainer,
+                    ),
+                  ),
+
+                  const SizedBox(height: 2),
+
+                  Text(
+                    'Sign in to use this private feature. '
+                    'You will return to it after authentication.',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: colors.onSecondaryContainer,
+                      height: 1.4,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ============================================================================
+// OR DIVIDER
+// ============================================================================
+
+class _OrDivider extends StatelessWidget {
+  const _OrDivider();
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+
+    return Row(
+      children: [
+        Expanded(child: Divider(color: colors.outlineVariant)),
+
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+          child: Text(
+            'or',
+            style: Theme.of(
+              context,
+            ).textTheme.bodySmall?.copyWith(color: colors.onSurfaceVariant),
+          ),
+        ),
+
+        Expanded(child: Divider(color: colors.outlineVariant)),
+      ],
     );
   }
 }

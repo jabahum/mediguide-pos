@@ -6,6 +6,7 @@ import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:form_builder_phone_field/form_builder_phone_field.dart';
 import 'package:form_builder_validators/form_builder_validators.dart';
+import 'package:go_router/go_router.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import 'package:user_app/app/router/app_navigator.dart';
@@ -48,6 +49,28 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
 
   final GlobalKey<FormBuilderState> _formKey = GlobalKey<FormBuilderState>();
 
+  bool _isSubmitting = false;
+
+  // ==========================================================================
+  // ROUTE CONTEXT
+  // ==========================================================================
+
+  String? get _redirect {
+    final value = GoRouterState.of(
+      context,
+    ).uri.queryParameters['redirect']?.trim();
+
+    if (value == null || value.isEmpty) {
+      return null;
+    }
+
+    return value;
+  }
+
+  // ==========================================================================
+  // VALIDATORS
+  // ==========================================================================
+
   String? _licenseNumberValidator(String? value) {
     final license = value?.trim() ?? '';
 
@@ -62,14 +85,48 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
     return null;
   }
 
+  String? _passwordValidator(String? value) {
+    final password = value ?? '';
+
+    if (password.isEmpty) {
+      return 'Password is required';
+    }
+
+    if (password.length < 8) {
+      return 'Password must be at least 8 characters';
+    }
+
+    if (!RegExp(r'[A-Za-z]').hasMatch(password)) {
+      return 'Password must contain at least one letter';
+    }
+
+    if (!RegExp(r'[0-9]').hasMatch(password)) {
+      return 'Password must contain at least one number';
+    }
+
+    return null;
+  }
+
+  // ==========================================================================
+  // SUBMIT
+  // ==========================================================================
+
   Future<void> _submit() async {
+    if (_isSubmitting) {
+      return;
+    }
+
     final form = _formKey.currentState;
 
     if (form == null) {
       return;
     }
 
-    if (!form.saveAndValidate()) {
+    FocusScope.of(context).unfocus();
+
+    final valid = form.saveAndValidate();
+
+    if (!valid) {
       return;
     }
 
@@ -77,6 +134,7 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
 
     if (values[_termsField] != true) {
       _showError('agreeToTermsError'.tr);
+
       return;
     }
 
@@ -88,23 +146,32 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
       return;
     }
 
-    FocusScope.of(context).unfocus();
-
     final userData =
         <String, dynamic>{
           'name': values[_fullNameField]?.toString().trim(),
+
           'role': UserRole.healthcareProvider.name,
+
           'status': UserStatus.pendingActivation.name,
+
           'phone': values[_phoneField]?.toString().trim(),
+
           'alternative_phone': values[_alternativePhoneField]
               ?.toString()
               .trim(),
+
           'license_number': values[_licenseField]?.toString().trim(),
+
           'specialization': values[_specializationField]?.toString().trim(),
+
           'preferred_language': PreferredLanguage.english.name,
         }..removeWhere(
           (_, value) => value == null || (value is String && value.isEmpty),
         );
+
+    setState(() {
+      _isSubmitting = true;
+    });
 
     try {
       final registered = await ref
@@ -116,29 +183,74 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
             additionalData: userData,
           );
 
-      if (!mounted || !registered) {
+      if (!mounted) {
         return;
       }
 
-      AppNavigator.go(AppRoutes.main);
+      if (!registered) {
+        _showError(
+          'Unable to create your account. Please review your details and try again.',
+        );
+
+        return;
+      }
+
+      TextInput.finishAutofillContext();
+
+      final destination = AppRoutes.safeDestination(_redirect);
+
+      AppNavigator.go(destination);
     } catch (_) {
       if (!mounted) {
         return;
       }
 
       _showError('registrationFailed'.tr);
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isSubmitting = false;
+        });
+      }
     }
   }
+
+  // ==========================================================================
+  // ERROR
+  // ==========================================================================
 
   void _showError(String message) {
     final navigatorContext = AppKeys.navigatorKey.currentContext;
 
-    if (navigatorContext == null) {
+    if (navigatorContext == null || !navigatorContext.mounted) {
       return;
     }
 
     AppMessage.error(navigatorContext, message);
   }
+
+  // ==========================================================================
+  // BACK TO LOGIN
+  // ==========================================================================
+
+  void _backToLogin() {
+    final redirect = _redirect;
+
+    if (redirect == null) {
+      AppNavigator.go(AppRoutes.login);
+
+      return;
+    }
+
+    AppNavigator.go(
+      '${AppRoutes.login}'
+      '?redirect=${Uri.encodeQueryComponent(redirect)}',
+    );
+  }
+
+  // ==========================================================================
+  // BUILD
+  // ==========================================================================
 
   @override
   Widget build(BuildContext context) {
@@ -146,13 +258,15 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
 
     final auth = authState.valueOrNull;
 
-    final isLoading = auth?.phase == AuthPhase.authenticating;
+    final controllerLoading = auth?.phase == AuthPhase.authenticating;
+
+    final isLoading = controllerLoading || _isSubmitting;
 
     final isPasswordVisible = ref.watch(_registerPasswordVisibleProvider);
 
     final theme = context.theme;
-    final cs = theme.colorScheme;
-    final size = MediaQuery.sizeOf(context);
+
+    final colors = theme.colorScheme;
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: FlexColorScheme.themedSystemNavigationBar(
@@ -162,305 +276,435 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
       ),
       child: Scaffold(
         resizeToAvoidBottomInset: true,
+        backgroundColor: colors.surface,
         body: GestureDetector(
           behavior: HitTestBehavior.opaque,
           onTap: () {
             FocusScope.of(context).unfocus();
           },
-          child: Container(
-            width: size.width,
-            height: size.height,
+          child: DecoratedBox(
             decoration: BoxDecoration(
               gradient: LinearGradient(
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
                 colors: [
-                  cs.primary.withValues(alpha: 0.10),
-                  cs.secondary.withValues(alpha: 0.05),
-                  cs.surface,
+                  colors.primary.withValues(alpha: 0.10),
+                  colors.secondary.withValues(alpha: 0.05),
+                  colors.surface,
                 ],
-                stops: const [0.0, 0.5, 1.0],
+                stops: const [0, 0.5, 1],
               ),
             ),
             child: SafeArea(
-              child: Center(
-                child: SingleChildScrollView(
-                  keyboardDismissBehavior:
-                      ScrollViewKeyboardDismissBehavior.onDrag,
-                  padding: EdgeInsets.symmetric(
-                    vertical: Responsive.verticalPadding(context),
-                    horizontal: Responsive.horizontalPadding(context),
-                  ),
-                  child: ConstrainedBox(
-                    constraints: BoxConstraints(
-                      maxWidth: Responsive.value<double>(
-                        context,
-                        mobile: double.infinity,
-                        tablet: 500,
-                        desktop: 450,
-                      ),
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  return SingleChildScrollView(
+                    keyboardDismissBehavior:
+                        ScrollViewKeyboardDismissBehavior.onDrag,
+                    padding: EdgeInsets.symmetric(
+                      horizontal: Responsive.horizontalPadding(context),
+                      vertical: Responsive.verticalPadding(context),
                     ),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const AppLogo(logoSize: 200),
+                    child: ConstrainedBox(
+                      constraints: BoxConstraints(
+                        minHeight:
+                            constraints.maxHeight -
+                            (Responsive.verticalPadding(context) * 2),
+                      ),
+                      child: Center(
+                        child: ConstrainedBox(
+                          constraints: BoxConstraints(
+                            maxWidth: Responsive.value<double>(
+                              context,
+                              mobile: double.infinity,
+                              tablet: 500,
+                              desktop: 460,
+                            ),
+                          ),
+                          child: AutofillGroup(
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                // ==========================================
+                                // LOGO
+                                // ==========================================
+                                const Center(child: AppLogo(logoSize: 160)),
 
-                        AppSpacing.gapXl,
+                                AppSpacing.gapLg,
 
-                        SizedBox(
-                          width: double.infinity,
-                          child: GlassCard.auth(
-                            child: FormBuilder(
-                              key: _formKey,
-                              enabled: !isLoading,
-                              autovalidateMode:
-                                  AutovalidateMode.onUserInteraction,
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.stretch,
-                                children: [
-                                  Text(
-                                    AppTranslationKey.createAccount.tr,
-                                    textAlign: TextAlign.center,
-                                    style: theme.textTheme.headlineSmall
-                                        ?.copyWith(
-                                          fontWeight: FontWeight.w700,
-                                          color: cs.onSurface,
-                                          fontSize: Responsive.fontSize(
+                                // ==========================================
+                                // INTRO
+                                // ==========================================
+                                const _RegisterIntroCard(),
+
+                                AppSpacing.gapMd,
+
+                                // ==========================================
+                                // FORM
+                                // ==========================================
+                                GlassCard.auth(
+                                  child: FormBuilder(
+                                    key: _formKey,
+                                    enabled: !isLoading,
+                                    autovalidateMode:
+                                        AutovalidateMode.onUserInteraction,
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.stretch,
+                                      children: [
+                                        Text(
+                                          AppTranslationKey.createAccount.tr,
+                                          style: theme.textTheme.headlineSmall
+                                              ?.copyWith(
+                                                fontWeight: FontWeight.w800,
+                                                color: colors.onSurface,
+                                                fontSize: Responsive.fontSize(
+                                                  context,
+                                                  mobile: 24,
+                                                  tablet: 28,
+                                                  desktop: 30,
+                                                ),
+                                              ),
+                                        ),
+
+                                        const SizedBox(height: 5),
+
+                                        Text(
+                                          'Create your MediGuide account to sync bookmarks, '
+                                          'reading progress, notes and offline content.',
+                                          style: theme.textTheme.bodyMedium
+                                              ?.copyWith(
+                                                color: colors.onSurfaceVariant,
+                                                height: 1.4,
+                                              ),
+                                        ),
+
+                                        AppSpacing.gapLg,
+
+                                        // ==================================
+                                        // PERSONAL INFORMATION
+                                        // ==================================
+                                        const _FormSectionHeader(
+                                          icon: LucideIcons.user,
+                                          title: 'Personal information',
+                                        ),
+
+                                        AppSpacing.gapMd,
+
+                                        FormBuilderTextField(
+                                          name: _fullNameField,
+                                          textInputAction: TextInputAction.next,
+                                          autofillHints: const [
+                                            AutofillHints.name,
+                                          ],
+                                          textCapitalization:
+                                              TextCapitalization.words,
+                                          decoration: _inputDecoration(
                                             context,
-                                            mobile: 24,
-                                            tablet: 28,
-                                            desktop: 32,
+                                            label:
+                                                AppTranslationKey.fullName.tr,
+                                            hint: 'Enter your full name',
+                                            icon: LucideIcons.user,
+                                          ),
+                                          validator:
+                                              FormBuilderValidators.compose([
+                                                FormBuilderValidators.required(
+                                                  errorText:
+                                                      'Full name is required',
+                                                ),
+                                                FormBuilderValidators.minLength(
+                                                  2,
+                                                  errorText:
+                                                      'Enter your full name',
+                                                ),
+                                              ]),
+                                        ),
+
+                                        AppSpacing.fieldGap,
+
+                                        FormBuilderTextField(
+                                          name: _emailField,
+                                          keyboardType:
+                                              TextInputType.emailAddress,
+                                          textInputAction: TextInputAction.next,
+                                          autofillHints: const [
+                                            AutofillHints.email,
+                                          ],
+                                          autocorrect: false,
+                                          enableSuggestions: false,
+                                          decoration: _inputDecoration(
+                                            context,
+                                            label: AppTranslationKey.email.tr,
+                                            hint: 'name@example.com',
+                                            icon: LucideIcons.mail,
+                                          ),
+                                          validator: FormBuilderValidators.compose([
+                                            FormBuilderValidators.required(
+                                              errorText: 'Email is required',
+                                            ),
+                                            FormBuilderValidators.email(
+                                              errorText:
+                                                  'Enter a valid email address',
+                                            ),
+                                          ]),
+                                        ),
+
+                                        AppSpacing.fieldGap,
+
+                                        FormBuilderPhoneField(
+                                          name: _phoneField,
+                                          decoration: _phoneDecoration(
+                                            context,
+                                            label: AppTranslationKey
+                                                .phoneNumber
+                                                .tr,
+                                          ),
+                                          iconSelector: const SizedBox.shrink(),
+                                          countryPicker: (flag, code) =>
+                                              _CountryPickerLabel(
+                                                flag: flag,
+                                                code: code,
+                                              ),
+                                          defaultSelectedCountryIsoCode: 'UG',
+                                          priorityListByIsoCode: const [
+                                            'UG',
+                                            'KE',
+                                            'TZ',
+                                            'RW',
+                                          ],
+                                          validator:
+                                              FormBuilderValidators.required(
+                                                errorText:
+                                                    'Phone number is required',
+                                              ),
+                                        ),
+
+                                        AppSpacing.fieldGap,
+
+                                        FormBuilderPhoneField(
+                                          name: _alternativePhoneField,
+                                          decoration: _phoneDecoration(
+                                            context,
+                                            label: 'Alternative phone',
+                                            hint: 'Optional',
+                                          ),
+                                          iconSelector: const SizedBox.shrink(),
+                                          countryPicker: (flag, code) =>
+                                              _CountryPickerLabel(
+                                                flag: flag,
+                                                code: code,
+                                              ),
+                                          defaultSelectedCountryIsoCode: 'UG',
+                                          priorityListByIsoCode: const [
+                                            'UG',
+                                            'KE',
+                                            'TZ',
+                                            'RW',
+                                          ],
+                                        ),
+
+                                        AppSpacing.gapXl,
+
+                                        // ==================================
+                                        // PROFESSIONAL INFORMATION
+                                        // ==================================
+                                        const _FormSectionHeader(
+                                          icon: LucideIcons.stethoscope,
+                                          title: 'Professional information',
+                                        ),
+
+                                        AppSpacing.gapMd,
+
+                                        FormBuilderTextField(
+                                          name: _licenseField,
+                                          textInputAction: TextInputAction.next,
+                                          textCapitalization:
+                                              TextCapitalization.characters,
+                                          decoration: _inputDecoration(
+                                            context,
+                                            label: 'License number',
+                                            hint:
+                                                'Enter professional license number',
+                                            icon: LucideIcons.badgeCheck,
+                                          ),
+                                          validator: _licenseNumberValidator,
+                                        ),
+
+                                        AppSpacing.fieldGap,
+
+                                        FormBuilderDropdown<String>(
+                                          name: _specializationField,
+                                          decoration:
+                                              _inputDecoration(
+                                                context,
+                                                label: AppTranslationKey
+                                                    .specialization
+                                                    .tr,
+                                                icon: LucideIcons
+                                                    .briefcaseMedical,
+                                              ).copyWith(
+                                                hintText: AppTranslationKey
+                                                    .selectSpecialization
+                                                    .tr,
+                                              ),
+                                          items: Specialization.values
+                                              .map((specialization) {
+                                                return DropdownMenuItem<String>(
+                                                  value: specialization.name,
+                                                  child: Text(
+                                                    specialization.label,
+                                                  ),
+                                                );
+                                              })
+                                              .toList(growable: false),
+                                          validator:
+                                              FormBuilderValidators.required(
+                                                errorText:
+                                                    'Select your specialization',
+                                              ),
+                                        ),
+
+                                        AppSpacing.gapXl,
+
+                                        // ==================================
+                                        // SECURITY
+                                        // ==================================
+                                        const _FormSectionHeader(
+                                          icon: LucideIcons.shieldCheck,
+                                          title: 'Account security',
+                                        ),
+
+                                        AppSpacing.gapMd,
+
+                                        FormBuilderTextField(
+                                          name: _passwordField,
+                                          obscureText: !isPasswordVisible,
+                                          textInputAction: TextInputAction.done,
+                                          autofillHints: const [
+                                            AutofillHints.newPassword,
+                                          ],
+                                          autocorrect: false,
+                                          enableSuggestions: false,
+                                          onSubmitted: (_) {
+                                            if (!isLoading) {
+                                              _submit();
+                                            }
+                                          },
+                                          decoration: _inputDecoration(
+                                            context,
+                                            label:
+                                                AppTranslationKey.password.tr,
+                                            hint: 'Create a secure password',
+                                            icon: LucideIcons.lock,
+                                            suffixIcon: IconButton(
+                                              tooltip: isPasswordVisible
+                                                  ? 'Hide password'
+                                                  : 'Show password',
+                                              onPressed: isLoading
+                                                  ? null
+                                                  : () {
+                                                      final notifier = ref.read(
+                                                        _registerPasswordVisibleProvider
+                                                            .notifier,
+                                                      );
+
+                                                      notifier.state =
+                                                          !isPasswordVisible;
+                                                    },
+                                              icon: Icon(
+                                                isPasswordVisible
+                                                    ? LucideIcons.eyeOff
+                                                    : LucideIcons.eye,
+                                                color: colors.primary,
+                                              ),
+                                            ),
+                                          ),
+                                          validator: _passwordValidator,
+                                        ),
+
+                                        const SizedBox(height: 7),
+
+                                        const _PasswordRequirements(),
+
+                                        AppSpacing.gapMd,
+
+                                        // ==================================
+                                        // TERMS
+                                        // ==================================
+                                        FormBuilderCheckbox(
+                                          name: _termsField,
+                                          initialValue: false,
+                                          contentPadding: EdgeInsets.zero,
+                                          controlAffinity:
+                                              ListTileControlAffinity.leading,
+                                          validator:
+                                              FormBuilderValidators.equal(
+                                                true,
+                                                errorText:
+                                                    'agreeToTermsError'.tr,
+                                              ),
+                                          title: _TermsText(
+                                            onTermsTap: () {
+                                              AppNavigator.push(
+                                                AppRoutes.termsAndConditions,
+                                              );
+                                            },
+                                            onPrivacyTap: () {
+                                              AppNavigator.push(
+                                                AppRoutes.termsAndConditions,
+                                              );
+                                            },
                                           ),
                                         ),
-                                  ),
 
-                                  AppSpacing.contentGap,
+                                        AppSpacing.gapMd,
 
-                                  FormBuilderTextField(
-                                    name: _fullNameField,
-                                    textInputAction: TextInputAction.next,
-                                    autofillHints: const [AutofillHints.name],
-                                    decoration: _inputDecoration(
-                                      context,
-                                      label: AppTranslationKey.fullName.tr,
-                                      icon: LucideIcons.user,
-                                    ),
-                                    validator: FormBuilderValidators.compose([
-                                      FormBuilderValidators.required(),
-                                      FormBuilderValidators.minLength(2),
-                                    ]),
-                                  ),
-
-                                  AppSpacing.fieldGap,
-
-                                  FormBuilderTextField(
-                                    name: _emailField,
-                                    keyboardType: TextInputType.emailAddress,
-                                    textInputAction: TextInputAction.next,
-                                    autofillHints: const [AutofillHints.email],
-                                    autocorrect: false,
-                                    enableSuggestions: false,
-                                    decoration: _inputDecoration(
-                                      context,
-                                      label: AppTranslationKey.email.tr,
-                                      icon: LucideIcons.mail,
-                                    ),
-                                    validator: FormBuilderValidators.compose([
-                                      FormBuilderValidators.required(),
-                                      FormBuilderValidators.email(),
-                                    ]),
-                                  ),
-
-                                  AppSpacing.fieldGap,
-
-                                  FormBuilderPhoneField(
-                                    name: _phoneField,
-                                    decoration: _phoneDecoration(
-                                      context,
-                                      label: AppTranslationKey.phoneNumber.tr,
-                                    ),
-                                    iconSelector: const SizedBox.shrink(),
-                                    countryPicker: (flag, code) =>
-                                        _CountryPickerLabel(
-                                          flag: flag,
-                                          code: code,
-                                        ),
-                                    defaultSelectedCountryIsoCode: 'UG',
-                                    priorityListByIsoCode: const [
-                                      'UG',
-                                      'KE',
-                                      'TZ',
-                                      'RW',
-                                    ],
-                                    validator: FormBuilderValidators.required(),
-                                  ),
-
-                                  AppSpacing.fieldGap,
-
-                                  FormBuilderPhoneField(
-                                    name: _alternativePhoneField,
-                                    decoration: _phoneDecoration(
-                                      context,
-                                      label: 'Alternative Phone (Optional)',
-                                    ),
-                                    iconSelector: const SizedBox.shrink(),
-                                    countryPicker: (flag, code) =>
-                                        _CountryPickerLabel(
-                                          flag: flag,
-                                          code: code,
-                                        ),
-                                    defaultSelectedCountryIsoCode: 'UG',
-                                    priorityListByIsoCode: const [
-                                      'UG',
-                                      'KE',
-                                      'TZ',
-                                      'RW',
-                                    ],
-                                  ),
-
-                                  AppSpacing.fieldGap,
-
-                                  FormBuilderTextField(
-                                    name: _licenseField,
-                                    textInputAction: TextInputAction.next,
-                                    decoration: _inputDecoration(
-                                      context,
-                                      label: AppTranslationKey.licenseNumber,
-                                      icon: LucideIcons.fileText,
-                                    ),
-                                    validator: _licenseNumberValidator,
-                                  ),
-
-                                  AppSpacing.fieldGap,
-
-                                  FormBuilderDropdown<String>(
-                                    name: _specializationField,
-                                    decoration:
-                                        _inputDecoration(
-                                          context,
-                                          label: AppTranslationKey
-                                              .specialization
+                                        // ==================================
+                                        // CREATE
+                                        // ==================================
+                                        AppButton.large(
+                                          text: AppTranslationKey
+                                              .createAccount
                                               .tr,
-                                          icon: LucideIcons.userCheck,
-                                        ).copyWith(
-                                          hintText: AppTranslationKey
-                                              .selectSpecialization
+                                          onPressed: isLoading ? null : _submit,
+                                          isLoading: isLoading,
+                                          loadingText: AppTranslationKey
+                                              .creatingAccount
                                               .tr,
+                                          width: double.infinity,
                                         ),
-                                    items: Specialization.values
-                                        .map((specialization) {
-                                          return DropdownMenuItem(
-                                            value: specialization.name,
-                                            child: Text(specialization.label),
-                                          );
-                                        })
-                                        .toList(growable: false),
-                                    validator: FormBuilderValidators.required(),
-                                  ),
 
-                                  AppSpacing.gapMd,
+                                        AppSpacing.gapMd,
 
-                                  FormBuilderTextField(
-                                    name: _passwordField,
-                                    obscureText: !isPasswordVisible,
-                                    textInputAction: TextInputAction.done,
-                                    autofillHints: const [
-                                      AutofillHints.newPassword,
-                                    ],
-                                    onSubmitted: (_) {
-                                      if (!isLoading) {
-                                        _submit();
-                                      }
-                                    },
-                                    decoration: _inputDecoration(
-                                      context,
-                                      label: AppTranslationKey.password.tr,
-                                      icon: LucideIcons.lock,
-                                      suffixIcon: IconButton(
-                                        tooltip: isPasswordVisible
-                                            ? 'Hide password'
-                                            : 'Show password',
-                                        onPressed: isLoading
-                                            ? null
-                                            : () {
-                                                final notifier = ref.read(
-                                                  _registerPasswordVisibleProvider
-                                                      .notifier,
-                                                );
+                                        const _OrDivider(),
 
-                                                notifier.state =
-                                                    !isPasswordVisible;
-                                              },
-                                        icon: Icon(
-                                          isPasswordVisible
-                                              ? LucideIcons.eyeOff
-                                              : LucideIcons.eye,
-                                          color: cs.primary,
+                                        AppSpacing.gapMd,
+
+                                        AppButtonVariants.textButton(
+                                          text:
+                                              AppTranslationKey.backToLogin.tr,
+                                          onPressed: isLoading
+                                              ? null
+                                              : _backToLogin,
+                                          width: double.infinity,
                                         ),
-                                      ),
-                                    ),
-                                    validator: FormBuilderValidators.compose([
-                                      FormBuilderValidators.required(),
-                                      FormBuilderValidators.minLength(8),
-                                    ]),
-                                  ),
-
-                                  AppSpacing.fieldGap,
-
-                                  FormBuilderCheckbox(
-                                    name: _termsField,
-                                    initialValue: false,
-                                    validator: FormBuilderValidators.equal(
-                                      true,
-                                      errorText: 'agreeToTermsError'.tr,
-                                    ),
-                                    title: _TermsText(
-                                      onTermsTap: () {
-                                        AppNavigator.push(
-                                          AppRoutes.termsAndConditions,
-                                        );
-                                      },
-                                      onPrivacyTap: () {
-                                        AppNavigator.push(
-                                          AppRoutes.termsAndConditions,
-                                        );
-                                      },
+                                      ],
                                     ),
                                   ),
+                                ),
 
-                                  AppSpacing.gapMd,
+                                AppSpacing.gapXl,
 
-                                  AppButton.large(
-                                    text: AppTranslationKey.createAccount.tr,
-                                    onPressed: isLoading ? null : _submit,
-                                    isLoading: isLoading,
-                                    loadingText:
-                                        AppTranslationKey.creatingAccount.tr,
-                                    width: double.infinity,
-                                  ),
-
-                                  AppSpacing.fieldGap,
-
-                                  AppButtonVariants.textButton(
-                                    text: AppTranslationKey.backToLogin.tr,
-                                    onPressed: isLoading
-                                        ? null
-                                        : AppNavigator.pop,
-                                    width: double.infinity,
-                                  ),
-                                ],
-                              ),
+                                const CopyrightTermsWidget(),
+                              ],
                             ),
                           ),
                         ),
-
-                        AppSpacing.gapXl,
-
-                        const CopyrightTermsWidget(),
-                      ],
+                      ),
                     ),
-                  ),
-                ),
+                  );
+                },
               ),
             ),
           ),
@@ -469,49 +713,56 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
     );
   }
 
+  // ==========================================================================
+  // INPUT
+  // ==========================================================================
+
   InputDecoration _inputDecoration(
     BuildContext context, {
     required String label,
     required IconData icon,
+    String? hint,
     Widget? suffixIcon,
   }) {
-    final cs = context.theme.colorScheme;
+    final colors = context.theme.colorScheme;
 
     return InputDecoration(
       labelText: label,
+      hintText: hint,
       filled: true,
-      fillColor: cs.surface.withValues(alpha: 0.72),
+      fillColor: colors.surface.withValues(alpha: 0.76),
       prefixIcon: Icon(
         icon,
-        color: cs.primary,
+        color: colors.primary,
         size: Responsive.iconSize(context, mobile: 20, tablet: 22, desktop: 24),
       ),
       suffixIcon: suffixIcon,
       border: _border(context),
       enabledBorder: _border(context),
-      focusedBorder: _border(context, color: cs.primary, width: 2),
-      errorBorder: _border(context, color: cs.error),
-      focusedErrorBorder: _border(context, color: cs.error, width: 2),
+      focusedBorder: _border(context, color: colors.primary, width: 1.7),
+      errorBorder: _border(context, color: colors.error),
+      focusedErrorBorder: _border(context, color: colors.error, width: 1.7),
     );
   }
 
   InputDecoration _phoneDecoration(
     BuildContext context, {
     required String label,
+    String? hint,
   }) {
-    final cs = context.theme.colorScheme;
+    final colors = context.theme.colorScheme;
 
     return InputDecoration(
       labelText: label,
-      hintText: '7XX XXX XXX',
+      hintText: hint ?? '7XX XXX XXX',
       isDense: true,
       filled: true,
-      fillColor: cs.surface.withValues(alpha: 0.72),
+      fillColor: colors.surface.withValues(alpha: 0.76),
       border: _border(context),
       enabledBorder: _border(context),
-      focusedBorder: _border(context, color: cs.primary, width: 2),
-      errorBorder: _border(context, color: cs.error),
-      focusedErrorBorder: _border(context, color: cs.error, width: 2),
+      focusedBorder: _border(context, color: colors.primary, width: 1.7),
+      errorBorder: _border(context, color: colors.error),
+      focusedErrorBorder: _border(context, color: colors.error, width: 1.7),
     );
   }
 
@@ -520,17 +771,146 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
     Color? color,
     double width = 1,
   }) {
-    final cs = context.theme.colorScheme;
+    final colors = context.theme.colorScheme;
 
     return OutlineInputBorder(
       borderRadius: BorderRadius.circular(14),
       borderSide: BorderSide(
-        color: color ?? cs.outlineVariant.withValues(alpha: 0.7),
+        color: color ?? colors.outlineVariant.withValues(alpha: 0.7),
         width: width,
       ),
     );
   }
 }
+
+// ============================================================================
+// REGISTER INTRO
+// ============================================================================
+
+class _RegisterIntroCard extends StatelessWidget {
+  const _RegisterIntroCard();
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.md),
+      decoration: BoxDecoration(
+        color: colors.primaryContainer.withValues(alpha: 0.55),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: colors.primary.withValues(alpha: 0.08)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 38,
+            height: 38,
+            decoration: BoxDecoration(
+              color: colors.primary.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(11),
+            ),
+            child: Icon(
+              LucideIcons.userRoundPlus,
+              size: 19,
+              color: colors.primary,
+            ),
+          ),
+
+          AppSpacing.hGapSm,
+
+          Expanded(
+            child: Text(
+              'Create a professional account to personalize MediGuide and '
+              'keep your clinical content synchronized across devices.',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: colors.onPrimaryContainer,
+                height: 1.4,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ============================================================================
+// FORM SECTION
+// ============================================================================
+
+class _FormSectionHeader extends StatelessWidget {
+  const _FormSectionHeader({required this.icon, required this.title});
+
+  final IconData icon;
+  final String title;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+
+    return Row(
+      children: [
+        Container(
+          width: 34,
+          height: 34,
+          decoration: BoxDecoration(
+            color: colors.primaryContainer,
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Icon(icon, size: 17, color: colors.primary),
+        ),
+
+        AppSpacing.hGapSm,
+
+        Expanded(
+          child: Text(
+            title,
+            style: Theme.of(
+              context,
+            ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w800),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+// ============================================================================
+// PASSWORD REQUIREMENTS
+// ============================================================================
+
+class _PasswordRequirements extends StatelessWidget {
+  const _PasswordRequirements();
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(LucideIcons.info, size: 14, color: colors.onSurfaceVariant),
+
+        const SizedBox(width: 6),
+
+        Expanded(
+          child: Text(
+            'Use at least 8 characters with a letter and a number.',
+            style: Theme.of(
+              context,
+            ).textTheme.bodySmall?.copyWith(color: colors.onSurfaceVariant),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+// ============================================================================
+// COUNTRY PICKER
+// ============================================================================
 
 class _CountryPickerLabel extends StatelessWidget {
   const _CountryPickerLabel({required this.flag, required this.code});
@@ -544,46 +924,122 @@ class _CountryPickerLabel extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       children: [
         SizedBox(width: 20, height: 14, child: flag),
+
         const SizedBox(width: 4),
+
         Text(code, style: context.textTheme.bodyMedium),
       ],
     );
   }
 }
 
-class _TermsText extends StatelessWidget {
+// ============================================================================
+// TERMS
+// ============================================================================
+
+class _TermsText extends StatefulWidget {
   const _TermsText({required this.onTermsTap, required this.onPrivacyTap});
 
   final VoidCallback onTermsTap;
   final VoidCallback onPrivacyTap;
 
   @override
+  State<_TermsText> createState() => _TermsTextState();
+}
+
+class _TermsTextState extends State<_TermsText> {
+  late final TapGestureRecognizer _termsRecognizer;
+  late final TapGestureRecognizer _privacyRecognizer;
+
+  @override
+  void initState() {
+    super.initState();
+
+    _termsRecognizer = TapGestureRecognizer()..onTap = widget.onTermsTap;
+
+    _privacyRecognizer = TapGestureRecognizer()..onTap = widget.onPrivacyTap;
+  }
+
+  @override
+  void didUpdateWidget(covariant _TermsText oldWidget) {
+    super.didUpdateWidget(oldWidget);
+
+    _termsRecognizer.onTap = widget.onTermsTap;
+
+    _privacyRecognizer.onTap = widget.onPrivacyTap;
+  }
+
+  @override
+  void dispose() {
+    _termsRecognizer.dispose();
+    _privacyRecognizer.dispose();
+
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     final theme = context.theme;
+
+    final normalStyle = theme.textTheme.bodySmall;
+
+    final linkStyle = normalStyle?.copyWith(
+      color: theme.colorScheme.primary,
+      fontWeight: FontWeight.w600,
+      decoration: TextDecoration.underline,
+    );
 
     return Text.rich(
       TextSpan(
         children: [
-          TextSpan(text: 'I agree to the ', style: theme.textTheme.bodySmall),
+          TextSpan(text: 'I agree to the ', style: normalStyle),
+
           TextSpan(
             text: 'Terms of Service',
-            style: theme.textTheme.bodySmall?.copyWith(
-              color: theme.colorScheme.primary,
-              decoration: TextDecoration.underline,
-            ),
-            recognizer: TapGestureRecognizer()..onTap = onTermsTap,
+            style: linkStyle,
+            recognizer: _termsRecognizer,
           ),
-          TextSpan(text: ' and ', style: theme.textTheme.bodySmall),
+
+          TextSpan(text: ' and ', style: normalStyle),
+
           TextSpan(
             text: 'Privacy Policy',
-            style: theme.textTheme.bodySmall?.copyWith(
-              color: theme.colorScheme.primary,
-              decoration: TextDecoration.underline,
-            ),
-            recognizer: TapGestureRecognizer()..onTap = onPrivacyTap,
+            style: linkStyle,
+            recognizer: _privacyRecognizer,
           ),
         ],
       ),
+    );
+  }
+}
+
+// ============================================================================
+// OR DIVIDER
+// ============================================================================
+
+class _OrDivider extends StatelessWidget {
+  const _OrDivider();
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+
+    return Row(
+      children: [
+        Expanded(child: Divider(color: colors.outlineVariant)),
+
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+          child: Text(
+            'Already registered?',
+            style: Theme.of(
+              context,
+            ).textTheme.bodySmall?.copyWith(color: colors.onSurfaceVariant),
+          ),
+        ),
+
+        Expanded(child: Divider(color: colors.outlineVariant)),
+      ],
     );
   }
 }

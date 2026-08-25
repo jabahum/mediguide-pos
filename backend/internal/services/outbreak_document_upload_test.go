@@ -86,6 +86,13 @@ func TestOutbreakDocumentUploadValidatesAndReplacesManagedFiles(t *testing.T) {
 	if replaced.MIMEType != "text/markdown; charset=utf-8" || replaced.LockVersion != 3 || len(store.objects) != 1 || len(store.deleted) != 1 {
 		t.Fatalf("replacement did not clean old object: %#v stored=%d deleted=%#v", replaced, len(store.objects), store.deleted)
 	}
+	var derived models.OutbreakResource
+	if err := service.DB.First(&derived, "id = ?", document.ID).Error; err != nil {
+		t.Fatal(err)
+	}
+	if derived.ExtractionStatus != "ready" || derived.ContentFormat != "markdown" || !strings.Contains(derived.SearchContent, "approved PPE") || derived.RenderedContent != strings.TrimSpace(string(markdown)) {
+		t.Fatalf("markdown discovery content was not derived safely: %#v", derived)
+	}
 }
 
 func TestOutbreakDocumentUploadRejectsSignatureMismatchAndStaleLock(t *testing.T) {

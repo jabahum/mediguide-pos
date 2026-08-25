@@ -491,6 +491,128 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/public/outbreak-documents": {
+            "get": {
+                "tags": [
+                    "public-outbreaks"
+                ],
+                "summary": "Search published effective outbreak documents across all outbreaks",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Title, metadata, outbreak or extracted-content search",
+                        "name": "search",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Document classification",
+                        "name": "document_kind",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Issuing authority",
+                        "name": "issuing_authority",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Language code",
+                        "name": "language",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Intended audience",
+                        "name": "audience",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Effective at or after",
+                        "name": "effective_from",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Effective at or before",
+                        "name": "effective_to",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Allowlisted sort field",
+                        "name": "sort",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "asc or desc",
+                        "name": "order",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.PaginatedOutbreakDocumentsEnvelope"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/public/outbreak-documents/{documentId}": {
+            "get": {
+                "tags": [
+                    "public-outbreaks"
+                ],
+                "summary": "Get a published effective outbreak document without its parent route",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Document UUID",
+                        "name": "documentId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.OutbreakDocumentEnvelope"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/public/outbreak-documents/{documentId}/content": {
+            "get": {
+                "tags": [
+                    "public-outbreaks"
+                ],
+                "summary": "Read approved derived Markdown or plain-text outbreak document content",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Document UUID",
+                        "name": "documentId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.OutbreakDocumentContentEnvelope"
+                        }
+                    }
+                }
+            }
+        },
         "/api/public/outbreaks": {
             "get": {
                 "tags": [
@@ -16963,6 +17085,17 @@ const docTemplate = `{
                 }
             }
         },
+        "handlers.OutbreakDocumentContentEnvelope": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/services.PublicOutbreakDocumentContent"
+                },
+                "success": {
+                    "type": "boolean"
+                }
+            }
+        },
         "handlers.OutbreakDocumentEnvelope": {
             "type": "object",
             "properties": {
@@ -20757,6 +20890,7 @@ const docTemplate = `{
                         "none",
                         "guideline",
                         "outbreak",
+                        "outbreak_document",
                         "situation_report",
                         "drug",
                         "calculator",
@@ -23919,6 +24053,7 @@ const docTemplate = `{
                         "none",
                         "guideline",
                         "outbreak",
+                        "outbreak_document",
                         "situation_report",
                         "drug",
                         "calculator",
@@ -26377,6 +26512,12 @@ const docTemplate = `{
                 "checksum_sha256": {
                     "type": "string"
                 },
+                "content_format": {
+                    "type": "string"
+                },
+                "content_url": {
+                    "type": "string"
+                },
                 "description": {
                     "type": "string"
                 },
@@ -26413,7 +26554,16 @@ const docTemplate = `{
                 "original_filename": {
                     "type": "string"
                 },
+                "outbreak_area": {
+                    "type": "string"
+                },
+                "outbreak_disease": {
+                    "type": "string"
+                },
                 "outbreak_id": {
+                    "type": "string"
+                },
+                "outbreak_title": {
                     "type": "string"
                 },
                 "page_count": {
@@ -26425,10 +26575,39 @@ const docTemplate = `{
                 "review_date": {
                     "type": "string"
                 },
+                "search_snippet": {
+                    "type": "string"
+                },
+                "supports_inline": {
+                    "type": "boolean"
+                },
                 "title": {
                     "type": "string"
                 },
                 "version": {
+                    "type": "string"
+                }
+            }
+        },
+        "services.PublicOutbreakDocumentContent": {
+            "type": "object",
+            "properties": {
+                "checksum_sha256": {
+                    "type": "string"
+                },
+                "content": {
+                    "type": "string"
+                },
+                "content_format": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "outbreak_id": {
+                    "type": "string"
+                },
+                "title": {
                     "type": "string"
                 }
             }

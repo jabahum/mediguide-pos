@@ -430,6 +430,14 @@ class GlobalSearchDelegate extends SearchDelegate<String?> {
           AppRoutes.outbreak(outbreak?.id ?? result.id),
           extra: outbreak,
         );
+      case SearchCategory.outbreakDocuments:
+        final document = result.getItem<PublicOutbreakDocument>();
+        if (document != null) {
+          AppNavigator.push(
+            AppRoutes.outbreakDocument(document.outbreakId, document.id),
+            extra: document,
+          );
+        }
       case SearchCategory.situationReports:
         final report = result.getItem<PublicSituationReport>();
         AppNavigator.push(
@@ -498,6 +506,8 @@ class GlobalSearchDelegate extends SearchDelegate<String?> {
         return LucideIcons.messageCircle;
       case SearchCategory.outbreaks:
         return LucideIcons.siren;
+      case SearchCategory.outbreakDocuments:
+        return LucideIcons.files;
       case SearchCategory.situationReports:
         return LucideIcons.fileChartColumn;
       case SearchCategory.tools:

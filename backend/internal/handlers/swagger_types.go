@@ -1003,6 +1003,11 @@ type OutbreakDocumentEnvelope struct {
 	Data    services.PublicOutbreakDocument `json:"data"`
 }
 
+type OutbreakDocumentContentEnvelope struct {
+	Success bool                                   `json:"success"`
+	Data    services.PublicOutbreakDocumentContent `json:"data"`
+}
+
 type PaginatedOutbreakDocumentsEnvelope struct {
 	Success bool                                                 `json:"success"`
 	Data    services.PageResult[services.PublicOutbreakDocument] `json:"data"`

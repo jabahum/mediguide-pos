@@ -705,6 +705,7 @@ class _SearchResultTile extends StatelessWidget {
       SearchCategory.abbreviations => LucideIcons.languages,
       SearchCategory.faq => LucideIcons.circleHelp,
       SearchCategory.outbreaks => LucideIcons.siren,
+      SearchCategory.outbreakDocuments => LucideIcons.files,
       SearchCategory.situationReports => LucideIcons.fileChartColumn,
       SearchCategory.tools => LucideIcons.calculator,
       SearchCategory.all => LucideIcons.search,

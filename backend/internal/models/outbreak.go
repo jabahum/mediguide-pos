@@ -91,6 +91,13 @@ type OutbreakResource struct {
 	WithdrawalReason string     `json:"withdrawal_reason,omitempty"`
 	SupersedesID     *uuid.UUID `gorm:"type:uuid;index" json:"supersedes_id,omitempty"`
 	LockVersion      int        `gorm:"not null;default:1" json:"lock_version"`
+	// Derived, server-owned discovery content. It is populated from validated
+	// uploads and is never accepted from public or administrative API payloads.
+	SearchContent    string     `json:"-"`
+	RenderedContent  string     `json:"-"`
+	ContentFormat    string     `json:"-"`
+	ExtractionStatus string     `json:"-"`
+	ExtractedAt      *time.Time `json:"-"`
 }
 
 type SituationReport struct {

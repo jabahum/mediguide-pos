@@ -290,6 +290,12 @@ class _OutbreakDocumentPageState extends ConsumerState<OutbreakDocumentPage> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
+        if (document.supportsInline)
+          FilledButton.icon(
+            onPressed: () => _readInline(document),
+            icon: const Icon(LucideIcons.bookOpenText),
+            label: const Text('Read document'),
+          ),
         FilledButton.icon(
           onPressed: downloading
               ? null
@@ -325,6 +331,28 @@ class _OutbreakDocumentPageState extends ConsumerState<OutbreakDocumentPage> {
           ),
       ],
     );
+  }
+
+  Future<void> _readInline(PublicOutbreakDocument document) async {
+    try {
+      final result = await ref
+          .read(outbreakRepositoryProvider)
+          .documentContent(document.id);
+      if (!mounted) return;
+      await Navigator.of(context).push(
+        MaterialPageRoute<void>(
+          builder: (_) => _MarkdownDocumentPage(
+            title: document.title,
+            source: result.value.content,
+          ),
+        ),
+      );
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Readable content is unavailable: $error')),
+      );
+    }
   }
 
   Future<OfflineDownload?> _download(PublicOutbreakDocument document) async {
@@ -382,6 +410,9 @@ class _OutbreakDocumentPageState extends ConsumerState<OutbreakDocumentPage> {
       return;
     }
     if (mime.contains('markdown') || filename.endsWith('.md')) {
+      if ((local == null || local.isEmpty) && document.supportsInline) {
+        return _readInline(document);
+      }
       if (local == null || local.isEmpty) {
         final downloaded = await _download(document);
         if (downloaded?.status != OfflineDownloadStatus.ready) return;

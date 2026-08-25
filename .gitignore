@@ -22,6 +22,7 @@
 backend/.env
 backend/.env.local
 backend/.air_tmp/
+backend/.cache/
 .DS_Store
 guidelines-docs
 .idea/

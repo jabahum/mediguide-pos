@@ -1120,6 +1120,13 @@ definitions:
       success:
         type: boolean
     type: object
+  handlers.OutbreakDocumentContentEnvelope:
+    properties:
+      data:
+        $ref: '#/definitions/services.PublicOutbreakDocumentContent'
+      success:
+        type: boolean
+    type: object
   handlers.OutbreakDocumentEnvelope:
     properties:
       data:
@@ -3651,6 +3658,7 @@ definitions:
         - none
         - guideline
         - outbreak
+        - outbreak_document
         - situation_report
         - drug
         - calculator
@@ -5729,6 +5737,7 @@ definitions:
         - none
         - guideline
         - outbreak
+        - outbreak_document
         - situation_report
         - drug
         - calculator
@@ -7351,6 +7360,10 @@ definitions:
         type: string
       checksum_sha256:
         type: string
+      content_format:
+        type: string
+      content_url:
+        type: string
       description:
         type: string
       document_kind:
@@ -7375,7 +7388,13 @@ definitions:
         type: string
       original_filename:
         type: string
+      outbreak_area:
+        type: string
+      outbreak_disease:
+        type: string
       outbreak_id:
+        type: string
+      outbreak_title:
         type: string
       page_count:
         type: integer
@@ -7383,9 +7402,28 @@ definitions:
         type: string
       review_date:
         type: string
+      search_snippet:
+        type: string
+      supports_inline:
+        type: boolean
       title:
         type: string
       version:
+        type: string
+    type: object
+  services.PublicOutbreakDocumentContent:
+    properties:
+      checksum_sha256:
+        type: string
+      content:
+        type: string
+      content_format:
+        type: string
+      id:
+        type: string
+      outbreak_id:
+        type: string
+      title:
         type: string
     type: object
   services.PublicOutbreakResource:
@@ -8383,6 +8421,85 @@ paths:
       summary: List reviewed tables in a published guideline
       tags:
       - Public Guidelines
+  /api/public/outbreak-documents:
+    get:
+      parameters:
+      - description: Title, metadata, outbreak or extracted-content search
+        in: query
+        name: search
+        type: string
+      - description: Document classification
+        in: query
+        name: document_kind
+        type: string
+      - description: Issuing authority
+        in: query
+        name: issuing_authority
+        type: string
+      - description: Language code
+        in: query
+        name: language
+        type: string
+      - description: Intended audience
+        in: query
+        name: audience
+        type: string
+      - description: Effective at or after
+        in: query
+        name: effective_from
+        type: string
+      - description: Effective at or before
+        in: query
+        name: effective_to
+        type: string
+      - description: Allowlisted sort field
+        in: query
+        name: sort
+        type: string
+      - description: asc or desc
+        in: query
+        name: order
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.PaginatedOutbreakDocumentsEnvelope'
+      summary: Search published effective outbreak documents across all outbreaks
+      tags:
+      - public-outbreaks
+  /api/public/outbreak-documents/{documentId}:
+    get:
+      parameters:
+      - description: Document UUID
+        in: path
+        name: documentId
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.OutbreakDocumentEnvelope'
+      summary: Get a published effective outbreak document without its parent route
+      tags:
+      - public-outbreaks
+  /api/public/outbreak-documents/{documentId}/content:
+    get:
+      parameters:
+      - description: Document UUID
+        in: path
+        name: documentId
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.OutbreakDocumentContentEnvelope'
+      summary: Read approved derived Markdown or plain-text outbreak document content
+      tags:
+      - public-outbreaks
   /api/public/outbreaks:
     get:
       parameters:

@@ -3,6 +3,7 @@ package handlers
 import (
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
@@ -28,6 +29,9 @@ func publicOutbreakTestRouter(t *testing.T) (*gin.Engine, *gorm.DB) {
 	handler := OutbreakHandler{Service: services.OutbreakService{DB: db}}
 	router := gin.New()
 	router.GET("/api/public/outbreaks", handler.List)
+	router.GET("/api/public/outbreak-documents", handler.SearchDocuments)
+	router.GET("/api/public/outbreak-documents/:documentId", handler.GetDocumentGlobal)
+	router.GET("/api/public/outbreak-documents/:documentId/content", handler.DocumentContent)
 	return router, db
 }
 
@@ -49,6 +53,30 @@ func TestPublicOutbreakHandlerSupportsETagAndNotModified(t *testing.T) {
 	router.ServeHTTP(second, request)
 	if second.Code != http.StatusNotModified || second.Body.Len() != 0 {
 		t.Fatalf("etag request status=%d body=%s", second.Code, second.Body.String())
+	}
+}
+
+func TestPublicOutbreakDocumentDiscoveryAndContentVisibility(t *testing.T) {
+	router, db := publicOutbreakTestRouter(t)
+	now := time.Now().UTC().Add(-time.Minute)
+	parent := models.Outbreak{Title: "Ebola response", DiseaseType: "EVD", Status: "active", PublishedAt: &now, LastUpdate: now}
+	if err := db.Create(&parent).Error; err != nil {
+		t.Fatal(err)
+	}
+	document := models.OutbreakResource{OutbreakID: parent.ID, Title: "Case management SOP", ResourceType: "managed_document", DocumentKind: "sop", Language: "en", Status: "published", PublishedAt: &now, SearchContent: "isolate the patient", RenderedContent: "# Isolation", ContentFormat: "markdown", ExtractionStatus: "ready", ChecksumSHA256: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"}
+	if err := db.Create(&document).Error; err != nil {
+		t.Fatal(err)
+	}
+
+	search := httptest.NewRecorder()
+	router.ServeHTTP(search, httptest.NewRequest(http.MethodGet, "/api/public/outbreak-documents?search=isolate", nil))
+	if search.Code != http.StatusOK || !strings.Contains(search.Body.String(), document.ID.String()) || !strings.Contains(search.Body.String(), "Ebola response") {
+		t.Fatalf("discovery status=%d body=%s", search.Code, search.Body.String())
+	}
+	content := httptest.NewRecorder()
+	router.ServeHTTP(content, httptest.NewRequest(http.MethodGet, "/api/public/outbreak-documents/"+document.ID.String()+"/content", nil))
+	if content.Code != http.StatusOK || content.Header().Get("ETag") == "" || !strings.Contains(content.Body.String(), "Isolation") {
+		t.Fatalf("content status=%d headers=%v body=%s", content.Code, content.Header(), content.Body.String())
 	}
 }
 

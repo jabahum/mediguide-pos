@@ -108,6 +108,22 @@ type PublicOutbreakDocument struct {
 	PageCount        *int       `json:"page_count,omitempty"`
 	DownloadURL      string     `json:"download_url,omitempty"`
 	PublishedAt      *time.Time `json:"published_at,omitempty"`
+	OutbreakTitle    string     `json:"outbreak_title,omitempty"`
+	OutbreakDisease  string     `json:"outbreak_disease,omitempty"`
+	OutbreakArea     string     `json:"outbreak_area,omitempty"`
+	SearchSnippet    string     `json:"search_snippet,omitempty"`
+	ContentURL       string     `json:"content_url,omitempty"`
+	ContentFormat    string     `json:"content_format,omitempty"`
+	SupportsInline   bool       `json:"supports_inline"`
+}
+
+type PublicOutbreakDocumentContent struct {
+	ID             uuid.UUID `json:"id"`
+	OutbreakID     uuid.UUID `json:"outbreak_id"`
+	Title          string    `json:"title"`
+	Content        string    `json:"content"`
+	ContentFormat  string    `json:"content_format"`
+	ChecksumSHA256 string    `json:"checksum_sha256"`
 }
 
 func (s OutbreakAdminService) ListDocuments(id uuid.UUID, in OutbreakDocumentQuery) (*PageResult[OutbreakDocumentAdminDTO], error) {
@@ -336,7 +352,8 @@ func (s OutbreakAdminService) AddDocumentReviewComment(actor OutbreakActor, outb
 }
 
 func (s OutbreakService) Documents(outbreakID uuid.UUID, in OutbreakDocumentQuery) (*PageResult[PublicOutbreakDocument], error) {
-	if _, err := s.Get(outbreakID); err != nil {
+	parent, err := s.Get(outbreakID)
+	if err != nil {
 		return nil, err
 	}
 	page := in.Page.Normalize(20, 100)
@@ -347,7 +364,7 @@ func (s OutbreakService) Documents(outbreakID uuid.UUID, in OutbreakDocumentQuer
 			query = outbreakDocumentPostgresSearch(query, value)
 		} else {
 			like := "%" + strings.ToLower(value) + "%"
-			query = query.Joins("JOIN outbreaks outbreak_search_parent ON outbreak_search_parent.id = outbreak_resources.outbreak_id").Where("lower(outbreak_resources.title) LIKE ? OR lower(outbreak_resources.description) LIKE ? OR lower(outbreak_resources.document_number) LIKE ? OR lower(outbreak_resources.issuing_authority) LIKE ? OR lower(outbreak_search_parent.title) LIKE ?", like, like, like, like, like)
+			query = query.Joins("JOIN outbreaks outbreak_search_parent ON outbreak_search_parent.id = outbreak_resources.outbreak_id").Where("lower(outbreak_resources.title) LIKE ? OR lower(outbreak_resources.description) LIKE ? OR lower(outbreak_resources.document_number) LIKE ? OR lower(outbreak_resources.issuing_authority) LIKE ? OR lower(outbreak_resources.search_content) LIKE ? OR lower(outbreak_search_parent.title) LIKE ?", like, like, like, like, like, like)
 		}
 	}
 	if value := strings.TrimSpace(in.DocumentKind); value != "" {
@@ -385,12 +402,122 @@ func (s OutbreakService) Documents(outbreakID uuid.UUID, in OutbreakDocumentQuer
 	items := make([]PublicOutbreakDocument, len(rows))
 	for i := range rows {
 		items[i] = publicOutbreakDocument(rows[i])
+		items[i].OutbreakTitle, items[i].OutbreakDisease, items[i].OutbreakArea = parent.Title, parent.DiseaseType, parent.GeographicArea
+		items[i].SearchSnippet = outbreakDocumentSnippet(rows[i], in.Search)
 	}
 	return NewPageResult(items, page, total), nil
 }
 
+// SearchDocuments returns public, currently effective documents across all
+// published outbreaks. It is intentionally separate from the nested endpoint
+// so clients never have to download every outbreak to discover its documents.
+func (s OutbreakService) SearchDocuments(in OutbreakDocumentQuery) (*PageResult[PublicOutbreakDocument], error) {
+	page := in.Page.Normalize(20, 100)
+	now := time.Now().UTC()
+	query := s.DB.Model(&models.OutbreakResource{}).
+		Joins("JOIN outbreaks outbreak_search_parent ON outbreak_search_parent.id = outbreak_resources.outbreak_id AND outbreak_search_parent.deleted_at IS NULL").
+		Where("outbreak_resources.resource_type IN ? AND outbreak_resources.status = 'published' AND outbreak_resources.published_at IS NOT NULL AND outbreak_resources.published_at <= ? AND outbreak_resources.withdrawn_at IS NULL AND (outbreak_resources.effective_date IS NULL OR outbreak_resources.effective_date <= ?) AND (outbreak_resources.expires_at IS NULL OR outbreak_resources.expires_at > ?)", []string{"managed_document", "downloadable_asset"}, now, now, now).
+		Where("outbreak_search_parent.published_at IS NOT NULL AND outbreak_search_parent.published_at <= ? AND outbreak_search_parent.withdrawn_at IS NULL AND outbreak_search_parent.status IN ?", now, []string{"published", "active", "monitoring", "contained", "closed"})
+	if value := strings.TrimSpace(in.Search); value != "" {
+		if s.DB.Dialector.Name() == "postgres" {
+			query = query.Where("("+outbreakDocumentSearchVector+") @@ websearch_to_tsquery('simple', ?) OR ("+outbreakParentSearchVector+") @@ websearch_to_tsquery('simple', ?)", value, value)
+		} else {
+			like := "%" + strings.ToLower(value) + "%"
+			query = query.Where("lower(outbreak_resources.title) LIKE ? OR lower(outbreak_resources.description) LIKE ? OR lower(outbreak_resources.document_number) LIKE ? OR lower(outbreak_resources.issuing_authority) LIKE ? OR lower(outbreak_resources.search_content) LIKE ? OR lower(outbreak_search_parent.title) LIKE ?", like, like, like, like, like, like)
+		}
+	}
+	if value := strings.TrimSpace(in.DocumentKind); value != "" {
+		if !validOutbreakValue(value, outbreakDocumentKinds...) {
+			return nil, ErrOutbreakInvalid
+		}
+		query = query.Where("outbreak_resources.document_kind = ?", value)
+	}
+	for _, filter := range []struct{ value, column string }{{in.Authority, "issuing_authority"}, {in.Language, "language"}, {in.Audience, "audience"}} {
+		if value := strings.TrimSpace(filter.value); value != "" {
+			query = query.Where("lower(outbreak_resources."+filter.column+") = ?", strings.ToLower(value))
+		}
+	}
+	if in.EffectiveFrom != nil {
+		query = query.Where("outbreak_resources.effective_date >= ?", *in.EffectiveFrom)
+	}
+	if in.EffectiveTo != nil {
+		query = query.Where("outbreak_resources.effective_date <= ?", *in.EffectiveTo)
+	}
+	order, err := outbreakDocumentOrder(in.Sort, in.Order)
+	if err != nil {
+		return nil, err
+	}
+	var total int64
+	if err := query.Count(&total).Error; err != nil {
+		return nil, err
+	}
+	selectFields := "outbreak_resources.*"
+	if value := strings.TrimSpace(in.Search); value != "" && s.DB.Dialector.Name() == "postgres" {
+		selectFields += ", CASE WHEN lower(outbreak_resources.title) = lower(?) THEN 2.0 ELSE 0 END + ts_rank_cd((" + outbreakDocumentSearchVector + " || " + outbreakParentSearchVector + "), websearch_to_tsquery('simple', ?)) AS document_search_rank"
+		order = "document_search_rank DESC, " + order
+	}
+	var rows []models.OutbreakResource
+	if value := strings.TrimSpace(in.Search); value != "" && s.DB.Dialector.Name() == "postgres" {
+		query = query.Select(selectFields, value, value)
+	} else {
+		query = query.Select(selectFields)
+	}
+	if err := query.Order(order).Offset(page.Offset()).Limit(page.PerPage).Find(&rows).Error; err != nil {
+		return nil, err
+	}
+	items := make([]PublicOutbreakDocument, len(rows))
+	parents, err := s.outbreakDocumentParents(rows)
+	if err != nil {
+		return nil, err
+	}
+	for i := range rows {
+		items[i] = publicOutbreakDocument(rows[i])
+		if parent, ok := parents[rows[i].OutbreakID]; ok {
+			items[i].OutbreakTitle, items[i].OutbreakDisease, items[i].OutbreakArea = parent.Title, parent.DiseaseType, parent.GeographicArea
+		}
+		items[i].SearchSnippet = outbreakDocumentSnippet(rows[i], in.Search)
+	}
+	return NewPageResult(items, page, total), nil
+}
+
+func (s OutbreakService) GetDocumentGlobal(documentID uuid.UUID) (*PublicOutbreakDocument, error) {
+	now := time.Now().UTC()
+	var row models.OutbreakResource
+	err := s.DB.Model(&models.OutbreakResource{}).
+		Select("outbreak_resources.*").
+		Joins("JOIN outbreaks outbreak_search_parent ON outbreak_search_parent.id = outbreak_resources.outbreak_id AND outbreak_search_parent.deleted_at IS NULL").
+		Where("outbreak_resources.id = ? AND outbreak_resources.resource_type IN ? AND outbreak_resources.status = 'published' AND outbreak_resources.published_at IS NOT NULL AND outbreak_resources.published_at <= ? AND outbreak_resources.withdrawn_at IS NULL AND (outbreak_resources.effective_date IS NULL OR outbreak_resources.effective_date <= ?) AND (outbreak_resources.expires_at IS NULL OR outbreak_resources.expires_at > ?)", documentID, []string{"managed_document", "downloadable_asset"}, now, now, now).
+		Where("outbreak_search_parent.published_at IS NOT NULL AND outbreak_search_parent.published_at <= ? AND outbreak_search_parent.withdrawn_at IS NULL AND outbreak_search_parent.status IN ?", now, []string{"published", "active", "monitoring", "contained", "closed"}).First(&row).Error
+	if err != nil {
+		return nil, err
+	}
+	result := publicOutbreakDocument(row)
+	var parent models.Outbreak
+	if err := s.DB.Select("id", "title", "disease_type", "geographic_area").First(&parent, "id = ?", row.OutbreakID).Error; err != nil {
+		return nil, err
+	}
+	result.OutbreakTitle, result.OutbreakDisease, result.OutbreakArea = parent.Title, parent.DiseaseType, parent.GeographicArea
+	return &result, nil
+}
+
+func (s OutbreakService) DocumentContent(documentID uuid.UUID) (*PublicOutbreakDocumentContent, error) {
+	document, err := s.GetDocumentGlobal(documentID)
+	if err != nil {
+		return nil, err
+	}
+	var row models.OutbreakResource
+	if err := s.DB.Select("rendered_content", "content_format", "extraction_status").First(&row, "id = ?", documentID).Error; err != nil {
+		return nil, err
+	}
+	if row.ExtractionStatus != "ready" || strings.TrimSpace(row.RenderedContent) == "" || !validOutbreakValue(row.ContentFormat, "markdown", "plain_text") {
+		return nil, gorm.ErrRecordNotFound
+	}
+	return &PublicOutbreakDocumentContent{ID: document.ID, OutbreakID: document.OutbreakID, Title: document.Title, Content: row.RenderedContent, ContentFormat: row.ContentFormat, ChecksumSHA256: document.ChecksumSHA256}, nil
+}
+
 func (s OutbreakService) GetDocument(outbreakID, documentID uuid.UUID) (*PublicOutbreakDocument, error) {
-	if _, err := s.Get(outbreakID); err != nil {
+	parent, err := s.Get(outbreakID)
+	if err != nil {
 		return nil, err
 	}
 	now := time.Now().UTC()
@@ -399,6 +526,7 @@ func (s OutbreakService) GetDocument(outbreakID, documentID uuid.UUID) (*PublicO
 		return nil, err
 	}
 	result := publicOutbreakDocument(row)
+	result.OutbreakTitle, result.OutbreakDisease, result.OutbreakArea = parent.Title, parent.DiseaseType, parent.GeographicArea
 	return &result, nil
 }
 
@@ -516,7 +644,8 @@ const outbreakDocumentSearchVector = `
 setweight(to_tsvector('simple', coalesce(outbreak_resources.title, '')), 'A') ||
 setweight(to_tsvector('simple', coalesce(outbreak_resources.document_number, '')), 'A') ||
 setweight(to_tsvector('simple', coalesce(outbreak_resources.issuing_authority, '') || ' ' || coalesce(outbreak_resources.document_kind, '') || ' ' || coalesce(outbreak_resources.audience, '')), 'B') ||
-setweight(to_tsvector('simple', coalesce(outbreak_resources.description, '')), 'C')`
+setweight(to_tsvector('simple', coalesce(outbreak_resources.description, '')), 'C') ||
+setweight(to_tsvector('simple', coalesce(outbreak_resources.search_content, '')), 'D')`
 
 const outbreakParentSearchVector = `setweight(to_tsvector('simple', coalesce(outbreak_search_parent.title, '')), 'B')`
 
@@ -542,5 +671,60 @@ func publicOutbreakDocument(row models.OutbreakResource) PublicOutbreakDocument 
 	if row.StorageKey != "" || row.AssetURL != "" {
 		downloadURL = "/api/public/outbreaks/" + row.OutbreakID.String() + "/documents/" + row.ID.String() + "/download"
 	}
-	return PublicOutbreakDocument{ID: row.ID, OutbreakID: row.OutbreakID, Title: row.Title, Description: row.Description, DocumentKind: row.DocumentKind, IssuingAuthority: row.IssuingAuthority, DocumentNumber: row.DocumentNumber, Version: row.Version, Language: row.Language, Audience: row.Audience, EffectiveDate: row.EffectiveDate, ReviewDate: row.ReviewDate, ExpiresAt: row.ExpiresAt, OriginalFilename: row.OriginalFilename, MIMEType: row.MIMEType, FileSize: row.FileSize, ChecksumSHA256: row.ChecksumSHA256, PageCount: row.PageCount, DownloadURL: downloadURL, PublishedAt: row.PublishedAt}
+	contentURL := ""
+	supportsInline := row.ExtractionStatus == "ready" && validOutbreakValue(row.ContentFormat, "markdown", "plain_text")
+	if supportsInline {
+		contentURL = "/api/public/outbreak-documents/" + row.ID.String() + "/content"
+	}
+	return PublicOutbreakDocument{ID: row.ID, OutbreakID: row.OutbreakID, Title: row.Title, Description: row.Description, DocumentKind: row.DocumentKind, IssuingAuthority: row.IssuingAuthority, DocumentNumber: row.DocumentNumber, Version: row.Version, Language: row.Language, Audience: row.Audience, EffectiveDate: row.EffectiveDate, ReviewDate: row.ReviewDate, ExpiresAt: row.ExpiresAt, OriginalFilename: row.OriginalFilename, MIMEType: row.MIMEType, FileSize: row.FileSize, ChecksumSHA256: row.ChecksumSHA256, PageCount: row.PageCount, DownloadURL: downloadURL, PublishedAt: row.PublishedAt, ContentURL: contentURL, ContentFormat: row.ContentFormat, SupportsInline: supportsInline}
+}
+
+func (s OutbreakService) outbreakDocumentParents(rows []models.OutbreakResource) (map[uuid.UUID]models.Outbreak, error) {
+	ids := make([]uuid.UUID, 0, len(rows))
+	seen := make(map[uuid.UUID]struct{}, len(rows))
+	for _, row := range rows {
+		if _, ok := seen[row.OutbreakID]; !ok {
+			seen[row.OutbreakID] = struct{}{}
+			ids = append(ids, row.OutbreakID)
+		}
+	}
+	parents := make(map[uuid.UUID]models.Outbreak, len(ids))
+	if len(ids) == 0 {
+		return parents, nil
+	}
+	var records []models.Outbreak
+	if err := s.DB.Select("id", "title", "disease_type", "geographic_area").Where("id IN ?", ids).Find(&records).Error; err != nil {
+		return nil, err
+	}
+	for _, record := range records {
+		parents[record.ID] = record
+	}
+	return parents, nil
+}
+
+func outbreakDocumentSnippet(row models.OutbreakResource, search string) string {
+	content := strings.TrimSpace(row.SearchContent)
+	if content == "" {
+		return strings.TrimSpace(row.Description)
+	}
+	runes := []rune(content)
+	needle := strings.ToLower(strings.TrimSpace(search))
+	start := 0
+	if needle != "" {
+		if byteIndex := strings.Index(strings.ToLower(content), needle); byteIndex >= 0 {
+			index := len([]rune(content[:byteIndex]))
+			if index > 80 {
+				start = index - 80
+			}
+		}
+	}
+	end := min(len(runes), start+240)
+	snippet := strings.TrimSpace(string(runes[start:end]))
+	if start > 0 {
+		snippet = "…" + snippet
+	}
+	if end < len(runes) {
+		snippet += "…"
+	}
+	return snippet
 }

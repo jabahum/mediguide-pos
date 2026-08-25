@@ -13,6 +13,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+	"time"
 	"unicode/utf8"
 
 	"mediguide/internal/models"
@@ -70,6 +71,8 @@ func (s OutbreakAdminService) UploadDocument(ctx context.Context, actor Outbreak
 	digest := sha256.Sum256(data)
 	checksum := hex.EncodeToString(digest[:])
 	key := fmt.Sprintf("outbreaks/%s/documents/%s/%s.%s", outbreakID, documentID, checksum, metadata.Extension)
+	searchContent, renderedContent, contentFormat, extractionStatus := deriveOutbreakDocumentContent(metadata.Extension, data)
+	extractedAt := time.Now().UTC()
 
 	if current.StorageKey == key && current.ChecksumSHA256 == checksum && current.OriginalFilename == name {
 		result := outbreakDocumentAdminDTO(current)
@@ -82,6 +85,9 @@ func (s OutbreakAdminService) UploadDocument(ctx context.Context, actor Outbreak
 		"storage_key": key, "original_filename": name, "mime_type": metadata.MIMEType,
 		"file_size": int64(len(data)), "checksum_sha256": checksum, "page_count": metadata.PageCount,
 		"asset_url": "", "lock_version": gorm.Expr("lock_version + 1"),
+		"search_content": searchContent, "rendered_content": renderedContent,
+		"content_format": contentFormat, "extraction_status": extractionStatus,
+		"extracted_at": extractedAt,
 	}
 	err = s.DB.Transaction(func(tx *gorm.DB) error {
 		result := tx.Model(&models.OutbreakResource{}).
@@ -105,6 +111,64 @@ func (s OutbreakAdminService) UploadDocument(ctx context.Context, actor Outbreak
 		s.deleteUnreferencedDocumentObject(ctx, current.StorageKey)
 	}
 	return s.GetDocument(outbreakID, documentID)
+}
+
+var markdownSyntax = regexp.MustCompile(`(?m)(?:^#{1,6}\s+|[*_~` + "`" + `>\[\]()]|!\[[^]]*\]\([^)]*\)|\[[^]]+\]\([^)]*\))`)
+var whitespaceRuns = regexp.MustCompile(`\s+`)
+var xmlTags = regexp.MustCompile(`<[^>]+>`)
+
+// deriveOutbreakDocumentContent deliberately supports only formats for which
+// the API can produce deterministic, safe text without executing converters.
+// PDF and spreadsheet extraction remain explicit "not_available" states until
+// a sandboxed extraction worker is configured.
+func deriveOutbreakDocumentContent(extension string, data []byte) (search, rendered, format, status string) {
+	switch extension {
+	case "md":
+		rendered = strings.TrimSpace(string(data))
+		search = strings.TrimSpace(whitespaceRuns.ReplaceAllString(markdownSyntax.ReplaceAllString(rendered, " "), " "))
+		return search, rendered, "markdown", "ready"
+	case "txt":
+		rendered = strings.TrimSpace(string(data))
+		search = strings.TrimSpace(whitespaceRuns.ReplaceAllString(rendered, " "))
+		return search, rendered, "plain_text", "ready"
+	case "docx":
+		text, err := extractOfficeXMLText(data, "word/document.xml")
+		if err == nil && text != "" {
+			return text, text, "plain_text", "ready"
+		}
+		return "", "", "", "failed"
+	default:
+		return "", "", "", "not_available"
+	}
+}
+
+func extractOfficeXMLText(data []byte, part string) (string, error) {
+	reader, err := zip.NewReader(bytes.NewReader(data), int64(len(data)))
+	if err != nil {
+		return "", err
+	}
+	for _, file := range reader.File {
+		if filepath.ToSlash(filepath.Clean(file.Name)) != part {
+			continue
+		}
+		stream, err := file.Open()
+		if err != nil {
+			return "", err
+		}
+		contents, readErr := io.ReadAll(io.LimitReader(stream, defaultOutbreakDocumentMaxBytes))
+		closeErr := stream.Close()
+		if readErr != nil {
+			return "", readErr
+		}
+		if closeErr != nil {
+			return "", closeErr
+		}
+		plain := strings.ReplaceAll(strings.ReplaceAll(string(contents), "</w:p>", "\n"), "</w:tab>", "\t")
+		plain = xmlTags.ReplaceAllString(plain, " ")
+		plain = strings.NewReplacer("&amp;", "&", "&lt;", "<", "&gt;", ">", "&quot;", `"`, "&apos;", "'").Replace(plain)
+		return strings.TrimSpace(whitespaceRuns.ReplaceAllString(plain, " ")), nil
+	}
+	return "", ErrOutbreakInvalid
 }
 
 func (s OutbreakAdminService) deleteUnreferencedDocumentObject(ctx context.Context, key string) {

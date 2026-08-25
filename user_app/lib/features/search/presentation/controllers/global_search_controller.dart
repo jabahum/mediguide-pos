@@ -401,6 +401,37 @@ final class RepositoryGlobalSearchDataSource implements GlobalSearchDataSource {
             )
             .toList(growable: false);
 
+      case SearchCategory.outbreakDocuments:
+        final response = await _outbreaks.searchDocuments(
+          page: 1,
+          perPage: 10,
+          query: OutbreakDocumentQuery(search: query),
+        );
+        return response.items
+            .map(
+              (item) => _withRelevance(
+                SearchResult(
+                  id: item.id,
+                  title: item.title,
+                  subtitle: [
+                    item.outbreakTitle,
+                    item.documentKind.replaceAll('_', ' '),
+                    item.issuingAuthority,
+                  ].where((value) => value.isNotEmpty).join(' · '),
+                  description: item.searchSnippet.isNotEmpty
+                      ? item.searchSnippet
+                      : item.description,
+                  category: category,
+                  route: AppRoutes.outbreakDocument(item.outbreakId, item.id),
+                  isOffline: response.cache.isOffline,
+                  isStale: response.cache.isStale,
+                  item: item,
+                ),
+                query,
+              ),
+            )
+            .toList(growable: false);
+
       case SearchCategory.situationReports:
         final response = await _outbreaks.reports(
           page: 1,
@@ -565,6 +596,7 @@ final class RepositoryGlobalSearchDataSource implements GlobalSearchDataSource {
       case SearchCategory.all:
       case SearchCategory.faq:
       case SearchCategory.outbreaks:
+      case SearchCategory.outbreakDocuments:
       case SearchCategory.situationReports:
         throw UnsupportedError('Unsupported search category: $category');
     }

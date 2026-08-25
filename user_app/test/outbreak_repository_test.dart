@@ -77,6 +77,50 @@ class FakeOutbreakApi extends BackendApiService {
         },
       };
     }
+    if (path == '/api/public/outbreak-documents/document-1/content') {
+      return {
+        'data': {
+          'id': 'document-1',
+          'outbreak_id': 'outbreak-1',
+          'title': 'Ebola response SOP',
+          'content': '# Isolation\n\nNotify the surveillance team.',
+          'content_format': 'markdown',
+          'checksum_sha256':
+              'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+        },
+      };
+    }
+    if (path == '/api/public/outbreak-documents') {
+      return {
+        'data': {
+          'items': [
+            {
+              'id': 'document-1',
+              'outbreak_id': 'outbreak-1',
+              'outbreak_title': 'Ebola response',
+              'outbreak_disease': 'EVD',
+              'outbreak_area': 'Kampala',
+              'title': 'Ebola response SOP',
+              'description': 'Isolation and notification procedure',
+              'search_snippet': 'Notify the surveillance team.',
+              'document_kind': 'sop',
+              'issuing_authority': 'Ministry of Health',
+              'version': '2.0',
+              'language': 'en',
+              'content_url':
+                  '/api/public/outbreak-documents/document-1/content',
+              'content_format': 'markdown',
+              'supports_inline': true,
+              'published_at': '2026-08-01T00:00:00Z',
+            },
+          ],
+          'page': 1,
+          'per_page': 10,
+          'total_items': 1,
+          'total_pages': 1,
+        },
+      };
+    }
     if (path.endsWith('/documents')) {
       return {
         'data': {
@@ -246,6 +290,31 @@ void main() {
     );
     await repository.refreshDocuments('outbreak-1');
     expect(versions.single, {'document-1': '2.0'});
+  });
+
+  test('global document discovery and readable content work offline', () async {
+    final store = TestLocalStore();
+    addTearDown(store.close);
+    final api = FakeOutbreakApi();
+    final repository = OutbreakRepository(api, store.cache);
+
+    final online = await repository.searchDocuments(
+      query: const OutbreakDocumentQuery(search: 'surveillance'),
+    );
+    expect(online.items.single.outbreakTitle, 'Ebola response');
+    expect(online.items.single.supportsInline, isTrue);
+    final content = await repository.documentContent('document-1');
+    expect(content.value.content, contains('Notify'));
+
+    api.offline = true;
+    final cached = await repository.searchDocuments(
+      query: const OutbreakDocumentQuery(search: 'surveillance'),
+    );
+    expect(cached.items.single.id, 'document-1');
+    expect(cached.cache.isOffline, isTrue);
+    final cachedContent = await repository.documentContent('document-1');
+    expect(cachedContent.cache.isOffline, isTrue);
+    expect(cachedContent.value.contentFormat, 'markdown');
   });
 
   test('malformed server payload is not hidden by a cached response', () async {

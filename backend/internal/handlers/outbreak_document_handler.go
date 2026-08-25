@@ -297,6 +297,81 @@ func (h OutbreakHandler) Documents(c *gin.Context) {
 	h.result(c, result, err)
 }
 
+// SearchDocuments godoc
+// @Summary Search published effective outbreak documents across all outbreaks
+// @Tags public-outbreaks
+// @Param search query string false "Title, metadata, outbreak or extracted-content search"
+// @Param document_kind query string false "Document classification"
+// @Param issuing_authority query string false "Issuing authority"
+// @Param language query string false "Language code"
+// @Param audience query string false "Intended audience"
+// @Param effective_from query string false "Effective at or after"
+// @Param effective_to query string false "Effective at or before"
+// @Param sort query string false "Allowlisted sort field"
+// @Param order query string false "asc or desc"
+// @Success 200 {object} handlers.PaginatedOutbreakDocumentsEnvelope
+// @Router /api/public/outbreak-documents [get]
+func (h OutbreakHandler) SearchDocuments(c *gin.Context) {
+	page, err := parsePageQuery(c, 20, 100)
+	if err != nil {
+		httpx.Error(c, http.StatusBadRequest, "invalid pagination")
+		return
+	}
+	from, to, ok := outbreakDateRange(c, "effective_from", "effective_to")
+	if !ok {
+		return
+	}
+	result, err := h.Service.SearchDocuments(services.OutbreakDocumentQuery{Page: page, Search: c.Query("search"), DocumentKind: c.Query("document_kind"), Authority: c.Query("issuing_authority"), Language: c.Query("language"), Audience: c.Query("audience"), EffectiveFrom: from, EffectiveTo: to, Sort: c.Query("sort"), Order: c.Query("order")})
+	h.result(c, result, err)
+}
+
+// GetDocumentGlobal godoc
+// @Summary Get a published effective outbreak document without its parent route
+// @Tags public-outbreaks
+// @Param documentId path string true "Document UUID"
+// @Success 200 {object} handlers.OutbreakDocumentEnvelope
+// @Router /api/public/outbreak-documents/{documentId} [get]
+func (h OutbreakHandler) GetDocumentGlobal(c *gin.Context) {
+	id, ok := outbreakUUID(c, "documentId")
+	if !ok {
+		return
+	}
+	result, err := h.Service.GetDocumentGlobal(id)
+	h.result(c, result, err)
+}
+
+// DocumentContent godoc
+// @Summary Read approved derived Markdown or plain-text outbreak document content
+// @Tags public-outbreaks
+// @Param documentId path string true "Document UUID"
+// @Success 200 {object} handlers.OutbreakDocumentContentEnvelope
+// @Router /api/public/outbreak-documents/{documentId}/content [get]
+func (h OutbreakHandler) DocumentContent(c *gin.Context) {
+	id, ok := outbreakUUID(c, "documentId")
+	if !ok {
+		return
+	}
+	result, err := h.Service.DocumentContent(id)
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		httpx.Error(c, http.StatusNotFound, "readable outbreak document content not found")
+		return
+	}
+	if err != nil {
+		httpx.Error(c, http.StatusInternalServerError, "failed to load outbreak document content")
+		return
+	}
+	etag := `"` + result.ChecksumSHA256 + `"`
+	if result.ChecksumSHA256 != "" && c.GetHeader("If-None-Match") == etag {
+		c.Status(http.StatusNotModified)
+		return
+	}
+	if result.ChecksumSHA256 != "" {
+		c.Header("ETag", etag)
+	}
+	c.Header("Cache-Control", "public, max-age=300, stale-while-revalidate=3600")
+	c.JSON(http.StatusOK, gin.H{"success": true, "data": result})
+}
+
 // GetDocument godoc
 // @Summary Get a published effective outbreak document
 // @Tags public-outbreaks

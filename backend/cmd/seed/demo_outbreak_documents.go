@@ -88,6 +88,8 @@ func seedDemoOutbreakDocuments(ctx context.Context, database *gorm.DB, store sto
 			"status": "published", "author_id": authorID, "reviewed_by": clinicianID,
 			"reviewed_at": publishedAt, "approved_by": clinicianID, "approved_at": publishedAt,
 			"published_at": publishedAt, "lock_version": 1,
+			"search_content": string(content), "rendered_content": string(content),
+			"content_format": "markdown", "extraction_status": "ready", "extracted_at": publishedAt,
 		}); err != nil {
 			return fmt.Errorf("upsert outbreak document %q: %w", document.Key, err)
 		}

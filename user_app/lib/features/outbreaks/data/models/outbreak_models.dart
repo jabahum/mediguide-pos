@@ -97,9 +97,32 @@ abstract class PublicOutbreakDocument with _$PublicOutbreakDocument {
     @JsonKey(name: 'page_count') int? pageCount,
     @JsonKey(name: 'download_url') @Default('') String downloadUrl,
     @JsonKey(name: 'published_at') DateTime? publishedAt,
+    @JsonKey(name: 'outbreak_title') @Default('') String outbreakTitle,
+    @JsonKey(name: 'outbreak_disease') @Default('') String outbreakDisease,
+    @JsonKey(name: 'outbreak_area') @Default('') String outbreakArea,
+    @JsonKey(name: 'search_snippet') @Default('') String searchSnippet,
+    @JsonKey(name: 'content_url') @Default('') String contentUrl,
+    @JsonKey(name: 'content_format') @Default('') String contentFormat,
+    @JsonKey(name: 'supports_inline') @Default(false) bool supportsInline,
   }) = _PublicOutbreakDocument;
   factory PublicOutbreakDocument.fromJson(Map<String, dynamic> json) =>
       _$PublicOutbreakDocumentFromJson(json);
+}
+
+@freezed
+abstract class OutbreakDocumentContent with _$OutbreakDocumentContent {
+  const factory OutbreakDocumentContent({
+    required String id,
+    @JsonKey(name: 'outbreak_id') required String outbreakId,
+    @Default('') String title,
+    @Default('') String content,
+    @JsonKey(name: 'content_format')
+    @Default('plain_text')
+    String contentFormat,
+    @JsonKey(name: 'checksum_sha256') @Default('') String checksumSha256,
+  }) = _OutbreakDocumentContent;
+  factory OutbreakDocumentContent.fromJson(Map<String, dynamic> json) =>
+      _$OutbreakDocumentContentFromJson(json);
 }
 
 @freezed

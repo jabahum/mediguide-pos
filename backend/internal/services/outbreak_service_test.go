@@ -2,6 +2,7 @@ package services
 
 import (
 	"errors"
+	"strings"
 	"testing"
 	"time"
 
@@ -116,5 +117,37 @@ func TestOutbreakServiceExposesOnlyCurrentPublishedDocuments(t *testing.T) {
 	}
 	if _, err := service.GetDocument(parent.ID, rows[1].ID); !errors.Is(err, gorm.ErrRecordNotFound) {
 		t.Fatalf("draft document exposed: %v", err)
+	}
+}
+
+func TestOutbreakServiceDiscoversDocumentsAcrossPublishedOutbreaks(t *testing.T) {
+	service := outbreakTestService(t)
+	now := time.Now().UTC().Add(-time.Minute)
+	publicParent := models.Outbreak{Title: "Ebola response", DiseaseType: "EVD", GeographicArea: "Kampala", Status: "active", PublishedAt: &now, LastUpdate: now}
+	draftParent := models.Outbreak{Title: "Internal response", Status: "draft", LastUpdate: now}
+	if err := service.DB.Create(&publicParent).Error; err != nil {
+		t.Fatal(err)
+	}
+	if err := service.DB.Create(&draftParent).Error; err != nil {
+		t.Fatal(err)
+	}
+	visible := models.OutbreakResource{OutbreakID: publicParent.ID, Title: "Case management SOP", Description: "Approved response protocol", ResourceType: "managed_document", DocumentKind: "sop", IssuingAuthority: "Ministry of Health", Language: "en", Status: "published", PublishedAt: &now, SearchContent: "isolate suspected cases immediately", RenderedContent: "# Immediate action\n\nIsolate suspected cases immediately.", ContentFormat: "markdown", ExtractionStatus: "ready", ChecksumSHA256: strings.Repeat("a", 64)}
+	hidden := models.OutbreakResource{OutbreakID: draftParent.ID, Title: "Secret SOP", ResourceType: "managed_document", DocumentKind: "sop", Language: "en", Status: "published", PublishedAt: &now, SearchContent: "isolate suspected cases immediately"}
+	if err := service.DB.Create(&visible).Error; err != nil {
+		t.Fatal(err)
+	}
+	if err := service.DB.Create(&hidden).Error; err != nil {
+		t.Fatal(err)
+	}
+	page, err := service.SearchDocuments(OutbreakDocumentQuery{Page: PageInput{Page: 1, PerPage: 10}, Search: "suspected cases"})
+	if err != nil || page.TotalItems != 1 || page.Items[0].ID != visible.ID || page.Items[0].OutbreakTitle != publicParent.Title || !page.Items[0].SupportsInline || page.Items[0].SearchSnippet == "" {
+		t.Fatalf("unexpected discovery result: %#v err=%v", page, err)
+	}
+	content, err := service.DocumentContent(visible.ID)
+	if err != nil || content.ContentFormat != "markdown" || !strings.Contains(content.Content, "Immediate action") {
+		t.Fatalf("unexpected public content: %#v err=%v", content, err)
+	}
+	if _, err := service.GetDocumentGlobal(hidden.ID); !errors.Is(err, gorm.ErrRecordNotFound) {
+		t.Fatalf("document under draft outbreak became public: %v", err)
 	}
 }

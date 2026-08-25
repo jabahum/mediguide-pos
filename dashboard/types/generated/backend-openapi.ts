@@ -712,6 +712,11 @@ export interface HandlersNotificationTemplateVersionsEnvelope {
   success?: boolean;
 }
 
+export interface HandlersOutbreakDocumentContentEnvelope {
+  data?: ServicesPublicOutbreakDocumentContent;
+  success?: boolean;
+}
+
 export interface HandlersOutbreakDocumentEnvelope {
   data?: ServicesPublicOutbreakDocument;
   success?: boolean;
@@ -2211,6 +2216,7 @@ export type ModelsNotificationActionTypeEnum =
   | "none"
   | "guideline"
   | "outbreak"
+  | "outbreak_document"
   | "situation_report"
   | "drug"
   | "calculator"
@@ -3357,6 +3363,7 @@ export type ServicesNotificationActionTypeEnum =
   | "none"
   | "guideline"
   | "outbreak"
+  | "outbreak_document"
   | "situation_report"
   | "drug"
   | "calculator"
@@ -4229,6 +4236,8 @@ export interface ServicesPublicOutbreak {
 export interface ServicesPublicOutbreakDocument {
   checksum_sha256?: string;
   audience?: string;
+  content_format?: string;
+  content_url?: string;
   description?: string;
   document_kind?: string;
   document_number?: string;
@@ -4241,12 +4250,26 @@ export interface ServicesPublicOutbreakDocument {
   language?: string;
   mime_type?: string;
   original_filename?: string;
+  outbreak_area?: string;
+  outbreak_disease?: string;
   outbreak_id?: string;
+  outbreak_title?: string;
   page_count?: number;
   published_at?: string;
   review_date?: string;
+  search_snippet?: string;
+  supports_inline?: boolean;
   title?: string;
   version?: string;
+}
+
+export interface ServicesPublicOutbreakDocumentContent {
+  checksum_sha256?: string;
+  content?: string;
+  content_format?: string;
+  id?: string;
+  outbreak_id?: string;
+  title?: string;
 }
 
 export interface ServicesPublicOutbreakResource {

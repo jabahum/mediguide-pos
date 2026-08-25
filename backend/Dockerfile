@@ -83,7 +83,9 @@ RUN apk add --no-cache curl && \
   go install github.com/air-verse/air@${AIR_VERSION} && \
   mkdir -p /app/legacy-tools /app/clinical-tools && \
   cp /out/migrate /app/migrate && \
+  cp /out/notification-worker /app/notification-worker && \
   cp /out/seed /app/seed && \
+  test -x /app/notification-worker && \
   cp -R /out/legacy-tools/. /app/legacy-tools/ && \
   cp -R /out/clinical-tools/. /app/clinical-tools/
 WORKDIR /src

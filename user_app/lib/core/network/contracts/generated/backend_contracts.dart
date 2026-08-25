@@ -11449,6 +11449,8 @@ final class ServicesOutbreakDocumentAdminDTO {
 
   String? get checksumSha256 => value['checksum_sha256']?.toString();
 
+  String? get contentFormat => value['content_format']?.toString();
+
   String? get createdAt => value['created_at']?.toString();
 
   String? get description => value['description']?.toString();
@@ -11460,6 +11462,10 @@ final class ServicesOutbreakDocumentAdminDTO {
   String? get effectiveDate => value['effective_date']?.toString();
 
   String? get expiresAt => value['expires_at']?.toString();
+
+  String? get extractedAt => value['extracted_at']?.toString();
+
+  String? get extractionStatus => value['extraction_status']?.toString();
 
   int? get fileSize => (value['file_size'] as num?)?.toInt();
 
@@ -11494,6 +11500,8 @@ final class ServicesOutbreakDocumentAdminDTO {
   String? get status => value['status']?.toString();
 
   String? get supersedesId => value['supersedes_id']?.toString();
+
+  bool? get supportsPreview => value['supports_preview'] as bool?;
 
   String? get title => value['title']?.toString();
 

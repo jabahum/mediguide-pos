@@ -161,6 +161,45 @@ func (h OutbreakAdminHandler) UploadDocument(c *gin.Context) {
 	h.result(c, http.StatusOK, result, err)
 }
 
+// AdminDocumentContent godoc
+// @Summary Preview server-derived Markdown or plain text for an outbreak document
+// @Tags outbreak-document-administration
+// @Security BearerAuth
+// @Param id path string true "Outbreak UUID"
+// @Param documentId path string true "Document UUID"
+// @Success 200 {object} handlers.OutbreakDocumentContentEnvelope
+// @Router /api/v2/outbreaks/{id}/documents/{documentId}/content [get]
+func (h OutbreakAdminHandler) AdminDocumentContent(c *gin.Context) {
+	id, documentID, ok := twoOutbreakIDs(c, "documentId")
+	if !ok {
+		return
+	}
+	result, err := h.Service.DocumentContent(id, documentID)
+	h.result(c, http.StatusOK, result, err)
+}
+
+// ReprocessDocument godoc
+// @Summary Rebuild safe search and preview content from the immutable managed file
+// @Tags outbreak-document-administration
+// @Security BearerAuth
+// @Param id path string true "Outbreak UUID"
+// @Param documentId path string true "Document UUID"
+// @Param payload body services.TransitionInput true "Current optimistic lock version"
+// @Success 200 {object} services.OutbreakDocumentAdminDTO
+// @Router /api/v2/outbreaks/{id}/documents/{documentId}/reprocess [post]
+func (h OutbreakAdminHandler) ReprocessDocument(c *gin.Context) {
+	id, documentID, ok := twoOutbreakIDs(c, "documentId")
+	if !ok {
+		return
+	}
+	input, ok := bindTransition(c)
+	if !ok {
+		return
+	}
+	result, err := h.Service.ReprocessDocument(c.Request.Context(), outbreakActor(c), id, documentID, input.LockVersion)
+	h.result(c, http.StatusOK, result, err)
+}
+
 // TransitionDocument godoc
 // @Summary Submit, approve, publish, or withdraw an outbreak document
 // @Tags outbreak-document-administration

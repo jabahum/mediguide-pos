@@ -71,6 +71,10 @@ type OutbreakDocumentAdminDTO struct {
 	ChecksumSHA256   string     `json:"checksum_sha256,omitempty"`
 	PageCount        *int       `json:"page_count,omitempty"`
 	AssetURL         string     `json:"asset_url,omitempty"`
+	ContentFormat    string     `json:"content_format,omitempty"`
+	ExtractionStatus string     `json:"extraction_status"`
+	ExtractedAt      *time.Time `json:"extracted_at,omitempty"`
+	SupportsPreview  bool       `json:"supports_preview"`
 	SortOrder        int        `json:"sort_order"`
 	Status           string     `json:"status"`
 	PublishedAt      *time.Time `json:"published_at,omitempty"`
@@ -214,6 +218,20 @@ func (s OutbreakAdminService) GetDocument(outbreakID, documentID uuid.UUID) (*Ou
 	}
 	result := outbreakDocumentAdminDTO(row)
 	return &result, nil
+}
+
+// DocumentContent returns the server-derived representation to authorized
+// staff without weakening public publication checks or exposing search-only
+// text. Draft previews are deliberately read-only.
+func (s OutbreakAdminService) DocumentContent(outbreakID, documentID uuid.UUID) (*PublicOutbreakDocumentContent, error) {
+	var row models.OutbreakResource
+	if err := s.DB.Where("id = ? AND outbreak_id = ? AND resource_type IN ?", documentID, outbreakID, []string{"managed_document", "downloadable_asset"}).First(&row).Error; err != nil {
+		return nil, err
+	}
+	if row.ExtractionStatus != "ready" || strings.TrimSpace(row.RenderedContent) == "" || !validOutbreakValue(row.ContentFormat, "markdown", "plain_text") {
+		return nil, gorm.ErrRecordNotFound
+	}
+	return &PublicOutbreakDocumentContent{ID: row.ID, OutbreakID: row.OutbreakID, Title: row.Title, Content: row.RenderedContent, ContentFormat: row.ContentFormat, ChecksumSHA256: row.ChecksumSHA256}, nil
 }
 
 func (s OutbreakAdminService) UpdateDocument(actor OutbreakActor, outbreakID, documentID uuid.UUID, in OutbreakDocumentInput) (*OutbreakDocumentAdminDTO, error) {
@@ -663,7 +681,8 @@ func outbreakDocumentRank(query *gorm.DB, value string) *gorm.DB {
 }
 
 func outbreakDocumentAdminDTO(row models.OutbreakResource) OutbreakDocumentAdminDTO {
-	return OutbreakDocumentAdminDTO{ID: row.ID, OutbreakID: row.OutbreakID, Title: row.Title, Description: row.Description, ResourceType: row.ResourceType, DocumentKind: row.DocumentKind, IssuingAuthority: row.IssuingAuthority, DocumentNumber: row.DocumentNumber, Version: row.Version, Language: row.Language, Audience: row.Audience, EffectiveDate: row.EffectiveDate, ReviewDate: row.ReviewDate, ExpiresAt: row.ExpiresAt, OriginalFilename: row.OriginalFilename, MIMEType: row.MIMEType, FileSize: row.FileSize, ChecksumSHA256: row.ChecksumSHA256, PageCount: row.PageCount, AssetURL: row.AssetURL, SortOrder: row.SortOrder, Status: row.Status, PublishedAt: row.PublishedAt, AuthorID: row.AuthorID, ReviewedBy: row.ReviewedBy, ReviewedAt: row.ReviewedAt, ApprovedBy: row.ApprovedBy, ApprovedAt: row.ApprovedAt, WithdrawnAt: row.WithdrawnAt, WithdrawalReason: row.WithdrawalReason, SupersedesID: row.SupersedesID, LockVersion: row.LockVersion, CreatedAt: row.CreatedAt, UpdatedAt: row.UpdatedAt}
+	preview := row.ExtractionStatus == "ready" && validOutbreakValue(row.ContentFormat, "markdown", "plain_text")
+	return OutbreakDocumentAdminDTO{ID: row.ID, OutbreakID: row.OutbreakID, Title: row.Title, Description: row.Description, ResourceType: row.ResourceType, DocumentKind: row.DocumentKind, IssuingAuthority: row.IssuingAuthority, DocumentNumber: row.DocumentNumber, Version: row.Version, Language: row.Language, Audience: row.Audience, EffectiveDate: row.EffectiveDate, ReviewDate: row.ReviewDate, ExpiresAt: row.ExpiresAt, OriginalFilename: row.OriginalFilename, MIMEType: row.MIMEType, FileSize: row.FileSize, ChecksumSHA256: row.ChecksumSHA256, PageCount: row.PageCount, AssetURL: row.AssetURL, ContentFormat: row.ContentFormat, ExtractionStatus: row.ExtractionStatus, ExtractedAt: row.ExtractedAt, SupportsPreview: preview, SortOrder: row.SortOrder, Status: row.Status, PublishedAt: row.PublishedAt, AuthorID: row.AuthorID, ReviewedBy: row.ReviewedBy, ReviewedAt: row.ReviewedAt, ApprovedBy: row.ApprovedBy, ApprovedAt: row.ApprovedAt, WithdrawnAt: row.WithdrawnAt, WithdrawalReason: row.WithdrawalReason, SupersedesID: row.SupersedesID, LockVersion: row.LockVersion, CreatedAt: row.CreatedAt, UpdatedAt: row.UpdatedAt}
 }
 
 func publicOutbreakDocument(row models.OutbreakResource) PublicOutbreakDocument {

@@ -6363,6 +6363,8 @@ definitions:
         type: string
       checksum_sha256:
         type: string
+      content_format:
+        type: string
       created_at:
         type: string
       description:
@@ -6374,6 +6376,10 @@ definitions:
       effective_date:
         type: string
       expires_at:
+        type: string
+      extracted_at:
+        type: string
+      extraction_status:
         type: string
       file_size:
         type: integer
@@ -6409,6 +6415,8 @@ definitions:
         type: string
       supersedes_id:
         type: string
+      supports_preview:
+        type: boolean
       title:
         type: string
       updated_at:
@@ -15555,6 +15563,29 @@ paths:
       summary: List immutable audit history for an outbreak document
       tags:
       - outbreak-document-administration
+  /api/v2/outbreaks/{id}/documents/{documentId}/content:
+    get:
+      parameters:
+      - description: Outbreak UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Document UUID
+        in: path
+        name: documentId
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.OutbreakDocumentContentEnvelope'
+      security:
+      - BearerAuth: []
+      summary: Preview server-derived Markdown or plain text for an outbreak document
+      tags:
+      - outbreak-document-administration
   /api/v2/outbreaks/{id}/documents/{documentId}/corrections:
     post:
       parameters:
@@ -15626,6 +15657,36 @@ paths:
       security:
       - BearerAuth: []
       summary: Submit, approve, publish, or withdraw an outbreak document
+      tags:
+      - outbreak-document-administration
+  /api/v2/outbreaks/{id}/documents/{documentId}/reprocess:
+    post:
+      parameters:
+      - description: Outbreak UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Document UUID
+        in: path
+        name: documentId
+        required: true
+        type: string
+      - description: Current optimistic lock version
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/services.TransitionInput'
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/services.OutbreakDocumentAdminDTO'
+      security:
+      - BearerAuth: []
+      summary: Rebuild safe search and preview content from the immutable managed
+        file
       tags:
       - outbreak-document-administration
   /api/v2/outbreaks/{id}/documents/{documentId}/review-comments:

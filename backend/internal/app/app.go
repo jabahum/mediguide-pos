@@ -310,6 +310,8 @@ func New(cfg config.Config) (*App, error) {
 		protected.PATCH("/outbreaks/:id/documents/:documentId", middleware.RequirePermission("outbreak.manage"), outbreakAdminH.UpdateDocument)
 		protected.DELETE("/outbreaks/:id/documents/:documentId", middleware.RequirePermission("outbreak.manage"), outbreakAdminH.DeleteDocument)
 		protected.PUT("/outbreaks/:id/documents/:documentId/file", middleware.RequirePermission("outbreak.manage"), outbreakAdminH.UploadDocument)
+		protected.GET("/outbreaks/:id/documents/:documentId/content", middleware.RequirePermission("outbreak.read"), outbreakAdminH.AdminDocumentContent)
+		protected.POST("/outbreaks/:id/documents/:documentId/reprocess", middleware.RequirePermission("outbreak.manage"), outbreakAdminH.ReprocessDocument)
 		protected.GET("/outbreaks/:id/documents/:documentId/versions", middleware.RequirePermission("outbreak.read"), outbreakAdminH.DocumentVersions)
 		protected.GET("/outbreaks/:id/documents/:documentId/audit", middleware.RequirePermission("outbreak.read"), outbreakAdminH.DocumentAudit)
 		protected.POST("/outbreaks/:id/documents/:documentId/review-comments", middleware.RequirePermission("outbreak.review"), outbreakAdminH.AddDocumentReviewComment)

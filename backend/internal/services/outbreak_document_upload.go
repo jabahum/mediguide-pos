@@ -113,6 +113,67 @@ func (s OutbreakAdminService) UploadDocument(ctx context.Context, actor Outbreak
 	return s.GetDocument(outbreakID, documentID)
 }
 
+// ReprocessDocument rebuilds only server-owned search and preview projections
+// from the immutable managed object. It verifies both the stored file shape and
+// checksum before changing any database state.
+func (s OutbreakAdminService) ReprocessDocument(ctx context.Context, actor OutbreakActor, outbreakID, documentID uuid.UUID, lockVersion int) (*OutbreakDocumentAdminDTO, error) {
+	if s.Store == nil || lockVersion < 1 {
+		return nil, ErrOutbreakInvalid
+	}
+	var current models.OutbreakResource
+	if err := s.DB.Where("id = ? AND outbreak_id = ? AND resource_type IN ?", documentID, outbreakID, []string{"managed_document", "downloadable_asset"}).First(&current).Error; err != nil {
+		return nil, err
+	}
+	if current.LockVersion != lockVersion {
+		return nil, ErrOutbreakConflict
+	}
+	if current.StorageKey == "" || current.OriginalFilename == "" || !outbreakDocumentChecksum.MatchString(current.ChecksumSHA256) {
+		return nil, ErrOutbreakInvalid
+	}
+	stream, err := s.Store.Get(ctx, current.StorageKey)
+	if err != nil {
+		return nil, err
+	}
+	data, readErr := io.ReadAll(io.LimitReader(stream, defaultOutbreakDocumentMaxBytes+1))
+	closeErr := stream.Close()
+	if readErr != nil || closeErr != nil || len(data) == 0 || int64(len(data)) > defaultOutbreakDocumentMaxBytes {
+		return nil, ErrOutbreakInvalid
+	}
+	metadata, err := validateOutbreakDocumentFile(current.OriginalFilename, data, defaultOutbreakDocumentMaxBytes)
+	if err != nil {
+		return nil, err
+	}
+	digest := sha256.Sum256(data)
+	if hex.EncodeToString(digest[:]) != current.ChecksumSHA256 {
+		return nil, ErrOutbreakInvalid
+	}
+	search, rendered, format, status := deriveOutbreakDocumentContent(metadata.Extension, data)
+	now := time.Now().UTC()
+	err = s.DB.Transaction(func(tx *gorm.DB) error {
+		result := tx.Model(&models.OutbreakResource{}).
+			Where("id = ? AND outbreak_id = ? AND lock_version = ?", documentID, outbreakID, lockVersion).
+			Updates(map[string]any{
+				"search_content": search, "rendered_content": rendered,
+				"content_format": format, "extraction_status": status,
+				"extracted_at": now, "lock_version": gorm.Expr("lock_version + 1"),
+			})
+		if result.Error != nil {
+			return result.Error
+		}
+		if result.RowsAffected == 0 {
+			return ErrOutbreakConflict
+		}
+		return auditOutbreak(tx, actor, "outbreak_document.content_reprocessed", "outbreak_document", documentID, map[string]any{
+			"previous_status": current.ExtractionStatus, "extraction_status": status,
+			"content_format": format, "checksum_sha256": current.ChecksumSHA256,
+		})
+	})
+	if err != nil {
+		return nil, err
+	}
+	return s.GetDocument(outbreakID, documentID)
+}
+
 var markdownSyntax = regexp.MustCompile(`(?m)(?:^#{1,6}\s+|[*_~` + "`" + `>\[\]()]|!\[[^]]*\]\([^)]*\)|\[[^]]+\]\([^)]*\))`)
 var whitespaceRuns = regexp.MustCompile(`\s+`)
 var xmlTags = regexp.MustCompile(`<[^>]+>`)

@@ -17,6 +17,7 @@ import type {
   ServicesTransitionInput,
   ServicesNotificationCampaignDTO,
   ServicesPublicGuideline,
+  ServicesPublicOutbreakDocumentContent,
 } from "@/types/generated/backend-openapi";
 
 export type OutbreakRecord = ServicesOutbreakAdminDTO;
@@ -31,6 +32,7 @@ export type OutbreakMetric = ServicesOutbreakMetric;
 export type OutbreakDocumentRecord = ServicesOutbreakDocumentAdminDTO;
 export type OutbreakDocumentInput = ServicesOutbreakDocumentInput;
 export type PublishedGuidelineRecord = ServicesPublicGuideline;
+export type OutbreakDocumentContent = ServicesPublicOutbreakDocumentContent;
 
 export interface PagedResult<T> {
   items: T[];
@@ -237,6 +239,17 @@ export const outbreaksService = {
     return client().send<OutbreakDocumentRecord>(
       `/api/v2/outbreaks/${id}/documents/${documentId}/file`,
       { method: "PUT", query: { lock_version: lockVersion }, body },
+    );
+  },
+  documentContent(id: string, documentId: string) {
+    return client().send<OutbreakDocumentContent>(
+      `/api/v2/outbreaks/${id}/documents/${documentId}/content`,
+    );
+  },
+  reprocessDocument(id: string, documentId: string, lockVersion: number) {
+    return client().send<OutbreakDocumentRecord>(
+      `/api/v2/outbreaks/${id}/documents/${documentId}/reprocess`,
+      { method: "POST", body: JSON.stringify({ lock_version: lockVersion }) },
     );
   },
   transitionDocument(

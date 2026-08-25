@@ -11828,6 +11828,43 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/v2/outbreaks/{id}/documents/{documentId}/content": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "outbreak-document-administration"
+                ],
+                "summary": "Preview server-derived Markdown or plain text for an outbreak document",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Outbreak UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Document UUID",
+                        "name": "documentId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.OutbreakDocumentContentEnvelope"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v2/outbreaks/{id}/documents/{documentId}/corrections": {
             "post": {
                 "security": [
@@ -11928,6 +11965,52 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "description": "Transition",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/services.TransitionInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/services.OutbreakDocumentAdminDTO"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v2/outbreaks/{id}/documents/{documentId}/reprocess": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "outbreak-document-administration"
+                ],
+                "summary": "Rebuild safe search and preview content from the immutable managed file",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Outbreak UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Document UUID",
+                        "name": "documentId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Current optimistic lock version",
                         "name": "payload",
                         "in": "body",
                         "required": true,
@@ -24997,6 +25080,9 @@ const docTemplate = `{
                 "checksum_sha256": {
                     "type": "string"
                 },
+                "content_format": {
+                    "type": "string"
+                },
                 "created_at": {
                     "type": "string"
                 },
@@ -25013,6 +25099,12 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "expires_at": {
+                    "type": "string"
+                },
+                "extracted_at": {
+                    "type": "string"
+                },
+                "extraction_status": {
                     "type": "string"
                 },
                 "file_size": {
@@ -25065,6 +25157,9 @@ const docTemplate = `{
                 },
                 "supersedes_id": {
                     "type": "string"
+                },
+                "supports_preview": {
+                    "type": "boolean"
                 },
                 "title": {
                     "type": "string"

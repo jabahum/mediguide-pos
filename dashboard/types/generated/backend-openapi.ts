@@ -3690,12 +3690,15 @@ export interface ServicesOutbreakDocumentAdminDTO {
   asset_url?: string;
   audience?: string;
   author_id?: string;
+  content_format?: string;
   created_at?: string;
   description?: string;
   document_kind?: string;
   document_number?: string;
   effective_date?: string;
   expires_at?: string;
+  extracted_at?: string;
+  extraction_status?: string;
   file_size?: number;
   id?: string;
   issuing_authority?: string;
@@ -3713,6 +3716,7 @@ export interface ServicesOutbreakDocumentAdminDTO {
   sort_order?: number;
   status?: string;
   supersedes_id?: string;
+  supports_preview?: boolean;
   title?: string;
   updated_at?: string;
   version?: string;

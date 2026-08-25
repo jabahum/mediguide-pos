@@ -20,6 +20,12 @@ Guidelines Platform.
 - `production.env.example` documents production variables. Copy it to the
   ignored `production.env` and replace every placeholder before deployment.
 
+`APP_ENV` is also the source of truth for the backend Gin runtime mode. The API
+uses Gin debug mode for `development`, test mode for `test`, and release mode
+for production, staging, or an unknown value. This fail-closed mapping prevents
+a misspelled hosted environment from enabling verbose Gin debug output; a
+startup log records both `app_env` and the selected `gin_mode`.
+
 Application-specific container assets live with their application. The
 Guidelines Dockerfiles, Nginx configuration, and runtime configuration scripts
 are in `../guidelines-platform`; Compose and environment orchestration remain

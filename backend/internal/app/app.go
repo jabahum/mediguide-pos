@@ -36,6 +36,9 @@ type App struct {
 }
 
 func New(cfg config.Config) (*App, error) {
+	ginMode := configureGinMode(cfg.AppEnv)
+	log.Info().Str("app_env", cfg.AppEnv).Str("gin_mode", ginMode).Msg("configured Gin runtime mode")
+
 	database, err := db.Connect(cfg.DatabaseURL)
 	if err != nil {
 		return nil, err

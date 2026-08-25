@@ -26,6 +26,12 @@ for production, staging, or an unknown value. This fail-closed mapping prevents
 a misspelled hosted environment from enabling verbose Gin debug output; a
 startup log records both `app_env` and the selected `gin_mode`.
 
+The development Compose override builds the backend's `development` target with
+[Air](https://github.com/air-verse/air) and mounts `../backend` at `/src`.
+Changes to non-test Go files rebuild and restart the API automatically; database
+migrations still run once before Air starts. Air and the writable source mount
+are absent from the production image and production Compose configuration.
+
 Application-specific container assets live with their application. The
 Guidelines Dockerfiles, Nginx configuration, and runtime configuration scripts
 are in `../guidelines-platform`; Compose and environment orchestration remain

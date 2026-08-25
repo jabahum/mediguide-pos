@@ -1,0 +1,22 @@
+root = "."
+tmp_dir = ".air_tmp"
+
+[build]
+cmd = "mkdir -p ./.air_tmp/go-build && GOTMPDIR=./.air_tmp/go-build go build -ldflags '-X mediguide/internal/buildinfo.Version=development -X mediguide/internal/buildinfo.Revision=local' -o ./.air_tmp/api ./cmd/api"
+entrypoint = [".air_tmp/api"]
+delay = 500
+exclude_dir = [".air_tmp", "docs", "migrations", "vendor"]
+exclude_regex = ["_test\\.go$"]
+exclude_unchanged = true
+include_ext = ["go"]
+kill_delay = "2s"
+poll = true
+poll_interval = 500
+send_interrupt = true
+stop_on_error = true
+
+[log]
+time = true
+
+[misc]
+clean_on_exit = true

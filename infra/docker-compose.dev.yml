@@ -2,7 +2,16 @@ services:
   api:
     build:
       target: development
-    command: ["sh", "-c", "/app/migrate up && /app/api"]
+    command: ["sh", "-c", "/app/migrate up && exec air -c .air.toml"]
+    volumes:
+      - ../backend:/src
+      - api_air_tmp:/src/.air_tmp
+      - ../dashboard/samples:/app/legacy-tools:ro
+      - ../clinical-tools:/app/clinical-tools:ro
+    read_only: false
+    restart: "no"
+    tty: true
+    stdin_open: true
 
   postgres:
     ports:
@@ -40,4 +49,5 @@ services:
       retries: 5
 
 volumes:
+  api_air_tmp:
   guidelines_node_modules:

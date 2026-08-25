@@ -77,7 +77,20 @@ HEALTHCHECK --interval=10s --timeout=3s --start-period=15s --retries=6 \
   CMD curl --fail --silent http://127.0.0.1:8080/api/readyz >/dev/null || exit 1
 CMD ["/app/api"]
 
-FROM production AS development
+FROM build AS development
+ARG AIR_VERSION=v1.66.1
+RUN apk add --no-cache curl && \
+  go install github.com/air-verse/air@${AIR_VERSION} && \
+  mkdir -p /app/legacy-tools /app/clinical-tools && \
+  cp /out/migrate /app/migrate && \
+  cp /out/seed /app/seed && \
+  cp -R /out/legacy-tools/. /app/legacy-tools/ && \
+  cp -R /out/clinical-tools/. /app/clinical-tools/
+WORKDIR /src
+EXPOSE 8080
+HEALTHCHECK --interval=10s --timeout=3s --start-period=30s --retries=6 \
+  CMD curl --fail --silent http://127.0.0.1:8080/api/readyz >/dev/null || exit 1
+CMD ["air", "-c", ".air.toml"]
 
 # Persistent local-development variant with no executable calculator HTML.
 # Use only after the guarded development activation command has published all

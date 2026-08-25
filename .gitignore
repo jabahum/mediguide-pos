@@ -21,6 +21,7 @@
 !backend/cmd/seed/fixtures/outbreak-documents/*.md
 backend/.env
 backend/.env.local
+backend/.air_tmp/
 .DS_Store
 guidelines-docs
 .idea/

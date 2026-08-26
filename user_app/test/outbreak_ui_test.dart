@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:user_app/features/outbreaks/data/models/outbreak_models.dart';
+import 'package:user_app/features/outbreaks/presentation/screens/outbreak_document_screens.dart';
 import 'package:user_app/features/outbreaks/presentation/screens/outbreak_screens.dart';
 
 const _outbreak = PublicOutbreak(
@@ -156,6 +157,104 @@ void main() {
     );
     expect(find.text('Ebola response SOP'), findsOneWidget);
     expect(find.text('Ipc Protocol'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets(
+    'outbreak Markdown reader exposes metadata, search, TOC and actions',
+    (tester) async {
+      tester.view.physicalSize = const Size(390, 844);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      Future<void> action() async {}
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: MediaQuery(
+            data: const MediaQueryData(
+              size: Size(390, 844),
+              textScaler: TextScaler.linear(2),
+            ),
+            child: OutbreakMarkdownReaderPage(
+              document: const PublicOutbreakDocument(
+                id: 'document-1',
+                outbreakId: 'outbreak-1',
+                title: 'Ebola isolation SOP',
+                issuingAuthority: 'Ministry of Health',
+                version: '2.0',
+              ),
+              content: OutbreakDocumentContent(
+                documentId: 'document-1',
+                outbreakId: 'outbreak-1',
+                title: 'Ebola isolation SOP',
+                content:
+                    '# Isolation\n\nNotify surveillance immediately.\n\n## Referral\n\nArrange safe referral.',
+                sections: const [
+                  OutbreakDocumentSection(
+                    id: 'isolation',
+                    heading: 'Isolation',
+                    level: 1,
+                  ),
+                  OutbreakDocumentSection(
+                    id: 'referral',
+                    heading: 'Referral',
+                    level: 2,
+                  ),
+                ],
+                reviewDate: DateTime.utc(2026, 1, 1),
+              ),
+              cache: const PublicCacheMetadata(
+                cachedAt: null,
+                lastVerifiedAt: null,
+                isStale: true,
+                isWithdrawn: false,
+                isOffline: true,
+              ),
+              onOpenOriginal: action,
+              onSaveOffline: action,
+              onShare: action,
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Ministry of Health'), findsOneWidget);
+      expect(find.text('Version 2.0'), findsOneWidget);
+      expect(find.textContaining('review date'), findsOneWidget);
+      expect(find.text('Open original'), findsOneWidget);
+      expect(find.text('Save offline'), findsOneWidget);
+      expect(find.text('Share'), findsOneWidget);
+
+      await tester.tap(find.byTooltip('Table of contents'));
+      await tester.pumpAndSettle();
+      expect(find.text('Table of contents'), findsOneWidget);
+      expect(find.text('Referral'), findsWidgets);
+      await tester.tap(find.text('Referral').last);
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byTooltip('Search this document'));
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byType(TextField), 'surveillance');
+      await tester.pumpAndSettle();
+      expect(find.text('1/1'), findsOneWidget);
+      expect(find.textContaining('surveillance'), findsWidgets);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets('unsupported outbreak formats have an honest accessible state', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: Scaffold(body: OutbreakUnsupportedFormatNotice()),
+      ),
+    );
+
+    expect(find.text('Inline preview unavailable'), findsOneWidget);
+    expect(find.textContaining('authoritative original'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 }

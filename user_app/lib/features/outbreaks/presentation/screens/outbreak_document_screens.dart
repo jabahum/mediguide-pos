@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import 'package:user_app/app/providers/app_providers.dart';
@@ -325,6 +326,7 @@ class _OutbreakDocumentPageState extends ConsumerState<OutbreakDocumentPage> {
             icon: const Icon(LucideIcons.bookOpenText),
             label: const Text('Read document'),
           ),
+        if (!document.supportsInline) const OutbreakUnsupportedFormatNotice(),
         FilledButton.icon(
           onPressed: downloading
               ? null
@@ -345,9 +347,14 @@ class _OutbreakDocumentPageState extends ConsumerState<OutbreakDocumentPage> {
           ),
         ],
         OutlinedButton.icon(
-          onPressed: () => _open(document, null),
+          onPressed: () => _openOriginal(document),
           icon: const Icon(LucideIcons.externalLink),
-          label: const Text('Open current online version'),
+          label: const Text('Open original'),
+        ),
+        OutlinedButton.icon(
+          onPressed: () => _shareDocument(document),
+          icon: const Icon(LucideIcons.share2),
+          label: const Text('Share'),
         ),
         if (ready)
           TextButton.icon(
@@ -374,14 +381,18 @@ class _OutbreakDocumentPageState extends ConsumerState<OutbreakDocumentPage> {
       if (!mounted) return;
       await Navigator.of(context).push(
         MaterialPageRoute<void>(
-          builder: (_) => _MarkdownDocumentPage(
-            title: document.title,
-            source: result.value.content,
+          builder: (_) => OutbreakMarkdownReaderPage(
+            document: document,
+            content: result.value,
+            cache: result.cache,
             matchingHeading: _resolvedHeading(
               result.value,
               matchingHeading,
               matchingSectionId,
             ),
+            onOpenOriginal: () => _openOriginal(document),
+            onSaveOffline: () => _download(document),
+            onShare: () => _shareDocument(document),
           ),
         ),
       );
@@ -478,8 +489,35 @@ class _OutbreakDocumentPageState extends ConsumerState<OutbreakDocumentPage> {
       if (mounted) {
         await Navigator.of(context).push(
           MaterialPageRoute<void>(
-            builder: (_) =>
-                _MarkdownDocumentPage(title: document.title, source: text),
+            builder: (_) => OutbreakMarkdownReaderPage(
+              document: document,
+              content: OutbreakDocumentContent(
+                documentId: document.id,
+                outbreakId: document.outbreakId,
+                title: document.title,
+                content: text,
+                contentFormat: 'markdown',
+                mimeType: document.mimeType,
+                checksumSha256: document.checksumSha256,
+                publishedAt: document.publishedAt,
+                effectiveDate: document.effectiveDate,
+                reviewDate: document.reviewDate,
+                expiresAt: document.expiresAt,
+                downloadUrl: document.downloadUrl,
+                originalAvailable: document.downloadUrl.isNotEmpty,
+                canReadInline: true,
+              ),
+              cache: const PublicCacheMetadata(
+                cachedAt: null,
+                lastVerifiedAt: null,
+                isOffline: true,
+                isStale: false,
+                isWithdrawn: false,
+              ),
+              onOpenOriginal: () => _openOriginal(document),
+              onSaveOffline: () => _download(document),
+              onShare: () => _shareDocument(document),
+            ),
           ),
         );
       }
@@ -498,6 +536,26 @@ class _OutbreakDocumentPageState extends ConsumerState<OutbreakDocumentPage> {
       return null;
     }
     return Uri.parse('${AppConfig.current.apiBaseUrl}/').resolveUri(relative);
+  }
+
+  Future<void> _openOriginal(PublicOutbreakDocument document) async {
+    final uri = _downloadUri(document);
+    if (uri == null ||
+        !await launchUrl(uri, mode: LaunchMode.externalApplication)) {
+      _showUnavailable();
+    }
+  }
+
+  Future<void> _shareDocument(PublicOutbreakDocument document) async {
+    final uri = _downloadUri(document);
+    final text = [
+      document.title,
+      if (document.issuingAuthority.isNotEmpty) document.issuingAuthority,
+      if (uri != null) uri.toString(),
+    ].join('\n');
+    await SharePlus.instance.share(
+      ShareParams(text: text, subject: document.title),
+    );
   }
 
   void _showUnavailable() {
@@ -539,22 +597,83 @@ class _OutbreakDocumentPageState extends ConsumerState<OutbreakDocumentPage> {
   }
 }
 
-class _MarkdownDocumentPage extends StatefulWidget {
-  const _MarkdownDocumentPage({
-    required this.title,
-    required this.source,
+class OutbreakMarkdownReaderPage extends StatefulWidget {
+  const OutbreakMarkdownReaderPage({
+    super.key,
+    required this.document,
+    required this.content,
+    required this.cache,
+    required this.onOpenOriginal,
+    required this.onSaveOffline,
+    required this.onShare,
     this.matchingHeading,
   });
-  final String title;
-  final String source;
+  final PublicOutbreakDocument document;
+  final OutbreakDocumentContent content;
+  final PublicCacheMetadata cache;
+  final Future<void> Function() onOpenOriginal;
+  final Future<void> Function() onSaveOffline;
+  final Future<void> Function() onShare;
   final String? matchingHeading;
 
   @override
-  State<_MarkdownDocumentPage> createState() => _MarkdownDocumentPageState();
+  State<OutbreakMarkdownReaderPage> createState() =>
+      _OutbreakMarkdownReaderPageState();
 }
 
-class _MarkdownDocumentPageState extends State<_MarkdownDocumentPage> {
+class _OutbreakMarkdownReaderPageState
+    extends State<OutbreakMarkdownReaderPage> {
   final ScrollController _controller = ScrollController();
+  final TextEditingController _search = TextEditingController();
+  bool _searchVisible = false;
+  int _matchIndex = 0;
+
+  String get _source => widget.content.content;
+
+  List<int> get _matches {
+    final query = _search.text.trim().toLowerCase();
+    if (query.isEmpty) return const <int>[];
+    final source = _source.toLowerCase();
+    final matches = <int>[];
+    var offset = 0;
+    while (offset < source.length) {
+      final index = source.indexOf(query, offset);
+      if (index < 0) break;
+      matches.add(index);
+      offset = index + query.length;
+    }
+    return matches;
+  }
+
+  List<({String id, String heading, int level, int offset})> get _headings {
+    if (widget.content.sections.isNotEmpty) {
+      return widget.content.sections
+          .map((section) {
+            final offset = _source.toLowerCase().indexOf(
+              section.heading.toLowerCase(),
+            );
+            return (
+              id: section.id,
+              heading: section.heading,
+              level: section.level,
+              offset: offset < 0 ? 0 : offset,
+            );
+          })
+          .toList(growable: false);
+    }
+    return RegExp(r'^(#{1,6})\s+(.+)$', multiLine: true)
+        .allMatches(_source)
+        .map(
+          (match) => (
+            id: 'heading-${match.start}',
+            heading: match.group(2)?.trim() ?? '',
+            level: match.group(1)?.length ?? 1,
+            offset: match.start,
+          ),
+        )
+        .where((heading) => heading.heading.isNotEmpty)
+        .toList(growable: false);
+  }
 
   @override
   void initState() {
@@ -565,39 +684,366 @@ class _MarkdownDocumentPageState extends State<_MarkdownDocumentPage> {
   @override
   void dispose() {
     _controller.dispose();
+    _search.dispose();
     super.dispose();
   }
 
   void _scrollToMatch() {
     final heading = widget.matchingHeading?.trim() ?? '';
-    if (heading.isEmpty || !_controller.hasClients || widget.source.isEmpty) {
+    if (heading.isEmpty || !_controller.hasClients || _source.isEmpty) {
       return;
     }
-    final index = widget.source.toLowerCase().indexOf(heading.toLowerCase());
+    final index = _source.toLowerCase().indexOf(heading.toLowerCase());
     if (index < 0) return;
-    final ratio = (index / widget.source.length).clamp(0.0, 1.0);
+    _scrollToOffset(index);
+  }
+
+  void _scrollToOffset(int sourceOffset) {
+    if (!_controller.hasClients || _source.isEmpty) return;
+    final ratio = (sourceOffset / _source.length).clamp(0.0, 1.0);
     _controller.jumpTo(_controller.position.maxScrollExtent * ratio);
   }
 
+  void _moveMatch(int delta) {
+    final matches = _matches;
+    if (matches.isEmpty) return;
+    setState(() {
+      _matchIndex = (_matchIndex + delta) % matches.length;
+      if (_matchIndex < 0) _matchIndex += matches.length;
+    });
+    WidgetsBinding.instance.addPostFrameCallback(
+      (_) => _scrollToOffset(matches[_matchIndex]),
+    );
+  }
+
+  Future<void> _showContents() async {
+    final headings = _headings;
+    await showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      builder: (sheetContext) => SafeArea(
+        child: headings.isEmpty
+            ? const Padding(
+                padding: EdgeInsets.all(24),
+                child: Text('No structured headings are available.'),
+              )
+            : ListView(
+                shrinkWrap: true,
+                children: [
+                  const ListTile(
+                    title: Text('Table of contents'),
+                    leading: Icon(LucideIcons.listTree),
+                  ),
+                  for (final heading in headings)
+                    ListTile(
+                      contentPadding: EdgeInsets.only(
+                        left: 16.0 + ((heading.level - 1).clamp(0, 4) * 14),
+                        right: 16,
+                      ),
+                      title: Text(heading.heading),
+                      onTap: () {
+                        Navigator.pop(sheetContext);
+                        WidgetsBinding.instance.addPostFrameCallback(
+                          (_) => _scrollToOffset(heading.offset),
+                        );
+                      },
+                    ),
+                ],
+              ),
+      ),
+    );
+  }
+
+  String _date(DateTime? value) =>
+      value == null ? '' : value.toLocal().toIso8601String().split('T').first;
+
+  Widget? _lifecycleWarning() {
+    final now = DateTime.now().toUtc();
+    if (widget.content.expiresAt != null &&
+        !widget.content.expiresAt!.isAfter(now)) {
+      return const _ReaderWarning(
+        text: 'This document has expired. Refresh before clinical use.',
+        icon: LucideIcons.triangleAlert,
+        critical: true,
+      );
+    }
+    if (widget.content.reviewDate != null &&
+        !widget.content.reviewDate!.isAfter(now)) {
+      return const _ReaderWarning(
+        text: 'The clinical review date has been reached. Check for an update.',
+        icon: LucideIcons.refreshCw,
+      );
+    }
+    return null;
+  }
+
   @override
-  Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(title: Text(widget.title)),
-    body: Markdown(
-      data: widget.source,
-      controller: _controller,
-      selectable: true,
-      padding: const EdgeInsets.all(20),
-      onTapLink: (_, href, _) async {
-        final uri = Uri.tryParse(href ?? '');
-        if (uri != null && uri.scheme == 'https') {
-          await launchUrl(uri, mode: LaunchMode.externalApplication);
-        }
-      },
-      styleSheet: MarkdownStyleSheet.fromTheme(Theme.of(context)).copyWith(
-        h1: Theme.of(
-          context,
-        ).textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.w800),
+  Widget build(BuildContext context) {
+    final matches = _matches;
+    if (_matchIndex >= matches.length) _matchIndex = 0;
+    final warning = _lifecycleWarning();
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(widget.document.title),
+        actions: [
+          IconButton(
+            tooltip: 'Search this document',
+            onPressed: () => setState(() => _searchVisible = !_searchVisible),
+            icon: const Icon(LucideIcons.search),
+          ),
+          IconButton(
+            tooltip: 'Table of contents',
+            onPressed: _showContents,
+            icon: const Icon(LucideIcons.listTree),
+          ),
+        ],
+      ),
+      body: Column(
+        children: [
+          if (_searchVisible)
+            Material(
+              color: Theme.of(context).colorScheme.surfaceContainerLow,
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(12, 8, 8, 8),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller: _search,
+                        autofocus: true,
+                        textInputAction: TextInputAction.search,
+                        decoration: const InputDecoration(
+                          hintText: 'Find in document',
+                          prefixIcon: Icon(LucideIcons.search),
+                        ),
+                        onChanged: (_) => setState(() => _matchIndex = 0),
+                        onSubmitted: (_) => _moveMatch(0),
+                      ),
+                    ),
+                    Semantics(
+                      liveRegion: true,
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 8),
+                        child: Text(
+                          matches.isEmpty
+                              ? '0 matches'
+                              : '${_matchIndex + 1}/${matches.length}',
+                        ),
+                      ),
+                    ),
+                    IconButton(
+                      tooltip: 'Previous match',
+                      onPressed: matches.isEmpty ? null : () => _moveMatch(-1),
+                      icon: const Icon(LucideIcons.chevronUp),
+                    ),
+                    IconButton(
+                      tooltip: 'Next match',
+                      onPressed: matches.isEmpty ? null : () => _moveMatch(1),
+                      icon: const Icon(LucideIcons.chevronDown),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          if (_searchVisible && matches.isNotEmpty)
+            _SearchMatchPreview(
+              source: _source,
+              query: _search.text,
+              offset: matches[_matchIndex],
+            ),
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+            child: Row(
+              children: [
+                _ReaderChip(
+                  icon: LucideIcons.landmark,
+                  label: widget.document.issuingAuthority.isEmpty
+                      ? 'Official source'
+                      : widget.document.issuingAuthority,
+                ),
+                if (widget.document.version.isNotEmpty)
+                  _ReaderChip(
+                    icon: LucideIcons.gitBranch,
+                    label: 'Version ${widget.document.version}',
+                  ),
+                if (widget.content.publishedAt != null)
+                  _ReaderChip(
+                    icon: LucideIcons.calendarDays,
+                    label: 'Published ${_date(widget.content.publishedAt)}',
+                  ),
+                if (widget.cache.isOffline)
+                  _ReaderChip(
+                    icon: LucideIcons.cloudOff,
+                    label: widget.cache.isStale
+                        ? 'Offline · may be stale'
+                        : 'Offline copy',
+                  ),
+              ],
+            ),
+          ),
+          if (warning != null) warning,
+          Expanded(
+            child: Markdown(
+              data: _source,
+              controller: _controller,
+              selectable: true,
+              padding: const EdgeInsets.fromLTRB(20, 12, 20, 32),
+              onTapLink: (_, href, _) async {
+                final uri = Uri.tryParse(href ?? '');
+                if (uri != null && uri.scheme == 'https') {
+                  await launchUrl(uri, mode: LaunchMode.externalApplication);
+                }
+              },
+              styleSheet: MarkdownStyleSheet.fromTheme(Theme.of(context))
+                  .copyWith(
+                    h1: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+            ),
+          ),
+        ],
+      ),
+      bottomNavigationBar: SafeArea(
+        top: false,
+        child: SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+          child: Row(
+            children: [
+              TextButton.icon(
+                onPressed: widget.onOpenOriginal,
+                icon: const Icon(LucideIcons.fileDown),
+                label: const Text('Open original'),
+              ),
+              TextButton.icon(
+                onPressed: widget.onSaveOffline,
+                icon: const Icon(LucideIcons.download),
+                label: const Text('Save offline'),
+              ),
+              TextButton.icon(
+                onPressed: widget.onShare,
+                icon: const Icon(LucideIcons.share2),
+                label: const Text('Share'),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ReaderChip extends StatelessWidget {
+  const _ReaderChip({required this.icon, required this.label});
+  final IconData icon;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.only(right: 8),
+    child: Chip(avatar: Icon(icon, size: 16), label: Text(label)),
+  );
+}
+
+class OutbreakUnsupportedFormatNotice extends StatelessWidget {
+  const OutbreakUnsupportedFormatNotice({super.key});
+
+  @override
+  Widget build(BuildContext context) => Card(
+    color: Theme.of(context).colorScheme.surfaceContainerLow,
+    child: const ListTile(
+      leading: Icon(LucideIcons.fileWarning),
+      title: Text('Inline preview unavailable'),
+      subtitle: Text(
+        'This format cannot be rendered safely in the app. Download or open the authoritative original instead.',
       ),
     ),
   );
+}
+
+class _ReaderWarning extends StatelessWidget {
+  const _ReaderWarning({
+    required this.text,
+    required this.icon,
+    this.critical = false,
+  });
+  final String text;
+  final IconData icon;
+  final bool critical;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = critical ? Colors.red : Colors.orange;
+    return Semantics(
+      liveRegion: true,
+      child: Container(
+        width: double.infinity,
+        margin: const EdgeInsets.fromLTRB(16, 4, 16, 4),
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: color.withValues(alpha: 0.4)),
+        ),
+        child: Row(
+          children: [
+            Icon(icon, color: color.shade700),
+            const SizedBox(width: 10),
+            Expanded(child: Text(text)),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _SearchMatchPreview extends StatelessWidget {
+  const _SearchMatchPreview({
+    required this.source,
+    required this.query,
+    required this.offset,
+  });
+  final String source;
+  final String query;
+  final int offset;
+
+  @override
+  Widget build(BuildContext context) {
+    final start = (offset - 55).clamp(0, source.length).toInt();
+    final end = (offset + query.length + 55).clamp(0, source.length).toInt();
+    final before = source.substring(start, offset);
+    final matchEnd = (offset + query.length).clamp(0, source.length).toInt();
+    final match = source.substring(offset, matchEnd);
+    final after = source.substring(matchEnd, end);
+    final style = Theme.of(context).textTheme.bodySmall;
+    return Semantics(
+      liveRegion: true,
+      label: 'Current search match: $match',
+      child: Container(
+        width: double.infinity,
+        color: Colors.amber.withValues(alpha: 0.14),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        child: Text.rich(
+          TextSpan(
+            style: style,
+            children: [
+              TextSpan(text: start > 0 ? '…$before' : before),
+              TextSpan(
+                text: match,
+                style: style?.copyWith(
+                  fontWeight: FontWeight.w800,
+                  backgroundColor: Colors.amber.shade300,
+                ),
+              ),
+              TextSpan(text: end < source.length ? '$after…' : after),
+            ],
+          ),
+          maxLines: 3,
+          overflow: TextOverflow.ellipsis,
+        ),
+      ),
+    );
+  }
 }

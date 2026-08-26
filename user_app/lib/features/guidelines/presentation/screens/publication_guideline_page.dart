@@ -81,6 +81,21 @@ class _PublicationGuidelinePageState
     final progress = ref
         .watch(publicationReadingProgressProvider(widget.guidelineId))
         .valueOrNull;
+    final downloadItems = ref
+        .watch(guidelineDownloadsControllerProvider)
+        .valueOrNull;
+    final currentContent = content.valueOrNull;
+    final targetAssetType = currentContent?.manifest.hasOfflinePackage == true
+        ? 'offline_package'
+        : 'original_pdf';
+    OfflineDownload? offlineDownload;
+    for (final item in downloadItems ?? const <OfflineDownload>[]) {
+      if (item.guidelineId == widget.guidelineId &&
+          item.assetType == targetAssetType) {
+        offlineDownload = item;
+        break;
+      }
+    }
 
     return Scaffold(
       appBar: AppBar(
@@ -176,6 +191,7 @@ class _PublicationGuidelinePageState
           ? null
           : _ReaderActionBar(
               isBookmarked: progress?.isBookmarked == true,
+              offlineDownload: offlineDownload,
               showRead: !widget.readerOnly,
               onRead: () {
                 context.push(AppRoutes.readPublicGuideline(widget.guidelineId));
@@ -196,6 +212,15 @@ class _PublicationGuidelinePageState
                 _openOriginal(context);
               },
               onDownload: () {
+                if (offlineDownload?.status == OfflineDownloadStatus.ready) {
+                  context.push(AppRoutes.offlineContent);
+                  return;
+                }
+                if (offlineDownload?.status ==
+                        OfflineDownloadStatus.downloading ||
+                    offlineDownload?.status == OfflineDownloadStatus.queued) {
+                  return;
+                }
                 _download(context, content.requireValue);
               },
             ),
@@ -294,14 +319,19 @@ class _PublicationGuidelinePageState
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text(message)));
-    } catch (error) {
+    } catch (_) {
       if (!context.mounted) {
         return;
       }
 
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Download failed: $error')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'The offline copy could not be downloaded. '
+            'Check your connection and try again.',
+          ),
+        ),
+      );
     }
   }
 
@@ -716,13 +746,18 @@ class _PublicationGuidelinePageState
           source: asset.url,
         ),
       );
-    } catch (error) {
+    } catch (_) {
       if (!context.mounted) {
         return;
       }
 
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Unable to open original document: $error')),
+        const SnackBar(
+          content: Text(
+            'The original document could not be opened. '
+            'Check your connection and try again.',
+          ),
+        ),
       );
     }
   }
@@ -1610,6 +1645,7 @@ class _ReviewStatus extends StatelessWidget {
 class _ReaderActionBar extends StatelessWidget {
   const _ReaderActionBar({
     required this.isBookmarked,
+    required this.offlineDownload,
     required this.showRead,
     required this.onRead,
     required this.onAskAi,
@@ -1621,6 +1657,7 @@ class _ReaderActionBar extends StatelessWidget {
   });
 
   final bool isBookmarked;
+  final OfflineDownload? offlineDownload;
   final bool showRead;
 
   final VoidCallback onRead;
@@ -1653,6 +1690,7 @@ class _ReaderActionBar extends StatelessWidget {
           child: showRead
               ? _OverviewBottomActions(
                   isBookmarked: isBookmarked,
+                  offlineDownload: offlineDownload,
                   onRead: onRead,
                   onBookmark: onBookmark,
                   onDownload: onDownload,
@@ -1675,20 +1713,47 @@ class _ReaderActionBar extends StatelessWidget {
   }
 
   Future<void> _showMoreActions(BuildContext context) {
+    final status = offlineDownload?.status;
+    final downloading =
+        status == OfflineDownloadStatus.queued ||
+        status == OfflineDownloadStatus.downloading;
+    final offlineTitle = switch (status) {
+      OfflineDownloadStatus.ready => 'Manage offline copy',
+      OfflineDownloadStatus.updateAvailable => 'Update offline copy',
+      OfflineDownloadStatus.failed ||
+      OfflineDownloadStatus.corrupted => 'Retry offline copy',
+      OfflineDownloadStatus.queued ||
+      OfflineDownloadStatus.downloading => 'Downloading offline copy',
+      _ => 'Download for offline use',
+    };
+    final offlineSubtitle = switch (status) {
+      OfflineDownloadStatus.ready => 'Saved and available without internet',
+      OfflineDownloadStatus.updateAvailable =>
+        'A newer published version is available',
+      OfflineDownloadStatus.failed || OfflineDownloadStatus.corrupted =>
+        'The previous download did not complete',
+      OfflineDownloadStatus.queued ||
+      OfflineDownloadStatus.downloading => 'The verified file is being saved',
+      _ => 'Save a verified copy on this device',
+    };
     return showModalBottomSheet<void>(
       context: context,
       showDragHandle: true,
       useSafeArea: true,
+      isScrollControlled: true,
       builder: (sheetContext) {
-        return Padding(
-          padding: const EdgeInsets.fromLTRB(
-            AppSpacing.md,
-            0,
-            AppSpacing.md,
-            AppSpacing.lg,
+        return ConstrainedBox(
+          constraints: BoxConstraints(
+            maxHeight: MediaQuery.sizeOf(sheetContext).height * 0.78,
           ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
+          child: ListView(
+            shrinkWrap: true,
+            padding: const EdgeInsets.fromLTRB(
+              AppSpacing.md,
+              0,
+              AppSpacing.md,
+              AppSpacing.lg,
+            ),
             children: [
               ListTile(
                 leading: const Icon(LucideIcons.sparkles),
@@ -1734,13 +1799,22 @@ class _ReaderActionBar extends StatelessWidget {
               ),
 
               ListTile(
-                leading: const Icon(LucideIcons.download),
-                title: const Text('Offline copy'),
-                onTap: () {
-                  Navigator.pop(sheetContext);
+                leading: Icon(
+                  status == OfflineDownloadStatus.ready
+                      ? LucideIcons.cloudCheck
+                      : status == OfflineDownloadStatus.updateAvailable
+                      ? LucideIcons.refreshCw
+                      : LucideIcons.download,
+                ),
+                title: Text(offlineTitle),
+                subtitle: Text(offlineSubtitle),
+                onTap: downloading
+                    ? null
+                    : () {
+                        Navigator.pop(sheetContext);
 
-                  onDownload();
-                },
+                        onDownload();
+                      },
               ),
             ],
           ),
@@ -1757,6 +1831,7 @@ class _ReaderActionBar extends StatelessWidget {
 class _OverviewBottomActions extends StatelessWidget {
   const _OverviewBottomActions({
     required this.isBookmarked,
+    required this.offlineDownload,
     required this.onRead,
     required this.onBookmark,
     required this.onDownload,
@@ -1764,6 +1839,7 @@ class _OverviewBottomActions extends StatelessWidget {
   });
 
   final bool isBookmarked;
+  final OfflineDownload? offlineDownload;
 
   final VoidCallback onRead;
   final VoidCallback onBookmark;
@@ -1796,8 +1872,12 @@ class _OverviewBottomActions extends StatelessWidget {
         AppSpacing.hGapXs,
 
         _BottomIconAction(
-          icon: LucideIcons.download,
-          tooltip: 'Offline',
+          icon: offlineDownload?.status == OfflineDownloadStatus.ready
+              ? LucideIcons.cloudCheck
+              : LucideIcons.download,
+          tooltip: offlineDownload?.status == OfflineDownloadStatus.ready
+              ? 'Manage offline copy'
+              : 'Download for offline use',
           onTap: onDownload,
         ),
 

@@ -1,5 +1,6 @@
 import 'package:user_app/core/network/api_client.dart';
 import 'package:user_app/core/network/contracts/generated/backend_contracts.dart';
+import 'package:user_app/core/config/app_config.dart';
 import 'package:user_app/core/storage/local_cache_service.dart';
 import 'package:user_app/features/guidelines/data/models/guideline_publication.dart';
 import 'package:user_app/shared/models/paginated_response.dart';
@@ -386,6 +387,14 @@ PublicationSection _sectionFromContract(Map<String, dynamic> json) {
 
 GuidelineAsset _assetFromContract(Map<String, dynamic> json) {
   final dto = ServicesPublicGuidelineAssetLink.fromJson(json);
+  final rawUrl = dto.url?.trim() ?? '';
+  final parsed = Uri.tryParse(rawUrl);
+  final resolvedUrl =
+      parsed != null && !parsed.hasScheme && !parsed.hasAuthority
+      ? Uri.parse(
+          '${AppConfig.current.apiBaseUrl}/',
+        ).resolveUri(parsed).toString()
+      : rawUrl;
   return GuidelineAsset(
     id: dto.assetId,
     type: dto.type ?? '',
@@ -393,7 +402,7 @@ GuidelineAsset _assetFromContract(Map<String, dynamic> json) {
     checksum: dto.checksum ?? '',
     sizeBytes: dto.sizeBytes ?? 0,
     originalFilename: dto.originalFilename ?? '',
-    url: dto.url ?? '',
+    url: resolvedUrl,
     expiresAt: DateTime.tryParse(dto.expiresAt ?? ''),
   );
 }

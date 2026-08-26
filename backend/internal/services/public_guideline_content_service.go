@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"strings"
 	"time"
 
@@ -111,6 +112,26 @@ type PublicGuidelineAssetLink struct {
 	OriginalFilename string     `json:"original_filename,omitempty"`
 	URL              string     `json:"url"`
 	ExpiresAt        time.Time  `json:"expires_at"`
+}
+
+// PublicGuidelineAssetDownload keeps managed object-storage reads behind the
+// public API boundary. Clients must never need to resolve an internal MinIO or
+// S3 hostname to download a published guideline asset.
+type PublicGuidelineAssetDownload struct {
+	Body      io.ReadCloser
+	Filename  string
+	MIMEType  string
+	SizeBytes int64
+	Checksum  string
+}
+
+type publicGuidelineAssetSource struct {
+	asset      *models.GuidelineAsset
+	storageKey string
+	filename   string
+	mimeType   string
+	sizeBytes  int64
+	checksum   string
 }
 
 func (s PublicGuidelineService) Manifest(ctx context.Context, guidelineID uuid.UUID) (*PublicGuidelineManifest, error) {
@@ -266,6 +287,24 @@ func (s PublicGuidelineService) OfflinePackage(ctx context.Context, guidelineID 
 	return s.assetLink(ctx, guidelineID, uuid.Nil, string(models.GuidelineAssetOfflinePackage))
 }
 
+func (s PublicGuidelineService) AssetDownload(ctx context.Context, guidelineID, assetID uuid.UUID, assetType string) (*PublicGuidelineAssetDownload, error) {
+	if s.Store == nil {
+		return nil, ErrPublicGuidelineNotFound
+	}
+	source, err := s.publicAssetSource(ctx, guidelineID, assetID, assetType)
+	if err != nil {
+		return nil, err
+	}
+	body, err := s.Store.Get(ctx, source.storageKey)
+	if err != nil {
+		return nil, err
+	}
+	return &PublicGuidelineAssetDownload{
+		Body: body, Filename: source.filename, MIMEType: source.mimeType,
+		SizeBytes: source.sizeBytes, Checksum: source.checksum,
+	}, nil
+}
+
 func (s PublicGuidelineService) publicSectionsQuery(ctx context.Context, guidelineID uuid.UUID) *gorm.DB {
 	return s.DB.WithContext(ctx).Table("guideline_sections AS gs").
 		Joins("JOIN guideline_versions AS gv ON gv.id = gs.version_id AND gv.deleted_at IS NULL AND lower(gv.status) = 'published'").
@@ -286,6 +325,34 @@ func (s PublicGuidelineService) assetLink(ctx context.Context, guidelineID, asse
 	if s.Store == nil {
 		return nil, ErrPublicGuidelineNotFound
 	}
+	source, err := s.publicAssetSource(ctx, guidelineID, assetID, assetType)
+	if err != nil {
+		return nil, err
+	}
+	downloadURL := fmt.Sprintf("/api/public/guidelines/%s/assets/%s/download", guidelineID, assetID)
+	if assetID == uuid.Nil {
+		switch assetType {
+		case string(models.GuidelineAssetOriginalPDF):
+			downloadURL = fmt.Sprintf("/api/public/guidelines/%s/original/download", guidelineID)
+		case string(models.GuidelineAssetOfflinePackage):
+			downloadURL = fmt.Sprintf("/api/public/guidelines/%s/offline-package/download", guidelineID)
+		default:
+			return nil, ErrPublicGuidelineNotFound
+		}
+	}
+	result := &PublicGuidelineAssetLink{
+		Type: assetType, MIMEType: source.mimeType, Checksum: source.checksum,
+		SizeBytes: source.sizeBytes, OriginalFilename: source.filename,
+		URL: downloadURL, ExpiresAt: time.Now().UTC().Add(publicAssetURLTTL),
+	}
+	if source.asset != nil {
+		result.AssetID = &source.asset.ID
+		result.Type = string(source.asset.Type)
+	}
+	return result, nil
+}
+
+func (s PublicGuidelineService) publicAssetSource(ctx context.Context, guidelineID, assetID uuid.UUID, assetType string) (*publicGuidelineAssetSource, error) {
 	row, err := s.getVisibleRow(ctx, guidelineID)
 	if err != nil {
 		return nil, err
@@ -302,12 +369,11 @@ func (s PublicGuidelineService) assetLink(ctx context.Context, guidelineID, asse
 	}
 	err = query.Order("created_at DESC").First(&asset).Error
 	if errors.Is(err, gorm.ErrRecordNotFound) && assetType == string(models.GuidelineAssetOriginalPDF) && strings.TrimSpace(row.OriginalFileKey) != "" {
-		expiresAt := time.Now().UTC().Add(publicAssetURLTTL)
-		url, signErr := s.Store.PresignGet(ctx, row.OriginalFileKey, publicAssetURLTTL)
-		if signErr != nil {
-			return nil, signErr
-		}
-		return &PublicGuidelineAssetLink{Type: assetType, MIMEType: "application/pdf", URL: url.String(), ExpiresAt: expiresAt}, nil
+		return &publicGuidelineAssetSource{
+			storageKey: row.OriginalFileKey,
+			filename:   slugify(row.Title) + ".pdf",
+			mimeType:   "application/pdf",
+		}, nil
 	}
 	if errors.Is(err, gorm.ErrRecordNotFound) {
 		return nil, ErrPublicGuidelineNotFound
@@ -315,19 +381,13 @@ func (s PublicGuidelineService) assetLink(ctx context.Context, guidelineID, asse
 	if err != nil {
 		return nil, err
 	}
-	url, err := s.Store.PresignGet(ctx, asset.StorageKey, publicAssetURLTTL)
-	if err != nil {
-		return nil, err
-	}
 	filename := ""
 	if asset.OriginalFilename != nil {
 		filename = *asset.OriginalFilename
 	}
-	expiresAt := time.Now().UTC().Add(publicAssetURLTTL)
-	return &PublicGuidelineAssetLink{
-		AssetID: &asset.ID, Type: string(asset.Type), MIMEType: asset.MIMEType,
-		Checksum: asset.Checksum, SizeBytes: asset.SizeBytes, OriginalFilename: filename,
-		URL: url.String(), ExpiresAt: expiresAt,
+	return &publicGuidelineAssetSource{
+		asset: &asset, storageKey: asset.StorageKey, filename: filename,
+		mimeType: asset.MIMEType, sizeBytes: asset.SizeBytes, checksum: asset.Checksum,
 	}, nil
 }
 

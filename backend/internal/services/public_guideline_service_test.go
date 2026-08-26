@@ -83,7 +83,7 @@ func TestSlugifyUsesSafeStableCharacters(t *testing.T) {
 
 func TestPublicStructuredGuidelineExposesOnlyReviewedPublishedContent(t *testing.T) {
 	db := publicGuidelineTestDB(t)
-	store := &fakePublicStore{objects: map[string][]byte{}}
+	store := &fakePublicStore{objects: map[string][]byte{"source/care.pdf": []byte("%PDF-public")}}
 	document := models.GuidelineDocument{Title: "Emergency care"}
 	if err := db.Create(&document).Error; err != nil {
 		t.Fatal(err)
@@ -138,8 +138,17 @@ func TestPublicStructuredGuidelineExposesOnlyReviewedPublishedContent(t *testing
 		t.Fatalf("unexpected manifest: %#v %v", gotManifest, err)
 	}
 	link, err := service.Original(context.Background(), document.ID)
-	if err != nil || link.URL != "https://objects.example.test/source/care.pdf" {
+	if err != nil || link.URL != "/api/public/guidelines/"+document.ID.String()+"/original/download" {
 		t.Fatalf("unexpected original link: %#v %v", link, err)
+	}
+	download, err := service.AssetDownload(context.Background(), document.ID, uuid.Nil, string(models.GuidelineAssetOriginalPDF))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer download.Body.Close()
+	contents, err := io.ReadAll(download.Body)
+	if err != nil || string(contents) != "%PDF-public" || download.MIMEType != "application/pdf" {
+		t.Fatalf("unexpected streamed original: content=%q download=%#v err=%v", contents, download, err)
 	}
 }
 

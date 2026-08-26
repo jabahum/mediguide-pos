@@ -92,6 +92,29 @@ void main() {
     );
   });
 
+  test(
+    'does not expose a ready action after the local file is removed',
+    () async {
+      final saved = await service.download(
+        guidelineId: 'guideline-missing',
+        title: 'Clinical guideline',
+        version: '1',
+        assetType: 'offline_package',
+        asset: asset(),
+        scope: 'public',
+      );
+      await File(saved.localPath).delete();
+
+      final refreshed = await service.get(
+        scope: 'public',
+        id: 'guideline-missing:offline_package',
+      );
+
+      expect(refreshed?.status, OfflineDownloadStatus.failed);
+      expect(refreshed?.error, 'Downloaded file is missing.');
+    },
+  );
+
   test('keeps public and authenticated metadata in separate scopes', () async {
     await service.download(
       guidelineId: 'guideline-3',

@@ -221,6 +221,47 @@
                 }
             }
         },
+        "/api/public/guidelines/{id}/assets/{assetId}/download": {
+            "get": {
+                "produces": [
+                    "application/octet-stream"
+                ],
+                "tags": [
+                    "Public Guidelines"
+                ],
+                "summary": "Download a reviewed published guideline asset through the API",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Guideline UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Asset UUID",
+                        "name": "assetId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "file"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.Response"
+                        }
+                    }
+                }
+            }
+        },
         "/api/public/guidelines/{id}/figures": {
             "get": {
                 "produces": [
@@ -339,6 +380,40 @@
                 }
             }
         },
+        "/api/public/guidelines/{id}/offline-package/download": {
+            "get": {
+                "produces": [
+                    "application/octet-stream"
+                ],
+                "tags": [
+                    "Public Guidelines"
+                ],
+                "summary": "Download the published offline guideline package through the API",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Guideline UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "file"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.Response"
+                        }
+                    }
+                }
+            }
+        },
         "/api/public/guidelines/{id}/original": {
             "get": {
                 "produces": [
@@ -362,6 +437,40 @@
                         "description": "OK",
                         "schema": {
                             "$ref": "#/definitions/handlers.PublicGuidelineAssetEnvelope"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/public/guidelines/{id}/original/download": {
+            "get": {
+                "produces": [
+                    "application/octet-stream"
+                ],
+                "tags": [
+                    "Public Guidelines"
+                ],
+                "summary": "Download the published original guideline file through the API",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Guideline UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "file"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.Response"
                         }
                     }
                 }

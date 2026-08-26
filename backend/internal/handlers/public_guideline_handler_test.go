@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -25,6 +26,16 @@ type fakePublicGuidelineReader struct {
 	markdown       *services.PublicGuidelineMarkdown
 	markdownErr    error
 	receivedFilter services.PublicGuidelineFilter
+}
+
+type fakePublicGuidelineContent struct {
+	PublicGuidelineContentReader
+	download *services.PublicGuidelineAssetDownload
+	err      error
+}
+
+func (f fakePublicGuidelineContent) AssetDownload(context.Context, uuid.UUID, uuid.UUID, string) (*services.PublicGuidelineAssetDownload, error) {
+	return f.download, f.err
 }
 
 func (f *fakePublicGuidelineReader) List(_ context.Context, filter services.PublicGuidelineFilter) (*services.PageResult[services.PublicGuideline], error) {
@@ -173,5 +184,29 @@ func TestPublicGuidelineDetailSupportsConditionalRequests(t *testing.T) {
 	router.ServeHTTP(second, request)
 	if second.Code != http.StatusNotModified || second.Body.Len() != 0 {
 		t.Fatalf("expected empty 304, got %d %s", second.Code, second.Body.String())
+	}
+}
+
+func TestPublicGuidelineAssetDownloadStreamsWithoutInternalStorageRedirect(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	id := uuid.New()
+	handler := PublicGuidelineHandler{Content: fakePublicGuidelineContent{download: &services.PublicGuidelineAssetDownload{
+		Body: io.NopCloser(strings.NewReader("verified-package")), Filename: "malaria-offline.zip",
+		MIMEType: "application/zip", SizeBytes: int64(len("verified-package")), Checksum: strings.Repeat("a", 64),
+	}}}
+	router := gin.New()
+	router.GET("/api/public/guidelines/:id/offline-package/download", handler.OfflinePackageDownload)
+
+	response := httptest.NewRecorder()
+	router.ServeHTTP(response, httptest.NewRequest(http.MethodGet, "/api/public/guidelines/"+id.String()+"/offline-package/download", nil))
+
+	if response.Code != http.StatusOK || response.Body.String() != "verified-package" {
+		t.Fatalf("unexpected download response %d: %q", response.Code, response.Body.String())
+	}
+	if response.Header().Get("Location") != "" || strings.Contains(response.Body.String(), "minio") {
+		t.Fatalf("internal storage address leaked: headers=%v body=%q", response.Header(), response.Body.String())
+	}
+	if response.Header().Get("Content-Type") != "application/zip" || !strings.Contains(response.Header().Get("Content-Disposition"), "malaria-offline.zip") {
+		t.Fatalf("download headers missing: %v", response.Header())
 	}
 }

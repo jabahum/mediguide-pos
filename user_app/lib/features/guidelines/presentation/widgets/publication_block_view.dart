@@ -181,6 +181,26 @@ class _TableBlock extends StatelessWidget {
         if (payload.title.isNotEmpty)
           Text(payload.title, style: Theme.of(context).textTheme.titleMedium),
         AppSpacing.gapSm,
+        if (payload.columns.length > 2)
+          Padding(
+            padding: const EdgeInsets.only(bottom: AppSpacing.xs),
+            child: Row(
+              children: [
+                Icon(
+                  LucideIcons.moveHorizontal,
+                  size: 16,
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
+                const SizedBox(width: AppSpacing.xs),
+                Text(
+                  'Swipe horizontally to see all columns',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ],
+            ),
+          ),
         Scrollbar(
           child: SingleChildScrollView(
             scrollDirection: Axis.horizontal,

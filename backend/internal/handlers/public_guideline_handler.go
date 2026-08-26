@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"mime"
 	"net/http"
 	"strings"
 	"time"
@@ -32,6 +33,7 @@ type PublicGuidelineContentReader interface {
 	Algorithms(context.Context, uuid.UUID, services.PublicGuidelineContentQuery) (*services.PageResult[services.PublicGuidelineAlgorithm], error)
 	Original(context.Context, uuid.UUID) (*services.PublicGuidelineAssetLink, error)
 	OfflinePackage(context.Context, uuid.UUID) (*services.PublicGuidelineAssetLink, error)
+	AssetDownload(context.Context, uuid.UUID, uuid.UUID, string) (*services.PublicGuidelineAssetDownload, error)
 }
 
 type PublicGuidelineHandler struct {
@@ -285,6 +287,86 @@ func (h PublicGuidelineHandler) Original(c *gin.Context) { h.asset(c, false) }
 // @Success 200 {object} handlers.PublicGuidelineAssetEnvelope
 // @Router /api/public/guidelines/{id}/offline-package [get]
 func (h PublicGuidelineHandler) OfflinePackage(c *gin.Context) { h.asset(c, true) }
+
+// OriginalDownload godoc
+// @Summary Download the published original guideline file through the API
+// @Tags Public Guidelines
+// @Produce application/octet-stream
+// @Param id path string true "Guideline UUID"
+// @Success 200 {file} binary
+// @Failure 404 {object} httpx.Response
+// @Router /api/public/guidelines/{id}/original/download [get]
+func (h PublicGuidelineHandler) OriginalDownload(c *gin.Context) {
+	h.downloadAsset(c, uuid.Nil, "original_pdf")
+}
+
+// OfflinePackageDownload godoc
+// @Summary Download the published offline guideline package through the API
+// @Tags Public Guidelines
+// @Produce application/octet-stream
+// @Param id path string true "Guideline UUID"
+// @Success 200 {file} binary
+// @Failure 404 {object} httpx.Response
+// @Router /api/public/guidelines/{id}/offline-package/download [get]
+func (h PublicGuidelineHandler) OfflinePackageDownload(c *gin.Context) {
+	h.downloadAsset(c, uuid.Nil, "offline_package")
+}
+
+// AssetDownload godoc
+// @Summary Download a reviewed published guideline asset through the API
+// @Tags Public Guidelines
+// @Produce application/octet-stream
+// @Param id path string true "Guideline UUID"
+// @Param assetId path string true "Asset UUID"
+// @Success 200 {file} binary
+// @Failure 404 {object} httpx.Response
+// @Router /api/public/guidelines/{id}/assets/{assetId}/download [get]
+func (h PublicGuidelineHandler) AssetDownload(c *gin.Context) {
+	assetID, err := uuid.Parse(c.Param("assetId"))
+	if err != nil {
+		httpx.Error(c, http.StatusBadRequest, "invalid assetId")
+		return
+	}
+	h.downloadAsset(c, assetID, "")
+}
+
+func (h PublicGuidelineHandler) downloadAsset(c *gin.Context, assetID uuid.UUID, assetType string) {
+	id, ok := publicGuidelineID(c)
+	if !ok || !h.contentAvailable(c) {
+		return
+	}
+	download, err := h.Content.AssetDownload(c.Request.Context(), id, assetID, assetType)
+	if err != nil {
+		publicGuidelineError(c, err)
+		return
+	}
+	if download == nil || download.Body == nil {
+		httpx.Error(c, http.StatusServiceUnavailable, "guideline asset unavailable")
+		return
+	}
+	defer download.Body.Close()
+	contentType := strings.TrimSpace(download.MIMEType)
+	if contentType == "" {
+		contentType = "application/octet-stream"
+	}
+	filename := strings.TrimSpace(download.Filename)
+	if filename == "" {
+		filename = id.String()
+	}
+	headers := map[string]string{
+		"Cache-Control":          "private, no-store",
+		"Content-Disposition":    mime.FormatMediaType("attachment", map[string]string{"filename": filename}),
+		"X-Content-Type-Options": "nosniff",
+	}
+	if download.Checksum != "" {
+		headers["ETag"] = `"` + download.Checksum + `"`
+	}
+	contentLength := download.SizeBytes
+	if contentLength <= 0 {
+		contentLength = -1
+	}
+	c.DataFromReader(http.StatusOK, contentLength, contentType, download.Body, headers)
+}
 
 func (h PublicGuidelineHandler) asset(c *gin.Context, offline bool) {
 	id, ok := publicGuidelineID(c)

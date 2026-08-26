@@ -246,7 +246,17 @@ final class GuidelineDownloadService {
     required String id,
   }) async {
     final row = await _cache.get(type: _cacheType, id: id, scope: scope);
-    return row == null ? null : OfflineDownload.fromJson(row);
+    if (row == null) return null;
+    var item = OfflineDownload.fromJson(row);
+    if (item.status == OfflineDownloadStatus.ready &&
+        (item.localPath.isEmpty || !await File(item.localPath).exists())) {
+      item = item.copyWith(
+        status: OfflineDownloadStatus.failed,
+        error: 'Downloaded file is missing.',
+      );
+      await _save(item);
+    }
+    return item;
   }
 
   Future<int> storageUsage(String scope) async => (await list(scope)).fold<int>(

@@ -627,6 +627,7 @@ class _OutbreakMarkdownReaderPageState
   final TextEditingController _search = TextEditingController();
   bool _searchVisible = false;
   int _matchIndex = 0;
+  int _initialMatchAttempts = 0;
 
   String get _source => widget.content.content;
 
@@ -678,7 +679,7 @@ class _OutbreakMarkdownReaderPageState
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToMatch());
+    _scheduleInitialMatch();
   }
 
   @override
@@ -688,14 +689,27 @@ class _OutbreakMarkdownReaderPageState
     super.dispose();
   }
 
-  void _scrollToMatch() {
+  void _scheduleInitialMatch() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _initialMatchAttempts++;
+      final moved = _scrollToMatch();
+      // The Markdown scroll position may attach one frame after the parent
+      // page. Retry briefly so deep links reliably land on their match.
+      if (!moved && _initialMatchAttempts < 3) _scheduleInitialMatch();
+    });
+  }
+
+  bool _scrollToMatch() {
     final heading = widget.matchingHeading?.trim() ?? '';
     if (heading.isEmpty || !_controller.hasClients || _source.isEmpty) {
-      return;
+      return heading.isEmpty;
     }
     final index = _source.toLowerCase().indexOf(heading.toLowerCase());
-    if (index < 0) return;
+    if (index < 0) return true;
+    if (_controller.position.maxScrollExtent <= 0 && index > 0) return false;
     _scrollToOffset(index);
+    return true;
   }
 
   void _scrollToOffset(int sourceOffset) {
@@ -885,6 +899,7 @@ class _OutbreakMarkdownReaderPageState
           if (warning != null) warning,
           Expanded(
             child: Markdown(
+              key: const Key('outbreak-document-markdown'),
               data: _source,
               controller: _controller,
               selectable: true,

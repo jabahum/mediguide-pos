@@ -6,7 +6,6 @@ import (
 	"crypto/sha256"
 	"embed"
 	"encoding/hex"
-	"encoding/json"
 	"fmt"
 	"io"
 	"path"
@@ -93,9 +92,9 @@ func seedDemoOutbreakDocuments(ctx context.Context, database *gorm.DB, store sto
 		if len(storedContent) == 0 || !bytes.Equal(content, storedContent) || storedChecksum != checksum {
 			return fmt.Errorf("stored outbreak document fixture %q failed size or checksum verification", document.Fixture)
 		}
-		sections, err := demoMarkdownSections(content)
-		if err != nil {
-			return fmt.Errorf("derive outbreak document fixture %q sections: %w", document.Fixture, err)
+		projection := services.DeriveOutbreakDocumentProjection(path.Ext(document.Fixture), content)
+		if projection.Status != "ready" || projection.Format != "markdown" || strings.TrimSpace(projection.Search) == "" || strings.TrimSpace(projection.Rendered) == "" || projection.Checksum == "" {
+			return fmt.Errorf("derive outbreak document fixture %q: status=%s error=%s", document.Fixture, projection.Status, projection.Error)
 		}
 		checksumValue := hex.EncodeToString(checksum[:])
 
@@ -113,11 +112,14 @@ func seedDemoOutbreakDocuments(ctx context.Context, database *gorm.DB, store sto
 			"status": "published", "author_id": authorID, "reviewed_by": clinicianID,
 			"reviewed_at": publishedAt, "approved_by": clinicianID, "approved_at": publishedAt,
 			"published_at": publishedAt, "lock_version": 1,
-			"search_content": string(content), "rendered_content": string(content),
-			"content_format": "markdown", "extraction_status": "ready", "extracted_at": publishedAt,
-			"extraction_source_checksum": checksumValue, "derived_content_checksum": checksumValue,
-			"search_index_status": "indexed", "search_schema_version": 1,
-			"content_sections": sections, "indexed_at": publishedAt,
+			"search_content": projection.Search, "search_headings": projection.Headings,
+			"rendered_content": projection.Rendered, "content_format": projection.Format,
+			"extraction_status": projection.Status, "extraction_error": projection.Error,
+			"extracted_at": publishedAt, "extraction_source_checksum": checksumValue,
+			"derived_content_checksum": projection.Checksum,
+			"search_index_status":      "indexed", "search_schema_version": services.OutbreakDocumentSearchSchemaVersion,
+			"content_sections": projection.SectionsJSON, "source_page_map": projection.PageMapJSON,
+			"indexed_at": publishedAt,
 		}); err != nil {
 			return fmt.Errorf("upsert outbreak document %q: %w", document.Key, err)
 		}
@@ -138,40 +140,4 @@ func seedDemoOutbreakDocuments(ctx context.Context, database *gorm.DB, store sto
 		return fmt.Errorf("verify body-only outbreak document search: %w", err)
 	}
 	return nil
-}
-
-func demoMarkdownSections(content []byte) ([]byte, error) {
-	type section struct {
-		ID      string `json:"id"`
-		Heading string `json:"heading"`
-		Level   int    `json:"level"`
-		Text    string `json:"text"`
-	}
-	rows := make([]section, 0)
-	var current *section
-	for _, line := range strings.Split(string(content), "\n") {
-		trimmed := strings.TrimSpace(line)
-		if strings.HasPrefix(trimmed, "#") {
-			level := len(trimmed) - len(strings.TrimLeft(trimmed, "#"))
-			if level > 0 && level <= 6 && len(trimmed) > level && trimmed[level] == ' ' {
-				heading := strings.TrimSpace(trimmed[level:])
-				id := strings.Trim(strings.ToLower(strings.Map(func(r rune) rune {
-					if r >= 'a' && r <= 'z' || r >= '0' && r <= '9' {
-						return r
-					}
-					return '-'
-				}, heading)), "-")
-				rows = append(rows, section{ID: id, Heading: heading, Level: level})
-				current = &rows[len(rows)-1]
-				continue
-			}
-		}
-		if current != nil && trimmed != "" {
-			if current.Text != "" {
-				current.Text += " "
-			}
-			current.Text += trimmed
-		}
-	}
-	return json.Marshal(rows)
 }

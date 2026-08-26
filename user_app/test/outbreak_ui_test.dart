@@ -1,10 +1,19 @@
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
+import 'package:responsive_framework/responsive_framework.dart';
 
+import 'package:user_app/app/providers/app_providers.dart';
+import 'package:user_app/app/router/route_names.dart';
+import 'package:user_app/core/services/download_service.dart';
+import 'package:user_app/features/documents/presentation/screens/document_reader_page.dart';
 import 'package:user_app/features/outbreaks/data/models/outbreak_models.dart';
 import 'package:user_app/features/outbreaks/presentation/screens/outbreak_document_screens.dart';
 import 'package:user_app/features/outbreaks/presentation/screens/outbreak_screens.dart';
+
+import 'helpers/test_local_store.dart';
 
 const _outbreak = PublicOutbreak(
   id: 'outbreak-1',
@@ -32,6 +41,8 @@ class _OutbreakController extends PublicOutbreaksController {
 }
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
   for (final configuration in <(String, Size, double, Brightness)>[
     ('narrow', const Size(320, 720), 1, Brightness.light),
     ('large', const Size(430, 932), 1, Brightness.light),
@@ -244,6 +255,168 @@ void main() {
     },
   );
 
+  testWidgets('Markdown reader moves to the section supplied by search', (
+    tester,
+  ) async {
+    final filler = List.filled(80, 'Clinical preparation step.').join('\n\n');
+    await tester.pumpWidget(
+      MaterialApp(
+        home: OutbreakMarkdownReaderPage(
+          document: const PublicOutbreakDocument(
+            id: 'document-1',
+            outbreakId: 'outbreak-1',
+            title: 'Ebola isolation SOP',
+          ),
+          content: OutbreakDocumentContent(
+            documentId: 'document-1',
+            outbreakId: 'outbreak-1',
+            title: 'Ebola isolation SOP',
+            content:
+                '# Preparation\n\n$filler\n\n## Safe referral\n\nNotify now.',
+            sections: const [
+              OutbreakDocumentSection(
+                id: 'safe-referral',
+                heading: 'Safe referral',
+                level: 2,
+              ),
+            ],
+          ),
+          cache: const PublicCacheMetadata.online(),
+          matchingHeading: 'Safe referral',
+          onOpenOriginal: _noop,
+          onSaveOffline: _noop,
+          onShare: _noop,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final markdown = find.byKey(const Key('outbreak-document-markdown'));
+    final markdownScrollable = find.descendant(
+      of: markdown,
+      matching: find.byType(Scrollable),
+    );
+    final scrollable = tester.state<ScrollableState>(markdownScrollable.first);
+    expect(scrollable.position.pixels, greaterThan(0));
+    expect(find.text('Safe referral'), findsOneWidget);
+  });
+
+  testWidgets('PDF search match opens the reader at the matching page', (
+    tester,
+  ) async {
+    final store = TestLocalStore();
+    final downloads = GuidelineDownloadService(Dio(), store.cache);
+    addTearDown(downloads.dispose);
+    addTearDown(store.close);
+    const document = PublicOutbreakDocument(
+      id: 'document-1',
+      outbreakId: 'outbreak-1',
+      title: 'Ebola response report',
+      mimeType: 'application/pdf',
+      originalFilename: 'report.pdf',
+      downloadUrl:
+          '/api/public/outbreaks/outbreak-1/documents/document-1/download',
+      matchingPdfPage: 7,
+    );
+    DocumentReaderArgs? readerArgs;
+    final router = GoRouter(
+      initialLocation: '/outbreak-hub/outbreak-1/documents/document-1',
+      routes: [
+        GoRoute(
+          path: AppRoutes.outbreakDocumentDetails,
+          builder: (_, state) => OutbreakDocumentPage(
+            outbreakId: state.pathParameters['outbreakId']!,
+            documentId: state.pathParameters['documentId']!,
+            initialDocument: document,
+          ),
+        ),
+        GoRoute(
+          path: AppRoutes.documentReader,
+          builder: (_, state) {
+            readerArgs = state.extra! as DocumentReaderArgs;
+            return Text('PDF page ${readerArgs!.initialPage}');
+          },
+        ),
+      ],
+    );
+    addTearDown(router.dispose);
+    const key = (outbreakId: 'outbreak-1', documentId: 'document-1');
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          guidelineDownloadServiceProvider.overrideWithValue(downloads),
+          publicOutbreakDocumentProvider(key).overrideWith(
+            (_) async => const PublicContent(
+              value: document,
+              cache: PublicCacheMetadata.online(),
+            ),
+          ),
+        ],
+        child: MaterialApp.router(routerConfig: router),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('PDF page 7'), findsOneWidget);
+    expect(readerArgs?.initialPage, 7);
+  });
+
+  testWidgets(
+    'document detail exposes loading, error and working retry states',
+    (tester) async {
+      final store = TestLocalStore();
+      final downloads = GuidelineDownloadService(Dio(), store.cache);
+      addTearDown(downloads.dispose);
+      addTearDown(store.close);
+      var attempts = 0;
+      const key = (outbreakId: 'outbreak-1', documentId: 'document-1');
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            guidelineDownloadServiceProvider.overrideWithValue(downloads),
+            publicOutbreakDocumentProvider(key).overrideWith((_) async {
+              attempts++;
+              await Future<void>.delayed(const Duration(milliseconds: 20));
+              if (attempts == 1) throw StateError('temporary failure');
+              return const PublicContent(
+                value: PublicOutbreakDocument(
+                  id: 'document-1',
+                  outbreakId: 'outbreak-1',
+                  title: 'Recovered document',
+                ),
+                cache: PublicCacheMetadata.online(),
+              );
+            }),
+          ],
+          child: MaterialApp(
+            builder: (context, child) => ResponsiveBreakpoints.builder(
+              child: child!,
+              breakpoints: const [
+                Breakpoint(start: 0, end: 450, name: MOBILE),
+                Breakpoint(start: 451, end: double.infinity, name: TABLET),
+              ],
+            ),
+            home: const OutbreakDocumentPage(
+              outbreakId: 'outbreak-1',
+              documentId: 'document-1',
+            ),
+          ),
+        ),
+      );
+
+      expect(find.text('Loading document...'), findsOneWidget);
+      await tester.pumpAndSettle();
+      expect(find.text('Document unavailable'), findsOneWidget);
+      await tester.tap(find.text('Try Again'));
+      await tester.pumpAndSettle();
+      expect(find.text('Recovered document'), findsOneWidget);
+      expect(attempts, 2);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
   testWidgets('unsupported outbreak formats have an honest accessible state', (
     tester,
   ) async {
@@ -258,3 +431,5 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 }
+
+Future<void> _noop() async {}

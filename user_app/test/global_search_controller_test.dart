@@ -3,6 +3,8 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
+import 'package:user_app/features/outbreaks/data/models/outbreak_models.dart';
 import 'package:user_app/features/search/presentation/screens/global_search_page.dart';
 import 'package:user_app/shared/models/search_models.dart';
 import 'package:user_app/features/search/presentation/controllers/global_search_controller.dart';
@@ -85,6 +87,69 @@ void main() {
       expect(find.textContaining('Use PPE'), findsOneWidget);
       expect(find.text('Offline cached result · may be stale'), findsOneWidget);
       expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
+    'outbreak document search result opens the exact route with match metadata',
+    (tester) async {
+      final dataSource = ControlledSearchDataSource();
+      const document = PublicOutbreakDocument(
+        id: 'document-1',
+        outbreakId: 'outbreak-1',
+        title: 'Ebola IPC SOP',
+        matchingHeading: 'Isolation procedure',
+        matchingSectionId: 'isolation-procedure',
+      );
+      Object? routedExtra;
+      final router = GoRouter(
+        initialLocation: '/search',
+        routes: [
+          GoRoute(path: '/search', builder: (_, _) => const GlobalSearchPage()),
+          GoRoute(
+            path: '/outbreak-hub/:outbreakId/documents/:documentId',
+            builder: (_, state) {
+              routedExtra = state.extra;
+              return Text(
+                '${state.pathParameters['outbreakId']}/'
+                '${state.pathParameters['documentId']}',
+              );
+            },
+          ),
+        ],
+      );
+      addTearDown(router.dispose);
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            globalSearchDataSourceProvider.overrideWithValue(dataSource),
+          ],
+          child: MaterialApp.router(routerConfig: router),
+        ),
+      );
+      await tester.enterText(find.byType(TextField), 'ebola');
+      await tester.pump(const Duration(milliseconds: 400));
+      dataSource.requests['ebola']!.complete(const [
+        SearchResult(
+          id: 'document-1',
+          title: 'Ebola IPC SOP',
+          category: SearchCategory.outbreakDocuments,
+          route: '/outbreak-hub/outbreak-1/documents/document-1',
+          item: document,
+        ),
+      ]);
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Ebola IPC SOP'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('outbreak-1/document-1'), findsOneWidget);
+      expect(routedExtra, same(document));
+      expect(
+        (routedExtra! as PublicOutbreakDocument).matchingSectionId,
+        'isolation-procedure',
+      );
     },
   );
 

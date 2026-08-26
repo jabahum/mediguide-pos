@@ -7,10 +7,12 @@ import (
 	"encoding/hex"
 	"io"
 	"net/url"
+	"path"
 	"testing"
 	"time"
 
 	"mediguide/internal/models"
+	"mediguide/internal/services"
 
 	"github.com/google/uuid"
 	"gorm.io/driver/sqlite"
@@ -84,7 +86,7 @@ func TestSeedDemoOutbreakDocumentsIsCompleteAndIdempotent(t *testing.T) {
 	}
 
 	seenKinds := map[string]bool{}
-	for _, row := range rows {
+	for index, row := range rows {
 		content, exists := store.objects[row.StorageKey]
 		if !exists || len(content) == 0 {
 			t.Fatalf("published seed %s references a missing object %q", row.ID, row.StorageKey)
@@ -93,7 +95,8 @@ func TestSeedDemoOutbreakDocumentsIsCompleteAndIdempotent(t *testing.T) {
 		if row.ChecksumSHA256 != hex.EncodeToString(digest[:]) || row.FileSize != int64(len(content)) {
 			t.Fatalf("stored metadata does not match fixture for %s", row.ID)
 		}
-		if row.ExtractionStatus != "ready" || row.SearchIndexStatus != "indexed" || row.IndexedAt == nil || row.ExtractedAt == nil || row.ExtractionSourceChecksum != row.ChecksumSHA256 || row.DerivedContentChecksum != row.ChecksumSHA256 || len(row.ContentSections) == 0 {
+		projection := services.DeriveOutbreakDocumentProjection(path.Ext(fixtures[index].Fixture), content)
+		if row.ExtractionStatus != "ready" || row.SearchIndexStatus != "indexed" || row.IndexedAt == nil || row.ExtractedAt == nil || row.ExtractionSourceChecksum != row.ChecksumSHA256 || row.DerivedContentChecksum != projection.Checksum || row.SearchSchemaVersion != services.OutbreakDocumentSearchSchemaVersion || row.SearchContent != projection.Search || row.SearchHeadings != projection.Headings || row.RenderedContent != projection.Rendered || !bytes.Equal(row.ContentSections, projection.SectionsJSON) || !bytes.Equal(row.SourcePageMap, projection.PageMapJSON) {
 			t.Fatalf("seeded document is not honestly extracted and indexed for %s: %#v", row.ID, row)
 		}
 		if row.ID != demoID("outbreak-document", fixtures[len(seenKinds)].Key) {

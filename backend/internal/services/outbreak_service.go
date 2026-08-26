@@ -223,12 +223,8 @@ func (s OutbreakService) Resources(id uuid.UUID, page PageInput) (*PageResult[Pu
 	}
 	page = page.Normalize(20, 100)
 	query := s.DB.Model(&models.OutbreakResource{}).Where("outbreak_id = ? AND status = ? AND published_at IS NOT NULL AND published_at <= ? AND withdrawn_at IS NULL", id, "published", time.Now())
-	var total int64
-	if err := query.Count(&total).Error; err != nil {
-		return nil, err
-	}
 	var rows []models.OutbreakResource
-	if err := query.Order("sort_order ASC, id ASC").Limit(page.PerPage).Offset(page.Offset()).Find(&rows).Error; err != nil {
+	if err := query.Order("sort_order ASC, id ASC").Find(&rows).Error; err != nil {
 		return nil, err
 	}
 	var parent models.Outbreak
@@ -241,9 +237,7 @@ func (s OutbreakService) Resources(id uuid.UUID, page PageInput) (*PageResult[Pu
 			items = append(items, item)
 		}
 	}
-	// Invalid or obsolete targets are intentionally not exposed publicly. Keep
-	// the database-owned total so pagination metadata remains stable.
-	return NewPageResult(items, page, total), nil
+	return paginateOutbreakResources(items, page), nil
 }
 
 // ListResources exposes only safe, published quick-resource targets for global
@@ -281,10 +275,6 @@ func (s OutbreakService) ListResources(in OutbreakResourceQuery) (*PageResult[Pu
 		}
 		query = query.Where("outbreak_resources.resource_type IN ?", resourceTypes)
 	}
-	var total int64
-	if err := query.Count(&total).Error; err != nil {
-		return nil, err
-	}
 	sortColumns := map[string]string{"title": "outbreak_resources.title", "publication_date": "outbreak_resources.published_at", "sort_order": "outbreak_resources.sort_order"}
 	column := "outbreak_resources.published_at"
 	if value := strings.TrimSpace(in.Sort); value != "" {
@@ -302,7 +292,7 @@ func (s OutbreakService) ListResources(in OutbreakResourceQuery) (*PageResult[Pu
 		return nil, ErrOutbreakInvalid
 	}
 	var rows []models.OutbreakResource
-	if err := query.Select("outbreak_resources.*").Order(column + " " + order + ", outbreak_resources.id " + order).Limit(page.PerPage).Offset(page.Offset()).Find(&rows).Error; err != nil {
+	if err := query.Select("outbreak_resources.*").Order(column + " " + order + ", outbreak_resources.id " + order).Find(&rows).Error; err != nil {
 		return nil, err
 	}
 	parents, err := s.resourceParents(rows)
@@ -315,7 +305,25 @@ func (s OutbreakService) ListResources(in OutbreakResourceQuery) (*PageResult[Pu
 			items = append(items, item)
 		}
 	}
-	return NewPageResult(items, page, total), nil
+	return paginateOutbreakResources(items, page), nil
+}
+
+// paginateOutbreakResources applies pagination only after target validation.
+// Quick-resource targets include dynamic allowlists and referenced-publication
+// checks that cannot safely be represented as portable SQL. Filtering after a
+// database LIMIT would produce short pages and totals that included rejected
+// targets, so the validated projection is the canonical paginated collection.
+func paginateOutbreakResources(items []PublicOutbreakResource, page PageInput) *PageResult[PublicOutbreakResource] {
+	total := int64(len(items))
+	start := page.Offset()
+	if start > len(items) {
+		start = len(items)
+	}
+	end := start + page.PerPage
+	if end > len(items) {
+		end = len(items)
+	}
+	return NewPageResult(items[start:end], page, total)
 }
 
 func (s OutbreakService) resourceParents(rows []models.OutbreakResource) (map[uuid.UUID]models.Outbreak, error) {

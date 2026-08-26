@@ -26,9 +26,14 @@ func (outbreakDocumentTestFile) Close() error { return nil }
 type outbreakDocumentTestStore struct {
 	objects map[string][]byte
 	deleted []string
+	putErr  error
+	getErr  error
 }
 
 func (s *outbreakDocumentTestStore) Put(_ context.Context, key string, reader io.Reader, _ int64, _ string) error {
+	if s.putErr != nil {
+		return s.putErr
+	}
 	data, err := io.ReadAll(reader)
 	if err != nil {
 		return err
@@ -37,6 +42,9 @@ func (s *outbreakDocumentTestStore) Put(_ context.Context, key string, reader io
 	return nil
 }
 func (s *outbreakDocumentTestStore) Get(_ context.Context, key string) (io.ReadCloser, error) {
+	if s.getErr != nil {
+		return nil, s.getErr
+	}
 	return io.NopCloser(bytes.NewReader(s.objects[key])), nil
 }
 func (s *outbreakDocumentTestStore) Delete(_ context.Context, key string) error {
@@ -119,6 +127,73 @@ func TestOutbreakDocumentUploadRejectsSignatureMismatchAndStaleLock(t *testing.T
 	header = &multipart.FileHeader{Filename: "protocol.pdf", Size: int64(len(valid))}
 	if _, err := service.UploadDocument(context.Background(), OutbreakActor{ID: uuid.New()}, parent.ID, document.ID, 2, outbreakDocumentTestFile{bytes.NewReader(valid)}, header, 1024); err != ErrOutbreakConflict {
 		t.Fatalf("stale lock accepted: %v", err)
+	}
+}
+
+func TestOutbreakDocumentUploadAndReprocessSurfaceObjectStorageFailures(t *testing.T) {
+	service := outbreakAdminTestService(t)
+	store := &outbreakDocumentTestStore{objects: map[string][]byte{}, putErr: errors.New("object store unavailable")}
+	service.Store = store
+	parent := models.Outbreak{Title: "Response", Status: "draft", LastUpdate: time.Now(), LockVersion: 1}
+	if err := service.DB.Create(&parent).Error; err != nil {
+		t.Fatal(err)
+	}
+	document, err := service.CreateDocument(OutbreakActor{ID: uuid.New()}, parent.ID, OutbreakDocumentInput{Title: ptr("IPC protocol")})
+	if err != nil {
+		t.Fatal(err)
+	}
+	markdown := []byte("# IPC\n\nUse approved PPE.\n")
+	if _, err := service.UploadDocument(context.Background(), OutbreakActor{ID: uuid.New()}, parent.ID, document.ID, 1, outbreakDocumentTestFile{bytes.NewReader(markdown)}, &multipart.FileHeader{Filename: "ipc.md", Size: int64(len(markdown))}, 1024); err == nil || !strings.Contains(err.Error(), "object store unavailable") {
+		t.Fatalf("object-storage upload failure was hidden: %v", err)
+	}
+	var unchanged models.OutbreakResource
+	if err := service.DB.First(&unchanged, "id = ?", document.ID).Error; err != nil {
+		t.Fatal(err)
+	}
+	if unchanged.StorageKey != "" || unchanged.LockVersion != 1 || unchanged.ExtractionStatus != "" {
+		t.Fatalf("failed upload mutated document state: %#v", unchanged)
+	}
+
+	store.putErr = nil
+	uploaded, err := service.UploadDocument(context.Background(), OutbreakActor{ID: uuid.New()}, parent.ID, document.ID, 1, outbreakDocumentTestFile{bytes.NewReader(markdown)}, &multipart.FileHeader{Filename: "ipc.md", Size: int64(len(markdown))}, 1024)
+	if err != nil {
+		t.Fatal(err)
+	}
+	store.getErr = errors.New("object store read failed")
+	if _, err := service.ReprocessDocument(context.Background(), OutbreakActor{ID: uuid.New()}, parent.ID, document.ID, uploaded.LockVersion); err == nil || !strings.Contains(err.Error(), "object store read failed") {
+		t.Fatalf("object-storage reprocess failure was hidden: %v", err)
+	}
+}
+
+func TestOutbreakDocumentExtractionFailureAndUploadIdempotency(t *testing.T) {
+	failed := deriveOutbreakDocumentContent("docx", []byte("not an OOXML archive"))
+	if failed.Status != "failed" || failed.Error == "" || failed.Rendered != "" || failed.Search != "" {
+		t.Fatalf("extraction failure was not recorded safely: %#v", failed)
+	}
+
+	service := outbreakAdminTestService(t)
+	store := &outbreakDocumentTestStore{objects: map[string][]byte{}}
+	service.Store = store
+	parent := models.Outbreak{Title: "Response", Status: "draft", LastUpdate: time.Now(), LockVersion: 1}
+	if err := service.DB.Create(&parent).Error; err != nil {
+		t.Fatal(err)
+	}
+	document, err := service.CreateDocument(OutbreakActor{ID: uuid.New()}, parent.ID, OutbreakDocumentInput{Title: ptr("Idempotent SOP")})
+	if err != nil {
+		t.Fatal(err)
+	}
+	markdown := []byte("# Stable content\n\nUse approved PPE.\n")
+	header := &multipart.FileHeader{Filename: "stable.md", Size: int64(len(markdown))}
+	first, err := service.UploadDocument(context.Background(), OutbreakActor{ID: uuid.New()}, parent.ID, document.ID, 1, outbreakDocumentTestFile{bytes.NewReader(markdown)}, header, 1024)
+	if err != nil {
+		t.Fatal(err)
+	}
+	second, err := service.UploadDocument(context.Background(), OutbreakActor{ID: uuid.New()}, parent.ID, document.ID, first.LockVersion, outbreakDocumentTestFile{bytes.NewReader(markdown)}, header, 1024)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if second.LockVersion != first.LockVersion || second.DerivedContentChecksum != first.DerivedContentChecksum || len(store.objects) != 1 || len(store.deleted) != 0 {
+		t.Fatalf("identical retry was not idempotent: first=%#v second=%#v objects=%d deleted=%v", first, second, len(store.objects), store.deleted)
 	}
 }
 

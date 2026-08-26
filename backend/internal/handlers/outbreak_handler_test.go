@@ -7,7 +7,9 @@ import (
 	"testing"
 	"time"
 
+	"mediguide/internal/middleware"
 	"mediguide/internal/models"
+	"mediguide/internal/security"
 	"mediguide/internal/services"
 
 	"github.com/gin-gonic/gin"
@@ -130,5 +132,48 @@ func TestPublicOutbreakHandlerRejectsInvalidTypedFilters(t *testing.T) {
 		if response.Code != http.StatusBadRequest {
 			t.Fatalf("path=%s status=%d body=%s", path, response.Code, response.Body.String())
 		}
+	}
+}
+
+func TestOutbreakDocumentReprocessRequiresManagePermission(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	db, err := gorm.Open(sqlite.Open("file:"+uuid.NewString()+"?mode=memory&cache=shared"), &gorm.Config{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := db.AutoMigrate(&models.Outbreak{}, &models.OutbreakResource{}, &models.AuditLog{}); err != nil {
+		t.Fatal(err)
+	}
+	handler := OutbreakAdminHandler{Service: services.OutbreakAdminService{DB: db}}
+	outbreakID, documentID := uuid.New(), uuid.New()
+	path := "/api/v2/outbreaks/" + outbreakID.String() + "/documents/" + documentID.String() + "/reprocess"
+
+	for name, testCase := range map[string]struct {
+		permissions []string
+		expected    int
+	}{
+		"unauthenticated":  {nil, http.StatusUnauthorized},
+		"wrong permission": {[]string{"outbreak.read"}, http.StatusForbidden},
+		// The manager reaches the service. With no object store configured the
+		// fixture is rejected as an invalid operation, rather than by auth.
+		"outbreak manager": {[]string{"outbreak.manage"}, http.StatusBadRequest},
+	} {
+		t.Run(name, func(t *testing.T) {
+			router := gin.New()
+			if testCase.permissions != nil {
+				router.Use(func(c *gin.Context) {
+					c.Set(middleware.ClaimsKey, &security.Claims{UserID: uuid.New(), Perms: testCase.permissions})
+					c.Next()
+				})
+			}
+			router.POST("/api/v2/outbreaks/:id/documents/:documentId/reprocess", middleware.RequirePermission("outbreak.manage"), handler.ReprocessDocument)
+			response := httptest.NewRecorder()
+			request := httptest.NewRequest(http.MethodPost, path, strings.NewReader(`{"lock_version":1}`))
+			request.Header.Set("Content-Type", "application/json")
+			router.ServeHTTP(response, request)
+			if response.Code != testCase.expected {
+				t.Fatalf("status=%d want=%d body=%s", response.Code, testCase.expected, response.Body.String())
+			}
+		})
 	}
 }

@@ -6,10 +6,17 @@ import (
 	"os"
 	"strings"
 	"testing"
+	"time"
+
+	"mediguide/internal/models"
+	"mediguide/internal/services"
 
 	"github.com/google/uuid"
 	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/pressly/goose/v3"
+	"gorm.io/datatypes"
+	"gorm.io/driver/postgres"
+	"gorm.io/gorm"
 )
 
 func TestOutbreakAdministrationMigrationUpDownUp(t *testing.T) {
@@ -91,5 +98,49 @@ func TestOutbreakAdministrationMigrationUpDownUp(t *testing.T) {
 	}
 	if err := testDB.QueryRowContext(ctx, `SELECT count(*) FROM pg_indexes WHERE schemaname = $1 AND indexname = 'idx_calculator_versions_one_published'`, schema).Scan(&count); err != nil || count != 1 {
 		t.Fatalf("single-published-version index missing after up/down/up: count=%d err=%v", count, err)
+	}
+
+	// Exercise the real PostgreSQL discovery query, not the SQLite fallback.
+	// The single-connection search_path above keeps all fixtures isolated in the
+	// disposable schema while pg_trgm and tsvector functions remain available
+	// from public.
+	gormDB, err := gorm.Open(postgres.New(postgres.Config{Conn: testDB}), &gorm.Config{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	now := time.Now().UTC().Add(-time.Hour)
+	parent := models.Outbreak{Title: "Ebola response", DiseaseType: "EVD", GeographicArea: "Kampala", Status: "active", VisualTone: "warning", PublishedAt: &now, LastUpdate: now, Metrics: datatypes.JSON(`[]`)}
+	if err := gormDB.Create(&parent).Error; err != nil {
+		t.Fatal(err)
+	}
+	pageFour := 4
+	documents := []models.OutbreakResource{
+		{OutbreakID: parent.ID, Title: "Specimen packaging protocol", Description: "Laboratory SOP", ResourceType: "managed_document", DocumentKind: "laboratory_protocol", IssuingAuthority: "Ministry of Health", DocumentNumber: "LAB-001", Version: "1.0", Language: "en", Audience: "laboratory staff", MIMEType: "application/pdf", Status: "published", ApprovedAt: &now, PublishedAt: &now, EffectiveDate: &now, SearchHeadings: "Packaging specimens", SearchContent: "Triple package every specimen before referral", ContentSections: []byte(`[{"id":"page-4","heading":"Packaging specimens","level":1,"text":"Triple package every specimen before referral.","page":4}]`), SourcePageMap: []byte(`[{"page":4,"section_id":"page-4"}]`), SortOrder: 2},
+		{OutbreakID: parent.ID, Title: "Triple package every specimen before referral", Description: "Exact-title reference", ResourceType: "managed_document", DocumentKind: "laboratory_protocol", IssuingAuthority: "Ministry of Health", DocumentNumber: "LAB-002", Version: "1.0", Language: "en", Audience: "laboratory staff", MIMEType: "application/pdf", Status: "published", ApprovedAt: &now, PublishedAt: &now, EffectiveDate: &now, SearchContent: "Referral laboratory guidance", ContentSections: []byte(`[]`), SourcePageMap: []byte(`[]`), SortOrder: 1},
+		{OutbreakID: parent.ID, Title: "Draft laboratory note", ResourceType: "managed_document", DocumentKind: "laboratory_protocol", Language: "en", Status: "draft", SearchContent: "Triple package every specimen before referral", ContentSections: []byte(`[]`), SourcePageMap: []byte(`[]`)},
+	}
+	for index := range documents {
+		if err := gormDB.Create(&documents[index]).Error; err != nil {
+			t.Fatal(err)
+		}
+	}
+	service := services.OutbreakService{DB: gormDB}
+	result, err := service.SearchDocuments(services.OutbreakDocumentQuery{Page: services.PageInput{Page: 1, PerPage: 1}, Search: "Triple package every specimen before referral", OutbreakID: &parent.ID, DocumentKind: "laboratory_protocol", Authority: "Ministry of Health", Language: "en", Audience: "laboratory staff", MIMEType: "application/pdf", Sort: "title", Order: "asc"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result.TotalItems != 2 || result.TotalPages != 2 || len(result.Items) != 1 || result.Items[0].ID != documents[1].ID || result.Items[0].SearchRelevanceScore <= 0 {
+		t.Fatalf("PostgreSQL ranking/filter/pagination mismatch: %#v", result)
+	}
+	pageTwo, err := service.SearchDocuments(services.OutbreakDocumentQuery{Page: services.PageInput{Page: 2, PerPage: 1}, Search: "Triple package every specimen before referral", Sort: "title", Order: "asc"})
+	if err != nil || len(pageTwo.Items) != 1 || pageTwo.Items[0].ID != documents[0].ID || pageTwo.Items[0].MatchingPDFPage == nil || *pageTwo.Items[0].MatchingPDFPage != pageFour {
+		t.Fatalf("PostgreSQL page match/order mismatch: %#v err=%v", pageTwo, err)
+	}
+	if _, err := service.SearchDocuments(services.OutbreakDocumentQuery{Sort: "title; DROP TABLE outbreak_resources;--"}); err == nil {
+		t.Fatal("malicious PostgreSQL sort was accepted")
+	}
+	var resourceCount int64
+	if err := gormDB.Model(&models.OutbreakResource{}).Count(&resourceCount).Error; err != nil || resourceCount != 3 {
+		t.Fatalf("PostgreSQL injection resistance failed: count=%d err=%v", resourceCount, err)
 	}
 }

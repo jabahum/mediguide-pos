@@ -77,7 +77,7 @@ func (s OutbreakAdminService) UploadDocument(ctx context.Context, actor Outbreak
 	derived := deriveOutbreakDocumentContent(metadata.Extension, data)
 	extractedAt := time.Now().UTC()
 
-	if current.StorageKey == key && current.ChecksumSHA256 == checksum && current.OriginalFilename == name && current.ExtractionSourceChecksum == checksum && current.SearchSchemaVersion == outbreakDocumentSearchSchemaVersion {
+	if current.StorageKey == key && current.ChecksumSHA256 == checksum && current.OriginalFilename == name && current.ExtractionSourceChecksum == checksum && current.SearchSchemaVersion == OutbreakDocumentSearchSchemaVersion {
 		result := outbreakDocumentAdminDTO(current)
 		return &result, nil
 	}
@@ -93,7 +93,7 @@ func (s OutbreakAdminService) UploadDocument(ctx context.Context, actor Outbreak
 		"extraction_error": derived.Error, "extraction_source_checksum": checksum,
 		"derived_content_checksum": derived.Checksum, "content_sections": derived.SectionsJSON,
 		"source_page_map": derived.PageMapJSON, "search_index_status": "pending_approval",
-		"search_schema_version": outbreakDocumentSearchSchemaVersion,
+		"search_schema_version": OutbreakDocumentSearchSchemaVersion,
 		"extracted_at":          extractedAt, "indexed_at": nil,
 	}
 	err = s.DB.Transaction(func(tx *gorm.DB) error {
@@ -155,7 +155,7 @@ func (s OutbreakAdminService) ReprocessDocument(ctx context.Context, actor Outbr
 		return nil, ErrOutbreakInvalid
 	}
 	derived := deriveOutbreakDocumentContent(metadata.Extension, data)
-	if current.ExtractionSourceChecksum == current.ChecksumSHA256 && current.DerivedContentChecksum == derived.Checksum && current.SearchSchemaVersion == outbreakDocumentSearchSchemaVersion && current.ExtractionStatus == derived.Status {
+	if current.ExtractionSourceChecksum == current.ChecksumSHA256 && current.DerivedContentChecksum == derived.Checksum && current.SearchSchemaVersion == OutbreakDocumentSearchSchemaVersion && current.ExtractionStatus == derived.Status {
 		result := outbreakDocumentAdminDTO(current)
 		return &result, nil
 	}
@@ -169,7 +169,7 @@ func (s OutbreakAdminService) ReprocessDocument(ctx context.Context, actor Outbr
 				"extraction_error": derived.Error, "extraction_source_checksum": current.ChecksumSHA256,
 				"derived_content_checksum": derived.Checksum, "content_sections": derived.SectionsJSON,
 				"source_page_map": derived.PageMapJSON, "search_index_status": "pending_approval",
-				"search_schema_version": outbreakDocumentSearchSchemaVersion,
+				"search_schema_version": OutbreakDocumentSearchSchemaVersion,
 				"extracted_at":          now, "indexed_at": nil, "lock_version": gorm.Expr("lock_version + 1"),
 			})
 		if result.Error != nil {
@@ -189,9 +189,12 @@ func (s OutbreakAdminService) ReprocessDocument(ctx context.Context, actor Outbr
 	return s.GetDocument(outbreakID, documentID)
 }
 
-const outbreakDocumentSearchSchemaVersion = 2
+// OutbreakDocumentSearchSchemaVersion identifies the deterministic derived
+// projection format. Seed/import code must use the same value and derivation
+// helper as runtime uploads so fresh environments do not start stale.
+const OutbreakDocumentSearchSchemaVersion = 2
 
-type outbreakDocumentDerived struct {
+type OutbreakDocumentProjection struct {
 	Search, Headings, Rendered, Format, Status, Error, Checksum string
 	SectionsJSON, PageMapJSON                                   []byte
 }
@@ -219,8 +222,8 @@ var nonSlug = regexp.MustCompile(`[^a-z0-9]+`)
 // deriveOutbreakDocumentContent creates server-owned projections. The source
 // object remains immutable and authoritative; these fields can always be
 // discarded and deterministically rebuilt from its checksum-bound bytes.
-func deriveOutbreakDocumentContent(extension string, data []byte) outbreakDocumentDerived {
-	var result outbreakDocumentDerived
+func deriveOutbreakDocumentContent(extension string, data []byte) OutbreakDocumentProjection {
+	var result OutbreakDocumentProjection
 	var sections []outbreakDocumentSection
 	var pages []outbreakDocumentPageMap
 	switch extension {
@@ -272,6 +275,12 @@ func deriveOutbreakDocumentContent(extension string, data []byte) outbreakDocume
 	digest := sha256.Sum256([]byte(result.Rendered + "\x00" + result.Search + "\x00" + string(result.SectionsJSON)))
 	result.Checksum = hex.EncodeToString(digest[:])
 	return result
+}
+
+// DeriveOutbreakDocumentProjection exposes the exact runtime projection to
+// controlled seed/import commands. It does not publish or approve content.
+func DeriveOutbreakDocumentProjection(extension string, data []byte) OutbreakDocumentProjection {
+	return deriveOutbreakDocumentContent(strings.TrimPrefix(strings.ToLower(strings.TrimSpace(extension)), "."), data)
 }
 
 func sanitizeOutbreakMarkdown(value string) string {

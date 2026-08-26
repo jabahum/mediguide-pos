@@ -679,6 +679,9 @@ class _PublicationGuidelinePageState
           'last_read_at': DateTime.now().toUtc().toIso8601String(),
         });
 
+    if (!mounted) {
+      return;
+    }
     ref.invalidate(publicationReadingProgressProvider(widget.guidelineId));
   }
 

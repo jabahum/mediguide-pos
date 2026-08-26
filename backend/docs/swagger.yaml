@@ -4182,6 +4182,10 @@ definitions:
     properties:
       asset_url:
         type: string
+      description:
+        type: string
+      issuing_organization:
+        type: string
       lock_version:
         type: integer
       resource_type:
@@ -6489,6 +6493,27 @@ definitions:
       version:
         type: string
     type: object
+  services.OutbreakDocumentSearchPreview:
+    properties:
+      document_id:
+        type: string
+      indexed_at:
+        type: string
+      matching_heading:
+        type: string
+      matching_pdf_page:
+        type: integer
+      matching_section_id:
+        type: string
+      query:
+        type: string
+      search_index_status:
+        type: string
+      searchable:
+        type: boolean
+      snippet:
+        type: string
+    type: object
   services.OutbreakInput:
     properties:
       data_as_of:
@@ -6591,7 +6616,11 @@ definitions:
         type: string
       created_at:
         type: string
+      description:
+        type: string
       id:
+        type: string
+      issuing_organization:
         type: string
       lock_version:
         type: integer
@@ -7511,16 +7540,32 @@ definitions:
     properties:
       asset_url:
         type: string
+      description:
+        type: string
+      download_capability:
+        type: boolean
       id:
+        type: string
+      issuing_organization:
         type: string
       outbreak_id:
         type: string
+      outbreak_title:
+        type: string
+      publication_date:
+        type: string
       published_at:
+        type: string
+      reader_capability:
         type: string
       resource_type:
         type: string
       sort_order:
         type: integer
+      target_type:
+        type: string
+      target_url:
+        type: string
       title:
         type: string
       url:
@@ -8595,6 +8640,41 @@ paths:
           schema:
             $ref: '#/definitions/handlers.OutbreakDocumentInlineUnsupportedEnvelope'
       summary: Read approved derived Markdown or plain-text outbreak document content
+      tags:
+      - public-outbreaks
+  /api/public/outbreak-resources:
+    get:
+      parameters:
+      - description: Title, description, issuer, or outbreak title
+        in: query
+        name: search
+        type: string
+      - description: Outbreak UUID
+        in: query
+        name: outbreak_id
+        type: string
+      - description: Resource type
+        in: query
+        name: resource_type
+        type: string
+      - description: guideline, situation_report, internal_route, or external_url
+        in: query
+        name: target_type
+        type: string
+      - description: title, publication_date, or sort_order
+        in: query
+        name: sort
+        type: string
+      - description: asc or desc
+        in: query
+        name: order
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.PaginatedOutbreakResourcesEnvelope'
+      summary: Search safe, published outbreak quick resources
       tags:
       - public-outbreaks
   /api/public/outbreaks:
@@ -15793,6 +15873,34 @@ paths:
       security:
       - BearerAuth: []
       summary: Add an auditable clinical-review comment to an outbreak document
+      tags:
+      - outbreak-document-administration
+  /api/v2/outbreaks/{id}/documents/{documentId}/search-preview:
+    get:
+      parameters:
+      - description: Outbreak UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Document UUID
+        in: path
+        name: documentId
+        required: true
+        type: string
+      - description: Search phrase (2-200 characters)
+        in: query
+        name: query
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/services.OutbreakDocumentSearchPreview'
+      security:
+      - BearerAuth: []
+      summary: Preview how a query matches server-derived outbreak document content
       tags:
       - outbreak-document-administration
   /api/v2/outbreaks/{id}/documents/{documentId}/submit:

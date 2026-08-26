@@ -310,6 +310,40 @@ final class OutbreakRepository {
     }
   }
 
+  /// Searches only published quick resources with a backend-validated target.
+  /// Managed clinical documents remain in [searchDocuments] so external links
+  /// can never be mistaken for reviewed in-app clinical content.
+  Future<PublicPage<PublicOutbreakResource>> quickResources({
+    int page = 1,
+    int perPage = 10,
+    String search = '',
+    String targetType = '',
+  }) async {
+    final safePage = page < 1 ? 1 : page;
+    final safePerPage = perPage.clamp(1, 50);
+    final response = await _public(
+      '/api/public/outbreak-resources',
+      query: {
+        'page': '$safePage',
+        'per_page': '$safePerPage',
+        if (search.trim().isNotEmpty) 'search': search.trim(),
+        if (targetType.trim().isNotEmpty) 'target_type': targetType.trim(),
+      },
+    );
+    final data = _data(response);
+    final items = _maps(
+      data['items'],
+    ).map(PublicOutbreakResource.fromJson).toList(growable: false);
+    return PublicPage(
+      items: items,
+      page: _integer(data['page'], safePage),
+      perPage: _integer(data['per_page'], safePerPage),
+      totalItems: _integer(data['total_items'], items.length),
+      totalPages: _integer(data['total_pages'], items.isEmpty ? 0 : 1),
+      cache: const PublicCacheMetadata.online(),
+    );
+  }
+
   /// Searches approved public outbreak documents already held in the local
   /// cache. Cache-only fields are never deserialized into the public model or
   /// sent back to the API.

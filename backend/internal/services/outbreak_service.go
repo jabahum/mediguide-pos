@@ -19,8 +19,9 @@ var ErrOutbreakConflict = errors.New("outbreak content changed; reload and retry
 var ErrOutbreakImmutable = errors.New("published outbreak content must be corrected, not edited")
 
 type OutbreakService struct {
-	DB    *gorm.DB
-	Store storage.ObjectStore
+	DB                   *gorm.DB
+	Store                storage.ObjectStore
+	AllowedExternalHosts []string
 }
 
 type OutbreakQuery struct {
@@ -71,14 +72,29 @@ type PublicOutbreakUpdate struct {
 	PublishedAt *time.Time `json:"published_at,omitempty"`
 }
 type PublicOutbreakResource struct {
-	ID           uuid.UUID  `json:"id"`
-	OutbreakID   uuid.UUID  `json:"outbreak_id"`
-	Title        string     `json:"title"`
-	ResourceType string     `json:"resource_type"`
-	URL          string     `json:"url"`
-	AssetURL     string     `json:"asset_url"`
-	SortOrder    int        `json:"sort_order"`
-	PublishedAt  *time.Time `json:"published_at,omitempty"`
+	ID                  uuid.UUID  `json:"id"`
+	OutbreakID          uuid.UUID  `json:"outbreak_id"`
+	OutbreakTitle       string     `json:"outbreak_title"`
+	Title               string     `json:"title"`
+	Description         string     `json:"description"`
+	IssuingOrganization string     `json:"issuing_organization"`
+	ResourceType        string     `json:"resource_type"`
+	TargetType          string     `json:"target_type"`
+	TargetURL           string     `json:"target_url"`
+	URL                 string     `json:"url,omitempty"`
+	AssetURL            string     `json:"asset_url,omitempty"`
+	SortOrder           int        `json:"sort_order"`
+	PublicationDate     *time.Time `json:"publication_date,omitempty"`
+	PublishedAt         *time.Time `json:"published_at,omitempty"`
+	ReaderCapability    string     `json:"reader_capability"`
+	DownloadCapability  bool       `json:"download_capability"`
+}
+
+type OutbreakResourceQuery struct {
+	Page                    PageInput
+	Search, ResourceType    string
+	TargetType, Sort, Order string
+	OutbreakID              *uuid.UUID
 }
 type PublicSituationReport struct {
 	ID                 uuid.UUID        `json:"id"`
@@ -215,11 +231,175 @@ func (s OutbreakService) Resources(id uuid.UUID, page PageInput) (*PageResult[Pu
 	if err := query.Order("sort_order ASC, id ASC").Limit(page.PerPage).Offset(page.Offset()).Find(&rows).Error; err != nil {
 		return nil, err
 	}
-	items := make([]PublicOutbreakResource, len(rows))
-	for i, row := range rows {
-		items[i] = PublicOutbreakResource{row.ID, row.OutbreakID, row.Title, row.ResourceType, row.URL, row.AssetURL, row.SortOrder, row.PublishedAt}
+	var parent models.Outbreak
+	if err := s.DB.Select("id", "title", "source_organization").First(&parent, "id = ?", id).Error; err != nil {
+		return nil, err
+	}
+	items := make([]PublicOutbreakResource, 0, len(rows))
+	for _, row := range rows {
+		if item, ok := s.publicOutbreakResource(row, parent); ok {
+			items = append(items, item)
+		}
+	}
+	// Invalid or obsolete targets are intentionally not exposed publicly. Keep
+	// the database-owned total so pagination metadata remains stable.
+	return NewPageResult(items, page, total), nil
+}
+
+// ListResources exposes only safe, published quick-resource targets for global
+// discovery. Managed outbreak documents are discovered through the dedicated
+// outbreak-document search endpoint and are deliberately not mixed with links.
+func (s OutbreakService) ListResources(in OutbreakResourceQuery) (*PageResult[PublicOutbreakResource], error) {
+	page := in.Page.Normalize(20, 100)
+	query := s.DB.Model(&models.OutbreakResource{}).
+		Joins("JOIN outbreaks ON outbreaks.id = outbreak_resources.outbreak_id AND outbreaks.deleted_at IS NULL").
+		Where("outbreak_resources.status = ? AND outbreak_resources.published_at IS NOT NULL AND outbreak_resources.published_at <= ? AND outbreak_resources.withdrawn_at IS NULL", "published", time.Now()).
+		Where("outbreaks.published_at IS NOT NULL AND outbreaks.published_at <= ? AND outbreaks.withdrawn_at IS NULL AND outbreaks.status IN ?", time.Now(), []string{"published", "active", "monitoring", "contained", "closed"}).
+		Where("outbreak_resources.resource_type IN ?", []string{"guideline", "situation_report", "internal_route", "approved_external_url", "official_statement", "official_update", "link"})
+	if in.OutbreakID != nil {
+		query = query.Where("outbreak_resources.outbreak_id = ?", *in.OutbreakID)
+	}
+	if value := strings.TrimSpace(in.Search); value != "" {
+		like := "%" + strings.ToLower(value) + "%"
+		query = query.Where("lower(outbreak_resources.title) LIKE ? OR lower(outbreak_resources.description) LIKE ? OR lower(outbreak_resources.issuing_authority) LIKE ? OR lower(outbreaks.title) LIKE ? OR lower(outbreaks.source_organization) LIKE ?", like, like, like, like, like)
+	}
+	if value := strings.TrimSpace(in.ResourceType); value != "" {
+		if !validOutbreakValue(value, "guideline", "situation_report", "internal_route", "approved_external_url", "official_statement", "official_update", "link") {
+			return nil, ErrOutbreakInvalid
+		}
+		query = query.Where("outbreak_resources.resource_type = ?", value)
+	}
+	if value := strings.TrimSpace(in.TargetType); value != "" {
+		types := map[string][]string{
+			"guideline": {"guideline"}, "situation_report": {"situation_report"},
+			"internal_route": {"internal_route"},
+			"external_url":   {"approved_external_url", "official_statement", "official_update", "link"},
+		}
+		resourceTypes, ok := types[value]
+		if !ok {
+			return nil, ErrOutbreakInvalid
+		}
+		query = query.Where("outbreak_resources.resource_type IN ?", resourceTypes)
+	}
+	var total int64
+	if err := query.Count(&total).Error; err != nil {
+		return nil, err
+	}
+	sortColumns := map[string]string{"title": "outbreak_resources.title", "publication_date": "outbreak_resources.published_at", "sort_order": "outbreak_resources.sort_order"}
+	column := "outbreak_resources.published_at"
+	if value := strings.TrimSpace(in.Sort); value != "" {
+		var ok bool
+		column, ok = sortColumns[value]
+		if !ok {
+			return nil, ErrOutbreakInvalid
+		}
+	}
+	order := strings.ToLower(strings.TrimSpace(in.Order))
+	if order == "" {
+		order = "desc"
+	}
+	if order != "asc" && order != "desc" {
+		return nil, ErrOutbreakInvalid
+	}
+	var rows []models.OutbreakResource
+	if err := query.Select("outbreak_resources.*").Order(column + " " + order + ", outbreak_resources.id " + order).Limit(page.PerPage).Offset(page.Offset()).Find(&rows).Error; err != nil {
+		return nil, err
+	}
+	parents, err := s.resourceParents(rows)
+	if err != nil {
+		return nil, err
+	}
+	items := make([]PublicOutbreakResource, 0, len(rows))
+	for _, row := range rows {
+		if item, ok := s.publicOutbreakResource(row, parents[row.OutbreakID]); ok {
+			items = append(items, item)
+		}
 	}
 	return NewPageResult(items, page, total), nil
+}
+
+func (s OutbreakService) resourceParents(rows []models.OutbreakResource) (map[uuid.UUID]models.Outbreak, error) {
+	ids := make([]uuid.UUID, 0, len(rows))
+	seen := map[uuid.UUID]struct{}{}
+	for _, row := range rows {
+		if _, ok := seen[row.OutbreakID]; !ok {
+			seen[row.OutbreakID] = struct{}{}
+			ids = append(ids, row.OutbreakID)
+		}
+	}
+	parents := map[uuid.UUID]models.Outbreak{}
+	if len(ids) == 0 {
+		return parents, nil
+	}
+	var rowsOut []models.Outbreak
+	if err := s.DB.Select("id", "title", "source_organization").Where("id IN ?", ids).Find(&rowsOut).Error; err != nil {
+		return nil, err
+	}
+	for _, row := range rowsOut {
+		parents[row.ID] = row
+	}
+	return parents, nil
+}
+
+func (s OutbreakService) publicOutbreakResource(row models.OutbreakResource, parent models.Outbreak) (PublicOutbreakResource, bool) {
+	kind, target, capability := "", strings.TrimSpace(row.URL), ""
+	download := false
+	switch row.ResourceType {
+	case "guideline":
+		kind, capability = "guideline", "in_app_reader"
+	case "situation_report":
+		kind, capability, download = "situation_report", "in_app_reader", true
+	case "internal_route":
+		kind, capability = "internal_route", "in_app_route"
+	case "approved_external_url", "official_statement", "official_update", "link":
+		kind, capability = "external_url", "external_browser"
+	default:
+		return PublicOutbreakResource{}, false
+	}
+	if kind == "external_url" {
+		if !validApprovedHTTPSURL(target, s.AllowedExternalHosts, len(s.AllowedExternalHosts) == 0) {
+			return PublicOutbreakResource{}, false
+		}
+	} else if kind == "internal_route" {
+		if !validNotificationInternalRoute(target) {
+			return PublicOutbreakResource{}, false
+		}
+	} else {
+		parsed, err := url.ParseRequestURI(target)
+		if err != nil || parsed.IsAbs() || parsed.Host != "" {
+			return PublicOutbreakResource{}, false
+		}
+		parts := strings.Split(strings.Trim(parsed.Path, "/"), "/")
+		if kind == "guideline" {
+			if len(parts) != 3 || parts[0] != "public" || parts[1] != "guidelines" {
+				return PublicOutbreakResource{}, false
+			}
+			id, err := uuid.Parse(parts[2])
+			if err != nil {
+				return PublicOutbreakResource{}, false
+			}
+			if _, err := (PublicGuidelineService{DB: s.DB}).Get(context.Background(), id); err != nil {
+				return PublicOutbreakResource{}, false
+			}
+		}
+		if kind == "situation_report" {
+			if len(parts) != 2 || parts[0] != "situation-reports" {
+				return PublicOutbreakResource{}, false
+			}
+			id, err := uuid.Parse(parts[1])
+			if err != nil {
+				return PublicOutbreakResource{}, false
+			}
+			if _, err := s.GetReport(id); err != nil {
+				return PublicOutbreakResource{}, false
+			}
+		}
+	}
+	issuer := strings.TrimSpace(row.IssuingAuthority)
+	if issuer == "" {
+		issuer = parent.SourceOrganization
+	}
+	return PublicOutbreakResource{ID: row.ID, OutbreakID: row.OutbreakID, OutbreakTitle: parent.Title, Title: row.Title, Description: row.Description, IssuingOrganization: issuer, ResourceType: row.ResourceType, TargetType: kind, TargetURL: target, URL: row.URL, AssetURL: row.AssetURL, SortOrder: row.SortOrder, PublicationDate: row.PublishedAt, PublishedAt: row.PublishedAt, ReaderCapability: capability, DownloadCapability: download}, true
 }
 
 func (s OutbreakService) ListReports(in SituationReportQuery) (*PageResult[PublicSituationReport], error) {

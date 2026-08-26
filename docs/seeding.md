@@ -79,6 +79,14 @@ curl --fail --silent http://localhost:8080/api/readyz
 curl --fail --silent \
   'http://localhost:8080/api/public/outbreaks/8148f968-ed21-5145-8100-89e89b948a4f/documents?page=1&per_page=20' \
   | jq '.data | {total_items, documents: [.items[] | {document_number, title, document_kind}]}'
+
+curl --fail --silent \
+  'http://localhost:8080/api/public/outbreak-resources?search=Bundibugyo&page=1&per_page=20' \
+  | jq '.data | {total_items, resources: [.items[] | {title, resource_type, target_type, issuing_organization}]}'
+
+curl --fail --silent \
+  'http://localhost:8080/api/public/outbreak-documents?search=environmental%20decontamination&page=1&per_page=20' \
+  | jq '.data | {total_items, documents: [.items[] | {document_number, title, extraction_status}]}'
 ```
 
 Check deterministic outbreak-document metadata directly when troubleshooting:

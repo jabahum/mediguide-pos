@@ -59,7 +59,7 @@ func TestOutbreakServiceScopesChildrenAndReportsToPublishedParents(t *testing.T)
 	if err := service.DB.Create(&models.OutbreakUpdate{OutbreakID: public.ID, Title: "Update", Status: "published", PublishedAt: &now}).Error; err != nil {
 		t.Fatal(err)
 	}
-	if err := service.DB.Create(&models.OutbreakResource{OutbreakID: public.ID, Title: "Guidance", Status: "published", PublishedAt: &now, SortOrder: 1}).Error; err != nil {
+	if err := service.DB.Create(&models.OutbreakResource{OutbreakID: public.ID, Title: "Guidance", ResourceType: "internal_route", URL: "/guidelines", Status: "published", PublishedAt: &now, SortOrder: 1}).Error; err != nil {
 		t.Fatal(err)
 	}
 	updates, err := service.Updates(public.ID, PageInput{})
@@ -83,6 +83,58 @@ func TestOutbreakServiceScopesChildrenAndReportsToPublishedParents(t *testing.T)
 	reports, err := service.ListReports(SituationReportQuery{Page: PageInput{}})
 	if err != nil || reports.TotalItems != 1 || reports.Items[0].Title != "Published report" {
 		t.Fatalf("reports: %#v %v", reports, err)
+	}
+}
+
+func TestOutbreakServiceDiscoversOnlySafeQuickResources(t *testing.T) {
+	service := outbreakTestService(t)
+	now := time.Now().UTC().Add(-time.Minute)
+	parent := models.Outbreak{Title: "Ebola response", SourceOrganization: "Ministry of Health", Status: "active", PublishedAt: &now, LastUpdate: now}
+	if err := service.DB.Create(&parent).Error; err != nil {
+		t.Fatal(err)
+	}
+	rows := []models.OutbreakResource{
+		{OutbreakID: parent.ID, Title: "Clinical guidance", Description: "Reviewed guidance", ResourceType: "internal_route", URL: "/guidelines", IssuingAuthority: "Clinical directorate", Status: "published", PublishedAt: &now},
+		{OutbreakID: parent.ID, Title: "Official statement", ResourceType: "official_statement", URL: "https://health.go.ug/statement", Status: "published", PublishedAt: &now},
+		{OutbreakID: parent.ID, Title: "Unsafe legacy link", ResourceType: "link", URL: "javascript:alert(1)", Status: "published", PublishedAt: &now},
+		{OutbreakID: parent.ID, Title: "Managed SOP", ResourceType: "managed_document", Status: "published", PublishedAt: &now},
+	}
+	for index := range rows {
+		if err := service.DB.Create(&rows[index]).Error; err != nil {
+			t.Fatal(err)
+		}
+	}
+	page, err := service.ListResources(OutbreakResourceQuery{Page: PageInput{Page: 1, PerPage: 20}, Search: "guidance"})
+	if err != nil || len(page.Items) != 1 {
+		t.Fatalf("quick resources: %#v err=%v", page, err)
+	}
+	item := page.Items[0]
+	if item.TargetType != "internal_route" || item.TargetURL == "" || item.ReaderCapability != "in_app_route" || item.DownloadCapability || item.OutbreakTitle != parent.Title || item.IssuingOrganization != "Clinical directorate" {
+		t.Fatalf("unexpected quick-resource DTO: %#v", item)
+	}
+	all, err := service.ListResources(OutbreakResourceQuery{Page: PageInput{Page: 1, PerPage: 20}})
+	if err != nil || len(all.Items) != 2 {
+		t.Fatalf("unsafe or managed target leaked: %#v err=%v", all, err)
+	}
+}
+
+func TestOutbreakDocumentSearchPreviewReportsIndexReadiness(t *testing.T) {
+	service := outbreakTestService(t)
+	now := time.Now().UTC().Add(-time.Minute)
+	parent := models.Outbreak{Title: "Response", Status: "active", PublishedAt: &now, LastUpdate: now}
+	if err := service.DB.Create(&parent).Error; err != nil {
+		t.Fatal(err)
+	}
+	document := models.OutbreakResource{OutbreakID: parent.ID, Title: "Isolation SOP", ResourceType: "managed_document", SearchContent: "Use the designated isolation room immediately.", SearchIndexStatus: "indexed", ExtractionStatus: "ready", IndexedAt: &now, ContentSections: []byte(`[{"id":"isolation","heading":"Isolation","level":2,"text":"Use the designated isolation room immediately."}]`)}
+	if err := service.DB.Create(&document).Error; err != nil {
+		t.Fatal(err)
+	}
+	preview, err := (OutbreakAdminService{DB: service.DB}).DocumentSearchPreview(parent.ID, document.ID, "isolation room")
+	if err != nil || !preview.Searchable || preview.MatchingHeading != "Isolation" || preview.Snippet == "" || preview.IndexedAt == nil {
+		t.Fatalf("unexpected search preview: %#v err=%v", preview, err)
+	}
+	if _, err := (OutbreakAdminService{DB: service.DB}).DocumentSearchPreview(parent.ID, document.ID, "x"); !errors.Is(err, ErrOutbreakInvalid) {
+		t.Fatalf("short query accepted: %v", err)
 	}
 }
 

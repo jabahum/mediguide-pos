@@ -29,10 +29,29 @@ func publicOutbreakTestRouter(t *testing.T) (*gin.Engine, *gorm.DB) {
 	handler := OutbreakHandler{Service: services.OutbreakService{DB: db}}
 	router := gin.New()
 	router.GET("/api/public/outbreaks", handler.List)
+	router.GET("/api/public/outbreak-resources", handler.ListResources)
 	router.GET("/api/public/outbreak-documents", handler.SearchDocuments)
 	router.GET("/api/public/outbreak-documents/:documentId", handler.GetDocumentGlobal)
 	router.GET("/api/public/outbreak-documents/:documentId/content", handler.DocumentContent)
 	return router, db
+}
+
+func TestPublicOutbreakQuickResourceDiscovery(t *testing.T) {
+	router, db := publicOutbreakTestRouter(t)
+	now := time.Now().UTC().Add(-time.Minute)
+	parent := models.Outbreak{Title: "Ebola response", SourceOrganization: "Ministry of Health", Status: "active", PublishedAt: &now, LastUpdate: now}
+	if err := db.Create(&parent).Error; err != nil {
+		t.Fatal(err)
+	}
+	resource := models.OutbreakResource{OutbreakID: parent.ID, Title: "Official response statement", Description: "Verified response announcement", ResourceType: "official_statement", URL: "https://health.go.ug/response", Status: "published", PublishedAt: &now}
+	if err := db.Create(&resource).Error; err != nil {
+		t.Fatal(err)
+	}
+	response := httptest.NewRecorder()
+	router.ServeHTTP(response, httptest.NewRequest(http.MethodGet, "/api/public/outbreak-resources?search=verified&target_type=external_url", nil))
+	if response.Code != http.StatusOK || !strings.Contains(response.Body.String(), `"target_type":"external_url"`) || !strings.Contains(response.Body.String(), `"reader_capability":"external_browser"`) || !strings.Contains(response.Body.String(), parent.Title) {
+		t.Fatalf("quick resource response=%d body=%s", response.Code, response.Body.String())
+	}
 }
 
 func TestPublicOutbreakHandlerSupportsETagAndNotModified(t *testing.T) {

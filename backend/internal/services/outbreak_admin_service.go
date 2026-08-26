@@ -60,13 +60,15 @@ type OutbreakInput struct {
 	LockVersion        *int              `json:"lock_version"`
 }
 type ChildContentInput struct {
-	Title        *string `json:"title"`
-	Summary      *string `json:"summary"`
-	ResourceType *string `json:"resource_type"`
-	URL          *string `json:"url"`
-	AssetURL     *string `json:"asset_url"`
-	SortOrder    *int    `json:"sort_order"`
-	LockVersion  *int    `json:"lock_version"`
+	Title               *string `json:"title"`
+	Summary             *string `json:"summary"`
+	Description         *string `json:"description"`
+	IssuingOrganization *string `json:"issuing_organization"`
+	ResourceType        *string `json:"resource_type"`
+	URL                 *string `json:"url"`
+	AssetURL            *string `json:"asset_url"`
+	SortOrder           *int    `json:"sort_order"`
+	LockVersion         *int    `json:"lock_version"`
 }
 type SituationReportInput struct {
 	OutbreakID         *uuid.UUID        `json:"outbreak_id"`
@@ -149,26 +151,28 @@ type OutbreakUpdateAdminDTO struct {
 	UpdatedAt        time.Time  `json:"updated_at"`
 }
 type OutbreakResourceAdminDTO struct {
-	ID               uuid.UUID  `json:"id"`
-	OutbreakID       uuid.UUID  `json:"outbreak_id"`
-	Title            string     `json:"title"`
-	ResourceType     string     `json:"resource_type"`
-	URL              string     `json:"url"`
-	AssetURL         string     `json:"asset_url"`
-	SortOrder        int        `json:"sort_order"`
-	Status           string     `json:"status"`
-	PublishedAt      *time.Time `json:"published_at,omitempty"`
-	AuthorID         *uuid.UUID `json:"author_id,omitempty"`
-	ReviewedBy       *uuid.UUID `json:"reviewed_by,omitempty"`
-	ReviewedAt       *time.Time `json:"reviewed_at,omitempty"`
-	ApprovedBy       *uuid.UUID `json:"approved_by,omitempty"`
-	ApprovedAt       *time.Time `json:"approved_at,omitempty"`
-	WithdrawnAt      *time.Time `json:"withdrawn_at,omitempty"`
-	WithdrawalReason string     `json:"withdrawal_reason,omitempty"`
-	SupersedesID     *uuid.UUID `json:"supersedes_id,omitempty"`
-	LockVersion      int        `json:"lock_version"`
-	CreatedAt        time.Time  `json:"created_at"`
-	UpdatedAt        time.Time  `json:"updated_at"`
+	ID                  uuid.UUID  `json:"id"`
+	OutbreakID          uuid.UUID  `json:"outbreak_id"`
+	Title               string     `json:"title"`
+	Description         string     `json:"description"`
+	IssuingOrganization string     `json:"issuing_organization"`
+	ResourceType        string     `json:"resource_type"`
+	URL                 string     `json:"url"`
+	AssetURL            string     `json:"asset_url"`
+	SortOrder           int        `json:"sort_order"`
+	Status              string     `json:"status"`
+	PublishedAt         *time.Time `json:"published_at,omitempty"`
+	AuthorID            *uuid.UUID `json:"author_id,omitempty"`
+	ReviewedBy          *uuid.UUID `json:"reviewed_by,omitempty"`
+	ReviewedAt          *time.Time `json:"reviewed_at,omitempty"`
+	ApprovedBy          *uuid.UUID `json:"approved_by,omitempty"`
+	ApprovedAt          *time.Time `json:"approved_at,omitempty"`
+	WithdrawnAt         *time.Time `json:"withdrawn_at,omitempty"`
+	WithdrawalReason    string     `json:"withdrawal_reason,omitempty"`
+	SupersedesID        *uuid.UUID `json:"supersedes_id,omitempty"`
+	LockVersion         int        `json:"lock_version"`
+	CreatedAt           time.Time  `json:"created_at"`
+	UpdatedAt           time.Time  `json:"updated_at"`
 }
 type SituationReportAdminDTO struct {
 	ID                 uuid.UUID        `json:"id"`
@@ -685,7 +689,7 @@ func (s OutbreakAdminService) UpdateResource(actor OutbreakActor, id, child uuid
 		return nil, err
 	}
 	if err := s.DB.Transaction(func(tx *gorm.DB) error {
-		r := tx.Model(&models.OutbreakResource{}).Where("id = ? AND outbreak_id = ? AND lock_version = ?", child, id, *in.LockVersion).Updates(map[string]any{"title": row.Title, "resource_type": row.ResourceType, "url": row.URL, "asset_url": row.AssetURL, "sort_order": row.SortOrder, "lock_version": gorm.Expr("lock_version + 1")})
+		r := tx.Model(&models.OutbreakResource{}).Where("id = ? AND outbreak_id = ? AND lock_version = ?", child, id, *in.LockVersion).Updates(map[string]any{"title": row.Title, "description": row.Description, "issuing_authority": row.IssuingAuthority, "resource_type": row.ResourceType, "url": row.URL, "asset_url": row.AssetURL, "sort_order": row.SortOrder, "lock_version": gorm.Expr("lock_version + 1")})
 		if r.Error != nil {
 			return r.Error
 		}
@@ -1099,7 +1103,7 @@ func updateAdminDTO(r models.OutbreakUpdate) OutbreakUpdateAdminDTO {
 	return OutbreakUpdateAdminDTO{r.ID, r.OutbreakID, r.Title, r.Summary, r.Status, r.PublishedAt, r.AuthorID, r.ReviewedBy, r.ReviewedAt, r.ApprovedBy, r.ApprovedAt, r.WithdrawnAt, r.WithdrawalReason, r.SupersedesID, r.LockVersion, r.CreatedAt, r.UpdatedAt}
 }
 func resourceAdminDTO(r models.OutbreakResource) OutbreakResourceAdminDTO {
-	return OutbreakResourceAdminDTO{r.ID, r.OutbreakID, r.Title, r.ResourceType, r.URL, r.AssetURL, r.SortOrder, r.Status, r.PublishedAt, r.AuthorID, r.ReviewedBy, r.ReviewedAt, r.ApprovedBy, r.ApprovedAt, r.WithdrawnAt, r.WithdrawalReason, r.SupersedesID, r.LockVersion, r.CreatedAt, r.UpdatedAt}
+	return OutbreakResourceAdminDTO{ID: r.ID, OutbreakID: r.OutbreakID, Title: r.Title, Description: r.Description, IssuingOrganization: r.IssuingAuthority, ResourceType: r.ResourceType, URL: r.URL, AssetURL: r.AssetURL, SortOrder: r.SortOrder, Status: r.Status, PublishedAt: r.PublishedAt, AuthorID: r.AuthorID, ReviewedBy: r.ReviewedBy, ReviewedAt: r.ReviewedAt, ApprovedBy: r.ApprovedBy, ApprovedAt: r.ApprovedAt, WithdrawnAt: r.WithdrawnAt, WithdrawalReason: r.WithdrawalReason, SupersedesID: r.SupersedesID, LockVersion: r.LockVersion, CreatedAt: r.CreatedAt, UpdatedAt: r.UpdatedAt}
 }
 func reportAdminDTO(r models.SituationReport) SituationReportAdminDTO {
 	return SituationReportAdminDTO{r.ID, r.OutbreakID, r.RegionID, r.DistrictID, r.Title, r.GeographicArea, r.Summary, r.SourceOrganization, r.PublicationDate, r.Status, r.ReportAssetURL, r.ReportAssetID, r.StandaloneAllowed, r.AuthorID, r.PublishedAt, r.ReviewedBy, r.ReviewedAt, r.ApprovedBy, r.ApprovedAt, r.WithdrawnAt, r.WithdrawalReason, r.CorrectionReason, r.SupersedesID, r.SourceURL, r.SourceReference, r.EffectiveAt, r.DataAsOf, r.LastVerifiedAt, r.LockVersion, decodeHighlights(r.KeyHighlights), decodeMetrics(r.Metrics), r.CreatedAt, r.UpdatedAt}
@@ -1138,6 +1142,12 @@ func applyResource(r *models.OutbreakResource, in ChildContentInput) {
 	}
 	if in.ResourceType != nil {
 		r.ResourceType = strings.TrimSpace(*in.ResourceType)
+	}
+	if in.Description != nil {
+		r.Description = strings.TrimSpace(*in.Description)
+	}
+	if in.IssuingOrganization != nil {
+		r.IssuingAuthority = strings.TrimSpace(*in.IssuingOrganization)
 	}
 	if in.URL != nil {
 		r.URL = strings.TrimSpace(*in.URL)

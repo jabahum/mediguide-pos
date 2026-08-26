@@ -511,9 +511,9 @@ func seedDemoOutbreaks(ctx context.Context, database *gorm.DB, store storage.Obj
 		}
 	}
 	resources := []map[string]any{
-		{"id": demoID("outbreak-resource", "uganda-moh-press-statement-2026"), "outbreak_id": ebolaID, "title": "Uganda Ministry of Health press statement", "resource_type": "official_statement", "url": "https://health.go.ug/download/press-statement-ebola-bundibugyo-virus-disease-outbreak-2026/", "asset_url": "", "sort_order": 1, "status": "published", "published_at": publicationDate},
-		{"id": demoID("outbreak-resource", "who-uganda-countdown-2026"), "outbreak_id": ebolaID, "title": "Uganda begins countdown to end of outbreak", "resource_type": "official_update", "url": "https://www.afro.who.int/countries/uganda/news/uganda-begins-countdown-end-ebola-outbreak", "asset_url": "", "sort_order": 2, "status": "published", "published_at": publicationDate},
-		{"id": demoID("outbreak-resource", "local-ebola-guideline"), "outbreak_id": ebolaID, "title": "Ebola and Marburg preparedness guideline", "resource_type": "guideline", "url": "/public/guidelines/" + demoID("guideline", "ebola-marburg").String(), "asset_url": "", "sort_order": 3, "status": "published", "published_at": publicationDate},
+		{"id": demoID("outbreak-resource", "uganda-moh-press-statement-2026"), "outbreak_id": ebolaID, "title": "Uganda Ministry of Health press statement", "description": "Official Ministry of Health announcement for the Uganda response.", "issuing_authority": "Ministry of Health Uganda", "resource_type": "official_statement", "url": "https://health.go.ug/download/press-statement-ebola-bundibugyo-virus-disease-outbreak-2026/", "asset_url": "", "sort_order": 1, "status": "published", "published_at": publicationDate},
+		{"id": demoID("outbreak-resource", "who-uganda-countdown-2026"), "outbreak_id": ebolaID, "title": "Uganda begins countdown to end of outbreak", "description": "Official WHO Africa operational update.", "issuing_authority": "WHO Regional Office for Africa", "resource_type": "official_update", "url": "https://www.afro.who.int/countries/uganda/news/uganda-begins-countdown-end-ebola-outbreak", "asset_url": "", "sort_order": 2, "status": "published", "published_at": publicationDate},
+		{"id": demoID("outbreak-resource", "local-ebola-guideline"), "outbreak_id": ebolaID, "title": "Ebola and Marburg preparedness guideline", "description": "Related reviewed MediGuide clinical guideline.", "issuing_authority": "Ministry of Health Uganda", "resource_type": "guideline", "url": "/public/guidelines/" + demoID("guideline", "ebola-marburg").String(), "asset_url": "", "sort_order": 3, "status": "published", "published_at": publicationDate},
 	}
 	for _, row := range resources {
 		if err := upsertByID(database, "outbreak_resources", row); err != nil {
@@ -531,6 +531,19 @@ func seedDemoOutbreaks(ctx context.Context, database *gorm.DB, store storage.Obj
 		"metrics":        mustJSON(`[{"key":"uganda_confirmed","label":"Confirmed cases in Uganda","value":"20","numeric_value":20,"unit":"cases","as_of":"2026-07-26T12:00:00Z","source_reference":"WHO situation report 11","sort_order":1},{"key":"uganda_deaths","label":"Deaths in Uganda","value":"2","numeric_value":2,"unit":"deaths","as_of":"2026-07-26T12:00:00Z","source_reference":"WHO situation report 11","sort_order":2},{"key":"contacts_followed","label":"Contacts followed up","value":"836","numeric_value":836,"unit":"contacts","as_of":"2026-07-26T12:00:00Z","source_reference":"WHO situation report 11","sort_order":3}]`),
 	}); err != nil {
 		return err
+	}
+	if err := upsertByID(database, "outbreak_resources", map[string]any{
+		"id": demoID("outbreak-resource", "who-bvd-situation-report-11"), "outbreak_id": ebolaID,
+		"title": "Bundibugyo virus disease situation report 11", "description": "Published situation report linked to this response.",
+		"issuing_authority": "WHO Regional Office for Africa", "resource_type": "situation_report",
+		"url": "/situation-reports/" + demoID("situation-report", "who-bvd-11-2026-07-26").String(), "asset_url": "",
+		"sort_order": 4, "status": "published", "published_at": reportDate,
+	}); err != nil {
+		return err
+	}
+	publicResources, err := (services.OutbreakService{DB: database}).ListResources(services.OutbreakResourceQuery{Page: services.PageInput{Page: 1, PerPage: 20}, OutbreakID: &ebolaID})
+	if err != nil || publicResources.TotalItems < 4 {
+		return fmt.Errorf("verify demo outbreak quick resources: %w", err)
 	}
 	return nil
 }

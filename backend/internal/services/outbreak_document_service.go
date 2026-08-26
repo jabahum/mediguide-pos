@@ -101,6 +101,18 @@ type OutbreakDocumentAdminDTO struct {
 	UpdatedAt                time.Time  `json:"updated_at"`
 }
 
+type OutbreakDocumentSearchPreview struct {
+	DocumentID        uuid.UUID  `json:"document_id"`
+	Query             string     `json:"query"`
+	Searchable        bool       `json:"searchable"`
+	SearchIndexStatus string     `json:"search_index_status"`
+	MatchingHeading   string     `json:"matching_heading,omitempty"`
+	MatchingSectionID string     `json:"matching_section_id,omitempty"`
+	MatchingPDFPage   *int       `json:"matching_pdf_page,omitempty"`
+	Snippet           string     `json:"snippet,omitempty"`
+	IndexedAt         *time.Time `json:"indexed_at,omitempty"`
+}
+
 type PublicOutbreakDocument struct {
 	ID                      uuid.UUID  `json:"id"`
 	OutbreakID              uuid.UUID  `json:"outbreak_id"`
@@ -258,6 +270,29 @@ func (s OutbreakAdminService) GetDocument(outbreakID, documentID uuid.UUID) (*Ou
 	}
 	result := outbreakDocumentAdminDTO(row)
 	return &result, nil
+}
+
+// DocumentSearchPreview runs the same deterministic local matching projection
+// used by public discovery without changing the stored or indexed document.
+func (s OutbreakAdminService) DocumentSearchPreview(outbreakID, documentID uuid.UUID, value string) (*OutbreakDocumentSearchPreview, error) {
+	value = strings.TrimSpace(value)
+	if len(value) < 2 || len(value) > 200 {
+		return nil, ErrOutbreakInvalid
+	}
+	var row models.OutbreakResource
+	if err := s.DB.Where("id = ? AND outbreak_id = ? AND resource_type IN ?", documentID, outbreakID, []string{"managed_document", "downloadable_asset"}).First(&row).Error; err != nil {
+		return nil, err
+	}
+	heading, sectionID, page := outbreakDocumentMatch(row, value)
+	searchable := row.ExtractionStatus == "ready" && row.SearchIndexStatus == "indexed" && strings.TrimSpace(row.SearchContent) != ""
+	if !searchable {
+		heading, sectionID, page = "", "", nil
+	}
+	snippet := ""
+	if searchable {
+		snippet = outbreakDocumentSnippet(row, value)
+	}
+	return &OutbreakDocumentSearchPreview{DocumentID: row.ID, Query: value, Searchable: searchable, SearchIndexStatus: row.SearchIndexStatus, MatchingHeading: heading, MatchingSectionID: sectionID, MatchingPDFPage: page, Snippet: snippet, IndexedAt: row.IndexedAt}, nil
 }
 
 // DocumentContent returns the server-derived representation to authorized

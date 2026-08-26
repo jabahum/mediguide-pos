@@ -187,6 +187,24 @@ func (h OutbreakAdminHandler) AdminDocumentContent(c *gin.Context) {
 	h.result(c, http.StatusOK, result, err)
 }
 
+// DocumentSearchPreview godoc
+// @Summary Preview how a query matches server-derived outbreak document content
+// @Tags outbreak-document-administration
+// @Security BearerAuth
+// @Param id path string true "Outbreak UUID"
+// @Param documentId path string true "Document UUID"
+// @Param query query string true "Search phrase (2-200 characters)"
+// @Success 200 {object} services.OutbreakDocumentSearchPreview
+// @Router /api/v2/outbreaks/{id}/documents/{documentId}/search-preview [get]
+func (h OutbreakAdminHandler) DocumentSearchPreview(c *gin.Context) {
+	id, documentID, ok := twoOutbreakIDs(c, "documentId")
+	if !ok {
+		return
+	}
+	result, err := h.Service.DocumentSearchPreview(id, documentID, c.Query("query"))
+	h.result(c, http.StatusOK, result, err)
+}
+
 // ReprocessDocument godoc
 // @Summary Rebuild safe search and preview content from the immutable managed file
 // @Tags outbreak-document-administration

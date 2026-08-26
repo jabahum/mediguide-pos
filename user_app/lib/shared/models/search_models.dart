@@ -15,6 +15,10 @@ enum SearchCategory {
     value: 'outbreak_documents',
     displayName: 'Outbreak Documents',
   ),
+  outbreakResources(
+    value: 'outbreak_resources',
+    displayName: 'Official Resources',
+  ),
   situationReports(
     value: 'situation_reports',
     displayName: 'Situation Reports',
@@ -42,6 +46,7 @@ class SearchResult {
   final String? description;
   final SearchCategory category;
   final String? route;
+  final String? externalUrl;
   final Map<String, dynamic>? routeArguments;
   final double relevanceScore;
   final bool isOffline;
@@ -55,6 +60,7 @@ class SearchResult {
     this.description,
     required this.category,
     this.route,
+    this.externalUrl,
     this.routeArguments,
     this.relevanceScore = 0.0,
     this.isOffline = false,
@@ -71,6 +77,7 @@ class SearchResult {
       description: json['description'] as String?,
       category: SearchCategory.fromString(json['category'] as String? ?? 'all'),
       route: json['route'] as String?,
+      externalUrl: json['externalUrl'] as String?,
       routeArguments: json['routeArguments'] as Map<String, dynamic>?,
       relevanceScore: (json['relevanceScore'] as num?)?.toDouble() ?? 0.0,
       isOffline: json['isOffline'] as bool? ?? false,
@@ -89,6 +96,7 @@ class SearchResult {
       'description': description,
       'category': category.value,
       'route': route,
+      'externalUrl': externalUrl,
       'routeArguments': routeArguments,
       'relevanceScore': relevanceScore,
       'isOffline': isOffline,
@@ -105,6 +113,7 @@ class SearchResult {
     String? description,
     SearchCategory? category,
     String? route,
+    String? externalUrl,
     Map<String, dynamic>? routeArguments,
     double? relevanceScore,
     bool? isOffline,
@@ -118,6 +127,7 @@ class SearchResult {
       description: description ?? this.description,
       category: category ?? this.category,
       route: route ?? this.route,
+      externalUrl: externalUrl ?? this.externalUrl,
       routeArguments: routeArguments ?? this.routeArguments,
       relevanceScore: relevanceScore ?? this.relevanceScore,
       isOffline: isOffline ?? this.isOffline,

@@ -140,6 +140,31 @@ func (h OutbreakHandler) Resources(c *gin.Context) {
 	h.result(c, result, err)
 }
 
+// ListResources godoc
+// @Summary Search safe, published outbreak quick resources
+// @Tags public-outbreaks
+// @Param search query string false "Title, description, issuer, or outbreak title"
+// @Param outbreak_id query string false "Outbreak UUID"
+// @Param resource_type query string false "Resource type"
+// @Param target_type query string false "guideline, situation_report, internal_route, or external_url"
+// @Param sort query string false "title, publication_date, or sort_order"
+// @Param order query string false "asc or desc"
+// @Success 200 {object} handlers.PaginatedOutbreakResourcesEnvelope
+// @Router /api/public/outbreak-resources [get]
+func (h OutbreakHandler) ListResources(c *gin.Context) {
+	page, err := parsePageQuery(c, 20, 100)
+	if err != nil {
+		httpx.Error(c, http.StatusBadRequest, "invalid pagination")
+		return
+	}
+	outbreakID, ok := outbreakOptionalUUID(c, "outbreak_id")
+	if !ok {
+		return
+	}
+	result, err := h.Service.ListResources(services.OutbreakResourceQuery{Page: page, Search: c.Query("search"), OutbreakID: outbreakID, ResourceType: c.Query("resource_type"), TargetType: c.Query("target_type"), Sort: c.Query("sort"), Order: c.Query("order")})
+	h.result(c, result, err)
+}
+
 // ListReports godoc
 // @Summary List published public situation reports
 // @Tags public-outbreaks

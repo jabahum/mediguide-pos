@@ -160,7 +160,7 @@ func validateSourceURL(value string, allowedHosts []string) error {
 }
 
 func (s OutbreakAdminService) validateResource(row models.OutbreakResource) error {
-	if strings.TrimSpace(row.Title) == "" || len(row.Title) > 240 || row.SortOrder < 0 || row.SortOrder > 10_000 {
+	if strings.TrimSpace(row.Title) == "" || len(row.Title) > 240 || len(row.Description) > 4000 || len(row.IssuingAuthority) > 240 || row.SortOrder < 0 || row.SortOrder > 10_000 {
 		return ErrOutbreakInvalid
 	}
 	kind := strings.TrimSpace(row.ResourceType)

@@ -2507,6 +2507,8 @@ export interface ServicesCalculatorVersionValidationDTO {
 
 export interface ServicesChildContentInput {
   asset_url?: string;
+  description?: string;
+  issuing_organization?: string;
   lock_version?: number;
   resource_type?: string;
   sort_order?: number;
@@ -3759,6 +3761,18 @@ export interface ServicesOutbreakDocumentInput {
   version?: string;
 }
 
+export interface ServicesOutbreakDocumentSearchPreview {
+  document_id?: string;
+  indexed_at?: string;
+  matching_heading?: string;
+  matching_pdf_page?: number;
+  matching_section_id?: string;
+  query?: string;
+  search_index_status?: string;
+  searchable?: boolean;
+  snippet?: string;
+}
+
 export interface ServicesOutbreakInput {
   data_as_of?: string;
   disease_type?: string;
@@ -3820,7 +3834,9 @@ export interface ServicesOutbreakResourceAdminDTO {
   asset_url?: string;
   author_id?: string;
   created_at?: string;
+  description?: string;
   id?: string;
+  issuing_organization?: string;
   lock_version?: number;
   outbreak_id?: string;
   published_at?: string;
@@ -4318,11 +4334,19 @@ export interface ServicesPublicOutbreakDocumentSection {
 
 export interface ServicesPublicOutbreakResource {
   asset_url?: string;
+  description?: string;
+  download_capability?: boolean;
   id?: string;
+  issuing_organization?: string;
   outbreak_id?: string;
+  outbreak_title?: string;
+  publication_date?: string;
   published_at?: string;
+  reader_capability?: string;
   resource_type?: string;
   sort_order?: number;
+  target_type?: string;
+  target_url?: string;
   title?: string;
   url?: string;
 }

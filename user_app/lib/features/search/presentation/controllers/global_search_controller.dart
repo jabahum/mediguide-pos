@@ -19,6 +19,7 @@ import 'package:user_app/features/guidelines/data/repositories/guideline_publica
 import 'package:user_app/features/support/data/repositories/help_content_repository.dart';
 import 'package:user_app/features/outbreaks/data/models/outbreak_models.dart';
 import 'package:user_app/features/outbreaks/data/repositories/outbreak_repository.dart';
+import 'package:user_app/features/notifications/domain/notification_action_resolver.dart';
 
 import 'package:user_app/shared/models/search_models.dart';
 
@@ -484,6 +485,41 @@ final class RepositoryGlobalSearchDataSource implements GlobalSearchDataSource {
             )
             .toList(growable: false);
 
+      case SearchCategory.outbreakResources:
+        final response = await _outbreaks.quickResources(
+          page: 1,
+          perPage: 10,
+          search: query,
+        );
+        return response.items
+            .map((item) {
+              final target = NotificationActionResolver.fromOutbreakResource(
+                type: item.resourceType,
+                url: item.targetUrl,
+                assetUrl: item.assetUrl,
+              );
+              return _withRelevance(
+                SearchResult(
+                  id: item.id,
+                  title: item.title,
+                  subtitle: [
+                    item.outbreakTitle,
+                    item.issuingOrganization,
+                    item.targetType == 'external_url'
+                        ? 'External official website'
+                        : item.resourceType.replaceAll('_', ' '),
+                  ].where((value) => value.isNotEmpty).join(' · '),
+                  description: item.description,
+                  category: category,
+                  route: target?.location,
+                  externalUrl: target?.externalUri?.toString(),
+                  item: item,
+                ),
+                query,
+              );
+            })
+            .toList(growable: false);
+
       case SearchCategory.situationReports:
         final response = await _outbreaks.reports(
           page: 1,
@@ -650,6 +686,7 @@ final class RepositoryGlobalSearchDataSource implements GlobalSearchDataSource {
       case SearchCategory.outbreaks:
       case SearchCategory.outbreakDocuments:
       case SearchCategory.situationReports:
+      case SearchCategory.outbreakResources:
         throw UnsupportedError('Unsupported search category: $category');
     }
   }

@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import 'package:user_app/core/constants/app_spacing.dart';
 import 'package:user_app/features/search/presentation/controllers/global_search_controller.dart';
@@ -614,7 +615,9 @@ class _SearchResultTile extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final colors = Theme.of(context).colorScheme;
 
-    final canOpen = result.route?.trim().isNotEmpty == true;
+    final canOpen =
+        result.route?.trim().isNotEmpty == true ||
+        result.externalUrl?.trim().isNotEmpty == true;
 
     return Semantics(
       button: canOpen,
@@ -631,6 +634,35 @@ class _SearchResultTile extends ConsumerWidget {
                       .read(globalSearchControllerProvider.notifier)
                       .recordSelection(result);
                   if (!context.mounted) return;
+                  if (result.externalUrl case final String value) {
+                    final confirmed = await showDialog<bool>(
+                      context: context,
+                      builder: (dialogContext) => AlertDialog(
+                        title: const Text('Open external official resource?'),
+                        content: Text(
+                          'You are leaving MediGuide and opening:\n$value',
+                        ),
+                        actions: [
+                          TextButton(
+                            onPressed: () =>
+                                Navigator.pop(dialogContext, false),
+                            child: const Text('Cancel'),
+                          ),
+                          FilledButton(
+                            onPressed: () => Navigator.pop(dialogContext, true),
+                            child: const Text('Open website'),
+                          ),
+                        ],
+                      ),
+                    );
+                    if (confirmed == true) {
+                      await launchUrl(
+                        Uri.parse(value),
+                        mode: LaunchMode.externalApplication,
+                      );
+                    }
+                    return;
+                  }
                   context.push(result.route!, extra: result.item);
                 },
           child: Padding(
@@ -728,6 +760,7 @@ class _SearchResultTile extends ConsumerWidget {
       SearchCategory.faq => LucideIcons.circleHelp,
       SearchCategory.outbreaks => LucideIcons.siren,
       SearchCategory.outbreakDocuments => LucideIcons.files,
+      SearchCategory.outbreakResources => LucideIcons.externalLink,
       SearchCategory.situationReports => LucideIcons.fileChartColumn,
       SearchCategory.tools => LucideIcons.calculator,
       SearchCategory.all => LucideIcons.search,

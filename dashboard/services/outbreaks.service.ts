@@ -9,6 +9,7 @@ import type {
   ServicesOutbreakMetric,
   ServicesOutbreakDocumentAdminDTO,
   ServicesOutbreakDocumentInput,
+  ServicesOutbreakDocumentSearchPreview,
   ServicesOutbreakResourceAdminDTO,
   ServicesOutbreakUpdateAdminDTO,
   ServicesSituationReportAdminDTO,
@@ -33,6 +34,7 @@ export type OutbreakDocumentRecord = ServicesOutbreakDocumentAdminDTO;
 export type OutbreakDocumentInput = ServicesOutbreakDocumentInput;
 export type PublishedGuidelineRecord = ServicesPublicGuideline;
 export type OutbreakDocumentContent = ServicesPublicOutbreakDocumentContent;
+export type OutbreakDocumentSearchPreview = ServicesOutbreakDocumentSearchPreview;
 
 export interface PagedResult<T> {
   items: T[];
@@ -244,6 +246,12 @@ export const outbreaksService = {
   documentContent(id: string, documentId: string) {
     return client().send<OutbreakDocumentContent>(
       `/api/v2/outbreaks/${id}/documents/${documentId}/content`,
+    );
+  },
+  documentSearchPreview(id: string, documentId: string, query: string) {
+    return client().send<OutbreakDocumentSearchPreview>(
+      `/api/v2/outbreaks/${id}/documents/${documentId}/search-preview`,
+      { query: { query } },
     );
   },
   reprocessDocument(id: string, documentId: string, lockVersion: number) {

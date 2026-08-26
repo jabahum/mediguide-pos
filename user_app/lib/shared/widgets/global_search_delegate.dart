@@ -19,6 +19,7 @@ import 'package:user_app/app/router/app_router.dart';
 import 'package:user_app/core/utils/loading.dart';
 import 'package:user_app/core/utils/responsive.dart';
 import 'package:user_app/core/constants/app_spacing.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 /// Global search delegate following Material Design and app theme
 class GlobalSearchDelegate extends SearchDelegate<String?> {
@@ -441,6 +442,35 @@ class GlobalSearchDelegate extends SearchDelegate<String?> {
             extra: document,
           );
         }
+      case SearchCategory.outbreakResources:
+        if (result.route != null) {
+          AppNavigator.push(result.route!, extra: result.item);
+          return;
+        }
+        final external = Uri.tryParse(result.externalUrl ?? '');
+        if (external == null) return;
+        final appContext = AppNavigator.context;
+        if (!appContext.mounted) return;
+        final confirmed = await showDialog<bool>(
+          context: appContext,
+          builder: (dialogContext) => AlertDialog(
+            title: const Text('Open external official resource?'),
+            content: Text('You are leaving MediGuide and opening:\n$external'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(dialogContext, false),
+                child: const Text('Cancel'),
+              ),
+              FilledButton(
+                onPressed: () => Navigator.pop(dialogContext, true),
+                child: const Text('Open website'),
+              ),
+            ],
+          ),
+        );
+        if (confirmed == true) {
+          await launchUrl(external, mode: LaunchMode.externalApplication);
+        }
       case SearchCategory.situationReports:
         final report = result.getItem<PublicSituationReport>();
         AppNavigator.push(
@@ -511,6 +541,8 @@ class GlobalSearchDelegate extends SearchDelegate<String?> {
         return LucideIcons.siren;
       case SearchCategory.outbreakDocuments:
         return LucideIcons.files;
+      case SearchCategory.outbreakResources:
+        return LucideIcons.externalLink;
       case SearchCategory.situationReports:
         return LucideIcons.fileChartColumn;
       case SearchCategory.tools:

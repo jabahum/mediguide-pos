@@ -7976,6 +7976,10 @@ final class ServicesChildContentInput {
 
   String? get assetUrl => value['asset_url']?.toString();
 
+  String? get description => value['description']?.toString();
+
+  String? get issuingOrganization => value['issuing_organization']?.toString();
+
   int? get lockVersion => (value['lock_version'] as num?)?.toInt();
 
   String? get resourceType => value['resource_type']?.toString();
@@ -11621,6 +11625,38 @@ final class ServicesOutbreakDocumentInput {
   Map<String, dynamic> toJson() => Map.of(value);
 }
 
+final class ServicesOutbreakDocumentSearchPreview {
+  ServicesOutbreakDocumentSearchPreview(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory ServicesOutbreakDocumentSearchPreview.fromJson(
+    Map<String, dynamic> json,
+  ) => ServicesOutbreakDocumentSearchPreview(json);
+
+  static const schemaName = 'services.OutbreakDocumentSearchPreview';
+  final Map<String, dynamic> value;
+
+  String? get documentId => value['document_id']?.toString();
+
+  String? get indexedAt => value['indexed_at']?.toString();
+
+  String? get matchingHeading => value['matching_heading']?.toString();
+
+  int? get matchingPdfPage => (value['matching_pdf_page'] as num?)?.toInt();
+
+  String? get matchingSectionId => value['matching_section_id']?.toString();
+
+  String? get query => value['query']?.toString();
+
+  String? get searchIndexStatus => value['search_index_status']?.toString();
+
+  bool? get searchable => value['searchable'] as bool?;
+
+  String? get snippet => value['snippet']?.toString();
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
 final class ServicesOutbreakInput {
   ServicesOutbreakInput(Map<String, dynamic> value)
     : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
@@ -11763,7 +11799,11 @@ final class ServicesOutbreakResourceAdminDTO {
 
   String? get createdAt => value['created_at']?.toString();
 
+  String? get description => value['description']?.toString();
+
   String? get id => value['id']?.toString();
+
+  String? get issuingOrganization => value['issuing_organization']?.toString();
 
   int? get lockVersion => (value['lock_version'] as num?)?.toInt();
 
@@ -13400,15 +13440,31 @@ final class ServicesPublicOutbreakResource {
 
   String? get assetUrl => value['asset_url']?.toString();
 
+  String? get description => value['description']?.toString();
+
+  bool? get downloadCapability => value['download_capability'] as bool?;
+
   String? get id => value['id']?.toString();
+
+  String? get issuingOrganization => value['issuing_organization']?.toString();
 
   String? get outbreakId => value['outbreak_id']?.toString();
 
+  String? get outbreakTitle => value['outbreak_title']?.toString();
+
+  String? get publicationDate => value['publication_date']?.toString();
+
   String? get publishedAt => value['published_at']?.toString();
+
+  String? get readerCapability => value['reader_capability']?.toString();
 
   String? get resourceType => value['resource_type']?.toString();
 
   int? get sortOrder => (value['sort_order'] as num?)?.toInt();
+
+  String? get targetType => value['target_type']?.toString();
+
+  String? get targetUrl => value['target_url']?.toString();
 
   String? get title => value['title']?.toString();
 

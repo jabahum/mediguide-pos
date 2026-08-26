@@ -47,6 +47,31 @@ class FakeOutbreakApi extends BackendApiService {
         },
       };
     }
+    if (path == '/api/public/outbreak-resources') {
+      return {
+        'data': {
+          'items': [
+            {
+              'id': 'resource-1',
+              'outbreak_id': 'outbreak-1',
+              'outbreak_title': 'Ebola response',
+              'title': 'Official response statement',
+              'description': 'Verified Ministry of Health announcement',
+              'issuing_organization': 'Ministry of Health',
+              'resource_type': 'official_statement',
+              'target_type': 'external_url',
+              'target_url': 'https://health.go.ug/response',
+              'reader_capability': 'external_browser',
+              'download_capability': false,
+            },
+          ],
+          'page': 1,
+          'per_page': 10,
+          'total_items': 1,
+          'total_pages': 1,
+        },
+      };
+    }
     if (path.endsWith('/resources')) {
       return {
         'data': {
@@ -274,6 +299,24 @@ void main() {
     expect(api.calls, contains('/api/public/outbreaks/outbreak-1/updates'));
     expect(api.calls, contains('/api/public/outbreaks/outbreak-1/resources'));
     expect(api.calls, contains('/api/public/outbreaks/outbreak-1/documents'));
+  });
+
+  test('quick-resource discovery preserves safe target metadata', () async {
+    final store = TestLocalStore();
+    addTearDown(store.close);
+    final api = FakeOutbreakApi();
+    final result = await OutbreakRepository(
+      api,
+      store.cache,
+    ).quickResources(search: 'verified');
+
+    expect(api.calls.single, '/api/public/outbreak-resources');
+    expect(api.queries.single?['search'], 'verified');
+    expect(result.items.single.outbreakTitle, 'Ebola response');
+    expect(result.items.single.targetType, 'external_url');
+    expect(result.items.single.readerCapability, 'external_browser');
+    expect(result.items.single.targetUrl, 'https://health.go.ug/response');
+    expect(result.items.single.downloadCapability, isFalse);
   });
 
   test('document list and detail remain searchable offline', () async {

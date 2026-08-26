@@ -77,13 +77,16 @@ describe("typed outbreak administration services", () => {
   it("uses dedicated derived-content preview and reprocess endpoints", async () => {
     send
       .mockResolvedValueOnce({ id: "document-1", content: "# SOP", content_format: "markdown" })
+      .mockResolvedValueOnce({ document_id: "document-1", query: "isolate", searchable: true })
       .mockResolvedValueOnce({ id: "document-1", extraction_status: "ready", lock_version: 5 })
 
     await outbreaksService.documentContent("outbreak-1", "document-1")
+    await outbreaksService.documentSearchPreview("outbreak-1", "document-1", "isolate")
     await outbreaksService.reprocessDocument("outbreak-1", "document-1", 4)
 
     expect(send).toHaveBeenNthCalledWith(1, "/api/v2/outbreaks/outbreak-1/documents/document-1/content")
-    expect(send).toHaveBeenNthCalledWith(2, "/api/v2/outbreaks/outbreak-1/documents/document-1/reprocess", {
+    expect(send).toHaveBeenNthCalledWith(2, "/api/v2/outbreaks/outbreak-1/documents/document-1/search-preview", { query: { query: "isolate" } })
+    expect(send).toHaveBeenNthCalledWith(3, "/api/v2/outbreaks/outbreak-1/documents/document-1/reprocess", {
       method: "POST",
       body: JSON.stringify({ lock_version: 4 }),
     })

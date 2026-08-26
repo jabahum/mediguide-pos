@@ -131,7 +131,7 @@ func New(cfg config.Config) (*App, error) {
 	authSvc := services.AuthService{DB: database, Cfg: cfg, Mailer: emailSender}
 	guidelineSvc := services.GuidelineService{DB: database, Store: store, Cache: cacheStore}
 	publicGuidelineSvc := services.PublicGuidelineService{DB: database, Store: store, Cache: cacheStore}
-	outbreakSvc := services.OutbreakService{DB: database, Store: store}
+	outbreakSvc := services.OutbreakService{DB: database, Store: store, AllowedExternalHosts: cfg.NotificationActionExternalHosts}
 	outbreakAdminSvc := services.OutbreakAdminService{DB: database, Store: store, AllowedExternalHosts: cfg.NotificationActionExternalHosts}
 	searchSvc := services.SearchService{DB: database, Cache: cacheStore}
 	ragSvc := services.RAGService{DB: database, Search: searchSvc, Cfg: cfg}
@@ -226,6 +226,7 @@ func New(cfg config.Config) (*App, error) {
 		public.GET("/outbreaks/:id", outbreakReadLimit, outbreakH.Get)
 		public.GET("/outbreaks/:id/updates", outbreakReadLimit, outbreakH.Updates)
 		public.GET("/outbreaks/:id/resources", outbreakReadLimit, outbreakH.Resources)
+		public.GET("/outbreak-resources", outbreakReadLimit, outbreakH.ListResources)
 		public.GET("/outbreaks/:id/documents", outbreakReadLimit, outbreakH.Documents)
 		public.GET("/outbreaks/:id/documents/:documentId", outbreakReadLimit, outbreakH.GetDocument)
 		public.GET("/outbreaks/:id/documents/:documentId/download", outbreakReadLimit, outbreakH.DocumentDownload)
@@ -311,6 +312,7 @@ func New(cfg config.Config) (*App, error) {
 		protected.DELETE("/outbreaks/:id/documents/:documentId", middleware.RequirePermission("outbreak.manage"), outbreakAdminH.DeleteDocument)
 		protected.PUT("/outbreaks/:id/documents/:documentId/file", middleware.RequirePermission("outbreak.manage"), outbreakAdminH.UploadDocument)
 		protected.GET("/outbreaks/:id/documents/:documentId/content", middleware.RequirePermission("outbreak.read"), outbreakAdminH.AdminDocumentContent)
+		protected.GET("/outbreaks/:id/documents/:documentId/search-preview", middleware.RequirePermission("outbreak.read"), outbreakAdminH.DocumentSearchPreview)
 		protected.POST("/outbreaks/:id/documents/:documentId/reprocess", middleware.RequirePermission("outbreak.manage"), outbreakAdminH.ReprocessDocument)
 		protected.GET("/outbreaks/:id/documents/:documentId/versions", middleware.RequirePermission("outbreak.read"), outbreakAdminH.DocumentVersions)
 		protected.GET("/outbreaks/:id/documents/:documentId/audit", middleware.RequirePermission("outbreak.read"), outbreakAdminH.DocumentAudit)

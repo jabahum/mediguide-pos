@@ -70,11 +70,24 @@ abstract class PublicOutbreakResource with _$PublicOutbreakResource {
   const factory PublicOutbreakResource({
     required String id,
     @JsonKey(name: 'outbreak_id') required String outbreakId,
+    @JsonKey(name: 'outbreak_title') @Default('') String outbreakTitle,
     @Default('') String title,
+    @Default('') String description,
+    @JsonKey(name: 'issuing_organization')
+    @Default('')
+    String issuingOrganization,
     @JsonKey(name: 'resource_type') @Default('link') String resourceType,
+    @JsonKey(name: 'target_type') @Default('') String targetType,
+    @JsonKey(name: 'target_url') @Default('') String targetUrl,
     @Default('') String url,
     @JsonKey(name: 'asset_url') @Default('') String assetUrl,
     @JsonKey(name: 'sort_order') @Default(0) int sortOrder,
+    @JsonKey(name: 'publication_date') DateTime? publicationDate,
+    @JsonKey(name: 'published_at') DateTime? publishedAt,
+    @JsonKey(name: 'reader_capability') @Default('') String readerCapability,
+    @JsonKey(name: 'download_capability')
+    @Default(false)
+    bool downloadCapability,
   }) = _PublicOutbreakResource;
   factory PublicOutbreakResource.fromJson(Map<String, dynamic> json) =>
       _$PublicOutbreakResourceFromJson(json);

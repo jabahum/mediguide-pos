@@ -6,10 +6,14 @@ import (
 	"crypto/sha256"
 	"embed"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
+	"io"
 	"path"
+	"strings"
 	"time"
 
+	"mediguide/internal/services"
 	"mediguide/internal/storage"
 
 	"github.com/google/uuid"
@@ -73,6 +77,27 @@ func seedDemoOutbreakDocuments(ctx context.Context, database *gorm.DB, store sto
 		if err := store.Put(ctx, storageKey, bytes.NewReader(content), int64(len(content)), "text/markdown; charset=utf-8"); err != nil {
 			return fmt.Errorf("store outbreak document fixture %q: %w", document.Fixture, err)
 		}
+		stored, err := store.Get(ctx, storageKey)
+		if err != nil {
+			return fmt.Errorf("read stored outbreak document fixture %q: %w", document.Fixture, err)
+		}
+		storedContent, readErr := io.ReadAll(stored)
+		closeErr := stored.Close()
+		if readErr != nil {
+			return fmt.Errorf("verify stored outbreak document fixture %q: %w", document.Fixture, readErr)
+		}
+		if closeErr != nil {
+			return fmt.Errorf("close stored outbreak document fixture %q: %w", document.Fixture, closeErr)
+		}
+		storedChecksum := sha256.Sum256(storedContent)
+		if len(storedContent) == 0 || !bytes.Equal(content, storedContent) || storedChecksum != checksum {
+			return fmt.Errorf("stored outbreak document fixture %q failed size or checksum verification", document.Fixture)
+		}
+		sections, err := demoMarkdownSections(content)
+		if err != nil {
+			return fmt.Errorf("derive outbreak document fixture %q sections: %w", document.Fixture, err)
+		}
+		checksumValue := hex.EncodeToString(checksum[:])
 
 		if err := upsertByID(database, "outbreak_resources", map[string]any{
 			"id": documentID, "outbreak_id": outbreakID, "title": document.Title,
@@ -83,16 +108,70 @@ func seedDemoOutbreakDocuments(ctx context.Context, database *gorm.DB, store sto
 			"effective_date": document.EffectiveDate, "review_date": document.ReviewDate,
 			"expires_at": document.ExpiresAt, "storage_key": storageKey,
 			"original_filename": document.Fixture, "mime_type": "text/markdown; charset=utf-8",
-			"file_size": int64(len(content)), "checksum_sha256": hex.EncodeToString(checksum[:]),
+			"file_size": int64(len(content)), "checksum_sha256": checksumValue,
 			"url": "", "asset_url": "", "sort_order": document.SortOrder,
 			"status": "published", "author_id": authorID, "reviewed_by": clinicianID,
 			"reviewed_at": publishedAt, "approved_by": clinicianID, "approved_at": publishedAt,
 			"published_at": publishedAt, "lock_version": 1,
 			"search_content": string(content), "rendered_content": string(content),
 			"content_format": "markdown", "extraction_status": "ready", "extracted_at": publishedAt,
+			"extraction_source_checksum": checksumValue, "derived_content_checksum": checksumValue,
+			"search_index_status": "indexed", "search_schema_version": 1,
+			"content_sections": sections, "indexed_at": publishedAt,
 		}); err != nil {
 			return fmt.Errorf("upsert outbreak document %q: %w", document.Key, err)
 		}
 	}
+	service := services.OutbreakService{DB: database, Store: store}
+	firstID := demoID("outbreak-document", demoOutbreakDocuments()[0].Key)
+	if _, err := service.GetDocumentGlobal(firstID); err != nil {
+		return fmt.Errorf("verify public outbreak document metadata: %w", err)
+	}
+	if target, err := service.DocumentDownload(ctx, outbreakID, firstID); err != nil || target == nil || target.Scheme == "" {
+		return fmt.Errorf("verify public outbreak document download: %w", err)
+	}
+	if content, err := service.DocumentContent(firstID); err != nil || !content.CanReadInline || strings.TrimSpace(content.Content) == "" {
+		return fmt.Errorf("verify public outbreak document content: %w", err)
+	}
+	result, err := service.SearchDocuments(services.OutbreakDocumentQuery{Page: services.PageInput{Page: 1, PerPage: 10}, Search: "environmental decontamination"})
+	if err != nil || result.TotalItems == 0 {
+		return fmt.Errorf("verify body-only outbreak document search: %w", err)
+	}
 	return nil
+}
+
+func demoMarkdownSections(content []byte) ([]byte, error) {
+	type section struct {
+		ID      string `json:"id"`
+		Heading string `json:"heading"`
+		Level   int    `json:"level"`
+		Text    string `json:"text"`
+	}
+	rows := make([]section, 0)
+	var current *section
+	for _, line := range strings.Split(string(content), "\n") {
+		trimmed := strings.TrimSpace(line)
+		if strings.HasPrefix(trimmed, "#") {
+			level := len(trimmed) - len(strings.TrimLeft(trimmed, "#"))
+			if level > 0 && level <= 6 && len(trimmed) > level && trimmed[level] == ' ' {
+				heading := strings.TrimSpace(trimmed[level:])
+				id := strings.Trim(strings.ToLower(strings.Map(func(r rune) rune {
+					if r >= 'a' && r <= 'z' || r >= '0' && r <= '9' {
+						return r
+					}
+					return '-'
+				}, heading)), "-")
+				rows = append(rows, section{ID: id, Heading: heading, Level: level})
+				current = &rows[len(rows)-1]
+				continue
+			}
+		}
+		if current != nil && trimmed != "" {
+			if current.Text != "" {
+				current.Text += " "
+			}
+			current.Text += trimmed
+		}
+	}
+	return json.Marshal(rows)
 }

@@ -80,13 +80,26 @@ class FakeOutbreakApi extends BackendApiService {
     if (path == '/api/public/outbreak-documents/document-1/content') {
       return {
         'data': {
-          'id': 'document-1',
+          'document_id': 'document-1',
           'outbreak_id': 'outbreak-1',
           'title': 'Ebola response SOP',
           'content': '# Isolation\n\nNotify the surveillance team.',
-          'content_format': 'markdown',
+          'format': 'markdown',
+          'mime_type': 'text/markdown',
+          'sections': [
+            {
+              'id': 'isolation',
+              'heading': 'Isolation',
+              'level': 1,
+              'text': 'Notify the surveillance team.',
+            },
+          ],
           'checksum_sha256':
               'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+          'download_url':
+              '/api/public/outbreaks/outbreak-1/documents/document-1/download',
+          'original_available': true,
+          'can_read_inline': true,
         },
       };
     }
@@ -103,6 +116,10 @@ class FakeOutbreakApi extends BackendApiService {
               'title': 'Ebola response SOP',
               'description': 'Isolation and notification procedure',
               'search_snippet': 'Notify the surveillance team.',
+              'matching_heading': 'Isolation',
+              'matching_section_id': 'isolation',
+              'search_relevance_score': 2.75,
+              'reader_url': '/api/public/outbreak-documents/document-1/content',
               'document_kind': 'sop',
               'issuing_authority': 'Ministry of Health',
               'version': '2.0',
@@ -111,6 +128,7 @@ class FakeOutbreakApi extends BackendApiService {
                   '/api/public/outbreak-documents/document-1/content',
               'content_format': 'markdown',
               'supports_inline': true,
+              'supports_offline_download': true,
               'published_at': '2026-08-01T00:00:00Z',
             },
           ],
@@ -303,8 +321,15 @@ void main() {
     );
     expect(online.items.single.outbreakTitle, 'Ebola response');
     expect(online.items.single.supportsInline, isTrue);
+    expect(online.items.single.matchingSectionId, 'isolation');
+    expect(online.items.single.searchRelevanceScore, 2.75);
+    expect(online.items.single.supportsOfflineDownload, isTrue);
     final content = await repository.documentContent('document-1');
     expect(content.value.content, contains('Notify'));
+    expect(content.value.documentId, 'document-1');
+    expect(content.value.sections.single.id, 'isolation');
+    expect(content.value.originalAvailable, isTrue);
+    expect(content.value.canReadInline, isTrue);
 
     api.offline = true;
     final cached = await repository.searchDocuments(

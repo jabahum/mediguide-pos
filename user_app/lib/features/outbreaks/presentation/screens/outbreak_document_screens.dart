@@ -185,9 +185,11 @@ class OutbreakDocumentPage extends ConsumerStatefulWidget {
     super.key,
     required this.outbreakId,
     required this.documentId,
+    this.initialDocument,
   });
   final String outbreakId;
   final String documentId;
+  final PublicOutbreakDocument? initialDocument;
 
   @override
   ConsumerState<OutbreakDocumentPage> createState() =>
@@ -197,6 +199,7 @@ class OutbreakDocumentPage extends ConsumerStatefulWidget {
 class _OutbreakDocumentPageState extends ConsumerState<OutbreakDocumentPage> {
   StreamSubscription<OfflineDownload>? _subscription;
   int _downloadRevision = 0;
+  bool _openedInitialMatch = false;
 
   @override
   void initState() {
@@ -208,6 +211,32 @@ class _OutbreakDocumentPageState extends ConsumerState<OutbreakDocumentPage> {
         .listen((_) {
           if (mounted) setState(() => _downloadRevision++);
         });
+    WidgetsBinding.instance.addPostFrameCallback((_) => _openInitialMatch());
+  }
+
+  Future<void> _openInitialMatch() async {
+    if (_openedInitialMatch || !mounted) return;
+    final document = widget.initialDocument;
+    if (document == null ||
+        (document.matchingSectionId.isEmpty &&
+            document.matchingHeading.isEmpty &&
+            document.matchingPdfPage == null)) {
+      return;
+    }
+    _openedInitialMatch = true;
+    if (document.supportsInline &&
+        (document.matchingSectionId.isNotEmpty ||
+            document.matchingHeading.isNotEmpty)) {
+      await _readInline(
+        document,
+        matchingHeading: document.matchingHeading,
+        matchingSectionId: document.matchingSectionId,
+      );
+      return;
+    }
+    if (document.matchingPdfPage != null) {
+      await _open(document, null, initialPage: document.matchingPdfPage);
+    }
   }
 
   @override
@@ -333,7 +362,11 @@ class _OutbreakDocumentPageState extends ConsumerState<OutbreakDocumentPage> {
     );
   }
 
-  Future<void> _readInline(PublicOutbreakDocument document) async {
+  Future<void> _readInline(
+    PublicOutbreakDocument document, {
+    String? matchingHeading,
+    String? matchingSectionId,
+  }) async {
     try {
       final result = await ref
           .read(outbreakRepositoryProvider)
@@ -344,6 +377,11 @@ class _OutbreakDocumentPageState extends ConsumerState<OutbreakDocumentPage> {
           builder: (_) => _MarkdownDocumentPage(
             title: document.title,
             source: result.value.content,
+            matchingHeading: _resolvedHeading(
+              result.value,
+              matchingHeading,
+              matchingSectionId,
+            ),
           ),
         ),
       );
@@ -353,6 +391,19 @@ class _OutbreakDocumentPageState extends ConsumerState<OutbreakDocumentPage> {
         SnackBar(content: Text('Readable content is unavailable: $error')),
       );
     }
+  }
+
+  String? _resolvedHeading(
+    OutbreakDocumentContent content,
+    String? heading,
+    String? sectionId,
+  ) {
+    if (heading?.trim().isNotEmpty == true) return heading!.trim();
+    if (sectionId?.trim().isNotEmpty != true) return null;
+    for (final section in content.sections) {
+      if (section.id == sectionId) return section.heading;
+    }
+    return null;
   }
 
   Future<OfflineDownload?> _download(PublicOutbreakDocument document) async {
@@ -391,8 +442,9 @@ class _OutbreakDocumentPageState extends ConsumerState<OutbreakDocumentPage> {
 
   Future<void> _open(
     PublicOutbreakDocument document,
-    OfflineDownload? offline,
-  ) async {
+    OfflineDownload? offline, {
+    int? initialPage,
+  }) async {
     final local = offline?.localPath;
     final source = local != null && local.isNotEmpty
         ? Uri.file(local).toString()
@@ -404,7 +456,11 @@ class _OutbreakDocumentPageState extends ConsumerState<OutbreakDocumentPage> {
       if (mounted) {
         context.push(
           AppRoutes.documentReader,
-          extra: DocumentReaderArgs(title: document.title, source: source),
+          extra: DocumentReaderArgs(
+            title: document.title,
+            source: source,
+            initialPage: initialPage,
+          ),
         );
       }
       return;
@@ -483,16 +539,52 @@ class _OutbreakDocumentPageState extends ConsumerState<OutbreakDocumentPage> {
   }
 }
 
-class _MarkdownDocumentPage extends StatelessWidget {
-  const _MarkdownDocumentPage({required this.title, required this.source});
+class _MarkdownDocumentPage extends StatefulWidget {
+  const _MarkdownDocumentPage({
+    required this.title,
+    required this.source,
+    this.matchingHeading,
+  });
   final String title;
   final String source;
+  final String? matchingHeading;
+
+  @override
+  State<_MarkdownDocumentPage> createState() => _MarkdownDocumentPageState();
+}
+
+class _MarkdownDocumentPageState extends State<_MarkdownDocumentPage> {
+  final ScrollController _controller = ScrollController();
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToMatch());
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _scrollToMatch() {
+    final heading = widget.matchingHeading?.trim() ?? '';
+    if (heading.isEmpty || !_controller.hasClients || widget.source.isEmpty) {
+      return;
+    }
+    final index = widget.source.toLowerCase().indexOf(heading.toLowerCase());
+    if (index < 0) return;
+    final ratio = (index / widget.source.length).clamp(0.0, 1.0);
+    _controller.jumpTo(_controller.position.maxScrollExtent * ratio);
+  }
 
   @override
   Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(title: Text(title)),
+    appBar: AppBar(title: Text(widget.title)),
     body: Markdown(
-      data: source,
+      data: widget.source,
+      controller: _controller,
       selectable: true,
       padding: const EdgeInsets.all(20),
       onTapLink: (_, href, _) async {

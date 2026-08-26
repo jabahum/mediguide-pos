@@ -1,7 +1,9 @@
 import 'dart:async';
 
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:user_app/features/search/presentation/screens/global_search_page.dart';
 import 'package:user_app/shared/models/search_models.dart';
 import 'package:user_app/features/search/presentation/controllers/global_search_controller.dart';
 
@@ -24,6 +26,68 @@ ProviderContainer createContainer(GlobalSearchDataSource dataSource) {
 }
 
 void main() {
+  test(
+    'a failed category does not suppress successful search categories',
+    () async {
+      final batches = await searchCategoriesIndependently(
+        const [SearchCategory.outbreakDocuments, SearchCategory.drugs],
+        (category) async {
+          if (category == SearchCategory.outbreakDocuments) {
+            throw StateError('document endpoint unavailable');
+          }
+          return const [
+            SearchResult(
+              id: 'drug-1',
+              title: 'Aspirin',
+              category: SearchCategory.drugs,
+            ),
+          ];
+        },
+      );
+
+      expect(batches.first, isEmpty);
+      expect(batches.last.single.title, 'Aspirin');
+    },
+  );
+
+  testWidgets(
+    'outbreak document results show source metadata, snippet and cache status',
+    (tester) async {
+      final dataSource = ControlledSearchDataSource();
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            globalSearchDataSourceProvider.overrideWithValue(dataSource),
+          ],
+          child: const MaterialApp(home: GlobalSearchPage()),
+        ),
+      );
+
+      await tester.enterText(find.byType(TextField), 'ebola');
+      await tester.pump(const Duration(milliseconds: 400));
+      dataSource.requests['ebola']!.complete(const [
+        SearchResult(
+          id: 'document-1',
+          title: 'Ebola IPC SOP',
+          subtitle:
+              'Ebola response · ipc protocol · Ministry of Health · Version 2.0',
+          description: 'Use PPE before entering the isolation area.',
+          category: SearchCategory.outbreakDocuments,
+          route: '/outbreak-hub/outbreak-1/documents/document-1',
+          isOffline: true,
+          isStale: true,
+        ),
+      ]);
+      await tester.pumpAndSettle();
+
+      expect(find.text('Ebola IPC SOP'), findsOneWidget);
+      expect(find.textContaining('Ministry of Health'), findsOneWidget);
+      expect(find.textContaining('Use PPE'), findsOneWidget);
+      expect(find.text('Offline cached result · may be stale'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
   test(
     'validates empty and short queries without calling the data source',
     () async {

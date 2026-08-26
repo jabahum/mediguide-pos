@@ -148,7 +148,7 @@ func TestOutbreakServiceDiscoversDocumentsAcrossPublishedOutbreaks(t *testing.T)
 		t.Fatalf("unexpected discovery result: %#v err=%v", page, err)
 	}
 	content, err := service.DocumentContent(visible.ID)
-	if err != nil || content.ContentFormat != "markdown" || !strings.Contains(content.Content, "Immediate action") {
+	if err != nil || content.Format != "markdown" || content.DocumentID != visible.ID || !content.CanReadInline || !content.OriginalAvailable || content.DownloadURL == "" || len(content.Sections) != 1 || !strings.Contains(content.Content, "Immediate action") {
 		t.Fatalf("unexpected public content: %#v err=%v", content, err)
 	}
 	if _, err := service.GetDocumentGlobal(hidden.ID); !errors.Is(err, gorm.ErrRecordNotFound) {

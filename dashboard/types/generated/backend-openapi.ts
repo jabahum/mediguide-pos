@@ -722,6 +722,17 @@ export interface HandlersOutbreakDocumentEnvelope {
   success?: boolean;
 }
 
+export interface HandlersOutbreakDocumentInlineError {
+  code?: string;
+  message?: string;
+}
+
+export interface HandlersOutbreakDocumentInlineUnsupportedEnvelope {
+  data?: ServicesPublicOutbreakDocumentContent;
+  error?: HandlersOutbreakDocumentInlineError;
+  success?: boolean;
+}
+
 export interface HandlersOutbreakEnvelope {
   data?: ServicesPublicOutbreak;
   success?: boolean;
@@ -4281,11 +4292,28 @@ export interface ServicesPublicOutbreakDocument {
 
 export interface ServicesPublicOutbreakDocumentContent {
   checksum_sha256?: string;
+  can_read_inline?: boolean;
   content?: string;
-  content_format?: string;
-  id?: string;
+  document_id?: string;
+  download_url?: string;
+  effective_date?: string;
+  expires_at?: string;
+  format?: string;
+  mime_type?: string;
+  original_available?: boolean;
   outbreak_id?: string;
+  published_at?: string;
+  review_date?: string;
+  sections?: ServicesPublicOutbreakDocumentSection[];
   title?: string;
+}
+
+export interface ServicesPublicOutbreakDocumentSection {
+  heading?: string;
+  id?: string;
+  level?: number;
+  page?: number;
+  text?: string;
 }
 
 export interface ServicesPublicOutbreakResource {

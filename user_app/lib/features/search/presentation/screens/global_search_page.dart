@@ -604,17 +604,15 @@ class _SearchGroupHeader extends StatelessWidget {
   }
 }
 
-class _SearchResultTile extends StatelessWidget {
+class _SearchResultTile extends ConsumerWidget {
   const _SearchResultTile({required this.result, required this.query});
 
   final SearchResult result;
   final String query;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final colors = Theme.of(context).colorScheme;
-
-    final description = result.subtitle ?? result.description;
 
     final canOpen = result.route?.trim().isNotEmpty == true;
 
@@ -628,7 +626,11 @@ class _SearchResultTile extends StatelessWidget {
         child: InkWell(
           onTap: !canOpen
               ? null
-              : () {
+              : () async {
+                  await ref
+                      .read(globalSearchControllerProvider.notifier)
+                      .recordSelection(result);
+                  if (!context.mounted) return;
                   context.push(result.route!, extra: result.item);
                 },
           child: Padding(
@@ -658,18 +660,38 @@ class _SearchResultTile extends StatelessWidget {
 
                       _SearchCategoryLabel(category: result.category),
 
-                      if (description?.trim().isNotEmpty == true) ...[
+                      if (result.subtitle?.trim().isNotEmpty == true) ...[
                         const SizedBox(height: 7),
 
                         _HighlightedText(
-                          text: description!,
+                          text: result.subtitle!,
                           query: query,
-                          maxLines: 3,
+                          maxLines: 2,
                           style: Theme.of(context).textTheme.bodySmall
                               ?.copyWith(
                                 color: colors.onSurfaceVariant,
                                 height: 1.35,
                               ),
+                        ),
+                      ],
+
+                      if (result.description?.trim().isNotEmpty == true) ...[
+                        const SizedBox(height: 7),
+                        _HighlightedText(
+                          text: result.description!,
+                          query: query,
+                          maxLines: 3,
+                          style: Theme.of(
+                            context,
+                          ).textTheme.bodySmall?.copyWith(height: 1.35),
+                        ),
+                      ],
+
+                      if (result.isOffline || result.isStale) ...[
+                        const SizedBox(height: 8),
+                        _SearchAvailabilityBadge(
+                          offline: result.isOffline,
+                          stale: result.isStale,
                         ),
                       ],
                     ],
@@ -710,6 +732,39 @@ class _SearchResultTile extends StatelessWidget {
       SearchCategory.tools => LucideIcons.calculator,
       SearchCategory.all => LucideIcons.search,
     };
+  }
+}
+
+class _SearchAvailabilityBadge extends StatelessWidget {
+  const _SearchAvailabilityBadge({required this.offline, required this.stale});
+
+  final bool offline;
+  final bool stale;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(
+          offline ? LucideIcons.cloudOff : LucideIcons.clock3,
+          size: 13,
+          color: colors.onSurfaceVariant,
+        ),
+        const SizedBox(width: 5),
+        Text(
+          offline
+              ? (stale
+                    ? 'Offline cached result · may be stale'
+                    : 'Offline cached result')
+              : 'Cached result · verify online',
+          style: Theme.of(
+            context,
+          ).textTheme.labelSmall?.copyWith(color: colors.onSurfaceVariant),
+        ),
+      ],
+    );
   }
 }
 

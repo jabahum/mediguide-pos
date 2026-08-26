@@ -44,6 +44,7 @@ import 'package:user_app/features/navigation/presentation/screens/guest_more_pag
 import 'package:user_app/features/navigation/presentation/screens/main_page.dart';
 import 'package:user_app/features/outbreaks/presentation/screens/outbreak_screens.dart';
 import 'package:user_app/features/outbreaks/presentation/screens/outbreak_document_screens.dart';
+import 'package:user_app/features/outbreaks/data/models/outbreak_models.dart';
 import 'package:user_app/features/notifications/presentation/screens/notifications_page.dart';
 import 'package:user_app/features/notifications/presentation/screens/notification_preferences_page.dart';
 import 'package:user_app/features/profile/presentation/screens/profile_page.dart';
@@ -179,6 +180,9 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         builder: (_, state) => OutbreakDocumentPage(
           outbreakId: state.pathParameters['outbreakId'] ?? '',
           documentId: state.pathParameters['documentId'] ?? '',
+          initialDocument: state.extra is PublicOutbreakDocument
+              ? state.extra! as PublicOutbreakDocument
+              : null,
         ),
       ),
       GoRoute(

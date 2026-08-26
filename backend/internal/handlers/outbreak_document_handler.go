@@ -176,6 +176,14 @@ func (h OutbreakAdminHandler) AdminDocumentContent(c *gin.Context) {
 		return
 	}
 	result, err := h.Service.DocumentContent(id, documentID)
+	if errors.Is(err, services.ErrOutbreakDocumentInlineUnsupported) || errors.Is(err, services.ErrOutbreakDocumentContentUnavailable) {
+		c.JSON(http.StatusUnprocessableEntity, gin.H{
+			"success": false,
+			"error":   gin.H{"code": outbreakDocumentContentErrorCode(err), "message": err.Error()},
+			"data":    result,
+		})
+		return
+	}
 	h.result(c, http.StatusOK, result, err)
 }
 
@@ -396,6 +404,8 @@ func (h OutbreakHandler) GetDocumentGlobal(c *gin.Context) {
 // @Tags public-outbreaks
 // @Param documentId path string true "Document UUID"
 // @Success 200 {object} handlers.OutbreakDocumentContentEnvelope
+// @Failure 415 {object} handlers.OutbreakDocumentInlineUnsupportedEnvelope
+// @Failure 422 {object} handlers.OutbreakDocumentInlineUnsupportedEnvelope
 // @Router /api/public/outbreak-documents/{documentId}/content [get]
 func (h OutbreakHandler) DocumentContent(c *gin.Context) {
 	id, ok := outbreakUUID(c, "documentId")
@@ -407,20 +417,52 @@ func (h OutbreakHandler) DocumentContent(c *gin.Context) {
 		httpx.Error(c, http.StatusNotFound, "readable outbreak document content not found")
 		return
 	}
+	if errors.Is(err, services.ErrOutbreakDocumentInlineUnsupported) || errors.Is(err, services.ErrOutbreakDocumentContentUnavailable) {
+		status := http.StatusUnsupportedMediaType
+		if errors.Is(err, services.ErrOutbreakDocumentContentUnavailable) {
+			status = http.StatusUnprocessableEntity
+		}
+		c.Header("Cache-Control", "no-store")
+		c.JSON(status, gin.H{
+			"success": false,
+			"error":   gin.H{"code": outbreakDocumentContentErrorCode(err), "message": err.Error()},
+			"data":    result,
+		})
+		return
+	}
 	if err != nil {
 		httpx.Error(c, http.StatusInternalServerError, "failed to load outbreak document content")
 		return
 	}
 	etag := `"` + result.ChecksumSHA256 + `"`
-	if result.ChecksumSHA256 != "" && c.GetHeader("If-None-Match") == etag {
-		c.Status(http.StatusNotModified)
-		return
-	}
+	c.Header("Cache-Control", "public, max-age=300, stale-while-revalidate=3600")
+	c.Header("Vary", "Accept-Encoding")
+	c.Header("X-Content-Type-Options", "nosniff")
 	if result.ChecksumSHA256 != "" {
 		c.Header("ETag", etag)
 	}
-	c.Header("Cache-Control", "public, max-age=300, stale-while-revalidate=3600")
+	if result.ChecksumSHA256 != "" && outbreakDocumentETagMatches(c.GetHeader("If-None-Match"), etag) {
+		c.Status(http.StatusNotModified)
+		return
+	}
 	c.JSON(http.StatusOK, gin.H{"success": true, "data": result})
+}
+
+func outbreakDocumentContentErrorCode(err error) string {
+	if errors.Is(err, services.ErrOutbreakDocumentInlineUnsupported) {
+		return "inline_reading_unsupported"
+	}
+	return "derived_content_unavailable"
+}
+
+func outbreakDocumentETagMatches(header, etag string) bool {
+	for _, candidate := range strings.Split(header, ",") {
+		candidate = strings.TrimSpace(candidate)
+		if candidate == "*" || candidate == etag || strings.TrimPrefix(candidate, "W/") == etag {
+			return true
+		}
+	}
+	return false
 }
 
 // GetDocument godoc

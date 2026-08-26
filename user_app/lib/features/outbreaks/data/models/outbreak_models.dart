@@ -3,6 +3,12 @@ import 'package:freezed_annotation/freezed_annotation.dart';
 part 'outbreak_models.freezed.dart';
 part 'outbreak_models.g.dart';
 
+Object? _readDocumentId(Map<dynamic, dynamic> json, String key) =>
+    json[key] ?? json['id'];
+
+Object? _readDocumentFormat(Map<dynamic, dynamic> json, String key) =>
+    json[key] ?? json['content_format'];
+
 @freezed
 abstract class OutbreakMetric with _$OutbreakMetric {
   const factory OutbreakMetric({
@@ -101,25 +107,59 @@ abstract class PublicOutbreakDocument with _$PublicOutbreakDocument {
     @JsonKey(name: 'outbreak_disease') @Default('') String outbreakDisease,
     @JsonKey(name: 'outbreak_area') @Default('') String outbreakArea,
     @JsonKey(name: 'search_snippet') @Default('') String searchSnippet,
+    @JsonKey(name: 'matching_heading') @Default('') String matchingHeading,
+    @JsonKey(name: 'matching_section_id') @Default('') String matchingSectionId,
+    @JsonKey(name: 'matching_pdf_page') int? matchingPdfPage,
+    @JsonKey(name: 'search_relevance_score')
+    @Default(0)
+    double searchRelevanceScore,
+    @JsonKey(name: 'reader_url') @Default('') String readerUrl,
     @JsonKey(name: 'content_url') @Default('') String contentUrl,
     @JsonKey(name: 'content_format') @Default('') String contentFormat,
     @JsonKey(name: 'supports_inline') @Default(false) bool supportsInline,
+    @JsonKey(name: 'supports_offline_download')
+    @Default(false)
+    bool supportsOfflineDownload,
   }) = _PublicOutbreakDocument;
   factory PublicOutbreakDocument.fromJson(Map<String, dynamic> json) =>
       _$PublicOutbreakDocumentFromJson(json);
 }
 
 @freezed
+abstract class OutbreakDocumentSection with _$OutbreakDocumentSection {
+  const factory OutbreakDocumentSection({
+    required String id,
+    @Default('') String heading,
+    @Default(1) int level,
+    @Default('') String text,
+    int? page,
+  }) = _OutbreakDocumentSection;
+  factory OutbreakDocumentSection.fromJson(Map<String, dynamic> json) =>
+      _$OutbreakDocumentSectionFromJson(json);
+}
+
+@freezed
 abstract class OutbreakDocumentContent with _$OutbreakDocumentContent {
   const factory OutbreakDocumentContent({
-    required String id,
+    @JsonKey(name: 'document_id', readValue: _readDocumentId)
+    required String documentId,
     @JsonKey(name: 'outbreak_id') required String outbreakId,
     @Default('') String title,
     @Default('') String content,
-    @JsonKey(name: 'content_format')
+    @JsonKey(name: 'format', readValue: _readDocumentFormat)
     @Default('plain_text')
     String contentFormat,
+    @JsonKey(name: 'mime_type') @Default('') String mimeType,
+    @Default(<OutbreakDocumentSection>[])
+    List<OutbreakDocumentSection> sections,
     @JsonKey(name: 'checksum_sha256') @Default('') String checksumSha256,
+    @JsonKey(name: 'published_at') DateTime? publishedAt,
+    @JsonKey(name: 'effective_date') DateTime? effectiveDate,
+    @JsonKey(name: 'review_date') DateTime? reviewDate,
+    @JsonKey(name: 'expires_at') DateTime? expiresAt,
+    @JsonKey(name: 'download_url') @Default('') String downloadUrl,
+    @JsonKey(name: 'original_available') @Default(false) bool originalAvailable,
+    @JsonKey(name: 'can_read_inline') @Default(false) bool canReadInline,
   }) = _OutbreakDocumentContent;
   factory OutbreakDocumentContent.fromJson(Map<String, dynamic> json) =>
       _$OutbreakDocumentContentFromJson(json);

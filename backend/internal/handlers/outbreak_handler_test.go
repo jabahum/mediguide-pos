@@ -63,7 +63,7 @@ func TestPublicOutbreakDocumentDiscoveryAndContentVisibility(t *testing.T) {
 	if err := db.Create(&parent).Error; err != nil {
 		t.Fatal(err)
 	}
-	document := models.OutbreakResource{OutbreakID: parent.ID, Title: "Case management SOP", ResourceType: "managed_document", DocumentKind: "sop", Language: "en", Status: "published", ApprovedAt: &now, PublishedAt: &now, SearchContent: "isolate the patient", RenderedContent: "# Isolation", ContentFormat: "markdown", ExtractionStatus: "ready", ChecksumSHA256: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"}
+	document := models.OutbreakResource{OutbreakID: parent.ID, Title: "Case management SOP", ResourceType: "managed_document", DocumentKind: "sop", Language: "en", MIMEType: "text/markdown", StorageKey: "outbreaks/case.md", Status: "published", ApprovedAt: &now, PublishedAt: &now, EffectiveDate: &now, SearchContent: "isolate the patient", RenderedContent: "# Isolation", ContentFormat: "markdown", ExtractionStatus: "ready", ContentSections: []byte(`[{"id":"isolation","heading":"Isolation","level":1,"text":"Isolate the patient."}]`), ChecksumSHA256: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", DerivedContentChecksum: "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"}
 	if err := db.Create(&document).Error; err != nil {
 		t.Fatal(err)
 	}
@@ -75,8 +75,25 @@ func TestPublicOutbreakDocumentDiscoveryAndContentVisibility(t *testing.T) {
 	}
 	content := httptest.NewRecorder()
 	router.ServeHTTP(content, httptest.NewRequest(http.MethodGet, "/api/public/outbreak-documents/"+document.ID.String()+"/content", nil))
-	if content.Code != http.StatusOK || content.Header().Get("ETag") == "" || !strings.Contains(content.Body.String(), "Isolation") {
+	if content.Code != http.StatusOK || content.Header().Get("ETag") != `"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"` || content.Header().Get("Cache-Control") == "" || content.Header().Get("X-Content-Type-Options") != "nosniff" || !strings.Contains(content.Body.String(), `"document_id"`) || !strings.Contains(content.Body.String(), `"can_read_inline":true`) || !strings.Contains(content.Body.String(), `"sections"`) || !strings.Contains(content.Body.String(), "Isolation") {
 		t.Fatalf("content status=%d headers=%v body=%s", content.Code, content.Header(), content.Body.String())
+	}
+	notModified := httptest.NewRecorder()
+	conditional := httptest.NewRequest(http.MethodGet, "/api/public/outbreak-documents/"+document.ID.String()+"/content", nil)
+	conditional.Header.Set("If-None-Match", `W/"ignored", W/`+content.Header().Get("ETag"))
+	router.ServeHTTP(notModified, conditional)
+	if notModified.Code != http.StatusNotModified || notModified.Body.Len() != 0 || notModified.Header().Get("ETag") == "" || notModified.Header().Get("Cache-Control") == "" {
+		t.Fatalf("conditional content status=%d headers=%v body=%s", notModified.Code, notModified.Header(), notModified.Body.String())
+	}
+
+	pdf := models.OutbreakResource{OutbreakID: parent.ID, Title: "Case definition PDF", ResourceType: "managed_document", DocumentKind: "case_definition", Language: "en", MIMEType: "application/pdf", StorageKey: "outbreaks/case.pdf", Status: "published", ApprovedAt: &now, PublishedAt: &now, SearchContent: "case definition", ContentFormat: "pdf_text", ExtractionStatus: "ready", ChecksumSHA256: strings.Repeat("c", 64), DerivedContentChecksum: strings.Repeat("d", 64)}
+	if err := db.Create(&pdf).Error; err != nil {
+		t.Fatal(err)
+	}
+	unsupported := httptest.NewRecorder()
+	router.ServeHTTP(unsupported, httptest.NewRequest(http.MethodGet, "/api/public/outbreak-documents/"+pdf.ID.String()+"/content", nil))
+	if unsupported.Code != http.StatusUnsupportedMediaType || unsupported.Header().Get("Cache-Control") != "no-store" || !strings.Contains(unsupported.Body.String(), `"code":"inline_reading_unsupported"`) || !strings.Contains(unsupported.Body.String(), `"can_read_inline":false`) || !strings.Contains(unsupported.Body.String(), pdf.ID.String()) {
+		t.Fatalf("unsupported inline status=%d headers=%v body=%s", unsupported.Code, unsupported.Header(), unsupported.Body.String())
 	}
 }
 

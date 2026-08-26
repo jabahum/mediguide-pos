@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/url"
 	"regexp"
 	"strings"
@@ -137,13 +138,35 @@ type PublicOutbreakDocument struct {
 }
 
 type PublicOutbreakDocumentContent struct {
-	ID             uuid.UUID `json:"id"`
-	OutbreakID     uuid.UUID `json:"outbreak_id"`
-	Title          string    `json:"title"`
-	Content        string    `json:"content"`
-	ContentFormat  string    `json:"content_format"`
-	ChecksumSHA256 string    `json:"checksum_sha256"`
+	DocumentID        uuid.UUID                       `json:"document_id"`
+	OutbreakID        uuid.UUID                       `json:"outbreak_id"`
+	Title             string                          `json:"title"`
+	Format            string                          `json:"format"`
+	MIMEType          string                          `json:"mime_type"`
+	Content           string                          `json:"content"`
+	Sections          []PublicOutbreakDocumentSection `json:"sections"`
+	ChecksumSHA256    string                          `json:"checksum_sha256"`
+	PublishedAt       *time.Time                      `json:"published_at,omitempty"`
+	EffectiveDate     *time.Time                      `json:"effective_date,omitempty"`
+	ReviewDate        *time.Time                      `json:"review_date,omitempty"`
+	ExpiresAt         *time.Time                      `json:"expires_at,omitempty"`
+	DownloadURL       string                          `json:"download_url,omitempty"`
+	OriginalAvailable bool                            `json:"original_available"`
+	CanReadInline     bool                            `json:"can_read_inline"`
 }
+
+type PublicOutbreakDocumentSection struct {
+	ID      string `json:"id"`
+	Heading string `json:"heading"`
+	Level   int    `json:"level"`
+	Text    string `json:"text"`
+	Page    *int   `json:"page,omitempty"`
+}
+
+var (
+	ErrOutbreakDocumentInlineUnsupported  = errors.New("outbreak document inline reading unsupported")
+	ErrOutbreakDocumentContentUnavailable = errors.New("outbreak document derived content unavailable")
+)
 
 type outbreakDocumentSearchRow struct {
 	models.OutbreakResource `gorm:"embedded"`
@@ -245,10 +268,7 @@ func (s OutbreakAdminService) DocumentContent(outbreakID, documentID uuid.UUID) 
 	if err := s.DB.Where("id = ? AND outbreak_id = ? AND resource_type IN ?", documentID, outbreakID, []string{"managed_document", "downloadable_asset"}).First(&row).Error; err != nil {
 		return nil, err
 	}
-	if row.ExtractionStatus != "ready" || strings.TrimSpace(row.RenderedContent) == "" || !validOutbreakValue(row.ContentFormat, "markdown", "plain_text") {
-		return nil, gorm.ErrRecordNotFound
-	}
-	return &PublicOutbreakDocumentContent{ID: row.ID, OutbreakID: row.OutbreakID, Title: row.Title, Content: row.RenderedContent, ContentFormat: row.ContentFormat, ChecksumSHA256: row.ChecksumSHA256}, nil
+	return outbreakDocumentContentManifest(row)
 }
 
 func (s OutbreakAdminService) UpdateDocument(actor OutbreakActor, outbreakID, documentID uuid.UUID, in OutbreakDocumentInput) (*OutbreakDocumentAdminDTO, error) {
@@ -575,18 +595,50 @@ func (s OutbreakService) GetDocumentGlobal(documentID uuid.UUID) (*PublicOutbrea
 }
 
 func (s OutbreakService) DocumentContent(documentID uuid.UUID) (*PublicOutbreakDocumentContent, error) {
-	document, err := s.GetDocumentGlobal(documentID)
-	if err != nil {
-		return nil, err
-	}
+	now := time.Now().UTC()
 	var row models.OutbreakResource
-	if err := s.DB.Select("rendered_content", "content_format", "extraction_status").First(&row, "id = ?", documentID).Error; err != nil {
+	if err := s.DB.Model(&models.OutbreakResource{}).
+		Select("outbreak_resources.*").
+		Joins("JOIN outbreaks outbreak_content_parent ON outbreak_content_parent.id = outbreak_resources.outbreak_id AND outbreak_content_parent.deleted_at IS NULL").
+		Where("outbreak_resources.id = ? AND outbreak_resources.resource_type IN ? AND outbreak_resources.status = 'published' AND outbreak_resources.approved_at IS NOT NULL AND outbreak_resources.published_at IS NOT NULL AND outbreak_resources.published_at <= ? AND outbreak_resources.withdrawn_at IS NULL AND (outbreak_resources.effective_date IS NULL OR outbreak_resources.effective_date <= ?) AND (outbreak_resources.expires_at IS NULL OR outbreak_resources.expires_at > ?)", documentID, []string{"managed_document", "downloadable_asset"}, now, now, now).
+		Where("outbreak_content_parent.published_at IS NOT NULL AND outbreak_content_parent.published_at <= ? AND outbreak_content_parent.withdrawn_at IS NULL AND outbreak_content_parent.status IN ?", now, []string{"published", "active", "monitoring", "contained", "closed"}).
+		First(&row).Error; err != nil {
 		return nil, err
 	}
-	if row.ExtractionStatus != "ready" || strings.TrimSpace(row.RenderedContent) == "" || !validOutbreakValue(row.ContentFormat, "markdown", "plain_text") {
-		return nil, gorm.ErrRecordNotFound
+	return outbreakDocumentContentManifest(row)
+}
+
+func outbreakDocumentContentManifest(row models.OutbreakResource) (*PublicOutbreakDocumentContent, error) {
+	sections := make([]PublicOutbreakDocumentSection, 0)
+	if len(row.ContentSections) > 0 {
+		if err := json.Unmarshal(row.ContentSections, &sections); err != nil {
+			return nil, fmt.Errorf("decode outbreak document sections: %w", err)
+		}
 	}
-	return &PublicOutbreakDocumentContent{ID: document.ID, OutbreakID: document.OutbreakID, Title: document.Title, Content: row.RenderedContent, ContentFormat: row.ContentFormat, ChecksumSHA256: document.ChecksumSHA256}, nil
+	downloadURL := ""
+	originalAvailable := strings.TrimSpace(row.StorageKey) != "" || strings.TrimSpace(row.AssetURL) != ""
+	if originalAvailable {
+		downloadURL = "/api/public/outbreaks/" + row.OutbreakID.String() + "/documents/" + row.ID.String() + "/download"
+	}
+	canReadInline := row.ExtractionStatus == "ready" && strings.TrimSpace(row.RenderedContent) != "" && validOutbreakValue(row.ContentFormat, "markdown", "plain_text")
+	checksum := strings.TrimSpace(row.DerivedContentChecksum)
+	if checksum == "" {
+		checksum = row.ChecksumSHA256
+	}
+	result := &PublicOutbreakDocumentContent{
+		DocumentID: row.ID, OutbreakID: row.OutbreakID, Title: row.Title,
+		Format: row.ContentFormat, MIMEType: row.MIMEType, Content: row.RenderedContent,
+		Sections: sections, ChecksumSHA256: checksum, PublishedAt: row.PublishedAt,
+		EffectiveDate: row.EffectiveDate, ReviewDate: row.ReviewDate, ExpiresAt: row.ExpiresAt,
+		DownloadURL: downloadURL, OriginalAvailable: originalAvailable, CanReadInline: canReadInline,
+	}
+	if canReadInline {
+		return result, nil
+	}
+	if row.ExtractionStatus != "ready" {
+		return result, ErrOutbreakDocumentContentUnavailable
+	}
+	return result, ErrOutbreakDocumentInlineUnsupported
 }
 
 func (s OutbreakService) GetDocument(outbreakID, documentID uuid.UUID) (*PublicOutbreakDocument, error) {

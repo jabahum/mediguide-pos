@@ -369,6 +369,9 @@ class GlobalSearchDelegate extends SearchDelegate<String?> {
   }
 
   Future<void> _selectSearchResult(WidgetRef ref, SearchResult result) async {
+    await ref
+        .read(globalSearchControllerProvider.notifier)
+        .recordSelection(result);
     switch (result.category) {
       case SearchCategory.drugs:
         final drug = result.getItem<Drug>();

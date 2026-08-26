@@ -13,10 +13,18 @@ import 'package:user_app/core/constants/app_spacing.dart';
 import 'package:user_app/shared/widgets/clinical_icon_tile.dart';
 
 final class DocumentReaderArgs {
-  const DocumentReaderArgs({required this.title, required this.source});
+  const DocumentReaderArgs({
+    required this.title,
+    required this.source,
+    this.initialPage,
+  });
 
   final String title;
   final String source;
+
+  /// One-based page supplied by search results and converted to the zero-based
+  /// page index expected by the native PDF viewer.
+  final int? initialPage;
 }
 
 bool isSupportedDocumentSource(String value) {
@@ -75,6 +83,11 @@ class _DocumentReaderPageState extends State<DocumentReaderPage> {
   }
 
   bool get _hasValidSource => isSupportedDocumentSource(_source);
+
+  int get _initialPageIndex {
+    final page = widget.args.initialPage ?? 1;
+    return page > 1 ? page - 1 : 0;
+  }
 
   @override
   void initState() {
@@ -278,6 +291,8 @@ class _DocumentReaderPageState extends State<DocumentReaderPage> {
                               label: 'PDF document viewer',
                               child: PDFView(
                                 filePath: filePath,
+
+                                defaultPage: _initialPageIndex,
 
                                 enableSwipe: true,
 

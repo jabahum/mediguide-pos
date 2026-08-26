@@ -17,6 +17,7 @@ import 'package:user_app/features/guidelines/data/repositories/guideline_content
 import 'package:user_app/features/guidelines/data/models/guideline_publication.dart';
 import 'package:user_app/features/guidelines/data/repositories/guideline_publication_repository.dart';
 import 'package:user_app/features/support/data/repositories/help_content_repository.dart';
+import 'package:user_app/features/outbreaks/data/models/outbreak_models.dart';
 import 'package:user_app/features/outbreaks/data/repositories/outbreak_repository.dart';
 
 import 'package:user_app/shared/models/search_models.dart';
@@ -86,6 +87,21 @@ abstract interface class GlobalSearchDataSource {
   Future<List<SearchResult>> search(String query);
 }
 
+Future<List<List<SearchResult>>> searchCategoriesIndependently(
+  Iterable<SearchCategory> categories,
+  Future<List<SearchResult>> Function(SearchCategory category) search,
+) {
+  return Future.wait(
+    categories.map((category) async {
+      try {
+        return await search(category);
+      } catch (_) {
+        return const <SearchResult>[];
+      }
+    }),
+  );
+}
+
 /// ======================================================
 /// GENERATED DATA SOURCE PROVIDER
 /// ======================================================
@@ -101,6 +117,7 @@ GlobalSearchDataSource globalSearchDataSource(GlobalSearchDataSourceRef ref) {
     helpContent: ref.watch(helpContentRepositoryProvider),
     calculators: ref.watch(calculatorRepositoryProvider),
     outbreaks: ref.watch(outbreakRepositoryProvider),
+    recordMetric: ref.watch(firebaseServiceProvider).recordOperationalEvent,
   );
 }
 
@@ -194,6 +211,30 @@ class GlobalSearchController extends _$GlobalSearchController {
       // opening a search result.
     }
   }
+
+  Future<void> recordSelection(SearchResult result) async {
+    try {
+      await ref.read(firebaseServiceProvider).recordOperationalEvent(
+        'global_search_result_opened',
+        <String, Object>{
+          'category': result.category.value,
+          'offline': result.isOffline,
+          'stale': result.isStale,
+          if (result.category == SearchCategory.outbreakDocuments)
+            'has_match_target':
+                result
+                        .getItem<PublicOutbreakDocument>()
+                        ?.matchingSectionId
+                        .isNotEmpty ==
+                    true ||
+                result.getItem<PublicOutbreakDocument>()?.matchingPdfPage !=
+                    null,
+        },
+      );
+    } catch (_) {
+      // Search telemetry must never block access to clinical content.
+    }
+  }
 }
 
 /// ======================================================
@@ -210,6 +251,7 @@ final class RepositoryGlobalSearchDataSource implements GlobalSearchDataSource {
     required HelpContentRepository helpContent,
     required CalculatorRepository calculators,
     required OutbreakRepository outbreaks,
+    Future<void> Function(String, Map<String, Object>)? recordMetric,
   }) : _drugs = drugs,
        _guidelines = guidelines,
        _publications = publications,
@@ -217,7 +259,8 @@ final class RepositoryGlobalSearchDataSource implements GlobalSearchDataSource {
        _facilities = facilities,
        _helpContent = helpContent,
        _calculators = calculators,
-       _outbreaks = outbreaks;
+       _outbreaks = outbreaks,
+       _recordMetric = recordMetric;
 
   final DrugRepository _drugs;
   final GuidelineContentRepository _guidelines;
@@ -227,13 +270,13 @@ final class RepositoryGlobalSearchDataSource implements GlobalSearchDataSource {
   final HelpContentRepository _helpContent;
   final CalculatorRepository _calculators;
   final OutbreakRepository _outbreaks;
+  final Future<void> Function(String, Map<String, Object>)? _recordMetric;
 
   @override
   Future<List<SearchResult>> search(String query) async {
-    final batches = await Future.wait(
-      SearchCategory.values
-          .where((category) => category != SearchCategory.all)
-          .map((category) => _searchSafely(category, query)),
+    final batches = await searchCategoriesIndependently(
+      SearchCategory.values.where((category) => category != SearchCategory.all),
+      (category) => _searchCategory(category, query),
     );
 
     final results = batches.expand((items) => items).toList()
@@ -247,18 +290,21 @@ final class RepositoryGlobalSearchDataSource implements GlobalSearchDataSource {
         return a.title.toLowerCase().compareTo(b.title.toLowerCase());
       });
 
-    return results.take(20).toList(growable: false);
-  }
-
-  Future<List<SearchResult>> _searchSafely(
-    SearchCategory category,
-    String query,
-  ) async {
     try {
-      return await _searchCategory(category, query);
+      await _recordMetric?.call('global_search_completed', <String, Object>{
+        'query_length': query.runes.length,
+        'result_count': results.length,
+        'outbreak_document_count': results
+            .where(
+              (result) => result.category == SearchCategory.outbreakDocuments,
+            )
+            .length,
+      });
     } catch (_) {
-      return const [];
+      // Operational analytics must not affect search results.
     }
+
+    return results.take(20).toList(growable: false);
   }
 
   Future<List<SearchResult>> _searchCategory(
@@ -417,6 +463,11 @@ final class RepositoryGlobalSearchDataSource implements GlobalSearchDataSource {
                     item.outbreakTitle,
                     item.documentKind.replaceAll('_', ' '),
                     item.issuingAuthority,
+                    if (item.version.isNotEmpty) 'Version ${item.version}',
+                    if (item.effectiveDate != null)
+                      'Effective ${_dateLabel(item.effectiveDate!)}'
+                    else if (item.publishedAt != null)
+                      'Published ${_dateLabel(item.publishedAt!)}',
                   ].where((value) => value.isNotEmpty).join(' · '),
                   description: item.searchSnippet.isNotEmpty
                       ? item.searchSnippet
@@ -425,6 +476,7 @@ final class RepositoryGlobalSearchDataSource implements GlobalSearchDataSource {
                   route: AppRoutes.outbreakDocument(item.outbreakId, item.id),
                   isOffline: response.cache.isOffline,
                   isStale: response.cache.isStale,
+                  relevanceScore: item.searchRelevanceScore,
                   item: item,
                 ),
                 query,
@@ -648,6 +700,11 @@ final class RepositoryGlobalSearchDataSource implements GlobalSearchDataSource {
     return plainText.isEmpty ? null : plainText;
   }
 
+  String _dateLabel(DateTime value) {
+    final date = value.toLocal();
+    return '${date.year.toString().padLeft(4, '0')}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
+  }
+
   // ======================================================
   // RELEVANCE
   // ======================================================
@@ -661,7 +718,7 @@ final class RepositoryGlobalSearchDataSource implements GlobalSearchDataSource {
 
     final description = result.description?.toLowerCase() ?? '';
 
-    var score = 0.0;
+    var score = result.relevanceScore;
 
     if (title == normalizedQuery) {
       score += 100;

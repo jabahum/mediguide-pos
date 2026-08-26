@@ -621,6 +621,18 @@ const docTemplate = `{
                         "schema": {
                             "$ref": "#/definitions/handlers.OutbreakDocumentContentEnvelope"
                         }
+                    },
+                    "415": {
+                        "description": "Unsupported Media Type",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.OutbreakDocumentInlineUnsupportedEnvelope"
+                        }
+                    },
+                    "422": {
+                        "description": "Unprocessable Entity",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.OutbreakDocumentInlineUnsupportedEnvelope"
+                        }
                     }
                 }
             }
@@ -17202,6 +17214,31 @@ const docTemplate = `{
                 }
             }
         },
+        "handlers.OutbreakDocumentInlineError": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "string"
+                },
+                "message": {
+                    "type": "string"
+                }
+            }
+        },
+        "handlers.OutbreakDocumentInlineUnsupportedEnvelope": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/services.PublicOutbreakDocumentContent"
+                },
+                "error": {
+                    "$ref": "#/definitions/handlers.OutbreakDocumentInlineError"
+                },
+                "success": {
+                    "type": "boolean"
+                }
+            }
+        },
         "handlers.OutbreakEnvelope": {
             "type": "object",
             "properties": {
@@ -26735,22 +26772,72 @@ const docTemplate = `{
         "services.PublicOutbreakDocumentContent": {
             "type": "object",
             "properties": {
+                "can_read_inline": {
+                    "type": "boolean"
+                },
                 "checksum_sha256": {
                     "type": "string"
                 },
                 "content": {
                     "type": "string"
                 },
-                "content_format": {
+                "document_id": {
+                    "type": "string"
+                },
+                "download_url": {
+                    "type": "string"
+                },
+                "effective_date": {
+                    "type": "string"
+                },
+                "expires_at": {
+                    "type": "string"
+                },
+                "format": {
+                    "type": "string"
+                },
+                "mime_type": {
+                    "type": "string"
+                },
+                "original_available": {
+                    "type": "boolean"
+                },
+                "outbreak_id": {
+                    "type": "string"
+                },
+                "published_at": {
+                    "type": "string"
+                },
+                "review_date": {
+                    "type": "string"
+                },
+                "sections": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/services.PublicOutbreakDocumentSection"
+                    }
+                },
+                "title": {
+                    "type": "string"
+                }
+            }
+        },
+        "services.PublicOutbreakDocumentSection": {
+            "type": "object",
+            "properties": {
+                "heading": {
                     "type": "string"
                 },
                 "id": {
                     "type": "string"
                 },
-                "outbreak_id": {
-                    "type": "string"
+                "level": {
+                    "type": "integer"
                 },
-                "title": {
+                "page": {
+                    "type": "integer"
+                },
+                "text": {
                     "type": "string"
                 }
             }

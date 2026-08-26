@@ -2635,6 +2635,53 @@ final class HandlersOutbreakDocumentEnvelope {
   Map<String, dynamic> toJson() => Map.of(value);
 }
 
+final class HandlersOutbreakDocumentInlineError {
+  HandlersOutbreakDocumentInlineError(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory HandlersOutbreakDocumentInlineError.fromJson(
+    Map<String, dynamic> json,
+  ) => HandlersOutbreakDocumentInlineError(json);
+
+  static const schemaName = 'handlers.OutbreakDocumentInlineError';
+  final Map<String, dynamic> value;
+
+  String? get code => value['code']?.toString();
+
+  String? get message => value['message']?.toString();
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
+final class HandlersOutbreakDocumentInlineUnsupportedEnvelope {
+  HandlersOutbreakDocumentInlineUnsupportedEnvelope(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory HandlersOutbreakDocumentInlineUnsupportedEnvelope.fromJson(
+    Map<String, dynamic> json,
+  ) => HandlersOutbreakDocumentInlineUnsupportedEnvelope(json);
+
+  static const schemaName =
+      'handlers.OutbreakDocumentInlineUnsupportedEnvelope';
+  final Map<String, dynamic> value;
+
+  ServicesPublicOutbreakDocumentContent? get data {
+    final raw = value['data'];
+    if (raw is! Map) return null;
+    return ServicesPublicOutbreakDocumentContent.fromJson(_jsonMap(raw));
+  }
+
+  HandlersOutbreakDocumentInlineError? get error {
+    final raw = value['error'];
+    if (raw is! Map) return null;
+    return HandlersOutbreakDocumentInlineError.fromJson(_jsonMap(raw));
+  }
+
+  bool? get success => value['success'] as bool?;
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
 final class HandlersOutbreakEnvelope {
   HandlersOutbreakEnvelope(Map<String, dynamic> value)
     : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
@@ -13274,17 +13321,69 @@ final class ServicesPublicOutbreakDocumentContent {
   static const schemaName = 'services.PublicOutbreakDocumentContent';
   final Map<String, dynamic> value;
 
+  bool? get canReadInline => value['can_read_inline'] as bool?;
+
   String? get checksumSha256 => value['checksum_sha256']?.toString();
 
   String? get content => value['content']?.toString();
 
-  String? get contentFormat => value['content_format']?.toString();
+  String? get documentId => value['document_id']?.toString();
 
-  String? get id => value['id']?.toString();
+  String? get downloadUrl => value['download_url']?.toString();
+
+  String? get effectiveDate => value['effective_date']?.toString();
+
+  String? get expiresAt => value['expires_at']?.toString();
+
+  String? get format => value['format']?.toString();
+
+  String? get mimeType => value['mime_type']?.toString();
+
+  bool? get originalAvailable => value['original_available'] as bool?;
 
   String? get outbreakId => value['outbreak_id']?.toString();
 
+  String? get publishedAt => value['published_at']?.toString();
+
+  String? get reviewDate => value['review_date']?.toString();
+
+  List<ServicesPublicOutbreakDocumentSection> get sections {
+    final raw = value['sections'];
+    if (raw is! List) return const [];
+    return raw
+        .whereType<Map>()
+        .map(
+          (item) =>
+              ServicesPublicOutbreakDocumentSection.fromJson(_jsonMap(item)),
+        )
+        .toList(growable: false);
+  }
+
   String? get title => value['title']?.toString();
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
+final class ServicesPublicOutbreakDocumentSection {
+  ServicesPublicOutbreakDocumentSection(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory ServicesPublicOutbreakDocumentSection.fromJson(
+    Map<String, dynamic> json,
+  ) => ServicesPublicOutbreakDocumentSection(json);
+
+  static const schemaName = 'services.PublicOutbreakDocumentSection';
+  final Map<String, dynamic> value;
+
+  String? get heading => value['heading']?.toString();
+
+  String? get id => value['id']?.toString();
+
+  int? get level => (value['level'] as num?)?.toInt();
+
+  int? get page => (value['page'] as num?)?.toInt();
+
+  String? get text => value['text']?.toString();
 
   Map<String, dynamic> toJson() => Map.of(value);
 }

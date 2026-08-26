@@ -8820,7 +8820,13 @@ paths:
       - public-outbreaks
   /api/public/outbreaks/{id}/documents/{documentId}/download:
     get:
+      produces:
+      - application/octet-stream
       responses:
+        "200":
+          description: OK
+          schema:
+            type: file
         "307":
           description: Temporary Redirect
         "404":

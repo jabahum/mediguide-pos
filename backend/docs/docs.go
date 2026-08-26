@@ -909,11 +909,20 @@ const docTemplate = `{
         },
         "/api/public/outbreaks/{id}/documents/{documentId}/download": {
             "get": {
+                "produces": [
+                    "application/octet-stream"
+                ],
                 "tags": [
                     "public-outbreaks"
                 ],
                 "summary": "Download a published outbreak document",
                 "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "file"
+                        }
+                    },
                     "307": {
                         "description": "Temporary Redirect"
                     },

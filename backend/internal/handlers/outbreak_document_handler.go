@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"errors"
+	"mime"
 	"net/http"
 	"strings"
 
@@ -500,6 +501,8 @@ func (h OutbreakHandler) GetDocument(c *gin.Context) {
 // DocumentDownload godoc
 // @Summary Download a published outbreak document
 // @Tags public-outbreaks
+// @Produce application/octet-stream
+// @Success 200 {file} binary
 // @Success 307
 // @Failure 404 {object} handlers.ErrorResponse
 // @Router /api/public/outbreaks/{id}/documents/{documentId}/download [get]
@@ -508,7 +511,7 @@ func (h OutbreakHandler) DocumentDownload(c *gin.Context) {
 	if !ok {
 		return
 	}
-	target, err := h.Service.DocumentDownload(c.Request.Context(), id, documentID)
+	download, err := h.Service.DocumentDownload(c.Request.Context(), id, documentID)
 	if errors.Is(err, gorm.ErrRecordNotFound) {
 		httpx.Error(c, http.StatusNotFound, "published outbreak document not found")
 		return
@@ -518,7 +521,35 @@ func (h OutbreakHandler) DocumentDownload(c *gin.Context) {
 		return
 	}
 	c.Header("Cache-Control", "private, no-store")
-	c.Redirect(http.StatusTemporaryRedirect, target.String())
+	if download.Body != nil {
+		defer download.Body.Close()
+		contentType := strings.TrimSpace(download.MIMEType)
+		if contentType == "" {
+			contentType = "application/octet-stream"
+		}
+		filename := strings.TrimSpace(download.Filename)
+		if filename == "" {
+			filename = documentID.String()
+		}
+		headers := map[string]string{
+			"Content-Disposition":    mime.FormatMediaType("attachment", map[string]string{"filename": filename}),
+			"X-Content-Type-Options": "nosniff",
+		}
+		if download.Checksum != "" {
+			headers["ETag"] = `"` + download.Checksum + `"`
+		}
+		contentLength := download.Size
+		if contentLength <= 0 {
+			contentLength = -1
+		}
+		c.DataFromReader(http.StatusOK, contentLength, contentType, download.Body, headers)
+		return
+	}
+	if download.RedirectURL == nil {
+		httpx.Error(c, http.StatusServiceUnavailable, "outbreak document unavailable")
+		return
+	}
+	c.Redirect(http.StatusTemporaryRedirect, download.RedirectURL.String())
 }
 
 func twoPublicOutbreakIDs(c *gin.Context, childName string) (outbreakID, childID uuid.UUID, ok bool) {

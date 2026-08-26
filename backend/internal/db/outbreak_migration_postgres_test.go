@@ -54,7 +54,7 @@ func TestOutbreakAdministrationMigrationUpDownUp(t *testing.T) {
 	if err := goose.DownTo(testDB, "../../migrations", 35); err != nil {
 		t.Fatal(err)
 	}
-	if err := goose.UpTo(testDB, "../../migrations", 44); err != nil {
+	if err := goose.UpTo(testDB, "../../migrations", 46); err != nil {
 		t.Fatal(err)
 	}
 	var count int
@@ -72,6 +72,13 @@ func TestOutbreakAdministrationMigrationUpDownUp(t *testing.T) {
 	}
 	if err := testDB.QueryRowContext(ctx, `SELECT count(*) FROM pg_indexes WHERE schemaname = $1 AND indexname IN ('idx_outbreak_resources_document_search_weighted','idx_outbreak_resources_document_title_trgm','idx_outbreaks_title_search')`, schema).Scan(&count); err != nil || count != 3 {
 		t.Fatalf("outbreak document discovery indexes missing after up/down/up: count=%d err=%v", count, err)
+	}
+	if err := testDB.QueryRowContext(ctx, `SELECT count(*) FROM information_schema.columns WHERE table_schema = $1 AND table_name = 'outbreak_resources' AND column_name IN ('search_headings','extraction_error','extraction_source_checksum','derived_content_checksum','search_index_status','search_schema_version','content_sections','source_page_map','indexed_at')`, schema).Scan(&count); err != nil || count != 9 {
+		t.Fatalf("outbreak document search projection columns missing after up/down/up: count=%d err=%v", count, err)
+	}
+	var indexPredicate string
+	if err := testDB.QueryRowContext(ctx, `SELECT indexdef FROM pg_indexes WHERE schemaname = $1 AND indexname = 'idx_outbreak_resources_document_search_weighted'`, schema).Scan(&indexPredicate); err != nil || !strings.Contains(indexPredicate, "approved_at IS NOT NULL") || !strings.Contains(indexPredicate, "status = 'published'") {
+		t.Fatalf("outbreak document search index is not approval-scoped after up/down/up: definition=%q err=%v", indexPredicate, err)
 	}
 	if err := testDB.QueryRowContext(ctx, `SELECT count(*) FROM notification_templates WHERE template_key LIKE 'outbreak-document-%' AND status = 'published'`).Scan(&count); err != nil || count != 7 {
 		t.Fatalf("outbreak document notification templates missing after up/down/up: count=%d err=%v", count, err)

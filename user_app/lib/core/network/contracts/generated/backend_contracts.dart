@@ -11453,6 +11453,9 @@ final class ServicesOutbreakDocumentAdminDTO {
 
   String? get createdAt => value['created_at']?.toString();
 
+  String? get derivedContentChecksum =>
+      value['derived_content_checksum']?.toString();
+
   String? get description => value['description']?.toString();
 
   String? get documentKind => value['document_kind']?.toString();
@@ -11465,11 +11468,18 @@ final class ServicesOutbreakDocumentAdminDTO {
 
   String? get extractedAt => value['extracted_at']?.toString();
 
+  String? get extractionError => value['extraction_error']?.toString();
+
+  String? get extractionSourceChecksum =>
+      value['extraction_source_checksum']?.toString();
+
   String? get extractionStatus => value['extraction_status']?.toString();
 
   int? get fileSize => (value['file_size'] as num?)?.toInt();
 
   String? get id => value['id']?.toString();
+
+  String? get indexedAt => value['indexed_at']?.toString();
 
   String? get issuingAuthority => value['issuing_authority']?.toString();
 
@@ -11494,6 +11504,11 @@ final class ServicesOutbreakDocumentAdminDTO {
   String? get reviewedAt => value['reviewed_at']?.toString();
 
   String? get reviewedBy => value['reviewed_by']?.toString();
+
+  String? get searchIndexStatus => value['search_index_status']?.toString();
+
+  int? get searchSchemaVersion =>
+      (value['search_schema_version'] as num?)?.toInt();
 
   int? get sortOrder => (value['sort_order'] as num?)?.toInt();
 
@@ -13206,6 +13221,12 @@ final class ServicesPublicOutbreakDocument {
 
   String? get language => value['language']?.toString();
 
+  String? get matchingHeading => value['matching_heading']?.toString();
+
+  int? get matchingPdfPage => (value['matching_pdf_page'] as num?)?.toInt();
+
+  String? get matchingSectionId => value['matching_section_id']?.toString();
+
   String? get mimeType => value['mime_type']?.toString();
 
   String? get originalFilename => value['original_filename']?.toString();
@@ -13222,11 +13243,18 @@ final class ServicesPublicOutbreakDocument {
 
   String? get publishedAt => value['published_at']?.toString();
 
+  String? get readerUrl => value['reader_url']?.toString();
+
   String? get reviewDate => value['review_date']?.toString();
+
+  num? get searchRelevanceScore => value['search_relevance_score'] as num?;
 
   String? get searchSnippet => value['search_snippet']?.toString();
 
   bool? get supportsInline => value['supports_inline'] as bool?;
+
+  bool? get supportsOfflineDownload =>
+      value['supports_offline_download'] as bool?;
 
   String? get title => value['title']?.toString();
 

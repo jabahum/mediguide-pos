@@ -1,9 +1,12 @@
 package services
 
 import (
+	"archive/zip"
 	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"mime/multipart"
 	"net/url"
@@ -169,4 +172,81 @@ func TestOutbreakDocumentReprocessVerifiesObjectAndRebuildsDerivedContent(t *tes
 	if _, err := service.ReprocessDocument(context.Background(), actor, parent.ID, document.ID, reprocessed.LockVersion); !errors.Is(err, ErrOutbreakInvalid) {
 		t.Fatalf("tampered object was reprocessed: %v", err)
 	}
+}
+
+func TestOutbreakDocumentDerivationSanitizesMarkdownAndBuildsStableSections(t *testing.T) {
+	derived := deriveOutbreakDocumentContent("md", []byte("# Immediate Action\n\n<script>alert('x')</script>Use PPE.\n\n## Triage\n\nAssess the patient.\n\n## Triage\n\nEscalate."))
+	if derived.Status != "ready" || derived.Format != "markdown" || derived.Checksum == "" || strings.Contains(strings.ToLower(derived.Rendered), "<script") || strings.Contains(derived.Search, "alert") {
+		t.Fatalf("unsafe or incomplete Markdown projection: %#v", derived)
+	}
+	var sections []outbreakDocumentSection
+	if err := json.Unmarshal(derived.SectionsJSON, &sections); err != nil {
+		t.Fatal(err)
+	}
+	if len(sections) != 3 || sections[0].ID != "immediate-action" || sections[1].ID != "triage" || sections[2].ID != "triage-2" || !strings.Contains(derived.Headings, "Immediate Action") {
+		t.Fatalf("unexpected section projection: %#v", sections)
+	}
+}
+
+func TestOutbreakDocumentDerivationExtractsSpreadsheetCells(t *testing.T) {
+	var payload bytes.Buffer
+	writer := zip.NewWriter(&payload)
+	for name, contents := range map[string]string{
+		"xl/sharedStrings.xml":     `<sst><si><t>Isolation ward</t></si><si><t>Daily checklist</t></si></sst>`,
+		"xl/worksheets/sheet1.xml": `<worksheet><sheetData><row><c t="inlineStr"><is><t>PPE stock</t></is></c></row></sheetData></worksheet>`,
+	} {
+		entry, err := writer.Create(name)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if _, err := entry.Write([]byte(contents)); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := writer.Close(); err != nil {
+		t.Fatal(err)
+	}
+	derived := deriveOutbreakDocumentContent("xlsx", payload.Bytes())
+	if derived.Status != "ready" || derived.Format != "spreadsheet_text" || !strings.Contains(derived.Search, "Isolation ward") || !strings.Contains(derived.Search, "PPE stock") || derived.Rendered != "" {
+		t.Fatalf("unexpected spreadsheet projection: %#v", derived)
+	}
+}
+
+func TestOutbreakDocumentDerivationExtractsPDFPages(t *testing.T) {
+	derived := deriveOutbreakDocumentContent("pdf", minimalTextPDF("Isolation protocol"))
+	if derived.Status != "ready" || derived.Format != "pdf_text" || !strings.Contains(derived.Search, "Isolation protocol") {
+		t.Fatalf("unexpected PDF projection: status=%s error=%s search=%q", derived.Status, derived.Error, derived.Search)
+	}
+	var sections []outbreakDocumentSection
+	if err := json.Unmarshal(derived.SectionsJSON, &sections); err != nil {
+		t.Fatal(err)
+	}
+	if len(sections) != 1 || sections[0].Page == nil || *sections[0].Page != 1 || sections[0].ID != "page-1" {
+		t.Fatalf("missing PDF page mapping: %#v", sections)
+	}
+}
+
+func minimalTextPDF(text string) []byte {
+	objects := []string{
+		`<< /Type /Catalog /Pages 2 0 R >>`,
+		`<< /Type /Pages /Kids [3 0 R] /Count 1 >>`,
+		`<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 4 0 R >> >> /Contents 5 0 R >>`,
+		`<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>`,
+	}
+	stream := fmt.Sprintf("BT /F1 12 Tf 72 720 Td (%s) Tj ET", strings.ReplaceAll(text, ")", `\)`))
+	objects = append(objects, fmt.Sprintf("<< /Length %d >>\nstream\n%s\nendstream", len(stream), stream))
+	var output bytes.Buffer
+	output.WriteString("%PDF-1.4\n")
+	offsets := []int{0}
+	for index, object := range objects {
+		offsets = append(offsets, output.Len())
+		fmt.Fprintf(&output, "%d 0 obj\n%s\nendobj\n", index+1, object)
+	}
+	xref := output.Len()
+	fmt.Fprintf(&output, "xref\n0 %d\n0000000000 65535 f \n", len(objects)+1)
+	for _, offset := range offsets[1:] {
+		fmt.Fprintf(&output, "%010d 00000 n \n", offset)
+	}
+	fmt.Fprintf(&output, "trailer\n<< /Size %d /Root 1 0 R >>\nstartxref\n%d\n%%%%EOF", len(objects)+1, xref)
+	return output.Bytes()
 }

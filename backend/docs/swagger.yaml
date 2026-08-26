@@ -6367,6 +6367,8 @@ definitions:
         type: string
       created_at:
         type: string
+      derived_content_checksum:
+        type: string
       description:
         type: string
       document_kind:
@@ -6379,11 +6381,17 @@ definitions:
         type: string
       extracted_at:
         type: string
+      extraction_error:
+        type: string
+      extraction_source_checksum:
+        type: string
       extraction_status:
         type: string
       file_size:
         type: integer
       id:
+        type: string
+      indexed_at:
         type: string
       issuing_authority:
         type: string
@@ -6409,6 +6417,10 @@ definitions:
         type: string
       reviewed_by:
         type: string
+      search_index_status:
+        type: string
+      search_schema_version:
+        type: integer
       sort_order:
         type: integer
       status:
@@ -7392,6 +7404,12 @@ definitions:
         type: string
       language:
         type: string
+      matching_heading:
+        type: string
+      matching_pdf_page:
+        type: integer
+      matching_section_id:
+        type: string
       mime_type:
         type: string
       original_filename:
@@ -7408,11 +7426,17 @@ definitions:
         type: integer
       published_at:
         type: string
+      reader_url:
+        type: string
       review_date:
         type: string
+      search_relevance_score:
+        type: number
       search_snippet:
         type: string
       supports_inline:
+        type: boolean
+      supports_offline_download:
         type: boolean
       title:
         type: string
@@ -8436,6 +8460,10 @@ paths:
         in: query
         name: search
         type: string
+      - description: Parent outbreak UUID
+        in: query
+        name: outbreak_id
+        type: string
       - description: Document classification
         in: query
         name: document_kind
@@ -8451,6 +8479,10 @@ paths:
       - description: Intended audience
         in: query
         name: audience
+        type: string
+      - description: Exact MIME type (charset parameters are ignored)
+        in: query
+        name: mime_type
         type: string
       - description: Effective at or after
         in: query

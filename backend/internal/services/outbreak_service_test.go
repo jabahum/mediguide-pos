@@ -96,10 +96,10 @@ func TestOutbreakServiceExposesOnlyCurrentPublishedDocuments(t *testing.T) {
 	past, future := now.Add(-time.Hour), now.Add(time.Hour)
 	expired := now.Add(-time.Minute)
 	rows := []models.OutbreakResource{
-		{OutbreakID: parent.ID, Title: "Current Ebola SOP", ResourceType: "managed_document", DocumentKind: "sop", Language: "en", Status: "published", PublishedAt: &past, EffectiveDate: &past, AssetURL: "https://health.go.ug/current.pdf", DocumentNumber: "SOP-1", Version: "1"},
+		{OutbreakID: parent.ID, Title: "Current Ebola SOP", ResourceType: "managed_document", DocumentKind: "sop", Language: "en", Status: "published", ApprovedAt: &past, PublishedAt: &past, EffectiveDate: &past, AssetURL: "https://health.go.ug/current.pdf", DocumentNumber: "SOP-1", Version: "1"},
 		{OutbreakID: parent.ID, Title: "Draft SOP", ResourceType: "managed_document", DocumentKind: "sop", Language: "en", Status: "draft"},
-		{OutbreakID: parent.ID, Title: "Future SOP", ResourceType: "managed_document", DocumentKind: "sop", Language: "en", Status: "published", PublishedAt: &past, EffectiveDate: &future},
-		{OutbreakID: parent.ID, Title: "Expired SOP", ResourceType: "managed_document", DocumentKind: "sop", Language: "en", Status: "published", PublishedAt: &past, EffectiveDate: &past, ExpiresAt: &expired},
+		{OutbreakID: parent.ID, Title: "Future SOP", ResourceType: "managed_document", DocumentKind: "sop", Language: "en", Status: "published", ApprovedAt: &past, PublishedAt: &past, EffectiveDate: &future},
+		{OutbreakID: parent.ID, Title: "Expired SOP", ResourceType: "managed_document", DocumentKind: "sop", Language: "en", Status: "published", ApprovedAt: &past, PublishedAt: &past, EffectiveDate: &past, ExpiresAt: &expired},
 		{OutbreakID: parent.ID, Title: "Ordinary link", ResourceType: "approved_external_url", DocumentKind: "other", Language: "en", Status: "published", PublishedAt: &past},
 	}
 	for index := range rows {
@@ -131,16 +131,20 @@ func TestOutbreakServiceDiscoversDocumentsAcrossPublishedOutbreaks(t *testing.T)
 	if err := service.DB.Create(&draftParent).Error; err != nil {
 		t.Fatal(err)
 	}
-	visible := models.OutbreakResource{OutbreakID: publicParent.ID, Title: "Case management SOP", Description: "Approved response protocol", ResourceType: "managed_document", DocumentKind: "sop", IssuingAuthority: "Ministry of Health", Language: "en", Status: "published", PublishedAt: &now, SearchContent: "isolate suspected cases immediately", RenderedContent: "# Immediate action\n\nIsolate suspected cases immediately.", ContentFormat: "markdown", ExtractionStatus: "ready", ChecksumSHA256: strings.Repeat("a", 64)}
+	visible := models.OutbreakResource{OutbreakID: publicParent.ID, Title: "Case management SOP", Description: "Approved response protocol", ResourceType: "managed_document", DocumentKind: "sop", IssuingAuthority: "Ministry of Health", Language: "en", MIMEType: "text/markdown; charset=utf-8", StorageKey: "outbreaks/case.md", Status: "published", ApprovedAt: &now, PublishedAt: &now, SearchHeadings: "Immediate action", SearchContent: "isolate suspected cases immediately", RenderedContent: "# Immediate action\n\nIsolate suspected cases immediately.", ContentFormat: "markdown", ExtractionStatus: "ready", ContentSections: []byte(`[{"id":"immediate-action","heading":"Immediate action","level":1,"text":"Isolate suspected cases immediately."}]`), ChecksumSHA256: strings.Repeat("a", 64)}
 	hidden := models.OutbreakResource{OutbreakID: draftParent.ID, Title: "Secret SOP", ResourceType: "managed_document", DocumentKind: "sop", Language: "en", Status: "published", PublishedAt: &now, SearchContent: "isolate suspected cases immediately"}
+	unapproved := models.OutbreakResource{OutbreakID: publicParent.ID, Title: "Unapproved case SOP", ResourceType: "managed_document", DocumentKind: "sop", Language: "en", Status: "published", PublishedAt: &now, SearchContent: "isolate suspected cases immediately"}
 	if err := service.DB.Create(&visible).Error; err != nil {
 		t.Fatal(err)
 	}
 	if err := service.DB.Create(&hidden).Error; err != nil {
 		t.Fatal(err)
 	}
-	page, err := service.SearchDocuments(OutbreakDocumentQuery{Page: PageInput{Page: 1, PerPage: 10}, Search: "suspected cases"})
-	if err != nil || page.TotalItems != 1 || page.Items[0].ID != visible.ID || page.Items[0].OutbreakTitle != publicParent.Title || !page.Items[0].SupportsInline || page.Items[0].SearchSnippet == "" {
+	if err := service.DB.Create(&unapproved).Error; err != nil {
+		t.Fatal(err)
+	}
+	page, err := service.SearchDocuments(OutbreakDocumentQuery{Page: PageInput{Page: 1, PerPage: 10}, Search: "immediate action", OutbreakID: &publicParent.ID, MIMEType: "text/markdown"})
+	if err != nil || page.TotalItems != 1 || page.Items[0].ID != visible.ID || page.Items[0].OutbreakTitle != publicParent.Title || !page.Items[0].SupportsInline || !page.Items[0].SupportsOfflineDownload || page.Items[0].ReaderURL == "" || page.Items[0].SearchSnippet == "" || page.Items[0].MatchingHeading != "Immediate action" || page.Items[0].MatchingSectionID != "immediate-action" || page.Items[0].SearchRelevanceScore <= 0 {
 		t.Fatalf("unexpected discovery result: %#v err=%v", page, err)
 	}
 	content, err := service.DocumentContent(visible.ID)

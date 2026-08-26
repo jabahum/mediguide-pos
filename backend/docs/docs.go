@@ -506,6 +506,12 @@ const docTemplate = `{
                     },
                     {
                         "type": "string",
+                        "description": "Parent outbreak UUID",
+                        "name": "outbreak_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
                         "description": "Document classification",
                         "name": "document_kind",
                         "in": "query"
@@ -526,6 +532,12 @@ const docTemplate = `{
                         "type": "string",
                         "description": "Intended audience",
                         "name": "audience",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Exact MIME type (charset parameters are ignored)",
+                        "name": "mime_type",
                         "in": "query"
                     },
                     {
@@ -25086,6 +25098,9 @@ const docTemplate = `{
                 "created_at": {
                     "type": "string"
                 },
+                "derived_content_checksum": {
+                    "type": "string"
+                },
                 "description": {
                     "type": "string"
                 },
@@ -25104,6 +25119,12 @@ const docTemplate = `{
                 "extracted_at": {
                     "type": "string"
                 },
+                "extraction_error": {
+                    "type": "string"
+                },
+                "extraction_source_checksum": {
+                    "type": "string"
+                },
                 "extraction_status": {
                     "type": "string"
                 },
@@ -25111,6 +25132,9 @@ const docTemplate = `{
                     "type": "integer"
                 },
                 "id": {
+                    "type": "string"
+                },
+                "indexed_at": {
                     "type": "string"
                 },
                 "issuing_authority": {
@@ -25148,6 +25172,12 @@ const docTemplate = `{
                 },
                 "reviewed_by": {
                     "type": "string"
+                },
+                "search_index_status": {
+                    "type": "string"
+                },
+                "search_schema_version": {
+                    "type": "integer"
                 },
                 "sort_order": {
                     "type": "integer"
@@ -26643,6 +26673,15 @@ const docTemplate = `{
                 "language": {
                     "type": "string"
                 },
+                "matching_heading": {
+                    "type": "string"
+                },
+                "matching_pdf_page": {
+                    "type": "integer"
+                },
+                "matching_section_id": {
+                    "type": "string"
+                },
                 "mime_type": {
                     "type": "string"
                 },
@@ -26667,13 +26706,22 @@ const docTemplate = `{
                 "published_at": {
                     "type": "string"
                 },
+                "reader_url": {
+                    "type": "string"
+                },
                 "review_date": {
                     "type": "string"
+                },
+                "search_relevance_score": {
+                    "type": "number"
                 },
                 "search_snippet": {
                     "type": "string"
                 },
                 "supports_inline": {
+                    "type": "boolean"
+                },
+                "supports_offline_download": {
                     "type": "boolean"
                 },
                 "title": {

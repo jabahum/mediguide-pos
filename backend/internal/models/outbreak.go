@@ -93,11 +93,20 @@ type OutbreakResource struct {
 	LockVersion      int        `gorm:"not null;default:1" json:"lock_version"`
 	// Derived, server-owned discovery content. It is populated from validated
 	// uploads and is never accepted from public or administrative API payloads.
-	SearchContent    string     `json:"-"`
-	RenderedContent  string     `json:"-"`
-	ContentFormat    string     `json:"-"`
-	ExtractionStatus string     `json:"-"`
-	ExtractedAt      *time.Time `json:"-"`
+	SearchContent            string         `json:"-"`
+	SearchHeadings           string         `json:"-"`
+	RenderedContent          string         `json:"-"`
+	ContentFormat            string         `json:"-"`
+	ExtractionStatus         string         `json:"-"`
+	ExtractionError          string         `json:"-"`
+	ExtractionSourceChecksum string         `json:"-"`
+	DerivedContentChecksum   string         `json:"-"`
+	SearchIndexStatus        string         `json:"-"`
+	SearchSchemaVersion      int            `gorm:"not null;default:1" json:"-"`
+	ContentSections          datatypes.JSON `gorm:"type:jsonb" json:"-"`
+	SourcePageMap            datatypes.JSON `gorm:"type:jsonb" json:"-"`
+	ExtractedAt              *time.Time     `json:"-"`
+	IndexedAt                *time.Time     `json:"-"`
 }
 
 type SituationReport struct {

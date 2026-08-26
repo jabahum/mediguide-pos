@@ -63,7 +63,7 @@ func TestPublicOutbreakDocumentDiscoveryAndContentVisibility(t *testing.T) {
 	if err := db.Create(&parent).Error; err != nil {
 		t.Fatal(err)
 	}
-	document := models.OutbreakResource{OutbreakID: parent.ID, Title: "Case management SOP", ResourceType: "managed_document", DocumentKind: "sop", Language: "en", Status: "published", PublishedAt: &now, SearchContent: "isolate the patient", RenderedContent: "# Isolation", ContentFormat: "markdown", ExtractionStatus: "ready", ChecksumSHA256: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"}
+	document := models.OutbreakResource{OutbreakID: parent.ID, Title: "Case management SOP", ResourceType: "managed_document", DocumentKind: "sop", Language: "en", Status: "published", ApprovedAt: &now, PublishedAt: &now, SearchContent: "isolate the patient", RenderedContent: "# Isolation", ContentFormat: "markdown", ExtractionStatus: "ready", ChecksumSHA256: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"}
 	if err := db.Create(&document).Error; err != nil {
 		t.Fatal(err)
 	}

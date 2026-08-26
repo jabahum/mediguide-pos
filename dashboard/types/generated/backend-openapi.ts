@@ -3692,15 +3692,19 @@ export interface ServicesOutbreakDocumentAdminDTO {
   author_id?: string;
   content_format?: string;
   created_at?: string;
+  derived_content_checksum?: string;
   description?: string;
   document_kind?: string;
   document_number?: string;
   effective_date?: string;
   expires_at?: string;
   extracted_at?: string;
+  extraction_error?: string;
+  extraction_source_checksum?: string;
   extraction_status?: string;
   file_size?: number;
   id?: string;
+  indexed_at?: string;
   issuing_authority?: string;
   language?: string;
   lock_version?: number;
@@ -3713,6 +3717,8 @@ export interface ServicesOutbreakDocumentAdminDTO {
   review_date?: string;
   reviewed_at?: string;
   reviewed_by?: string;
+  search_index_status?: string;
+  search_schema_version?: number;
   sort_order?: number;
   status?: string;
   supersedes_id?: string;
@@ -4252,6 +4258,9 @@ export interface ServicesPublicOutbreakDocument {
   id?: string;
   issuing_authority?: string;
   language?: string;
+  matching_heading?: string;
+  matching_pdf_page?: number;
+  matching_section_id?: string;
   mime_type?: string;
   original_filename?: string;
   outbreak_area?: string;
@@ -4260,9 +4269,12 @@ export interface ServicesPublicOutbreakDocument {
   outbreak_title?: string;
   page_count?: number;
   published_at?: string;
+  reader_url?: string;
   review_date?: string;
+  search_relevance_score?: number;
   search_snippet?: string;
   supports_inline?: boolean;
+  supports_offline_download?: boolean;
   title?: string;
   version?: string;
 }

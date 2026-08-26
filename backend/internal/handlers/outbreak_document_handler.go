@@ -3,6 +3,7 @@ package handlers
 import (
 	"errors"
 	"net/http"
+	"strings"
 
 	"mediguide/internal/httpx"
 	"mediguide/internal/services"
@@ -340,10 +341,12 @@ func (h OutbreakHandler) Documents(c *gin.Context) {
 // @Summary Search published effective outbreak documents across all outbreaks
 // @Tags public-outbreaks
 // @Param search query string false "Title, metadata, outbreak or extracted-content search"
+// @Param outbreak_id query string false "Parent outbreak UUID"
 // @Param document_kind query string false "Document classification"
 // @Param issuing_authority query string false "Issuing authority"
 // @Param language query string false "Language code"
 // @Param audience query string false "Intended audience"
+// @Param mime_type query string false "Exact MIME type (charset parameters are ignored)"
 // @Param effective_from query string false "Effective at or after"
 // @Param effective_to query string false "Effective at or before"
 // @Param sort query string false "Allowlisted sort field"
@@ -360,7 +363,16 @@ func (h OutbreakHandler) SearchDocuments(c *gin.Context) {
 	if !ok {
 		return
 	}
-	result, err := h.Service.SearchDocuments(services.OutbreakDocumentQuery{Page: page, Search: c.Query("search"), DocumentKind: c.Query("document_kind"), Authority: c.Query("issuing_authority"), Language: c.Query("language"), Audience: c.Query("audience"), EffectiveFrom: from, EffectiveTo: to, Sort: c.Query("sort"), Order: c.Query("order")})
+	var outbreakID *uuid.UUID
+	if raw := strings.TrimSpace(c.Query("outbreak_id")); raw != "" {
+		parsed, parseErr := uuid.Parse(raw)
+		if parseErr != nil {
+			httpx.Error(c, http.StatusBadRequest, "invalid outbreak_id")
+			return
+		}
+		outbreakID = &parsed
+	}
+	result, err := h.Service.SearchDocuments(services.OutbreakDocumentQuery{Page: page, Search: c.Query("search"), OutbreakID: outbreakID, DocumentKind: c.Query("document_kind"), Authority: c.Query("issuing_authority"), Language: c.Query("language"), Audience: c.Query("audience"), MIMEType: c.Query("mime_type"), EffectiveFrom: from, EffectiveTo: to, Sort: c.Query("sort"), Order: c.Query("order")})
 	h.result(c, result, err)
 }
 

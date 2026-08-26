@@ -731,6 +731,10 @@ func (s OutbreakAdminService) CorrectResource(actor OutbreakActor, id, child uui
 	copy.WithdrawalReason = ""
 	copy.SupersedesID = &old.ID
 	copy.LockVersion = 1
+	if copy.ResourceType == "managed_document" || copy.ResourceType == "downloadable_asset" {
+		copy.SearchIndexStatus = "pending_approval"
+		copy.IndexedAt = nil
+	}
 	if err := s.DB.Transaction(func(tx *gorm.DB) error {
 		if err := tx.Create(&copy).Error; err != nil {
 			return err

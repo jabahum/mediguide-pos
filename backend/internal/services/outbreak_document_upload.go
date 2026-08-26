@@ -6,6 +6,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -19,6 +20,8 @@ import (
 	"mediguide/internal/models"
 
 	"github.com/google/uuid"
+	"github.com/ledongthuc/pdf"
+	"github.com/microcosm-cc/bluemonday"
 	"gorm.io/gorm"
 )
 
@@ -71,10 +74,10 @@ func (s OutbreakAdminService) UploadDocument(ctx context.Context, actor Outbreak
 	digest := sha256.Sum256(data)
 	checksum := hex.EncodeToString(digest[:])
 	key := fmt.Sprintf("outbreaks/%s/documents/%s/%s.%s", outbreakID, documentID, checksum, metadata.Extension)
-	searchContent, renderedContent, contentFormat, extractionStatus := deriveOutbreakDocumentContent(metadata.Extension, data)
+	derived := deriveOutbreakDocumentContent(metadata.Extension, data)
 	extractedAt := time.Now().UTC()
 
-	if current.StorageKey == key && current.ChecksumSHA256 == checksum && current.OriginalFilename == name {
+	if current.StorageKey == key && current.ChecksumSHA256 == checksum && current.OriginalFilename == name && current.ExtractionSourceChecksum == checksum && current.SearchSchemaVersion == outbreakDocumentSearchSchemaVersion {
 		result := outbreakDocumentAdminDTO(current)
 		return &result, nil
 	}
@@ -85,9 +88,13 @@ func (s OutbreakAdminService) UploadDocument(ctx context.Context, actor Outbreak
 		"storage_key": key, "original_filename": name, "mime_type": metadata.MIMEType,
 		"file_size": int64(len(data)), "checksum_sha256": checksum, "page_count": metadata.PageCount,
 		"asset_url": "", "lock_version": gorm.Expr("lock_version + 1"),
-		"search_content": searchContent, "rendered_content": renderedContent,
-		"content_format": contentFormat, "extraction_status": extractionStatus,
-		"extracted_at": extractedAt,
+		"search_content": derived.Search, "search_headings": derived.Headings, "rendered_content": derived.Rendered,
+		"content_format": derived.Format, "extraction_status": derived.Status,
+		"extraction_error": derived.Error, "extraction_source_checksum": checksum,
+		"derived_content_checksum": derived.Checksum, "content_sections": derived.SectionsJSON,
+		"source_page_map": derived.PageMapJSON, "search_index_status": "pending_approval",
+		"search_schema_version": outbreakDocumentSearchSchemaVersion,
+		"extracted_at":          extractedAt, "indexed_at": nil,
 	}
 	err = s.DB.Transaction(func(tx *gorm.DB) error {
 		result := tx.Model(&models.OutbreakResource{}).
@@ -147,15 +154,23 @@ func (s OutbreakAdminService) ReprocessDocument(ctx context.Context, actor Outbr
 	if hex.EncodeToString(digest[:]) != current.ChecksumSHA256 {
 		return nil, ErrOutbreakInvalid
 	}
-	search, rendered, format, status := deriveOutbreakDocumentContent(metadata.Extension, data)
+	derived := deriveOutbreakDocumentContent(metadata.Extension, data)
+	if current.ExtractionSourceChecksum == current.ChecksumSHA256 && current.DerivedContentChecksum == derived.Checksum && current.SearchSchemaVersion == outbreakDocumentSearchSchemaVersion && current.ExtractionStatus == derived.Status {
+		result := outbreakDocumentAdminDTO(current)
+		return &result, nil
+	}
 	now := time.Now().UTC()
 	err = s.DB.Transaction(func(tx *gorm.DB) error {
 		result := tx.Model(&models.OutbreakResource{}).
 			Where("id = ? AND outbreak_id = ? AND lock_version = ?", documentID, outbreakID, lockVersion).
 			Updates(map[string]any{
-				"search_content": search, "rendered_content": rendered,
-				"content_format": format, "extraction_status": status,
-				"extracted_at": now, "lock_version": gorm.Expr("lock_version + 1"),
+				"search_content": derived.Search, "search_headings": derived.Headings, "rendered_content": derived.Rendered,
+				"content_format": derived.Format, "extraction_status": derived.Status,
+				"extraction_error": derived.Error, "extraction_source_checksum": current.ChecksumSHA256,
+				"derived_content_checksum": derived.Checksum, "content_sections": derived.SectionsJSON,
+				"source_page_map": derived.PageMapJSON, "search_index_status": "pending_approval",
+				"search_schema_version": outbreakDocumentSearchSchemaVersion,
+				"extracted_at":          now, "indexed_at": nil, "lock_version": gorm.Expr("lock_version + 1"),
 			})
 		if result.Error != nil {
 			return result.Error
@@ -164,8 +179,8 @@ func (s OutbreakAdminService) ReprocessDocument(ctx context.Context, actor Outbr
 			return ErrOutbreakConflict
 		}
 		return auditOutbreak(tx, actor, "outbreak_document.content_reprocessed", "outbreak_document", documentID, map[string]any{
-			"previous_status": current.ExtractionStatus, "extraction_status": status,
-			"content_format": format, "checksum_sha256": current.ChecksumSHA256,
+			"previous_status": current.ExtractionStatus, "extraction_status": derived.Status,
+			"content_format": derived.Format, "checksum_sha256": current.ChecksumSHA256,
 		})
 	})
 	if err != nil {
@@ -174,33 +189,219 @@ func (s OutbreakAdminService) ReprocessDocument(ctx context.Context, actor Outbr
 	return s.GetDocument(outbreakID, documentID)
 }
 
+const outbreakDocumentSearchSchemaVersion = 2
+
+type outbreakDocumentDerived struct {
+	Search, Headings, Rendered, Format, Status, Error, Checksum string
+	SectionsJSON, PageMapJSON                                   []byte
+}
+
+type outbreakDocumentSection struct {
+	ID      string `json:"id"`
+	Heading string `json:"heading"`
+	Level   int    `json:"level"`
+	Text    string `json:"text"`
+	Page    *int   `json:"page,omitempty"`
+}
+
+type outbreakDocumentPageMap struct {
+	Page      int    `json:"page"`
+	SectionID string `json:"section_id"`
+}
+
 var markdownSyntax = regexp.MustCompile(`(?m)(?:^#{1,6}\s+|[*_~` + "`" + `>\[\]()]|!\[[^]]*\]\([^)]*\)|\[[^]]+\]\([^)]*\))`)
+var markdownHeading = regexp.MustCompile(`^(#{1,6})\s+(.+?)\s*#*\s*$`)
 var whitespaceRuns = regexp.MustCompile(`\s+`)
 var xmlTags = regexp.MustCompile(`<[^>]+>`)
+var spreadsheetCellText = regexp.MustCompile(`(?s)<(?:t|v)(?:\s[^>]*)?>(.*?)</(?:t|v)>`)
+var nonSlug = regexp.MustCompile(`[^a-z0-9]+`)
 
-// deriveOutbreakDocumentContent deliberately supports only formats for which
-// the API can produce deterministic, safe text without executing converters.
-// PDF and spreadsheet extraction remain explicit "not_available" states until
-// a sandboxed extraction worker is configured.
-func deriveOutbreakDocumentContent(extension string, data []byte) (search, rendered, format, status string) {
+// deriveOutbreakDocumentContent creates server-owned projections. The source
+// object remains immutable and authoritative; these fields can always be
+// discarded and deterministically rebuilt from its checksum-bound bytes.
+func deriveOutbreakDocumentContent(extension string, data []byte) outbreakDocumentDerived {
+	var result outbreakDocumentDerived
+	var sections []outbreakDocumentSection
+	var pages []outbreakDocumentPageMap
 	switch extension {
 	case "md":
-		rendered = strings.TrimSpace(string(data))
-		search = strings.TrimSpace(whitespaceRuns.ReplaceAllString(markdownSyntax.ReplaceAllString(rendered, " "), " "))
-		return search, rendered, "markdown", "ready"
+		result.Rendered = sanitizeOutbreakMarkdown(string(data))
+		sections = extractMarkdownSections(result.Rendered)
+		result.Search = searchableSections(sections, result.Rendered)
+		result.Format, result.Status = "markdown", "ready"
 	case "txt":
-		rendered = strings.TrimSpace(string(data))
-		search = strings.TrimSpace(whitespaceRuns.ReplaceAllString(rendered, " "))
-		return search, rendered, "plain_text", "ready"
+		result.Rendered = strings.TrimSpace(string(data))
+		sections = []outbreakDocumentSection{{ID: "document", Heading: "Document", Level: 1, Text: result.Rendered}}
+		result.Search = normalizeSearchText(result.Rendered)
+		result.Format, result.Status = "plain_text", "ready"
 	case "docx":
 		text, err := extractOfficeXMLText(data, "word/document.xml")
 		if err == nil && text != "" {
-			return text, text, "plain_text", "ready"
+			result.Search, result.Rendered = text, text
+			sections = []outbreakDocumentSection{{ID: "document", Heading: "Document", Level: 1, Text: text}}
+			result.Format, result.Status = "plain_text", "ready"
+		} else {
+			result.Status, result.Error = "failed", safeExtractionError(err, "DOCX contains no readable text")
 		}
-		return "", "", "", "failed"
+	case "pdf":
+		var err error
+		sections, pages, result.Search, err = extractPDFText(data)
+		if err != nil || result.Search == "" {
+			result.Status, result.Error = "failed", safeExtractionError(err, "PDF contains no extractable text; OCR may be required")
+		} else {
+			result.Format, result.Status = "pdf_text", "ready"
+		}
+	case "xlsx":
+		text, err := extractSpreadsheetText(data)
+		if err != nil || text == "" {
+			result.Status, result.Error = "failed", safeExtractionError(err, "Spreadsheet contains no indexable text")
+		} else {
+			result.Search = text
+			sections = []outbreakDocumentSection{{ID: "spreadsheet", Heading: "Spreadsheet", Level: 1, Text: text}}
+			result.Format, result.Status = "spreadsheet_text", "ready"
+		}
 	default:
-		return "", "", "", "not_available"
+		result.Status = "not_available"
 	}
+	result.SectionsJSON, _ = json.Marshal(sections)
+	result.PageMapJSON, _ = json.Marshal(pages)
+	for _, section := range sections {
+		result.Headings += " " + section.Heading
+	}
+	result.Headings = normalizeSearchText(result.Headings)
+	digest := sha256.Sum256([]byte(result.Rendered + "\x00" + result.Search + "\x00" + string(result.SectionsJSON)))
+	result.Checksum = hex.EncodeToString(digest[:])
+	return result
+}
+
+func sanitizeOutbreakMarkdown(value string) string {
+	// StrictPolicy removes executable/raw HTML while leaving Markdown syntax,
+	// tables, lists, callouts and fenced code as text for the Markdown renderer.
+	return strings.TrimSpace(bluemonday.StrictPolicy().Sanitize(value))
+}
+
+func extractMarkdownSections(markdown string) []outbreakDocumentSection {
+	lines := strings.Split(markdown, "\n")
+	sections := make([]outbreakDocumentSection, 0)
+	used := map[string]int{}
+	current := outbreakDocumentSection{ID: "document", Heading: "Document", Level: 1}
+	flush := func() {
+		current.Text = strings.TrimSpace(current.Text)
+		if current.Text != "" || current.ID != "document" {
+			sections = append(sections, current)
+		}
+	}
+	for _, line := range lines {
+		match := markdownHeading.FindStringSubmatch(strings.TrimSpace(line))
+		if len(match) == 3 {
+			flush()
+			heading := strings.TrimSpace(markdownSyntax.ReplaceAllString(match[2], ""))
+			base := stableSectionID(heading)
+			used[base]++
+			id := base
+			if used[base] > 1 {
+				id = fmt.Sprintf("%s-%d", base, used[base])
+			}
+			current = outbreakDocumentSection{ID: id, Heading: heading, Level: len(match[1])}
+			continue
+		}
+		current.Text += line + "\n"
+	}
+	flush()
+	return sections
+}
+
+func stableSectionID(value string) string {
+	id := strings.Trim(nonSlug.ReplaceAllString(strings.ToLower(value), "-"), "-")
+	if id == "" {
+		return "section"
+	}
+	return id
+}
+
+func searchableSections(sections []outbreakDocumentSection, fallback string) string {
+	parts := make([]string, 0, len(sections)*2)
+	for _, section := range sections {
+		parts = append(parts, section.Heading, section.Text)
+	}
+	if len(parts) == 0 {
+		parts = append(parts, fallback)
+	}
+	return normalizeSearchText(markdownSyntax.ReplaceAllString(strings.Join(parts, " "), " "))
+}
+
+func normalizeSearchText(value string) string {
+	return strings.TrimSpace(whitespaceRuns.ReplaceAllString(value, " "))
+}
+
+func safeExtractionError(err error, fallback string) string {
+	if err == nil {
+		return fallback
+	}
+	message := strings.TrimSpace(err.Error())
+	if len(message) > 500 {
+		message = message[:500]
+	}
+	return message
+}
+
+func extractPDFText(data []byte) ([]outbreakDocumentSection, []outbreakDocumentPageMap, string, error) {
+	reader, err := pdf.NewReader(bytes.NewReader(data), int64(len(data)))
+	if err != nil {
+		return nil, nil, "", err
+	}
+	sections := make([]outbreakDocumentSection, 0, reader.NumPage())
+	pageMap := make([]outbreakDocumentPageMap, 0, reader.NumPage())
+	parts := make([]string, 0, reader.NumPage())
+	for pageNumber := 1; pageNumber <= reader.NumPage(); pageNumber++ {
+		text, pageErr := reader.Page(pageNumber).GetPlainText(nil)
+		if pageErr != nil {
+			return nil, nil, "", fmt.Errorf("extract PDF page %d: %w", pageNumber, pageErr)
+		}
+		text = normalizeSearchText(text)
+		if text == "" {
+			continue
+		}
+		page := pageNumber
+		id := fmt.Sprintf("page-%d", pageNumber)
+		sections = append(sections, outbreakDocumentSection{ID: id, Heading: fmt.Sprintf("Page %d", pageNumber), Level: 1, Text: text, Page: &page})
+		pageMap = append(pageMap, outbreakDocumentPageMap{Page: pageNumber, SectionID: id})
+		parts = append(parts, text)
+	}
+	return sections, pageMap, normalizeSearchText(strings.Join(parts, " ")), nil
+}
+
+func extractSpreadsheetText(data []byte) (string, error) {
+	reader, err := zip.NewReader(bytes.NewReader(data), int64(len(data)))
+	if err != nil {
+		return "", err
+	}
+	parts := make([]string, 0)
+	for _, file := range reader.File {
+		name := filepath.ToSlash(filepath.Clean(file.Name))
+		if name != "xl/sharedStrings.xml" && !strings.HasPrefix(name, "xl/worksheets/sheet") {
+			continue
+		}
+		stream, openErr := file.Open()
+		if openErr != nil {
+			return "", openErr
+		}
+		contents, readErr := io.ReadAll(io.LimitReader(stream, defaultOutbreakDocumentMaxBytes))
+		closeErr := stream.Close()
+		if readErr != nil {
+			return "", readErr
+		}
+		if closeErr != nil {
+			return "", closeErr
+		}
+		for _, match := range spreadsheetCellText.FindAllSubmatch(contents, -1) {
+			if len(match) == 2 {
+				parts = append(parts, string(match[1]))
+			}
+		}
+	}
+	text := strings.NewReplacer("&amp;", "&", "&lt;", "<", "&gt;", ">", "&quot;", `"`, "&apos;", "'").Replace(strings.Join(parts, " "))
+	return normalizeSearchText(text), nil
 }
 
 func extractOfficeXMLText(data []byte, part string) (string, error) {

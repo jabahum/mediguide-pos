@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"net/url"
 	"regexp"
 	"strings"
@@ -147,6 +148,17 @@ type PublicOutbreakDocument struct {
 	ContentFormat           string     `json:"content_format,omitempty"`
 	SupportsInline          bool       `json:"supports_inline"`
 	SupportsOfflineDownload bool       `json:"supports_offline_download"`
+}
+
+// OutbreakDocumentDownload keeps managed object-storage reads behind the API
+// boundary. RedirectURL is used only for an explicitly external asset.
+type OutbreakDocumentDownload struct {
+	Body        io.ReadCloser
+	RedirectURL *url.URL
+	Filename    string
+	MIMEType    string
+	Size        int64
+	Checksum    string
 }
 
 type PublicOutbreakDocumentContent struct {
@@ -691,8 +703,9 @@ func (s OutbreakService) GetDocument(outbreakID, documentID uuid.UUID) (*PublicO
 	return &result, nil
 }
 
-func (s OutbreakService) DocumentDownload(ctx context.Context, outbreakID, documentID uuid.UUID) (*url.URL, error) {
-	if _, err := s.GetDocument(outbreakID, documentID); err != nil {
+func (s OutbreakService) DocumentDownload(ctx context.Context, outbreakID, documentID uuid.UUID) (*OutbreakDocumentDownload, error) {
+	document, err := s.GetDocument(outbreakID, documentID)
+	if err != nil {
 		return nil, err
 	}
 	var row models.OutbreakResource
@@ -703,13 +716,20 @@ func (s OutbreakService) DocumentDownload(ctx context.Context, outbreakID, docum
 		if s.Store == nil {
 			return nil, errors.New("outbreak document storage unavailable")
 		}
-		return s.Store.PresignGet(ctx, row.StorageKey, 10*time.Minute)
+		body, err := s.Store.Get(ctx, row.StorageKey)
+		if err != nil {
+			return nil, err
+		}
+		return &OutbreakDocumentDownload{
+			Body: body, Filename: document.OriginalFilename, MIMEType: document.MIMEType,
+			Size: document.FileSize, Checksum: document.ChecksumSHA256,
+		}, nil
 	}
 	target, err := url.Parse(strings.TrimSpace(row.AssetURL))
-	if err != nil || target.String() == "" {
+	if err != nil || target.String() == "" || (target.Scheme != "https" && target.Scheme != "http") {
 		return nil, gorm.ErrRecordNotFound
 	}
-	return target, nil
+	return &OutbreakDocumentDownload{RedirectURL: target}, nil
 }
 
 func (s OutbreakAdminService) validateDocument(row models.OutbreakResource, readyForReview bool) error {

@@ -1,8 +1,12 @@
 package handlers
 
 import (
+	"bytes"
+	"context"
+	"io"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"strings"
 	"testing"
 	"time"
@@ -17,6 +21,19 @@ import (
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 )
+
+type outbreakDownloadHandlerStore struct{ objects map[string][]byte }
+
+func (s outbreakDownloadHandlerStore) Put(context.Context, string, io.Reader, int64, string) error {
+	return nil
+}
+func (s outbreakDownloadHandlerStore) Get(_ context.Context, key string) (io.ReadCloser, error) {
+	return io.NopCloser(bytes.NewReader(s.objects[key])), nil
+}
+func (s outbreakDownloadHandlerStore) Delete(context.Context, string) error { return nil }
+func (s outbreakDownloadHandlerStore) PresignGet(context.Context, string, time.Duration) (*url.URL, error) {
+	return url.Parse("http://minio:9000/private-object")
+}
 
 func publicOutbreakTestRouter(t *testing.T) (*gin.Engine, *gorm.DB) {
 	t.Helper()
@@ -115,6 +132,50 @@ func TestPublicOutbreakDocumentDiscoveryAndContentVisibility(t *testing.T) {
 	router.ServeHTTP(unsupported, httptest.NewRequest(http.MethodGet, "/api/public/outbreak-documents/"+pdf.ID.String()+"/content", nil))
 	if unsupported.Code != http.StatusUnsupportedMediaType || unsupported.Header().Get("Cache-Control") != "no-store" || !strings.Contains(unsupported.Body.String(), `"code":"inline_reading_unsupported"`) || !strings.Contains(unsupported.Body.String(), `"can_read_inline":false`) || !strings.Contains(unsupported.Body.String(), pdf.ID.String()) {
 		t.Fatalf("unsupported inline status=%d headers=%v body=%s", unsupported.Code, unsupported.Header(), unsupported.Body.String())
+	}
+}
+
+func TestPublicOutbreakDocumentDownloadStreamsManagedObjectThroughAPI(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	db, err := gorm.Open(sqlite.Open("file:"+uuid.NewString()+"?mode=memory&cache=shared"), &gorm.Config{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := db.AutoMigrate(&models.Outbreak{}, &models.OutbreakResource{}); err != nil {
+		t.Fatal(err)
+	}
+	contents := []byte("%PDF-1.7\nmanaged content")
+	store := outbreakDownloadHandlerStore{objects: map[string][]byte{"outbreaks/report.pdf": contents}}
+	handler := OutbreakHandler{Service: services.OutbreakService{DB: db, Store: store}}
+	router := gin.New()
+	router.GET("/api/public/outbreaks/:id/documents/:documentId/download", handler.DocumentDownload)
+
+	now := time.Now().UTC().Add(-time.Minute)
+	parent := models.Outbreak{Title: "Ebola response", Status: "active", PublishedAt: &now, LastUpdate: now}
+	if err := db.Create(&parent).Error; err != nil {
+		t.Fatal(err)
+	}
+	document := models.OutbreakResource{
+		OutbreakID: parent.ID, Title: "Case management", ResourceType: "managed_document",
+		DocumentKind: "sop", Status: "published", ApprovedAt: &now, PublishedAt: &now,
+		StorageKey: "outbreaks/report.pdf", OriginalFilename: "case management.pdf",
+		MIMEType: "application/pdf", FileSize: int64(len(contents)), ChecksumSHA256: strings.Repeat("a", 64),
+	}
+	if err := db.Create(&document).Error; err != nil {
+		t.Fatal(err)
+	}
+
+	response := httptest.NewRecorder()
+	path := "/api/public/outbreaks/" + parent.ID.String() + "/documents/" + document.ID.String() + "/download"
+	router.ServeHTTP(response, httptest.NewRequest(http.MethodGet, path, nil))
+	if response.Code != http.StatusOK || !bytes.Equal(response.Body.Bytes(), contents) {
+		t.Fatalf("managed download status=%d body=%q", response.Code, response.Body.Bytes())
+	}
+	if response.Header().Get("Content-Type") != "application/pdf" || !strings.Contains(response.Header().Get("Content-Disposition"), "case management.pdf") {
+		t.Fatalf("download headers missing: %v", response.Header())
+	}
+	if response.Header().Get("Location") != "" || strings.Contains(response.Body.String(), "minio") {
+		t.Fatalf("internal object-storage address leaked: headers=%v body=%q", response.Header(), response.Body.String())
 	}
 }
 

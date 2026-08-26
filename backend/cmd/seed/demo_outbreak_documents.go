@@ -129,8 +129,12 @@ func seedDemoOutbreakDocuments(ctx context.Context, database *gorm.DB, store sto
 	if _, err := service.GetDocumentGlobal(firstID); err != nil {
 		return fmt.Errorf("verify public outbreak document metadata: %w", err)
 	}
-	if target, err := service.DocumentDownload(ctx, outbreakID, firstID); err != nil || target == nil || target.Scheme == "" {
+	download, err := service.DocumentDownload(ctx, outbreakID, firstID)
+	if err != nil || download == nil || download.Body == nil {
 		return fmt.Errorf("verify public outbreak document download: %w", err)
+	}
+	if err := download.Body.Close(); err != nil {
+		return fmt.Errorf("close verified outbreak document download: %w", err)
 	}
 	if content, err := service.DocumentContent(firstID); err != nil || !content.CanReadInline || strings.TrimSpace(content.Content) == "" {
 		return fmt.Errorf("verify public outbreak document content: %w", err)

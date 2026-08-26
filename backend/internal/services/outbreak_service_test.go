@@ -1,7 +1,10 @@
 package services
 
 import (
+	"bytes"
+	"context"
 	"errors"
+	"io"
 	"strings"
 	"testing"
 	"time"
@@ -177,6 +180,72 @@ func TestOutbreakServiceExposesOnlyCurrentPublishedDocuments(t *testing.T) {
 	}
 	if _, err := service.GetDocument(parent.ID, rows[1].ID); !errors.Is(err, gorm.ErrRecordNotFound) {
 		t.Fatalf("draft document exposed: %v", err)
+	}
+}
+
+func TestOutbreakDocumentDownloadStreamsManagedStorageWithoutPresignedURL(t *testing.T) {
+	service := outbreakTestService(t)
+	contents := []byte("managed document bytes")
+	store := &outbreakDocumentTestStore{objects: map[string][]byte{
+		"outbreaks/ebola/sop.pdf": contents,
+	}}
+	service.Store = store
+	now := time.Now().UTC().Add(-time.Minute)
+	parent := models.Outbreak{Title: "Published response", Status: "active", PublishedAt: &now, LastUpdate: now}
+	if err := service.DB.Create(&parent).Error; err != nil {
+		t.Fatal(err)
+	}
+	document := models.OutbreakResource{
+		OutbreakID: parent.ID, Title: "Case management SOP", ResourceType: "managed_document",
+		DocumentKind: "sop", Status: "published", ApprovedAt: &now, PublishedAt: &now,
+		StorageKey: "outbreaks/ebola/sop.pdf", OriginalFilename: "case-management.pdf",
+		MIMEType: "application/pdf", FileSize: int64(len(contents)), ChecksumSHA256: strings.Repeat("a", 64),
+	}
+	if err := service.DB.Create(&document).Error; err != nil {
+		t.Fatal(err)
+	}
+
+	download, err := service.DocumentDownload(context.Background(), parent.ID, document.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer download.Body.Close()
+	body, err := io.ReadAll(download.Body)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if download.RedirectURL != nil || !bytes.Equal(body, contents) {
+		t.Fatalf("managed object escaped through redirect: %#v body=%q", download, body)
+	}
+	if download.Filename != document.OriginalFilename || download.MIMEType != document.MIMEType || download.Checksum != document.ChecksumSHA256 {
+		t.Fatalf("managed download metadata lost: %#v", download)
+	}
+}
+
+func TestOutbreakDocumentDownloadRedirectsOnlyValidatedExternalURLs(t *testing.T) {
+	service := outbreakTestService(t)
+	now := time.Now().UTC().Add(-time.Minute)
+	parent := models.Outbreak{Title: "Published response", Status: "active", PublishedAt: &now, LastUpdate: now}
+	if err := service.DB.Create(&parent).Error; err != nil {
+		t.Fatal(err)
+	}
+	document := models.OutbreakResource{
+		OutbreakID: parent.ID, Title: "External SOP", ResourceType: "downloadable_asset",
+		DocumentKind: "sop", Status: "published", ApprovedAt: &now, PublishedAt: &now,
+		AssetURL: "https://health.go.ug/sop.pdf",
+	}
+	if err := service.DB.Create(&document).Error; err != nil {
+		t.Fatal(err)
+	}
+	download, err := service.DocumentDownload(context.Background(), parent.ID, document.ID)
+	if err != nil || download.RedirectURL == nil || download.RedirectURL.Host != "health.go.ug" || download.Body != nil {
+		t.Fatalf("valid external document was not redirected: %#v err=%v", download, err)
+	}
+	if err := service.DB.Model(&document).Update("asset_url", "file:///private/report.pdf").Error; err != nil {
+		t.Fatal(err)
+	}
+	if _, err := service.DocumentDownload(context.Background(), parent.ID, document.ID); !errors.Is(err, gorm.ErrRecordNotFound) {
+		t.Fatalf("unsafe external scheme accepted: %v", err)
 	}
 }
 

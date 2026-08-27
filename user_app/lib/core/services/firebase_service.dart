@@ -210,11 +210,18 @@ final class MediGuideFirebaseService {
       description: 'Clinical updates, reminders, and urgent alerts',
       importance: Importance.high,
     );
-    await _localNotifications
+    const updatesChannel = AndroidNotificationChannel(
+      'mediguide_updates',
+      'MediGuide updates',
+      description: 'Guideline updates, reminders, and general notifications',
+      importance: Importance.defaultImportance,
+    );
+    final androidNotifications = _localNotifications
         .resolvePlatformSpecificImplementation<
           AndroidFlutterLocalNotificationsPlugin
-        >()
-        ?.createNotificationChannel(channel);
+        >();
+    await androidNotifications?.createNotificationChannel(channel);
+    await androidNotifications?.createNotificationChannel(updatesChannel);
   }
 
   Future<void> _initializeMessaging() async {

@@ -1,2 +1,4 @@
 #include? "Pods/Target Support Files/Pods-Runner/Pods-Runner.release-development.xcconfig"
 #include "Generated.xcconfig"
+MEDIGUIDE_APP_ICON=developmentAppIcon
+MEDIGUIDE_APP_NAME=MediGuide Dev

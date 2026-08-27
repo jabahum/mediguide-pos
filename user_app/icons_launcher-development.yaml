@@ -1,0 +1,10 @@
+icons_launcher:
+  image_path: "assets/icons/environments/development.png"
+  platforms:
+    android:
+      enable: true
+      adaptive_background_color: "#0B5CAD"
+      adaptive_foreground_image: "assets/icons/environments/development.png"
+    ios:
+      enable: true
+

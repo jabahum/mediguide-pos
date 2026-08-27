@@ -45,6 +45,9 @@ The committed `infra/development.env` contains safe local defaults.
 variable schema with environment-specific placeholders. Run `make env-check`
 after adding or renaming an infrastructure variable; the check also validates
 ignored local staging and production files when they exist.
+See the complete [three-environment configuration guide](infra/README.md#environment-configuration)
+for file creation, Firebase injection, validation, CI handling, and secret
+boundaries.
 
 Default local endpoints:
 

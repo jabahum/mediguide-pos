@@ -36,6 +36,117 @@ When adding a Compose variable, add it to all three templates in the same
 change. `FIREBASE_SERVICE_ACCOUNT_BASE64` must contain the one-line encoded
 JSON contents at runtime, never a filename.
 
+## Environment configuration
+
+The infrastructure supports three isolated environments:
+
+| Environment | Committed source | Local/deployment file | `APP_ENV` | Secret policy |
+|---|---|---|---|---|
+| Development | `development.env` | `development.env` | `development` | Safe local defaults; inject external credentials at runtime |
+| Staging | `staging.env.example` | `staging.env` | `staging` | Ignored file or protected staging secret |
+| Production | `production.env.example` | `production.env` | `production` | Ignored file or protected production secret |
+
+`staging.env` and `production.env` are ignored by Git. Never copy credentials
+from one environment into another, and use a separate Firebase service account,
+database password, JWT secret, storage key, SMTP account, and administrator
+password for each hosted environment.
+
+Create the hosted-environment files for the first time:
+
+```bash
+cp infra/staging.env.example infra/staging.env
+cp infra/production.env.example infra/production.env
+chmod 600 infra/staging.env infra/production.env
+```
+
+Replace all `replace-with-*` values and update the public URLs, image tags, and
+Firebase project IDs. Do not run a hosted environment from an example file.
+
+### Firebase credential injection
+
+The API and notification worker expect the Base64 contents of the service
+account JSON. A filename such as `mediguide-staging-backend.base64` is invalid
+and causes `illegal base64 data` during startup.
+
+For a local development session, inject the value into the current shell:
+
+```bash
+export FIREBASE_SERVICE_ACCOUNT_BASE64="$(
+  openssl base64 -A \
+    -in "$HOME/.config/mediguide/firebase/mediguide-development-backend.json"
+)"
+
+docker compose \
+  --env-file infra/development.env \
+  -f infra/docker-compose.yml \
+  -f infra/docker-compose.dev.yml \
+  up -d --no-deps --force-recreate api notification-worker
+
+unset FIREBASE_SERVICE_ACCOUNT_BASE64
+```
+
+For staging or production, place the one-line Base64 value inside the protected
+environment file or CI secret. Keep the variable blank until the correct
+environment-specific credential is available; blank disables Firebase delivery
+without making the API fail during initialization.
+
+`FIREBASE_PROJECT_ID` must exactly match `project_id` inside the decoded JSON.
+Validate a credential without printing it:
+
+```bash
+credential_file="$HOME/.config/mediguide/firebase/mediguide-staging-backend.json"
+
+jq -e '
+  .type == "service_account" and
+  (.project_id | length > 0) and
+  (.client_email | length > 0) and
+  (.private_key | length > 0)
+' "$credential_file" >/dev/null
+```
+
+### Validation
+
+Run the schema check after changing any environment variable:
+
+```bash
+make env-check
+```
+
+It verifies that:
+
+- development, staging, and production expose the same variable names;
+- no environment file contains duplicate keys;
+- ignored local staging and production files match the canonical schema when
+  present;
+- every variable interpolated by the base and development Compose files is
+  declared;
+- Firebase credentials are not configured as `.json` or `.base64` filenames.
+
+Validate each rendered Compose configuration without starting containers:
+
+```bash
+docker compose \
+  --env-file infra/development.env \
+  -f infra/docker-compose.yml \
+  -f infra/docker-compose.dev.yml \
+  config --quiet
+
+docker compose \
+  --env-file infra/staging.env \
+  -f infra/docker-compose.yml \
+  config --quiet
+
+docker compose \
+  --env-file infra/production.env \
+  -f infra/docker-compose.yml \
+  config --quiet
+```
+
+The container-image workflow and release-readiness script validate schema
+parity and all three Compose variants automatically. The staging and production
+GitHub Environments should store their complete environment files as protected
+secrets; never print those values in workflow logs.
+
 `APP_ENV` is also the source of truth for the backend Gin runtime mode. The API
 uses Gin debug mode for `development`, test mode for `test`, and release mode
 for production, staging, or an unknown value. This fail-closed mapping prevents

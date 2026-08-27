@@ -374,6 +374,8 @@ jobs:
     uses: ./.github/workflows/mobile-distribution.yml
     with:
       destination: all
+      flavor: production
+      github_environment: testing
       api_base_url: ${{ inputs.api_base_url || vars.MOBILE_API_BASE_URL || 'https://mediguide.health.go.ug' }}
     secrets: inherit
 

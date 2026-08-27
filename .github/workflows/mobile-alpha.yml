@@ -195,7 +195,9 @@ jobs:
     uses: ./.github/workflows/mobile-distribution.yml
     with:
       destination: ${{ inputs.destination }}
-      api_base_url: ${{ vars.MOBILE_API_BASE_URL || 'https://mediguide.health.go.ug' }}
+      flavor: staging
+      github_environment: staging
+      api_base_url: ${{ vars.STAGING_MOBILE_API_BASE_URL || 'https://staging.mediguide.health.go.ug' }}
       release_notes: ${{ needs.metadata.outputs.release_notes }}
       build_number: ${{ needs.metadata.outputs.build_number }}
       tester_groups: ${{ needs.metadata.outputs.tester_groups }}

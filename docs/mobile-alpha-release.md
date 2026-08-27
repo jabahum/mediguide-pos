@@ -2,12 +2,15 @@
 
 Mobile alpha releases distribute internal test builds without deploying the
 backend, dashboard, guidelines site, AI worker, or production Compose stack.
-They use the production mobile application IDs so Firebase installations and
-internal TestFlight builds exercise the same native application as a stable
-release:
+They use the isolated staging application IDs and hosted staging API:
 
-- Android: `com.mediguide.ug`
-- iOS: `com.omarsoft.mediguide`
+- Android: `com.mediguide.ug.staging`
+- iOS: `com.omarsoft.mediguide.staging`
+- API: `https://staging.mediguide.health.go.ug`
+
+The staging binary is a release-mode replica of the staging platform while
+retaining the draggable debug overlay for Network, Remote Config, and Build
+Config inspection. Stable production builds remove that overlay.
 
 The alpha label is a delivery-channel label. Apple requires a numeric marketing
 version, so the checked-in `pubspec.yaml` version remains numeric while CI
@@ -16,7 +19,7 @@ release notes, TestFlight changelog, artifacts, and the GitHub Actions summary.
 
 ## One-time setup
 
-Use the protected `testing` GitHub Environment already documented in
+Use the protected `staging` GitHub Environment already documented in
 [`firebase-mobile-distribution.md`](firebase-mobile-distribution.md). It must
 contain all Firebase, Android signing, Apple signing, and App Store Connect
 variables and secrets required by the selected destination.
@@ -26,9 +29,9 @@ Create a Firebase App Distribution group with alias
 uploads remain internal (`distribute_external: false`) and testers must belong
 to an App Store Connect internal testing group.
 
-Alpha builds use `vars.MOBILE_API_BASE_URL`. Configure that variable in the
-`testing` Environment with the API that alpha testers should exercise. Do not
-point alpha builds at production unless that is an intentional test decision.
+Alpha builds use `vars.STAGING_MOBILE_API_BASE_URL` when configured and fall
+back to `https://staging.mediguide.health.go.ug`. Do not point staging builds at
+production.
 
 ## Start an alpha release
 

@@ -106,25 +106,27 @@ This repository initializes Firebase programmatically through
 generated `firebase_options.dart`. The build-time values below are the supported
 configuration source.
 
-The signed alpha/beta workflow currently builds the production native flavor so
-the same installed application can be promoted through TestFlight. Therefore,
-the protected `testing` GitHub Environment must reference Firebase app records
-whose native IDs are `com.mediguide.ug` and `com.omarsoft.mediguide`. Those may
-be the production Firebase apps or duplicate production-ID app registrations in
-a dedicated distribution project. Prefer the dedicated project if prerelease
-Remote Config or Analytics must be isolated from production.
+Signed alpha and beta workflows build the staging native flavor against the
+hosted staging API. The reusable distribution workflow receives the flavor and
+protected GitHub Environment explicitly, validates that
+`FIREBASE_MOBILE_CONFIG_JSON.MEDIGUIDE_FLAVOR` matches, and uses flavor-specific
+artifact paths. Stable tagged distribution explicitly selects production, so a
+prerelease cannot silently become a production bundle through a fallback.
 
-Registering all six Firebase apps does not by itself change CI. The reusable
-`.github/workflows/mobile-distribution.yml` currently sets
-`MOBILE_FLAVOR=production` and uses the `testing` GitHub Environment. Until that
-workflow accepts flavor and GitHub Environment inputs, alpha/beta distribution
-continues to publish the production native bundle. The intended mapping is:
+The enforced mapping is:
 
 | Delivery channel | GitHub Environment | Flutter flavor |
 |---|---|---|
 | Development/manual testing | `development` | `development` |
 | Alpha and beta testing | `staging` | `staging` |
 | Stable store release | `production` | `production` |
+
+The staging Environment must therefore contain Firebase app records and Apple
+profiles for `com.mediguide.ug.staging` and
+`com.omarsoft.mediguide.staging`. Staging has production-like release runtime
+behavior and connects to `https://staging.mediguide.health.go.ug`; its one
+intentional application-level difference is the enabled draggable diagnostic
+overlay.
 
 The current FlutterFire packages require iOS 15 or later. The Podfile and Xcode
 project intentionally use an iOS 15 deployment target.

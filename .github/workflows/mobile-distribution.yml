@@ -19,6 +19,14 @@ on:
       tester_groups:
         required: false
         type: string
+      flavor:
+        required: false
+        default: staging
+        type: string
+      github_environment:
+        required: false
+        default: staging
+        type: string
   workflow_dispatch:
     inputs:
       destination:
@@ -47,6 +55,19 @@ on:
         description: Firebase App Distribution group aliases
         required: false
         type: string
+      flavor:
+        description: Native Flutter flavor to distribute
+        required: true
+        default: staging
+        type: choice
+        options:
+          - staging
+          - production
+      github_environment:
+        description: Protected GitHub Environment containing matching credentials
+        required: true
+        default: staging
+        type: environment
 
 permissions:
   contents: read
@@ -58,16 +79,16 @@ concurrency:
 env:
   FLUTTER_VERSION: 3.44.8
   RUBY_VERSION: "3.3"
-  MOBILE_API_BASE_URL: ${{ inputs.api_base_url || vars.MOBILE_API_BASE_URL || 'https://mediguide.health.go.ug' }}
-  MOBILE_FLAVOR: production
+  MOBILE_API_BASE_URL: ${{ inputs.api_base_url || ((inputs.flavor || 'staging') == 'production' && 'https://mediguide.health.go.ug' || 'https://staging.mediguide.health.go.ug') }}
+  MOBILE_FLAVOR: ${{ inputs.flavor || 'staging' }}
   RELEASE_NOTES: ${{ inputs.release_notes }}
   MOBILE_BUILD_NUMBER: ${{ inputs.build_number }}
   FIREBASE_TESTER_GROUPS: ${{ inputs.tester_groups || vars.FIREBASE_TESTER_GROUPS || 'mediguide-testers' }}
   FIREBASE_TESTERS: ${{ vars.FIREBASE_TESTERS }}
   FIREBASE_ANDROID_APP_ID: ${{ vars.FIREBASE_ANDROID_APP_ID }}
   FIREBASE_IOS_APP_ID: ${{ vars.FIREBASE_IOS_APP_ID }}
-  ANDROID_PACKAGE_NAME: com.mediguide.ug
-  IOS_BUNDLE_IDENTIFIER: com.omarsoft.mediguide
+  ANDROID_PACKAGE_NAME: ${{ (inputs.flavor || 'staging') == 'production' && 'com.mediguide.ug' || 'com.mediguide.ug.staging' }}
+  IOS_BUNDLE_IDENTIFIER: ${{ (inputs.flavor || 'staging') == 'production' && 'com.omarsoft.mediguide' || 'com.omarsoft.mediguide.staging' }}
 
 jobs:
   android-firebase:
@@ -78,7 +99,7 @@ jobs:
       inputs.destination == 'firebase-android'
     runs-on: ubuntu-latest
     timeout-minutes: 90
-    environment: testing
+    environment: ${{ inputs.github_environment || 'staging' }}
     defaults:
       run:
         working-directory: user_app
@@ -143,6 +164,13 @@ jobs:
             exit 1
           fi
           printf '%s' "${FIREBASE_MOBILE_CONFIG_JSON}" > firebase-dart-defines.json
+          jq -e --arg flavor "${MOBILE_FLAVOR}" '
+            .MEDIGUIDE_FLAVOR == $flavor and
+            (.FIREBASE_PROJECT_ID | type == "string" and length > 0) and
+            (.FIREBASE_API_KEY | type == "string" and length > 0) and
+            (.FIREBASE_MESSAGING_SENDER_ID | type == "string" and length > 0) and
+            (.FIREBASE_ANDROID_APP_ID | type == "string" and length > 0)
+          ' firebase-dart-defines.json >/dev/null
           printf '%s' "${FIREBASE_APP_DISTRIBUTION_SERVICE_ACCOUNT_BASE64}" | base64 --decode > firebase-app-distribution.json
           printf '%s' "${ANDROID_UPLOAD_KEYSTORE_BASE64}" | base64 --decode > android/app/upload-keystore.jks
           test -s firebase-dart-defines.json
@@ -173,8 +201,8 @@ jobs:
         with:
           name: mediguide-firebase-android-${{ github.run_id }}
           path: |
-            user_app/build/app/outputs/flutter-apk/app-production-release.apk
-            user_app/build/app/outputs/bundle/productionRelease/app-production-release.aab
+            user_app/build/app/outputs/flutter-apk/app-${{ env.MOBILE_FLAVOR }}-release.apk
+            user_app/build/app/outputs/bundle/${{ env.MOBILE_FLAVOR }}Release/app-${{ env.MOBILE_FLAVOR }}-release.aab
           if-no-files-found: ignore
           retention-days: 30
           compression-level: 0
@@ -194,7 +222,7 @@ jobs:
       inputs.destination == 'testflight'
     runs-on: macos-latest
     timeout-minutes: 120
-    environment: testing
+    environment: ${{ inputs.github_environment || 'staging' }}
     defaults:
       run:
         working-directory: user_app
@@ -292,6 +320,13 @@ jobs:
           fi
 
           printf '%s' "${FIREBASE_MOBILE_CONFIG_JSON}" > firebase-dart-defines.json
+          jq -e --arg flavor "${MOBILE_FLAVOR}" '
+            .MEDIGUIDE_FLAVOR == $flavor and
+            (.FIREBASE_PROJECT_ID | type == "string" and length > 0) and
+            (.FIREBASE_API_KEY | type == "string" and length > 0) and
+            (.FIREBASE_MESSAGING_SENDER_ID | type == "string" and length > 0) and
+            (.FIREBASE_IOS_APP_ID | type == "string" and length > 0)
+          ' firebase-dart-defines.json >/dev/null
           printf '%s' "${IOS_DISTRIBUTION_CERTIFICATE_BASE64}" | base64 -D > ios/distribution.p12
           if [ -n "${FIREBASE_APP_DISTRIBUTION_SERVICE_ACCOUNT_BASE64:-}" ]; then
             printf '%s' "${FIREBASE_APP_DISTRIBUTION_SERVICE_ACCOUNT_BASE64}" | base64 -D > firebase-app-distribution.json

@@ -12,6 +12,13 @@ side. Production retains the identifiers already used by the stores.
 Production always disables the inspector overlay in application code, even if
 `MEDIGUIDE_DEBUG_TOOLS_ENABLED=true` is supplied accidentally.
 
+Staging is built in release mode and is otherwise an exact client replica of
+the hosted staging environment. It uses the staging API, staging Firebase
+project, staging native identifiers, staging signing profiles and staging
+Remote Config. The draggable diagnostic overlay is the only intentional
+application-level difference and remains enabled even if
+`MEDIGUIDE_DEBUG_TOOLS_ENABLED=false` is supplied accidentally.
+
 ## Run each environment
 
 Development uses the local API by default. Android rewrites loopback to the
@@ -43,6 +50,10 @@ Override the endpoint when required:
 ```bash
 --dart-define=MEDIGUIDE_API_BASE_URL=https://staging-api.example.org
 ```
+
+The normal staging endpoint is
+`https://staging.mediguide.health.go.ug`. Overrides are intended only for
+deliberate isolated testing and must not point staging binaries at production.
 
 Firebase configuration files contain client identifiers but must remain outside
 Git because every environment must map to the correct registered Firebase apps.
@@ -86,6 +97,20 @@ adding logging outside `NetworkInspectorInterceptor`; production builds do not
 construct or display an inspector UI.
 
 ## Release behavior
+
+Alpha and beta workflows select:
+
+```text
+--flavor staging
+--target lib/main_staging.dart
+MEDIGUIDE_API_BASE_URL=https://staging.mediguide.health.go.ug
+MEDIGUIDE_DEBUG_TOOLS_ENABLED=true
+```
+
+They read Firebase and signing configuration from the protected `staging`
+GitHub Environment and produce `.staging` Android/iOS application identities.
+The workflow rejects a Firebase Dart configuration whose `MEDIGUIDE_FLAVOR`
+is not `staging`.
 
 GitHub release and Fastlane workflows always use:
 

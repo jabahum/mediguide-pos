@@ -85,4 +85,17 @@ void main() {
     expect(find.text('PRODUCTION'), findsNothing);
     expect(find.text('Application'), findsOneWidget);
   });
+
+  test(
+    'staging retains debug tools even when a build define disables them',
+    () {
+      AppConfig.configure(Flavor.staging, debugToolsEnabled: false);
+
+      expect(AppConfig.current.debugToolsEnabled, isTrue);
+      expect(
+        AppConfig.current.apiBaseUrl,
+        'https://staging.mediguide.health.go.ug',
+      );
+    },
+  );
 }

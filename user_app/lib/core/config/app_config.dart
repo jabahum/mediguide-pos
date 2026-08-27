@@ -34,9 +34,14 @@ final class AppConfig {
               : Environment.defaultApiBaseUrl(flavor),
           defaultTargetPlatform,
         ),
-        debugToolsEnabled:
-            flavor != Flavor.production &&
-            (debugToolsEnabled ?? Environment.configuredDebugToolsEnabled),
+        // Staging is a release-mode replica of the hosted staging platform,
+        // with the diagnostic overlay as its sole intentional UI difference.
+        debugToolsEnabled: switch (flavor) {
+          Flavor.production => false,
+          Flavor.staging => true,
+          Flavor.development =>
+            debugToolsEnabled ?? Environment.configuredDebugToolsEnabled,
+        },
       );
 }
 

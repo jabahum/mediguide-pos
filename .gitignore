@@ -32,6 +32,7 @@ guidelines-docs
 __pycache__/
 *.pyc
 infra/production.env
+infra/staging.env
 infra/release.env
 infra/backups/
 artifacts/clinical-tools-retirement-rehearsal/
@@ -47,3 +48,10 @@ user_app/ios/*.mobileprovision
 user_app/ios/AuthKey_*.p8
 user_app/ios/ExportOptions*.plist
 mediguide/*.json
+mediguide/*.p12
+mediguide/*.mobileprovision
+mediguide/*.p8
+mediguide/*.plist
+mediguide/*.jks
+mediguide/*.pfx
+mediguide/*.base64

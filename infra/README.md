@@ -17,8 +17,24 @@ Guidelines Platform.
 - `docker-compose.dev.yml` adds local database ports and replaces the
   Guidelines service with Vite, source mounting, and hot reload.
 - `development.env` contains safe local defaults.
+- `staging.env.example` documents the staging values. Copy it to the ignored
+  `staging.env` and replace all placeholders.
 - `production.env.example` documents production variables. Copy it to the
   ignored `production.env` and replace every placeholder before deployment.
+
+All three files intentionally expose the same variable names. Values and
+credentials remain environment-specific; blank secret values must be injected
+from the shell, the protected CI environment, or the deployment secret. Check
+the templates, any existing ignored environment files, and Compose references
+without printing secret values:
+
+```bash
+make env-check
+```
+
+When adding a Compose variable, add it to all three templates in the same
+change. `FIREBASE_SERVICE_ACCOUNT_BASE64` must contain the one-line encoded
+JSON contents at runtime, never a filename.
 
 `APP_ENV` is also the source of truth for the backend Gin runtime mode. The API
 uses Gin debug mode for `development`, test mode for `test`, and release mode

@@ -105,6 +105,11 @@ docker compose \
   -f infra/docker-compose.yml \
   -f infra/docker-compose.dev.yml \
   config --quiet
+bash scripts/check-infra-env-parity.sh
+docker compose \
+  --env-file infra/staging.env.example \
+  -f infra/docker-compose.yml \
+  config --quiet
 docker compose \
   --env-file infra/production.env.example \
   -f infra/docker-compose.yml \

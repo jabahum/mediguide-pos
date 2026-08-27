@@ -41,6 +41,10 @@ make ps
 ```
 
 The committed `infra/development.env` contains safe local defaults.
+`infra/staging.env.example` and `infra/production.env.example` use the same
+variable schema with environment-specific placeholders. Run `make env-check`
+after adding or renaming an infrastructure variable; the check also validates
+ignored local staging and production files when they exist.
 
 Default local endpoints:
 
@@ -56,6 +60,7 @@ Useful commands:
 
 ```bash
 make logs                 # follow all containers
+make env-check            # verify environment and Compose variable parity
 make guidelines-logs      # follow the public frontend
 make down                 # stop and preserve data
 make reset                # destructive: stop and delete development volumes
@@ -117,6 +122,92 @@ The abbreviated setup is:
 
 Follow the complete copy-and-paste process in
 [`docs/firebase-mobile-distribution.md`](docs/firebase-mobile-distribution.md).
+
+### Backend Firebase credentials
+
+The API and notification worker use a backend-only service account; this is
+different from the mobile client configuration and the App Distribution CI
+account. Create one service account per Firebase environment and grant only:
+
+- Firebase Cloud Messaging API Admin (`roles/firebasecloudmessaging.admin`);
+- Firebase Remote Config Admin (`roles/cloudconfig.admin`).
+
+Download its JSON key to an approved location outside the repository. Validate
+the path before encoding it; an empty `$key_file` produces `Can't open "" for
+reading`:
+
+```bash
+key_file="/secure/mediguide/mediguide-staging-backend.json"
+
+test -r "$key_file" || {
+  echo "Service-account file not found: $key_file"
+  exit 1
+}
+
+jq -e '
+  .type == "service_account" and
+  (.project_id | length > 0) and
+  (.client_email | length > 0) and
+  (.private_key | length > 0)
+' "$key_file"
+
+openssl base64 -A \
+  -in "$key_file" \
+  -out "/secure/mediguide/mediguide-staging-backend.base64"
+```
+
+Use `key_file`, without a backslash before the underscore, and do not leave a
+trailing `\` on the final command line. Never print, commit or paste the JSON or
+base64 value into an issue or chat. `FIREBASE_SERVICE_ACCOUNT_BASE64` expects
+the encoded contents, not a filename or path. For a local Compose session,
+inject the value without storing it in the tracked development environment:
+
+```bash
+export FIREBASE_SERVICE_ACCOUNT_BASE64="$(tr -d '\r\n' \
+  < "$HOME/.config/mediguide/firebase/mediguide-development-backend.base64")"
+
+docker compose \
+  --env-file infra/development.env \
+  -f infra/docker-compose.yml \
+  -f infra/docker-compose.dev.yml \
+  up -d --no-deps --force-recreate api notification-worker
+
+unset FIREBASE_SERVICE_ACCOUNT_BASE64
+```
+
+Set the matching values in the protected Compose environment:
+
+```dotenv
+FIREBASE_PROJECT_ID=mediguide-staging
+FIREBASE_SERVICE_ACCOUNT_BASE64=BASE64_JSON_HERE
+FIREBASE_DEVICE_STALE_DAYS=90
+```
+
+`FIREBASE_PROJECT_ID` must exactly match `project_id` inside the decoded JSON.
+Production values belong in the ignored `infra/production.env`; upload the
+complete file to the protected GitHub Environment after preserving every other
+required setting:
+
+```bash
+gh secret set PRODUCTION_ENV_FILE \
+  --repo mohuganda/mediguide-pos \
+  --env production \
+  < infra/production.env
+```
+
+Recreate the services after changing credentials because a container restart
+does not reload environment variables:
+
+```bash
+docker compose \
+  --env-file infra/production.env \
+  -f infra/docker-compose.yml \
+  up -d --no-deps --force-recreate api notification-worker
+```
+
+The full least-privilege setup, local-development flow, APNs configuration,
+GitHub secrets and verification checklist remain in
+[`docs/firebase-mobile-distribution.md`](docs/firebase-mobile-distribution.md#backend-firebase-admin-setup).
 
 ## Quality checks
 

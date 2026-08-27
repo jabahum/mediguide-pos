@@ -24,6 +24,7 @@ help:
 		"  logs             Tail development stack logs" \
 		"  guidelines-logs  Tail the integrated guidelines service" \
 		"  config           Render the merged development configuration" \
+		"  env-check        Verify development, staging, production, and Compose variable parity" \
 		"  prod-up          Pull, migrate, and start production with health waiting" \
 		"  prod-migrate     Apply migrations with the configured production API image" \
 		"  prod-down        Stop the production stack and preserve data" \
@@ -83,6 +84,10 @@ logs:
 .PHONY: config
 config:
 	$(DOCKER_COMPOSE) config
+
+.PHONY: env-check
+env-check:
+	bash scripts/check-infra-env-parity.sh
 
 .PHONY: guidelines-logs
 guidelines-logs:

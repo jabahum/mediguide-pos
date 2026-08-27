@@ -46,3 +46,4 @@ user_app/ios/*.p12
 user_app/ios/*.mobileprovision
 user_app/ios/AuthKey_*.p8
 user_app/ios/ExportOptions*.plist
+mediguide/*.json

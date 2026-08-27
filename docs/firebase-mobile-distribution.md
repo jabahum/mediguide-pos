@@ -29,23 +29,76 @@ Use separate Firebase projects for development, staging and production. This
 keeps test notification tokens, Analytics audiences and Remote Config changes
 away from production users.
 
-| Firebase project | Android package | iOS bundle ID |
-|---|---|---|
-| Development | `com.mediguide.ug.dev` | `com.omarsoft.mediguide.dev` |
-| Staging | `com.mediguide.ug.staging` | `com.omarsoft.mediguide.staging` |
-| Production | `com.mediguide.ug` | `com.omarsoft.mediguide` |
+| Environment | Suggested Firebase project ID | Android package | iOS bundle ID |
+|---|---|---|---|
+| Development | `mediguide-development` | `com.mediguide.ug.dev` | `com.omarsoft.mediguide.dev` |
+| Staging | `mediguide-staging` | `com.mediguide.ug.staging` | `com.omarsoft.mediguide.staging` |
+| Production | `mediguide-production` | `com.mediguide.ug` | `com.omarsoft.mediguide` |
+
+Firebase project IDs are globally unique. Keep the environment names even if a
+suffix is required, and record the final project IDs because they are supplied
+to both the app and backend.
+
+### Create the three projects
+
+For each row in the table:
+
+1. Open the Firebase Console and select **Create a project**.
+2. Enter the suggested project name or another clearly environment-specific
+   name.
+3. Enable Google Analytics. Analytics supports Remote Config targeting and
+   keeps each environment's audiences separate.
+4. Complete project creation and open **Project settings → General**.
+
+Do not register a single generic **Flutter** app. Flutter is the application
+framework, while Firebase identifies installed builds through their native
+Android package names and Apple bundle IDs. Every Firebase project must contain
+two app registrations: one **Android** app and one **Apple/iOS** app. Across the
+three projects this produces six Firebase app records.
+
+### Register the Android app
 
 For each Firebase project:
 
-1. Open **Project settings → General** and add one Android application using the
-   exact, case-sensitive package ID from the table.
-2. Add one Apple application using the exact bundle ID.
-3. Record the project ID, Web API key, messaging sender ID, Android Firebase App
-   ID and iOS Firebase App ID.
-4. Enable Google Analytics when creating the project. It is needed for Remote
-   Config audience and user-property targeting.
-5. Open **Remote Config**, **Cloud Messaging**, **Analytics**, and
-   **App Distribution** once so each product is initialized.
+1. Select **Add app → Android**.
+2. Enter the exact, case-sensitive Android package from the table. Firebase does
+   not allow the registered package name to be changed later.
+3. Use an environment-specific nickname such as `MediGuide Development
+   Android`, `MediGuide Staging Android`, or `MediGuide Production Android`.
+4. Register the app and record its Firebase App ID, which resembles
+   `1:1234567890:android:abcdef123456`.
+5. SHA certificate fingerprints are not required for the current FCM, Remote
+   Config and Analytics integration. Add the appropriate debug/upload/store
+   fingerprints before introducing Firebase Authentication, App Check or other
+   products that require them.
+
+### Register the Apple/iOS app
+
+For each Firebase project:
+
+1. Return to **Project settings → General** and select **Add app → Apple**.
+2. Enter the exact iOS bundle ID from the table.
+3. Use the matching environment-specific nickname.
+4. Register the app and record its Firebase App ID, which resembles
+   `1:1234567890:ios:abcdef123456`.
+5. The App Store ID and Apple team ID may be added later, but the Apple
+   Developer App ID and provisioning profiles must use the same bundle ID.
+
+### Initialize Firebase products
+
+In each Firebase project, open **Remote Config**, **Cloud Messaging**,
+**Analytics**, and **App Distribution** once so each product is initialized.
+Create separate tester groups and Remote Config templates in each project;
+never reuse development notification tokens or experimental configuration in
+production.
+
+From **Project settings → General**, record all values needed by MediGuide:
+
+- final Firebase project ID;
+- Web API key;
+- project number/messaging sender ID;
+- Android Firebase App ID;
+- iOS Firebase App ID.
 
 This repository initializes Firebase programmatically through
 `user_app/lib/core/config/firebase_config.dart`; do not commit generated
@@ -60,6 +113,18 @@ whose native IDs are `com.mediguide.ug` and `com.omarsoft.mediguide`. Those may
 be the production Firebase apps or duplicate production-ID app registrations in
 a dedicated distribution project. Prefer the dedicated project if prerelease
 Remote Config or Analytics must be isolated from production.
+
+Registering all six Firebase apps does not by itself change CI. The reusable
+`.github/workflows/mobile-distribution.yml` currently sets
+`MOBILE_FLAVOR=production` and uses the `testing` GitHub Environment. Until that
+workflow accepts flavor and GitHub Environment inputs, alpha/beta distribution
+continues to publish the production native bundle. The intended mapping is:
+
+| Delivery channel | GitHub Environment | Flutter flavor |
+|---|---|---|
+| Development/manual testing | `development` | `development` |
+| Alpha and beta testing | `staging` | `staging` |
+| Stable store release | `production` | `production` |
 
 The current FlutterFire packages require iOS 15 or later. The Podfile and Xcode
 project intentionally use an iOS 15 deployment target.
@@ -93,14 +158,25 @@ Set `MEDIGUIDE_FLAVOR` inside each file to `development`, `staging`, or
 `production`. It selects the corresponding native bundle ID in Firebase
 options; it must agree with `--flavor` and the selected entry point.
 
-Run a configured flavor:
+Run each configured flavor with its matching entry point and configuration:
 
 ```bash
 cd user_app
+
+fvm flutter run \
+  --flavor development \
+  --target lib/main_development.dart \
+  --dart-define-from-file=/secure/mediguide/firebase-development.json
+
 fvm flutter run \
   --flavor staging \
   --target lib/main_staging.dart \
   --dart-define-from-file=/secure/mediguide/firebase-staging.json
+
+fvm flutter run \
+  --flavor production \
+  --target lib/main_production.dart \
+  --dart-define-from-file=/secure/mediguide/firebase-production.json
 ```
 
 If any required value is absent, the app intentionally starts with Firebase
@@ -217,14 +293,53 @@ Config writes are permission protected and rate limited.
 
 In the Firebase App Distribution console, create these group aliases:
 
+- `mediguide-development-testers`
 - `mediguide-alpha-testers`
 - `mediguide-beta-testers`
 - `mediguide-testers`
 
-Create a separate CI service account with the **Firebase App Distribution
-Admin** role. This credential is for build delivery only; do not reuse the
-backend Admin service account. Download its JSON key, store it as a GitHub
-secret, and remove the local copy after validation.
+Create a separate CI service account in each Firebase/Google Cloud project with
+the **Firebase App Distribution Admin** role. These credentials are for build
+delivery only; do not reuse a backend Admin service account. Download each JSON
+key once, store it in the matching protected GitHub Environment, and remove the
+local copy after validation.
+
+Prepare the environment names that will eventually map one-to-one to the three
+native flavors. Always specify the repository because this checkout can have
+multiple remotes:
+
+```bash
+for environment in development staging production; do
+  gh api --method PUT \
+    "repos/mohuganda/mediguide-pos/environments/${environment}"
+done
+```
+
+For `development` or `staging`, replace `ENVIRONMENT`, the app IDs, file paths
+and group with matching values, then run:
+
+```bash
+gh variable set FIREBASE_ANDROID_APP_ID \
+  --repo mohuganda/mediguide-pos --env ENVIRONMENT \
+  --body '1:PROJECT_NUMBER:android:FIREBASE_APP_ID'
+gh variable set FIREBASE_IOS_APP_ID \
+  --repo mohuganda/mediguide-pos --env ENVIRONMENT \
+  --body '1:PROJECT_NUMBER:ios:FIREBASE_APP_ID'
+gh variable set FIREBASE_TESTER_GROUPS \
+  --repo mohuganda/mediguide-pos --env ENVIRONMENT \
+  --body 'MATCHING-GROUP-ALIAS'
+
+gh secret set FIREBASE_MOBILE_CONFIG_JSON \
+  --repo mohuganda/mediguide-pos --env ENVIRONMENT \
+  < /secure/mediguide/firebase-ENVIRONMENT.json
+openssl base64 -A \
+  -in /secure/mediguide/firebase-ENVIRONMENT-app-distribution.json | \
+  gh secret set FIREBASE_APP_DISTRIBUTION_SERVICE_ACCOUNT_BASE64 \
+    --repo mohuganda/mediguide-pos --env ENVIRONMENT
+```
+
+`FIREBASE_ANDROID_APP_ID` and `FIREBASE_IOS_APP_ID` above are Firebase App IDs,
+not the Android package name or iOS bundle ID.
 
 Configure the protected `testing` GitHub Environment. Always specify the
 repository because this checkout can have multiple remotes:
@@ -392,6 +507,24 @@ bundle exec fastlane android firebase apk:/absolute/path/app-release.apk
 bundle exec fastlane ios firebase ipa:/absolute/path/firebase.ipa
 bundle exec fastlane ios upload_testflight ipa:/absolute/path/testflight.ipa
 ```
+
+## Environment verification checklist
+
+Complete this checklist separately for development, staging and production:
+
+1. Install the Android and iOS builds and confirm the expected launcher icon,
+   display name, package/bundle ID and Firebase project in **Build Config**.
+2. Sign in and confirm the installation registers successfully through
+   `POST /api/v2/firebase/devices` against the matching backend environment.
+3. Send an FCM test notification from that Firebase project's console and test
+   foreground, background and terminated application behavior on a physical
+   device.
+4. Publish a harmless Remote Config change, fetch and activate it, and confirm
+   that it does not appear in either of the other environments.
+5. Upload Android and iOS builds to App Distribution and confirm that only the
+   intended environment's tester group receives access.
+6. Verify `/api/v2/firebase/status` reports the same project ID used by the
+   mobile build before enabling campaign delivery.
 
 ## Troubleshooting
 

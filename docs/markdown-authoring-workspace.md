@@ -223,6 +223,10 @@ invalid Markdown may still be saved so work is not lost, but blocking issues
 prevent regeneration/publication. Reports include stable codes, severity,
 messages and source ranges.
 
+For code-by-code correction guidance covering both Markdown validation and the
+post-regeneration publication checks, see
+[`guideline-validation-troubleshooting.md`](guideline-validation-troubleshooting.md).
+
 The API accepts `.md` and `.markdown` UTF-8 source files and PDFs. Images are
 limited to PNG, JPEG, GIF and WebP; SVG and executable content are rejected.
 The deployment-wide source upload ceiling is `MAX_UPLOAD_MB` (100 MiB by

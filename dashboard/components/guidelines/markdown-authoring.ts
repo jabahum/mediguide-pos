@@ -105,38 +105,38 @@ export const markdownTemplates: MarkdownTemplate[] = [
 
 export function markdownHeadings(markdown: string): MarkdownHeading[] {
   const lines = markdown.split("\n")
-  const headings: MarkdownHeading[] = []
-  let offset = 0
+  const lineOffsets = new Array<number>(lines.length + 1).fill(0)
+  const wordPrefixes = new Array<number>(lines.length + 1).fill(0)
+  const matches: Array<{ index: number; line: string; match: RegExpExecArray }> = []
+
   for (let index = 0; index < lines.length; index += 1) {
     const line = lines[index]
     const match = /^(#{1,6})\s+(.+?)\s*#*\s*$/u.exec(line)
-    if (match) {
-      const nextHeading = lines.slice(index + 1).findIndex((candidate) => /^#{1,6}\s+/u.test(candidate))
-      const end = nextHeading < 0 ? lines.length : index + 1 + nextHeading
-      const words = lines.slice(index + 1, end).join(" ").trim().split(/\s+/u).filter(Boolean).length
-      const parents = headings.filter((heading) => heading.level < match[1].length)
-      const breadcrumb: string[] = []
-      let parentLevel = match[1].length
-      for (let parentIndex = parents.length - 1; parentIndex >= 0; parentIndex -= 1) {
-        const parent = parents[parentIndex]
-        if (parent.level < parentLevel) {
-          breadcrumb.unshift(parent.text)
-          parentLevel = parent.level
-        }
-      }
-      headings.push({
-        id: headingSlug(match[2]),
-        text: match[2],
-        level: match[1].length,
-        line: index + 1,
-        from: offset,
-        to: offset + line.length,
-        words,
-        end: lines.slice(0, end).reduce((total, value) => total + value.length + 1, 0),
-        breadcrumb: [...breadcrumb, match[2]],
-      })
+    if (match) matches.push({ index, line, match })
+    lineOffsets[index + 1] = lineOffsets[index] + line.length + 1
+    wordPrefixes[index + 1] = wordPrefixes[index] + (line.trim() ? line.trim().split(/\s+/u).length : 0)
+  }
+
+  const headings: MarkdownHeading[] = []
+  const ancestors: MarkdownHeading[] = []
+  for (let headingIndex = 0; headingIndex < matches.length; headingIndex += 1) {
+    const { index, line, match } = matches[headingIndex]
+    const level = match[1].length
+    const endLine = matches[headingIndex + 1]?.index ?? lines.length
+    while (ancestors.length > 0 && ancestors[ancestors.length - 1].level >= level) ancestors.pop()
+    const heading: MarkdownHeading = {
+      id: headingSlug(match[2]),
+      text: match[2],
+      level,
+      line: index + 1,
+      from: lineOffsets[index],
+      to: lineOffsets[index] + line.length,
+      words: wordPrefixes[endLine] - wordPrefixes[index + 1],
+      end: lineOffsets[endLine],
+      breadcrumb: [...ancestors.map((ancestor) => ancestor.text), match[2]],
     }
-    offset += line.length + 1
+    headings.push(heading)
+    ancestors.push(heading)
   }
   return headings
 }

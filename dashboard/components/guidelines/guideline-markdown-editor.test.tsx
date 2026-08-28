@@ -150,6 +150,25 @@ describe("GuidelineMarkdownEditor", () => {
     ).not.toBeInTheDocument()
   })
 
+  it("opens large drafts in edit mode without mounting the full preview", () => {
+    const largeContent = `# Large guideline\n\n${"Reviewed clinical content.\n".repeat(3_500)}`
+
+    render(
+      <GuidelineMarkdownEditor
+        versionId="version-large"
+        documentTitle="Large guideline"
+        versionLabel="1.0"
+        initialContent={largeContent}
+        editable
+        published={false}
+      />,
+    )
+
+    expect(screen.getByRole("textbox", { name: "Markdown source" })).toBeInTheDocument()
+    expect(screen.queryByRole("article", { name: "Rendered Markdown preview" })).not.toBeInTheDocument()
+    expect(screen.getByRole("tab", { name: "Edit" })).toHaveAttribute("aria-selected", "true")
+  })
+
   it("supports the keyboard save shortcut", async () => {
     const saveDraft = vi
       .spyOn(GuidelineMarkdownService, "saveDraft")

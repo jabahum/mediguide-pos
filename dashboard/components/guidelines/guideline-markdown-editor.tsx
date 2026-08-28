@@ -229,7 +229,7 @@ export function GuidelineMarkdownEditor({
   const [content, setContent] = React.useState(initialContent)
   const [savedContent, setSavedContent] = React.useState(initialContent)
   const [draft, setDraft] = React.useState<MarkdownDraft | null>(initialDraft)
-  const [mode, setMode] = React.useState<MarkdownViewMode>(editable ? "split" : "preview")
+  const [mode, setMode] = React.useState<MarkdownViewMode>(editable ? (initialContent.length >= 80_000 ? "edit" : "split") : "preview")
   const [saving, setSaving] = React.useState(false)
   const [saveError, setSaveError] = React.useState<string | null>(null)
   const [lastSavedAt, setLastSavedAt] = React.useState<Date | null>(null)
@@ -311,6 +311,8 @@ export function GuidelineMarkdownEditor({
   }, [documentId, initialDraft?.revision.document_id, versionId])
   const dirty = canEdit && content !== savedContent
   const headings = React.useMemo(() => markdownHeadings(content), [content])
+  const headingsRef = React.useRef(headings)
+  headingsRef.current = headings
   const localIssues = React.useMemo(() => validateMarkdown(content), [content])
   const issues = !dirty && serverIssues.length > 0 ? serverIssues : localIssues
   const displayedIssues = React.useMemo(() => issues.slice(0, 150), [issues])
@@ -821,7 +823,7 @@ export function GuidelineMarkdownEditor({
     EditorView.updateListener.of((update) => {
       if (!update.selectionSet && !update.docChanged) return
       const cursor = update.state.selection.main.head
-      const next = markdownHeadings(update.state.doc.toString()).findLastIndex((heading) => heading.from <= cursor)
+      const next = headingsRef.current.findLastIndex((heading) => heading.from <= cursor)
       setActiveHeading(Math.max(0, next))
     }),
     ...(preferences.lineWrapping ? [EditorView.lineWrapping] : []),

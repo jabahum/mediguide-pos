@@ -38,6 +38,20 @@ describe("Markdown authoring utilities", () => {
     ])
   })
 
+  it("indexes large clinical documents without changing heading boundaries", () => {
+    const markdown = Array.from({ length: 2_000 }, (_, index) => (
+      `## Section ${index + 1}\n\nClinical recommendation ${index + 1}.`
+    )).join("\n\n")
+
+    const headings = markdownHeadings(`# Guideline\n\n${markdown}`)
+
+    expect(headings).toHaveLength(2_001)
+    expect(headings[0]).toEqual(expect.objectContaining({ text: "Guideline", words: 0, breadcrumb: ["Guideline"] }))
+    expect(headings[1]).toEqual(expect.objectContaining({ text: "Section 1", words: 3, breadcrumb: ["Guideline", "Section 1"] }))
+    expect(headings.at(-1)).toEqual(expect.objectContaining({ text: "Section 2000", words: 3 }))
+    expect(headings.at(-1)?.end).toBe(markdown.length + "# Guideline\n\n".length + 1)
+  })
+
   it("blocks executable Markdown and detects structural/callout errors", () => {
     const issues = validateMarkdown(
       "## Assessment\n\n#### Details\n\n<script>alert(1)</script>\n\n:::warning\nReview.",

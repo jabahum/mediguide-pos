@@ -56,12 +56,13 @@ export function MarkdownPreviewSurface({
   className,
   assets = [],
 }: MarkdownPreviewSurfaceProps) {
-  const headings = markdownHeadings(content)
   const originalPDF = assets.find((asset) => asset.type === "original_pdf" && asset.url)
 
   if (presentation === "rendered") {
     return <MarkdownPreview content={content} className={className} assets={assets} />
   }
+
+  const headings = markdownHeadings(content)
 
   if (presentation === "public-reader") {
     return (

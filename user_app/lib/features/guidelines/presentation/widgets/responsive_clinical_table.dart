@@ -119,15 +119,18 @@ class _TableRowCards extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    for (var columnIndex = 0;
-                        columnIndex < columns.length;
-                        columnIndex++) ...[
+                    for (
+                      var columnIndex = 0;
+                      columnIndex < columns.length;
+                      columnIndex++
+                    ) ...[
                       Text(
                         columns[columnIndex],
-                        style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                          color: colors.onSurfaceVariant,
-                          fontWeight: FontWeight.w700,
-                        ),
+                        style: Theme.of(context).textTheme.labelMedium
+                            ?.copyWith(
+                              color: colors.onSurfaceVariant,
+                              fontWeight: FontWeight.w700,
+                            ),
                       ),
                       const SizedBox(height: AppSpacing.xs),
                       SelectableText(
@@ -164,9 +167,9 @@ class _TableCell extends StatelessWidget {
     child: SelectableText(
       text,
       style: isHeader
-          ? Theme.of(context).textTheme.labelMedium?.copyWith(
-              fontWeight: FontWeight.w800,
-            )
+          ? Theme.of(
+              context,
+            ).textTheme.labelMedium?.copyWith(fontWeight: FontWeight.w800)
           : Theme.of(context).textTheme.bodySmall,
     ),
   );

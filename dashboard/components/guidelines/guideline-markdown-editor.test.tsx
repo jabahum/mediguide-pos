@@ -169,6 +169,32 @@ describe("GuidelineMarkdownEditor", () => {
     expect(screen.getByRole("tab", { name: "Edit" })).toHaveAttribute("aria-selected", "true")
   })
 
+  it("opens review and activity when an older API returns null empty lists", async () => {
+    const user = userEvent.setup()
+    vi.spyOn(GuidelineMarkdownService, "reviewAssignments").mockResolvedValue(null as never)
+    vi.spyOn(GuidelineMarkdownService, "reviewerCandidates").mockResolvedValue(null as never)
+    vi.spyOn(GuidelineMarkdownService, "editorComments").mockResolvedValue(null as never)
+    vi.spyOn(GuidelineMarkdownService, "activity").mockResolvedValue(null as never)
+
+    render(
+      <GuidelineMarkdownEditor
+        versionId="version-empty-review"
+        documentTitle="Test guideline"
+        versionLabel="1.0"
+        initialContent="# Reviewable guideline"
+        editable
+        published={false}
+      />,
+    )
+
+    await user.click(screen.getByRole("button", { name: "Review & activity" }))
+
+    const dialog = await screen.findByRole("dialog", { name: "Review and activity" })
+    expect(within(dialog).getByText("No reviewers assigned.")).toBeInTheDocument()
+    expect(within(dialog).getByText("No review comments.")).toBeInTheDocument()
+    expect(within(dialog).getByText("No editorial activity recorded.")).toBeInTheDocument()
+  })
+
   it("supports the keyboard save shortcut", async () => {
     const saveDraft = vi
       .spyOn(GuidelineMarkdownService, "saveDraft")

@@ -92,7 +92,7 @@ func userCanReviewGuidelines(user models.User) bool {
 }
 
 func (s GuidelineService) ListGuidelineReviewAssignments(versionID uuid.UUID) ([]GuidelineReviewAssignmentView, error) {
-	var rows []GuidelineReviewAssignmentView
+	rows := make([]GuidelineReviewAssignmentView, 0)
 	err := s.DB.Table("guideline_review_assignments a").
 		Select("a.id, a.version_id, a.reviewer_id, u.name AS reviewer_name, u.email AS reviewer_email, a.assigned_by, a.status, a.due_at, a.completed_at, a.created_at, a.updated_at").
 		Joins("JOIN users u ON u.id = a.reviewer_id").
@@ -179,7 +179,7 @@ func (s GuidelineService) ListGuidelineEditorComments(versionID uuid.UUID, resol
 	if resolved != nil {
 		query = query.Where("resolved = ?", *resolved)
 	}
-	var rows []models.GuidelineEditorComment
+	rows := make([]models.GuidelineEditorComment, 0)
 	err := query.Order("created_at asc, id asc").Find(&rows).Error
 	return rows, err
 }
@@ -256,7 +256,7 @@ func (s GuidelineService) GuidelineActivity(versionID uuid.UUID, limit int) ([]m
 	if err := s.DB.Select("id").First(&version, "id = ?", versionID).Error; err != nil {
 		return nil, err
 	}
-	var rows []models.AuditLog
+	rows := make([]models.AuditLog, 0)
 	err := s.DB.Where("action LIKE ? AND (entity_id = ? OR metadata_json::jsonb ->> 'version_id' = ?)", "guideline.%", versionID.String(), versionID.String()).Order("created_at desc").Limit(limit).Find(&rows).Error
 	return rows, err
 }

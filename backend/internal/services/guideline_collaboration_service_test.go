@@ -59,3 +59,19 @@ func TestGuidelineCollaborationScopesAssignmentsAndCommentsToVersion(t *testing.
 		t.Fatalf("version-scoped comments: rows=%d err=%v", len(rows), err)
 	}
 }
+
+func TestGuidelineCollaborationEmptyListsAreJSONArrays(t *testing.T) {
+	service, version, _ := markdownServiceFixture(t)
+	if err := service.DB.AutoMigrate(&models.Role{}, &models.Permission{}); err != nil {
+		t.Fatal(err)
+	}
+
+	assignments, err := service.ListGuidelineReviewAssignments(version.ID)
+	if err != nil || assignments == nil {
+		t.Fatalf("assignments must be a non-nil empty list: rows=%#v err=%v", assignments, err)
+	}
+	comments, err := service.ListGuidelineEditorComments(version.ID, nil)
+	if err != nil || comments == nil {
+		t.Fatalf("comments must be a non-nil empty list: rows=%#v err=%v", comments, err)
+	}
+}

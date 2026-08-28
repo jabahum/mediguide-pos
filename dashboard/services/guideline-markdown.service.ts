@@ -10,6 +10,10 @@ import type {
 import type { GuidelineVersionRecord } from "@/services/guideline-documents.service";
 import type { MarkdownAnchorMetadata } from "@/components/guidelines/markdown-authoring";
 
+function arrayOrEmpty<T>(value: T[] | null | undefined): T[] {
+  return Array.isArray(value) ? value : [];
+}
+
 export type MarkdownRevisionSource =
   | "blank"
   | "template"
@@ -446,9 +450,9 @@ export class GuidelineMarkdownService {
     versionId: string,
     jobId: string,
   ): Promise<RegenerationReviewComment[]> {
-    return getBackendClient().request<RegenerationReviewComment[]>(
+    return arrayOrEmpty(await getBackendClient().request<RegenerationReviewComment[] | null>(
       `/api/v2/guideline-versions/${versionId}/regeneration-reviews/${jobId}/comments`,
-    );
+    ));
   }
   static async addReviewComment(
     versionId: string,
@@ -464,17 +468,17 @@ export class GuidelineMarkdownService {
   static async reviewAssignments(
     versionId: string,
   ): Promise<GuidelineReviewAssignment[]> {
-    return getBackendClient().request<GuidelineReviewAssignment[]>(
+    return arrayOrEmpty(await getBackendClient().request<GuidelineReviewAssignment[] | null>(
       `/api/v2/guideline-versions/${versionId}/reviewers`,
-    );
+    ));
   }
   static async reviewerCandidates(
     search = "",
   ): Promise<GuidelineReviewerCandidate[]> {
-    return getBackendClient().request<GuidelineReviewerCandidate[]>(
+    return arrayOrEmpty(await getBackendClient().request<GuidelineReviewerCandidate[] | null>(
       "/api/v2/guideline-reviewers",
       { query: { search: search || undefined } },
-    );
+    ));
   }
   static async assignReviewer(
     versionId: string,
@@ -506,10 +510,10 @@ export class GuidelineMarkdownService {
     versionId: string,
     resolved?: boolean,
   ): Promise<GuidelineEditorComment[]> {
-    return getBackendClient().request<GuidelineEditorComment[]>(
+    return arrayOrEmpty(await getBackendClient().request<GuidelineEditorComment[] | null>(
       `/api/v2/guideline-versions/${versionId}/review-comments`,
       { query: { resolved } },
-    );
+    ));
   }
   static async addEditorComment(
     versionId: string,
@@ -542,10 +546,10 @@ export class GuidelineMarkdownService {
     );
   }
   static async activity(versionId: string): Promise<GuidelineActivityItem[]> {
-    return getBackendClient().request<GuidelineActivityItem[]>(
+    return arrayOrEmpty(await getBackendClient().request<GuidelineActivityItem[] | null>(
       `/api/v2/guideline-versions/${versionId}/activity`,
       { query: { limit: 100 } },
-    );
+    ));
   }
 
   static async load(versionId: string): Promise<string> {

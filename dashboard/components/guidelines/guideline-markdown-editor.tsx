@@ -628,10 +628,12 @@ export function GuidelineMarkdownEditor({
         GuidelineMarkdownService.editorComments(versionId),
         GuidelineMarkdownService.activity(versionId),
       ])
-      setAssignments(nextAssignments)
-      setReviewerCandidates(nextReviewers)
-      setEditorComments(nextComments)
-      setActivity(nextActivity)
+      // Older API deployments serialized empty Go slices as `data: null`.
+      // Keep the review workspace resilient while those deployments roll forward.
+      setAssignments(Array.isArray(nextAssignments) ? nextAssignments : [])
+      setReviewerCandidates(Array.isArray(nextReviewers) ? nextReviewers : [])
+      setEditorComments(Array.isArray(nextComments) ? nextComments : [])
+      setActivity(Array.isArray(nextActivity) ? nextActivity : [])
       setCollaborationOpen(true)
     } catch (error) {
       showToast.error("Review workspace unavailable", error instanceof Error ? error.message : "Could not load collaboration data")

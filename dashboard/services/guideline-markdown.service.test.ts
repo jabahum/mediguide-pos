@@ -23,4 +23,20 @@ describe("GuidelineMarkdownService regeneration workflow", () => {
     expect(review.status).toBe("rejected")
     expect(fetchMock).toHaveBeenNthCalledWith(2,"http://127.0.0.1:8080/api/v2/guideline-versions/version/regeneration-reviews/job/reject",expect.objectContaining({method:"POST",body:JSON.stringify({comment:"Incorrect hierarchy"})}))
   })
+
+  it("normalizes empty collaboration payloads from older APIs", async () => {
+    const fetchMock = vi.fn().mockImplementation(async () => (
+      new Response(JSON.stringify({ success: true, data: null }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      })
+    ))
+    vi.stubGlobal("fetch", fetchMock)
+
+    await expect(GuidelineMarkdownService.reviewAssignments("version")).resolves.toEqual([])
+    await expect(GuidelineMarkdownService.reviewerCandidates()).resolves.toEqual([])
+    await expect(GuidelineMarkdownService.editorComments("version")).resolves.toEqual([])
+    await expect(GuidelineMarkdownService.activity("version")).resolves.toEqual([])
+    await expect(GuidelineMarkdownService.reviewComments("version", "job")).resolves.toEqual([])
+  })
 })

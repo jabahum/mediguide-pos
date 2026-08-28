@@ -584,6 +584,7 @@ func New(cfg config.Config) (*App, error) {
 		protected.POST("/guideline-versions/:id/regeneration-reviews/:jobId/reject", middleware.RequirePermission("guideline.review"), guidelineH.RejectRegeneration)
 		protected.GET("/guideline-versions/:id/regeneration-reviews/:jobId/comments", middleware.RequirePermission("guideline.review"), guidelineH.ListRegenerationComments)
 		protected.POST("/guideline-versions/:id/regeneration-reviews/:jobId/comments", middleware.RequirePermission("guideline.review"), guidelineH.AddRegenerationComment)
+		protected.GET("/guideline-reviewers", middleware.RequirePermission("guideline.review"), guidelineH.ListGuidelineReviewerCandidates)
 		protected.GET("/guideline-versions/:id/reviewers", middleware.RequirePermission("guideline.review"), guidelineH.ListGuidelineReviewAssignments)
 		protected.POST("/guideline-versions/:id/reviewers", middleware.RequirePermission("guideline.review"), guidelineH.AssignGuidelineReviewer)
 		protected.PATCH("/guideline-versions/:id/reviewers/:assignmentId", middleware.RequirePermission("guideline.review"), guidelineH.UpdateGuidelineReviewAssignment)

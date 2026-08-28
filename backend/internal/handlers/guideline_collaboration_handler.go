@@ -25,7 +25,7 @@ func collaborationID(c *gin.Context, name string) (uuid.UUID, bool) {
 // @Tags guideline-review
 // @Security BearerAuth
 // @Param id path string true "Guideline version ID" format(uuid)
-// @Success 200 {array} models.GuidelineReviewAssignment
+// @Success 200 {array} services.GuidelineReviewAssignmentView
 // @Router /api/v2/guideline-versions/{id}/reviewers [get]
 func (h GuidelineHandler) ListGuidelineReviewAssignments(c *gin.Context) {
 	versionID, ok := markdownVersionID(c)
@@ -46,7 +46,7 @@ func (h GuidelineHandler) ListGuidelineReviewAssignments(c *gin.Context) {
 // @Security BearerAuth
 // @Param id path string true "Guideline version ID" format(uuid)
 // @Param payload body services.AssignGuidelineReviewerInput true "Reviewer assignment"
-// @Success 201 {object} models.GuidelineReviewAssignment
+// @Success 201 {object} services.GuidelineReviewAssignmentView
 // @Router /api/v2/guideline-versions/{id}/reviewers [post]
 func (h GuidelineHandler) AssignGuidelineReviewer(c *gin.Context) {
 	versionID, ok := markdownVersionID(c)
@@ -73,7 +73,7 @@ func (h GuidelineHandler) AssignGuidelineReviewer(c *gin.Context) {
 // @Param id path string true "Guideline version ID" format(uuid)
 // @Param assignmentId path string true "Assignment ID" format(uuid)
 // @Param payload body services.GuidelineReviewAssignmentStatusInput true "Assignment transition"
-// @Success 200 {object} models.GuidelineReviewAssignment
+// @Success 200 {object} services.GuidelineReviewAssignmentView
 // @Router /api/v2/guideline-versions/{id}/reviewers/{assignmentId} [patch]
 func (h GuidelineHandler) UpdateGuidelineReviewAssignment(c *gin.Context) {
 	versionID, ok := markdownVersionID(c)
@@ -95,6 +95,22 @@ func (h GuidelineHandler) UpdateGuidelineReviewAssignment(c *gin.Context) {
 		return
 	}
 	httpx.OK(c, row)
+}
+
+// ListGuidelineReviewerCandidates godoc
+// @Summary List active users eligible to review guidelines
+// @Tags guideline-review
+// @Security BearerAuth
+// @Param search query string false "Search reviewer name or email"
+// @Success 200 {array} services.GuidelineReviewerCandidate
+// @Router /api/v2/guideline-reviewers [get]
+func (h GuidelineHandler) ListGuidelineReviewerCandidates(c *gin.Context) {
+	rows, err := h.Service.ListGuidelineReviewerCandidates(c.Query("search"))
+	if err != nil {
+		markdownError(c, err)
+		return
+	}
+	httpx.OK(c, rows)
 }
 
 // ListGuidelineEditorComments godoc

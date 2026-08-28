@@ -252,10 +252,11 @@ export default function GuidelineReviewPage() {
       </div>
     </div>
 
-    {(workspace.extraction_warnings.length > 0 || workspace.validation.errors.length > 0) && <Card className="border-amber-300">
+    {(workspace.extraction_warnings.length > 0 || workspace.validation.errors.length > 0 || workspace.validation.warnings.length > 0) && <Card className="border-amber-300">
       <CardHeader><CardTitle className="flex items-center gap-2 text-base"><AlertTriangle className="h-4 w-4 text-amber-600" /> Extraction and publication review</CardTitle></CardHeader>
       <CardContent className="space-y-2 text-sm">
         {workspace.extraction_warnings.map((warning, index) => <div key={`warning-${index}`} className="text-amber-800">{warning}</div>)}
+        {workspace.validation.warnings.map((issue, index) => <div key={`${issue.code}-advisory-${index}`} className="text-amber-800">Advisory: {issue.message}</div>)}
         {workspace.validation.errors.map((issue, index) => <button key={`${issue.code}-${index}`} className="block text-left text-destructive underline-offset-2 hover:underline" onClick={() => { if (issue.section_id) setSelectedSectionId(issue.section_id); if (issue.block_id) setSelectedBlockId(issue.block_id) }}>{issue.message}</button>)}
       </CardContent>
     </Card>}

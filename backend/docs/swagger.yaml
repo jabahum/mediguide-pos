@@ -3207,27 +3207,6 @@ definitions:
       version_id:
         type: string
     type: object
-  models.GuidelineReviewAssignment:
-    properties:
-      assigned_by:
-        type: string
-      completed_at:
-        type: string
-      created_at:
-        type: string
-      due_at:
-        type: string
-      id:
-        type: string
-      reviewer_id:
-        type: string
-      status:
-        type: string
-      updated_at:
-        type: string
-      version_id:
-        type: string
-    type: object
   models.GuidelineReviewComment:
     properties:
       author_id:
@@ -5371,6 +5350,31 @@ definitions:
     required:
     - status
     type: object
+  services.GuidelineReviewAssignmentView:
+    properties:
+      assigned_by:
+        type: string
+      completed_at:
+        type: string
+      created_at:
+        type: string
+      due_at:
+        type: string
+      id:
+        type: string
+      reviewer_email:
+        type: string
+      reviewer_id:
+        type: string
+      reviewer_name:
+        type: string
+      status:
+        type: string
+      updated_at:
+        type: string
+      version_id:
+        type: string
+    type: object
   services.GuidelineReviewCommentInput:
     properties:
       block_id:
@@ -5413,6 +5417,15 @@ definitions:
         $ref: '#/definitions/services.GuidelinePublicationValidation'
       version:
         $ref: '#/definitions/models.GuidelineVersion'
+    type: object
+  services.GuidelineReviewerCandidate:
+    properties:
+      email:
+        type: string
+      id:
+        type: string
+      name:
+        type: string
     type: object
   services.GuidelineSectionOrderInput:
     properties:
@@ -12254,6 +12267,25 @@ paths:
       summary: List direct children of an index entry
       tags:
       - guideline-taxonomy
+  /api/v2/guideline-reviewers:
+    get:
+      parameters:
+      - description: Search reviewer name or email
+        in: query
+        name: search
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/services.GuidelineReviewerCandidate'
+            type: array
+      security:
+      - BearerAuth: []
+      summary: List active users eligible to review guidelines
+      tags:
+      - guideline-review
   /api/v2/guideline-tags:
     get:
       responses:
@@ -13741,7 +13773,7 @@ paths:
           description: OK
           schema:
             items:
-              $ref: '#/definitions/models.GuidelineReviewAssignment'
+              $ref: '#/definitions/services.GuidelineReviewAssignmentView'
             type: array
       security:
       - BearerAuth: []
@@ -13766,7 +13798,7 @@ paths:
         "201":
           description: Created
           schema:
-            $ref: '#/definitions/models.GuidelineReviewAssignment'
+            $ref: '#/definitions/services.GuidelineReviewAssignmentView'
       security:
       - BearerAuth: []
       summary: Assign a reviewer to a guideline version
@@ -13797,7 +13829,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/models.GuidelineReviewAssignment'
+            $ref: '#/definitions/services.GuidelineReviewAssignmentView'
       security:
       - BearerAuth: []
       summary: Complete or dismiss a reviewer assignment

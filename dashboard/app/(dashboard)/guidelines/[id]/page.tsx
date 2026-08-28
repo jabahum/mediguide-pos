@@ -104,6 +104,12 @@ export default function GuidelineDetailsPage() {
   async function publish(version: GuidelineVersionRecord) {
     setSubmitting(true)
     try {
+      const validation = await GuidelineDocumentsService.validatePublication(version.id)
+      if (!validation.valid) {
+        const summary = validation.errors.slice(0, 3).map((issue) => issue.message).join(" ")
+        showToast.error("Publication needs review", summary || "Open Editorial Review and resolve the blocking items.")
+        return
+      }
       await GuidelineDocumentsService.publishVersion(version.id)
       await refresh()
       showToast.success("Version published", `${version.version} is now the current version.`)
@@ -165,6 +171,11 @@ export default function GuidelineDetailsPage() {
             const hasMarkdown = Boolean(version.markdown_file_key)
             const hasHtml = Boolean(version.html_file_key)
             const publishable = version.status !== "published" && Boolean(hasMarkdown && hasHtml)
+            const reviewAvailable = version.status !== "published" && Boolean(
+              version.original_file_key ||
+              version.structured_markdown_revision_id ||
+              ["review_required", "approved"].includes(version.structured_content_status || "")
+            )
             return (
               <div key={version.id} className="rounded-lg border p-4">
                 <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
@@ -190,7 +201,7 @@ export default function GuidelineDetailsPage() {
                         <BookOpen className="h-4 w-4" /> View Content
                       </Button>
                     )}
-                    {canUpdate && version.original_file_key && version.status !== "published" && (
+                    {canUpdate && reviewAvailable && (
                       <Button
                         variant="outline"
                         size="sm"

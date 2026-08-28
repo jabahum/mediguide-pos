@@ -11,7 +11,15 @@ import (
 
 func TestGuidelineCollaborationScopesAssignmentsAndCommentsToVersion(t *testing.T) {
 	service, version, actorID := markdownServiceFixture(t)
-	reviewer := models.User{Name: "Clinical reviewer", Email: uuid.NewString() + "@example.test", PasswordHash: "not-returned", IsActive: true}
+	if err := service.DB.AutoMigrate(&models.Role{}, &models.Permission{}); err != nil {
+		t.Fatal(err)
+	}
+	roleKey := "reviewer"
+	role := models.Role{Name: "Clinical Reviewer " + uuid.NewString(), RoleKey: &roleKey, IsActive: true}
+	if err := service.DB.Create(&role).Error; err != nil {
+		t.Fatal(err)
+	}
+	reviewer := models.User{Name: "Clinical reviewer", Email: uuid.NewString() + "@example.test", PasswordHash: "not-returned", IsActive: true, Roles: []models.Role{role}}
 	if err := service.DB.Create(&reviewer).Error; err != nil {
 		t.Fatal(err)
 	}
@@ -19,8 +27,12 @@ func TestGuidelineCollaborationScopesAssignmentsAndCommentsToVersion(t *testing.
 	if err != nil {
 		t.Fatal(err)
 	}
-	if assignment.ReviewerID != reviewer.ID || assignment.AssignedBy == nil || *assignment.AssignedBy != actorID {
+	if assignment.ReviewerID != reviewer.ID || assignment.ReviewerName != reviewer.Name || assignment.AssignedBy == nil || *assignment.AssignedBy != actorID {
 		t.Fatalf("actor ownership was not derived: %#v", assignment)
+	}
+	candidates, err := service.ListGuidelineReviewerCandidates("Clinical")
+	if err != nil || len(candidates) != 1 || candidates[0].ID != reviewer.ID {
+		t.Fatalf("eligible reviewer directory mismatch: candidates=%#v err=%v", candidates, err)
 	}
 
 	draft, err := service.SaveMarkdownDraft(context.Background(), version.ID, actorID, MarkdownDraftInput{Content: "# Reviewed draft", SourceType: "blank"})

@@ -20,6 +20,26 @@ type GuidelineReviewAssignmentStatusInput struct {
 	Status string `json:"status" binding:"required"`
 }
 
+type GuidelineReviewerCandidate struct {
+	ID    uuid.UUID `json:"id"`
+	Name  string    `json:"name"`
+	Email string    `json:"email"`
+}
+
+type GuidelineReviewAssignmentView struct {
+	ID            uuid.UUID  `json:"id"`
+	VersionID     uuid.UUID  `json:"version_id"`
+	ReviewerID    uuid.UUID  `json:"reviewer_id"`
+	ReviewerName  string     `json:"reviewer_name"`
+	ReviewerEmail string     `json:"reviewer_email"`
+	AssignedBy    *uuid.UUID `json:"assigned_by,omitempty"`
+	Status        string     `json:"status"`
+	DueAt         *time.Time `json:"due_at,omitempty"`
+	CompletedAt   *time.Time `json:"completed_at,omitempty"`
+	CreatedAt     time.Time  `json:"created_at"`
+	UpdatedAt     time.Time  `json:"updated_at"`
+}
+
 type CreateGuidelineEditorCommentInput struct {
 	RevisionID *uuid.UUID `json:"revision_id,omitempty"`
 	SectionID  *uuid.UUID `json:"section_id,omitempty"`
@@ -31,13 +51,57 @@ type ResolveGuidelineEditorCommentInput struct {
 	Resolved bool `json:"resolved"`
 }
 
-func (s GuidelineService) ListGuidelineReviewAssignments(versionID uuid.UUID) ([]models.GuidelineReviewAssignment, error) {
-	var rows []models.GuidelineReviewAssignment
-	err := s.DB.Where("version_id = ?", versionID).Order("created_at desc").Find(&rows).Error
+func (s GuidelineService) ListGuidelineReviewerCandidates(search string) ([]GuidelineReviewerCandidate, error) {
+	query := s.DB.Preload("Roles.Permissions").Where("is_active = true")
+	if search = strings.TrimSpace(search); search != "" {
+		like := "%" + strings.ToLower(search) + "%"
+		query = query.Where("LOWER(name) LIKE ? OR LOWER(email) LIKE ?", like, like)
+	}
+	var users []models.User
+	if err := query.Order("name asc, email asc").Limit(100).Find(&users).Error; err != nil {
+		return nil, err
+	}
+	rows := make([]GuidelineReviewerCandidate, 0, len(users))
+	for _, user := range users {
+		if !userCanReviewGuidelines(user) {
+			continue
+		}
+		rows = append(rows, GuidelineReviewerCandidate{ID: user.ID, Name: user.Name, Email: user.Email})
+	}
+	return rows, nil
+}
+
+func userCanReviewGuidelines(user models.User) bool {
+	for _, role := range user.Roles {
+		for _, permission := range role.Permissions {
+			if permission.Code == "guideline.review" || permission.Code == "admin.all" {
+				return true
+			}
+		}
+		roleKey := ""
+		if role.RoleKey != nil {
+			roleKey = strings.TrimSpace(*role.RoleKey)
+		}
+		for _, permission := range deriveRolePermissions(roleKey, string(role.PermissionsJSON)) {
+			if permission == "guideline.review" || permission == "admin.all" {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+func (s GuidelineService) ListGuidelineReviewAssignments(versionID uuid.UUID) ([]GuidelineReviewAssignmentView, error) {
+	var rows []GuidelineReviewAssignmentView
+	err := s.DB.Table("guideline_review_assignments a").
+		Select("a.id, a.version_id, a.reviewer_id, u.name AS reviewer_name, u.email AS reviewer_email, a.assigned_by, a.status, a.due_at, a.completed_at, a.created_at, a.updated_at").
+		Joins("JOIN users u ON u.id = a.reviewer_id").
+		Where("a.version_id = ? AND a.deleted_at IS NULL", versionID).
+		Order("a.created_at desc").Scan(&rows).Error
 	return rows, err
 }
 
-func (s GuidelineService) AssignGuidelineReviewer(versionID, actorID uuid.UUID, in AssignGuidelineReviewerInput) (*models.GuidelineReviewAssignment, error) {
+func (s GuidelineService) AssignGuidelineReviewer(versionID, actorID uuid.UUID, in AssignGuidelineReviewerInput) (*GuidelineReviewAssignmentView, error) {
 	if in.ReviewerID == uuid.Nil || (in.DueAt != nil && in.DueAt.Before(time.Now().UTC())) {
 		return nil, ErrGuidelineReviewConflict
 	}
@@ -46,22 +110,34 @@ func (s GuidelineService) AssignGuidelineReviewer(versionID, actorID uuid.UUID, 
 		if err := requireEditableGuidelineVersion(tx, versionID); err != nil {
 			return err
 		}
-		var count int64
-		if err := tx.Model(&models.User{}).Where("id = ? AND is_active = true", in.ReviewerID).Count(&count).Error; err != nil || count != 1 {
-			if err != nil {
-				return err
-			}
-			return gorm.ErrRecordNotFound
+		var reviewer models.User
+		if err := tx.Preload("Roles.Permissions").First(&reviewer, "id = ? AND is_active = true", in.ReviewerID).Error; err != nil {
+			return err
+		}
+		if !userCanReviewGuidelines(reviewer) {
+			return ErrGuidelineReviewConflict
 		}
 		if err := tx.Create(&row).Error; err != nil {
 			return err
 		}
 		return writeGuidelineAudit(tx, actorID, "guideline.review.assigned", "guideline_review_assignment", row.ID, "", map[string]any{"version_id": versionID, "reviewer_id": in.ReviewerID})
 	})
-	return &row, err
+	if err != nil {
+		return nil, err
+	}
+	rows, err := s.ListGuidelineReviewAssignments(versionID)
+	if err != nil {
+		return nil, err
+	}
+	for _, assignment := range rows {
+		if assignment.ID == row.ID {
+			return &assignment, nil
+		}
+	}
+	return nil, gorm.ErrRecordNotFound
 }
 
-func (s GuidelineService) UpdateGuidelineReviewAssignment(versionID, assignmentID, actorID uuid.UUID, in GuidelineReviewAssignmentStatusInput) (*models.GuidelineReviewAssignment, error) {
+func (s GuidelineService) UpdateGuidelineReviewAssignment(versionID, assignmentID, actorID uuid.UUID, in GuidelineReviewAssignmentStatusInput) (*GuidelineReviewAssignmentView, error) {
 	if in.Status != "completed" && in.Status != "dismissed" {
 		return nil, ErrGuidelineReviewConflict
 	}
@@ -83,7 +159,19 @@ func (s GuidelineService) UpdateGuidelineReviewAssignment(versionID, assignmentI
 		}
 		return writeGuidelineAudit(tx, actorID, "guideline.review."+in.Status, "guideline_review_assignment", row.ID, "", map[string]any{"version_id": versionID, "reviewer_id": row.ReviewerID})
 	})
-	return &row, err
+	if err != nil {
+		return nil, err
+	}
+	rows, err := s.ListGuidelineReviewAssignments(versionID)
+	if err != nil {
+		return nil, err
+	}
+	for _, assignment := range rows {
+		if assignment.ID == row.ID {
+			return &assignment, nil
+		}
+	}
+	return nil, gorm.ErrRecordNotFound
 }
 
 func (s GuidelineService) ListGuidelineEditorComments(versionID uuid.UUID, resolved *bool) ([]models.GuidelineEditorComment, error) {

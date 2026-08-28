@@ -98,6 +98,7 @@ import {
   RegenerationReview,
   RegenerationReviewComment,
   GuidelineReviewAssignment,
+  GuidelineReviewerCandidate,
   GuidelineEditorComment,
   GuidelineActivityItem,
 } from "@/services/guideline-markdown.service"
@@ -242,6 +243,7 @@ export function GuidelineMarkdownEditor({
   const [collaborationOpen, setCollaborationOpen] = React.useState(false)
   const [collaborationLoading, setCollaborationLoading] = React.useState(false)
   const [assignments, setAssignments] = React.useState<GuidelineReviewAssignment[]>([])
+  const [reviewerCandidates, setReviewerCandidates] = React.useState<GuidelineReviewerCandidate[]>([])
   const [editorComments, setEditorComments] = React.useState<GuidelineEditorComment[]>([])
   const [activity, setActivity] = React.useState<GuidelineActivityItem[]>([])
   const [reviewerId, setReviewerId] = React.useState("")
@@ -311,6 +313,7 @@ export function GuidelineMarkdownEditor({
   const headings = React.useMemo(() => markdownHeadings(content), [content])
   const localIssues = React.useMemo(() => validateMarkdown(content), [content])
   const issues = !dirty && serverIssues.length > 0 ? serverIssues : localIssues
+  const displayedIssues = React.useMemo(() => issues.slice(0, 150), [issues])
   const stats = React.useMemo(() => markdownStats(content), [content])
   const visibleHeadings = React.useMemo(() => headings.filter((heading, index) => {
     if (!heading.text.toLowerCase().includes(outlineSearch.toLowerCase())) return false
@@ -617,12 +620,14 @@ export function GuidelineMarkdownEditor({
   const loadCollaboration = async () => {
     setCollaborationLoading(true)
     try {
-      const [nextAssignments, nextComments, nextActivity] = await Promise.all([
+      const [nextAssignments, nextReviewers, nextComments, nextActivity] = await Promise.all([
         GuidelineMarkdownService.reviewAssignments(versionId),
+        GuidelineMarkdownService.reviewerCandidates(),
         GuidelineMarkdownService.editorComments(versionId),
         GuidelineMarkdownService.activity(versionId),
       ])
       setAssignments(nextAssignments)
+      setReviewerCandidates(nextReviewers)
       setEditorComments(nextComments)
       setActivity(nextActivity)
       setCollaborationOpen(true)
@@ -955,6 +960,7 @@ export function GuidelineMarkdownEditor({
         )}
         {!online && <Alert className="m-4 mb-0"><CloudOff className="h-4 w-4" /><AlertTitle>Working offline</AlertTitle><AlertDescription>Your text is retained locally. Server saving resumes after reconnection.</AlertDescription></Alert>}
         {published && <Alert className="m-4 mb-0"><Info className="h-4 w-4" /><AlertTitle>Published version</AlertTitle><AlertDescription>Published Markdown is immutable. Create a new version to revise it.</AlertDescription></Alert>}
+        {!published && issues.length > 0 && <Alert className="m-4 mb-0"><Info className="h-4 w-4" /><AlertTitle>Markdown validation guidance</AlertTitle><AlertDescription><strong>Errors block regeneration.</strong> Warnings are advisory and do not stop regeneration. Warnings about clinical callouts, tables, dosages, or units identify content that must be checked in Editorial Review before publication.</AlertDescription></Alert>}
         {renamedAnchors.length > 0 && <Alert className="m-4 mb-0"><Info className="h-4 w-4" /><AlertTitle>Stable section anchor retained</AlertTitle><AlertDescription>{renamedAnchors.length} renamed heading{renamedAnchors.length === 1 ? "" : "s"} will retain revision metadata anchors. Review inbound links before publication.</AlertDescription></Alert>}
         {saveError && <Alert variant="destructive" className="m-4 mb-0"><AlertCircle className="h-4 w-4" /><AlertTitle>Markdown was not saved</AlertTitle><AlertDescription className="flex flex-wrap items-center gap-2"><span>{saveError} Your edits remain available.</span><Button size="sm" variant="outline" disabled={saving || !online} onClick={() => void save()}>Retry save</Button></AlertDescription></Alert>}</div>
         {regenerationJob && <Alert className="m-4 mb-0 print:hidden">
@@ -1012,7 +1018,7 @@ export function GuidelineMarkdownEditor({
                   </button>
                 )})}
                 {issues.length > 0 && <div className="mt-4 border-t pt-3 text-xs font-medium">Validation</div>}
-                {issues.map((issue, index) => (
+                {displayedIssues.map((issue, index) => (
                   <button
                     key={`${issue.code}-${index}`}
                     type="button"
@@ -1029,6 +1035,7 @@ export function GuidelineMarkdownEditor({
                     <span>{issue.message}</span>
                   </button>
                 ))}
+                {issues.length > displayedIssues.length && <p className="mt-2 px-2 text-xs text-muted-foreground">Showing the first {displayedIssues.length} of {issues.length} issues. Resolve errors first; repeated clinical warnings are reviewed after regeneration.</p>}
               </ScrollArea>
             </aside>
           )}
@@ -1166,10 +1173,16 @@ export function GuidelineMarkdownEditor({
           <DialogHeader><DialogTitle>Review and activity</DialogTitle><DialogDescription>Review is asynchronous and protected by immutable revisions and ETags. Live cursors and presence are not supported.</DialogDescription></DialogHeader>
           <div className="grid max-h-[70vh] gap-5 overflow-y-auto lg:grid-cols-2">
             <section className="space-y-3"><h3 className="font-medium">Reviewer assignments</h3>
-              <Input aria-label="Reviewer user UUID" placeholder="Reviewer user UUID" value={reviewerId} onChange={(event) => setReviewerId(event.target.value)} />
+              <Label htmlFor="guideline-reviewer">Clinical reviewer</Label>
+              <select id="guideline-reviewer" aria-label="Clinical reviewer" className="h-9 w-full rounded-md border bg-background px-3 text-sm" value={reviewerId} onChange={(event) => setReviewerId(event.target.value)}>
+                <option value="">Select a reviewer by name</option>
+                {reviewerCandidates.map((reviewer) => <option key={reviewer.id} value={reviewer.id}>{reviewer.name || reviewer.email}{reviewer.name ? ` — ${reviewer.email}` : ""}</option>)}
+              </select>
+              {reviewerCandidates.length === 0 && <p className="text-sm text-muted-foreground">No active users with guideline review permission are available. Assign the Reviewer role to a user first.</p>}
               <Input aria-label="Review due date" type="date" value={reviewDueAt} onChange={(event) => setReviewDueAt(event.target.value)} />
               <Button size="sm" disabled={!reviewerId.trim()} onClick={async () => { try { const row = await GuidelineMarkdownService.assignReviewer(versionId, reviewerId.trim(), reviewDueAt ? new Date(`${reviewDueAt}T23:59:59Z`).toISOString() : undefined); setAssignments((current) => [row, ...current]); setReviewerId(""); setReviewDueAt("") } catch (error) { showToast.error("Reviewer not assigned", error instanceof Error ? error.message : "Could not assign reviewer") } }}>Assign reviewer</Button>
-              {assignments.length === 0 ? <p className="text-sm text-muted-foreground">No reviewers assigned.</p> : assignments.map((assignment) => <div key={assignment.id} className="rounded border p-3 text-sm"><div className="font-medium">{assignment.reviewer_id}</div><div className="text-xs text-muted-foreground">{assignment.status}{assignment.due_at ? ` · due ${new Date(assignment.due_at).toLocaleDateString()}` : ""}</div>{assignment.status === "assigned" && <div className="mt-2 flex gap-2"><Button size="sm" variant="outline" onClick={async () => { const row = await GuidelineMarkdownService.updateReviewAssignment(versionId, assignment.id, "completed"); setAssignments((items) => items.map((item) => item.id === row.id ? row : item)) }}>Complete</Button><Button size="sm" variant="ghost" onClick={async () => { const row = await GuidelineMarkdownService.updateReviewAssignment(versionId, assignment.id, "dismissed"); setAssignments((items) => items.map((item) => item.id === row.id ? row : item)) }}>Dismiss</Button></div>}</div>)}
+              <p className="text-xs text-muted-foreground">Assignment coordinates the review. The reviewer must still approve regenerated high-risk blocks in Editorial Review before publication.</p>
+              {assignments.length === 0 ? <p className="text-sm text-muted-foreground">No reviewers assigned.</p> : assignments.map((assignment) => <div key={assignment.id} className="rounded border p-3 text-sm"><div className="font-medium">{assignment.reviewer_name || assignment.reviewer_email || "Reviewer"}</div>{assignment.reviewer_name && <div className="text-xs text-muted-foreground">{assignment.reviewer_email}</div>}<div className="text-xs text-muted-foreground">{assignment.status}{assignment.due_at ? ` · due ${new Date(assignment.due_at).toLocaleDateString()}` : ""}</div>{assignment.status === "assigned" && <div className="mt-2 flex gap-2"><Button size="sm" variant="outline" onClick={async () => { const row = await GuidelineMarkdownService.updateReviewAssignment(versionId, assignment.id, "completed"); setAssignments((items) => items.map((item) => item.id === row.id ? row : item)) }}>Complete</Button><Button size="sm" variant="ghost" onClick={async () => { const row = await GuidelineMarkdownService.updateReviewAssignment(versionId, assignment.id, "dismissed"); setAssignments((items) => items.map((item) => item.id === row.id ? row : item)) }}>Dismiss</Button></div>}</div>)}
             </section>
             <section className="space-y-3"><h3 className="font-medium">Revision comments</h3>
               <Textarea value={editorComment} onChange={(event) => setEditorComment(event.target.value)} placeholder="Comment on the current immutable revision" />

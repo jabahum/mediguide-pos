@@ -89,11 +89,18 @@ export interface GuidelineReviewAssignment {
   id: string;
   version_id: string;
   reviewer_id: string;
+  reviewer_name: string;
+  reviewer_email: string;
   assigned_by?: string;
   status: "assigned" | "completed" | "dismissed";
   due_at?: string;
   completed_at?: string;
   created_at: string;
+}
+export interface GuidelineReviewerCandidate {
+  id: string;
+  name: string;
+  email: string;
 }
 export interface GuidelineEditorComment {
   id: string;
@@ -459,6 +466,14 @@ export class GuidelineMarkdownService {
   ): Promise<GuidelineReviewAssignment[]> {
     return getBackendClient().request<GuidelineReviewAssignment[]>(
       `/api/v2/guideline-versions/${versionId}/reviewers`,
+    );
+  }
+  static async reviewerCandidates(
+    search = "",
+  ): Promise<GuidelineReviewerCandidate[]> {
+    return getBackendClient().request<GuidelineReviewerCandidate[]>(
+      "/api/v2/guideline-reviewers",
+      { query: { search: search || undefined } },
     );
   }
   static async assignReviewer(

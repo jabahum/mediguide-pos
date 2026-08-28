@@ -6351,6 +6351,38 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/v2/guideline-reviewers": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "guideline-review"
+                ],
+                "summary": "List active users eligible to review guidelines",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Search reviewer name or email",
+                        "name": "search",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/services.GuidelineReviewerCandidate"
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/api/v2/guideline-tags": {
             "get": {
                 "security": [
@@ -8679,7 +8711,7 @@ const docTemplate = `{
                         "schema": {
                             "type": "array",
                             "items": {
-                                "$ref": "#/definitions/models.GuidelineReviewAssignment"
+                                "$ref": "#/definitions/services.GuidelineReviewAssignmentView"
                             }
                         }
                     }
@@ -8718,7 +8750,7 @@ const docTemplate = `{
                     "201": {
                         "description": "Created",
                         "schema": {
-                            "$ref": "#/definitions/models.GuidelineReviewAssignment"
+                            "$ref": "#/definitions/services.GuidelineReviewAssignmentView"
                         }
                     }
                 }
@@ -8766,7 +8798,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/models.GuidelineReviewAssignment"
+                            "$ref": "#/definitions/services.GuidelineReviewAssignmentView"
                         }
                     }
                 }
@@ -20533,38 +20565,6 @@ const docTemplate = `{
                 }
             }
         },
-        "models.GuidelineReviewAssignment": {
-            "type": "object",
-            "properties": {
-                "assigned_by": {
-                    "type": "string"
-                },
-                "completed_at": {
-                    "type": "string"
-                },
-                "created_at": {
-                    "type": "string"
-                },
-                "due_at": {
-                    "type": "string"
-                },
-                "id": {
-                    "type": "string"
-                },
-                "reviewer_id": {
-                    "type": "string"
-                },
-                "status": {
-                    "type": "string"
-                },
-                "updated_at": {
-                    "type": "string"
-                },
-                "version_id": {
-                    "type": "string"
-                }
-            }
-        },
         "models.GuidelineReviewComment": {
             "type": "object",
             "properties": {
@@ -23819,6 +23819,44 @@ const docTemplate = `{
                 }
             }
         },
+        "services.GuidelineReviewAssignmentView": {
+            "type": "object",
+            "properties": {
+                "assigned_by": {
+                    "type": "string"
+                },
+                "completed_at": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "due_at": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "reviewer_email": {
+                    "type": "string"
+                },
+                "reviewer_id": {
+                    "type": "string"
+                },
+                "reviewer_name": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                },
+                "version_id": {
+                    "type": "string"
+                }
+            }
+        },
         "services.GuidelineReviewCommentInput": {
             "type": "object",
             "properties": {
@@ -23882,6 +23920,20 @@ const docTemplate = `{
                 },
                 "version": {
                     "$ref": "#/definitions/models.GuidelineVersion"
+                }
+            }
+        },
+        "services.GuidelineReviewerCandidate": {
+            "type": "object",
+            "properties": {
+                "email": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
                 }
             }
         },

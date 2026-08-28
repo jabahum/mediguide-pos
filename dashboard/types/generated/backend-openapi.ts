@@ -1984,18 +1984,6 @@ export interface ModelsGuidelineRegenerationReview {
   version_id?: string;
 }
 
-export interface ModelsGuidelineReviewAssignment {
-  assigned_by?: string;
-  completed_at?: string;
-  created_at?: string;
-  due_at?: string;
-  id?: string;
-  reviewer_id?: string;
-  status?: string;
-  updated_at?: string;
-  version_id?: string;
-}
-
 export interface ModelsGuidelineReviewComment {
   author_id?: string;
   block_id?: string;
@@ -3162,6 +3150,20 @@ export interface ServicesGuidelineReviewAssignmentStatusInput {
   status: string;
 }
 
+export interface ServicesGuidelineReviewAssignmentView {
+  assigned_by?: string;
+  completed_at?: string;
+  created_at?: string;
+  due_at?: string;
+  id?: string;
+  reviewer_email?: string;
+  reviewer_id?: string;
+  reviewer_name?: string;
+  status?: string;
+  updated_at?: string;
+  version_id?: string;
+}
+
 export interface ServicesGuidelineReviewCommentInput {
   block_id?: string;
   body?: string;
@@ -3182,6 +3184,12 @@ export interface ServicesGuidelineReviewWorkspace {
   sections?: ModelsGuidelineSection[];
   validation?: ServicesGuidelinePublicationValidation;
   version?: ModelsGuidelineVersion;
+}
+
+export interface ServicesGuidelineReviewerCandidate {
+  email?: string;
+  id?: string;
+  name?: string;
 }
 
 export interface ServicesGuidelineSectionOrderInput {

@@ -64,12 +64,20 @@ After facilities have already been imported, set
 Default development accounts:
 
 ```text
-email: admin@mediguide.local
+email: admin@mediguide.health.go.ug
 password: Admin123!
 
-email: clinician@mediguide.local
+email: clinician@mediguide.health.go.ug
 password: Clinician123!
+
+email: reviewer@mediguide.health.go.ug
+password: Reviewer123!
 ```
+
+The reviewer account is assigned the active `reviewer` role. The demo seed also
+creates a `Malaria in Adults` `1.5-review` draft with a pending assignment,
+review comment, Markdown revision, and audit activity for end-to-end workflow
+testing. See `docs/seeding.md` for the walkthrough.
 
 The guideline, medicine, calculator and account records created by the seed are
 demonstration data and must not be treated as approved production guidance.

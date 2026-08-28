@@ -103,7 +103,7 @@ func main() {
 		if err := clinicaltools.ValidateRehearsalTarget(cfg.DatabaseURL, cfg.AppEnv, os.Getenv("COMPOSE_PROJECT_NAME"), os.Getenv("CLINICAL_TOOLS_REHEARSAL")); err != nil {
 			log.Fatal().Err(err).Msg("unsafe clinical-tool rehearsal seed target")
 		}
-		admin, _, err := seedSecurity(database)
+		admin, _, _, err := seedSecurity(database)
 		if err != nil {
 			log.Fatal().Err(err).Msg("seed rehearsal actors failed")
 		}
@@ -155,7 +155,7 @@ func main() {
 		log.Fatal().Str("scope", scope).Msg("unsupported seed scope")
 	}
 
-	admin, clinician, err := seedSecurity(database)
+	admin, clinician, reviewer, err := seedSecurity(database)
 	if err != nil {
 		log.Fatal().Err(err).Msg("seed security failed")
 	}
@@ -171,7 +171,7 @@ func main() {
 	if err != nil {
 		log.Fatal().Err(err).Msg("seed object storage connection failed")
 	}
-	if err := seedDemoData(context.Background(), database, store, admin, clinician); err != nil {
+	if err := seedDemoData(context.Background(), database, store, admin, clinician, reviewer); err != nil {
 		log.Fatal().Err(err).Msg("seed demo data failed")
 	}
 
@@ -234,6 +234,7 @@ func validateBootstrapPassword(password string) error {
 type seedAuthorizationState struct {
 	AdminRole     models.Role
 	ClinicianRole models.Role
+	ReviewerRole  models.Role
 }
 
 func seedAuthorization(database *gorm.DB) (seedAuthorizationState, error) {
@@ -315,10 +316,30 @@ func seedAuthorization(database *gorm.DB) (seedAuthorizationState, error) {
 	if err := database.Model(&clinicianRole).Association("Permissions").Replace(&clinicianPerms); err != nil {
 		return seedAuthorizationState{}, err
 	}
+
+	reviewerRoleKey := "reviewer"
+	reviewerRole, err := ensureRole(database, reviewerRoleKey, models.Role{
+		Name:        "reviewer",
+		RoleKey:     &reviewerRoleKey,
+		Description: "Clinical guideline reviewer",
+		IsActive:    true,
+	})
+	if err != nil {
+		return seedAuthorizationState{}, err
+	}
+	reviewerPerms := make([]models.Permission, 0)
+	for _, code := range deriveBackendPermissions(reviewerRoleKey, "") {
+		if permission, ok := permissionByCode[code]; ok {
+			reviewerPerms = append(reviewerPerms, permission)
+		}
+	}
+	if err := database.Model(&reviewerRole).Association("Permissions").Replace(&reviewerPerms); err != nil {
+		return seedAuthorizationState{}, err
+	}
 	if err := syncImportedRolePermissions(database, permissionByCode); err != nil {
 		return seedAuthorizationState{}, err
 	}
-	return seedAuthorizationState{AdminRole: adminRole, ClinicianRole: clinicianRole}, nil
+	return seedAuthorizationState{AdminRole: adminRole, ClinicianRole: clinicianRole, ReviewerRole: reviewerRole}, nil
 }
 
 func seedProductionAdmin(database *gorm.DB, input productionAdminInput) error {
@@ -374,17 +395,18 @@ func seedProductionAdmin(database *gorm.DB, input productionAdminInput) error {
 	return database.Model(&user).Association("Roles").Append(&authorization.AdminRole)
 }
 
-func seedSecurity(database *gorm.DB) (*models.User, *models.User, error) {
+func seedSecurity(database *gorm.DB) (*models.User, *models.User, *models.User, error) {
 	authorization, err := seedAuthorization(database)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 	adminRole := authorization.AdminRole
 	clinicianRole := authorization.ClinicianRole
+	reviewerRole := authorization.ReviewerRole
 
 	adminHash, err := security.HashPassword("Admin123!")
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 	admin := models.User{Email: "admin@mediguide.health.go.ug"}
 	if err := database.Where(models.User{Email: admin.Email}).Assign(models.User{
@@ -396,15 +418,15 @@ func seedSecurity(database *gorm.DB) (*models.User, *models.User, error) {
 		Verified:     true,
 		Status:       "active",
 	}).FirstOrCreate(&admin).Error; err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 	if err := database.Model(&admin).Association("Roles").Replace(&adminRole); err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 
 	clinicianHash, err := security.HashPassword("Clinician123!")
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 	clinician := models.User{Email: "clinician@mediguide.health.go.ug"}
 	preferredLanguage := "English"
@@ -422,15 +444,40 @@ func seedSecurity(database *gorm.DB) (*models.User, *models.User, error) {
 		PreferredLanguage: &preferredLanguage,
 		Specialization:    models.StringList{specialization},
 	}).FirstOrCreate(&clinician).Error; err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 	if err := database.Model(&clinician).Association("Roles").Replace(&clinicianRole); err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
+	}
+
+	reviewerHash, err := security.HashPassword("Reviewer123!")
+	if err != nil {
+		return nil, nil, nil, err
+	}
+	reviewer := models.User{Email: "reviewer@mediguide.health.go.ug"}
+	reviewerOrganization := "Ministry of Health Uganda"
+	reviewerSpecialization := "Public Health"
+	if err := database.Where(models.User{Email: reviewer.Email}).Assign(models.User{
+		Name:              "Dr. Amina Clinical Reviewer",
+		Email:             reviewer.Email,
+		Phone:             "+256700000004",
+		PasswordHash:      reviewerHash,
+		IsActive:          true,
+		Verified:          true,
+		Status:            "active",
+		Organization:      &reviewerOrganization,
+		PreferredLanguage: &preferredLanguage,
+		Specialization:    models.StringList{reviewerSpecialization},
+	}).FirstOrCreate(&reviewer).Error; err != nil {
+		return nil, nil, nil, err
+	}
+	if err := database.Model(&reviewer).Association("Roles").Replace(&reviewerRole); err != nil {
+		return nil, nil, nil, err
 	}
 
 	assistantHash, err := security.HashPassword("Assistant123!")
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 	assistant := models.User{Email: "assistant@mediguide.health.go.ug"}
 	assistantOrg := "MediGuide"
@@ -444,13 +491,13 @@ func seedSecurity(database *gorm.DB) (*models.User, *models.User, error) {
 		Status:       "active",
 		Organization: &assistantOrg,
 	}).FirstOrCreate(&assistant).Error; err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 	if err := database.Model(&assistant).Association("Roles").Replace(&clinicianRole); err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 
-	return &admin, &clinician, nil
+	return &admin, &clinician, &reviewer, nil
 }
 
 func syncImportedRolePermissions(database *gorm.DB, permissionByCode map[string]models.Permission) error {

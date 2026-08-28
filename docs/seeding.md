@@ -68,6 +68,51 @@ docker compose \
 
 Rerunning the demo command is supported. Stable UUIDs and natural keys update the owned fixtures rather than creating duplicate logical records. MinIO fixture objects use deterministic storage keys and are replaced with the repository version while their checksums and sizes are recalculated.
 
+The demo scope creates these development-only accounts:
+
+| Purpose | Email | Password |
+|---|---|---|
+| Administrator and assigning editor | `admin@mediguide.health.go.ug` | `Admin123!` |
+| Frontline clinician | `clinician@mediguide.health.go.ug` | `Clinician123!` |
+| Clinical guideline reviewer | `reviewer@mediguide.health.go.ug` | `Reviewer123!` |
+
+Never reuse these credentials outside local development or a controlled demonstration environment. The production `admin` and `facilities` scopes do not create this demo reviewer account.
+
+### Exercise the guideline review workflow
+
+The demo scope leaves the public `Malaria in Adults` version `1.4` published and creates a separate editable `1.5-review` version. That review draft includes:
+
+- a current Markdown revision stored in MinIO;
+- an active assignment to `Dr. Amina Clinical Reviewer`;
+- one unresolved reviewer comment;
+- assignment and comment audit events.
+
+To test the complete workflow:
+
+1. Sign in to the dashboard as the demo administrator.
+2. Open **Clinical Guidelines**, select **Malaria in Adults**, then select version **1.5-review**.
+3. Open the Markdown workspace and choose **Review & activity**. Confirm that the reviewer is shown by name and email, the seeded comment is visible, and the activity feed contains the assignment and comment events.
+4. Use the reviewer selector to verify that **Dr. Amina Clinical Reviewer** is available. Assigning the same reviewer while the seeded assignment is active should be rejected as a duplicate active assignment.
+5. Sign in as the demo reviewer, resolve the seeded comment, add another comment, and complete or dismiss the assignment.
+6. Refresh the page and confirm the updated state persists. Rerunning the demo seed restores the deterministic active-assignment fixture.
+
+Inspect the fixture directly when troubleshooting:
+
+```bash
+docker compose \
+  --env-file infra/development.env \
+  -f infra/docker-compose.yml \
+  -f infra/docker-compose.dev.yml \
+  exec -T postgres sh -eu -c \
+  'psql --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" -c \
+    "SELECT gv.version,u.name,u.email,a.status,c.body,c.resolved
+       FROM guideline_versions gv
+       JOIN guideline_review_assignments a ON a.version_id = gv.id AND a.deleted_at IS NULL
+       JOIN users u ON u.id = a.reviewer_id
+       LEFT JOIN guideline_editor_comments c ON c.version_id = gv.id AND c.deleted_at IS NULL
+      WHERE gv.version = '\''1.5-review'\'';"'
+```
+
 Developers running the Go backend outside Docker may use `make seed`, but only when `backend/.env` points to the intended local PostgreSQL, Redis and MinIO services. The Compose command above is preferred because it uses the same runtime and network configuration as the application.
 
 ### Verify local results

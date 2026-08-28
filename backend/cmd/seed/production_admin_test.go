@@ -121,3 +121,28 @@ func TestValidateBootstrapPassword(t *testing.T) {
 		t.Fatalf("expected a strong password to pass: %v", err)
 	}
 }
+
+func TestSeedAuthorizationCreatesReviewerRoleWithReviewPermission(t *testing.T) {
+	database := productionAdminTestDB(t)
+	authorization, err := seedAuthorization(database)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var reviewer models.Role
+	if err := database.Preload("Permissions").First(&reviewer, "id = ?", authorization.ReviewerRole.ID).Error; err != nil {
+		t.Fatal(err)
+	}
+	if reviewer.RoleKey == nil || *reviewer.RoleKey != "reviewer" || !reviewer.IsActive {
+		t.Fatalf("expected an active reviewer role, got %#v", reviewer)
+	}
+	permissionCodes := make(map[string]bool, len(reviewer.Permissions))
+	for _, permission := range reviewer.Permissions {
+		permissionCodes[permission.Code] = true
+	}
+	for _, required := range []string{"guideline.markdown.read", "guideline.review", "guideline.high_risk.approve"} {
+		if !permissionCodes[required] {
+			t.Fatalf("reviewer role is missing %q: %#v", required, permissionCodes)
+		}
+	}
+}

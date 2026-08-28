@@ -48,13 +48,14 @@ type demoBlock struct {
 	Payload map[string]any
 }
 
-func seedDemoData(ctx context.Context, database *gorm.DB, store storage.ObjectStore, admin, clinician *models.User) error {
+func seedDemoData(ctx context.Context, database *gorm.DB, store storage.ObjectStore, admin, clinician, reviewer *models.User) error {
 	return database.Transaction(func(tx *gorm.DB) error {
 		steps := []func() error{
 			func() error { return seedDemoReferenceContent(tx) },
 			func() error { return seedDemoCalculators(tx, admin.ID) },
 			func() error { return seedDemoDrugs(tx) },
-			func() error { return seedDemoGuidelines(ctx, tx, store, admin.ID) },
+			func() error { return seedDemoGuidelines(ctx, tx, store, reviewer.ID) },
+			func() error { return seedDemoGuidelineReviewWorkflow(ctx, tx, store, admin.ID, reviewer.ID) },
 			func() error { return seedDemoOutbreaks(ctx, tx, store, admin.ID, clinician.ID) },
 			func() error { return seedDemoPeopleAndHelp(tx, admin.ID, clinician.ID) },
 		}
@@ -66,6 +67,87 @@ func seedDemoData(ctx context.Context, database *gorm.DB, store storage.ObjectSt
 		log.Info().Msg("seeded deterministic development demo content")
 		return nil
 	})
+}
+
+func seedDemoGuidelineReviewWorkflow(ctx context.Context, database *gorm.DB, store storage.ObjectStore, assignedBy, reviewerID uuid.UUID) error {
+	guideline := demoGuidelines()[0]
+	documentID := demoID("guideline", guideline.Key)
+	versionID := demoID("guideline-version", guideline.Key+"-review-draft")
+	revisionID := demoID("guideline-revision", guideline.Key+"-review-draft-1")
+	assignmentID := demoID("guideline-review-assignment", guideline.Key+"-review-draft")
+	commentID := demoID("guideline-editor-comment", guideline.Key+"-review-draft-1")
+	markdownKey := fmt.Sprintf("demo/guidelines/%s/review-draft.md", guideline.Key)
+
+	markdown := append([]byte(nil), demoMarkdown(guideline)...)
+	markdown = append(markdown, []byte("\n<!-- Demo review fixture: resolve the seeded comment before completing the assignment. -->\n")...)
+	sum := sha256.Sum256(markdown)
+	checksum := hex.EncodeToString(sum[:])
+	if err := store.Put(ctx, markdownKey, bytes.NewReader(markdown), int64(len(markdown)), "text/markdown; charset=utf-8"); err != nil {
+		return err
+	}
+
+	// Create the editable version before its revision because the two records
+	// reference one another. The published fixture remains the document's
+	// current public version.
+	if err := upsertByID(database, "guideline_versions", map[string]any{
+		"id": versionID, "document_id": documentID, "version": "1.5-review", "status": "draft",
+		"markdown_file_key": markdownKey, "checksum": checksum, "extraction_schema_version": 1,
+		"extraction_metadata_json": mustJSON(`{"source":"development_seed","workflow":"review_assignment"}`),
+		"extraction_warnings_json": mustJSON(`[]`), "structured_content_status": "outdated",
+	}); err != nil {
+		return err
+	}
+	if err := upsertByID(database, "guideline_markdown_revisions", map[string]any{
+		"id": revisionID, "document_id": documentID, "version_id": versionID, "revision_number": 1,
+		"storage_key": markdownKey, "checksum": checksum, "size_bytes": len(markdown), "source_type": "manual_edit",
+		"checkpoint_name": "Ready for clinical review", "change_summary": "Development fixture for the reviewer workflow",
+		"anchor_metadata_json": mustJSON(`{}`), "created_by": assignedBy, "is_current": true,
+		"structured_content_status": "outdated", "review_state": "review_required", "publication_state": "draft",
+	}); err != nil {
+		return err
+	}
+	if err := database.Table("guideline_versions").Where("id = ?", versionID).Updates(map[string]any{
+		"current_markdown_revision_id": revisionID,
+		"markdown_file_key":            markdownKey,
+		"checksum":                     checksum,
+		"structured_content_status":    "outdated",
+		"updated_at":                   time.Now().UTC(),
+	}).Error; err != nil {
+		return err
+	}
+
+	if err := upsertByID(database, "guideline_review_assignments", map[string]any{
+		"id": assignmentID, "version_id": versionID, "reviewer_id": reviewerID,
+		"assigned_by": assignedBy, "status": "assigned", "completed_at": nil, "deleted_at": nil,
+	}); err != nil {
+		return err
+	}
+	if err := upsertByID(database, "guideline_editor_comments", map[string]any{
+		"id": commentID, "version_id": versionID, "revision_id": revisionID, "author_id": reviewerID,
+		"body":     "Please confirm the diagnostic table source and high-risk recommendations before regeneration.",
+		"resolved": false, "resolved_by": nil, "resolved_at": nil, "deleted_at": nil,
+	}); err != nil {
+		return err
+	}
+
+	activity := []map[string]any{
+		{
+			"id": demoID("audit", guideline.Key+"-review-assigned"), "actor_id": assignedBy.String(),
+			"action": "guideline.review.assigned", "entity_type": "guideline_review_assignment", "entity_id": assignmentID.String(),
+			"metadata_json": mustJSON(fmt.Sprintf(`{"version_id":%q,"reviewer_id":%q}`, versionID.String(), reviewerID.String())),
+		},
+		{
+			"id": demoID("audit", guideline.Key+"-review-comment"), "actor_id": reviewerID.String(),
+			"action": "guideline.review.comment.created", "entity_type": "guideline_editor_comment", "entity_id": commentID.String(),
+			"metadata_json": mustJSON(fmt.Sprintf(`{"version_id":%q}`, versionID.String())),
+		},
+	}
+	for _, row := range activity {
+		if err := upsertByID(database, "audit_logs", row); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func demoID(kind, key string) uuid.UUID {

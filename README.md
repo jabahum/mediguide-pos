@@ -272,7 +272,7 @@ promotion and store credentials.
 
 | Document | Covers |
 |---|---|
-| [`docs/firebase-mobile-distribution.md`](docs/firebase-mobile-distribution.md) | Firebase projects, apps, FCM, APNs, Remote Config, backend Admin and CI secrets |
+| [`docs/firebase-mobile-distribution.md`](docs/firebase-mobile-distribution.md) | Firebase projects, apps, FCM, APNs, Remote Config, Crashlytics, backend Admin and CI secrets |
 | [`docs/mobile-environments.md`](docs/mobile-environments.md) | Flutter flavors, bundle IDs, schemes and debug tools |
 | [`docs/mobile-alpha-release.md`](docs/mobile-alpha-release.md) | Alpha, beta and production mobile delivery |
 | [`docs/mobile-visual-regression.md`](docs/mobile-visual-regression.md) | Golden-image matrix and accessibility sizes |

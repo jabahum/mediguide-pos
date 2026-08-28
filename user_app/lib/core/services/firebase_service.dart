@@ -5,6 +5,7 @@ import 'dart:math';
 
 import 'package:firebase_analytics/firebase_analytics.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:firebase_remote_config/firebase_remote_config.dart';
 import 'package:flutter/foundation.dart';
@@ -12,6 +13,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:user_app/core/config/app_config.dart';
 import 'package:user_app/core/config/firebase_config.dart';
 import 'package:user_app/core/network/api_client.dart';
 import 'package:user_app/features/authentication/data/datasources/auth_remote_datasource.dart';
@@ -63,10 +65,12 @@ final class MediGuideFirebaseService {
   VoidCallback? _authListener;
   RemoteMessage? _initialMessage;
   bool _enabled = false;
+  bool _crashReportingEnabled = false;
   AppNotificationPermissionState _permissionState =
       AppNotificationPermissionState.notDetermined;
 
   bool get enabled => _enabled;
+  bool get crashReportingEnabled => _crashReportingEnabled;
   Stream<RemoteMessage> get openedMessages async* {
     final initial = _initialMessage;
     _initialMessage = null;
@@ -138,6 +142,7 @@ final class MediGuideFirebaseService {
       options: MediGuideFirebaseConfig.currentPlatform,
     );
     _enabled = true;
+    await _initializeCrashReporting();
     FirebaseMessaging.onBackgroundMessage(firebaseBackgroundMessageHandler);
 
     await _initializeRemoteConfig();
@@ -145,8 +150,9 @@ final class MediGuideFirebaseService {
     await _initializeMessaging();
     await _syncPublicOutbreakTopic();
 
-    _auth.beforeLogout = unregisterCurrentDevice;
+    _auth.beforeLogout = _beforeLogout;
     _authListener = () {
+      unawaited(_syncCrashReportingUser());
       if (_auth.currentUser.value != null) {
         unawaited(registerCurrentDevice());
         unawaited(syncOutbreakTopicPreferenceFromServer());
@@ -158,6 +164,65 @@ final class MediGuideFirebaseService {
       await syncOutbreakTopicPreferenceFromServer();
     }
     return this;
+  }
+
+  Future<void> _initializeCrashReporting() async {
+    try {
+      final crashlytics = FirebaseCrashlytics.instance;
+      await crashlytics.setCrashlyticsCollectionEnabled(true);
+      final package = await PackageInfo.fromPlatform();
+      await crashlytics.setCustomKey(
+        'environment',
+        AppConfig.current.flavor.name,
+      );
+      await crashlytics.setCustomKey('platform', Platform.operatingSystem);
+      await crashlytics.setCustomKey('app_version', package.version);
+      await crashlytics.setCustomKey('build_number', package.buildNumber);
+
+      FlutterError.onError = (details) {
+        FlutterError.presentError(details);
+        unawaited(crashlytics.recordFlutterFatalError(details));
+      };
+      PlatformDispatcher.instance.onError = (error, stack) {
+        unawaited(crashlytics.recordError(error, stack, fatal: true));
+        return true;
+      };
+      _crashReportingEnabled = true;
+      await _syncCrashReportingUser();
+    } catch (error) {
+      debugPrint('Crashlytics initialization failed: $error');
+    }
+  }
+
+  Future<void> _syncCrashReportingUser() async {
+    if (!_crashReportingEnabled) return;
+    final userID = _auth.currentUser.value?.id ?? '';
+    try {
+      await FirebaseCrashlytics.instance.setUserIdentifier(userID);
+    } catch (_) {
+      // Crash reporting must never interrupt access to clinical content.
+    }
+  }
+
+  Future<void> recordNonFatalError(
+    Object error,
+    StackTrace stack, {
+    String? reason,
+  }) async {
+    if (!_crashReportingEnabled) return;
+    await FirebaseCrashlytics.instance.recordError(
+      error,
+      stack,
+      reason: reason,
+      fatal: false,
+    );
+  }
+
+  Future<void> _beforeLogout() async {
+    await unregisterCurrentDevice();
+    if (_crashReportingEnabled) {
+      await FirebaseCrashlytics.instance.setUserIdentifier('');
+    }
   }
 
   Future<void> _initializeRemoteConfig() async {

@@ -2,3 +2,4 @@
 #include "Generated.xcconfig"
 MEDIGUIDE_APP_ICON=stagingAppIcon
 MEDIGUIDE_APP_NAME=MediGuide Staging
+MEDIGUIDE_FIREBASE_IOS_APP_ID=1:986550714488:ios:3c683257a65391bff36d8d

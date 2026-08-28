@@ -31,7 +31,7 @@ away from production users.
 
 | Environment | Suggested Firebase project ID | Android package | iOS bundle ID |
 |---|---|---|---|
-| Development | `mediguide-development` | `com.mediguide.ug.dev` | `com.omarsoft.mediguide.dev` |
+| Development | `mediguide-dev` | `com.mediguide.ug.dev` | `com.omarsoft.mediguide.dev` |
 | Staging | `mediguide-staging` | `com.mediguide.ug.staging` | `com.omarsoft.mediguide.staging` |
 | Production | `mediguide-production` | `com.mediguide.ug` | `com.omarsoft.mediguide` |
 
@@ -101,10 +101,13 @@ From **Project settings → General**, record all values needed by MediGuide:
 - iOS Firebase App ID.
 
 This repository initializes Firebase programmatically through
-`user_app/lib/core/config/firebase_config.dart`; do not commit generated
-`google-services.json`, `GoogleService-Info.plist`, service-account JSON or a
-generated `firebase_options.dart`. The build-time values below are the supported
-configuration source.
+`user_app/lib/core/config/firebase_config.dart`. Android additionally keeps one
+public `google-services.json` descriptor under each native flavor source set so
+the Google Services and Crashlytics Gradle plugins select the correct app during
+native builds. These files contain client identifiers, not Admin credentials.
+Do not commit `GoogleService-Info.plist`, service-account JSON, a generated
+`firebase_options.dart`, or any backend private key. The protected build-time
+values below remain the shared Dart configuration source.
 
 Signed alpha and beta workflows build the staging native flavor against the
 hosted staging API. The reusable distribution workflow receives the flavor and
@@ -183,6 +186,48 @@ fvm flutter run \
 
 If any required value is absent, the app intentionally starts with Firebase
 disabled while the rest of MediGuide remains usable.
+
+## Crashlytics
+
+Crashlytics is wired into development, staging and production for Android and
+iOS. The app records uncaught Flutter framework errors, uncaught asynchronous
+platform errors and explicitly reported non-fatal failures. Reports include the
+environment, operating system, app version and build number. An authenticated
+user ID may be attached for diagnosis; email addresses, names, access tokens,
+clinical content and request bodies must not be added to Crashlytics keys or
+logs.
+
+For each Firebase project:
+
+1. Open **Build → Crashlytics** and finish product activation for both the
+   Android and Apple app records.
+2. Run the matching mobile flavor with its matching Firebase configuration.
+3. In development or staging, open the red diagnostic badge and select **Send
+   Crashlytics test**. This records a non-fatal environment-specific report.
+4. Background or restart the app so the queued report is flushed, then confirm
+   it appears in the matching Firebase project. Initial reports can take several
+   minutes to appear.
+5. Repeat the verification for every native app record before release. The
+   production app has no debug overlay; validate it with a controlled internal
+   build or an intentionally caught non-fatal diagnostic, never by crashing a
+   user-facing production session.
+
+Android applies the Google Services and Crashlytics Gradle plugins and selects
+these committed public descriptors:
+
+```text
+user_app/android/app/src/development/google-services.json
+user_app/android/app/src/staging/google-services.json
+user_app/android/app/src/production/google-services.json
+```
+
+iOS is configured without `GoogleService-Info.plist`. Each flavor Xcode config
+sets its Firebase Apple App ID, and the archive build phase invokes
+`ios/scripts/upload_crashlytics_symbols.sh` to upload the matching dSYM. Keep the
+Firebase Apple App IDs in those Xcode configs aligned with the protected Dart
+configuration whenever an Apple app registration changes. Local CocoaPods
+commands should run through the project-supported Ruby environment; a completed
+`pod install` must leave `FirebaseCrashlytics` present in `ios/Podfile.lock`.
 
 ## Cloud Messaging and APNs
 

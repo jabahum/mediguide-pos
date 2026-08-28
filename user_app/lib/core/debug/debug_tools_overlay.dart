@@ -222,6 +222,22 @@ final class _DebugToolsSheetState extends ConsumerState<_DebugToolsSheet> {
                     'Review flavor, package, version and endpoints',
                     _DebugPage.buildConfig,
                   ),
+                  ListTile(
+                    minTileHeight: 84,
+                    leading: Icon(
+                      Icons.bug_report_outlined,
+                      color: Theme.of(context).colorScheme.primary,
+                      size: 30,
+                    ),
+                    title: const Text(
+                      'Send Crashlytics test',
+                      style: TextStyle(fontWeight: FontWeight.w700),
+                    ),
+                    subtitle: const Text(
+                      'Queue a non-fatal diagnostic report for this environment',
+                    ),
+                    onTap: _sendCrashlyticsTest,
+                  ),
                 ],
               ),
             },
@@ -244,6 +260,34 @@ final class _DebugToolsSheetState extends ConsumerState<_DebugToolsSheet> {
     trailing: const Icon(Icons.chevron_right),
     onTap: () => setState(() => _page = page),
   );
+
+  Future<void> _sendCrashlyticsTest() async {
+    final service = ref.read(firebaseServiceProvider);
+    if (!service.crashReportingEnabled) {
+      _showMessage('Crashlytics is not configured for this build.');
+      return;
+    }
+    try {
+      await service.recordNonFatalError(
+        StateError('MediGuide Crashlytics diagnostic test'),
+        StackTrace.current,
+        reason: 'Manual ${AppConfig.current.flavor.name} environment test',
+      );
+      _showMessage(
+        'Test report queued for ${AppConfig.current.flavor.label}. '
+        'Restart the app to flush it.',
+      );
+    } catch (error) {
+      _showMessage('Could not queue the Crashlytics test: $error');
+    }
+  }
+
+  void _showMessage(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
+  }
 }
 
 final class _NetworkInspectorPage extends ConsumerWidget {

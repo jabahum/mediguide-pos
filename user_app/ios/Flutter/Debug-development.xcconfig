@@ -2,3 +2,4 @@
 #include "Generated.xcconfig"
 MEDIGUIDE_APP_ICON=developmentAppIcon
 MEDIGUIDE_APP_NAME=MediGuide Dev
+MEDIGUIDE_FIREBASE_IOS_APP_ID=1:935985334489:ios:8c71a95aa5794d9fa016c8

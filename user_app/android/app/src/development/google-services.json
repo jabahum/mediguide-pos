@@ -1,0 +1,22 @@
+{
+  "project_info": {
+    "project_number": "935985334489",
+    "project_id": "mediguide-dev"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:935985334489:android:df7d10c4dd848b3da016c8",
+        "android_client_info": {
+          "package_name": "com.mediguide.ug.dev"
+        }
+      },
+      "api_key": [
+        {
+          "current_key": "AIzaSyC5dKCjWzWJ4vmoJpIPprtKYecr_5_rDeY"
+        }
+      ]
+    }
+  ],
+  "configuration_version": "1"
+}

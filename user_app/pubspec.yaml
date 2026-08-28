@@ -48,6 +48,7 @@ dependencies:
   # Keep runtime and generator aligned with Riverpod 2.x's source_gen range.
   # Upgrade Drift and Riverpod generators together in a dedicated migration.
   drift: 2.27.0
+  sqlite3_flutter_libs: ^0.5.42
 
   path: ^1.9.1
   path_provider: ^2.1.5
@@ -149,10 +150,13 @@ dependencies:
 
   intl: ^0.20.2
   event_bus: ^2.0.1
-  firebase_core: ^4.13.0
+  # Keep the native Firebase SDK coordinated with the checked-in CocoaPods
+  # lockfile. Upgrade the Firebase family together in a dedicated change.
+  firebase_core: 4.13.0
   firebase_messaging: ^16.5.0
   firebase_remote_config: ^6.5.6
   firebase_analytics: ^12.4.6
+  firebase_crashlytics: 5.2.7
   flutter_local_notifications: ^22.3.0
   package_info_plus: ^9.0.1
 

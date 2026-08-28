@@ -88,6 +88,24 @@ export function MarkdownPreview({ content, className, assets = [] }: MarkdownPre
         skipHtml
         urlTransform={(url) => typeof url === "string" && url.startsWith("guideline-asset://") ? url : defaultUrlTransform(url)}
         components={{
+          table: ({ children, node, ...props }) => {
+            void node
+            return (
+              <div className="my-4 min-w-0 max-w-full overflow-hidden rounded-md border">
+                <table {...props} className="m-0 w-full table-fixed border-collapse">
+                  {children}
+                </table>
+              </div>
+            )
+          },
+          th: ({ children, node, ...props }) => {
+            void node
+            return <th {...props} className="break-words [overflow-wrap:anywhere]">{children}</th>
+          },
+          td: ({ children, node, ...props }) => {
+            void node
+            return <td {...props} className="break-words [overflow-wrap:anywhere]">{children}</td>
+          },
           a: ({ href, children, node, ...props }) => {
             void node
             return (

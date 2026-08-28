@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'package:user_app/app/router/route_names.dart';
 import 'package:user_app/core/constants/app_spacing.dart';
 import 'package:user_app/features/guidelines/data/models/guideline_publication.dart';
+import 'package:user_app/features/guidelines/presentation/widgets/responsive_clinical_table.dart';
 
 class PublicationBlockView extends StatelessWidget {
   const PublicationBlockView({
@@ -178,51 +179,7 @@ class _TableBlock extends StatelessWidget {
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        if (payload.title.isNotEmpty)
-          Text(payload.title, style: Theme.of(context).textTheme.titleMedium),
-        AppSpacing.gapSm,
-        if (payload.columns.length > 2)
-          Padding(
-            padding: const EdgeInsets.only(bottom: AppSpacing.xs),
-            child: Row(
-              children: [
-                Icon(
-                  LucideIcons.moveHorizontal,
-                  size: 16,
-                  color: Theme.of(context).colorScheme.onSurfaceVariant,
-                ),
-                const SizedBox(width: AppSpacing.xs),
-                Text(
-                  'Swipe horizontally to see all columns',
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        Scrollbar(
-          child: SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: DataTable(
-              columns: payload.columns
-                  .map((column) => DataColumn(label: Text(column)))
-                  .toList(),
-              rows: payload.rows
-                  .map(
-                    (row) => DataRow(
-                      cells: List.generate(
-                        payload.columns.length,
-                        (index) => DataCell(
-                          Text(index < row.length ? row[index] : ''),
-                        ),
-                      ),
-                    ),
-                  )
-                  .toList(),
-            ),
-          ),
-        ),
+        ResponsiveClinicalTable(payload: payload, showTitle: true),
         for (final footnote in payload.footnotes)
           Text(footnote, style: Theme.of(context).textTheme.bodySmall),
         if (onOpen != null)

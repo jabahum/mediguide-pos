@@ -103,7 +103,7 @@ export function StructuredTable({ content }: { content: Record<string, unknown> 
       <div className="table-scroll" tabIndex={0} role="region" aria-label={textValue(content.title) || "Clinical table"}>
         <table>
           {columns.length > 0 && <thead><tr>{columns.map((column, index) => <th scope="col" key={`${column}-${index}`}>{column}</th>)}</tr></thead>}
-          <tbody>{rows.map((row, rowIndex) => <tr key={rowIndex}>{row.map((cell, cellIndex) => <td key={cellIndex}>{cell}</td>)}</tr>)}</tbody>
+          <tbody>{rows.map((row, rowIndex) => <tr key={rowIndex}>{columns.map((column, cellIndex) => <td data-label={column} key={cellIndex}>{row[cellIndex] ?? ""}</td>)}</tr>)}</tbody>
         </table>
       </div>
       {footnotes.length > 0 && <ol className="table-footnotes">{footnotes.map((note, index) => <li key={index}>{note}</li>)}</ol>}

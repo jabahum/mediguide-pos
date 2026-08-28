@@ -25,6 +25,21 @@ describe("MarkdownPreview", () => {
     expect(screen.getByRole("checkbox")).toBeChecked()
   })
 
+  it("constrains wide tables to the preview width and wraps cell content", () => {
+    render(
+      <MarkdownPreview
+        content={`| Test | Typical setting | Result | Recommendation |
+| --- | --- | --- | --- |
+| Microscopy | Laboratory | Parasite detection | Follow national algorithms |`}
+      />,
+    )
+
+    const table = screen.getByRole("table")
+    expect(table).toHaveClass("table-fixed")
+    expect(table.parentElement).toHaveClass("max-w-full", "overflow-hidden")
+    expect(screen.getByText("Follow national algorithms")).toHaveClass("break-words")
+  })
+
   it("does not render raw HTML or executable elements", () => {
     const { container } = render(
       <MarkdownPreview content={'<script>alert("xss")</script><iframe src="bad"></iframe><b>unsafe</b>'} />,

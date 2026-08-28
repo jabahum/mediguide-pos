@@ -9,6 +9,7 @@ import 'package:user_app/core/widgets/app_error_view.dart';
 import 'package:user_app/core/widgets/app_loading_view.dart';
 import 'package:user_app/features/guidelines/data/models/guideline_publication.dart';
 import 'package:user_app/features/guidelines/presentation/controllers/publication_guideline_controller.dart';
+import 'package:user_app/features/guidelines/presentation/widgets/responsive_clinical_table.dart';
 
 class PublicationTablePage extends ConsumerWidget {
   const PublicationTablePage({
@@ -220,13 +221,10 @@ class _FullTable extends StatefulWidget {
 }
 
 class _FullTableState extends State<_FullTable> {
-  final ScrollController _horizontalController = ScrollController();
-
   final ScrollController _verticalController = ScrollController();
 
   @override
   void dispose() {
-    _horizontalController.dispose();
     _verticalController.dispose();
     super.dispose();
   }
@@ -279,54 +277,9 @@ class _FullTableState extends State<_FullTable> {
                   thumbVisibility: true,
                   child: SingleChildScrollView(
                     controller: _verticalController,
-                    child: Scrollbar(
-                      controller: _horizontalController,
-                      thumbVisibility: true,
-                      notificationPredicate: (notification) {
-                        return notification.metrics.axis == Axis.horizontal;
-                      },
-                      child: SingleChildScrollView(
-                        controller: _horizontalController,
-                        scrollDirection: Axis.horizontal,
-                        child: DataTable(
-                          headingRowColor: WidgetStatePropertyAll(
-                            colors.surfaceContainerHigh,
-                          ),
-                          columns: block.payload.columns
-                              .map(
-                                (column) => DataColumn(
-                                  label: Text(
-                                    column,
-                                    style: Theme.of(context)
-                                        .textTheme
-                                        .labelLarge
-                                        ?.copyWith(fontWeight: FontWeight.w800),
-                                  ),
-                                ),
-                              )
-                              .toList(),
-                          rows: block.payload.rows
-                              .map(
-                                (row) => DataRow(
-                                  cells: List.generate(
-                                    block.payload.columns.length,
-                                    (index) => DataCell(
-                                      ConstrainedBox(
-                                        constraints: const BoxConstraints(
-                                          minWidth: 100,
-                                          maxWidth: 280,
-                                        ),
-                                        child: SelectableText(
-                                          index < row.length ? row[index] : '',
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              )
-                              .toList(),
-                        ),
-                      ),
+                    child: Padding(
+                      padding: AppSpacing.cardPadding,
+                      child: ResponsiveClinicalTable(payload: block.payload),
                     ),
                   ),
                 ),

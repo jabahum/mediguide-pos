@@ -36,6 +36,8 @@ describe("GuidelineBlockRenderer", () => {
     })} />);
 
     expect(html).toContain("Dose table");
+    expect(html).toContain('data-label="Medicine"');
+    expect(html).toContain('data-label="Dose"');
     expect(html).toContain("&lt;script&gt;alert(1)&lt;/script&gt;");
     expect(html).not.toContain("<script>");
   });

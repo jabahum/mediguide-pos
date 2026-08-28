@@ -90,7 +90,7 @@ language: en
 If the metadata is already managed by the dashboard, the front matter can be
 removed instead of duplicated.
 
-### `duplicate_heading_anchor` or local `duplicate_heading`
+### `duplicate_heading_anchor`
 
 **Cause:** Two headings normalize to the same URL anchor. Punctuation and case
 do not make anchors unique.
@@ -108,7 +108,7 @@ attributes such as `onclick`, or `javascript:` URLs.
 **Fix:** Remove executable markup. Express content with Markdown and upload
 approved media as guideline assets. Never bypass or downgrade this validation.
 
-### `missing_image_alt` or local `missing_alt_text`
+### `missing_image_alt`
 
 **Cause:** An image uses empty alternative text.
 
@@ -178,6 +178,16 @@ columns.
 ```
 
 Do not merge cells with raw HTML because unsupported HTML is sanitized.
+Empty cells are valid, including trailing empty cells, but their delimiters must
+still be present. Escaped pipes (`\|`) and pipes inside inline code do not create
+extra columns:
+
+```markdown
+| Level | Primary | Secondary | Tertiary |
+| --- | --- | --- | --- |
+| Screening | Available |  |  |
+| Expression | `A | B` | A \| B |  |
+```
 
 ### `unexpected_callout_end`
 

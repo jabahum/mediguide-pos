@@ -230,13 +230,13 @@ func validateMarkdownDocument(revisionID uuid.UUID, content string, document mod
 			add("error", "malformed_link", "A Markdown link or image is not closed correctly.", lineNo, 1, len(line)+1)
 		}
 		if strings.Contains(line, "|") && index+1 < len(lines) && regexp.MustCompile(`^\s*\|?\s*:?-+`).MatchString(lines[index+1]) {
-			expected := len(strings.Split(strings.Trim(line, " |"), "|"))
-			separator := len(strings.Split(strings.Trim(lines[index+1], " |"), "|"))
+			expected := len(markdownTableCells(line))
+			separator := len(markdownTableCells(lines[index+1]))
 			if expected != separator {
 				add("error", "malformed_table", "Table header and separator have different column counts.", lineNo, 1, len(line)+1)
 			}
 			for rowIndex := index + 2; rowIndex < len(lines) && strings.Contains(lines[rowIndex], "|"); rowIndex++ {
-				columns := len(strings.Split(strings.Trim(lines[rowIndex], " |"), "|"))
+				columns := len(markdownTableCells(lines[rowIndex]))
 				if columns != expected {
 					add("error", "malformed_table", fmt.Sprintf("Table row has %d columns; expected %d.", columns, expected), rowIndex+1, 1, len(lines[rowIndex])+1)
 				}
@@ -288,6 +288,46 @@ func validateMarkdownDocument(revisionID uuid.UUID, content string, document mod
 	}
 	result.Valid = result.Errors == 0
 	return result
+}
+
+// markdownTableCells counts Markdown table cells without discarding meaningful
+// empty cells at either edge. It also keeps escaped pipes and pipes inside
+// inline-code spans in their containing cell.
+func markdownTableCells(line string) []string {
+	line = strings.TrimSpace(line)
+	if strings.HasPrefix(line, "|") {
+		line = strings.TrimPrefix(line, "|")
+	}
+	if strings.HasSuffix(line, "|") && !isEscapedMarkdownByte(line, len(line)-1) {
+		line = strings.TrimSuffix(line, "|")
+	}
+
+	cells := make([]string, 0, strings.Count(line, "|")+1)
+	start := 0
+	inCode := false
+	for index := 0; index < len(line); index++ {
+		switch line[index] {
+		case '`':
+			if !isEscapedMarkdownByte(line, index) {
+				inCode = !inCode
+			}
+		case '|':
+			if !inCode && !isEscapedMarkdownByte(line, index) {
+				cells = append(cells, line[start:index])
+				start = index + 1
+			}
+		}
+	}
+	cells = append(cells, line[start:])
+	return cells
+}
+
+func isEscapedMarkdownByte(value string, index int) bool {
+	backslashes := 0
+	for index--; index >= 0 && value[index] == '\\'; index-- {
+		backslashes++
+	}
+	return backslashes%2 == 1
 }
 
 func markdownAnchor(value string) string {

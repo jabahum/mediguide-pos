@@ -156,9 +156,9 @@ export function validateMarkdown(markdown: string): MarkdownValidationIssue[] {
   for (const heading of headings) {
     if (seen.has(heading.id)) {
       issues.push({
-        code: "duplicate_heading",
-        severity: "warning",
-        message: `Duplicate heading anchor “${heading.id}”.`,
+        code: "duplicate_heading_anchor",
+        severity: "error",
+        message: `Heading anchor “${heading.id}” duplicates line ${seen.get(heading.id)}.`,
         line: heading.line,
       })
     }
@@ -177,8 +177,22 @@ export function validateMarkdown(markdown: string): MarkdownValidationIssue[] {
     if (/<\s*script\b|\bon\w+\s*=|javascript\s*:/iu.test(line)) {
       issues.push({ code: "unsafe_html", severity: "error", message: "Executable HTML or JavaScript is not allowed.", line: index + 1 })
     }
-    if (/!\[\]\(/u.test(line)) {
-      issues.push({ code: "missing_alt_text", severity: "warning", message: "Image alternative text is missing.", line: index + 1 })
+    if (/!\[\s*\]\(/u.test(line)) {
+      issues.push({ code: "missing_image_alt", severity: "error", message: "Images require meaningful alternative text.", line: index + 1 })
+    }
+    if (line.includes("|") && index + 1 < lines.length && /^\s*\|?\s*:?-+/u.test(lines[index + 1])) {
+      const expected = markdownTableCells(line).length
+      const separator = markdownTableCells(lines[index + 1]).length
+      if (expected !== separator) {
+        issues.push({ code: "malformed_table", severity: "error", message: "Table header and separator have different column counts.", line: index + 1 })
+      }
+      for (let rowIndex = index + 2; rowIndex < lines.length && lines[rowIndex].includes("|"); rowIndex += 1) {
+        const columns = markdownTableCells(lines[rowIndex]).length
+        if (columns !== expected) {
+          issues.push({ code: "malformed_table", severity: "error", message: `Table row has ${columns} columns; expected ${expected}.`, line: rowIndex + 1 })
+        }
+      }
+      issues.push({ code: "high_risk_table_review_required", severity: "warning", message: "Clinical tables require explicit publisher review after regeneration.", line: index + 1 })
     }
   })
   const calloutStarts = lines.filter((line) => /^:::[a-z_-]+(?:\s+.*)?$/iu.test(line) && !/^:::\s*$/u.test(line)).length
@@ -192,6 +206,32 @@ export function validateMarkdown(markdown: string): MarkdownValidationIssue[] {
     issues.push({ code: "invalid_callout", severity: "error", message: error instanceof Error ? error.message : "Invalid clinical callout.", line: 1 })
   }
   return issues
+}
+
+function markdownTableCells(line: string) {
+  let value = line.trim()
+  if (value.startsWith("|")) value = value.slice(1)
+  if (value.endsWith("|") && !isEscapedMarkdownCharacter(value, value.length - 1)) value = value.slice(0, -1)
+
+  const cells: string[] = []
+  let start = 0
+  let inCode = false
+  for (let index = 0; index < value.length; index += 1) {
+    if (value[index] === "`" && !isEscapedMarkdownCharacter(value, index)) {
+      inCode = !inCode
+    } else if (value[index] === "|" && !inCode && !isEscapedMarkdownCharacter(value, index)) {
+      cells.push(value.slice(start, index))
+      start = index + 1
+    }
+  }
+  cells.push(value.slice(start))
+  return cells
+}
+
+function isEscapedMarkdownCharacter(value: string, index: number) {
+  let backslashes = 0
+  for (let cursor = index - 1; cursor >= 0 && value[cursor] === "\\"; cursor -= 1) backslashes += 1
+  return backslashes % 2 === 1
 }
 
 export function markdownStats(markdown: string): MarkdownStats {

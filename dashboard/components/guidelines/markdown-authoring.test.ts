@@ -54,6 +54,28 @@ describe("Markdown authoring utilities", () => {
     expect(issues.find((issue) => issue.code === "unsafe_html")?.severity).toBe("error")
   })
 
+  it("treats duplicate anchors and missing image alt text as production errors", () => {
+    const issues = validateMarkdown("# Care\n\n## Review\n\n## Review\n\n![](asset:missing)")
+
+    expect(issues).toEqual(expect.arrayContaining([
+      expect.objectContaining({ code: "duplicate_heading_anchor", severity: "error", line: 5 }),
+      expect.objectContaining({ code: "missing_image_alt", severity: "error", line: 7 }),
+    ]))
+  })
+
+  it("accepts trailing empty table cells and literal pipes", () => {
+    const issues = validateMarkdown("# Care\n\n| Area | Primary | Secondary | Tertiary |\n| --- | --- | --- | --- |\n| History | x |  |  |\n| Expression | `a | b` | A \\| B |  |")
+
+    expect(issues.filter((issue) => issue.code === "malformed_table")).toEqual([])
+    expect(issues).toContainEqual(expect.objectContaining({ code: "high_risk_table_review_required", severity: "warning" }))
+  })
+
+  it("rejects real table column mismatches", () => {
+    const issues = validateMarkdown("# Care\n\n| One | Two | Three |\n| --- | --- | --- |\n| A | B |")
+
+    expect(issues).toContainEqual(expect.objectContaining({ code: "malformed_table", severity: "error", line: 5 }))
+  })
+
   it("formats line endings and creates a deterministic safe line diff", () => {
     expect(formatMarkdown("# Care\r\n\r\nOld.  \r\n")).toBe("# Care\n\nOld.\n")
     expect(lineDiff("# Care\nOld", "# Care\nNew")).toEqual([

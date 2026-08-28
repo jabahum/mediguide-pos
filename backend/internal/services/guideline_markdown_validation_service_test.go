@@ -65,3 +65,40 @@ func TestValidateMarkdownDocumentRejectsEmptyCalloutAndMissingReference(t *testi
 		}
 	}
 }
+
+func TestValidateMarkdownDocumentAcceptsTrailingEmptyTableCells(t *testing.T) {
+	content := "# Assessment\n\n| Area | Finding | Primary | Secondary | Tertiary |\n| --- | --- | --- | --- | --- |\n| History | Confirm diagnosis | x |  |  |\n| Examination | Assess complications | x | x |  |"
+	result := validateMarkdownDocument(uuid.New(), content, models.GuidelineDocument{SourceOrg: "Ministry"}, nil)
+	for _, issue := range result.Issues {
+		if issue.Code == "malformed_table" {
+			t.Fatalf("valid empty table cells were rejected: %#v", result.Issues)
+		}
+	}
+	if !result.Valid {
+		t.Fatalf("expected valid Markdown: %#v", result.Issues)
+	}
+}
+
+func TestValidateMarkdownDocumentKeepsEscapedAndCodePipesInTableCells(t *testing.T) {
+	content := "# Assessment\n\n| Label | Expression | Notes |\n| --- | --- | --- |\n| Choice | A \\| B | `x | y` |"
+	result := validateMarkdownDocument(uuid.New(), content, models.GuidelineDocument{SourceOrg: "Ministry"}, nil)
+	for _, issue := range result.Issues {
+		if issue.Code == "malformed_table" {
+			t.Fatalf("literal pipes were counted as columns: %#v", result.Issues)
+		}
+	}
+}
+
+func TestValidateMarkdownDocumentRejectsRealTableColumnMismatch(t *testing.T) {
+	content := "# Assessment\n\n| One | Two | Three |\n| --- | --- | --- |\n| A | B |"
+	result := validateMarkdownDocument(uuid.New(), content, models.GuidelineDocument{SourceOrg: "Ministry"}, nil)
+	found := false
+	for _, issue := range result.Issues {
+		if issue.Code == "malformed_table" {
+			found = true
+		}
+	}
+	if !found || result.Valid {
+		t.Fatalf("expected malformed table error: %#v", result.Issues)
+	}
+}

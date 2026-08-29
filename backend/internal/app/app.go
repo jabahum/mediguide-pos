@@ -217,6 +217,13 @@ func New(cfg config.Config) (*App, error) {
 		public.GET("/guidelines/:id/offline-package/download", rateLimiter.Limit(middleware.Policy("public-guideline-offline-download", 10, time.Minute, 2), middleware.IPIdentity), publicGuidelineH.OfflinePackageDownload)
 		public.GET("/guidelines/:id/assets/:assetId/download", rateLimiter.Limit(middleware.Policy("public-guideline-asset-download", 60, time.Minute, 10), middleware.IPIdentity), publicGuidelineH.AssetDownload)
 		public.GET("/guidelines/:id/markdown", rateLimiter.Limit(middleware.Policy("public-markdown", 60, time.Minute, 10), middleware.IPIdentity), publicGuidelineH.Markdown)
+		public.POST("/assistant/ask",
+			middleware.PrivateNoStore(),
+			rateLimiter.Limit(middleware.Policy("public-general-ai-chat-minute", 6, time.Minute, 1), middleware.IPIdentity),
+			rateLimiter.Limit(middleware.Policy("public-general-ai-chat-daily", 30, 24*time.Hour, 0), middleware.IPIdentity),
+			rateLimiter.Concurrency("public-general-ai-chat-ip", 1, time.Minute, middleware.IPIdentity),
+			rateLimiter.Concurrency("public-general-ai-chat-global", 10, 2*time.Minute, middleware.StaticIdentity("global")),
+			ragH.AskPublic)
 		public.POST("/guidelines/:id/ask",
 			middleware.PrivateNoStore(),
 			rateLimiter.Limit(middleware.Policy("public-ai-chat-minute", 6, time.Minute, 1), middleware.IPIdentity),

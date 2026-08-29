@@ -14,6 +14,7 @@ abstract interface class RagAssistant {
     required String question,
     String? country,
     String? programArea,
+    bool authenticated = false,
   });
 }
 
@@ -35,6 +36,7 @@ final class RagRepository implements RagAssistant {
     required String question,
     String? country,
     String? programArea,
+    bool authenticated = false,
   }) async {
     final normalizedQuestion = question.trim();
     if (normalizedQuestion.isEmpty) {
@@ -48,8 +50,16 @@ final class RagRepository implements RagAssistant {
       'program_area': programArea?.trim() ?? '',
       if (_sessionId?.isNotEmpty == true) 'session_id': _sessionId,
     });
+    final endpoint = authenticated
+        ? '/api/v2/chat/ask'
+        : '/api/public/assistant/ask';
     final envelope = await _api
-        .requestJson('/api/v2/chat/ask', method: 'POST', body: request.toJson())
+        .requestJson(
+          endpoint,
+          method: 'POST',
+          body: request.toJson(),
+          includeAuth: authenticated,
+        )
         .timeout(const Duration(seconds: 130));
     final data = envelope['data'];
     if (data is! Map) {

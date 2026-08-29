@@ -133,6 +133,7 @@ class FakeRagAssistant implements RagAssistant {
     required String question,
     String? country,
     String? programArea,
+    bool authenticated = false,
   }) async {
     lastMessage = question;
     return const RagAnswer(

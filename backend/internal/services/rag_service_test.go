@@ -36,6 +36,17 @@ func TestPublishedRAGAskRejectsInvalidQuestionsBeforeDatabaseAccess(t *testing.T
 	}
 }
 
+func TestPublicRAGAskRejectsInvalidQuestionsBeforeDatabaseAccess(t *testing.T) {
+	t.Parallel()
+	service := RAGService{}
+	for _, question := range []string{"", "x", strings.Repeat("x", 1201)} {
+		_, err := service.AskPublic(AskRequest{Question: question})
+		if !errors.Is(err, ErrInvalidPublicRAGQuestion) {
+			t.Fatalf("question length %d: expected ErrInvalidPublicRAGQuestion, got %v", len(question), err)
+		}
+	}
+}
+
 func TestRAGCitationEnrichmentUsesAuthoritativeChunkNavigation(t *testing.T) {
 	db, err := gorm.Open(sqlite.Open("file::memory:?cache=shared"), &gorm.Config{})
 	if err != nil {

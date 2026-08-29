@@ -15,6 +15,40 @@ import (
 
 type RAGHandler struct{ Service services.RAGService }
 
+// AskPublic godoc
+// @Summary Ask the public assistant across approved guidelines
+// @Description Returns citation-first content from approved guideline chunks. Anonymous sessions are isolated and rate limited.
+// @Tags public-guidelines
+// @Accept json
+// @Produce json
+// @Param payload body services.AskRequest true "Question payload"
+// @Success 200 {object} handlers.AskEnvelope
+// @Failure 400 {object} handlers.ErrorResponse
+// @Failure 404 {object} handlers.ErrorResponse
+// @Failure 429 {object} handlers.ErrorResponse
+// @Failure 500 {object} handlers.ErrorResponse
+// @Router /api/public/assistant/ask [post]
+func (h RAGHandler) AskPublic(c *gin.Context) {
+	var req services.AskRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		httpx.Error(c, http.StatusBadRequest, err.Error())
+		return
+	}
+	res, err := h.Service.AskPublic(req)
+	if err != nil {
+		switch {
+		case errors.Is(err, services.ErrInvalidPublicRAGQuestion), errors.Is(err, services.ErrInvalidRAGSession):
+			httpx.Error(c, http.StatusBadRequest, err.Error())
+		case errors.Is(err, services.ErrRAGSessionNotFound):
+			httpx.Error(c, http.StatusNotFound, err.Error())
+		default:
+			httpx.Error(c, http.StatusInternalServerError, "internal server error")
+		}
+		return
+	}
+	httpx.OK(c, res)
+}
+
 // AskPublishedGuideline godoc
 // @Summary Ask the public assistant about one published guideline
 // @Description Returns citation-first content scoped to the exact current published guideline. It does not replace clinical judgement.

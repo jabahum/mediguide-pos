@@ -223,6 +223,7 @@ class AiAssistantController extends _$AiAssistantController {
       question: requestMessage,
       country: _country,
       programArea: _programArea,
+      authenticated: _domainUser != null,
     );
 
     state = state.copyWith(

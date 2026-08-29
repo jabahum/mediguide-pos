@@ -107,6 +107,14 @@ func TestPublishedGuidelineAssistantSearchStaysInsideCurrentPublishedVersion(t *
 	if len(results) != 1 || results[0].Title != "Current treatment" || results[0].GuidelineID != targetID.String() {
 		t.Fatalf("assistant search escaped the current publication: %#v", results)
 	}
+
+	generalResults, err := (SearchService{DB: database}).SearchApprovedGuidelineContext(t.Context(), "How should severe malaria be treated?", 5)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(generalResults) != 1 || generalResults[0].Title != "Current treatment" || generalResults[0].GuidelineID != targetID.String() {
+		t.Fatalf("general assistant search leaked superseded content: %#v", generalResults)
+	}
 }
 
 func TestPublicAssistantTermsRemovesQuestionNoise(t *testing.T) {

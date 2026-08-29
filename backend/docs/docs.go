@@ -22,6 +22,64 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
+        "/api/public/assistant/ask": {
+            "post": {
+                "description": "Returns citation-first content from approved guideline chunks. Anonymous sessions are isolated and rate limited.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "public-guidelines"
+                ],
+                "summary": "Ask the public assistant across approved guidelines",
+                "parameters": [
+                    {
+                        "description": "Question payload",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/services.AskRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.AskEnvelope"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    },
+                    "429": {
+                        "description": "Too Many Requests",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/public/guidelines": {
             "get": {
                 "produces": [
@@ -20521,6 +20579,32 @@ const docTemplate = `{
                 }
             }
         },
+        "models.GuidelineRegenerationPendingBlock": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "string"
+                },
+                "page_end": {
+                    "type": "integer"
+                },
+                "page_start": {
+                    "type": "integer"
+                },
+                "review_status": {
+                    "$ref": "#/definitions/models.GuidelineBlockReviewStatus"
+                },
+                "section_id": {
+                    "type": "string"
+                },
+                "sort_order": {
+                    "type": "integer"
+                },
+                "type": {
+                    "$ref": "#/definitions/models.GuidelineBlockType"
+                }
+            }
+        },
         "models.GuidelineRegenerationReview": {
             "type": "object",
             "properties": {
@@ -20544,6 +20628,19 @@ const docTemplate = `{
                 },
                 "job_id": {
                     "type": "string"
+                },
+                "outstanding_high_risk_blocks": {
+                    "description": "ReviewProgress is computed from the current structured projection. These\nfields are not persisted because block review decisions can change after\nthe regeneration review row is created.",
+                    "type": "integer"
+                },
+                "pending_high_risk_blocks": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.GuidelineRegenerationPendingBlock"
+                    }
+                },
+                "pending_high_risk_blocks_truncated": {
+                    "type": "boolean"
                 },
                 "reviewed_at": {
                     "type": "string"

@@ -116,6 +116,21 @@ func (s RAGService) Ask(userID *uuid.UUID, req AskRequest) (*AskResponse, error)
 	if utf8.RuneCountInString(req.Question) < 2 || utf8.RuneCountInString(req.Question) > 12000 {
 		return nil, ErrInvalidRAGQuestion
 	}
+	return s.ask(userID, req)
+}
+
+// AskPublic provides the general approved-guideline assistant without requiring
+// an account. Public questions have a smaller input limit and anonymous sessions
+// can only be resumed when the supplied session also belongs to an anonymous user.
+func (s RAGService) AskPublic(req AskRequest) (*AskResponse, error) {
+	req.Question = strings.TrimSpace(req.Question)
+	if utf8.RuneCountInString(req.Question) < 2 || utf8.RuneCountInString(req.Question) > 1200 {
+		return nil, ErrInvalidPublicRAGQuestion
+	}
+	return s.ask(nil, req)
+}
+
+func (s RAGService) ask(userID *uuid.UUID, req AskRequest) (*AskResponse, error) {
 	session, err := s.getOrCreateSession(userID, req)
 	if err != nil {
 		return nil, err
@@ -202,7 +217,10 @@ func (s RAGService) askWithConfiguredProvider(req workerAskRequest) (*AskRespons
 	provider := strings.ToLower(strings.TrimSpace(s.Cfg.AIRAGProvider))
 	if provider == "worker" || provider == "ai-worker" {
 		if res, err := s.askWorker(req); err == nil {
-			return res, nil
+			if res != nil && strings.TrimSpace(res.Answer) != "" && len(res.Citations) > 0 {
+				return res, nil
+			}
+			log.Warn().Msg("ai-worker RAG returned no grounded citations, falling back to approved local search")
 		} else {
 			log.Warn().Err(err).Msg("ai-worker RAG failed, falling back to local search")
 		}
@@ -284,14 +302,14 @@ func toGRPCChatMessages(messages []workerChatMessage) []*aiworkerpb.ChatMessage 
 }
 
 func (s RAGService) askLocal(req workerAskRequest) (*AskResponse, error) {
-	results, err := s.Search.Search(s.buildLocalSearchQuestion(req), req.ProgramArea, 5)
+	results, err := s.Search.SearchApprovedGuidelineContext(context.Background(), s.buildLocalSearchQuestion(req), 5)
 	if err != nil {
 		return nil, err
 	}
 	citations := []Citation{}
 	parts := []string{}
 	for _, r := range results {
-		citations = append(citations, Citation{ChunkID: r.ID, Title: r.Title, SourceName: r.SourceName, SourceVersion: r.SourceVersion, PageStart: r.PageStart, PageEnd: r.PageEnd})
+		citations = append(citations, Citation{ChunkID: r.ID, GuidelineID: r.GuidelineID, SectionID: r.SectionID, BlockID: r.BlockID, Title: r.Title, SourceName: r.SourceName, SourceVersion: r.SourceVersion, PageStart: r.PageStart, PageEnd: r.PageEnd})
 		parts = append(parts, "- "+r.Snippet)
 	}
 	answer := "I found the following approved guideline content that may answer the question. Please review the cited source sections before clinical use:\n\n" + strings.Join(parts, "\n")

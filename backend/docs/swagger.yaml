@@ -3178,6 +3178,23 @@ definitions:
       version_id:
         type: string
     type: object
+  models.GuidelineRegenerationPendingBlock:
+    properties:
+      id:
+        type: string
+      page_end:
+        type: integer
+      page_start:
+        type: integer
+      review_status:
+        $ref: '#/definitions/models.GuidelineBlockReviewStatus'
+      section_id:
+        type: string
+      sort_order:
+        type: integer
+      type:
+        $ref: '#/definitions/models.GuidelineBlockType'
+    type: object
   models.GuidelineRegenerationReview:
     properties:
       after_snapshot:
@@ -3194,6 +3211,18 @@ definitions:
         type: string
       job_id:
         type: string
+      outstanding_high_risk_blocks:
+        description: |-
+          ReviewProgress is computed from the current structured projection. These
+          fields are not persisted because block review decisions can change after
+          the regeneration review row is created.
+        type: integer
+      pending_high_risk_blocks:
+        items:
+          $ref: '#/definitions/models.GuidelineRegenerationPendingBlock'
+        type: array
+      pending_high_risk_blocks_truncated:
+        type: boolean
       reviewed_at:
         type: string
       reviewed_by:
@@ -8254,6 +8283,45 @@ info:
   title: MediGuide Backend API
   version: 2.0.24
 paths:
+  /api/public/assistant/ask:
+    post:
+      consumes:
+      - application/json
+      description: Returns citation-first content from approved guideline chunks.
+        Anonymous sessions are isolated and rate limited.
+      parameters:
+      - description: Question payload
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/services.AskRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.AskEnvelope'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "429":
+          description: Too Many Requests
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+      summary: Ask the public assistant across approved guidelines
+      tags:
+      - public-guidelines
   /api/public/guidelines:
     get:
       parameters:

@@ -18,6 +18,10 @@ void main() {
       expect(AppRoutes.isPublic(route), isTrue);
     });
 
+    test('allows guests to open the general MediGuide Assistant', () {
+      expect(AppRoutes.isPublic(AppRoutes.aiAssistant), isTrue);
+    });
+
     test('accepts only safe local post-authentication destinations', () {
       expect(
         AppRoutes.safeDestination('/public/guidelines/guideline-1'),

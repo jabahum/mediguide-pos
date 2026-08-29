@@ -92,6 +92,7 @@ abstract final class AppRoutes {
     publicGuidelines,
     offlineContent,
     documentReader,
+    aiAssistant,
     outbreakHub,
     situationReports,
     drugIndex,

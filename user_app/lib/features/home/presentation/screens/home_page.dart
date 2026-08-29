@@ -85,13 +85,6 @@ class HomePage extends ConsumerWidget {
         },
       ),
 
-      floatingActionButton: _ChatFloatingButton(
-        unreadCount: data.unreadMessagesCount,
-        onPressed: () {
-          AppNavigator.push(AppRoutes.chatList);
-        },
-      ),
-
       body: _buildBody(
         context: context,
         ref: ref,
@@ -1104,40 +1097,6 @@ class _NoRecentGuidelinesCard extends StatelessWidget {
               ],
             ),
           ),
-        ),
-      ),
-    );
-  }
-}
-
-/// ===========================================================================
-/// CHAT
-/// ===========================================================================
-
-class _ChatFloatingButton extends StatelessWidget {
-  const _ChatFloatingButton({
-    required this.unreadCount,
-    required this.onPressed,
-  });
-
-  final int unreadCount;
-  final VoidCallback onPressed;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
-
-    final unread = unreadCount.clamp(0, 9999);
-
-    return FloatingActionButton.small(
-      onPressed: onPressed,
-      tooltip: 'Conversations',
-      child: Badge(
-        isLabelVisible: unread > 0,
-        label: Text(unread > 99 ? '99+' : '$unread'),
-        child: Icon(
-          LucideIcons.messageCircle,
-          color: colors.onPrimaryContainer,
         ),
       ),
     );

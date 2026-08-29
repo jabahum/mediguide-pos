@@ -3,6 +3,8 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
+import 'package:user_app/app/router/app_navigator.dart';
+import 'package:user_app/app/router/route_names.dart';
 import 'package:user_app/features/navigation/presentation/controllers/main_navigation_controller.dart';
 import 'package:user_app/features/home/presentation/screens/home_page.dart';
 import 'package:user_app/features/home/presentation/controllers/home_controller.dart';
@@ -109,6 +111,12 @@ class _MainPageState extends ConsumerState<MainPage> {
             ],
           );
           return Scaffold(
+            floatingActionButton: FloatingActionButton.small(
+              key: const Key('global-ai-assistant-fab'),
+              tooltip: 'Open MediGuide Assistant',
+              onPressed: () => AppNavigator.push(AppRoutes.aiAssistant),
+              child: const Icon(LucideIcons.sparkles),
+            ),
             body: compact
                 ? content
                 : Row(

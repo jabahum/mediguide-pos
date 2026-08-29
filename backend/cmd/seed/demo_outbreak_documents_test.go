@@ -71,8 +71,8 @@ func TestSeedDemoOutbreakDocumentsIsCompleteAndIdempotent(t *testing.T) {
 	}
 
 	fixtures := demoOutbreakDocuments()
-	if len(fixtures) != 6 {
-		t.Fatalf("expected six required outbreak fixtures, got %d", len(fixtures))
+	if len(fixtures) != 13 {
+		t.Fatalf("expected thirteen required outbreak fixtures, got %d", len(fixtures))
 	}
 	var rows []models.OutbreakResource
 	if err := database.Where("outbreak_id = ? AND resource_type = ?", outbreakID, "managed_document").Order("sort_order ASC").Find(&rows).Error; err != nil {
@@ -110,7 +110,7 @@ func TestSeedDemoOutbreakDocumentsIsCompleteAndIdempotent(t *testing.T) {
 		}
 		seenKinds[row.DocumentKind] = true
 	}
-	for _, kind := range []string{"sop", "ipc_protocol", "laboratory_protocol", "contact_tracing_guide", "checklist", "communication_material"} {
+	for _, kind := range []string{"case_definition", "sop", "treatment_protocol", "ipc_protocol", "referral_protocol", "laboratory_protocol", "policy", "contact_tracing_guide", "form", "checklist", "training_material", "communication_material", "other"} {
 		if !seenKinds[kind] {
 			t.Fatalf("required document kind %q was not seeded", kind)
 		}

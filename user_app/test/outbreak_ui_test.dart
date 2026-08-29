@@ -184,6 +184,134 @@ void main() {
   });
 
   testWidgets(
+    'guest outbreak hub opens the complete Clinical Care section workflow',
+    (tester) async {
+      tester.view.physicalSize = const Size(390, 844);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      final documents = <PublicOutbreakDocument>[
+        for (final kind in const [
+          'case_definition',
+          'sop',
+          'treatment_protocol',
+          'ipc_protocol',
+          'referral_protocol',
+          'laboratory_protocol',
+          'policy',
+          'contact_tracing_guide',
+          'form',
+          'checklist',
+          'training_material',
+          'communication_material',
+          'other',
+        ])
+          PublicOutbreakDocument(
+            id: 'document-$kind',
+            outbreakId: 'outbreak-1',
+            title: 'Published ${kind.replaceAll('_', ' ')}',
+            documentKind: kind,
+            supportsInline: true,
+          ),
+      ];
+      final detail = PublicOutbreakDetail(
+        outbreak: _outbreak.copyWith(diseaseType: 'Ebola Virus Disease'),
+        documents: documents,
+        reports: const [
+          PublicSituationReport(
+            id: 'report-1',
+            outbreakId: 'outbreak-1',
+            title: 'Situation report',
+          ),
+        ],
+      );
+      final router = GoRouter(
+        initialLocation: '/outbreak-hub/outbreak-1',
+        routes: [
+          GoRoute(
+            path: AppRoutes.outbreakDetails,
+            builder: (_, state) => OutbreakDetailPage(
+              outbreakId: state.pathParameters['outbreakId']!,
+            ),
+          ),
+          GoRoute(
+            path: AppRoutes.outbreakSection,
+            builder: (_, state) => OutbreakSectionGridPage(
+              outbreakId: state.pathParameters['outbreakId']!,
+              sectionId: state.pathParameters['sectionId']!,
+            ),
+          ),
+          GoRoute(
+            path: AppRoutes.outbreakDocumentDetails,
+            builder: (_, state) =>
+                Text('Opened ${state.pathParameters['documentId']}'),
+          ),
+        ],
+      );
+      addTearDown(router.dispose);
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            publicOutbreakProvider('outbreak-1').overrideWith(
+              (_) async => PublicContent(
+                value: detail,
+                cache: const PublicCacheMetadata.online(),
+              ),
+            ),
+          ],
+          child: MaterialApp.router(routerConfig: router),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.scrollUntilVisible(
+        find.text('Quick access'),
+        220,
+        scrollable: find.byType(Scrollable).last,
+      );
+
+      for (final label in const [
+        'Clinical Care',
+        'IPC & PPE',
+        'Algorithms',
+        'Laboratory',
+        'Medicines',
+        'Forms',
+        'Training',
+        'Situation reports',
+        'Contacts',
+        'FAQs',
+      ]) {
+        expect(find.text(label), findsAtLeastNWidgets(1));
+      }
+
+      await Scrollable.ensureVisible(
+        tester.element(find.text('Clinical Care')),
+        alignment: 0.5,
+      );
+      await tester.pump();
+      await tester.tap(find.text('Clinical Care'));
+      await tester.pumpAndSettle();
+      expect(
+        find.text('Evidence-based clinical management for Ebola Virus Disease'),
+        findsOneWidget,
+      );
+      expect(find.text('Case Definition'), findsOneWidget);
+      expect(find.text('Screening & Triage'), findsOneWidget);
+      expect(find.text('Isolation'), findsOneWidget);
+      expect(find.text('Clinical Management'), findsOneWidget);
+      expect(find.text('Discharge Criteria'), findsOneWidget);
+      expect(find.text('Follow-up & Monitoring'), findsOneWidget);
+
+      await tester.tap(find.text('Case Definition'));
+      await tester.pumpAndSettle();
+      expect(find.text('Opened document-case_definition'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
     'outbreak Markdown reader exposes metadata, search, TOC and actions',
     (tester) async {
       tester.view.physicalSize = const Size(390, 844);

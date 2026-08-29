@@ -113,7 +113,7 @@ The dashboard document workspace shows the immutable original checksum separatel
 
 ## Demo and staging document seed
 
-Use `SEED_SCOPE=outbreaks` when only the outbreak experience needs test data. It creates the required development actors and publishes the deterministic Bundibugyo virus disease response hub, metrics, updates, quick resources, situation report, and six searchable Markdown documents. The broader `SEED_SCOPE=demo` seed includes the same outbreak fixture with all other demo content.
+Use `SEED_SCOPE=outbreaks` when only the outbreak experience needs test data. It creates the required development actors and publishes the deterministic Bundibugyo virus disease response hub, metrics, updates, quick resources, situation report, and thirteen searchable Markdown documents. The broader `SEED_SCOPE=demo` seed includes the same outbreak fixture with all other demo content.
 
 The public search terms include both the precise disease name and the commonly used outbreak term (`Ebola`), so an outbreak-hub result is returned alongside matching governed documents.
 
@@ -125,7 +125,7 @@ docker compose \
   run --rm --no-deps -e SEED_SCOPE=outbreaks api /app/seed
 ```
 
-The documents include a case-management SOP, IPC protocol, laboratory specimen-handling protocol, contact-tracing guide, frontline checklist and risk-communication guide. The source files live in `backend/cmd/seed/fixtures/outbreak-documents` and are embedded in the seed binary. Each database record therefore has a corresponding object uploaded to the configured MinIO/S3 bucket under a deterministic `demo/outbreaks/...` key.
+The documents cover the guest response-hub workflow: case definition, screening and treatment pathway, case-management SOP, IPC, discharge and referral, laboratory handling, medicines safety, contact tracing, forms, frontline checklist, training, risk communication and FAQs. The source files live in `backend/cmd/seed/fixtures/outbreak-documents` and are embedded in the seed binary. Each database record therefore has a corresponding object uploaded to the configured MinIO/S3 bucket under a deterministic `demo/outbreaks/...` key.
 
 Rerunning the seed is safe: document UUIDs, document numbers, versions and storage keys are stable; object contents are replaced from the repository fixture; and SHA-256 checksum and size metadata are recalculated. Each demo outbreak also receives a protocol/SOP, checklist, situation report, related guideline and approved official website quick resource. The seed reads uploaded objects back from storage, verifies non-empty bytes and SHA-256 checksums, and invokes the same projection derivation used by runtime uploads. It persists the runtime search text, rendered body, headings, sections, page map, derived checksum and search-schema version, then verifies public metadata, content, download and body-search paths. A parity test re-derives every fixture and prevents seed/runtime projection drift. The fixtures are clearly marked as demonstration content and are not clinician-approved operational guidance.
 

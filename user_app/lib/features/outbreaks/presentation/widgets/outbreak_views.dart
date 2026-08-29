@@ -703,24 +703,71 @@ class _OutbreakQuickAccessGrid extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final clinicalCare = _firstOutbreakDocument(detail.documents, const [
+      'treatment_protocol',
+      'sop',
+      'case_definition',
+    ]);
+    final ipc = _firstOutbreakDocument(detail.documents, const [
+      'ipc_protocol',
+    ]);
+    final algorithm = _firstOutbreakDocument(detail.documents, const [
+      'treatment_protocol',
+    ]);
+    final laboratory = _firstOutbreakDocument(detail.documents, const [
+      'laboratory_protocol',
+    ]);
+    final medicines = _firstOutbreakDocument(detail.documents, const [
+      'policy',
+    ]);
+    final forms = _firstOutbreakDocument(detail.documents, const ['form']);
+    final training = _firstOutbreakDocument(detail.documents, const [
+      'training_material',
+    ]);
+    final contacts = _firstOutbreakDocument(detail.documents, const [
+      'contact_tracing_guide',
+    ]);
+    final faqs = _firstOutbreakDocument(detail.documents, const ['other']);
+
     final actions = <_OutbreakQuickAction>[
-      for (final document in detail.documents.take(4))
+      if (clinicalCare != null)
         _OutbreakQuickAction(
-          label: _documentQuickLabel(document),
-          icon: _documentQuickIcon(document),
+          label: 'Clinical Care',
+          icon: LucideIcons.stethoscope,
           onTap: () => context.push(
-            AppRoutes.outbreakDocument(document.outbreakId, document.id),
+            AppRoutes.outbreakSectionFor(detail.outbreak.id, 'clinical-care'),
           ),
         ),
-      for (final resource in detail.resources.take(2))
-        _OutbreakQuickAction(
-          label: resource.targetType == 'guideline'
-              ? 'Clinical guide'
-              : 'Official update',
-          icon: resource.targetType == 'guideline'
-              ? LucideIcons.bookOpenCheck
-              : LucideIcons.info,
-          onTap: () => _openOutbreakResource(context, resource),
+      if (ipc != null) _documentQuickAction(context, 'IPC & PPE', ipc),
+      if (algorithm != null)
+        _documentQuickAction(
+          context,
+          'Algorithms',
+          algorithm,
+          icon: LucideIcons.gitBranch,
+        ),
+      if (laboratory != null)
+        _documentQuickAction(context, 'Laboratory', laboratory),
+      if (medicines != null)
+        _documentQuickAction(
+          context,
+          'Medicines',
+          medicines,
+          icon: LucideIcons.pill,
+        ),
+      if (forms != null)
+        _documentQuickAction(
+          context,
+          'Forms',
+          forms,
+          icon: LucideIcons.fileText,
+        ),
+      if (training != null)
+        _documentQuickAction(
+          context,
+          'Training',
+          training,
+          icon: LucideIcons.graduationCap,
         ),
       if (detail.reports.isNotEmpty)
         _OutbreakQuickAction(
@@ -728,6 +775,20 @@ class _OutbreakQuickAccessGrid extends StatelessWidget {
           icon: LucideIcons.fileChartColumn,
           onTap: () =>
               context.push(AppRoutes.situationReport(detail.reports.first.id)),
+        ),
+      if (contacts != null)
+        _documentQuickAction(
+          context,
+          'Contacts',
+          contacts,
+          icon: LucideIcons.users,
+        ),
+      if (faqs != null)
+        _documentQuickAction(
+          context,
+          'FAQs',
+          faqs,
+          icon: LucideIcons.messageCircleQuestion,
         ),
     ];
 
@@ -754,6 +815,34 @@ class _OutbreakQuickAccessGrid extends StatelessWidget {
       },
     );
   }
+}
+
+_OutbreakQuickAction _documentQuickAction(
+  BuildContext context,
+  String label,
+  PublicOutbreakDocument document, {
+  IconData? icon,
+}) {
+  return _OutbreakQuickAction(
+    label: label,
+    icon: icon ?? _documentQuickIcon(document),
+    onTap: () => context.push(
+      AppRoutes.outbreakDocument(document.outbreakId, document.id),
+      extra: document,
+    ),
+  );
+}
+
+PublicOutbreakDocument? _firstOutbreakDocument(
+  List<PublicOutbreakDocument> documents,
+  List<String> kinds,
+) {
+  for (final kind in kinds) {
+    for (final document in documents) {
+      if (document.documentKind == kind) return document;
+    }
+  }
+  return null;
 }
 
 class _OutbreakQuickAccessTile extends StatelessWidget {
@@ -805,18 +894,6 @@ class _OutbreakQuickAction {
   final String label;
   final IconData icon;
   final VoidCallback onTap;
-}
-
-String _documentQuickLabel(PublicOutbreakDocument document) {
-  return switch (document.documentKind) {
-    'ipc_protocol' => 'IPC & PPE',
-    'laboratory_protocol' => 'Laboratory',
-    'contact_tracing_guide' => 'Contact tracing',
-    'checklist' => 'Checklist',
-    'communication_material' => 'Communication',
-    'sop' => 'Clinical care',
-    _ => 'Clinical document',
-  };
 }
 
 IconData _documentQuickIcon(PublicOutbreakDocument document) {

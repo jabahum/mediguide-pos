@@ -4,6 +4,10 @@ This guide explains how authors and reviewers should resolve errors and warnings
 reported while importing, editing, regenerating, reviewing, and publishing a
 clinical guideline.
 
+For the complete end-to-end dashboard procedure, including the exact steps for
+marking a clinical table reviewed, see
+[`guideline-authoring-and-publication-workflow.md`](guideline-authoring-and-publication-workflow.md).
+
 It is intended for large documents such as the Uganda Clinical Guidelines
 (UCG), where a valid document can legitimately produce many clinical-review
 warnings.

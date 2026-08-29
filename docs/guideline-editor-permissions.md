@@ -12,9 +12,9 @@ reviewer assignment and high-risk review boundaries.
 | Read private Markdown, revisions and draft previews | `guideline.markdown.read` | Public DTOs stay separate and never expose storage keys. |
 | Edit, save, checkpoint or duplicate Markdown | `guideline.markdown.edit` | Expected ETag/revision is required; published versions are immutable. |
 | Upload or manage authoring assets | `guideline.asset.manage` | Assets are version-scoped, type/size checked and private. |
-| Request, retry or cancel regeneration | `guideline.regenerate` | It is revision-bound, idempotent and concurrency limited. |
+| Request, retry or cancel regeneration | `guideline.structure.regenerate` | It is revision-bound, idempotent and concurrency limited. |
 | Review ordinary generated content | `guideline.review` | Decisions record authenticated actor and time. |
-| Approve high-risk clinical blocks | `guideline.review.high_risk` | Required for clinical recommendation and safety blocks. |
+| Approve high-risk clinical blocks | `guideline.high_risk.approve` | Required for clinical recommendation and safety blocks. |
 | Restore an immutable revision | `guideline.revision.restore` | Restore creates a new revision; history is never rewritten. |
 | Publish an accepted version | `guideline.publish` | Current, structured and accepted revision IDs must match. |
 

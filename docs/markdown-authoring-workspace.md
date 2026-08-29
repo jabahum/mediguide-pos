@@ -35,9 +35,13 @@ Authenticated guideline editors use:
 - `POST /api/v2/guideline-versions/:id/duplicate`
 - `POST /api/v2/guideline-versions/:id/regenerate`
 
-The current permission model maps these operations to `guideline.write`.
-Publication remains protected by `guideline.publish`. Requests are rate-limited,
-and regeneration is concurrency-limited per authenticated user.
+The current permission model uses granular capabilities: private reads require
+`guideline.markdown.read`, draft writes require `guideline.markdown.edit`,
+source uploads require `guideline.markdown.upload`, revision restores require
+`guideline.revision.restore`, and regeneration requires
+`guideline.structure.regenerate`. Publication remains protected by
+`guideline.publish`. Requests are rate-limited, and regeneration is
+concurrency-limited per authenticated user.
 
 Each revision stores a version-scoped immutable object key, SHA-256 checksum,
 monotonic revision number, source and parent metadata, editor, checkpoint
@@ -240,6 +244,11 @@ granular permission matrix and default role behavior. Private draft reads,
 Markdown edits, asset management, regeneration, ordinary/high-risk review,
 revision restore and publication are separate authorities. Actor identity is
 derived from JWT claims and state-changing operations are audited.
+
+For the complete dashboard operating procedure—from document creation and
+Markdown editing through table approval, regeneration acceptance, publication,
+and post-publication verification—see
+[`guideline-authoring-and-publication-workflow.md`](guideline-authoring-and-publication-workflow.md).
 
 ## Troubleshooting
 

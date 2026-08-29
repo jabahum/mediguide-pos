@@ -280,6 +280,7 @@ promotion and store credentials.
 | [`docs/seeding.md`](docs/seeding.md) | Local demo data and guarded production metadata/admin seeding |
 | [`docs/guideline-publication-architecture.md`](docs/guideline-publication-architecture.md) | Guideline ingestion and publication architecture |
 | [`docs/markdown-authoring-workspace.md`](docs/markdown-authoring-workspace.md) | Dashboard Markdown editor and review workflow |
+| [`docs/guideline-authoring-and-publication-workflow.md`](docs/guideline-authoring-and-publication-workflow.md) | End-to-end guideline creation, Markdown authoring, clinical block approval, publication, and verification runbook |
 | [`docs/guideline-validation-troubleshooting.md`](docs/guideline-validation-troubleshooting.md) | Resolving guideline Markdown errors, clinical warnings, regeneration failures, and publication blockers |
 | [`docs/guideline-editor-permissions.md`](docs/guideline-editor-permissions.md) | Authoring authorization model |
 | [`docs/clinical-tool-runtime.md`](docs/clinical-tool-runtime.md) | Schema tools, reviewer workflow, clinical gates, rehearsal, retirement and audit procedures |

@@ -54,13 +54,14 @@ final class RagRepository implements RagAssistant {
         ? '/api/v2/chat/ask'
         : '/api/public/assistant/ask';
     final envelope = await _api
-        .requestJson(
+        .requestJsonWithTimeout(
           endpoint,
           method: 'POST',
           body: request.toJson(),
           includeAuth: authenticated,
+          receiveTimeout: const Duration(seconds: 130),
         )
-        .timeout(const Duration(seconds: 130));
+        .timeout(const Duration(seconds: 135));
     final data = envelope['data'];
     if (data is! Map) {
       throw const FormatException('RAG response is missing its data object');

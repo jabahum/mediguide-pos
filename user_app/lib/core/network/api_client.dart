@@ -256,6 +256,7 @@ class BackendApiService {
     Map<String, String>? extraHeaders,
     bool includeAuth = true,
     bool retryAfterRefresh = true,
+    Duration? receiveTimeout,
   }) async {
     final headers = <String, String>{
       'Accept': 'application/json',
@@ -273,11 +274,14 @@ class BackendApiService {
           method: method.toUpperCase(),
           headers: headers,
           extra: {'includeAuth': includeAuth},
+          receiveTimeout: receiveTimeout,
         ),
       );
     } on DioException catch (error) {
       throw BackendApiException(
-        error.message ?? 'Unable to reach the MediGuide API.',
+        error.type == DioExceptionType.receiveTimeout
+            ? 'The server took too long to respond. Please retry.'
+            : error.message ?? 'Unable to reach the MediGuide API.',
         statusCode: error.response?.statusCode ?? 0,
         cause: error,
       );
@@ -317,6 +321,7 @@ class BackendApiService {
         extraHeaders: extraHeaders,
         includeAuth: includeAuth,
         retryAfterRefresh: false,
+        receiveTimeout: receiveTimeout,
       );
     }
 
@@ -349,6 +354,24 @@ class BackendApiService {
       body: body,
       query: query,
       includeAuth: includeAuth,
+    );
+  }
+
+  Future<Map<String, dynamic>> requestJsonWithTimeout(
+    String path, {
+    required String method,
+    required Duration receiveTimeout,
+    Map<String, dynamic>? body,
+    Map<String, String>? query,
+    bool includeAuth = true,
+  }) {
+    return _requestJson(
+      path,
+      method: method,
+      body: body,
+      query: query,
+      includeAuth: includeAuth,
+      receiveTimeout: receiveTimeout,
     );
   }
 

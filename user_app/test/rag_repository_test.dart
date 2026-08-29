@@ -44,6 +44,26 @@ final class RagApi extends BackendApiService {
       },
     };
   }
+
+  @override
+  Future<Map<String, dynamic>> requestJsonWithTimeout(
+    String path, {
+    required String method,
+    required Duration receiveTimeout,
+    Map<String, dynamic>? body,
+    Map<String, String>? query,
+    bool includeAuth = true,
+  }) async {
+    final response = await requestJson(
+      path,
+      method: method,
+      body: body,
+      query: query,
+      includeAuth: includeAuth,
+    );
+    requests.last['receiveTimeout'] = receiveTimeout;
+    return response;
+  }
 }
 
 void main() {
@@ -70,6 +90,7 @@ void main() {
     expect(api.requests.single['path'], '/api/v2/chat/ask');
     expect(api.requests.single['method'], 'POST');
     expect(api.requests.single['includeAuth'], isTrue);
+    expect(api.requests.single['receiveTimeout'], const Duration(seconds: 130));
     expect(api.requests.single['body'], {
       'question': 'How is malaria treated?',
       'language': 'sw',

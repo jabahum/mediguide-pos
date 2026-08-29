@@ -80,6 +80,18 @@ export interface RegenerationReview {
   decision_comment?: string;
   reviewed_by?: string;
   reviewed_at?: string;
+  outstanding_high_risk_blocks: number;
+  pending_high_risk_blocks: RegenerationPendingBlock[];
+  pending_high_risk_blocks_truncated: boolean;
+}
+export interface RegenerationPendingBlock {
+  id: string;
+  section_id?: string;
+  type: string;
+  sort_order: number;
+  review_status: "draft" | "reviewed" | "rejected";
+  page_start?: number;
+  page_end?: number;
 }
 export interface RegenerationReviewComment {
   id: string;

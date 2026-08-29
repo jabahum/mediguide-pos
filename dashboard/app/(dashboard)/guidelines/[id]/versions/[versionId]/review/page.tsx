@@ -3,7 +3,7 @@
 import * as React from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Image from "next/image";
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import {
   AlertTriangle,
   ArrowDown,
@@ -48,12 +48,34 @@ const blockTypes: GuidelineBlockType[] = [
   "figure",
   "recommendation",
   "warning",
+  "caution",
   "key_point",
+  "contraindication",
+  "dosage",
+  "evidence",
+  "definition",
+  "procedure",
+  "clinical_note",
+  "referral_criteria",
+  "algorithm_reference",
   "algorithm",
   "reference",
   "page_break",
   "unknown",
 ];
+
+const highRiskBlockTypes = new Set<GuidelineBlockType>([
+  "table",
+  "recommendation",
+  "warning",
+  "caution",
+  "contraindication",
+  "dosage",
+  "procedure",
+  "algorithm",
+  "algorithm_reference",
+  "referral_criteria",
+]);
 
 function blockText(block: GuidelineContentBlockRecord) {
   const content = block.content;
@@ -221,7 +243,9 @@ function FigureBlockPreview({ block }: { block: GuidelineContentBlockRecord }) {
 export default function GuidelineReviewPage() {
   const { id, versionId } = useParams<{ id: string; versionId: string }>();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const queryClient = useQueryClient();
+  const pendingQueueInitialized = React.useRef(false);
   const [selectedSectionId, setSelectedSectionId] = React.useState<
     string | null
   >(null);
@@ -279,6 +303,15 @@ export default function GuidelineReviewPage() {
     () => workspace?.blocks || [],
     [workspace?.blocks],
   );
+  const pendingHighRiskBlocks = React.useMemo(
+    () =>
+      blocks.filter(
+        (block) =>
+          highRiskBlockTypes.has(block.type) &&
+          block.review_status !== "reviewed",
+      ),
+    [blocks],
+  );
   const selectedSection =
     sections.find((section) => section.id === selectedSectionId) || sections[0];
   const sectionBlocks = blocks.filter(
@@ -290,6 +323,25 @@ export default function GuidelineReviewPage() {
   React.useEffect(() => {
     if (!selectedSectionId && sections[0]) setSelectedSectionId(sections[0].id);
   }, [sections, selectedSectionId]);
+
+  const selectBlock = React.useCallback(
+    (block: GuidelineContentBlockRecord) => {
+      if (block.section_id) setSelectedSectionId(block.section_id);
+      setSelectedBlockId(block.id);
+    },
+    [],
+  );
+
+  React.useEffect(() => {
+    if (
+      searchParams.get("focus") !== "pending-high-risk" ||
+      pendingQueueInitialized.current ||
+      pendingHighRiskBlocks.length === 0
+    )
+      return;
+    pendingQueueInitialized.current = true;
+    selectBlock(pendingHighRiskBlocks[0]);
+  }, [pendingHighRiskBlocks, searchParams, selectBlock]);
 
   React.useEffect(() => {
     if (!selectedSection) return;
@@ -421,6 +473,9 @@ export default function GuidelineReviewPage() {
 
   async function decide(status: "reviewed" | "rejected") {
     if (!selectedBlock) return;
+    const remainingBeforeDecision = pendingHighRiskBlocks.filter(
+      (block) => block.id !== selectedBlock.id,
+    );
     await action.mutateAsync(() =>
       GuidelineDocumentsService.reviewBlock(
         versionId,
@@ -428,8 +483,19 @@ export default function GuidelineReviewPage() {
         status,
       ),
     );
-    showToast.success(
-      status === "reviewed" ? "Block approved" : "Block rejected",
+    if (status === "reviewed") {
+      showToast.success(
+        "Block approved",
+        remainingBeforeDecision.length === 0
+          ? "All high-risk blocks are approved. Return to the Markdown editor and refresh the regeneration review."
+          : `${remainingBeforeDecision.length} high-risk block${remainingBeforeDecision.length === 1 ? "" : "s"} still require approval.`,
+      );
+      if (remainingBeforeDecision[0]) selectBlock(remainingBeforeDecision[0]);
+      return;
+    }
+    showToast.error(
+      "Block rejected",
+      "A rejected high-risk block remains a publication blocker. Correct it, compare it with the source again, and approve the corrected block.",
     );
   }
 
@@ -578,6 +644,52 @@ export default function GuidelineReviewPage() {
           </Button>
         </div>
       </div>
+
+      {(searchParams.get("focus") === "pending-high-risk" ||
+        pendingHighRiskBlocks.length > 0) && (
+        <Card
+          className={
+            pendingHighRiskBlocks.length > 0
+              ? "border-amber-300 bg-amber-50/40"
+              : "border-emerald-300 bg-emerald-50/40"
+          }
+        >
+          <CardContent className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <div className="font-medium">
+                {pendingHighRiskBlocks.length > 0
+                  ? `${pendingHighRiskBlocks.length} high-risk block${pendingHighRiskBlocks.length === 1 ? "" : "s"} require approval`
+                  : "All high-risk blocks are approved"}
+              </div>
+              <p className="mt-1 text-sm text-muted-foreground">
+                {pendingHighRiskBlocks.length > 0
+                  ? "Compare each pending table or clinical block with the original source. Rejected blocks remain pending until corrected and approved."
+                  : "Return to the regeneration review, refresh its approval status, and accept the regenerated projection."}
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <Button
+                size="sm"
+                disabled={pendingHighRiskBlocks.length === 0}
+                onClick={() => selectBlock(pendingHighRiskBlocks[0])}
+              >
+                <Check className="h-4 w-4" /> Review next pending
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() =>
+                  router.push(
+                    `/guidelines/${id}/versions/${versionId}/markdown`,
+                  )
+                }
+              >
+                <ArrowLeft className="h-4 w-4" /> Return to regeneration review
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {(workspace.extraction_warnings.length > 0 ||
         workspace.validation.errors.length > 0 ||

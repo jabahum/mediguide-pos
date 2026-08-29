@@ -452,6 +452,27 @@ Check Redis, the worker loop, PostgreSQL, MinIO, and the shared worker secret.
 Inspect the ingestion job error before retrying. Retrying an unchanged revision
 is idempotent; do not create repeated versions merely to restart a failed job.
 
+### Accept regenerated projection reports incomplete high-risk review
+
+This is a clinical-safety gate, not a regeneration failure. The projection was
+generated successfully, but at least one table, recommendation, warning,
+caution, contraindication, dosage, procedure, algorithm, algorithm reference,
+or referral criterion is still `draft` or `rejected`.
+
+1. In the regeneration panel, select **Review pending blocks**.
+2. Compare the selected block with the original source page.
+3. Select **Approve** only when it is faithful and clinically correct.
+4. If it is wrong, reject and correct it. Rejected blocks remain blockers until
+   the corrected content is explicitly approved.
+5. Work through **Review next pending** until the count is zero.
+6. Return to the Markdown editor, select **Refresh approval status**, and then
+   accept the regenerated projection.
+
+Do not change database review states or remove the acceptance gate to work
+around this message. If the dashboard count disagrees with the API, rebuild the
+API and dashboard together and inspect the regeneration-review response's
+`outstanding_high_risk_blocks` and `pending_high_risk_blocks` fields.
+
 ### Regeneration is superseded
 
 `superseded` is a safety outcome for an ingestion job, not a publication state

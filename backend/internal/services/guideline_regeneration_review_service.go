@@ -20,6 +20,21 @@ var (
 	ErrRegenerationReviewIncomplete = errors.New("regeneration review is incomplete")
 )
 
+var regenerationHighRiskBlockTypes = []models.GuidelineBlockType{
+	models.GuidelineBlockTable,
+	models.GuidelineBlockRecommendation,
+	models.GuidelineBlockWarning,
+	models.GuidelineBlockCaution,
+	models.GuidelineBlockContraindication,
+	models.GuidelineBlockDosage,
+	models.GuidelineBlockProcedure,
+	models.GuidelineBlockAlgorithm,
+	models.GuidelineBlockAlgorithmReference,
+	models.GuidelineBlockReferralCriteria,
+}
+
+const regenerationPendingBlockLimit = 100
+
 type RegenerationJobView struct {
 	Job        models.IngestionJob `json:"job"`
 	RevisionID uuid.UUID           `json:"revision_id"`
@@ -146,7 +161,45 @@ func (s GuidelineService) GetRegenerationReview(versionID, jobID uuid.UUID) (*mo
 	if err := s.DB.First(&row, "version_id=? AND job_id=?", versionID, jobID).Error; err != nil {
 		return nil, err
 	}
+	if err := populateRegenerationReviewProgress(s.DB, versionID, &row); err != nil {
+		return nil, err
+	}
 	return &row, nil
+}
+
+func populateRegenerationReviewProgress(tx *gorm.DB, versionID uuid.UUID, review *models.GuidelineRegenerationReview) error {
+	pendingQuery := tx.Model(&models.GuidelineContentBlock{}).
+		Where("version_id=? AND type IN ? AND review_status <> ?", versionID, regenerationHighRiskBlockTypes, models.GuidelineBlockReviewed)
+
+	var outstanding int64
+	if err := pendingQuery.Count(&outstanding).Error; err != nil {
+		return err
+	}
+
+	var blocks []models.GuidelineContentBlock
+	if err := tx.Select("id", "section_id", "type", "sort_order", "review_status", "page_start", "page_end").
+		Where("version_id=? AND type IN ? AND review_status <> ?", versionID, regenerationHighRiskBlockTypes, models.GuidelineBlockReviewed).
+		Order("sort_order ASC, id ASC").
+		Limit(regenerationPendingBlockLimit).
+		Find(&blocks).Error; err != nil {
+		return err
+	}
+
+	review.OutstandingHighRiskBlocks = outstanding
+	review.PendingHighRiskBlocks = make([]models.GuidelineRegenerationPendingBlock, 0, len(blocks))
+	for _, block := range blocks {
+		review.PendingHighRiskBlocks = append(review.PendingHighRiskBlocks, models.GuidelineRegenerationPendingBlock{
+			ID:           block.ID,
+			SectionID:    block.SectionID,
+			Type:         block.Type,
+			SortOrder:    block.SortOrder,
+			ReviewStatus: block.ReviewStatus,
+			PageStart:    block.PageStart,
+			PageEnd:      block.PageEnd,
+		})
+	}
+	review.PendingHighRiskBlocksTruncated = outstanding > int64(len(blocks))
+	return nil
 }
 
 func (s GuidelineService) DecideRegenerationReview(versionID, jobID, actorID uuid.UUID, accept bool, input RegenerationDecisionInput) (*models.GuidelineRegenerationReview, error) {
@@ -166,12 +219,11 @@ func (s GuidelineService) DecideRegenerationReview(versionID, jobID, actorID uui
 			return fmt.Errorf("%w: regeneration is %s", ErrRegenerationReviewIncomplete, job.Status)
 		}
 		if accept {
-			var outstanding int64
-			if err := tx.Model(&models.GuidelineContentBlock{}).Where("version_id=? AND type IN ? AND review_status <> ?", versionID, []models.GuidelineBlockType{models.GuidelineBlockTable, models.GuidelineBlockRecommendation, models.GuidelineBlockWarning, models.GuidelineBlockCaution, models.GuidelineBlockContraindication, models.GuidelineBlockDosage, models.GuidelineBlockProcedure, models.GuidelineBlockAlgorithm, models.GuidelineBlockAlgorithmReference, models.GuidelineBlockReferralCriteria}, models.GuidelineBlockReviewed).Count(&outstanding).Error; err != nil {
+			if err := populateRegenerationReviewProgress(tx, versionID, &review); err != nil {
 				return err
 			}
-			if outstanding > 0 {
-				return fmt.Errorf("%w: %d high-risk blocks still require approval", ErrRegenerationReviewIncomplete, outstanding)
+			if review.OutstandingHighRiskBlocks > 0 {
+				return fmt.Errorf("%w: %d high-risk blocks still require approval", ErrRegenerationReviewIncomplete, review.OutstandingHighRiskBlocks)
 			}
 			review.Status = "accepted"
 		} else {
@@ -201,6 +253,11 @@ func (s GuidelineService) DecideRegenerationReview(versionID, jobID, actorID uui
 		}
 		return writeGuidelineAudit(tx, actorID, "guideline.regeneration."+review.Status, "guideline_regeneration_review", review.ID, "", map[string]any{"job_id": jobID, "comment": review.DecisionComment})
 	})
+	if err == nil {
+		if progressErr := populateRegenerationReviewProgress(s.DB, versionID, &review); progressErr != nil {
+			return nil, progressErr
+		}
+	}
 	return &review, err
 }
 

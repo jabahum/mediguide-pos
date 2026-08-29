@@ -391,4 +391,61 @@ describe("GuidelineMarkdownEditor", () => {
       expect(routerPush).toHaveBeenCalledWith("/guidelines/document-1/versions/new-version/markdown")
     })
   })
+
+  it("restores a pending regeneration review and opens its pending blocks", async () => {
+    const user = userEvent.setup()
+    const initialDraft = savedDraft("# Regenerated")
+    initialDraft.revision = {
+      ...initialDraft.revision,
+      regeneration_job_id: "job-1",
+      structured_content_status: "review_required",
+    }
+
+    vi.spyOn(GuidelineMarkdownService, "validate").mockRejectedValue(
+      new Error("validation unavailable"),
+    )
+    vi.spyOn(
+      GuidelineMarkdownService,
+      "regenerationReview",
+    ).mockResolvedValue({
+      id: "review-1",
+      version_id: "version-1",
+      revision_id: "revision-1",
+      job_id: "job-1",
+      status: "pending",
+      before_snapshot: {},
+      after_snapshot: {},
+      comparison: {},
+      outstanding_high_risk_blocks: 17,
+      pending_high_risk_blocks: [],
+      pending_high_risk_blocks_truncated: false,
+    })
+    vi.spyOn(GuidelineMarkdownService, "reviewComments").mockResolvedValue([])
+
+    render(
+      <GuidelineMarkdownEditor
+        documentId="document-1"
+        versionId="version-1"
+        documentTitle="Clinical guideline"
+        versionLabel="1.0"
+        initialContent={initialDraft.content}
+        initialDraft={initialDraft}
+        editable
+        published={false}
+      />,
+    )
+
+    const button = await screen.findByRole("button", {
+      name: "Review pending blocks",
+    })
+    expect(
+      screen.getByText("17 high-risk blocks require a decision"),
+    ).toBeInTheDocument()
+
+    await user.click(button)
+
+    expect(routerPush).toHaveBeenCalledWith(
+      "/guidelines/document-1/versions/version-1/review?focus=pending-high-risk",
+    )
+  })
 })

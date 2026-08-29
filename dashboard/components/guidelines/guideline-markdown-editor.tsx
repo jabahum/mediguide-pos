@@ -522,6 +522,35 @@ export function GuidelineMarkdownEditor({
 
   React.useEffect(() => {
     const jobId = draft?.revision.regeneration_job_id
+    const status = draft?.revision.structured_content_status
+    if (!jobId || regenerationReview || !["review_required", "approved"].includes(status ?? "")) return
+
+    let active = true
+    const restoreReview = async () => {
+      try {
+        const [review, comments] = await Promise.all([
+          GuidelineMarkdownService.regenerationReview(versionId, jobId),
+          GuidelineMarkdownService.reviewComments(versionId, jobId),
+        ])
+        if (!active) return
+        setRegenerationReview(review)
+        setReviewComments(comments)
+      } catch {
+        // The editor remains usable if an older backend has no persisted review.
+      }
+    }
+
+    void restoreReview()
+    return () => { active = false }
+  }, [
+    draft?.revision.regeneration_job_id,
+    draft?.revision.structured_content_status,
+    regenerationReview,
+    versionId,
+  ])
+
+  React.useEffect(() => {
+    const jobId = draft?.revision.regeneration_job_id
     if (!draft || !jobId || !["queued", "processing"].includes(draft.revision.structured_content_status)) return
     let active = true
     const refresh = async () => {
@@ -745,8 +774,32 @@ export function GuidelineMarkdownEditor({
 
   const decideRegeneration = async (decision:"accept"|"reject") => {
     const jobId=draft?.revision.regeneration_job_id;if(!jobId)return
-    try { const review=await GuidelineMarkdownService.decideRegeneration(versionId,jobId,decision,reviewComment);setRegenerationReview(review);setReviewComment("");setDraft(await GuidelineMarkdownService.loadDraft(versionId));showToast.success(`Regeneration ${decision}ed`) }
+    try {
+      if (decision === "accept") {
+        const currentReview = await GuidelineMarkdownService.regenerationReview(versionId, jobId)
+        setRegenerationReview(currentReview)
+        const outstanding = currentReview.outstanding_high_risk_blocks ?? 0
+        if (outstanding > 0) {
+          showToast.error(
+            "Clinical review is incomplete",
+            `${outstanding} high-risk block${outstanding === 1 ? "" : "s"} must be approved in Editorial Review.`,
+          )
+          return
+        }
+      }
+      const review=await GuidelineMarkdownService.decideRegeneration(versionId,jobId,decision,reviewComment);setRegenerationReview(review);setReviewComment("");setDraft(await GuidelineMarkdownService.loadDraft(versionId));showToast.success(`Regeneration ${decision}ed`)
+    }
     catch(error){showToast.error("Review decision failed",error instanceof Error?error.message:"Could not save the review decision")}
+  }
+
+  const refreshRegenerationReview = async () => {
+    const jobId = draft?.revision.regeneration_job_id
+    if (!jobId) return
+    try {
+      setRegenerationReview(await GuidelineMarkdownService.regenerationReview(versionId, jobId))
+    } catch (error) {
+      showToast.error("Review status unavailable", error instanceof Error ? error.message : "Could not refresh review status")
+    }
   }
 
   const addReviewComment = async () => {
@@ -993,10 +1046,56 @@ export function GuidelineMarkdownEditor({
           <GitCompareArrows className="h-4 w-4" /><AlertTitle>Regeneration review: {regenerationReview.status}</AlertTitle>
           <AlertDescription className="space-y-3">
             <p>The comparison covers hierarchy, block-type counts, tables, chunks, assets, provenance, and original-PDF availability. Review individual high-risk blocks in the structured review workspace before acceptance.</p>
+            {regenerationReview.status === "pending" && documentId && (
+              <div className="flex flex-wrap items-center gap-2">
+                <Button onClick={() => router.push(`/guidelines/${documentId}/versions/${versionId}/review?focus=pending-high-risk`)}>
+                  <Users className="h-4 w-4" /> Review pending blocks
+                </Button>
+                <span className="text-xs text-muted-foreground">
+                  {(regenerationReview.outstanding_high_risk_blocks ?? 0) > 0
+                    ? `${regenerationReview.outstanding_high_risk_blocks} high-risk block${regenerationReview.outstanding_high_risk_blocks === 1 ? "" : "s"} require a decision`
+                    : "Open Editorial Review to verify the regenerated projection"}
+                </span>
+              </div>
+            )}
+            {regenerationReview.status === "pending" && (
+              <div className="rounded-md border border-amber-300 bg-amber-50 p-3 text-amber-950">
+                <div className="flex items-start gap-2">
+                  <ShieldAlert className="mt-0.5 h-4 w-4 shrink-0" />
+                  <div className="space-y-2">
+                    <p className="font-medium">
+                      {(regenerationReview.outstanding_high_risk_blocks ?? 0) > 0
+                        ? `${regenerationReview.outstanding_high_risk_blocks} high-risk block${regenerationReview.outstanding_high_risk_blocks === 1 ? "" : "s"} still require approval`
+                        : "Editorial review is required before acceptance"}
+                    </p>
+                    <p className="text-xs">
+                      Tables, recommendations, warnings, dosages, procedures, algorithms, contraindications, cautions, and referral criteria must be compared with the source and marked reviewed. Rejected blocks remain pending until corrected and approved.
+                    </p>
+                    {(regenerationReview.pending_high_risk_blocks ?? []).length > 0 && (
+                      <div className="flex flex-wrap gap-1">
+                        {(regenerationReview.pending_high_risk_blocks ?? []).slice(0, 10).map((block) => (
+                          <Badge key={block.id} variant="outline" className="border-amber-400 bg-white/60">
+                            {block.type.replaceAll("_", " ")} · p.{block.page_start ?? "—"} · {block.review_status}
+                          </Badge>
+                        ))}
+                        {(regenerationReview.pending_high_risk_blocks_truncated || (regenerationReview.pending_high_risk_blocks ?? []).length > 10) && (
+                          <Badge variant="outline">More in Editorial Review</Badge>
+                        )}
+                      </div>
+                    )}
+                    <div className="flex flex-wrap gap-2">
+                      <Button size="sm" variant="outline" onClick={() => void refreshRegenerationReview()}>
+                        <RotateCcw className="h-4 w-4" /> Refresh approval status
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
             <pre className="max-h-56 overflow-auto rounded bg-muted p-3 text-xs">{JSON.stringify(regenerationReview.comparison,null,2)}</pre>
             <div className="space-y-2">{reviewComments.map((comment)=><div key={comment.id} className="rounded border p-2 text-xs"><span className="font-medium">{comment.author_id}</span> · {new Date(comment.created_at).toLocaleString()}<p className="mt-1 whitespace-pre-wrap">{comment.body}</p></div>)}</div>
             <div className="flex gap-2"><Textarea className="min-h-16" value={threadComment} onChange={(event)=>setThreadComment(event.target.value)} placeholder="Leave a review comment" /><Button size="sm" variant="outline" disabled={!threadComment.trim()} onClick={()=>void addReviewComment()}>Comment</Button></div>
-            {regenerationReview.status === "pending" && <><Textarea value={reviewComment} onChange={(event)=>setReviewComment(event.target.value)} placeholder="Reviewer comment (required for rejection)" /><div className="flex gap-2"><Button size="sm" onClick={()=>void decideRegeneration("accept")}>Accept regenerated projection</Button><Button size="sm" variant="destructive" disabled={!reviewComment.trim()} onClick={()=>void decideRegeneration("reject")}>Reject and return to Markdown</Button></div></>}
+            {regenerationReview.status === "pending" && <><Textarea value={reviewComment} onChange={(event)=>setReviewComment(event.target.value)} placeholder="Reviewer comment (required for rejection)" /><div className="flex gap-2"><Button size="sm" disabled={(regenerationReview.outstanding_high_risk_blocks ?? 0) > 0} title={(regenerationReview.outstanding_high_risk_blocks ?? 0) > 0 ? "Approve all high-risk blocks in Editorial Review first" : undefined} onClick={()=>void decideRegeneration("accept")}>Accept regenerated projection</Button><Button size="sm" variant="destructive" disabled={!reviewComment.trim()} onClick={()=>void decideRegeneration("reject")}>Reject and return to Markdown</Button></div></>}
           </AlertDescription>
         </Alert>}
 

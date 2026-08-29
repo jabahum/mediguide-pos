@@ -189,6 +189,24 @@ regenerated projection**. Use **Reject and return to Markdown** when the
 projection is not faithful. Overall acceptance is refused while any required
 high-risk block is still `draft` or `rejected`.
 
+The regeneration panel shows the authoritative outstanding-block count and a
+sample of the pending block types and source pages. When the count is nonzero:
+
+1. Select **Review pending blocks**.
+2. The Editorial Review workspace opens the first pending high-risk block.
+3. Compare it with the original source and select **Approve**, or correct and
+   re-review it. The queue advances to the next pending block after approval.
+4. A rejected block is intentionally still pending. Correct its source or typed
+   payload, regenerate when the source changed, and approve the corrected block.
+5. When the queue reports that all high-risk blocks are approved, select
+   **Return to regeneration review**.
+6. Select **Refresh approval status**, then **Accept regenerated projection**.
+
+There is no bulk-approval or force-accept action. Tables, dosages,
+recommendations, warnings, cautions, contraindications, procedures, algorithms,
+algorithm references, and referral criteria require an individual, auditable
+clinical decision.
+
 Acceptance applies to the exact generated revision. Saving or regenerating a
 new revision requires a new review and acceptance cycle.
 
@@ -234,6 +252,7 @@ edited and reviewed. A failed draft must not displace it.
 | No reviewer candidates | No active user has the review permission. | Ask an administrator to grant the Reviewer role or equivalent permissions. |
 | Regeneration is outdated | The saved Markdown revision has not produced the current structured projection. | Regenerate the current saved revision. |
 | Regeneration is superseded | The job is permanently bound to an older immutable revision and stopped safely. | Select **Reload current revision**, verify the source, then create a new regeneration job. Do not retry the stale job. |
+| `regeneration review is incomplete: N high-risk blocks still require approval` | The regenerated projection completed, but one or more safety-sensitive blocks are still `draft` or `rejected`. | Select **Review pending blocks**, approve each verified block, return to the Markdown editor, refresh approval status, and accept again. |
 
 ## Rework rules
 

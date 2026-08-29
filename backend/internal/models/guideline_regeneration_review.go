@@ -22,6 +22,26 @@ type GuidelineRegenerationReview struct {
 	ReviewedBy      *uuid.UUID     `gorm:"type:uuid" json:"reviewed_by,omitempty"`
 	ReviewedAt      *time.Time     `json:"reviewed_at,omitempty"`
 	DecisionComment string         `gorm:"type:text" json:"decision_comment,omitempty"`
+
+	// ReviewProgress is computed from the current structured projection. These
+	// fields are not persisted because block review decisions can change after
+	// the regeneration review row is created.
+	OutstandingHighRiskBlocks      int64                               `gorm:"-" json:"outstanding_high_risk_blocks"`
+	PendingHighRiskBlocks          []GuidelineRegenerationPendingBlock `gorm:"-" json:"pending_high_risk_blocks"`
+	PendingHighRiskBlocksTruncated bool                                `gorm:"-" json:"pending_high_risk_blocks_truncated"`
+}
+
+// GuidelineRegenerationPendingBlock identifies a clinical block that must be
+// explicitly approved in Editorial Review before a regenerated projection can
+// be accepted.
+type GuidelineRegenerationPendingBlock struct {
+	ID           uuid.UUID                  `json:"id"`
+	SectionID    *uuid.UUID                 `json:"section_id,omitempty"`
+	Type         GuidelineBlockType         `json:"type"`
+	SortOrder    int                        `json:"sort_order"`
+	ReviewStatus GuidelineBlockReviewStatus `json:"review_status"`
+	PageStart    *int                       `json:"page_start,omitempty"`
+	PageEnd      *int                       `json:"page_end,omitempty"`
 }
 
 type GuidelineReviewComment struct {

@@ -317,6 +317,7 @@ export function GuidelineMarkdownEditor({
   const issues = !dirty && serverIssues.length > 0 ? serverIssues : localIssues
   const displayedIssues = React.useMemo(() => issues.slice(0, 150), [issues])
   const stats = React.useMemo(() => markdownStats(content), [content])
+  const regenerationSuperseded = regenerationJob?.job.progress_stage === "superseded"
   const visibleHeadings = React.useMemo(() => headings.filter((heading, index) => {
     if (!heading.text.toLowerCase().includes(outlineSearch.toLowerCase())) return false
     if (outlineSearch.trim()) return true
@@ -536,8 +537,15 @@ export function GuidelineMarkdownEditor({
             setRegenerationReview(await GuidelineMarkdownService.regenerationReview(versionId,jobId))
             setReviewComments(await GuidelineMarkdownService.reviewComments(versionId,jobId))
           }
-          if (job.job.status === "failed") showToast.error("Regeneration failed", job.job.error || "The worker could not regenerate this revision.")
-          else showToast.success("Regeneration updated", `Regeneration is ${job.job.status}.`)
+          if (job.job.status === "failed") {
+            showToast.error("Regeneration failed", job.job.error || "The worker could not regenerate this revision.")
+          } else if (job.job.progress_stage === "superseded") {
+            showToast.warning("Regeneration stopped", "A newer saved Markdown revision became current. Reload it before regenerating again.")
+          } else if (job.job.status === "canceled") {
+            showToast.info("Regeneration canceled", "The saved Markdown revision was not changed.")
+          } else {
+            showToast.success("Regeneration completed", "The current Markdown revision is ready for editorial review.")
+          }
         }
       } catch { /* Retain the last known status and retry. */ }
     }
@@ -969,12 +977,14 @@ export function GuidelineMarkdownEditor({
         {saveError && <Alert variant="destructive" className="m-4 mb-0"><AlertCircle className="h-4 w-4" /><AlertTitle>Markdown was not saved</AlertTitle><AlertDescription className="flex flex-wrap items-center gap-2"><span>{saveError} Your edits remain available.</span><Button size="sm" variant="outline" disabled={saving || !online} onClick={() => void save()}>Retry save</Button></AlertDescription></Alert>}</div>
         {regenerationJob && <Alert className="m-4 mb-0 print:hidden">
           <Clock3 className="h-4 w-4" />
-          <AlertTitle>Regeneration: {regenerationJob.job.progress_stage.replaceAll("_"," ")} ({regenerationJob.job.progress_percent}%)</AlertTitle>
+          <AlertTitle>{regenerationSuperseded ? "Regeneration stopped: newer revision" : `Regeneration: ${regenerationJob.job.progress_stage.replaceAll("_"," ")} (${regenerationJob.job.progress_percent}%)`}</AlertTitle>
           <AlertDescription>
+            {regenerationSuperseded && <p className="mt-2">This job is bound to an older immutable revision. Reload the current saved revision, then start a new regeneration. Retrying this stale job is intentionally disabled.</p>}
             <div className="mt-2 h-2 overflow-hidden rounded bg-muted"><div className="h-full bg-primary transition-all" style={{width:`${regenerationJob.job.progress_percent}%`}} /></div>
             <div className="mt-2 flex flex-wrap gap-2">
               {["queued","running","cancel_requested"].includes(regenerationJob.job.status) && <Button size="sm" variant="outline" onClick={async()=>{try{const job=await GuidelineMarkdownService.cancelRegeneration(versionId,regenerationJob.job.id);setRegenerationJob({...regenerationJob,job})}catch(error){showToast.error("Cancellation unavailable",error instanceof Error?error.message:"Could not cancel")}}}>Cancel safely</Button>}
-              {["failed","canceled"].includes(regenerationJob.job.status) && <Button size="sm" variant="outline" onClick={async()=>{try{const job=await GuidelineMarkdownService.retryRegeneration(versionId,regenerationJob.job.id);setRegenerationJob({...regenerationJob,job});setDraft((current)=>current?{...current,revision:{...current.revision,structured_content_status:"queued"}}:current)}catch(error){showToast.error("Retry unavailable",error instanceof Error?error.message:"Could not retry")}}}>Retry</Button>}
+              {["failed","canceled"].includes(regenerationJob.job.status) && !regenerationSuperseded && <Button size="sm" variant="outline" onClick={async()=>{try{const job=await GuidelineMarkdownService.retryRegeneration(versionId,regenerationJob.job.id);setRegenerationJob({...regenerationJob,job});setDraft((current)=>current?{...current,revision:{...current.revision,structured_content_status:"queued"}}:current)}catch(error){showToast.error("Retry unavailable",error instanceof Error?error.message:"Could not retry")}}}>Retry</Button>}
+              {regenerationSuperseded && <Button size="sm" variant="outline" onClick={async()=>{try{const current=await GuidelineMarkdownService.loadDraft(versionId);applySavedDraft(current);setRegenerationJob(null);showToast.info("Current revision loaded","Review the saved source, then select Regenerate to create a job for this revision.")}catch(error){showToast.error("Reload unavailable",error instanceof Error?error.message:"Could not load the current revision")}}}>Reload current revision</Button>}
               {regenerationJob.job.error && <span className="text-destructive">{regenerationJob.job.error}</span>}
             </div>
           </AlertDescription>

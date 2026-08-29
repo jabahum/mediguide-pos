@@ -107,6 +107,9 @@ func (s GuidelineService) RetryRegenerationJob(versionID, jobID, actorID uuid.UU
 		if result.Status != "failed" && result.Status != "canceled" {
 			return ErrRegenerationJobConflict
 		}
+		if result.ProgressStage == "superseded" {
+			return fmt.Errorf("%w: reload and regenerate the current Markdown revision", ErrRegenerationJobConflict)
+		}
 		if result.AttemptCount >= 3 {
 			return fmt.Errorf("%w: maximum retry count reached", ErrRegenerationJobConflict)
 		}

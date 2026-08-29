@@ -211,6 +211,13 @@ previously published version remains live. Superseded or canceled jobs cannot
 persist. Failures preserve both the source revision and previous generated
 projection.
 
+A `superseded` job is bound to an older immutable revision; it is not a signal
+that the entire guideline has been withdrawn or replaced. Reload the current
+revision and start a new regeneration rather than retrying the stale job. The
+worker identifies Markdown input by `current_markdown_revision_id` and the
+revision's `storage_key`. The version-level `markdown_file_key` contains the
+generated artifact and is deliberately not used as author-source identity.
+
 Regenerated output is `review_required`. Reviewers compare its before/after
 snapshot, resolve comments, and review high-risk blocks individually. Overall
 acceptance requires all high-risk blocks to be reviewed; publication requires

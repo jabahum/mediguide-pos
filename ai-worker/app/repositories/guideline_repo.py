@@ -7,6 +7,10 @@ from app.core.db import db_conn
 from app.embeddings.factory import to_pgvector
 
 
+class GuidelineSourceSupersededError(RuntimeError):
+    """Raised when persistence no longer targets the current immutable source."""
+
+
 class GuidelineRepository:
     EXTRACTION_SCHEMA_VERSION = 1
 
@@ -22,6 +26,39 @@ class GuidelineRepository:
                 (version_id,),
             )
             return cur.fetchone()
+
+    def is_current_markdown_source(
+        self, version_id: str, revision_id: str | None, storage_key: str
+    ) -> bool:
+        """Match a Markdown job against the current immutable author revision.
+
+        ``guideline_versions.markdown_file_key`` is the generated structured
+        Markdown artifact after extraction. It must not be used as the source
+        identity for later regeneration jobs.
+        """
+        if not revision_id or not storage_key:
+            return False
+        with db_conn() as conn, conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT EXISTS (
+                  SELECT 1
+                  FROM guideline_versions gv
+                  JOIN guideline_markdown_revisions revision
+                    ON revision.id=gv.current_markdown_revision_id
+                   AND revision.version_id=gv.id
+                  WHERE gv.id=%s
+                    AND gv.deleted_at IS NULL
+                    AND revision.id=%s
+                    AND revision.storage_key=%s
+                    AND revision.is_current=TRUE
+                    AND revision.deleted_at IS NULL
+                ) AS current
+                """,
+                (version_id, revision_id, storage_key),
+            )
+            row = cur.fetchone()
+            return bool(row and row.get("current"))
 
     def clear_existing_extraction(self, version_id: str) -> None:
         with db_conn() as conn, conn.cursor() as cur:
@@ -189,6 +226,39 @@ class GuidelineRepository:
                 "SELECT pg_advisory_xact_lock(hashtext('guideline-extraction'), hashtext(%s))",
                 (version_id,),
             )
+            # Serialize against saves that advance current_markdown_revision_id.
+            # This guard is intentionally inside the replacement transaction so
+            # a newer author revision cannot appear between the service's last
+            # preflight check and destructive projection replacement.
+            if markdown_revision_id:
+                cur.execute(
+                    """
+                    SELECT gv.current_markdown_revision_id,
+                           revision.storage_key,
+                           revision.is_current
+                    FROM guideline_versions gv
+                    LEFT JOIN guideline_markdown_revisions revision
+                      ON revision.id=gv.current_markdown_revision_id
+                     AND revision.version_id=gv.id
+                     AND revision.deleted_at IS NULL
+                    WHERE gv.id=%s AND gv.deleted_at IS NULL
+                    FOR UPDATE OF gv
+                    """,
+                    (version_id,),
+                )
+                source = cur.fetchone()
+                expected_storage_key = str(metadata.get("source_file_key") or "").strip()
+                if (
+                    not source
+                    or str(source.get("current_markdown_revision_id") or "")
+                    != markdown_revision_id
+                    or str(source.get("storage_key") or "").strip()
+                    != expected_storage_key
+                    or not bool(source.get("is_current"))
+                ):
+                    raise GuidelineSourceSupersededError(
+                        "A newer Markdown revision became current before persistence"
+                    )
             before_snapshot = self._projection_snapshot(cur, version_id)
             cur.execute(
                 """

@@ -120,3 +120,27 @@ def test_ingestion_job_payload_accepts_json_and_rejects_non_objects():
 
     with pytest.raises(ValueError, match="must be an object"):
         IngestionService._job_payload({"payload_json": "[]"})
+
+
+def test_markdown_source_identity_uses_immutable_revision_not_generated_artifact():
+    class GuidelineRepositoryStub:
+        def __init__(self):
+            self.calls = []
+
+        def is_current_markdown_source(self, version_id, revision_id, storage_key):
+            self.calls.append((version_id, revision_id, storage_key))
+            return True
+
+    service = object.__new__(IngestionService)
+    service.guidelines = GuidelineRepositoryStub()
+
+    assert service._source_is_current(
+        version_id="version-1",
+        version={"markdown_file_key": "generated/latest.md"},
+        source_format="markdown",
+        source_key="revisions/revision-4/source.md",
+        revision_id="revision-4",
+    )
+    assert service.guidelines.calls == [
+        ("version-1", "revision-4", "revisions/revision-4/source.md")
+    ]

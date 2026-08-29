@@ -232,7 +232,8 @@ edited and reviewed. A failed draft must not displace it.
 | `Block correction saved` | Structured data changed and its old approval was invalidated. | Review and approve the corrected block again. |
 | `No reviewers assigned` | Nobody is coordinating the review yet. | Assign an eligible reviewer by name. |
 | No reviewer candidates | No active user has the review permission. | Ask an administrator to grant the Reviewer role or equivalent permissions. |
-| Regeneration is outdated/superseded | A newer Markdown revision exists. | Save the intended source and regenerate that revision. |
+| Regeneration is outdated | The saved Markdown revision has not produced the current structured projection. | Regenerate the current saved revision. |
+| Regeneration is superseded | The job is permanently bound to an older immutable revision and stopped safely. | Select **Reload current revision**, verify the source, then create a new regeneration job. Do not retry the stale job. |
 
 ## Rework rules
 

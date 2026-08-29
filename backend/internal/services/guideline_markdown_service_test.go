@@ -287,6 +287,25 @@ func TestRegenerationCancellationRetryAndReviewGate(t *testing.T) {
 	}
 }
 
+func TestSupersededRegenerationCannotBeRetried(t *testing.T) {
+	service, version, actorID := markdownServiceFixture(t)
+	draft, err := service.SaveMarkdownDraft(context.Background(), version.ID, actorID, MarkdownDraftInput{Content: "# Ready", SourceType: "blank"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	queued, err := service.RegenerateMarkdown(version.ID, actorID, MarkdownRegenerationInput{RevisionID: draft.Revision.ID, IdempotencyKey: "superseded-retry"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := service.DB.Model(&models.IngestionJob{}).Where("id=?", queued.Job.ID).Updates(map[string]any{"status": "canceled", "progress_stage": "superseded"}).Error; err != nil {
+		t.Fatal(err)
+	}
+	_, err = service.RetryRegenerationJob(version.ID, queued.Job.ID, actorID)
+	if !errors.Is(err, ErrRegenerationJobConflict) {
+		t.Fatalf("expected superseded job retry conflict, got %v", err)
+	}
+}
+
 func TestRegenerationRejectionRequiresComment(t *testing.T) {
 	service, version, actorID := markdownServiceFixture(t)
 	draft, err := service.SaveMarkdownDraft(context.Background(), version.ID, actorID, MarkdownDraftInput{Content: "# Ready", SourceType: "blank"})

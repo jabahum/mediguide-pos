@@ -165,7 +165,62 @@ class IngestionRepository:
                 (job_id,),
             )
             cur.execute(
-                "UPDATE guideline_markdown_revisions SET structured_content_status='canceled', review_state='draft', updated_at=now() WHERE regeneration_job_id=%s",
+                """
+                UPDATE guideline_markdown_revisions revision
+                SET structured_content_status='canceled', review_state='draft', updated_at=now()
+                WHERE revision.regeneration_job_id=%s
+                  AND NOT EXISTS (
+                    SELECT 1 FROM guideline_versions gv
+                    WHERE gv.current_markdown_revision_id=revision.id
+                      AND gv.deleted_at IS NULL
+                  )
+                """,
+                (job_id,),
+            )
+            # A superseded job must never leave the current revision stuck in
+            # processing. Restore the state of its last accepted projection.
+            cur.execute(
+                """
+                UPDATE guideline_markdown_revisions revision
+                SET structured_content_status=CASE
+                      WHEN gv.structured_markdown_revision_id=revision.id
+                        THEN 'review_required'
+                      ELSE 'outdated'
+                    END,
+                    review_state=CASE
+                      WHEN gv.structured_markdown_revision_id=revision.id
+                        THEN 'review_required'
+                      ELSE 'draft'
+                    END,
+                    updated_at=now()
+                FROM guideline_versions gv
+                WHERE revision.regeneration_job_id=%s
+                  AND gv.current_markdown_revision_id=revision.id
+                  AND revision.deleted_at IS NULL
+                  AND gv.deleted_at IS NULL
+                """,
+                (job_id,),
+            )
+            cur.execute(
+                """
+                UPDATE guideline_versions gv
+                SET structured_content_status=CASE
+                      WHEN gv.structured_markdown_revision_id=revision.id
+                        THEN 'review_required'
+                      ELSE 'outdated'
+                    END,
+                    status=CASE
+                      WHEN gv.structured_markdown_revision_id=revision.id
+                        THEN 'review_required'
+                      ELSE gv.status
+                    END,
+                    updated_at=now()
+                FROM guideline_markdown_revisions revision
+                WHERE revision.regeneration_job_id=%s
+                  AND gv.current_markdown_revision_id=revision.id
+                  AND revision.deleted_at IS NULL
+                  AND gv.deleted_at IS NULL
+                """,
                 (job_id,),
             )
             conn.commit()
@@ -174,6 +229,35 @@ class IngestionRepository:
         with db_conn() as conn, conn.cursor() as cur:
             cur.execute(
                 "UPDATE guideline_regeneration_reviews SET after_snapshot=before_snapshot, comparison='{\"no_changes\":true}'::jsonb, updated_at=now() WHERE job_id=%s AND deleted_at IS NULL",
+                (job_id,),
+            )
+            cur.execute(
+                """
+                UPDATE guideline_markdown_revisions revision
+                SET structured_content_status='review_required',
+                    review_state='review_required',
+                    updated_at=now()
+                FROM guideline_versions gv
+                WHERE revision.regeneration_job_id=%s
+                  AND gv.current_markdown_revision_id=revision.id
+                  AND revision.deleted_at IS NULL
+                  AND gv.deleted_at IS NULL
+                """,
+                (job_id,),
+            )
+            cur.execute(
+                """
+                UPDATE guideline_versions gv
+                SET structured_markdown_revision_id=revision.id,
+                    structured_content_status='review_required',
+                    status='review_required',
+                    updated_at=now()
+                FROM guideline_markdown_revisions revision
+                WHERE revision.regeneration_job_id=%s
+                  AND gv.current_markdown_revision_id=revision.id
+                  AND revision.deleted_at IS NULL
+                  AND gv.deleted_at IS NULL
+                """,
                 (job_id,),
             )
             conn.commit()

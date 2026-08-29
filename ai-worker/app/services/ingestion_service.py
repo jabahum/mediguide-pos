@@ -13,7 +13,10 @@ from app.document_processing.markdown_extractor import extract_markdown
 from app.document_processing.chunker import chunk_blocks, chunk_sections
 from app.document_processing.types import ExtractedAsset
 from app.embeddings.factory import get_embedding_provider
-from app.repositories.guideline_repo import GuidelineRepository
+from app.repositories.guideline_repo import (
+    GuidelineRepository,
+    GuidelineSourceSupersededError,
+)
 from app.repositories.ingestion_repo import IngestionRepository
 
 log = structlog.get_logger()
@@ -35,6 +38,23 @@ class IngestionService:
         self.storage = ObjectStorage()
         self.embedder = get_embedding_provider()
 
+    def _source_is_current(
+        self,
+        *,
+        version_id: str,
+        version: dict | None,
+        source_format: str,
+        source_key: str,
+        revision_id: str | None,
+    ) -> bool:
+        if not version:
+            return False
+        if source_format == "markdown":
+            return self.guidelines.is_current_markdown_source(
+                version_id, revision_id, source_key
+            )
+        return str(version.get("original_file_key") or "").strip() == source_key
+
     def run_job(self, job_id: str) -> None:
         job = self.jobs.get_job(job_id)
         if not job:
@@ -52,7 +72,7 @@ class IngestionService:
         except IngestionCanceled:
             self.jobs.mark_canceled(job_id)
             log.info("ingestion_job_canceled", job_id=job_id)
-        except IngestionSuperseded:
+        except (IngestionSuperseded, GuidelineSourceSupersededError):
             self.jobs.mark_superseded(job_id)
             log.info("ingestion_job_superseded", job_id=job_id)
         except Exception as exc:
@@ -78,11 +98,19 @@ class IngestionService:
             source_format = "markdown" if job.get("job_type") == "markdown_ingestion" else "pdf"
         if source_format not in {"pdf", "markdown"}:
             raise ValueError(f"Unsupported guideline source format: {source_format}")
-        source_field = "markdown_file_key" if source_format == "markdown" else "original_file_key"
+        revision_id = str(payload.get("revision_id") or "").strip() or None
+        source_field = "original_file_key"
         source_key = str(payload.get("file_key") or version.get(source_field) or "").strip()
         if not source_key:
             raise ValueError(f"Guideline version has no {source_format} source file")
-        if str(version.get(source_field) or "").strip() != source_key:
+        source_is_current = self._source_is_current(
+            version_id=version_id,
+            version=version,
+            source_format=source_format,
+            source_key=source_key,
+            revision_id=revision_id,
+        )
+        if not source_is_current:
             log.info(
                 "ingestion_skipped_superseded_source",
                 job_id=str(job["id"]),
@@ -129,7 +157,6 @@ class IngestionService:
                 if source_format == "markdown"
                 else extract_pdf(source_path)
             )
-            revision_id = str(payload.get("revision_id") or "").strip() or None
             for block in extracted.blocks:
                 block.provenance = {
                     **block.provenance,
@@ -248,7 +275,14 @@ class IngestionService:
             stage("persisting", 90)
             started = time.perf_counter()
             latest = self.guidelines.get_version_with_document(version_id)
-            if not latest or str(latest.get(source_field) or "").strip() != source_key:
+            source_is_current = self._source_is_current(
+                version_id=version_id,
+                version=latest,
+                source_format=source_format,
+                source_key=source_key,
+                revision_id=revision_id,
+            )
+            if not source_is_current:
                 log.info(
                     "ingestion_skipped_superseded_source",
                     job_id=str(job["id"]),

@@ -454,8 +454,59 @@ is idempotent; do not create repeated versions merely to restart a failed job.
 
 ### Regeneration is superseded
 
-Another Markdown revision became current before the job completed. Reload the
-editor and regenerate the newest saved revision.
+`superseded` is a safety outcome for an ingestion job, not a publication state
+for the whole guideline. It normally means another immutable Markdown revision
+became current after the job was queued. The worker deliberately stops before
+replacing structured sections, tables, search chunks, or assets.
+
+In the editor:
+
+1. Select **Reload current revision** in the regeneration status panel.
+2. Confirm that any intended browser edits are present in the saved revision.
+3. Select **Regenerate** to create a new job bound to that revision.
+4. Do not retry the superseded job. It is permanently associated with its old
+   source revision.
+
+The previous accepted structured projection remains available until the new
+job completes. A superseded job must not leave the current version in
+`processing`; its status returns to `review_required` when it still has an
+accepted projection, otherwise to `outdated`.
+
+#### Operator diagnosis
+
+Compare the job payload with the version's current revision. Use read-only
+queries first (replace the example IDs):
+
+```sql
+SELECT id, status, progress_stage, progress_percent,
+       payload_json->>'revision_id' AS job_revision_id,
+       payload_json->>'file_key' AS job_source_key
+FROM ingestion_jobs
+WHERE id = '<job-uuid>';
+
+SELECT gv.id AS version_id,
+       gv.current_markdown_revision_id,
+       revision.storage_key AS current_source_key,
+       gv.structured_markdown_revision_id,
+       gv.structured_content_status
+FROM guideline_versions gv
+LEFT JOIN guideline_markdown_revisions revision
+  ON revision.id = gv.current_markdown_revision_id
+WHERE gv.id = '<version-uuid>';
+```
+
+- Different revision IDs or storage keys indicate a genuine race. Reload and
+  regenerate the current revision.
+- Matching revision IDs and storage keys indicate a false supersede or stale
+  deployment. Confirm the API and AI worker images contain the immutable
+  revision identity fix, then create a new regeneration job.
+- `guideline_versions.markdown_file_key` is a generated structured Markdown
+  artifact. It is not the author-source identity and must not be compared with
+  a revision's `storage_key`.
+
+Inspect the AI worker log for `ingestion_job_superseded` and
+`ingestion_skipped_superseded_source`, including the job and version IDs. Do not
+manually relabel a job as completed or copy projections between revisions.
 
 ### Save reports `409 Conflict`
 

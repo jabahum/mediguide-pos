@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest"
+import { describe, expect, it } from "vitest";
 
 import {
   formatMarkdown,
@@ -11,7 +11,7 @@ import {
   stableHeadingAnchors,
   validateMarkdown,
   wordDiff,
-} from "./markdown-authoring"
+} from "./markdown-authoring";
 
 describe("Markdown authoring utilities", () => {
   it("provides structure-only templates for each required clinical document type", () => {
@@ -22,40 +22,65 @@ describe("Markdown authoring utilities", () => {
       "diagnostic",
       "procedure",
       "outbreak",
-    ])
+    ]);
     for (const template of markdownTemplates) {
-      expect(template.content).toMatch(/^# /u)
-      expect(template.content).toContain("_Add reviewed clinical content._")
+      expect(template.content).toMatch(/^# /u);
+      expect(template.content).toContain("_Add reviewed clinical content._");
     }
-  })
+  });
 
   it("builds stable heading navigation with section word counts", () => {
-    const headings = markdownHeadings("# Care\n\nIntro words.\n\n## Assessment\n\nCheck danger signs.")
+    const headings = markdownHeadings(
+      "# Care\n\nIntro words.\n\n## Assessment\n\nCheck danger signs.",
+    );
 
     expect(headings).toEqual([
       expect.objectContaining({ id: "care", level: 1, line: 1, words: 2 }),
-      expect.objectContaining({ id: "assessment", level: 2, line: 5, words: 3 }),
-    ])
-  })
+      expect.objectContaining({
+        id: "assessment",
+        level: 2,
+        line: 5,
+        words: 3,
+      }),
+    ]);
+  });
 
   it("indexes large clinical documents without changing heading boundaries", () => {
-    const markdown = Array.from({ length: 2_000 }, (_, index) => (
-      `## Section ${index + 1}\n\nClinical recommendation ${index + 1}.`
-    )).join("\n\n")
+    const markdown = Array.from(
+      { length: 2_000 },
+      (_, index) =>
+        `## Section ${index + 1}\n\nClinical recommendation ${index + 1}.`,
+    ).join("\n\n");
 
-    const headings = markdownHeadings(`# Guideline\n\n${markdown}`)
+    const headings = markdownHeadings(`# Guideline\n\n${markdown}`);
 
-    expect(headings).toHaveLength(2_001)
-    expect(headings[0]).toEqual(expect.objectContaining({ text: "Guideline", words: 0, breadcrumb: ["Guideline"] }))
-    expect(headings[1]).toEqual(expect.objectContaining({ text: "Section 1", words: 3, breadcrumb: ["Guideline", "Section 1"] }))
-    expect(headings.at(-1)).toEqual(expect.objectContaining({ text: "Section 2000", words: 3 }))
-    expect(headings.at(-1)?.end).toBe(markdown.length + "# Guideline\n\n".length + 1)
-  })
+    expect(headings).toHaveLength(2_001);
+    expect(headings[0]).toEqual(
+      expect.objectContaining({
+        text: "Guideline",
+        words: 0,
+        breadcrumb: ["Guideline"],
+      }),
+    );
+    expect(headings[1]).toEqual(
+      expect.objectContaining({
+        text: "Section 1",
+        words: 3,
+        breadcrumb: ["Guideline", "Section 1"],
+      }),
+    );
+    expect(headings.at(-1)).toEqual(
+      expect.objectContaining({ text: "Section 2000", words: 3 }),
+    );
+    expect(headings.at(-1)?.end).toBe(
+      markdown.length + "# Guideline\n\n".length + 1,
+    );
+  });
 
   it("blocks executable Markdown and detects structural/callout errors", () => {
     const issues = validateMarkdown(
       "## Assessment\n\n#### Details\n\n<script>alert(1)</script>\n\n:::warning\nReview.",
-    )
+    );
 
     expect(issues.map((issue) => issue.code)).toEqual(
       expect.arrayContaining([
@@ -64,64 +89,132 @@ describe("Markdown authoring utilities", () => {
         "unsafe_html",
         "unclosed_callout",
       ]),
-    )
-    expect(issues.find((issue) => issue.code === "unsafe_html")?.severity).toBe("error")
-  })
+    );
+    expect(issues.find((issue) => issue.code === "unsafe_html")?.severity).toBe(
+      "error",
+    );
+  });
 
   it("treats duplicate anchors and missing image alt text as production errors", () => {
-    const issues = validateMarkdown("# Care\n\n## Review\n\n## Review\n\n![](asset:missing)")
+    const issues = validateMarkdown(
+      "# Care\n\n## Review\n\n## Review\n\n![](asset:missing)",
+    );
 
-    expect(issues).toEqual(expect.arrayContaining([
-      expect.objectContaining({ code: "duplicate_heading_anchor", severity: "error", line: 5 }),
-      expect.objectContaining({ code: "missing_image_alt", severity: "error", line: 7 }),
-    ]))
-  })
+    expect(issues).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          code: "duplicate_heading_anchor",
+          severity: "error",
+          line: 5,
+        }),
+        expect.objectContaining({
+          code: "missing_image_alt",
+          severity: "error",
+          line: 7,
+        }),
+      ]),
+    );
+  });
 
   it("accepts trailing empty table cells and literal pipes", () => {
-    const issues = validateMarkdown("# Care\n\n| Area | Primary | Secondary | Tertiary |\n| --- | --- | --- | --- |\n| History | x |  |  |\n| Expression | `a | b` | A \\| B |  |")
+    const issues = validateMarkdown(
+      "# Care\n\n| Area | Primary | Secondary | Tertiary |\n| --- | --- | --- | --- |\n| History | x |  |  |\n| Expression | `a | b` | A \\| B |  |",
+    );
 
-    expect(issues.filter((issue) => issue.code === "malformed_table")).toEqual([])
-    expect(issues).toContainEqual(expect.objectContaining({ code: "high_risk_table_review_required", severity: "warning" }))
-  })
+    expect(issues.filter((issue) => issue.code === "malformed_table")).toEqual(
+      [],
+    );
+    expect(issues).toContainEqual(
+      expect.objectContaining({
+        code: "high_risk_table_review_required",
+        severity: "warning",
+        message:
+          "Clinical table “Care” requires explicit publisher review after regeneration.",
+      }),
+    );
+  });
 
   it("rejects real table column mismatches", () => {
-    const issues = validateMarkdown("# Care\n\n| One | Two | Three |\n| --- | --- | --- |\n| A | B |")
+    const issues = validateMarkdown(
+      "# Care\n\n| One | Two | Three |\n| --- | --- | --- |\n| A | B |",
+    );
 
-    expect(issues).toContainEqual(expect.objectContaining({ code: "malformed_table", severity: "error", line: 5 }))
-  })
+    expect(issues).toContainEqual(
+      expect.objectContaining({
+        code: "malformed_table",
+        severity: "error",
+        line: 5,
+      }),
+    );
+  });
 
   it("formats line endings and creates a deterministic safe line diff", () => {
-    expect(formatMarkdown("# Care\r\n\r\nOld.  \r\n")).toBe("# Care\n\nOld.\n")
+    expect(formatMarkdown("# Care\r\n\r\nOld.  \r\n")).toBe("# Care\n\nOld.\n");
     expect(lineDiff("# Care\nOld", "# Care\nNew")).toEqual([
       { type: "same", text: "# Care" },
       { type: "removed", text: "Old" },
       { type: "added", text: "New" },
-    ])
-    expect(wordDiff("Give 5 mg", "Give 10 mg").filter((part) => part.type !== "same")).toEqual([
+    ]);
+    expect(
+      wordDiff("Give 5 mg", "Give 10 mg").filter(
+        (part) => part.type !== "same",
+      ),
+    ).toEqual([
       { type: "removed", text: "5" },
       { type: "added", text: "10" },
-    ])
-  })
+    ]);
+  });
 
   it("parses safe typed callouts without rewriting clinical values", () => {
-    const source = clinicalCalloutMarkdown({ type: "dosage", title: "Reviewed dose", severity: "high", evidenceGrade: "A", content: "Give 5 mg/kg." })
-    expect(source).toContain("Give 5 mg/kg.")
+    const source = clinicalCalloutMarkdown({
+      type: "dosage",
+      title: "Reviewed dose",
+      severity: "high",
+      evidenceGrade: "A",
+      content: "Give 5 mg/kg.",
+    });
+    expect(source).toContain("Give 5 mg/kg.");
     expect(parseClinicalCallouts(source)).toEqual([
-      expect.objectContaining({ type: "dosage", title: "Reviewed dose", severity: "high", evidenceGrade: "A", content: "Give 5 mg/kg." }),
-    ])
-  })
+      expect.objectContaining({
+        type: "dosage",
+        title: "Reviewed dose",
+        severity: "high",
+        evidenceGrade: "A",
+        content: "Give 5 mg/kg.",
+      }),
+    ]);
+  });
 
   it("moves a heading with its complete section content", () => {
-    expect(moveMarkdownSection("# One\nBody one.\n\n# Two\nBody two.\n", 1, 0)).toBe("# Two\nBody two.\n# One\nBody one.\n\n")
-    expect(moveMarkdownSection("# One\nIntro.\n## Child\nChild body.\n# Two\nOther.\n", 0, 2)).toBe("# One\nIntro.\n## Child\nChild body.\n# Two\nOther.\n")
-    expect(moveMarkdownSection("# One\nIntro.\n## Child\nChild body.\n# Two\nOther.\n", 2, 0)).toBe("# Two\nOther.\n# One\nIntro.\n## Child\nChild body.\n")
-  })
+    expect(
+      moveMarkdownSection("# One\nBody one.\n\n# Two\nBody two.\n", 1, 0),
+    ).toBe("# Two\nBody two.\n# One\nBody one.\n\n");
+    expect(
+      moveMarkdownSection(
+        "# One\nIntro.\n## Child\nChild body.\n# Two\nOther.\n",
+        0,
+        2,
+      ),
+    ).toBe("# One\nIntro.\n## Child\nChild body.\n# Two\nOther.\n");
+    expect(
+      moveMarkdownSection(
+        "# One\nIntro.\n## Child\nChild body.\n# Two\nOther.\n",
+        2,
+        0,
+      ),
+    ).toBe("# Two\nOther.\n# One\nIntro.\n## Child\nChild body.\n");
+  });
 
   it("retains stable anchors for renames and matches titles after insertion", () => {
-    const original = stableHeadingAnchors("# Care\n## Assessment")
-    expect(stableHeadingAnchors("# Clinical care\n## Assessment", original)["0"].id).toBe("care")
-    const inserted = stableHeadingAnchors("# Preface\n# Care\n## Assessment", original)
-    expect(inserted["1"].id).toBe("care")
-    expect(inserted["2"].id).toBe("assessment")
-  })
-})
+    const original = stableHeadingAnchors("# Care\n## Assessment");
+    expect(
+      stableHeadingAnchors("# Clinical care\n## Assessment", original)["0"].id,
+    ).toBe("care");
+    const inserted = stableHeadingAnchors(
+      "# Preface\n# Care\n## Assessment",
+      original,
+    );
+    expect(inserted["1"].id).toBe("care");
+    expect(inserted["2"].id).toBe("assessment");
+  });
+});

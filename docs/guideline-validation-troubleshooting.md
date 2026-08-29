@@ -310,7 +310,23 @@ Editorial Review.
 
 Clinical tables always require explicit review after regeneration. Verify every
 heading, cell, unit, footnote, and row alignment against the source, then approve
-the regenerated table.
+the regenerated table. The validator names the nearest table caption or section
+heading and reports its source line so the reviewer can locate it. This warning
+does not mean that the Markdown column syntax is malformed.
+
+To clear the publication gate:
+
+1. Open the guideline version's **Editorial Review** workspace.
+2. Filter or scan for blocks of type **table**. The card and preview show the
+   extracted table title.
+3. Compare every displayed cell, unit, row, column, and footnote with the
+   authoritative source document.
+4. Correct the Markdown and regenerate if the extraction is wrong. Do not approve
+   a knowingly incorrect structured table.
+5. With `guideline.high_risk.approve`, mark each correct table block as
+   **Reviewed**. Assigning a reviewer is not the same as reviewing a block.
+6. Run publication validation again. The blocker clears only when every active
+   high-risk table has a recorded review decision for the current content.
 
 ### `ambiguous_dosage_or_unit`
 

@@ -241,7 +241,8 @@ func validateMarkdownDocument(revisionID uuid.UUID, content string, document mod
 					add("error", "malformed_table", fmt.Sprintf("Table row has %d columns; expected %d.", columns, expected), rowIndex+1, 1, len(lines[rowIndex])+1)
 				}
 			}
-			add("warning", "high_risk_table_review_required", "Clinical tables require explicit publisher review after regeneration.", lineNo, 1, len(line)+1)
+			label := markdownTableLabel(lines, index)
+			add("warning", "high_risk_table_review_required", fmt.Sprintf("Clinical table %q requires explicit publisher review after regeneration.", label), lineNo, 1, len(line)+1)
 		}
 		if mdDoseRE.MatchString(line) && !regexp.MustCompile(`(?i)\b(per|every|daily|once|twice|hour|day|week|kg|dose|route|oral|iv|im|sc)\b`).MatchString(line) {
 			add("warning", "ambiguous_dosage_or_unit", "Review this dosage or unit for an explicit route, frequency, and patient basis.", lineNo, 1, len(line)+1)
@@ -288,6 +289,23 @@ func validateMarkdownDocument(revisionID uuid.UUID, content string, document mod
 	}
 	result.Valid = result.Errors == 0
 	return result
+}
+
+func markdownTableLabel(lines []string, headerIndex int) string {
+	for index := headerIndex - 1; index >= 0; index-- {
+		candidate := strings.TrimSpace(lines[index])
+		if candidate == "" {
+			continue
+		}
+		candidate = strings.TrimSpace(strings.Trim(candidate, "*_`"))
+		if matches := mdHeadingRE.FindStringSubmatch(candidate); len(matches) == 3 {
+			candidate = strings.TrimSpace(matches[2])
+		}
+		if candidate != "" {
+			return candidate
+		}
+	}
+	return fmt.Sprintf("starting on line %d", headerIndex+1)
 }
 
 // markdownTableCells counts Markdown table cells without discarding meaningful

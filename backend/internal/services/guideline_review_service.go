@@ -617,7 +617,18 @@ func validateGuidelinePublication(tx *gorm.DB, version *models.GuidelineVersion)
 			addError("invalid_block_payload", err.Error(), block.SectionID, &current.ID)
 		}
 		if highRiskGuidelineBlock(block.Type) && block.ReviewStatus != models.GuidelineBlockReviewed {
-			addError("unreviewed_high_risk_block", fmt.Sprintf("The %s block requires publisher review.", block.Type), block.SectionID, &current.ID)
+			label := string(block.Type)
+			if block.Type == models.GuidelineBlockTable {
+				var payload models.GuidelineTableBlockPayload
+				if json.Unmarshal(block.ContentJSON, &payload) == nil && strings.TrimSpace(payload.Title) != "" {
+					label = fmt.Sprintf("table %q", strings.TrimSpace(payload.Title))
+				} else if block.SectionID != nil {
+					if section, exists := sectionMap[*block.SectionID]; exists && strings.TrimSpace(section.Title) != "" {
+						label = fmt.Sprintf("table in section %q", strings.TrimSpace(section.Title))
+					}
+				}
+			}
+			addError("unreviewed_high_risk_block", fmt.Sprintf("The %s block requires publisher review.", label), block.SectionID, &current.ID)
 		}
 	}
 	if strings.TrimSpace(version.HTMLFileKey) == "" || strings.TrimSpace(version.MarkdownFileKey) == "" {

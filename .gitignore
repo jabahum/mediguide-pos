@@ -19,6 +19,7 @@
 !docs/clinical-tool-validation-status.md
 !docs/seeding.md
 !guidelines-platform/src/content/**/*.md
+!artifacts/guidelines/integrated-diabetes-management-guideline-uganda-summary.corrected.md
 !backend/cmd/seed/fixtures/outbreak-documents/*.md
 backend/.env
 backend/.env.local

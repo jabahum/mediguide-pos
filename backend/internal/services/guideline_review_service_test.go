@@ -165,6 +165,44 @@ func TestGuidelinePublicationValidationAcceptsReviewedStructuredContent(t *testi
 	}
 }
 
+func TestGuidelinePublicationValidationNamesUnreviewedTable(t *testing.T) {
+	db := guidelineReviewTestDB(t)
+	document := models.GuidelineDocument{Title: "Clinical guidance"}
+	if err := db.Create(&document).Error; err != nil {
+		t.Fatal(err)
+	}
+	version := models.GuidelineVersion{DocumentID: document.ID, Version: "1", Status: "review_required", OriginalFileKey: "source.pdf", ExtractionSchemaVersion: 1}
+	if err := db.Create(&version).Error; err != nil {
+		t.Fatal(err)
+	}
+	section := models.GuidelineSection{VersionID: version.ID, Title: "Diagnosis", Slug: "diagnosis", Level: 1, SortOrder: 0}
+	if err := db.Create(&section).Error; err != nil {
+		t.Fatal(err)
+	}
+	block := models.GuidelineContentBlock{
+		VersionID: version.ID, SectionID: &section.ID, Type: models.GuidelineBlockTable,
+		SortOrder: 0, ContentJSON: []byte(`{"type":"table","title":"Table 2. Diagnostic criteria","columns":["Test","Threshold"],"rows":[["HbA1c","6.5%"]],"footnotes":[]}`),
+		SourceFingerprint: "table-2", ReviewStatus: models.GuidelineBlockDraft,
+	}
+	if err := db.Create(&block).Error; err != nil {
+		t.Fatal(err)
+	}
+
+	validation, err := GuidelineService{DB: db}.ValidateVersionForPublication(version.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, issue := range validation.Errors {
+		if issue.Code == "unreviewed_high_risk_block" {
+			if issue.Message != `The table "Table 2. Diagnostic criteria" block requires publisher review.` {
+				t.Fatalf("table review blocker does not identify the table: %#v", issue)
+			}
+			return
+		}
+	}
+	t.Fatalf("missing table review blocker: %#v", validation.Errors)
+}
+
 func TestPublishedVersionReviewMutationIsRejected(t *testing.T) {
 	db := guidelineReviewTestDB(t)
 	document := models.GuidelineDocument{Title: "Clinical guidance"}

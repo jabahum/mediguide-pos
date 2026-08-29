@@ -359,6 +359,10 @@ func TestOutbreakDocumentDiscoveryFiltersPaginationPDFMatchAndSafeSort(t *testin
 	if err != nil || len(second.Items) != 1 || second.Items[0].ID != rows[1].ID {
 		t.Fatalf("deterministic second page failed: %#v err=%v", second, err)
 	}
+	bySortOrder, err := service.SearchDocuments(OutbreakDocumentQuery{Page: PageInput{Page: 1, PerPage: 2}, Search: "triple package", Sort: "sort_order", Order: "asc"})
+	if err != nil || len(bySortOrder.Items) != 2 || bySortOrder.Items[0].ID != rows[0].ID {
+		t.Fatalf("document sort_order contract failed: %#v err=%v", bySortOrder, err)
+	}
 	for _, malicious := range []OutbreakDocumentQuery{
 		{Sort: "title; DROP TABLE outbreak_resources;--"},
 		{Sort: "deleted_at"},

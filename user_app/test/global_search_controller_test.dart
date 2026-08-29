@@ -90,6 +90,70 @@ void main() {
     },
   );
 
+  testWidgets('an outbreak is presented as a top result and opens its hub', (
+    tester,
+  ) async {
+    final dataSource = ControlledSearchDataSource();
+    final router = GoRouter(
+      initialLocation: '/search',
+      routes: [
+        GoRoute(path: '/search', builder: (_, _) => const GlobalSearchPage()),
+        GoRoute(
+          path: '/outbreak-hub/:outbreakId',
+          builder: (_, state) =>
+              Text('Opened ${state.pathParameters['outbreakId']}'),
+        ),
+      ],
+    );
+    addTearDown(router.dispose);
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          globalSearchDataSourceProvider.overrideWithValue(dataSource),
+        ],
+        child: MaterialApp.router(routerConfig: router),
+      ),
+    );
+
+    await tester.enterText(find.byType(TextField), 'ebola');
+    await tester.pump(const Duration(milliseconds: 400));
+    dataSource.requests['ebola']!.complete(const [
+      SearchResult(
+        id: 'guideline-1',
+        title: 'General infection guideline',
+        category: SearchCategory.guidelines,
+        relevanceScore: 2,
+      ),
+      SearchResult(
+        id: 'outbreak-1',
+        title: 'Ebola response hub',
+        subtitle: 'Ebola virus disease · Kasese District',
+        category: SearchCategory.outbreaks,
+        route: '/outbreak-hub/outbreak-1',
+        relevanceScore: 10,
+        item: PublicOutbreak(
+          id: 'outbreak-1',
+          title: 'Ebola response hub',
+          diseaseType: 'Ebola virus disease',
+          geographicArea: 'Kasese District',
+          status: 'active',
+        ),
+      ),
+    ]);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Outbreaks · Top results'), findsOneWidget);
+    expect(find.text('Active outbreak'), findsOneWidget);
+    expect(
+      tester.getTopLeft(find.text('Ebola response hub')).dy,
+      lessThan(tester.getTopLeft(find.text('General infection guideline')).dy),
+    );
+
+    await tester.tap(find.text('Ebola response hub'));
+    await tester.pumpAndSettle();
+    expect(find.text('Opened outbreak-1'), findsOneWidget);
+  });
+
   testWidgets(
     'outbreak document search result opens the exact route with match metadata',
     (tester) async {

@@ -112,7 +112,7 @@ final class OutbreakDocumentQuery {
     this.mimeType = '',
     this.effectiveFrom,
     this.effectiveTo,
-    this.sort = 'sort_order',
+    this.sort = '',
     this.order = 'asc',
   });
 
@@ -140,7 +140,7 @@ final class OutbreakDocumentQuery {
       'effective_from': effectiveFrom!.toUtc().toIso8601String(),
     if (effectiveTo != null)
       'effective_to': effectiveTo!.toUtc().toIso8601String(),
-    'sort': sort,
+    if (sort.trim().isNotEmpty) 'sort': sort.trim(),
     'order': order,
   };
 

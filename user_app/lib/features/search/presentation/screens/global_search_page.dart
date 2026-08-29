@@ -7,6 +7,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import 'package:user_app/core/constants/app_spacing.dart';
+import 'package:user_app/features/outbreaks/data/models/outbreak_models.dart';
 import 'package:user_app/features/search/presentation/controllers/global_search_controller.dart';
 import 'package:user_app/shared/models/search_models.dart';
 import 'package:user_app/shared/widgets/clinical_icon_tile.dart';
@@ -176,7 +177,7 @@ class _GlobalSearchPageState extends ConsumerState<GlobalSearchPage> {
                 icon: LucideIcons.search,
                 title: 'Find clinical guidance',
                 message:
-                    'Search guidelines, medicines, abbreviations, clinical tools, facilities and other MediGuide resources.',
+                    'Search outbreaks, guidelines, medicines, clinical tools, facilities and other MediGuide resources.',
               ),
             )
           //
@@ -336,7 +337,7 @@ class _ClinicalSearchField extends StatelessWidget {
 
     return SearchBar(
       controller: controller,
-      hintText: 'Search guidelines, drugs, tools…',
+      hintText: 'Search outbreaks, guidelines, drugs, tools…',
       leading: Icon(LucideIcons.search, color: colors.primary),
       trailing: [
         if (controller.text.isNotEmpty)
@@ -478,6 +479,16 @@ class _GroupedSearchResults extends StatelessWidget {
     for (final result in results) {
       groups.putIfAbsent(result.category, () => []).add(result);
     }
+    final orderedCategories = groups.keys.toList()
+      ..sort((left, right) {
+        final leftScore = groups[left]!
+            .map((result) => result.relevanceScore)
+            .reduce((a, b) => a > b ? a : b);
+        final rightScore = groups[right]!
+            .map((result) => result.relevanceScore)
+            .reduce((a, b) => a > b ? a : b);
+        return rightScore.compareTo(leftScore);
+      });
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -497,7 +508,7 @@ class _GroupedSearchResults extends StatelessWidget {
 
         AppSpacing.gapMd,
 
-        for (final category in SearchCategory.values)
+        for (final category in orderedCategories)
           if (groups[category]?.isNotEmpty == true) ...[
             if (selectedCategory == SearchCategory.all) ...[
               _SearchGroupHeader(
@@ -588,7 +599,9 @@ class _SearchGroupHeader extends StatelessWidget {
 
           Expanded(
             child: Text(
-              category.displayName,
+              category == SearchCategory.outbreaks
+                  ? 'Outbreaks · Top results'
+                  : category.displayName,
               style: Theme.of(context).textTheme.titleMedium,
             ),
           ),
@@ -614,6 +627,12 @@ class _SearchResultTile extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final colors = Theme.of(context).colorScheme;
+    final outbreak = result.getItem<PublicOutbreak>();
+    final outbreakTone = outbreak == null
+        ? null
+        : outbreak.status.toLowerCase() == 'active'
+        ? colors.error
+        : colors.tertiary;
 
     final canOpen =
         result.route?.trim().isNotEmpty == true ||
@@ -626,6 +645,13 @@ class _SearchResultTile extends ConsumerWidget {
       child: Card(
         margin: EdgeInsets.zero,
         clipBehavior: Clip.antiAlias,
+        color: outbreakTone?.withValues(alpha: 0.045),
+        shape: outbreakTone == null
+            ? null
+            : RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+                side: BorderSide(color: outbreakTone.withValues(alpha: 0.28)),
+              ),
         child: InkWell(
           onTap: !canOpen
               ? null
@@ -687,6 +713,14 @@ class _SearchResultTile extends ConsumerWidget {
                           height: 1.25,
                         ),
                       ),
+
+                      if (outbreak != null) ...[
+                        const SizedBox(height: 7),
+                        _OutbreakSearchBadge(
+                          status: outbreak.status,
+                          color: outbreakTone!,
+                        ),
+                      ],
 
                       const SizedBox(height: 5),
 
@@ -765,6 +799,34 @@ class _SearchResultTile extends ConsumerWidget {
       SearchCategory.tools => LucideIcons.calculator,
       SearchCategory.all => LucideIcons.search,
     };
+  }
+}
+
+class _OutbreakSearchBadge extends StatelessWidget {
+  const _OutbreakSearchBadge({required this.status, required this.color});
+
+  final String status;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    final label = status.trim().isEmpty
+        ? 'Published outbreak'
+        : '${status[0].toUpperCase()}${status.substring(1)} outbreak';
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Text(
+        label,
+        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+          color: color,
+          fontWeight: FontWeight.w800,
+        ),
+      ),
+    );
   }
 }
 

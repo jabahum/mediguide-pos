@@ -806,7 +806,7 @@ func applyOutbreakDocument(row *models.OutbreakResource, in OutbreakDocumentInpu
 }
 
 func outbreakDocumentOrder(sort, order string) (string, error) {
-	columns := map[string]string{"": "outbreak_resources.sort_order", "title": "outbreak_resources.title", "document_kind": "outbreak_resources.document_kind", "issuing_authority": "outbreak_resources.issuing_authority", "version": "outbreak_resources.version", "effective_date": "outbreak_resources.effective_date", "review_date": "outbreak_resources.review_date", "published_at": "outbreak_resources.published_at", "created_at": "outbreak_resources.created_at", "updated_at": "outbreak_resources.updated_at"}
+	columns := map[string]string{"": "outbreak_resources.sort_order", "sort_order": "outbreak_resources.sort_order", "title": "outbreak_resources.title", "document_kind": "outbreak_resources.document_kind", "issuing_authority": "outbreak_resources.issuing_authority", "version": "outbreak_resources.version", "effective_date": "outbreak_resources.effective_date", "review_date": "outbreak_resources.review_date", "published_at": "outbreak_resources.published_at", "created_at": "outbreak_resources.created_at", "updated_at": "outbreak_resources.updated_at"}
 	column, ok := columns[strings.TrimSpace(sort)]
 	if !ok {
 		return "", ErrOutbreakInvalid

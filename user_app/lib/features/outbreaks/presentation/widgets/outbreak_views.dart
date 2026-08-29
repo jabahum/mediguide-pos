@@ -596,6 +596,19 @@ class _OutbreakDetail extends StatelessWidget {
           OutbreakMetricGrid(metrics: outbreak.metrics),
         ],
 
+        if (detail.documents.isNotEmpty ||
+            detail.resources.isNotEmpty ||
+            detail.reports.isNotEmpty) ...[
+          AppSpacing.gapLg,
+          const SectionHeader(
+            title: 'Quick access',
+            subtitle: 'Open essential response guidance and reports',
+            icon: LucideIcons.layoutGrid,
+          ),
+          AppSpacing.gapSm,
+          _OutbreakQuickAccessGrid(detail: detail),
+        ],
+
         if (detail.updates.isNotEmpty) ...[
           AppSpacing.gapLg,
 
@@ -681,6 +694,141 @@ class _OutbreakDetail extends StatelessWidget {
       ],
     );
   }
+}
+
+class _OutbreakQuickAccessGrid extends StatelessWidget {
+  const _OutbreakQuickAccessGrid({required this.detail});
+
+  final PublicOutbreakDetail detail;
+
+  @override
+  Widget build(BuildContext context) {
+    final actions = <_OutbreakQuickAction>[
+      for (final document in detail.documents.take(4))
+        _OutbreakQuickAction(
+          label: _documentQuickLabel(document),
+          icon: _documentQuickIcon(document),
+          onTap: () => context.push(
+            AppRoutes.outbreakDocument(document.outbreakId, document.id),
+          ),
+        ),
+      for (final resource in detail.resources.take(2))
+        _OutbreakQuickAction(
+          label: resource.targetType == 'guideline'
+              ? 'Clinical guide'
+              : 'Official update',
+          icon: resource.targetType == 'guideline'
+              ? LucideIcons.bookOpenCheck
+              : LucideIcons.info,
+          onTap: () => _openOutbreakResource(context, resource),
+        ),
+      if (detail.reports.isNotEmpty)
+        _OutbreakQuickAction(
+          label: 'Situation reports',
+          icon: LucideIcons.fileChartColumn,
+          onTap: () =>
+              context.push(AppRoutes.situationReport(detail.reports.first.id)),
+        ),
+    ];
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final columns = constraints.maxWidth >= 700
+            ? 4
+            : constraints.maxWidth >= 340
+            ? 3
+            : 2;
+        final width =
+            (constraints.maxWidth - AppSpacing.sm * (columns - 1)) / columns;
+        return Wrap(
+          spacing: AppSpacing.sm,
+          runSpacing: AppSpacing.sm,
+          children: [
+            for (final action in actions)
+              SizedBox(
+                width: width,
+                child: _OutbreakQuickAccessTile(action: action),
+              ),
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _OutbreakQuickAccessTile extends StatelessWidget {
+  const _OutbreakQuickAccessTile({required this.action});
+
+  final _OutbreakQuickAction action;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    return Card(
+      margin: EdgeInsets.zero,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12),
+        onTap: action.onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.sm,
+            vertical: AppSpacing.md,
+          ),
+          child: Column(
+            children: [
+              Icon(action.icon, color: colors.primary, size: 22),
+              const SizedBox(height: 7),
+              Text(
+                action.label,
+                textAlign: TextAlign.center,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: Theme.of(
+                  context,
+                ).textTheme.labelSmall?.copyWith(fontWeight: FontWeight.w700),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _OutbreakQuickAction {
+  const _OutbreakQuickAction({
+    required this.label,
+    required this.icon,
+    required this.onTap,
+  });
+
+  final String label;
+  final IconData icon;
+  final VoidCallback onTap;
+}
+
+String _documentQuickLabel(PublicOutbreakDocument document) {
+  return switch (document.documentKind) {
+    'ipc_protocol' => 'IPC & PPE',
+    'laboratory_protocol' => 'Laboratory',
+    'contact_tracing_guide' => 'Contact tracing',
+    'checklist' => 'Checklist',
+    'communication_material' => 'Communication',
+    'sop' => 'Clinical care',
+    _ => 'Clinical document',
+  };
+}
+
+IconData _documentQuickIcon(PublicOutbreakDocument document) {
+  return switch (document.documentKind) {
+    'ipc_protocol' => LucideIcons.shieldCheck,
+    'laboratory_protocol' => LucideIcons.flaskConical,
+    'contact_tracing_guide' => LucideIcons.users,
+    'checklist' => LucideIcons.listChecks,
+    'communication_material' => LucideIcons.messagesSquare,
+    'sop' => LucideIcons.stethoscope,
+    _ => LucideIcons.fileText,
+  };
 }
 
 // ===========================================================================

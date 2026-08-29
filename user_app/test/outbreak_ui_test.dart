@@ -160,12 +160,24 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('Official documents and SOPs'), findsOneWidget);
+    await tester.scrollUntilVisible(
+      find.text('Quick access'),
+      250,
+      scrollable: find.byType(Scrollable).last,
+    );
+    expect(find.text('Quick access'), findsOneWidget);
+    await tester.scrollUntilVisible(
+      find.text('IPC & PPE'),
+      120,
+      scrollable: find.byType(Scrollable).last,
+    );
+    expect(find.text('IPC & PPE'), findsOneWidget);
     await tester.scrollUntilVisible(
       find.text('Ebola response SOP'),
       250,
       scrollable: find.byType(Scrollable).last,
     );
+    expect(find.text('Official documents and SOPs'), findsOneWidget);
     expect(find.text('Ebola response SOP'), findsOneWidget);
     expect(find.text('Ipc Protocol'), findsOneWidget);
     expect(tester.takeException(), isNull);

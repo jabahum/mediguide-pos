@@ -255,6 +255,17 @@ class FakeOutbreakApi extends BackendApiService {
 }
 
 void main() {
+  test('default outbreak document query uses the server safe sort', () {
+    final defaultQuery = const OutbreakDocumentQuery(search: 'ebola').toQuery();
+    final explicitQuery = const OutbreakDocumentQuery(
+      sort: 'sort_order',
+    ).toQuery();
+
+    expect(defaultQuery['search'], 'ebola');
+    expect(defaultQuery, isNot(contains('sort')));
+    expect(explicitQuery['sort'], 'sort_order');
+  });
+
   test(
     'outbreak repository uses public typed routes and public cache',
     () async {

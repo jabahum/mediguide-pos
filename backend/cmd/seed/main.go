@@ -147,6 +147,25 @@ func main() {
 		}
 		log.Info().Msg("notification seed completed")
 		return
+	case "outbreaks":
+		if strings.EqualFold(cfg.AppEnv, "production") {
+			log.Fatal().Msg("demo outbreak seeding is disabled in production")
+		}
+		admin, clinician, _, err := seedSecurity(database)
+		if err != nil {
+			log.Fatal().Err(err).Msg("seed outbreak actors failed")
+		}
+		store, err := storage.NewMinioStore(cfg)
+		if err != nil {
+			log.Fatal().Err(err).Msg("seed outbreak object storage connection failed")
+		}
+		if err := database.Transaction(func(tx *gorm.DB) error {
+			return seedDemoOutbreaks(context.Background(), tx, store, admin.ID, clinician.ID)
+		}); err != nil {
+			log.Fatal().Err(err).Msg("seed outbreak data failed")
+		}
+		log.Info().Msg("outbreak demo seed completed")
+		return
 	case "", "demo":
 		if strings.EqualFold(cfg.AppEnv, "production") && !strings.EqualFold(strings.TrimSpace(os.Getenv("SEED_ALLOW_DEMO")), "true") {
 			log.Fatal().Msg("demo seeding is disabled in production; use SEED_SCOPE=admin or SEED_SCOPE=facilities")

@@ -142,6 +142,13 @@ abstract final class AppRoutes {
     return '$publicGuidelines/${Uri.encodeComponent(guidelineId)}';
   }
 
+  static String publicGuidelinesForProgramArea(String programArea) {
+    return Uri(
+      path: publicGuidelines,
+      queryParameters: {'program_area': programArea.trim()},
+    ).toString();
+  }
+
   static String readPublicGuideline(String guidelineId) {
     return '${publicGuideline(guidelineId)}/read';
   }

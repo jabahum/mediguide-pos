@@ -65,17 +65,32 @@ final class GuidelinePublicationRepository {
       final cached = await _cache.list(
         type: _publicationType,
         scope: 'public',
-        search: search,
-        limit: perPage,
-        offset: (page - 1).clamp(0, 1 << 30) * perPage,
+        search: search.trim().isNotEmpty ? search : programArea,
+        limit: programArea.trim().isEmpty ? perPage : 1000,
+        offset: programArea.trim().isEmpty
+            ? (page - 1).clamp(0, 1 << 30) * perPage
+            : 0,
       );
       if (cached.isEmpty) rethrow;
+      final normalizedArea = programArea.trim().toLowerCase();
+      final filtered = cached
+          .map(GuidelinePublication.fromJson)
+          .where(
+            (item) =>
+                normalizedArea.isEmpty ||
+                item.programArea.trim().toLowerCase() == normalizedArea,
+          )
+          .toList(growable: false);
+      final items = filtered
+          .skip((page - 1).clamp(0, 1 << 30) * perPage)
+          .take(perPage)
+          .toList(growable: false);
       return PaginatedResponse<GuidelinePublication>(
-        items: cached.map(GuidelinePublication.fromJson).toList(),
+        items: items,
         page: page,
         perPage: perPage,
-        totalItems: cached.length,
-        totalPages: 1,
+        totalItems: filtered.length,
+        totalPages: filtered.isEmpty ? 1 : (filtered.length / perPage).ceil(),
       );
     }
   }

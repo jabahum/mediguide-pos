@@ -488,13 +488,7 @@ class _PublicationSections extends StatelessWidget {
           _CategoryQuickAccessGrid(
             categories: areas,
             onCategory: (area) {
-              //
-              // For now this opens the publications catalogue.
-              //
-              // When your publications page supports a category/program-area
-              // argument, pass `area` here instead.
-              //
-              context.push(AppRoutes.publicGuidelines);
+              context.push(AppRoutes.publicGuidelinesForProgramArea(area));
             },
           ),
 
@@ -606,6 +600,7 @@ class _CategoryQuickAccessTile extends StatelessWidget {
         margin: EdgeInsets.zero,
         clipBehavior: Clip.antiAlias,
         child: InkWell(
+          key: ValueKey('guest-category-$label'),
           onTap: onTap,
           child: Padding(
             padding: const EdgeInsets.all(AppSpacing.xs),

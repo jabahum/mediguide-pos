@@ -14,18 +14,31 @@ import 'package:user_app/features/guidelines/data/models/guideline_publication.d
 import 'package:user_app/shared/widgets/clinical_icon_tile.dart';
 
 final _publicationCatalogueProvider = FutureProvider.autoDispose
-    .family<List<GuidelinePublication>, String>((ref, search) async {
+    .family<List<GuidelinePublication>, ({String search, String programArea})>((
+      ref,
+      query,
+    ) async {
       final page = await ref
           .watch(guidelinePublicationRepositoryProvider)
-          .publications(search: search.trim(), page: 1, perPage: 100);
+          .publications(
+            search: query.search.trim(),
+            programArea: query.programArea.trim(),
+            page: 1,
+            perPage: 100,
+          );
 
       return page.items;
     });
 
 class PublicationCataloguePage extends ConsumerStatefulWidget {
-  const PublicationCataloguePage({super.key, this.embedded = false});
+  const PublicationCataloguePage({
+    super.key,
+    this.embedded = false,
+    this.programArea = '',
+  });
 
   final bool embedded;
+  final String programArea;
 
   @override
   ConsumerState<PublicationCataloguePage> createState() =>
@@ -37,6 +50,9 @@ class _PublicationCataloguePageState
   final TextEditingController _searchController = TextEditingController();
 
   String _search = '';
+
+  ({String search, String programArea}) get _query =>
+      (search: _search, programArea: widget.programArea.trim());
 
   @override
   void dispose() {
@@ -70,14 +86,15 @@ class _PublicationCataloguePageState
   }
 
   Future<void> _refresh() async {
-    ref.invalidate(_publicationCatalogueProvider(_search));
+    ref.invalidate(_publicationCatalogueProvider(_query));
 
-    await ref.read(_publicationCatalogueProvider(_search).future);
+    await ref.read(_publicationCatalogueProvider(_query).future);
   }
 
   @override
   Widget build(BuildContext context) {
-    final publications = ref.watch(_publicationCatalogueProvider(_search));
+    final programArea = widget.programArea.trim();
+    final publications = ref.watch(_publicationCatalogueProvider(_query));
 
     final body = RefreshIndicator(
       onRefresh: _refresh,
@@ -98,13 +115,17 @@ class _PublicationCataloguePageState
                 children: [
                   if (widget.embedded) ...[
                     Text(
-                      'All Guidelines',
+                      programArea.isEmpty
+                          ? 'All Guidelines'
+                          : '$programArea Guidelines',
                       style: Theme.of(context).textTheme.headlineMedium
                           ?.copyWith(fontWeight: FontWeight.w800),
                     ),
                     const SizedBox(height: 3),
                     Text(
-                      'Browse published clinical guidance',
+                      programArea.isEmpty
+                          ? 'Browse published clinical guidance'
+                          : 'Published guidance in $programArea',
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
                         color: Theme.of(context).colorScheme.onSurfaceVariant,
                       ),
@@ -138,7 +159,7 @@ class _PublicationCataloguePageState
                 title: 'Failed to load guidelines',
                 message: 'The publication catalogue could not be loaded.',
                 onRetry: () {
-                  ref.invalidate(_publicationCatalogueProvider(_search));
+                  ref.invalidate(_publicationCatalogueProvider(_query));
                 },
               ),
             ),
@@ -148,6 +169,7 @@ class _PublicationCataloguePageState
                   hasScrollBody: false,
                   child: _CatalogueEmptyState(
                     search: _search,
+                    programArea: programArea,
                     onClear: _clearSearch,
                     onRefresh: _refresh,
                   ),
@@ -186,15 +208,21 @@ class _PublicationCataloguePageState
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'All Guidelines',
+              programArea.isEmpty
+                  ? 'All Guidelines'
+                  : '$programArea Guidelines',
               style: Theme.of(
                 context,
               ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
             ),
             Text(
               _search.isEmpty
-                  ? 'Published clinical guidance'
-                  : 'Results for “$_search”',
+                  ? programArea.isEmpty
+                        ? 'Published clinical guidance'
+                        : 'Published guidance in $programArea'
+                  : programArea.isEmpty
+                  ? 'Results for “$_search”'
+                  : 'Results for “$_search” in $programArea',
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
@@ -390,11 +418,13 @@ class _CatalogueCategoryBadge extends StatelessWidget {
 class _CatalogueEmptyState extends StatelessWidget {
   const _CatalogueEmptyState({
     required this.search,
+    required this.programArea,
     required this.onClear,
     required this.onRefresh,
   });
 
   final String search;
+  final String programArea;
   final VoidCallback onClear;
   final Future<void> Function() onRefresh;
 
@@ -407,6 +437,17 @@ class _CatalogueEmptyState extends StatelessWidget {
             'No published guideline matched “$search”. Try another term.',
         actionLabel: 'Clear search',
         onAction: onClear,
+      );
+    }
+
+    if (programArea.isNotEmpty) {
+      return EmptyState.noData(
+        title: 'No $programArea guidelines',
+        description: 'There are no published guidelines in this category yet.',
+        actionLabel: 'Refresh',
+        onAction: () {
+          onRefresh();
+        },
       );
     }
 

@@ -11,6 +11,22 @@ void main() {
       expect(AppRoutes.isPublic('/profile'), isFalse);
     });
 
+    test('builds an encoded public programme-area catalogue route', () {
+      final route = AppRoutes.publicGuidelinesForProgramArea(
+        'Maternal & Child Health',
+      );
+
+      expect(
+        route,
+        '/public/guidelines?program_area=Maternal+%26+Child+Health',
+      );
+      expect(
+        Uri.parse(route).queryParameters['program_area'],
+        'Maternal & Child Health',
+      );
+      expect(AppRoutes.isPublic(route), isTrue);
+    });
+
     test('recognizes outbreak clinical section deep links as public', () {
       final route = AppRoutes.outbreakSectionFor('outbreak-1', 'clinical-care');
 

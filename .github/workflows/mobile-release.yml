@@ -208,6 +208,8 @@ jobs:
       - name: Build release APK
         run: >-
           flutter build apk --release
+          --split-per-abi
+          --target-platform android-arm,android-arm64
           --flavor production
           --target lib/main_production.dart
           --dart-define=MEDIGUIDE_API_BASE_URL="${MOBILE_API_BASE_URL}"
@@ -218,6 +220,7 @@ jobs:
       - name: Build release app bundle
         run: >-
           flutter build appbundle --release
+          --target-platform android-arm,android-arm64
           --flavor production
           --target lib/main_production.dart
           --dart-define=MEDIGUIDE_API_BASE_URL="${MOBILE_API_BASE_URL}"
@@ -225,12 +228,37 @@ jobs:
           --dart-define=MEDIGUIDE_DEBUG_TOOLS_ENABLED=false
           ${FIREBASE_BUILD_ARGS}
 
+      - name: Enforce Android artifact size budgets
+        run: |
+          set -eu
+          max_apk_bytes=$((45 * 1024 * 1024))
+          max_aab_bytes=$((70 * 1024 * 1024))
+          apk_count=0
+          for artifact in build/app/outputs/flutter-apk/*production-release.apk; do
+            test -f "${artifact}" || continue
+            apk_count=$((apk_count + 1))
+            bytes="$(wc -c < "${artifact}")"
+            echo "$(basename "${artifact}"): ${bytes} bytes"
+            if [ "${bytes}" -gt "${max_apk_bytes}" ]; then
+              echo "${artifact} exceeds the 45 MiB direct-download budget." >&2
+              exit 1
+            fi
+          done
+          test "${apk_count}" -eq 2
+          aab="build/app/outputs/bundle/productionRelease/app-production-release.aab"
+          aab_bytes="$(wc -c < "${aab}")"
+          echo "$(basename "${aab}"): ${aab_bytes} bytes"
+          if [ "${aab_bytes}" -gt "${max_aab_bytes}" ]; then
+            echo "${aab} exceeds the 70 MiB upload budget." >&2
+            exit 1
+          fi
+
       - name: Upload Android artifacts
         uses: actions/upload-artifact@v7
         with:
           name: mediguide-android-${{ github.run_id }}
           path: |
-            user_app/build/app/outputs/flutter-apk/app-production-release.apk
+            user_app/build/app/outputs/flutter-apk/*production-release.apk
             user_app/build/app/outputs/bundle/productionRelease/app-production-release.aab
           if-no-files-found: error
           retention-days: 30
@@ -340,6 +368,27 @@ jobs:
           ditto -c -k --sequesterRsrc --keepParent
           build/ios/iphoneos/Runner.app
           build/ios/iphoneos/mediguide-ios-unsigned.zip
+
+      - name: Enforce iOS artifact size budgets
+        run: |
+          set -eu
+          max_app_bytes=$((70 * 1024 * 1024))
+          max_archive_bytes=$((35 * 1024 * 1024))
+          app="build/ios/iphoneos/Runner.app"
+          archive="build/ios/iphoneos/mediguide-ios-unsigned.zip"
+          app_kib="$(du -sk "${app}" | awk '{print $1}')"
+          app_bytes=$((app_kib * 1024))
+          archive_bytes="$(wc -c < "${archive}")"
+          echo "Runner.app: ${app_bytes} bytes"
+          echo "$(basename "${archive}"): ${archive_bytes} bytes"
+          if [ "${app_bytes}" -gt "${max_app_bytes}" ]; then
+            echo "${app} exceeds the 70 MiB installed-content budget." >&2
+            exit 1
+          fi
+          if [ "${archive_bytes}" -gt "${max_archive_bytes}" ]; then
+            echo "${archive} exceeds the 35 MiB compressed archive budget." >&2
+            exit 1
+          fi
 
       - name: Build macOS release
         run: >-
@@ -454,14 +503,16 @@ jobs:
           mobile_artifact_version="${mobile_version}+${mobile_build_number}"
           owner="$(printf '%s' "${REPOSITORY_OWNER}" | tr '[:upper:]' '[:lower:]')"
 
-          apk="$(find release-artifacts -name app-production-release.apk -print -quit)"
+          arm_apk="$(find release-artifacts -name 'app-armeabi-v7a-production-release.apk' -print -quit)"
+          arm64_apk="$(find release-artifacts -name 'app-arm64-v8a-production-release.apk' -print -quit)"
           aab="$(find release-artifacts -name app-production-release.aab -print -quit)"
           ios="$(find release-artifacts -name mediguide-ios-unsigned.zip -print -quit)"
           macos="$(find release-artifacts -name mediguide-macos.zip -print -quit)"
           web="$(find release-artifacts -type d -name 'mediguide-web-*' -print -quit)"
 
-          test -n "${apk}" && test -n "${aab}" && test -n "${ios}" && test -n "${macos}" && test -n "${web}"
-          cp "${apk}" "dist/mediguide-${mobile_artifact_version}-android.apk"
+          test -n "${arm_apk}" && test -n "${arm64_apk}" && test -n "${aab}" && test -n "${ios}" && test -n "${macos}" && test -n "${web}"
+          cp "${arm_apk}" "dist/mediguide-${mobile_artifact_version}-android-armeabi-v7a.apk"
+          cp "${arm64_apk}" "dist/mediguide-${mobile_artifact_version}-android-arm64-v8a.apk"
           cp "${aab}" "dist/mediguide-${mobile_artifact_version}-android.aab"
           cp "${ios}" "dist/mediguide-${mobile_artifact_version}-ios-unsigned.zip"
           cp "${macos}" "dist/mediguide-${mobile_artifact_version}-macos-unsigned.zip"

@@ -49,6 +49,14 @@ def flutter_version_args
   args
 end
 
+def enforce_artifact_size!(path:, max_bytes:, label:)
+  bytes = File.size(path)
+  UI.message("#{label}: #{bytes} bytes")
+  return if bytes <= max_bytes
+
+  UI.user_error!("#{label} exceeds the #{max_bytes / 1024 / 1024} MiB release budget")
+end
+
 def firebase_distribution(binary:, app_id:)
   require_environment!("GOOGLE_APPLICATION_CREDENTIALS")
 
@@ -85,7 +93,14 @@ platform :android do
     require_environment!("MOBILE_API_BASE_URL")
     sh("dart", "run", "build_runner", "build", "--delete-conflicting-outputs")
     sh("flutter", "build", "apk", "--release", "--flavor", mobile_flavor, "--target", flutter_target, *flutter_version_args, *flutter_defines)
-    sh("flutter", "build", "appbundle", "--release", "--flavor", mobile_flavor, "--target", flutter_target, *flutter_version_args, *flutter_defines)
+    sh(
+      "flutter", "build", "appbundle", "--release",
+      "--target-platform", "android-arm,android-arm64",
+      "--flavor", mobile_flavor,
+      "--target", flutter_target,
+      *flutter_version_args,
+      *flutter_defines
+    )
   end
 
   desc "Upload an existing signed Android APK to Firebase App Distribution"
@@ -152,6 +167,11 @@ platform :ios do
     FileUtils.mkdir_p(output_directory)
     destination = File.join(output_directory, File.basename(ipa))
     FileUtils.cp(ipa, destination)
+    enforce_artifact_size!(
+      path: destination,
+      max_bytes: Integer(ENV.fetch("MAX_IOS_IPA_BYTES", 40 * 1024 * 1024)),
+      label: "Signed iOS IPA"
+    )
     destination
   end
 

@@ -214,7 +214,10 @@ flutter:
   # ==========================================================
 
   assets:
-    - assets/
+    # Launcher source artwork is used only by icons_launcher. The generated
+    # native launchers already live under android/ and ios/.
+    - assets/coat_of_arms.png
+    - assets/calculator-theme.css
 
   # ==========================================================
   # FONTS
@@ -223,15 +226,6 @@ flutter:
   fonts:
     - family: Geist
       fonts:
-        - asset: assets/fonts/Geist-Thin.ttf
-          weight: 100
-
-        - asset: assets/fonts/Geist-ExtraLight.ttf
-          weight: 200
-
-        - asset: assets/fonts/Geist-Light.ttf
-          weight: 300
-
         - asset: assets/fonts/Geist-Regular.ttf
           weight: 400
 

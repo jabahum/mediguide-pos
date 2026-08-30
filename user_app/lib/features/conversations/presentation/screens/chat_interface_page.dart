@@ -288,17 +288,20 @@ class _ChatInterfacePageState extends ConsumerState<ChatInterfacePage> {
       return;
     }
 
-    await Clipboard.setData(ClipboardData(text: text));
-
-    if (!context.mounted) {
-      return;
+    try {
+      await Clipboard.setData(ClipboardData(text: text));
+      if (context.mounted) {
+        AppMessage.success(
+          context,
+          'Message copied.',
+          duration: const Duration(seconds: 2),
+        );
+      }
+    } catch (_) {
+      if (context.mounted) {
+        AppMessage.error(context, 'The message could not be copied.');
+      }
     }
-
-    AppMessage.success(
-      context,
-      'Message copied.',
-      duration: const Duration(seconds: 2),
-    );
   }
 
   // =========================================================================

@@ -106,13 +106,16 @@ class PublicationTablePage extends ConsumerWidget {
       ...block.payload.footnotes,
     ].join('\n');
 
-    await Clipboard.setData(ClipboardData(text: value));
-
-    if (!context.mounted) {
-      return;
+    try {
+      await Clipboard.setData(ClipboardData(text: value));
+      if (context.mounted) {
+        AppMessage.success(context, 'Table copied to clipboard.');
+      }
+    } catch (_) {
+      if (context.mounted) {
+        AppMessage.error(context, 'The table could not be copied.');
+      }
     }
-
-    AppMessage.success(context, 'Table copied to clipboard.');
   }
 }
 
@@ -189,17 +192,20 @@ class PublicationAlgorithmPage extends ConsumerWidget {
   }
 
   Future<void> _copyLink(BuildContext context) async {
-    await Clipboard.setData(
-      ClipboardData(
-        text: AppRoutes.publicGuidelineAlgorithmView(guidelineId, blockId),
-      ),
-    );
-
-    if (!context.mounted) {
-      return;
+    try {
+      await Clipboard.setData(
+        ClipboardData(
+          text: AppRoutes.publicGuidelineAlgorithmView(guidelineId, blockId),
+        ),
+      );
+      if (context.mounted) {
+        AppMessage.success(context, 'Algorithm link copied.');
+      }
+    } catch (_) {
+      if (context.mounted) {
+        AppMessage.error(context, 'The algorithm link could not be copied.');
+      }
     }
-
-    AppMessage.success(context, 'Algorithm link copied.');
   }
 }
 

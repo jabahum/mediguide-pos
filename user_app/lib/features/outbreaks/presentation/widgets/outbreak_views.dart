@@ -1757,13 +1757,16 @@ String _capitalize(String value) {
 Future<void> _copyLink(BuildContext context, String value) async {
   final api = Uri.parse(AppConfig.current.apiBaseUrl);
   final absolute = api.replace(path: value, query: null, fragment: null);
-  await Clipboard.setData(ClipboardData(text: absolute.toString()));
-
-  if (!context.mounted) {
-    return;
+  try {
+    await Clipboard.setData(ClipboardData(text: absolute.toString()));
+    if (context.mounted) {
+      AppMessage.success(context, 'Link copied.');
+    }
+  } catch (_) {
+    if (context.mounted) {
+      AppMessage.error(context, 'The outbreak link could not be copied.');
+    }
   }
-
-  AppMessage.success(context, 'Link copied.');
 }
 
 Future<void> _openOutbreakResource(
@@ -1775,12 +1778,18 @@ Future<void> _openOutbreakResource(
       _isManagedOutbreakAssetPath(resource.assetUrl)) {
     final base = Uri.parse('${AppConfig.current.apiBaseUrl}/');
     final target = base.resolve(resource.assetUrl.replaceFirst('/', ''));
-    final launched = await launchUrl(
-      target,
-      mode: LaunchMode.externalApplication,
-    );
-    if (!launched && context.mounted) {
-      AppMessage.error(context, 'Unable to open this managed document.');
+    try {
+      final launched = await launchUrl(
+        target,
+        mode: LaunchMode.externalApplication,
+      );
+      if (!launched && context.mounted) {
+        AppMessage.error(context, 'Unable to open this managed document.');
+      }
+    } catch (_) {
+      if (context.mounted) {
+        AppMessage.error(context, 'Unable to open this managed document.');
+      }
     }
     return;
   }
@@ -1794,9 +1803,18 @@ Future<void> _openOutbreakResource(
     return;
   }
   if (target?.externalUri case final Uri uri) {
-    final launched = await launchUrl(uri, mode: LaunchMode.externalApplication);
-    if (!launched && context.mounted) {
-      AppMessage.error(context, 'Unable to open this trusted resource.');
+    try {
+      final launched = await launchUrl(
+        uri,
+        mode: LaunchMode.externalApplication,
+      );
+      if (!launched && context.mounted) {
+        AppMessage.error(context, 'Unable to open this trusted resource.');
+      }
+    } catch (_) {
+      if (context.mounted) {
+        AppMessage.error(context, 'Unable to open this trusted resource.');
+      }
     }
     return;
   }

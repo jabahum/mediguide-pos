@@ -5,6 +5,7 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:go_router/go_router.dart';
 import 'package:user_app/app/router/route_names.dart';
 import 'package:user_app/core/constants/app_spacing.dart';
+import 'package:user_app/core/utils/app_message.dart';
 import 'package:user_app/features/guidelines/data/models/guideline_publication.dart';
 import 'package:user_app/features/guidelines/presentation/widgets/responsive_clinical_table.dart';
 
@@ -76,7 +77,7 @@ class PublicationBlockView extends StatelessWidget {
       leading: const Icon(LucideIcons.bookMarked),
       title: Text(citation),
       subtitle: url.isEmpty ? null : Text(url),
-      onTap: url.isEmpty ? null : () => launchUrl(Uri.parse(url)),
+      onTap: url.isEmpty ? null : () => _openReference(context, url),
     ),
     PageBreakGuidelineBlock(:final page) => Row(
       children: [
@@ -111,6 +112,25 @@ class PublicationBlockView extends StatelessWidget {
       ),
     ),
   };
+}
+
+Future<void> _openReference(BuildContext context, String value) async {
+  final uri = Uri.tryParse(value);
+  if (uri == null || uri.scheme != 'https') {
+    AppMessage.warning(context, 'This reference link is unavailable.');
+    return;
+  }
+
+  try {
+    final launched = await launchUrl(uri, mode: LaunchMode.externalApplication);
+    if (!launched && context.mounted) {
+      AppMessage.error(context, 'Unable to open this reference.');
+    }
+  } catch (_) {
+    if (context.mounted) {
+      AppMessage.error(context, 'Unable to open this reference.');
+    }
+  }
 }
 
 class _TextBlock extends StatelessWidget {

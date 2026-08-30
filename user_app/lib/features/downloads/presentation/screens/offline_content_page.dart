@@ -5,6 +5,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import 'package:user_app/app/router/route_names.dart';
 import 'package:user_app/core/constants/app_spacing.dart';
+import 'package:user_app/core/utils/app_message.dart';
 import 'package:user_app/features/downloads/data/models/offline_download.dart';
 import 'package:user_app/features/downloads/presentation/controllers/guideline_downloads_controller.dart';
 import 'package:user_app/shared/widgets/clinical_icon_tile.dart';
@@ -66,11 +67,24 @@ class OfflineContentPage extends ConsumerWidget {
               ref
                   .read(guidelineDownloadsControllerProvider.notifier)
                   .cancel(item);
+              AppMessage.info(context, 'Download canceled.');
             },
-            onRetry: (item) {
-              ref
-                  .read(guidelineDownloadsControllerProvider.notifier)
-                  .retry(item);
+            onRetry: (item) async {
+              try {
+                await ref
+                    .read(guidelineDownloadsControllerProvider.notifier)
+                    .retry(item);
+                if (context.mounted) {
+                  AppMessage.success(context, 'Offline copy downloaded.');
+                }
+              } catch (_) {
+                if (context.mounted) {
+                  AppMessage.error(
+                    context,
+                    'The download could not be restarted. Please try again.',
+                  );
+                }
+              }
             },
             onRemove: (item) {
               _confirmRemove(context, ref, item);
@@ -152,7 +166,21 @@ class OfflineContentPage extends ConsumerWidget {
       return;
     }
 
-    await ref.read(guidelineDownloadsControllerProvider.notifier).remove(item);
+    try {
+      await ref
+          .read(guidelineDownloadsControllerProvider.notifier)
+          .remove(item);
+      if (context.mounted) {
+        AppMessage.success(context, 'Offline copy removed.');
+      }
+    } catch (_) {
+      if (context.mounted) {
+        AppMessage.error(
+          context,
+          'The offline copy could not be removed. Please try again.',
+        );
+      }
+    }
   }
 }
 

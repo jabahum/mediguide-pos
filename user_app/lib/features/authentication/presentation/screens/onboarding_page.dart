@@ -7,6 +7,7 @@ import 'package:user_app/app/router/app_router.dart';
 import 'package:user_app/core/constants/app_constants.dart';
 import 'package:user_app/core/constants/app_spacing.dart';
 import 'package:user_app/core/storage/local_storage_service.dart';
+import 'package:user_app/core/utils/app_message.dart';
 import 'package:user_app/core/utils/responsive.dart';
 import 'package:user_app/shared/widgets/app_logo.dart';
 
@@ -207,7 +208,9 @@ class OnboardingPage extends StatelessWidget {
   // ==========================================================================
 
   Future<void> _continueAsGuest(BuildContext context) async {
-    await _markOnboardingComplete();
+    if (!await _markOnboardingComplete(context)) {
+      return;
+    }
 
     if (!context.mounted) {
       return;
@@ -231,7 +234,9 @@ class OnboardingPage extends StatelessWidget {
       context,
     ).uri.queryParameters['redirect']?.trim();
 
-    await _markOnboardingComplete();
+    if (!await _markOnboardingComplete(context)) {
+      return;
+    }
 
     if (!context.mounted) {
       return;
@@ -261,8 +266,19 @@ class OnboardingPage extends StatelessWidget {
     );
   }
 
-  Future<void> _markOnboardingComplete() {
-    return PreferenceUtils.setBool(SharedPreferencesKeys.notFirstTime, true);
+  Future<bool> _markOnboardingComplete(BuildContext context) async {
+    try {
+      await PreferenceUtils.setBool(SharedPreferencesKeys.notFirstTime, true);
+      return true;
+    } catch (_) {
+      if (context.mounted) {
+        AppMessage.error(
+          context,
+          'MediGuide could not save your onboarding choice. Please try again.',
+        );
+      }
+      return false;
+    }
   }
 }
 

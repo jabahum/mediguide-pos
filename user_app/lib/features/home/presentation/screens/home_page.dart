@@ -5,6 +5,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:user_app/app/router/app_navigator.dart';
 import 'package:user_app/app/router/app_router.dart';
 import 'package:user_app/core/constants/app_spacing.dart';
+import 'package:user_app/core/utils/app_message.dart';
 import 'package:user_app/core/utils/date_utils.dart';
 import 'package:user_app/core/utils/responsive.dart';
 
@@ -323,6 +324,10 @@ class HomePage extends ConsumerWidget {
     final guidelineId = progress.guidelineId.trim();
 
     if (guidelineId.isEmpty) {
+      final context = AppNavigator.context;
+      if (context.mounted) {
+        AppMessage.warning(context, 'This reading item is unavailable.');
+      }
       return;
     }
 
@@ -345,6 +350,13 @@ class HomePage extends ConsumerWidget {
       // A temporary offline/navigation failure
       // should not remove continue-reading data.
       //
+      final context = AppNavigator.context;
+      if (context.mounted) {
+        AppMessage.error(
+          context,
+          'The guideline could not be opened. Please try again.',
+        );
+      }
     }
   }
 }

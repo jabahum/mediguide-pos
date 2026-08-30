@@ -64,10 +64,25 @@ class _SearchResultTile extends ConsumerWidget {
                       ),
                     );
                     if (confirmed == true) {
-                      await launchUrl(
-                        Uri.parse(value),
-                        mode: LaunchMode.externalApplication,
-                      );
+                      try {
+                        final launched = await launchUrl(
+                          Uri.parse(value),
+                          mode: LaunchMode.externalApplication,
+                        );
+                        if (!launched && context.mounted) {
+                          AppMessage.error(
+                            context,
+                            'Unable to open this official resource.',
+                          );
+                        }
+                      } catch (_) {
+                        if (context.mounted) {
+                          AppMessage.error(
+                            context,
+                            'Unable to open this official resource.',
+                          );
+                        }
+                      }
                     }
                     return;
                   }

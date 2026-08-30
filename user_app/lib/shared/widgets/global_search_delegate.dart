@@ -469,7 +469,25 @@ class GlobalSearchDelegate extends SearchDelegate<String?> {
           ),
         );
         if (confirmed == true) {
-          await launchUrl(external, mode: LaunchMode.externalApplication);
+          try {
+            final launched = await launchUrl(
+              external,
+              mode: LaunchMode.externalApplication,
+            );
+            if (!launched && appContext.mounted) {
+              AppMessage.error(
+                appContext,
+                'Unable to open this official resource.',
+              );
+            }
+          } catch (_) {
+            if (appContext.mounted) {
+              AppMessage.error(
+                appContext,
+                'Unable to open this official resource.',
+              );
+            }
+          }
         }
       case SearchCategory.situationReports:
         final report = result.getItem<PublicSituationReport>();

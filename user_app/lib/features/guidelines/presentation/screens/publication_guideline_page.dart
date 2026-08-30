@@ -790,14 +790,30 @@ class _PublicationGuidelinePageState
     final provider = publicationReadingProgressProvider(widget.guidelineId);
 
     final current = ref.read(provider).valueOrNull;
+    final willBookmark = !(current?.isBookmarked ?? false);
 
-    await ref.read(readingProgressRepositoryProvider).upsert(
-      user.id,
-      widget.guidelineId,
-      {'is_bookmarked': !(current?.isBookmarked ?? false)},
-    );
+    try {
+      await ref.read(readingProgressRepositoryProvider).upsert(
+        user.id,
+        widget.guidelineId,
+        {'is_bookmarked': willBookmark},
+      );
 
-    ref.invalidate(provider);
+      ref.invalidate(provider);
+      if (context.mounted) {
+        AppMessage.success(
+          context,
+          willBookmark ? 'Guideline bookmarked.' : 'Bookmark removed.',
+        );
+      }
+    } catch (_) {
+      if (context.mounted) {
+        AppMessage.error(
+          context,
+          'The bookmark could not be updated. Please try again.',
+        );
+      }
+    }
   }
 
   // ===========================================================================
@@ -827,13 +843,32 @@ class _PublicationGuidelinePageState
       return;
     }
 
-    await ref.read(readingProgressRepositoryProvider).upsert(
-      user.id,
-      widget.guidelineId,
-      {'notes': note.trim()},
-    );
+    final normalizedNote = note.trim();
 
-    ref.invalidate(publicationReadingProgressProvider(widget.guidelineId));
+    try {
+      await ref.read(readingProgressRepositoryProvider).upsert(
+        user.id,
+        widget.guidelineId,
+        {'notes': normalizedNote},
+      );
+
+      ref.invalidate(publicationReadingProgressProvider(widget.guidelineId));
+      if (context.mounted) {
+        AppMessage.success(
+          context,
+          normalizedNote.isEmpty
+              ? 'Reading note removed.'
+              : 'Reading note saved.',
+        );
+      }
+    } catch (_) {
+      if (context.mounted) {
+        AppMessage.error(
+          context,
+          'The reading note could not be saved. Please try again.',
+        );
+      }
+    }
   }
 
   // ===========================================================================
@@ -843,13 +878,16 @@ class _PublicationGuidelinePageState
   Future<void> _copyLink(BuildContext context) async {
     final link = AppRoutes.publicGuideline(widget.guidelineId);
 
-    await Clipboard.setData(ClipboardData(text: link));
-
-    if (!context.mounted) {
-      return;
+    try {
+      await Clipboard.setData(ClipboardData(text: link));
+      if (context.mounted) {
+        AppMessage.success(context, 'Guideline link copied.');
+      }
+    } catch (_) {
+      if (context.mounted) {
+        AppMessage.error(context, 'The guideline link could not be copied.');
+      }
     }
-
-    AppMessage.success(context, 'Guideline link copied.');
   }
 
   // ===========================================================================

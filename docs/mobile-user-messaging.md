@@ -50,6 +50,28 @@ Do not include patient-identifiable information, access tokens, raw response
 bodies, or secrets in AppMessage text. Convert technical failures into concise,
 actionable user language before displaying them.
 
+## Action feedback checklist
+
+Every user-triggered asynchronous action must either update an obvious,
+persistent part of the current screen or report its outcome through
+`AppMessage`. Check these actions whenever a screen is added or reviewed:
+
+- copy, share, or open an external link;
+- save, submit, bookmark, remove, cancel, or retry;
+- download content or remove an offline copy;
+- persist an onboarding or preference choice;
+- navigate using data that may be missing or stale.
+
+Show success when the completed result is not otherwise clear. Always catch a
+failure at the UI boundary, unless the action delegates to a controller whose
+state renders a persistent error with a recovery control. Background analytics,
+read-progress tracking, cache refreshes, and other best-effort bookkeeping must
+not interrupt the user with transient messages.
+
+The current audit covers authentication and onboarding, home navigation,
+global search, guideline reading and publication tools, conversation copying,
+offline content, outbreak resources and documents, and calculator review.
+
 ## Application wiring
 
 `MaterialApp.router` owns the shared `AppKeys.scaffoldMessengerKey`, while the

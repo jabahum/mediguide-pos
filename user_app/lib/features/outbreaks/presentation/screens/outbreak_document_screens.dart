@@ -364,10 +364,7 @@ class _OutbreakDocumentPageState extends ConsumerState<OutbreakDocumentPage> {
         ),
         if (ready)
           TextButton.icon(
-            onPressed: () async {
-              await ref.read(guidelineDownloadServiceProvider).remove(offline);
-              if (mounted) setState(() => _downloadRevision++);
-            },
+            onPressed: () => _removeOfflineCopy(offline),
             icon: const Icon(LucideIcons.trash2),
             label: const Text('Remove offline copy'),
           ),
@@ -402,9 +399,12 @@ class _OutbreakDocumentPageState extends ConsumerState<OutbreakDocumentPage> {
           ),
         ),
       );
-    } catch (error) {
+    } catch (_) {
       if (!mounted) return;
-      AppMessage.error(context, 'Readable content is unavailable: $error');
+      AppMessage.error(
+        context,
+        'Readable outbreak content is unavailable. Please try again.',
+      );
     }
   }
 
@@ -428,7 +428,7 @@ class _OutbreakDocumentPageState extends ConsumerState<OutbreakDocumentPage> {
       return null;
     }
     try {
-      return await ref
+      final result = await ref
           .read(guidelineDownloadServiceProvider)
           .download(
             guidelineId: document.id,
@@ -446,9 +446,20 @@ class _OutbreakDocumentPageState extends ConsumerState<OutbreakDocumentPage> {
               url: uri.toString(),
             ),
           );
-    } catch (error) {
+      if (mounted) {
+        if (result.status == OfflineDownloadStatus.ready) {
+          AppMessage.success(context, 'Outbreak document saved offline.');
+        } else {
+          AppMessage.info(context, 'Download ${result.status.name}.');
+        }
+      }
+      return result;
+    } catch (_) {
       if (!mounted) return null;
-      AppMessage.error(context, 'Download failed: $error');
+      AppMessage.error(
+        context,
+        'The outbreak document could not be downloaded. Please try again.',
+      );
       return null;
     }
   }
@@ -487,7 +498,18 @@ class _OutbreakDocumentPageState extends ConsumerState<OutbreakDocumentPage> {
         if (downloaded?.status != OfflineDownloadStatus.ready) return;
         return _open(document, downloaded);
       }
-      final text = await File(local).readAsString();
+      String text;
+      try {
+        text = await File(local).readAsString();
+      } catch (_) {
+        if (mounted) {
+          AppMessage.error(
+            context,
+            'The offline document could not be read. Download it again.',
+          );
+        }
+        return;
+      }
       if (mounted) {
         await Navigator.of(context).push(
           MaterialPageRoute<void>(
@@ -526,8 +548,17 @@ class _OutbreakDocumentPageState extends ConsumerState<OutbreakDocumentPage> {
       return;
     }
     final uri = Uri.tryParse(source);
-    if (uri == null ||
-        !await launchUrl(uri, mode: LaunchMode.externalApplication)) {
+    if (uri == null) {
+      _showUnavailable();
+      return;
+    }
+    try {
+      final launched = await launchUrl(
+        uri,
+        mode: LaunchMode.externalApplication,
+      );
+      if (!launched) _showUnavailable();
+    } catch (_) {
       _showUnavailable();
     }
   }
@@ -542,8 +573,17 @@ class _OutbreakDocumentPageState extends ConsumerState<OutbreakDocumentPage> {
 
   Future<void> _openOriginal(PublicOutbreakDocument document) async {
     final uri = _downloadUri(document);
-    if (uri == null ||
-        !await launchUrl(uri, mode: LaunchMode.externalApplication)) {
+    if (uri == null) {
+      _showUnavailable();
+      return;
+    }
+    try {
+      final launched = await launchUrl(
+        uri,
+        mode: LaunchMode.externalApplication,
+      );
+      if (!launched) _showUnavailable();
+    } catch (_) {
       _showUnavailable();
     }
   }
@@ -555,9 +595,31 @@ class _OutbreakDocumentPageState extends ConsumerState<OutbreakDocumentPage> {
       if (document.issuingAuthority.isNotEmpty) document.issuingAuthority,
       if (uri != null) uri.toString(),
     ].join('\n');
-    await SharePlus.instance.share(
-      ShareParams(text: text, subject: document.title),
-    );
+    try {
+      await SharePlus.instance.share(
+        ShareParams(text: text, subject: document.title),
+      );
+    } catch (_) {
+      if (mounted) {
+        AppMessage.error(context, 'This document could not be shared.');
+      }
+    }
+  }
+
+  Future<void> _removeOfflineCopy(OfflineDownload offline) async {
+    try {
+      await ref.read(guidelineDownloadServiceProvider).remove(offline);
+      if (!mounted) return;
+      setState(() => _downloadRevision++);
+      AppMessage.success(context, 'Offline outbreak document removed.');
+    } catch (_) {
+      if (mounted) {
+        AppMessage.error(
+          context,
+          'The offline outbreak document could not be removed.',
+        );
+      }
+    }
   }
 
   void _showUnavailable() {
@@ -907,7 +969,21 @@ class _OutbreakMarkdownReaderPageState
               onTapLink: (_, href, _) async {
                 final uri = Uri.tryParse(href ?? '');
                 if (uri != null && uri.scheme == 'https') {
-                  await launchUrl(uri, mode: LaunchMode.externalApplication);
+                  try {
+                    final launched = await launchUrl(
+                      uri,
+                      mode: LaunchMode.externalApplication,
+                    );
+                    if (!launched && context.mounted) {
+                      AppMessage.error(context, 'Unable to open this link.');
+                    }
+                  } catch (_) {
+                    if (context.mounted) {
+                      AppMessage.error(context, 'Unable to open this link.');
+                    }
+                  }
+                } else if (context.mounted) {
+                  AppMessage.warning(context, 'This link is unavailable.');
                 }
               },
               styleSheet: MarkdownStyleSheet.fromTheme(Theme.of(context))

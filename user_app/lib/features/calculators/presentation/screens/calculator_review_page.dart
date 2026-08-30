@@ -123,11 +123,17 @@ class CalculatorReviewPage extends ConsumerWidget {
     );
     controller.dispose();
     if (comment == null || comment.trim().isEmpty || !context.mounted) return;
-    await ref
-        .read(calculatorReviewControllerProvider(versionId).notifier)
-        .addComment(comment);
-    if (context.mounted) {
-      AppMessage.success(context, 'Review comment submitted');
+    try {
+      await ref
+          .read(calculatorReviewControllerProvider(versionId).notifier)
+          .addComment(comment);
+      if (context.mounted) {
+        AppMessage.success(context, 'Review comment submitted');
+      }
+    } catch (_) {
+      if (context.mounted) {
+        AppMessage.error(context, 'The review comment could not be submitted.');
+      }
     }
   }
 }

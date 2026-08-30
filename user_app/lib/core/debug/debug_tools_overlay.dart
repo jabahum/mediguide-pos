@@ -9,6 +9,7 @@ import 'package:user_app/core/config/app_config.dart';
 import 'package:user_app/core/config/firebase_config.dart';
 import 'package:user_app/core/debug/network_inspector.dart';
 import 'package:user_app/core/services/firebase_service.dart';
+import 'package:user_app/core/utils/app_message.dart';
 
 enum _DebugPage { network, remoteConfig, buildConfig }
 
@@ -264,7 +265,10 @@ final class _DebugToolsSheetState extends ConsumerState<_DebugToolsSheet> {
   Future<void> _sendCrashlyticsTest() async {
     final service = ref.read(firebaseServiceProvider);
     if (!service.crashReportingEnabled) {
-      _showMessage('Crashlytics is not configured for this build.');
+      AppMessage.warning(
+        context,
+        'Crashlytics is not configured for this build.',
+      );
       return;
     }
     try {
@@ -273,20 +277,16 @@ final class _DebugToolsSheetState extends ConsumerState<_DebugToolsSheet> {
         StackTrace.current,
         reason: 'Manual ${AppConfig.current.flavor.name} environment test',
       );
-      _showMessage(
+      if (!mounted) return;
+      AppMessage.success(
+        context,
         'Test report queued for ${AppConfig.current.flavor.label}. '
         'Restart the app to flush it.',
       );
     } catch (error) {
-      _showMessage('Could not queue the Crashlytics test: $error');
+      if (!mounted) return;
+      AppMessage.error(context, 'Could not queue the Crashlytics test: $error');
     }
-  }
-
-  void _showMessage(String message) {
-    if (!mounted) return;
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text(message)));
   }
 }
 

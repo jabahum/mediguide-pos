@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:user_app/core/config/app_keys.dart';
 
 /// Navigation boundary used by non-widget collaborators and shared helpers.
 ///
@@ -12,8 +13,7 @@ import 'package:go_router/go_router.dart';
 abstract final class AppNavigator {
   AppNavigator._();
 
-  static final GlobalKey<NavigatorState> navigatorKey =
-      GlobalKey<NavigatorState>();
+  static final GlobalKey<NavigatorState> navigatorKey = AppKeys.navigatorKey;
 
   static BuildContext get context {
     final currentContext = navigatorKey.currentContext;

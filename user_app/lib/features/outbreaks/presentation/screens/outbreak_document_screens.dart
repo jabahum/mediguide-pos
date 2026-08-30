@@ -12,6 +12,7 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:user_app/app/providers/app_providers.dart';
 import 'package:user_app/app/router/route_names.dart';
 import 'package:user_app/core/config/app_config.dart';
+import 'package:user_app/core/utils/app_message.dart';
 import 'package:user_app/core/widgets/app_error_view.dart';
 import 'package:user_app/core/widgets/app_loading_view.dart';
 import 'package:user_app/features/documents/presentation/screens/document_reader_page.dart';
@@ -403,9 +404,7 @@ class _OutbreakDocumentPageState extends ConsumerState<OutbreakDocumentPage> {
       );
     } catch (error) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Readable content is unavailable: $error')),
-      );
+      AppMessage.error(context, 'Readable content is unavailable: $error');
     }
   }
 
@@ -449,9 +448,7 @@ class _OutbreakDocumentPageState extends ConsumerState<OutbreakDocumentPage> {
           );
     } catch (error) {
       if (!mounted) return null;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Download failed: $error')));
+      AppMessage.error(context, 'Download failed: $error');
       return null;
     }
   }
@@ -565,9 +562,7 @@ class _OutbreakDocumentPageState extends ConsumerState<OutbreakDocumentPage> {
 
   void _showUnavailable() {
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('This document is currently unavailable.')),
-    );
+    AppMessage.warning(context, 'This document is currently unavailable.');
   }
 
   Widget _metadata(String label, String value) {

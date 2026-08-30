@@ -5,6 +5,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import 'package:user_app/app/router/route_names.dart';
 import 'package:user_app/core/constants/app_spacing.dart';
+import 'package:user_app/core/utils/app_message.dart';
 import 'package:user_app/core/widgets/app_error_view.dart';
 import 'package:user_app/core/widgets/app_loading_view.dart';
 import 'package:user_app/features/guidelines/data/models/guideline_publication.dart';
@@ -111,9 +112,7 @@ class PublicationTablePage extends ConsumerWidget {
       return;
     }
 
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(const SnackBar(content: Text('Table copied to clipboard.')));
+    AppMessage.success(context, 'Table copied to clipboard.');
   }
 }
 
@@ -200,9 +199,7 @@ class PublicationAlgorithmPage extends ConsumerWidget {
       return;
     }
 
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(const SnackBar(content: Text('Algorithm link copied.')));
+    AppMessage.success(context, 'Algorithm link copied.');
   }
 }
 

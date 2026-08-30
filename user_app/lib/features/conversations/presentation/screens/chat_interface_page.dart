@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import 'package:user_app/core/constants/app_spacing.dart';
+import 'package:user_app/core/utils/app_message.dart';
 import 'package:user_app/core/widgets/app_error_view.dart';
 import 'package:user_app/core/widgets/app_loading_view.dart';
 import 'package:user_app/core/widgets/empty_state.dart';
@@ -293,11 +294,10 @@ class _ChatInterfacePageState extends ConsumerState<ChatInterfacePage> {
       return;
     }
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Message copied.'),
-        duration: Duration(seconds: 2),
-      ),
+    AppMessage.success(
+      context,
+      'Message copied.',
+      duration: const Duration(seconds: 2),
     );
   }
 

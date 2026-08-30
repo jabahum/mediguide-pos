@@ -8,6 +8,7 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:user_app/app/router/route_names.dart';
 import 'package:user_app/core/constants/app_spacing.dart';
 import 'package:user_app/core/config/app_config.dart';
+import 'package:user_app/core/utils/app_message.dart';
 import 'package:user_app/core/widgets/app_error_view.dart';
 import 'package:user_app/core/widgets/app_loading_view.dart';
 import 'package:user_app/features/documents/presentation/screens/document_reader_page.dart';
@@ -1762,9 +1763,7 @@ Future<void> _copyLink(BuildContext context, String value) async {
     return;
   }
 
-  ScaffoldMessenger.of(context)
-    ..hideCurrentSnackBar()
-    ..showSnackBar(const SnackBar(content: Text('Link copied.')));
+  AppMessage.success(context, 'Link copied.');
 }
 
 Future<void> _openOutbreakResource(
@@ -1781,9 +1780,7 @@ Future<void> _openOutbreakResource(
       mode: LaunchMode.externalApplication,
     );
     if (!launched && context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Unable to open this managed document.')),
-      );
+      AppMessage.error(context, 'Unable to open this managed document.');
     }
     return;
   }
@@ -1799,16 +1796,12 @@ Future<void> _openOutbreakResource(
   if (target?.externalUri case final Uri uri) {
     final launched = await launchUrl(uri, mode: LaunchMode.externalApplication);
     if (!launched && context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Unable to open this trusted resource.')),
-      );
+      AppMessage.error(context, 'Unable to open this trusted resource.');
     }
     return;
   }
   if (context.mounted) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('This resource link is unavailable.')),
-    );
+    AppMessage.warning(context, 'This resource link is unavailable.');
   }
 }
 

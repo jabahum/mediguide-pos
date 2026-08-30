@@ -10,6 +10,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import 'package:user_app/core/constants/app_spacing.dart';
+import 'package:user_app/core/utils/app_message.dart';
 import 'package:user_app/shared/widgets/clinical_icon_tile.dart';
 
 part '../widgets/document_reader_page_document_error.dart';
@@ -492,9 +493,7 @@ class _DocumentReaderPageState extends State<DocumentReaderPage> {
       return;
     }
 
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text(message)));
+    AppMessage.error(context, message);
   }
 }
 

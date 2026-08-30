@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:user_app/core/config/app_config.dart';
+import 'package:user_app/core/utils/app_message.dart';
 import 'package:user_app/features/calculators/presentation/controllers/calculator_review_controller.dart';
 import 'package:user_app/features/calculators/presentation/widgets/native_clinical_tool.dart';
 
@@ -126,9 +127,7 @@ class CalculatorReviewPage extends ConsumerWidget {
         .read(calculatorReviewControllerProvider(versionId).notifier)
         .addComment(comment);
     if (context.mounted) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Review comment submitted')));
+      AppMessage.success(context, 'Review comment submitted');
     }
   }
 }

@@ -5,12 +5,23 @@ enum AppMessageType { success, error, warning, info }
 class AppMessage {
   const AppMessage._();
 
+  static const Duration defaultDuration = Duration(seconds: 3);
+  static const Duration errorDuration = Duration(seconds: 5);
+
   static void show(
     BuildContext context, {
     required String message,
     AppMessageType type = AppMessageType.info,
-    Duration duration = const Duration(seconds: 3),
+    Duration duration = defaultDuration,
+    String? actionLabel,
+    VoidCallback? onAction,
+    bool replaceCurrent = true,
   }) {
+    assert(
+      actionLabel == null || onAction != null,
+      'onAction is required when actionLabel is provided.',
+    );
+
     final theme = Theme.of(context);
 
     final backgroundColor = switch (type) {
@@ -28,15 +39,21 @@ class AppMessage {
     };
 
     final messenger = ScaffoldMessenger.of(context);
+    final resolvedActionLabel = actionLabel?.trim();
+    final hasCustomAction = resolvedActionLabel?.isNotEmpty == true;
 
-    messenger
-      ..hideCurrentSnackBar()
-      ..showSnackBar(
-        SnackBar(
-          duration: duration,
-          behavior: SnackBarBehavior.floating,
-          backgroundColor: backgroundColor,
-          content: Row(
+    if (replaceCurrent) {
+      messenger.hideCurrentSnackBar();
+    }
+
+    messenger.showSnackBar(
+      SnackBar(
+        duration: duration,
+        behavior: SnackBarBehavior.floating,
+        backgroundColor: backgroundColor,
+        content: Semantics(
+          liveRegion: true,
+          child: Row(
             children: [
               Icon(icon, color: Colors.white),
               const SizedBox(width: 12),
@@ -48,33 +65,82 @@ class AppMessage {
               ),
             ],
           ),
-          action: SnackBarAction(
-            label: 'DISMISS',
-            textColor: Colors.white,
-            onPressed: messenger.hideCurrentSnackBar,
-          ),
         ),
-      );
+        action: SnackBarAction(
+          label: hasCustomAction ? resolvedActionLabel! : 'DISMISS',
+          textColor: Colors.white,
+          onPressed: hasCustomAction
+              ? onAction!
+              : messenger.hideCurrentSnackBar,
+        ),
+      ),
+    );
   }
 
-  static void success(BuildContext context, String message) {
-    show(context, message: message, type: AppMessageType.success);
+  static void success(
+    BuildContext context,
+    String message, {
+    Duration duration = defaultDuration,
+    String? actionLabel,
+    VoidCallback? onAction,
+  }) {
+    show(
+      context,
+      message: message,
+      type: AppMessageType.success,
+      duration: duration,
+      actionLabel: actionLabel,
+      onAction: onAction,
+    );
   }
 
-  static void error(BuildContext context, String message) {
+  static void error(
+    BuildContext context,
+    String message, {
+    Duration duration = errorDuration,
+    String? actionLabel,
+    VoidCallback? onAction,
+  }) {
     show(
       context,
       message: message,
       type: AppMessageType.error,
-      duration: const Duration(seconds: 5),
+      duration: duration,
+      actionLabel: actionLabel,
+      onAction: onAction,
     );
   }
 
-  static void warning(BuildContext context, String message) {
-    show(context, message: message, type: AppMessageType.warning);
+  static void warning(
+    BuildContext context,
+    String message, {
+    Duration duration = defaultDuration,
+    String? actionLabel,
+    VoidCallback? onAction,
+  }) {
+    show(
+      context,
+      message: message,
+      type: AppMessageType.warning,
+      duration: duration,
+      actionLabel: actionLabel,
+      onAction: onAction,
+    );
   }
 
-  static void info(BuildContext context, String message) {
-    show(context, message: message);
+  static void info(
+    BuildContext context,
+    String message, {
+    Duration duration = defaultDuration,
+    String? actionLabel,
+    VoidCallback? onAction,
+  }) {
+    show(
+      context,
+      message: message,
+      duration: duration,
+      actionLabel: actionLabel,
+      onAction: onAction,
+    );
   }
 }

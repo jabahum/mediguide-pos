@@ -276,6 +276,7 @@ promotion and store credentials.
 | [`docs/mobile-environments.md`](docs/mobile-environments.md) | Flutter flavors, bundle IDs, schemes and debug tools |
 | [`docs/mobile-alpha-release.md`](docs/mobile-alpha-release.md) | Alpha, beta and production mobile delivery |
 | [`docs/mobile-visual-regression.md`](docs/mobile-visual-regression.md) | Golden-image matrix and accessibility sizes |
+| [`docs/mobile-user-messaging.md`](docs/mobile-user-messaging.md) | Canonical Flutter user-message API and usage boundaries |
 | [`docs/release-process.md`](docs/release-process.md) | Unified release, deployment and rollback |
 | [`docs/seeding.md`](docs/seeding.md) | Local demo data and guarded production metadata/admin seeding |
 | [`docs/guideline-publication-architecture.md`](docs/guideline-publication-architecture.md) | Guideline ingestion and publication architecture |

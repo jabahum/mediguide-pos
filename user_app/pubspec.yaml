@@ -142,7 +142,6 @@ dependencies:
   expansion_tile_group: ^2.3.0
   bubble: ^1.2.1
   introduction_screen: ^4.0.0
-  toastification: ^3.0.3
 
   # ==========================================================
   # UTILITIES

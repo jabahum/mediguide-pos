@@ -6,6 +6,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import 'package:user_app/app/router/route_names.dart';
 import 'package:user_app/core/constants/app_spacing.dart';
+import 'package:user_app/core/utils/app_message.dart';
 
 import 'package:user_app/features/ai_assistant/data/models/ai_context.dart';
 import 'package:user_app/features/ai_assistant/data/models/rag_answer.dart';
@@ -245,10 +246,9 @@ class _AiAssistantPageState extends ConsumerState<AiAssistantPage> {
 
   void _openCitation(BuildContext context, RagCitation citation) {
     if (citation.guidelineId.trim().isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('This source does not include a navigable guideline.'),
-        ),
+      AppMessage.warning(
+        context,
+        'This source does not include a navigable guideline.',
       );
 
       return;

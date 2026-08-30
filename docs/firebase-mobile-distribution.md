@@ -502,21 +502,30 @@ The App Store Connect app record must already exist and use bundle identifier
 
 ## Run and monitor distribution
 
-Manual full distribution from `main`:
+Do not dispatch the reusable distribution workflow directly. It deliberately
+has no manual trigger because doing so would bypass the prerelease quality and
+approval gates. For an alpha, select the exact green commit from `main` and run:
 
 ```bash
-gh workflow run mobile-distribution.yml \
+release_sha="$(git rev-parse upstream/main)"
+
+gh workflow run mobile-alpha.yml \
   --repo mohuganda/mediguide-pos \
   --ref main \
-  -f destination=all
+  -f release_ref="${release_sha}" \
+  -f destination=all \
+  -f release_notes='Describe the tester charter and known issues.'
 
 run_id="$(gh run list \
   --repo mohuganda/mediguide-pos \
-  --workflow mobile-distribution.yml \
+  --workflow mobile-alpha.yml \
   --limit 1 --json databaseId --jq '.[0].databaseId')"
 gh run watch "${run_id}" \
   --repo mohuganda/mediguide-pos --exit-status
 ```
+
+Use `mobile-beta.yml` only after the regression and clinical-review gates in
+the mobile release runbook have been completed.
 
 For a tagged platform release, no manual dispatch is needed. The workflow
 validates that the tag matches `user_app/pubspec.yaml`, then delivers Android to

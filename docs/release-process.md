@@ -155,9 +155,10 @@ worker uses a process-liveness probe; it does not use the HTTP health endpoint
 exposed by the separate AI HTTP service.
 
 The normal mobile build retains unsigned Apple compile-verification artifacts.
-The separate `Distribute mobile betas` workflow creates signed iOS IPAs and
-publishes them to Firebase App Distribution and TestFlight. Its protected
-signing, Firebase, and App Store Connect setup is documented in
+The reusable mobile tester distribution workflow creates signed iOS IPAs and
+publishes them to Firebase App Distribution and TestFlight after an alpha,
+beta, or tagged-release workflow passes its gates. It cannot be dispatched
+directly. Its protected signing, Firebase, and App Store Connect setup is documented in
 [`firebase-mobile-distribution.md`](firebase-mobile-distribution.md). Never
 submit the unsigned verification ZIP to the App Store or describe it as an
 installable iOS release.

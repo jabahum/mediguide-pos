@@ -41,13 +41,15 @@ Alpha releases must be dispatched from `main`:
 git fetch upstream main --prune
 git switch main
 git pull --ff-only upstream main
+release_sha="$(git rev-parse upstream/main)"
 
 gh workflow run mobile-alpha.yml \
   --repo mohuganda/mediguide-pos \
   --ref main \
+  -f release_ref="${release_sha}" \
   -f destination=all \
   -f alpha_number=1 \
-  -f release_notes='Initial internal alpha validation'
+  -f release_notes='Test startup, authentication, RAG and offline access. Known issue: none.'
 ```
 
 `alpha_number` is optional and defaults to the workflow run number. It is a
@@ -94,15 +96,19 @@ alpha with a higher build number.
 
 Beta uses the same quality and signing implementation as alpha, but distributes
 Firebase builds to `mediguide-beta-testers` and labels all release notes as a
-beta. Create that Firebase tester group before the first run.
+beta. Create that Firebase tester group and a protected `beta-approval` GitHub
+Environment before the first run. Select the exact SHA accepted during alpha:
 
 ```bash
 gh workflow run mobile-beta.yml \
   --repo mohuganda/mediguide-pos \
   --ref main \
+  -f release_ref="${release_sha}" \
   -f destination=all \
   -f beta_number=1 \
-  -f release_notes='Release candidate validation'
+  -f regression_testing_confirmed=true \
+  -f clinical_review_confirmed=true \
+  -f release_notes='Regression complete. Test RAG citations, offline access and outbreaks. Known issue: none.'
 ```
 
 Alpha and beta builds allocate store build numbers without modifying

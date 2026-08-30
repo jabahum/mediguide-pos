@@ -1,4 +1,4 @@
-name: Distribute mobile betas
+name: Reusable mobile tester distribution
 
 on:
   workflow_call:
@@ -27,47 +27,9 @@ on:
         required: false
         default: staging
         type: string
-  workflow_dispatch:
-    inputs:
-      destination:
-        description: Distribution destination
-        required: true
-        default: all
-        type: choice
-        options:
-          - all
-          - firebase-android
-          - firebase-ios
-          - testflight
-      api_base_url:
-        description: API URL embedded in the mobile builds
+      source_ref:
         required: false
         type: string
-      release_notes:
-        description: Optional tester release notes
-        required: false
-        type: string
-      build_number:
-        description: Optional unique Android/iOS store build number
-        required: false
-        type: string
-      tester_groups:
-        description: Firebase App Distribution group aliases
-        required: false
-        type: string
-      flavor:
-        description: Native Flutter flavor to distribute
-        required: true
-        default: staging
-        type: choice
-        options:
-          - staging
-          - production
-      github_environment:
-        description: Protected GitHub Environment containing matching credentials
-        required: true
-        default: staging
-        type: environment
 
 permissions:
   contents: read
@@ -107,6 +69,8 @@ jobs:
     steps:
       - name: Check out repository
         uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.source_ref || github.ref }}
 
       - name: Verify tag and mobile version
         if: startsWith(github.ref, 'refs/tags/v')
@@ -230,6 +194,8 @@ jobs:
     steps:
       - name: Check out repository
         uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.source_ref || github.ref }}
 
       - name: Verify tag and mobile version
         if: startsWith(github.ref, 'refs/tags/v')

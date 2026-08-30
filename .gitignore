@@ -13,6 +13,7 @@
 !docs/mobile-user-messaging.md
 !docs/mobile-android-size.md
 !docs/mobile-ios-size.md
+!docs/mobile-release-workflow.md
 !docs/firebase-mobile-distribution.md
 !docs/mobile-environments.md
 !docs/mobile-alpha-release.md
@@ -22,6 +23,7 @@
 !docs/clinical-tool-runtime.md
 !docs/clinical-tool-validation-status.md
 !docs/seeding.md
+!.github/ISSUE_TEMPLATE/mobile-release.md
 !guidelines-platform/src/content/**/*.md
 !artifacts/guidelines/integrated-diabetes-management-guideline-uganda-summary.corrected.md
 !backend/cmd/seed/fixtures/outbreak-documents/*.md

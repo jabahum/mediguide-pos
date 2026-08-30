@@ -3,6 +3,10 @@ name: Release mobile beta
 on:
   workflow_dispatch:
     inputs:
+      release_ref:
+        description: Exact main commit SHA selected as the beta release candidate
+        required: true
+        type: string
       destination:
         description: Beta distribution destination
         required: true
@@ -18,20 +22,57 @@ on:
         required: false
         type: string
       release_notes:
-        description: Optional notes appended to the generated beta metadata
-        required: false
+        description: Tester charter, notable changes, and known issues
+        required: true
         type: string
+      regression_testing_confirmed:
+        description: Alpha testing and the required regression checks have passed
+        required: true
+        default: false
+        type: boolean
+      clinical_review_confirmed:
+        description: A clinical reviewer has approved the candidate content
+        required: true
+        default: false
+        type: boolean
 
 permissions:
   contents: read
 
 jobs:
+  approval:
+    name: Confirm beta release gates
+    runs-on: ubuntu-latest
+    environment: beta-approval
+    steps:
+      - name: Require regression and clinical approval
+        env:
+          REGRESSION_TESTING_CONFIRMED: ${{ inputs.regression_testing_confirmed }}
+          CLINICAL_REVIEW_CONFIRMED: ${{ inputs.clinical_review_confirmed }}
+          RELEASE_NOTES: ${{ inputs.release_notes }}
+        run: |
+          set -euo pipefail
+          if [ "${REGRESSION_TESTING_CONFIRMED}" != "true" ]; then
+            echo "Beta release blocked: regression testing has not been confirmed." >&2
+            exit 1
+          fi
+          if [ "${CLINICAL_REVIEW_CONFIRMED}" != "true" ]; then
+            echo "Beta release blocked: clinical review has not been confirmed." >&2
+            exit 1
+          fi
+          if [ -z "${RELEASE_NOTES//[[:space:]]/}" ]; then
+            echo "Beta release notes must include a test charter and known issues." >&2
+            exit 1
+          fi
+
   release:
     name: Validate and distribute beta
+    needs: approval
     uses: ./.github/workflows/mobile-alpha.yml
     with:
       channel: beta
       destination: ${{ inputs.destination }}
       sequence_number: ${{ inputs.beta_number }}
       release_notes: ${{ inputs.release_notes }}
+      source_ref: ${{ inputs.release_ref }}
     secrets: inherit

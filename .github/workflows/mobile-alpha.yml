@@ -15,10 +15,19 @@ on:
         required: false
         type: string
       release_notes:
+        required: true
+        type: string
+      source_ref:
         required: false
+        default: main
         type: string
   workflow_dispatch:
     inputs:
+      release_ref:
+        description: Exact main commit SHA to release (use main only to resolve its current SHA)
+        required: true
+        default: main
+        type: string
       destination:
         description: Alpha distribution destination
         required: true
@@ -34,8 +43,8 @@ on:
         required: false
         type: string
       release_notes:
-        description: Optional notes appended to the generated alpha metadata
-        required: false
+        description: Tester charter, notable changes, and known issues
+        required: true
         type: string
 
 permissions:
@@ -59,6 +68,7 @@ jobs:
       release_notes: ${{ steps.metadata.outputs.release_notes }}
       channel: ${{ steps.metadata.outputs.channel }}
       tester_groups: ${{ steps.metadata.outputs.tester_groups }}
+      source_sha: ${{ steps.metadata.outputs.source_sha }}
     steps:
       - name: Require canonical main branch
         if: github.ref != 'refs/heads/main'
@@ -68,6 +78,23 @@ jobs:
 
       - name: Check out repository
         uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.source_ref || inputs.release_ref || 'main' }}
+          fetch-depth: 0
+
+      - name: Verify release source is contained in main
+        id: source
+        env:
+          REQUESTED_SOURCE_REF: ${{ inputs.source_ref || inputs.release_ref || 'main' }}
+        run: |
+          set -euo pipefail
+          git fetch origin main --no-tags
+          source_sha="$(git rev-parse HEAD)"
+          if ! git merge-base --is-ancestor "${source_sha}" origin/main; then
+            echo "${REQUESTED_SOURCE_REF} resolves to ${source_sha}, which is not contained in origin/main." >&2
+            exit 1
+          fi
+          echo "source_sha=${source_sha}" >> "${GITHUB_OUTPUT}"
 
       - name: Derive unique prerelease version
         id: metadata
@@ -75,6 +102,7 @@ jobs:
           RELEASE_CHANNEL: ${{ inputs.channel || 'alpha' }}
           REQUESTED_SEQUENCE_NUMBER: ${{ inputs.sequence_number || inputs.alpha_number }}
           EXTRA_RELEASE_NOTES: ${{ inputs.release_notes }}
+          SOURCE_SHA: ${{ steps.source.outputs.source_sha }}
         working-directory: user_app
         run: |
           set -euo pipefail
@@ -83,6 +111,11 @@ jobs:
           current_build="${full_version##*+}"
           channel="${RELEASE_CHANNEL:-alpha}"
           sequence_number="${REQUESTED_SEQUENCE_NUMBER:-${GITHUB_RUN_NUMBER}}"
+
+          if [ -z "${EXTRA_RELEASE_NOTES//[[:space:]]/}" ]; then
+            echo "Prerelease notes must include a tester charter and known issues." >&2
+            exit 1
+          fi
 
           if [ "${channel}" != "alpha" ] && [ "${channel}" != "beta" ]; then
             echo "Prerelease channel must be alpha or beta." >&2
@@ -117,7 +150,8 @@ jobs:
             exit 1
           fi
 
-          notes="MediGuide ${app_version} ${channel}.${sequence_number} (build ${allocated_build}, ${GITHUB_SHA::12})"
+          commit_subject="$(git log -1 --pretty=%s)"
+          notes="MediGuide ${app_version} ${channel}.${sequence_number} (build ${allocated_build}, ${SOURCE_SHA::12}). ${commit_subject}"
           extra_notes="$(printf '%s' "${EXTRA_RELEASE_NOTES}" | tr '\r\n' '  ')"
           if [ -n "${extra_notes}" ]; then
             notes="${notes}. ${extra_notes}"
@@ -130,6 +164,7 @@ jobs:
             echo "channel=${channel}"
             echo "tester_groups=mediguide-${channel}-testers"
             echo "release_notes=${notes}"
+            echo "source_sha=${SOURCE_SHA}"
           } >> "${GITHUB_OUTPUT}"
 
           {
@@ -137,7 +172,8 @@ jobs:
             echo
             echo "- App version: ${app_version}"
             echo "- Store build: ${allocated_build}"
-            echo "- Commit: ${GITHUB_SHA}"
+            echo "- Requested source: ${{ inputs.source_ref || inputs.release_ref || 'main' }}"
+            echo "- Resolved commit: ${SOURCE_SHA}"
             echo "- Destination: ${{ inputs.destination }}"
             echo "- Firebase group: mediguide-${channel}-testers"
             echo "- Production deployment: not triggered"
@@ -154,6 +190,8 @@ jobs:
     steps:
       - name: Check out repository
         uses: actions/checkout@v6
+        with:
+          ref: ${{ needs.metadata.outputs.source_sha }}
 
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
@@ -166,8 +204,22 @@ jobs:
       - name: Install dependencies
         run: flutter pub get
 
-      - name: Generate sources
-        run: dart run build_runner build --delete-conflicting-outputs
+      - name: Verify generated backend contracts
+        run: |
+          dart run tool/generate_backend_contracts.dart
+          dart format lib/core/network/contracts/generated/backend_contracts.dart
+          git diff --exit-code -- lib/core/network/contracts/generated/backend_contracts.dart
+
+      - name: Verify generated Dart models
+        run: |
+          if [ -n "$(git ls-files '*.g.dart' '*.freezed.dart')" ]; then
+            echo "Generated *.g.dart and *.freezed.dart files must not be committed." >&2
+            git ls-files '*.g.dart' '*.freezed.dart' >&2
+            exit 1
+          fi
+          dart run build_runner build --delete-conflicting-outputs
+          dart format lib
+          git diff --exit-code -- lib
 
       - name: Check formatting
         run: dart format --output=none --set-exit-if-changed lib test
@@ -201,4 +253,5 @@ jobs:
       release_notes: ${{ needs.metadata.outputs.release_notes }}
       build_number: ${{ needs.metadata.outputs.build_number }}
       tester_groups: ${{ needs.metadata.outputs.tester_groups }}
+      source_ref: ${{ needs.metadata.outputs.source_sha }}
     secrets: inherit

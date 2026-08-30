@@ -23,7 +23,26 @@ import 'package:user_app/features/guidelines/data/models/guideline_publication.d
 import 'package:user_app/features/guidelines/presentation/controllers/publication_guideline_controller.dart';
 import 'package:user_app/features/guidelines/presentation/widgets/publication_block_view.dart';
 
-part '../widgets/publication_guideline_page_widgets.dart';
+part '../widgets/publication_guideline_page_guideline_menu_action.dart';
+part '../widgets/publication_guideline_page_guideline_content_search_delegate.dart';
+part '../widgets/publication_guideline_page_reading_notes_sheet.dart';
+part '../widgets/publication_guideline_page_reading_notes_sheet_state.dart';
+part '../widgets/publication_guideline_page_guideline_overview.dart';
+part '../widgets/publication_guideline_page_guideline_overview_state.dart';
+part '../widgets/publication_guideline_page_guideline_tabs.dart';
+part '../widgets/publication_guideline_page_guideline_about.dart';
+part '../widgets/publication_guideline_page_chapter_list.dart';
+part '../widgets/publication_guideline_page_key_point_list.dart';
+part '../widgets/publication_guideline_page_table_list.dart';
+part '../widgets/publication_guideline_page_review_status.dart';
+part '../widgets/publication_guideline_page_reader_action_bar.dart';
+part '../widgets/publication_guideline_page_overview_bottom_actions.dart';
+part '../widgets/publication_guideline_page_reading_bottom_actions.dart';
+part '../widgets/publication_guideline_page_bottom_icon_action.dart';
+part '../widgets/publication_guideline_page_reader_bottom_action.dart';
+part '../widgets/publication_guideline_page_overview.dart';
+part '../widgets/publication_guideline_page_original_document_reader.dart';
+part '../widgets/publication_guideline_page_section_header_delegate.dart';
 
 class PublicationGuidelinePage extends ConsumerStatefulWidget {
   const PublicationGuidelinePage({

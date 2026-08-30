@@ -12,7 +12,10 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:user_app/core/constants/app_spacing.dart';
 import 'package:user_app/shared/widgets/clinical_icon_tile.dart';
 
-part '../widgets/document_reader_page_widgets.dart';
+part '../widgets/document_reader_page_document_error.dart';
+part '../widgets/document_reader_page_document_loading.dart';
+part '../widgets/document_reader_page_pdf_rendering_overlay.dart';
+part '../widgets/document_reader_page_document_navigation_bar.dart';
 
 final class DocumentReaderArgs {
   const DocumentReaderArgs({

@@ -16,7 +16,11 @@ import 'package:user_app/features/profile/presentation/controllers/edit_profile_
 import 'package:user_app/shared/widgets/user_avatar.dart';
 import 'package:user_app/core/utils/responsive.dart';
 
-part '../widgets/edit_profile_page_widgets.dart';
+part '../widgets/edit_profile_page_profile_unavailable.dart';
+part '../widgets/edit_profile_page_profile_photo_section.dart';
+part '../widgets/edit_profile_page_profile_form_section.dart';
+part '../widgets/edit_profile_page_responsive_field_row.dart';
+part '../widgets/edit_profile_page_unsaved_changes_notice.dart';
 
 class EditProfilePage extends ConsumerStatefulWidget {
   const EditProfilePage({super.key});

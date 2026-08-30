@@ -23,7 +23,8 @@ import 'package:user_app/shared/widgets/app_logo.dart';
 import 'package:user_app/shared/widgets/copyright_terms_widget.dart';
 import 'package:user_app/shared/widgets/glass_card.dart';
 
-part '../widgets/login_page_widgets.dart';
+part '../widgets/login_page_authentication_required_banner.dart';
+part '../widgets/login_page_or_divider.dart';
 
 final _passwordVisibleProvider = StateProvider.autoDispose<bool>(
   (ref) => false,

@@ -16,7 +16,13 @@ import 'package:user_app/features/conversations/presentation/controllers/chat_in
 
 import 'package:user_app/shared/widgets/user_avatar.dart';
 
-part '../widgets/chat_interface_page_widgets.dart';
+part '../widgets/chat_interface_page_chat_app_bar_title.dart';
+part '../widgets/chat_interface_page_date_separator.dart';
+part '../widgets/chat_interface_page_message_bubble.dart';
+part '../widgets/chat_interface_page_reply_preview.dart';
+part '../widgets/chat_interface_page_message_status_icon.dart';
+part '../widgets/chat_interface_page_message_input_bar.dart';
+part '../widgets/chat_interface_page_conversation_error_banner.dart';
 
 class ChatInterfacePage extends ConsumerStatefulWidget {
   const ChatInterfacePage({super.key, this.otherUser});

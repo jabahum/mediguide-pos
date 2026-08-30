@@ -11,7 +11,11 @@ import 'package:user_app/features/ai_assistant/data/models/ai_context.dart';
 import 'package:user_app/features/ai_assistant/data/models/rag_answer.dart';
 import 'package:user_app/features/ai_assistant/presentation/controllers/ai_assistant_controller.dart';
 
-part '../widgets/ai_assistant_page_widgets.dart';
+part '../widgets/ai_assistant_page_assistant_menu_action.dart';
+part '../widgets/ai_assistant_page_assistant_top_context.dart';
+part '../widgets/ai_assistant_page_assistant_error_banner.dart';
+part '../widgets/ai_assistant_page_sources_strip.dart';
+part '../widgets/ai_assistant_page_citation_tile.dart';
 
 class AiAssistantPage extends ConsumerStatefulWidget {
   const AiAssistantPage({super.key, this.arguments});

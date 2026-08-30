@@ -20,7 +20,9 @@ import 'package:user_app/features/guidelines/presentation/widgets/guideline_sect
 import 'package:user_app/shared/models/models.dart';
 import 'package:user_app/shared/widgets/ai_context_button.dart';
 
-part '../widgets/read_guideline_page_widgets.dart';
+part '../widgets/read_guideline_page_section_navigation_bar.dart';
+part '../widgets/read_guideline_page_section_anchor.dart';
+part '../widgets/read_guideline_page_no_structured_sections.dart';
 
 class ReadGuidelinePage extends ConsumerStatefulWidget {
   const ReadGuidelinePage({super.key, this.arguments});

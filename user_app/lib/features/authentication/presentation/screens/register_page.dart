@@ -26,7 +26,13 @@ import 'package:user_app/shared/widgets/app_logo.dart';
 import 'package:user_app/shared/widgets/copyright_terms_widget.dart';
 import 'package:user_app/shared/widgets/glass_card.dart';
 
-part '../widgets/register_page_widgets.dart';
+part '../widgets/register_page_register_intro_card.dart';
+part '../widgets/register_page_form_section_header.dart';
+part '../widgets/register_page_password_requirements.dart';
+part '../widgets/register_page_country_picker_label.dart';
+part '../widgets/register_page_terms_text.dart';
+part '../widgets/register_page_terms_text_state.dart';
+part '../widgets/register_page_or_divider.dart';
 
 final _registerPasswordVisibleProvider = StateProvider.autoDispose<bool>(
   (ref) => false,

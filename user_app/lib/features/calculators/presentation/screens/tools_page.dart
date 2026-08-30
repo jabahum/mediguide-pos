@@ -18,7 +18,16 @@ import 'package:user_app/shared/models/models.dart';
 import 'package:user_app/shared/widgets/clinical_icon_tile.dart';
 import 'package:user_app/shared/widgets/pagination_indicators.dart';
 
-part '../widgets/tools_page_widgets.dart';
+part '../widgets/tools_page_destination.dart';
+part '../widgets/tools_page_destination_group.dart';
+part '../widgets/tools_page_destination_tile.dart';
+part '../widgets/tools_page_catalogue_header_card.dart';
+part '../widgets/tools_page_tool_type_filter_bar.dart';
+part '../widgets/tools_page_tool_type_chip.dart';
+part '../widgets/tools_page_tool_type_filter.dart';
+part '../widgets/tools_page_tool_card_shell.dart';
+part '../widgets/tools_page_active_filter_banner.dart';
+part '../widgets/tools_page_tools_filter_header_delegate.dart';
 
 class ToolsPage extends ConsumerStatefulWidget {
   const ToolsPage({super.key, this.arguments});

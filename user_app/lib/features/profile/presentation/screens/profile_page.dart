@@ -26,7 +26,9 @@ import 'package:user_app/shared/widgets/language_bottom_sheet.dart';
 import 'package:user_app/shared/widgets/theme_bottom_sheet.dart';
 import 'package:user_app/shared/widgets/user_avatar.dart';
 
-part '../widgets/profile_page_widgets.dart';
+part '../widgets/profile_page_profile_header_card.dart';
+part '../widgets/profile_page_settings_section.dart';
+part '../widgets/profile_page_settings_tile.dart';
 
 class ProfilePage extends ConsumerWidget {
   const ProfilePage({super.key});

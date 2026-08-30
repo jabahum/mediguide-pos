@@ -21,7 +21,9 @@ import 'package:user_app/shared/widgets/app_logo.dart';
 import 'package:user_app/shared/widgets/copyright_terms_widget.dart';
 import 'package:user_app/shared/widgets/glass_card.dart';
 
-part '../widgets/forgot_password_page_widgets.dart';
+part '../widgets/forgot_password_page_reset_request_form.dart';
+part '../widgets/forgot_password_page_reset_request_sent.dart';
+part '../widgets/forgot_password_page_password_reset_security_notice.dart';
 
 class ForgotPasswordPage extends ConsumerStatefulWidget {
   const ForgotPasswordPage({super.key});

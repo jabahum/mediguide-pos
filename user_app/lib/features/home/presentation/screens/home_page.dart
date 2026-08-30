@@ -23,7 +23,19 @@ import 'package:user_app/features/outbreaks/presentation/providers/outbreak_prov
 import 'package:user_app/shared/models/models.dart';
 import 'package:user_app/shared/widgets/section_header.dart';
 
-part '../widgets/home_page_widgets.dart';
+part '../widgets/home_page_home_app_bar.dart';
+part '../widgets/home_page_clinical_search_card.dart';
+part '../widgets/home_page_home_quick_action.dart';
+part '../widgets/home_page_quick_action_grid.dart';
+part '../widgets/home_page_quick_action_card.dart';
+part '../widgets/home_page_continue_reading_section.dart';
+part '../widgets/home_page_continue_reading_card.dart';
+part '../widgets/home_page_guidelines_preview_list.dart';
+part '../widgets/home_page_guideline_preview.dart';
+part '../widgets/home_page_home_guideline_tile.dart';
+part '../widgets/home_page_guideline_category_chip.dart';
+part '../widgets/home_page_no_recent_guidelines_card.dart';
+part '../widgets/home_page_logged_in_outbreak_banner.dart';
 
 final homeOutbreakBannerProvider =
     FutureProvider.autoDispose<List<PublicOutbreak>>((ref) async {

@@ -6,7 +6,16 @@ import 'package:user_app/core/utils/app_extensions.dart';
 import 'package:user_app/core/utils/responsive.dart';
 import 'package:user_app/l10n/app_translations.dart';
 
-part '../widgets/terms_and_conditions_page_widgets.dart';
+part '../widgets/terms_and_conditions_page_legal_document_header.dart';
+part '../widgets/terms_and_conditions_page_legal_section.dart';
+part '../widgets/terms_and_conditions_page_legal_paragraph.dart';
+part '../widgets/terms_and_conditions_page_legal_subheading.dart';
+part '../widgets/terms_and_conditions_page_bullet_list.dart';
+part '../widgets/terms_and_conditions_page_legal_notice.dart';
+part '../widgets/terms_and_conditions_page_contact_card.dart';
+part '../widgets/terms_and_conditions_page_contact_row.dart';
+part '../widgets/terms_and_conditions_page_legal_divider.dart';
+part '../widgets/terms_and_conditions_page_legal_footer.dart';
 
 class TermsAndConditionsPage extends StatelessWidget {
   const TermsAndConditionsPage({super.key});

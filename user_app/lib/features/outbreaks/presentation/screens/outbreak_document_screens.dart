@@ -21,7 +21,10 @@ import 'package:user_app/features/outbreaks/data/models/outbreak_models.dart';
 import 'package:user_app/features/outbreaks/data/repositories/outbreak_repository.dart';
 import 'package:user_app/features/outbreaks/presentation/providers/outbreak_providers.dart';
 
-part '../widgets/outbreak_document_screens_widgets.dart';
+part '../widgets/outbreak_document_screens_reader_chip.dart';
+part '../widgets/outbreak_document_screens_outbreak_unsupported_format_notice.dart';
+part '../widgets/outbreak_document_screens_reader_warning.dart';
+part '../widgets/outbreak_document_screens_search_match_preview.dart';
 
 class OutbreakDocumentsPage extends ConsumerStatefulWidget {
   const OutbreakDocumentsPage({super.key, required this.outbreakId});

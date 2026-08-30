@@ -11,7 +11,14 @@ import 'package:user_app/features/notifications/presentation/controllers/notific
 import 'package:user_app/app/providers/app_providers.dart';
 import 'package:user_app/core/services/firebase_service.dart';
 
-part '../widgets/notification_preferences_page_widgets.dart';
+part '../widgets/notification_preferences_page_preferences_content.dart';
+part '../widgets/notification_preferences_page_system_permission_card.dart';
+part '../widgets/notification_preferences_page_intro_card.dart';
+part '../widgets/notification_preferences_page_section.dart';
+part '../widgets/notification_preferences_page_preference_switch.dart';
+part '../widgets/notification_preferences_page_quiet_hours_card.dart';
+part '../widgets/notification_preferences_page_language_card.dart';
+part '../widgets/notification_preferences_page_devices_card.dart';
 
 class NotificationPreferencesPage extends ConsumerWidget {
   const NotificationPreferencesPage({super.key});

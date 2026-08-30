@@ -5,6 +5,8 @@ web.
 
 The Riverpod application architecture and feature-first project structure are
 documented in [docs/riverpod-migration.md](docs/riverpod-migration.md).
+Screen and feature-widget ownership is documented in
+[docs/presentation-structure.md](docs/presentation-structure.md).
 
 ## Environment launcher icons
 

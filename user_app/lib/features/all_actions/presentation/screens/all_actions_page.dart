@@ -10,7 +10,13 @@ import 'package:user_app/core/widgets/empty_state.dart';
 
 import 'package:user_app/features/all_actions/presentation/controllers/all_actions_controller.dart';
 
-part '../widgets/all_actions_page_widgets.dart';
+part '../widgets/all_actions_page_scrollable_state_container.dart';
+part '../widgets/all_actions_page_inline_content_error.dart';
+part '../widgets/all_actions_page_actions_header_card.dart';
+part '../widgets/all_actions_page_count_chip.dart';
+part '../widgets/all_actions_page_actions_section.dart';
+part '../widgets/all_actions_page_section_header.dart';
+part '../widgets/all_actions_page_action_tile.dart';
 
 class AllActionsPage extends ConsumerWidget {
   const AllActionsPage({super.key});

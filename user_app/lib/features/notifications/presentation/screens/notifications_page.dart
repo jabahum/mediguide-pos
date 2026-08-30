@@ -19,7 +19,14 @@ import 'package:user_app/shared/widgets/filter_button.dart';
 import 'package:user_app/shared/widgets/my_notification_card.dart';
 import 'package:user_app/shared/widgets/pagination_indicators.dart';
 
-part '../widgets/notifications_page_widgets.dart';
+part '../widgets/notifications_page_notification_filter_sheet.dart';
+part '../widgets/notifications_page_notification_browse_card.dart';
+part '../widgets/notifications_page_active_notification_filters.dart';
+part '../widgets/notifications_page_active_notification_filter_chip.dart';
+part '../widgets/notifications_page_notification_card_shell.dart';
+part '../widgets/notifications_page_filter_section_title.dart';
+part '../widgets/notifications_page_filter_choice_chip.dart';
+part '../widgets/notifications_page_notification_filter_option.dart';
 
 class NotificationsPage extends ConsumerWidget {
   const NotificationsPage({super.key});

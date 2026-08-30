@@ -16,7 +16,12 @@ import 'package:user_app/features/support/presentation/widgets/support_ticket_ca
 import 'package:user_app/shared/models/models.dart';
 import 'package:user_app/shared/widgets/pagination_indicators.dart';
 
-part '../widgets/help_center_page_widgets.dart';
+part '../widgets/help_center_page_support_browse_card.dart';
+part '../widgets/help_center_page_active_support_filters.dart';
+part '../widgets/help_center_page_status_filter_bar.dart';
+part '../widgets/help_center_page_status_filter_chip.dart';
+part '../widgets/help_center_page_support_ticket_shell.dart';
+part '../widgets/help_center_page_ticket_status_filter.dart';
 
 class HelpCenterPage extends ConsumerWidget {
   const HelpCenterPage({super.key});

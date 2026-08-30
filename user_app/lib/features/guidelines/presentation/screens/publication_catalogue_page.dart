@@ -13,7 +13,11 @@ import 'package:user_app/core/widgets/empty_state.dart';
 import 'package:user_app/features/guidelines/data/models/guideline_publication.dart';
 import 'package:user_app/shared/widgets/clinical_icon_tile.dart';
 
-part '../widgets/publication_catalogue_page_widgets.dart';
+part '../widgets/publication_catalogue_page_catalogue_search_field.dart';
+part '../widgets/publication_catalogue_page_publication_catalogue_card.dart';
+part '../widgets/publication_catalogue_page_catalogue_category_badge.dart';
+part '../widgets/publication_catalogue_page_catalogue_empty_state.dart';
+part '../widgets/publication_catalogue_page_catalogue_skeleton.dart';
 
 final _publicationCatalogueProvider = FutureProvider.autoDispose
     .family<List<GuidelinePublication>, ({String search, String programArea})>((

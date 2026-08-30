@@ -9,7 +9,15 @@ import 'package:user_app/features/downloads/data/models/offline_download.dart';
 import 'package:user_app/features/downloads/presentation/controllers/guideline_downloads_controller.dart';
 import 'package:user_app/shared/widgets/clinical_icon_tile.dart';
 
-part '../widgets/offline_content_page_widgets.dart';
+part '../widgets/offline_content_page_offline_content_list.dart';
+part '../widgets/offline_content_page_storage_summary.dart';
+part '../widgets/offline_content_page_section_heading.dart';
+part '../widgets/offline_content_page_download_tile.dart';
+part '../widgets/offline_content_page_status_chip.dart';
+part '../widgets/offline_content_page_metadata_chip.dart';
+part '../widgets/offline_content_page_download_action.dart';
+part '../widgets/offline_content_page_offline_loading.dart';
+part '../widgets/offline_content_page_centered_message.dart';
 
 class OfflineContentPage extends ConsumerWidget {
   const OfflineContentPage({super.key, this.embedded = false});

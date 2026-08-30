@@ -16,6 +16,11 @@ import 'package:user_app/shared/models/models.dart';
 import 'package:user_app/shared/widgets/filter_button.dart';
 import 'package:user_app/shared/widgets/pagination_indicators.dart';
 
+part '../widgets/drug_index_page_drug_search_field.dart';
+part '../widgets/drug_index_page_drug_search_field_state.dart';
+part '../widgets/drug_index_page_active_drug_filters_banner.dart';
+part '../widgets/drug_index_page_drug_card_shell.dart';
+
 class DrugIndexPage extends ConsumerStatefulWidget {
   const DrugIndexPage({super.key});
 
@@ -292,139 +297,3 @@ class _DrugIndexPageState extends ConsumerState<DrugIndexPage> {
 // ===========================================================================
 // SEARCH
 // ===========================================================================
-
-class _DrugSearchField extends StatefulWidget {
-  const _DrugSearchField({
-    required this.controller,
-    required this.onChanged,
-    required this.onSubmitted,
-    required this.onClear,
-  });
-
-  final TextEditingController controller;
-  final ValueChanged<String> onChanged;
-  final ValueChanged<String> onSubmitted;
-  final VoidCallback onClear;
-
-  @override
-  State<_DrugSearchField> createState() => _DrugSearchFieldState();
-}
-
-class _DrugSearchFieldState extends State<_DrugSearchField> {
-  @override
-  Widget build(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
-
-    final hasSearch = widget.controller.text.trim().isNotEmpty;
-
-    return SearchBar(
-      controller: widget.controller,
-      hintText: 'Search medicines',
-      leading: Icon(LucideIcons.search, color: colors.primary),
-      trailing: [
-        if (hasSearch)
-          IconButton(
-            tooltip: 'Clear search',
-            onPressed: () {
-              widget.onClear();
-              setState(() {});
-            },
-            icon: const Icon(LucideIcons.x),
-          ),
-      ],
-      onChanged: (value) {
-        widget.onChanged(value);
-        setState(() {});
-      },
-      onSubmitted: widget.onSubmitted,
-      textInputAction: TextInputAction.search,
-      elevation: const WidgetStatePropertyAll(0),
-      backgroundColor: WidgetStatePropertyAll(colors.surfaceContainerLow),
-      side: WidgetStatePropertyAll(BorderSide(color: colors.outlineVariant)),
-      padding: const WidgetStatePropertyAll(
-        EdgeInsets.symmetric(horizontal: AppSpacing.md),
-      ),
-    );
-  }
-}
-
-// ===========================================================================
-// ACTIVE FILTERS
-// ===========================================================================
-
-class _ActiveDrugFiltersBanner extends StatelessWidget {
-  const _ActiveDrugFiltersBanner({
-    required this.onClear,
-    required this.onOpenFilters,
-  });
-
-  final VoidCallback onClear;
-  final VoidCallback onOpenFilters;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
-
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.md,
-        vertical: AppSpacing.sm,
-      ),
-      decoration: BoxDecoration(
-        color: colors.secondaryContainer,
-        borderRadius: BorderRadius.circular(14),
-      ),
-      child: Row(
-        children: [
-          Icon(
-            LucideIcons.listFilter,
-            size: 18,
-            color: colors.onSecondaryContainer,
-          ),
-
-          AppSpacing.hGapSm,
-
-          Expanded(
-            child: Text(
-              'Filters applied',
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: colors.onSecondaryContainer,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-          ),
-
-          TextButton(onPressed: onOpenFilters, child: const Text('Edit')),
-
-          TextButton(onPressed: onClear, child: const Text('Clear')),
-        ],
-      ),
-    );
-  }
-}
-
-// ===========================================================================
-// DRUG CARD SHELL
-// ===========================================================================
-
-class _DrugCardShell extends StatelessWidget {
-  const _DrugCardShell({required this.child});
-
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
-
-    return Container(
-      decoration: BoxDecoration(
-        color: colors.surfaceContainerLowest,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: colors.outlineVariant),
-      ),
-      clipBehavior: Clip.antiAlias,
-      child: child,
-    );
-  }
-}

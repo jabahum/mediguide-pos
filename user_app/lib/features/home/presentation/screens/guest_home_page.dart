@@ -14,7 +14,20 @@ import 'package:user_app/features/outbreaks/presentation/providers/outbreak_prov
 import 'package:user_app/shared/widgets/clinical_icon_tile.dart';
 import 'package:user_app/shared/widgets/section_header.dart';
 
-part '../widgets/guest_home_page_widgets.dart';
+part '../widgets/guest_home_page_guest_search_card.dart';
+part '../widgets/guest_home_page_active_outbreak_card.dart';
+part '../widgets/guest_home_page_publication_sections.dart';
+part '../widgets/guest_home_page_category_quick_access_grid.dart';
+part '../widgets/guest_home_page_category_quick_access_tile.dart';
+part '../widgets/guest_home_page_publication_card.dart';
+part '../widgets/guest_home_page_program_area_badge.dart';
+part '../widgets/guest_home_page_quick_action_grid.dart';
+part '../widgets/guest_home_page_quick_action_card.dart';
+part '../widgets/guest_home_page_quick_action.dart';
+part '../widgets/guest_home_page_offline_access_card.dart';
+part '../widgets/guest_home_page_empty_publications_card.dart';
+part '../widgets/guest_home_page_publication_skeleton.dart';
+part '../widgets/guest_home_page_section_error.dart';
 
 final guestHomePublicationsProvider =
     FutureProvider.autoDispose<List<GuidelinePublication>>((ref) async {

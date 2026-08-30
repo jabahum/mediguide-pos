@@ -14,7 +14,13 @@ import 'package:user_app/features/guidelines/presentation/controllers/guidelines
 import 'package:user_app/features/guidelines/presentation/controllers/guidelines_tree_filter.dart';
 import 'package:user_app/features/guidelines/presentation/widgets/guideline_tree_tile.dart';
 
-part '../widgets/guidelines_indexer_page_widgets.dart';
+part '../widgets/guidelines_indexer_page_tree_section_header.dart';
+part '../widgets/guidelines_indexer_page_search_field.dart';
+part '../widgets/guidelines_indexer_page_search_field_state.dart';
+part '../widgets/guidelines_indexer_page_quick_filter_chips.dart';
+part '../widgets/guidelines_indexer_page_browse_chip.dart';
+part '../widgets/guidelines_indexer_page_active_filters_summary.dart';
+part '../widgets/guidelines_indexer_page_guideline_tree_container.dart';
 
 class GuidelinesIndexerPage extends ConsumerStatefulWidget {
   const GuidelinesIndexerPage({super.key, this.arguments});

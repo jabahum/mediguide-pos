@@ -10,7 +10,11 @@ import 'package:user_app/core/widgets/empty_state.dart';
 
 import 'package:user_app/shared/models/models.dart';
 
-part '../widgets/health_facility_detail_page_widgets.dart';
+part '../widgets/health_facility_detail_page_facility_details_scaffold.dart';
+part '../widgets/health_facility_detail_page_facility_summary_card.dart';
+part '../widgets/health_facility_detail_page_info_badge.dart';
+part '../widgets/health_facility_detail_page_detail_section.dart';
+part '../widgets/health_facility_detail_page_detail_item.dart';
 
 final healthFacilityDetailsProvider = FutureProvider.autoDispose
     .family<HealthFacility, String>((ref, facilityId) {

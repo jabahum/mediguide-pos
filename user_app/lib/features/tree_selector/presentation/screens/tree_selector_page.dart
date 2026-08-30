@@ -16,6 +16,11 @@ import 'package:user_app/features/tree_selector/presentation/controllers/tree_se
 import 'package:user_app/features/tree_selector/presentation/controllers/tree_selector_state.dart';
 import 'package:user_app/features/tree_selector/presentation/widgets/tree_selector_tile.dart';
 
+part '../widgets/tree_selector_page_tree_search_field.dart';
+part '../widgets/tree_selector_page_tree_search_field_state.dart';
+part '../widgets/tree_selector_page_selector_info_card.dart';
+part '../widgets/tree_selector_page_tree_surface.dart';
+
 class TreeSelectorPage extends ConsumerStatefulWidget {
   const TreeSelectorPage({super.key, required this.config});
 
@@ -360,130 +365,3 @@ class _TreeSelectorPageState extends ConsumerState<TreeSelectorPage> {
 // ===========================================================================
 // SEARCH
 // ===========================================================================
-
-class _TreeSearchField extends StatefulWidget {
-  const _TreeSearchField({
-    required this.controller,
-    required this.onChanged,
-    required this.onClear,
-  });
-
-  final TextEditingController controller;
-  final ValueChanged<String> onChanged;
-  final VoidCallback onClear;
-
-  @override
-  State<_TreeSearchField> createState() => _TreeSearchFieldState();
-}
-
-class _TreeSearchFieldState extends State<_TreeSearchField> {
-  @override
-  Widget build(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
-
-    final hasSearch = widget.controller.text.trim().isNotEmpty;
-
-    return SearchBar(
-      controller: widget.controller,
-      hintText: 'Search options',
-      leading: Icon(LucideIcons.search, color: colors.primary),
-      trailing: [
-        if (hasSearch)
-          IconButton(
-            tooltip: 'Clear search',
-            onPressed: () {
-              widget.onClear();
-              setState(() {});
-            },
-            icon: const Icon(LucideIcons.x),
-          ),
-      ],
-      onChanged: (value) {
-        widget.onChanged(value);
-
-        setState(() {});
-      },
-      textInputAction: TextInputAction.search,
-      elevation: const WidgetStatePropertyAll(0),
-      backgroundColor: WidgetStatePropertyAll(colors.surfaceContainerLow),
-      side: WidgetStatePropertyAll(BorderSide(color: colors.outlineVariant)),
-      padding: const WidgetStatePropertyAll(
-        EdgeInsets.symmetric(horizontal: AppSpacing.md),
-      ),
-    );
-  }
-}
-
-// ===========================================================================
-// SELECTOR INFORMATION
-// ===========================================================================
-
-class _SelectorInfoCard extends StatelessWidget {
-  const _SelectorInfoCard({required this.allowParentSelection});
-
-  final bool allowParentSelection;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
-
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(AppSpacing.sm),
-      decoration: BoxDecoration(
-        color: colors.secondaryContainer,
-        borderRadius: BorderRadius.circular(14),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(
-            LucideIcons.listTree,
-            size: 18,
-            color: colors.onSecondaryContainer,
-          ),
-
-          AppSpacing.hGapSm,
-
-          Expanded(
-            child: Text(
-              allowParentSelection
-                  ? 'Tap a row to open or select it. Parent groups may also be selected when available.'
-                  : 'Tap a row to select it. Expand groups to browse deeper levels.',
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: colors.onSecondaryContainer,
-                height: 1.35,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-// ===========================================================================
-// TREE SURFACE
-// ===========================================================================
-
-class _TreeSurface extends StatelessWidget {
-  const _TreeSurface({required this.child});
-
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
-
-    return Container(
-      width: double.infinity,
-      decoration: BoxDecoration(
-        color: colors.surfaceContainerLowest,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: colors.outlineVariant),
-      ),
-      clipBehavior: Clip.antiAlias,
-      child: child,
-    );
-  }
-}

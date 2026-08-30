@@ -9,7 +9,13 @@ import 'package:user_app/core/utils/app_extensions.dart';
 import 'package:user_app/core/utils/common.dart';
 import 'package:user_app/core/utils/responsive.dart';
 
-part '../widgets/about_us_page_widgets.dart';
+part '../widgets/about_us_page_about_hero.dart';
+part '../widgets/about_us_page_about_section.dart';
+part '../widgets/about_us_page_feature_tile.dart';
+part '../widgets/about_us_page_action_tile.dart';
+part '../widgets/about_us_page_metadata_badge.dart';
+part '../widgets/about_us_page_section_divider.dart';
+part '../widgets/about_us_page_about_footer.dart';
 
 class AboutUsPage extends StatefulWidget {
   const AboutUsPage({super.key});

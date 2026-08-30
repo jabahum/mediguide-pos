@@ -10,7 +10,13 @@ import 'package:user_app/core/storage/local_storage_service.dart';
 import 'package:user_app/core/utils/responsive.dart';
 import 'package:user_app/shared/widgets/app_logo.dart';
 
-part '../widgets/onboarding_page_widgets.dart';
+part '../widgets/onboarding_page_brand_header.dart';
+part '../widgets/onboarding_page_clinical_illustration.dart';
+part '../widgets/onboarding_page_orbit_icon.dart';
+part '../widgets/onboarding_page_benefits_card.dart';
+part '../widgets/onboarding_page_benefit.dart';
+part '../widgets/onboarding_page_benefit_divider.dart';
+part '../widgets/onboarding_page_guest_access_notice.dart';
 
 /// First-run MediGuide welcome screen.
 ///

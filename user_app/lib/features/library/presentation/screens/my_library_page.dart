@@ -12,7 +12,18 @@ import 'package:user_app/features/guidelines/data/models/reading_progress.dart';
 import 'package:user_app/features/library/data/models/guideline_library_models.dart';
 import 'package:user_app/shared/widgets/clinical_icon_tile.dart';
 
-part '../widgets/my_library_page_widgets.dart';
+part '../widgets/my_library_page_library_header.dart';
+part '../widgets/my_library_page_library_quick_stats.dart';
+part '../widgets/my_library_page_library_stat.dart';
+part '../widgets/my_library_page_library_summary.dart';
+part '../widgets/my_library_page_library_menu_tile.dart';
+part '../widgets/my_library_page_library_action_icon.dart';
+part '../widgets/my_library_page_section_heading.dart';
+part '../widgets/my_library_page_progress_tile.dart';
+part '../widgets/my_library_page_empty_library_section.dart';
+part '../widgets/my_library_page_library_loading.dart';
+part '../widgets/my_library_page_library_error.dart';
+part '../widgets/my_library_page_library_data.dart';
 
 final libraryDataProvider = FutureProvider.autoDispose<LibraryData>((
   ref,

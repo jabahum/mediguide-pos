@@ -18,7 +18,13 @@ import 'package:user_app/features/guidelines/presentation/widgets/guideline_card
 import 'package:user_app/shared/widgets/filter_button.dart';
 import 'package:user_app/shared/widgets/pagination_indicators.dart';
 
-part '../widgets/guidelines_page_widgets.dart';
+part '../widgets/guidelines_page_guidelines_search_box.dart';
+part '../widgets/guidelines_page_guidelines_search_box_state.dart';
+part '../widgets/guidelines_page_quick_filters.dart';
+part '../widgets/guidelines_page_quick_filter_chip.dart';
+part '../widgets/guidelines_page_active_guideline_context.dart';
+part '../widgets/guidelines_page_context_badge.dart';
+part '../widgets/guidelines_page_guideline_card_shell.dart';
 
 class GuidelinesPage extends ConsumerStatefulWidget {
   const GuidelinesPage({super.key, this.arguments});

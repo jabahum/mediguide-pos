@@ -12,7 +12,20 @@ import 'package:user_app/features/search/presentation/controllers/global_search_
 import 'package:user_app/shared/models/search_models.dart';
 import 'package:user_app/shared/widgets/clinical_icon_tile.dart';
 
-part '../widgets/global_search_page_widgets.dart';
+part '../widgets/global_search_page_search_header.dart';
+part '../widgets/global_search_page_result_count_badge.dart';
+part '../widgets/global_search_page_clinical_search_field.dart';
+part '../widgets/global_search_page_search_category_filters.dart';
+part '../widgets/global_search_page_search_filter_chip.dart';
+part '../widgets/global_search_page_grouped_search_results.dart';
+part '../widgets/global_search_page_filtered_results_header.dart';
+part '../widgets/global_search_page_search_group_header.dart';
+part '../widgets/global_search_page_search_result_tile.dart';
+part '../widgets/global_search_page_outbreak_search_badge.dart';
+part '../widgets/global_search_page_search_availability_badge.dart';
+part '../widgets/global_search_page_search_category_label.dart';
+part '../widgets/global_search_page_highlighted_text.dart';
+part '../widgets/global_search_page_search_message.dart';
 
 class GlobalSearchPage extends ConsumerStatefulWidget {
   const GlobalSearchPage({super.key, this.embedded = false});

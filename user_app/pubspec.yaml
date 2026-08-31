@@ -106,16 +106,9 @@ dependencies:
   animated_tree_view: ^2.3.0
 
   # ==========================================================
-  # APP LIFECYCLE / BACKGROUND SYNC
-  # ==========================================================
-
-  workmanager: ^0.9.0+3
-
-  # ==========================================================
   # DEVICE / FILES
   # ==========================================================
 
-  file_picker: ^10.3.10
   flutter_pdfview: ^1.4.4
   share_plus: ^12.0.2
   url_launcher: ^6.3.2
@@ -133,22 +126,18 @@ dependencies:
   # ==========================================================
 
   flutter_gen_ai_chat_ui: ^2.5.0
-  openai_dart: ^7.0.1
 
   # ==========================================================
   # OTHER UI
   # ==========================================================
 
-  expansion_tile_group: ^2.3.0
   bubble: ^1.2.1
-  introduction_screen: ^4.0.0
 
   # ==========================================================
   # UTILITIES
   # ==========================================================
 
   intl: ^0.20.2
-  event_bus: ^2.0.1
   # Keep the native Firebase SDK coordinated with the checked-in CocoaPods
   # lockfile. Upgrade the Firebase family together in a dedicated change.
   firebase_core: 4.13.0

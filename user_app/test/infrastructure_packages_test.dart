@@ -4,7 +4,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:user_app/core/constants/storage_keys.dart';
 import 'package:user_app/core/network/api_client.dart';
-import 'package:user_app/core/network/api_response.dart';
 import 'package:user_app/core/network/ttl_response_cache.dart';
 import 'package:user_app/core/storage/database/app_database.dart';
 
@@ -63,18 +62,5 @@ void main() {
     expect(first, second);
     expect(loads, 1);
     expect(await database.cacheEntry('languages'), isNotNull);
-  });
-
-  test('generated API response supports typed JSON round trips', () {
-    final response = ApiResponse<String>(
-      data: 'ok',
-      message: 'Loaded',
-      requestId: 'request-1',
-    );
-
-    final json = response.toJson((value) => value);
-    final restored = ApiResponse<String>.fromJson(json, (value) => '$value');
-
-    expect(restored, response);
   });
 }

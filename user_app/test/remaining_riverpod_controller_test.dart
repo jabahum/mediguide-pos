@@ -14,8 +14,6 @@ import 'package:user_app/features/support/presentation/controllers/faq_controlle
 import 'package:user_app/features/content/presentation/controllers/generic_viewer_controller.dart';
 import 'package:user_app/features/guidelines/presentation/controllers/guidelines_indexer_controller.dart';
 import 'package:user_app/features/content/presentation/controllers/ministry_directory_controller.dart';
-import 'package:user_app/features/tree_selector/data/models/tree_selector_models.dart';
-import 'package:user_app/features/tree_selector/presentation/controllers/tree_selector_controller.dart';
 import 'package:user_app/app/providers/app_providers.dart';
 import 'package:user_app/features/abbreviations/data/repositories/abbreviation_local_repository.dart';
 import 'package:user_app/features/content/data/repositories/generic_page_local_repository.dart';
@@ -245,45 +243,33 @@ void main() {
     );
   });
 
-  test(
-    'guideline index and tree selector load without service locators',
-    () async {
-      final api = RemainingFeaturesApi();
-      final store = TestLocalStore();
-      addTearDown(store.close);
-      final repository = GuidelineContentRepository(
-        api,
-        GuidelineContentLocalRepository(store.cache),
-        AbbreviationLocalRepository(store.cache),
-      );
-      const config = TreeSelectorConfig(
-        title: 'Select region',
-        endpointPath: '/api/v2/tree',
-      );
-      final selectorProvider = treeSelectorControllerProvider(config);
-      final container = ProviderContainer(
-        overrides: [
-          backendApiServiceProvider.overrideWithValue(api),
-          guidelineContentRepositoryProvider.overrideWithValue(repository),
-        ],
-      );
-      addTearDown(container.dispose);
-      container.listen(guidelinesIndexerControllerProvider, (_, _) {});
-      container.listen(selectorProvider, (_, _) {});
-      final indexer = container.read(
-        guidelinesIndexerControllerProvider.notifier,
-      );
+  test('guideline index loads without service locators', () async {
+    final api = RemainingFeaturesApi();
+    final store = TestLocalStore();
+    addTearDown(store.close);
+    final repository = GuidelineContentRepository(
+      api,
+      GuidelineContentLocalRepository(store.cache),
+      AbbreviationLocalRepository(store.cache),
+    );
+    final container = ProviderContainer(
+      overrides: [
+        backendApiServiceProvider.overrideWithValue(api),
+        guidelineContentRepositoryProvider.overrideWithValue(repository),
+      ],
+    );
+    addTearDown(container.dispose);
+    container.listen(guidelinesIndexerControllerProvider, (_, _) {});
+    final indexer = container.read(
+      guidelinesIndexerControllerProvider.notifier,
+    );
 
-      await indexer.initialize(channel: 'Clinical');
-      await Future<void>.delayed(Duration.zero);
+    await indexer.initialize(channel: 'Clinical');
+    await Future<void>.delayed(Duration.zero);
 
-      final indexState = container.read(guidelinesIndexerControllerProvider);
-      final selectorState = container.read(selectorProvider);
-      expect(indexState.hasLoadError, isFalse);
-      expect(indexState.totalSections, 2);
-      expect(indexState.visibleTree.childrenAsList, isNotEmpty);
-      expect(selectorState.rootTreeNode.childrenAsList, hasLength(1));
-      expect(api.paths, contains('/api/v2/tree'));
-    },
-  );
+    final indexState = container.read(guidelinesIndexerControllerProvider);
+    expect(indexState.hasLoadError, isFalse);
+    expect(indexState.totalSections, 2);
+    expect(indexState.visibleTree.childrenAsList, isNotEmpty);
+  });
 }

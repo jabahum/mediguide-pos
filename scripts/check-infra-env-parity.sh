@@ -70,10 +70,10 @@ for environment_name in staging production; do
   fi
 done
 
-rg -o '\$\{[A-Za-z_][A-Za-z0-9_]*' \
+grep -Eho '\$\{[A-Za-z_][A-Za-z0-9_]*' \
   "${repo_root}/infra/docker-compose.yml" \
   "${repo_root}/infra/docker-compose.dev.yml" |
-  sed 's/.*${//' |
+  sed 's/^${//' |
   sort -u > "${tmp_dir}/compose.keys"
 
 if missing_keys="$(comm -23 "${tmp_dir}/compose.keys" "${tmp_dir}/development.keys")" &&

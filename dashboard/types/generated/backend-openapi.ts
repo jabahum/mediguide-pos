@@ -1968,6 +1968,16 @@ export interface ModelsGuidelineMarkdownRevision {
   version_id?: string;
 }
 
+export interface ModelsGuidelineRegenerationPendingBlock {
+  id?: string;
+  page_end?: number;
+  page_start?: number;
+  review_status?: ModelsGuidelineBlockReviewStatus;
+  section_id?: string;
+  sort_order?: number;
+  type?: ModelsGuidelineBlockType;
+}
+
 export interface ModelsGuidelineRegenerationReview {
   after_snapshot?: object;
   before_snapshot?: object;
@@ -1976,6 +1986,14 @@ export interface ModelsGuidelineRegenerationReview {
   decision_comment?: string;
   id?: string;
   job_id?: string;
+  /**
+   * ReviewProgress is computed from the current structured projection. These
+   * fields are not persisted because block review decisions can change after
+   * the regeneration review row is created.
+   */
+  outstanding_high_risk_blocks?: number;
+  pending_high_risk_blocks?: ModelsGuidelineRegenerationPendingBlock[];
+  pending_high_risk_blocks_truncated?: boolean;
   reviewed_at?: string;
   reviewed_by?: string;
   revision_id?: string;

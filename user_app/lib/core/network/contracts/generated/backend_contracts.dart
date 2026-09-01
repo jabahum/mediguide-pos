@@ -6490,6 +6490,34 @@ final class ModelsGuidelineMarkdownRevision {
   Map<String, dynamic> toJson() => Map.of(value);
 }
 
+final class ModelsGuidelineRegenerationPendingBlock {
+  ModelsGuidelineRegenerationPendingBlock(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory ModelsGuidelineRegenerationPendingBlock.fromJson(
+    Map<String, dynamic> json,
+  ) => ModelsGuidelineRegenerationPendingBlock(json);
+
+  static const schemaName = 'models.GuidelineRegenerationPendingBlock';
+  final Map<String, dynamic> value;
+
+  String? get id => value['id']?.toString();
+
+  int? get pageEnd => (value['page_end'] as num?)?.toInt();
+
+  int? get pageStart => (value['page_start'] as num?)?.toInt();
+
+  String? get reviewStatus => value['review_status']?.toString();
+
+  String? get sectionId => value['section_id']?.toString();
+
+  int? get sortOrder => (value['sort_order'] as num?)?.toInt();
+
+  String? get type => value['type']?.toString();
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
 final class ModelsGuidelineRegenerationReview {
   ModelsGuidelineRegenerationReview(Map<String, dynamic> value)
     : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
@@ -6514,6 +6542,24 @@ final class ModelsGuidelineRegenerationReview {
   String? get id => value['id']?.toString();
 
   String? get jobId => value['job_id']?.toString();
+
+  int? get outstandingHighRiskBlocks =>
+      (value['outstanding_high_risk_blocks'] as num?)?.toInt();
+
+  List<ModelsGuidelineRegenerationPendingBlock> get pendingHighRiskBlocks {
+    final raw = value['pending_high_risk_blocks'];
+    if (raw is! List) return const [];
+    return raw
+        .whereType<Map>()
+        .map(
+          (item) =>
+              ModelsGuidelineRegenerationPendingBlock.fromJson(_jsonMap(item)),
+        )
+        .toList(growable: false);
+  }
+
+  bool? get pendingHighRiskBlocksTruncated =>
+      value['pending_high_risk_blocks_truncated'] as bool?;
 
   String? get reviewedAt => value['reviewed_at']?.toString();
 

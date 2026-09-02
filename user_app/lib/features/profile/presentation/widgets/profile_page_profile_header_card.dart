@@ -87,7 +87,6 @@ class _ProfileHeaderCard extends ConsumerWidget {
                     const SizedBox(height: 7),
 
                     Row(
-                      mainAxisSize: MainAxisSize.min,
                       children: [
                         Icon(
                           LucideIcons.pencil,
@@ -97,13 +96,17 @@ class _ProfileHeaderCard extends ConsumerWidget {
 
                         const SizedBox(width: 4),
 
-                        Text(
-                          'Edit profile',
-                          style: Theme.of(context).textTheme.labelMedium
-                              ?.copyWith(
-                                color: colors.primary,
-                                fontWeight: FontWeight.w600,
-                              ),
+                        Flexible(
+                          child: Text(
+                            'Edit profile',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: Theme.of(context).textTheme.labelMedium
+                                ?.copyWith(
+                                  color: colors.primary,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                          ),
                         ),
                       ],
                     ),

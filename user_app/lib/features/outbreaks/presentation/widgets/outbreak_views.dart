@@ -40,6 +40,8 @@ class OutbreakHubPage extends ConsumerWidget {
           children: [
             Text(
               'Outbreak response hub',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
               style: Theme.of(
                 context,
               ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
@@ -413,6 +415,7 @@ class _OutbreakCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
+    final largeText = MediaQuery.textScalerOf(context).scale(1) >= 1.5;
 
     final tone = _statusTone(
       context,
@@ -438,6 +441,14 @@ class _OutbreakCard extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                if (largeText) ...[
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: _StatusChip(status: outbreak.status, color: tone),
+                  ),
+                  AppSpacing.gapSm,
+                ],
+
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -493,9 +504,10 @@ class _OutbreakCard extends StatelessWidget {
                       ),
                     ),
 
-                    AppSpacing.hGapSm,
-
-                    _StatusChip(status: outbreak.status, color: tone),
+                    if (!largeText) ...[
+                      AppSpacing.hGapSm,
+                      _StatusChip(status: outbreak.status, color: tone),
+                    ],
                   ],
                 ),
 

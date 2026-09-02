@@ -23,7 +23,7 @@ class _QuickActionGrid extends StatelessWidget {
             mainAxisSpacing: AppSpacing.sm,
             crossAxisSpacing: AppSpacing.sm,
             childAspectRatio: largeText
-                ? 0.72
+                ? 0.70
                 : columns == 4
                 ? 0.86
                 : 1.45,

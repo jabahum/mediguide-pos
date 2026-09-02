@@ -63,6 +63,8 @@ class ProfilePage extends ConsumerWidget {
           children: [
             Text(
               'Profile & Settings',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
               style: TextStyle(
                 fontSize: Responsive.fontSize(
                   context,
@@ -75,6 +77,8 @@ class ProfilePage extends ConsumerWidget {
             ),
             Text(
               'Account, preferences and support',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
               style: Theme.of(
                 context,
               ).textTheme.bodySmall?.copyWith(color: colors.onSurfaceVariant),

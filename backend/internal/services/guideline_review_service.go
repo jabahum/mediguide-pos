@@ -124,6 +124,21 @@ func (s GuidelineService) ReviewWorkspace(versionID uuid.UUID) (*GuidelineReview
 	if len(version.ExtractionWarningsJSON) > 0 {
 		_ = json.Unmarshal(version.ExtractionWarningsJSON, &warnings)
 	}
+	// Historical rows can contain the JSON literal `null`. Unmarshalling that
+	// value replaces the initialized empty slice with nil, which is serialized
+	// as null and breaks clients that consume this field as an array.
+	if warnings == nil {
+		warnings = []string{}
+	}
+	if sections == nil {
+		sections = []models.GuidelineSection{}
+	}
+	if blocks == nil {
+		blocks = []models.GuidelineContentBlock{}
+	}
+	if assets == nil {
+		assets = []models.GuidelineAsset{}
+	}
 	validation, err := s.ValidateVersionForPublication(versionID)
 	if err != nil {
 		return nil, err

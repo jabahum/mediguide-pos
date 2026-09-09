@@ -8,7 +8,7 @@ vi.mock("@/lib/backend-client", () => ({
 
 import { GuidelineDocumentsService } from "./guideline-documents.service"
 
-describe("GuidelineDocumentsService notification campaigns", () => {
+describe("GuidelineDocumentsService", () => {
   beforeEach(() => request.mockReset())
 
   it("creates a draft through the published-guideline endpoint", async () => {
@@ -33,5 +33,41 @@ describe("GuidelineDocumentsService notification campaigns", () => {
       "/api/v2/guidelines/document-1/notification-campaign",
       { method: "POST", body: JSON.stringify(payload) },
     )
+  })
+
+  it("normalizes nullable review workspace collections from historical rows", async () => {
+    request.mockResolvedValue({
+      version: { id: "version-1", version: "1" },
+      sections: null,
+      blocks: null,
+      assets: null,
+      extraction_warnings: null,
+      validation: { valid: true, errors: null, warnings: null },
+      block_review_policy: {
+        high_risk_types: null,
+        bulk_review_eligible_types: null,
+        conditional_risk_types: null,
+        ineligible_bulk_types: null,
+      },
+    })
+
+    const workspace =
+      await GuidelineDocumentsService.getReviewWorkspace("version-1")
+
+    expect(workspace.sections).toEqual([])
+    expect(workspace.blocks).toEqual([])
+    expect(workspace.assets).toEqual([])
+    expect(workspace.extraction_warnings).toEqual([])
+    expect(workspace.validation).toEqual({
+      valid: true,
+      errors: [],
+      warnings: [],
+    })
+    expect(workspace.block_review_policy).toEqual({
+      high_risk_types: [],
+      bulk_review_eligible_types: [],
+      conditional_risk_types: [],
+      ineligible_bulk_types: [],
+    })
   })
 })

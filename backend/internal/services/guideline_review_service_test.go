@@ -395,6 +395,34 @@ func TestReviewWorkspaceExposesAuthoritativeBlockReviewPolicy(t *testing.T) {
 	}
 }
 
+func TestReviewWorkspaceNormalizesNullExtractionWarnings(t *testing.T) {
+	db := guidelineReviewTestDB(t)
+	document := models.GuidelineDocument{Title: "Historical clinical guidance"}
+	if err := db.Create(&document).Error; err != nil {
+		t.Fatal(err)
+	}
+	version := models.GuidelineVersion{
+		DocumentID:             document.ID,
+		Version:                "1",
+		Status:                 "draft",
+		ExtractionWarningsJSON: []byte(`null`),
+	}
+	if err := db.Create(&version).Error; err != nil {
+		t.Fatal(err)
+	}
+
+	workspace, err := (GuidelineService{DB: db}).ReviewWorkspace(version.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if workspace.ExtractionWarnings == nil {
+		t.Fatal("historical null extraction warnings must be returned as an empty array")
+	}
+	if workspace.Sections == nil || workspace.Blocks == nil || workspace.Assets == nil {
+		t.Fatal("review workspace collections must never be returned as null")
+	}
+}
+
 func containsGuidelineBlockType(values []models.GuidelineBlockType, expected models.GuidelineBlockType) bool {
 	for _, value := range values {
 		if value == expected {

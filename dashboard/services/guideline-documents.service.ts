@@ -570,7 +570,7 @@ export class GuidelineDocumentsService {
     versionId: string,
     filters: GuidelineReviewBlocksFilter,
   ): Promise<GuidelineReviewBlocksPage> {
-    return getBackendClient().request<GuidelineReviewBlocksPage>(
+    const page = await getBackendClient().request<GuidelineReviewBlocksPage>(
       `/api/v2/guideline-versions/${versionId}/review-blocks`,
       {
         method: "GET",
@@ -584,6 +584,7 @@ export class GuidelineDocumentsService {
         },
       },
     );
+    return { ...page, items: Array.isArray(page.items) ? page.items : [] };
   }
 
   static async bulkReviewBlocks(
@@ -614,10 +615,36 @@ export class GuidelineDocumentsService {
   static async getCompletenessReport(
     versionId: string,
   ): Promise<GuidelineCompletenessReport> {
-    return getBackendClient().request<GuidelineCompletenessReport>(
+    const report = await getBackendClient().request<GuidelineCompletenessReport>(
       `/api/v2/guideline-versions/${versionId}/completeness-report`,
       { method: "GET" },
     );
+    return {
+      ...report,
+      block_counts: Array.isArray(report.block_counts)
+        ? report.block_counts
+        : [],
+      empty_leaf_sections: Array.isArray(report.empty_leaf_sections)
+        ? report.empty_leaf_sections
+        : [],
+      validation: {
+        valid: Boolean(report.validation?.valid),
+        errors: Array.isArray(report.validation?.errors)
+          ? report.validation.errors
+          : [],
+        warnings: Array.isArray(report.validation?.warnings)
+          ? report.validation.warnings
+          : [],
+      },
+      current_comparison: report.current_comparison
+        ? {
+            ...report.current_comparison,
+            metrics: Array.isArray(report.current_comparison.metrics)
+              ? report.current_comparison.metrics
+              : [],
+          }
+        : undefined,
+    };
   }
 
   static async downloadCompletenessReport(

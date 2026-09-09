@@ -149,6 +149,8 @@ func (s GuidelineService) GuidelineCompletenessReport(versionID uuid.UUID) (*Gui
 		GeneratedAt: time.Now().UTC(), ReadOnly: true,
 		GuidelineID: document.ID, GuidelineTitle: document.Title,
 		VersionID: version.ID, Version: version.Version, VersionStatus: version.Status,
+		BlockCounts:       []GuidelineCompletenessBlockCount{},
+		EmptyLeafSections: []GuidelineCompletenessEmptySection{},
 		Regeneration: GuidelineCompletenessRegeneration{
 			CurrentMarkdownRevisionID:    version.CurrentMarkdownRevisionID,
 			StructuredMarkdownRevisionID: version.StructuredMarkdownRevisionID,

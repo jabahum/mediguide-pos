@@ -70,4 +70,28 @@ describe("GuidelineDocumentsService", () => {
       ineligible_bulk_types: [],
     })
   })
+
+  it("normalizes nullable collections in review queues and completeness reports", async () => {
+    request
+      .mockResolvedValueOnce({ items: null, page: 1, total_pages: 0 })
+      .mockResolvedValueOnce({
+        block_counts: null,
+        empty_leaf_sections: null,
+        validation: { valid: true, errors: null, warnings: null },
+        current_comparison: { same_version: false, metrics: null },
+      })
+
+    const page = await GuidelineDocumentsService.getReviewBlocks("version-1", {
+      risk: "pending-high-risk",
+    })
+    const report =
+      await GuidelineDocumentsService.getCompletenessReport("version-1")
+
+    expect(page.items).toEqual([])
+    expect(report.block_counts).toEqual([])
+    expect(report.empty_leaf_sections).toEqual([])
+    expect(report.validation.errors).toEqual([])
+    expect(report.validation.warnings).toEqual([])
+    expect(report.current_comparison?.metrics).toEqual([])
+  })
 })

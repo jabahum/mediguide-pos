@@ -195,4 +195,40 @@ verify_public_route "Guidelines" "${public_site_url%/}/healthz"
 verify_public_route "Dashboard" "${dashboard_public_url%/}"
 verify_public_route "API" "${public_api_base_url%/}/api/readyz"
 
+asset_import_enabled="$(read_env_value GUIDELINE_ASSET_IMPORT_ENABLED)"
+if [[ "${asset_import_enabled:-0}" == '1' ]]; then
+  repository_dir="$(cd "${infra_dir}/.." && pwd)"
+  asset_import_version_id="$(read_env_value GUIDELINE_ASSET_IMPORT_VERSION_ID)"
+  asset_import_script="$(read_env_value GUIDELINE_ASSET_IMPORT_SCRIPT)"
+  asset_import_manifest="$(read_env_value GUIDELINE_ASSET_IMPORT_MANIFEST)"
+  asset_import_token_file="$(read_env_value GUIDELINE_ASSET_IMPORT_TOKEN_FILE)"
+  asset_import_regenerate="$(read_env_value GUIDELINE_ASSET_IMPORT_REGENERATE)"
+  asset_import_timeout="$(read_env_value GUIDELINE_ASSET_IMPORT_TIMEOUT_SECONDS)"
+
+  if [[ "${asset_import_script}" != /* ]]; then
+    asset_import_script="${repository_dir}/${asset_import_script}"
+  fi
+  if [[ "${asset_import_manifest}" != /* ]]; then
+    asset_import_manifest="${repository_dir}/${asset_import_manifest}"
+  fi
+  if [[ -z "${asset_import_version_id}" || ! -x "${asset_import_script}" || ! -s "${asset_import_manifest}" || ! -s "${asset_import_token_file}" ]]; then
+    echo "Guideline asset import is enabled but its script, draft version, manifest, or token file is unavailable." >&2
+    exit 1
+  fi
+
+  asset_import_args=(
+    --version-id "${asset_import_version_id}"
+    --manifest "${asset_import_manifest}"
+    --execute
+  )
+  if [[ "${asset_import_regenerate:-1}" == '1' ]]; then
+    asset_import_args+=(--regenerate)
+  fi
+  echo "Running the opt-in governed guideline asset import."
+  MEDIGUIDE_API_URL="${public_api_base_url}" \
+  MEDIGUIDE_ASSET_IMPORT_TOKEN_FILE="${asset_import_token_file}" \
+  MEDIGUIDE_ASSET_IMPORT_TIMEOUT_SECONDS="${asset_import_timeout:-1800}" \
+    "${asset_import_script}" "${asset_import_args[@]}"
+fi
+
 echo "MediGuide ${release_version} (${release_revision}) deployed successfully."

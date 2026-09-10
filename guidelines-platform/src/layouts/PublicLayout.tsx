@@ -17,8 +17,11 @@ export function PublicLayout() {
             <a href="#guidelines">Guidelines</a>
             <a href="#about">About</a>
             <ThemeToggle />
-            <a className="button button-small button-outline" href={dashboardLoginUrl}>
-              Staff login
+            <a
+              className="button button-small button-outline"
+              href={dashboardLoginUrl}
+            >
+              Login
             </a>
           </nav>
         </div>

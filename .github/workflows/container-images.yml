@@ -106,6 +106,14 @@ jobs:
       - name: Validate production Compose
         run: |
           bash -n infra/deploy-production.sh
+          bash -n scripts/import-guideline-assets.sh
+          jq -e '.schema_version == 1 and (.assets | type == "array") and (.assets | length > 0)' \
+            scripts/manifests/ucg-2023-assets.json >/dev/null
+          duplicate_paths="$(jq -r '.assets[].markdown_path' scripts/manifests/ucg-2023-assets.json | sort | uniq -d)"
+          test -z "${duplicate_paths}" || { echo "Duplicate guideline asset Markdown paths: ${duplicate_paths}" >&2; exit 1; }
+          while IFS= read -r asset_file; do
+            test -s "scripts/manifests/${asset_file}" || { echo "Missing guideline asset source: ${asset_file}" >&2; exit 1; }
+          done < <(jq -r '.assets[].file' scripts/manifests/ucg-2023-assets.json)
           docker compose --env-file infra/production.env.example -f infra/docker-compose.yml config --quiet
           python3 infra/check-production-ports.py \
             --env-file infra/production.env.example \

@@ -1,6 +1,7 @@
 import json
 import hashlib
 import uuid
+from collections import defaultdict, deque
 from datetime import datetime, timezone
 from typing import Any
 from app.core.db import db_conn
@@ -262,6 +263,27 @@ class GuidelineRepository:
             before_snapshot = self._projection_snapshot(cur, version_id)
             cur.execute(
                 """
+                SELECT type, content_json, review_status, reviewed_by, reviewed_at
+                FROM guideline_content_blocks
+                WHERE version_id=%s AND deleted_at IS NULL
+                ORDER BY sort_order, id
+                """,
+                (version_id,),
+            )
+            previous_block_reviews: dict[
+                str, deque[tuple[str, Any, Any]]
+            ] = defaultdict(deque)
+            for row in cur.fetchall():
+                identity = self._stable_block_identity(row["type"], row["content_json"])
+                previous_block_reviews[identity].append(
+                    (
+                        str(row["review_status"] or "draft"),
+                        row.get("reviewed_by"),
+                        row.get("reviewed_at"),
+                    )
+                )
+            cur.execute(
+                """
                 SELECT source_fingerprint, provenance_json, page_start, page_end
                 FROM guideline_content_blocks
                 WHERE version_id=%s AND deleted_at IS NULL
@@ -348,8 +370,10 @@ class GuidelineRepository:
                 )
 
             block_id_by_order: dict[int, str] = {}
+            block_review_status_by_order: dict[int, str] = {}
             block_rows: list[tuple[Any, ...]] = []
             preserved_page_citations = 0
+            preserved_block_reviews = 0
             for block in blocks:
                 block_id = str(uuid.uuid4())
                 block_id_by_order[block.sort_order] = block_id
@@ -387,6 +411,14 @@ class GuidelineRepository:
                         }
                     )
                     preserved_page_citations += 1
+                review_status, reviewed_by, reviewed_at = self._regenerated_block_review(
+                    block_type=block.type,
+                    content=block.content,
+                    previous_reviews=previous_block_reviews,
+                )
+                if review_status == "reviewed":
+                    preserved_block_reviews += 1
+                block_review_status_by_order[block.sort_order] = review_status
                 block_rows.append(
                     (
                         block_id,
@@ -400,7 +432,9 @@ class GuidelineRepository:
                         page_start,
                         page_end,
                         block.extraction_confidence,
-                        "draft",
+                        review_status,
+                        reviewed_by,
+                        reviewed_at,
                     )
                 )
             if block_rows:
@@ -409,14 +443,15 @@ class GuidelineRepository:
                     INSERT INTO guideline_content_blocks(
                       id, version_id, section_id, type, sort_order, content_json,
                       source_fingerprint, provenance_json, page_start, page_end,
-                      extraction_confidence, review_status
+                      extraction_confidence, review_status, reviewed_by, reviewed_at
                     )
-                    VALUES (%s,%s,%s,%s,%s,%s::jsonb,%s,%s::jsonb,%s,%s,%s,%s)
+                    VALUES (%s,%s,%s,%s,%s,%s::jsonb,%s,%s::jsonb,%s,%s,%s,%s,%s,%s)
                     """,
                     block_rows,
                 )
 
             if str(metadata.get("source_format") or "") == "markdown":
+                metadata["preserved_block_review_count"] = preserved_block_reviews
                 metadata["page_citations_available"] = preserved_page_citations > 0
                 metadata["preserved_pdf_page_citation_count"] = preserved_page_citations
                 warnings[:] = [
@@ -462,6 +497,10 @@ class GuidelineRepository:
                     if chunk.block_order is not None
                     else None
                 )
+                chunk_review_status = self._regenerated_chunk_review_status(
+                    block_order=chunk.block_order,
+                    block_review_status_by_order=block_review_status_by_order,
+                )
                 chunk_rows.append(
                     (
                         str(uuid.uuid4()),
@@ -478,7 +517,7 @@ class GuidelineRepository:
                         version.get("program_area"),
                         version.get("source_org") or version.get("document_title"),
                         version.get("version"),
-                        "draft",
+                        chunk_review_status,
                         chunk.content,
                         to_pgvector(embedding),
                     )
@@ -608,6 +647,46 @@ class GuidelineRepository:
                     ),
                 )
             conn.commit()
+
+    @staticmethod
+    def _regenerated_block_review(
+        *,
+        block_type: Any,
+        content: Any,
+        previous_reviews: dict[str, deque[tuple[str, Any, Any]]],
+    ) -> tuple[str, Any | None, Any | None]:
+        """Carry approval for the same occurrence of unchanged block content."""
+        identity = GuidelineRepository._stable_block_identity(block_type, content)
+        occurrences = previous_reviews.get(identity)
+        if not occurrences:
+            return "draft", None, None
+        review_status, reviewed_by, reviewed_at = occurrences.popleft()
+        if review_status != "reviewed" or reviewed_by is None or reviewed_at is None:
+            return "draft", None, None
+        return "reviewed", reviewed_by, reviewed_at
+
+    @staticmethod
+    def _stable_block_identity(block_type: Any, content: Any) -> str:
+        payload = {
+            "type": str(block_type or ""),
+            "content": content or {},
+        }
+        return json.dumps(
+            payload,
+            sort_keys=True,
+            ensure_ascii=False,
+            separators=(",", ":"),
+        )
+
+    @staticmethod
+    def _regenerated_chunk_review_status(
+        *,
+        block_order: Any,
+        block_review_status_by_order: dict[int, str],
+    ) -> str:
+        if block_order is None:
+            return "draft"
+        return block_review_status_by_order.get(block_order, "draft")
 
     @staticmethod
     def _projection_snapshot(cur, version_id: str) -> dict[str, Any]:

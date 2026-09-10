@@ -161,7 +161,22 @@ jobs:
             fi
             rm -f "${firebase_json}"
           fi
-          tar -czf "${RUNNER_TEMP}/mediguide-infra.tar.gz" infra
+          asset_import_enabled="$(sed -n 's/^GUIDELINE_ASSET_IMPORT_ENABLED=//p' infra/production.env | tail -n 1 | tr -d '\r')"
+          if [ "${asset_import_enabled:-0}" = '1' ]; then
+            asset_file_list="${RUNNER_TEMP}/guideline-asset-files.txt"
+            jq -r '.assets[].file | sub("^../../"; "")' \
+              scripts/manifests/ucg-2023-assets.json > "${asset_file_list}"
+            while IFS= read -r asset_file; do
+              test -s "${asset_file}" || { echo "Missing guideline asset source: ${asset_file}" >&2; exit 1; }
+            done < "${asset_file_list}"
+            tar -czf "${RUNNER_TEMP}/mediguide-infra.tar.gz" \
+              -T "${asset_file_list}" \
+              infra \
+              scripts/import-guideline-assets.sh \
+              scripts/manifests/ucg-2023-assets.json
+          else
+            tar -czf "${RUNNER_TEMP}/mediguide-infra.tar.gz" infra
+          fi
 
       - name: Configure verified SSH access
         env:
@@ -310,6 +325,19 @@ jobs:
           test -f "${extracted}/infra/docker-compose.yml"
           test -f "${extracted}/infra/deploy-production.sh"
           test -s "${extracted}/infra/production.env"
+
+          if [ -d "${extracted}/scripts" ]; then
+            asset_import_bundle="${deploy_path}/asset-import"
+            asset_import_previous="${deploy_path}/asset-import.previous"
+            rm -rf -- "${asset_import_previous}"
+            if [ -d "${asset_import_bundle}" ]; then
+              mv "${asset_import_bundle}" "${asset_import_previous}"
+            fi
+            mkdir -p "${extracted}/asset-import"
+            mv "${extracted}/scripts" "${extracted}/asset-import/scripts"
+            mv "${extracted}/guidelines-platform" "${extracted}/asset-import/guidelines-platform"
+            mv "${extracted}/asset-import" "${asset_import_bundle}"
+          fi
 
           # Fetch and verify every immutable first-party image before replacing
           # the current configuration or stopping any healthy containers.

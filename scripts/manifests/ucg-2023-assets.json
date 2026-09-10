@@ -1,0 +1,523 @@
+{
+  "schema_version": 1,
+  "name": "Uganda Clinical Guidelines 2023 managed images",
+  "assets": [
+    {
+      "file": "../../guidelines-platform/src/content/chapters_split/00/images/0.1-Communication-skills-in-the-consultation-room.jpg",
+      "markdown_path": "images/chapter-00-communication-skills-in-the-consultation-room.jpg",
+      "alternative_text": "Communication skills in the consultation room",
+      "caption": "Communication skills in the consultation room",
+      "source": "Uganda Clinical Guidelines 2023",
+      "attribution": "Ministry of Health Uganda",
+      "license": "",
+      "clinically_sensitive": true
+    },
+    {
+      "file": "../../guidelines-platform/src/content/chapters_split/00/images/0.1-What-is-the-difference-between-the-UCG-and-a-textbook.jpg",
+      "markdown_path": "images/chapter-00-difference-between-ucg-and-a-textbook.jpg",
+      "alternative_text": "Difference between UCG and a textbook",
+      "caption": "Difference between UCG and a textbook",
+      "source": "Uganda Clinical Guidelines 2023",
+      "attribution": "Ministry of Health Uganda",
+      "license": "",
+      "clinically_sensitive": true
+    },
+    {
+      "file": "../../guidelines-platform/src/content/chapters_split/00/images/0.1-What-about-the-Essential-Medicines-and-Health-Supply-List.jpg",
+      "markdown_path": "images/chapter-00-essential-medicines-and-health-supply-list.jpg",
+      "alternative_text": "Essential Medicines and Health Supply List",
+      "caption": "Essential Medicines and Health Supply List",
+      "source": "Uganda Clinical Guidelines 2023",
+      "attribution": "Ministry of Health Uganda",
+      "license": "",
+      "clinically_sensitive": true
+    },
+    {
+      "file": "../../guidelines-platform/src/content/chapters_split/00/images/0.1-Medicine-interactions.jpg",
+      "markdown_path": "images/chapter-00-medicine-interactions.jpg",
+      "alternative_text": "Medicine interactions",
+      "caption": "Medicine interactions",
+      "source": "Uganda Clinical Guidelines 2023",
+      "attribution": "Ministry of Health Uganda",
+      "license": "",
+      "clinically_sensitive": true
+    },
+    {
+      "file": "../../guidelines-platform/src/content/chapters_split/00/images/0.1-Primary-Health-Care.jpg",
+      "markdown_path": "images/chapter-00-primary-health-care.jpg",
+      "alternative_text": "Primary Health Care",
+      "caption": "Primary Health Care",
+      "source": "Uganda Clinical Guidelines 2023",
+      "attribution": "Ministry of Health Uganda",
+      "license": "",
+      "clinically_sensitive": true
+    },
+    {
+      "file": "../../guidelines-platform/src/content/chapters_split/00/images/0.1-Why-is-the-UCG-necessary.jpg",
+      "markdown_path": "images/chapter-00-why-the-ucg-is-necessary.jpg",
+      "alternative_text": "Why the UCG is necessary",
+      "caption": "Why the UCG is necessary",
+      "source": "Uganda Clinical Guidelines 2023",
+      "attribution": "Ministry of Health Uganda",
+      "license": "",
+      "clinically_sensitive": true
+    },
+    {
+      "file": "../../guidelines-platform/src/content/chapters_split/01/images/1.2.1.1-Snakebites13.jpg",
+      "markdown_path": "images/chapter-01-battersbys-green-snake.jpg",
+      "alternative_text": "Battersby’s green snake",
+      "caption": "Battersby’s green snake",
+      "source": "Uganda Clinical Guidelines 2023",
+      "attribution": "Ministry of Health Uganda",
+      "license": "",
+      "clinically_sensitive": true
+    },
+    {
+      "file": "../../guidelines-platform/src/content/chapters_split/01/images/1.2.1.1-Snakebites2.jpg",
+      "markdown_path": "images/chapter-01-black-mamba.jpg",
+      "alternative_text": "Black mamba",
+      "caption": "Black mamba",
+      "source": "Uganda Clinical Guidelines 2023",
+      "attribution": "Ministry of Health Uganda",
+      "license": "",
+      "clinically_sensitive": true
+    },
+    {
+      "file": "../../guidelines-platform/src/content/chapters_split/01/images/1.2.1.1-Snakebites4.jpg",
+      "markdown_path": "images/chapter-01-black-necked-spitting-cobra.jpg",
+      "alternative_text": "Black-necked spitting cobra",
+      "caption": "Black-necked spitting cobra",
+      "source": "Uganda Clinical Guidelines 2023",
+      "attribution": "Ministry of Health Uganda",
+      "license": "",
+      "clinically_sensitive": true
+    },
+    {
+      "file": "../../guidelines-platform/src/content/chapters_split/01/images/1.2.1.1-Snakebites6.jpg",
+      "markdown_path": "images/chapter-01-boomslang.jpg",
+      "alternative_text": "Boomslang",
+      "caption": "Boomslang",
+      "source": "Uganda Clinical Guidelines 2023",
+      "attribution": "Ministry of Health Uganda",
+      "license": "",
+      "clinically_sensitive": true
+    },
+    {
+      "file": "../../guidelines-platform/src/content/chapters_split/01/images/1.2.1.1-Snakebites10.jpg",
+      "markdown_path": "images/chapter-01-eastern-forest-cobra.jpg",
+      "alternative_text": "Eastern forest cobra",
+      "caption": "Eastern forest cobra",
+      "source": "Uganda Clinical Guidelines 2023",
+      "attribution": "Ministry of Health Uganda",
+      "license": "",
+      "clinically_sensitive": true
+    },
+    {
+      "file": "../../guidelines-platform/src/content/chapters_split/01/images/1.2.1.1-Snakebites9.jpg",
+      "markdown_path": "images/chapter-01-egyptian-cobra-2.jpg",
+      "alternative_text": "Egyptian cobra",
+      "caption": "Egyptian cobra",
+      "source": "Uganda Clinical Guidelines 2023",
+      "attribution": "Ministry of Health Uganda",
+      "license": "",
+      "clinically_sensitive": true
+    },
+    {
+      "file": "../../guidelines-platform/src/content/chapters_split/01/images/1.2.1.1-Snakebites3.jpg",
+      "markdown_path": "images/chapter-01-egyptian-cobra.jpg",
+      "alternative_text": "Egyptian cobra",
+      "caption": "Egyptian cobra",
+      "source": "Uganda Clinical Guidelines 2023",
+      "attribution": "Ministry of Health Uganda",
+      "license": "",
+      "clinically_sensitive": true
+    },
+    {
+      "file": "../../guidelines-platform/src/content/chapters_split/01/images/1.2.1.1-Snakebites12.jpg",
+      "markdown_path": "images/chapter-01-gaboon-adder.jpg",
+      "alternative_text": "Gaboon adder",
+      "caption": "Gaboon adder",
+      "source": "Uganda Clinical Guidelines 2023",
+      "attribution": "Ministry of Health Uganda",
+      "license": "",
+      "clinically_sensitive": true
+    },
+    {
+      "file": "../../guidelines-platform/src/content/chapters_split/01/images/1.4-HYPOXEAMIA-MANAGEMENT-AND-OXYGEN-THERAPY-GUIDELINES1.png",
+      "markdown_path": "images/chapter-01-image-25.png",
+      "alternative_text": "image 25",
+      "caption": "image 25",
+      "source": "Uganda Clinical Guidelines 2023",
+      "attribution": "Ministry of Health Uganda",
+      "license": "",
+      "clinically_sensitive": true
+    },
+    {
+      "file": "../../guidelines-platform/src/content/chapters_split/01/images/1.4-HYPOXEAMIA-MANAGEMENT-AND-OXYGEN-THERAPY-GUIDELINES2.png",
+      "markdown_path": "images/chapter-01-image-26.png",
+      "alternative_text": "image 26",
+      "caption": "image 26",
+      "source": "Uganda Clinical Guidelines 2023",
+      "attribution": "Ministry of Health Uganda",
+      "license": "",
+      "clinically_sensitive": true
+    },
+    {
+      "file": "../../guidelines-platform/src/content/chapters_split/01/images/1.2.1.1-Snakebites5.jpg",
+      "markdown_path": "images/chapter-01-jamesons-mamba.jpg",
+      "alternative_text": "Jameson’s mamba",
+      "caption": "Jameson’s mamba",
+      "source": "Uganda Clinical Guidelines 2023",
+      "attribution": "Ministry of Health Uganda",
+      "license": "",
+      "clinically_sensitive": true
+    },
+    {
+      "file": "../../guidelines-platform/src/content/chapters_split/01/images/1.2.1.1-Snakebites14.jpg",
+      "markdown_path": "images/chapter-01-olive-house-snake.jpg",
+      "alternative_text": "Olive house snake",
+      "caption": "Olive house snake",
+      "source": "Uganda Clinical Guidelines 2023",
+      "attribution": "Ministry of Health Uganda",
+      "license": "",
+      "clinically_sensitive": true
+    },
+    {
+      "file": "../../guidelines-platform/src/content/chapters_split/01/images/1.2.1.1-Snakebites1.jpg",
+      "markdown_path": "images/chapter-01-puff-adder.jpg",
+      "alternative_text": "Puff adder",
+      "caption": "Puff adder",
+      "source": "Uganda Clinical Guidelines 2023",
+      "attribution": "Ministry of Health Uganda",
+      "license": "",
+      "clinically_sensitive": true
+    },
+    {
+      "file": "../../guidelines-platform/src/content/chapters_split/01/images/1.2.1.1-Snakebites8.jpg",
+      "markdown_path": "images/chapter-01-rhino-horned-viper.jpg",
+      "alternative_text": "Rhino-horned viper",
+      "caption": "Rhino-horned viper",
+      "source": "Uganda Clinical Guidelines 2023",
+      "attribution": "Ministry of Health Uganda",
+      "license": "",
+      "clinically_sensitive": true
+    },
+    {
+      "file": "../../guidelines-platform/src/content/chapters_split/01/images/1.2.1.1-Snakebites11.jpg",
+      "markdown_path": "images/chapter-01-rock-python.jpg",
+      "alternative_text": "Rock python",
+      "caption": "Rock python",
+      "source": "Uganda Clinical Guidelines 2023",
+      "attribution": "Ministry of Health Uganda",
+      "license": "",
+      "clinically_sensitive": true
+    },
+    {
+      "file": "../../guidelines-platform/src/content/chapters_split/01/images/1.2.1.1-Snakebites7.jpg",
+      "markdown_path": "images/chapter-01-vine-bird-twig-or-tree-snake.jpg",
+      "alternative_text": "Vine, bird, twig or tree snake",
+      "caption": "Vine, bird, twig or tree snake",
+      "source": "Uganda Clinical Guidelines 2023",
+      "attribution": "Ministry of Health Uganda",
+      "license": "",
+      "clinically_sensitive": true
+    },
+    {
+      "file": "../../guidelines-platform/src/content/chapters_split/02/images/2.3.7-COVID-19-screening-triage-flowchart.png",
+      "markdown_path": "images/chapter-02-covid-19-screening-and-triage-process-at-health-facilities.png",
+      "alternative_text": "COVID-19 screening and triage process at health facilities",
+      "caption": "COVID-19 screening and triage process at health facilities",
+      "source": "Uganda Clinical Guidelines 2023",
+      "attribution": "Ministry of Health Uganda",
+      "license": "",
+      "clinically_sensitive": true
+    },
+    {
+      "file": "../../guidelines-platform/src/content/chapters_split/02/images/2.3.7-COVID-19-Disease.png",
+      "markdown_path": "images/chapter-02-covid-19-screening-and-triage-process.png",
+      "alternative_text": "COVID-19 screening and triage process",
+      "caption": "COVID-19 screening and triage process",
+      "source": "Uganda Clinical Guidelines 2023",
+      "attribution": "Ministry of Health Uganda",
+      "license": "",
+      "clinically_sensitive": true
+    },
+    {
+      "file": "../../guidelines-platform/src/content/chapters_split/03/images/3.2.2-abnormal-vaginal-discharge-syndrome-algorithm.png",
+      "markdown_path": "images/chapter-03-abnormal-vaginal-discharge-syndrome-management-algorithm.png",
+      "alternative_text": "Abnormal vaginal discharge syndrome management algorithm",
+      "caption": "Abnormal vaginal discharge syndrome management algorithm",
+      "source": "Uganda Clinical Guidelines 2023",
+      "attribution": "Ministry of Health Uganda",
+      "license": "",
+      "clinically_sensitive": true
+    },
+    {
+      "file": "../../guidelines-platform/src/content/chapters_split/03/images/3.1.6-art-clinical-and-laboratory-monitoring-schedule.png",
+      "markdown_path": "images/chapter-03-art-clinical-assessment-and-laboratory-monitoring-schedule.png",
+      "alternative_text": "ART clinical assessment and laboratory monitoring schedule",
+      "caption": "ART clinical assessment and laboratory monitoring schedule",
+      "source": "Uganda Clinical Guidelines 2023",
+      "attribution": "Ministry of Health Uganda",
+      "license": "",
+      "clinically_sensitive": true
+    },
+    {
+      "file": "../../guidelines-platform/src/content/chapters_split/03/images/3.1.10.2-art-timing-with-cryptococcal-meningitis.png",
+      "markdown_path": "images/chapter-03-art-timing-with-cryptococcal-meningitis.png",
+      "alternative_text": "ART timing with cryptococcal meningitis",
+      "caption": "ART timing with cryptococcal meningitis",
+      "source": "Uganda Clinical Guidelines 2023",
+      "attribution": "Ministry of Health Uganda",
+      "license": "",
+      "clinically_sensitive": true
+    },
+    {
+      "file": "../../guidelines-platform/src/content/chapters_split/03/images/3.1.8-arv-dosing-table-fixed-dose-combinations1.png",
+      "markdown_path": "images/chapter-03-arv-dosing-table-for-abc-3tc-azt-3tc-tdf-3tc-and-tdf-3tc-efv.png",
+      "alternative_text": "ARV dosing table for ABC/3TC, AZT/3TC, TDF/3TC and TDF/3TC/EFV",
+      "caption": "ARV dosing table for ABC/3TC, AZT/3TC, TDF/3TC and TDF/3TC/EFV",
+      "source": "Uganda Clinical Guidelines 2023",
+      "attribution": "Ministry of Health Uganda",
+      "license": "",
+      "clinically_sensitive": true
+    },
+    {
+      "file": "../../guidelines-platform/src/content/chapters_split/03/images/3.1.8-arv-dosing-table-fixed-dose-combinations2.png",
+      "markdown_path": "images/chapter-03-arv-dosing-table-for-dtg-based-and-lpv-r-based-fixed-dose-combinations.png",
+      "alternative_text": "ARV dosing table for DTG-based and LPV/r-based fixed-dose combinations",
+      "caption": "ARV dosing table for DTG-based and LPV/r-based fixed-dose combinations",
+      "source": "Uganda Clinical Guidelines 2023",
+      "attribution": "Ministry of Health Uganda",
+      "license": "",
+      "clinically_sensitive": true
+    },
+    {
+      "file": "../../guidelines-platform/src/content/chapters_split/03/images/3.1.8-arv-dosing-table-fixed-dose-combinations3.png",
+      "markdown_path": "images/chapter-03-arv-dosing-table-for-dtg-efv-lpv-r-drv-r-atv-r-and-raltegravir.png",
+      "alternative_text": "ARV dosing table for DTG, EFV, LPV/r, DRV/r, ATV/r and raltegravir",
+      "caption": "ARV dosing table for DTG, EFV, LPV/r, DRV/r, ATV/r and raltegravir",
+      "source": "Uganda Clinical Guidelines 2023",
+      "attribution": "Ministry of Health Uganda",
+      "license": "",
+      "clinically_sensitive": true
+    },
+    {
+      "file": "../../guidelines-platform/src/content/chapters_split/03/images/3.1.8-arv-dosing-table-fixed-dose-combinations4.png",
+      "markdown_path": "images/chapter-03-arv-dosing-table-for-raltegravir-drv-rtv-and-etv.png",
+      "alternative_text": "ARV dosing table for raltegravir, DRV, RTV and ETV",
+      "caption": "ARV dosing table for raltegravir, DRV, RTV and ETV",
+      "source": "Uganda Clinical Guidelines 2023",
+      "attribution": "Ministry of Health Uganda",
+      "license": "",
+      "clinically_sensitive": true
+    },
+    {
+      "file": "../../guidelines-platform/src/content/chapters_split/03/images/3.1.10.2-cryptococcal-screening-management-algorithm.png",
+      "markdown_path": "images/chapter-03-cryptococcal-screening-and-management-algorithm.png",
+      "alternative_text": "Cryptococcal screening and management algorithm",
+      "caption": "Cryptococcal screening and management algorithm",
+      "source": "Uganda Clinical Guidelines 2023",
+      "attribution": "Ministry of Health Uganda",
+      "license": "",
+      "clinically_sensitive": true
+    },
+    {
+      "file": "../../guidelines-platform/src/content/chapters_split/03/images/3.2.4-genital-ulcer-disease-algorithm.png",
+      "markdown_path": "images/chapter-03-genital-ulcer-disease-management-algorithm.png",
+      "alternative_text": "Genital ulcer disease management algorithm",
+      "caption": "Genital ulcer disease management algorithm",
+      "source": "Uganda Clinical Guidelines 2023",
+      "attribution": "Ministry of Health Uganda",
+      "license": "",
+      "clinically_sensitive": true
+    },
+    {
+      "file": "../../guidelines-platform/src/content/chapters_split/03/images/3.1.2-hiv-exposed-infant-testing-algorithm.png",
+      "markdown_path": "images/chapter-03-hiv-exposed-infant-testing-algorithm.png",
+      "alternative_text": "HIV-exposed infant testing algorithm",
+      "caption": "HIV-exposed infant testing algorithm",
+      "source": "Uganda Clinical Guidelines 2023",
+      "attribution": "Ministry of Health Uganda",
+      "license": "",
+      "clinically_sensitive": true
+    },
+    {
+      "file": "../../guidelines-platform/src/content/chapters_split/03/images/3.1.2-hiv-syphilis-duo-kit-mch-testing-algorithm.png",
+      "markdown_path": "images/chapter-03-hiv-syphilis-duo-kit-testing-algorithm-in-mch-settings.png",
+      "alternative_text": "HIV-Syphilis Duo Kit testing algorithm in MCH settings",
+      "caption": "HIV-Syphilis Duo Kit testing algorithm in MCH settings",
+      "source": "Uganda Clinical Guidelines 2023",
+      "attribution": "Ministry of Health Uganda",
+      "license": "",
+      "clinically_sensitive": true
+    },
+    {
+      "file": "../../guidelines-platform/src/content/chapters_split/03/images/3.2.5-inguinal-swelling-bubo-algorithm.png",
+      "markdown_path": "images/chapter-03-inguinal-swelling-management-algorithm.png",
+      "alternative_text": "Inguinal swelling management algorithm",
+      "caption": "Inguinal swelling management algorithm",
+      "source": "Uganda Clinical Guidelines 2023",
+      "attribution": "Ministry of Health Uganda",
+      "license": "",
+      "clinically_sensitive": true
+    },
+    {
+      "file": "../../guidelines-platform/src/content/chapters_split/03/images/3.1.2-serial-hiv-testing-algorithm-above-18-months.png",
+      "markdown_path": "images/chapter-03-serial-hiv-testing-algorithm-for-persons-above-18-months.png",
+      "alternative_text": "Serial HIV testing algorithm for persons above 18 months",
+      "caption": "Serial HIV testing algorithm for persons above 18 months",
+      "source": "Uganda Clinical Guidelines 2023",
+      "attribution": "Ministry of Health Uganda",
+      "license": "",
+      "clinically_sensitive": true
+    },
+    {
+      "file": "../../guidelines-platform/src/content/chapters_split/03/images/3.2.1-urethral-discharge-syndrome-algorithm.png",
+      "markdown_path": "images/chapter-03-urethral-discharge-syndrome-management-algorithm.png",
+      "alternative_text": "Urethral discharge syndrome management algorithm",
+      "caption": "Urethral discharge syndrome management algorithm",
+      "source": "Uganda Clinical Guidelines 2023",
+      "attribution": "Ministry of Health Uganda",
+      "license": "",
+      "clinically_sensitive": true
+    },
+    {
+      "file": "../../guidelines-platform/src/content/chapters_split/03/images/3.1.6-vl-testing-algorithm.png",
+      "markdown_path": "images/chapter-03-viral-load-testing-algorithm-for-children-adolescents-and-adults.png",
+      "alternative_text": "Viral load testing algorithm for children, adolescents and adults",
+      "caption": "Viral load testing algorithm for children, adolescents and adults",
+      "source": "Uganda Clinical Guidelines 2023",
+      "attribution": "Ministry of Health Uganda",
+      "license": "",
+      "clinically_sensitive": true
+    },
+    {
+      "file": "../../guidelines-platform/src/content/chapters_split/05/images/5.1.1.1-asthma-exacerbation-management-algorithm.png",
+      "markdown_path": "images/chapter-05-asthma-exacerbation-management-algorithm.png",
+      "alternative_text": "Asthma exacerbation management algorithm",
+      "caption": "Asthma exacerbation management algorithm",
+      "source": "Uganda Clinical Guidelines 2023",
+      "attribution": "Ministry of Health Uganda",
+      "license": "",
+      "clinically_sensitive": true
+    },
+    {
+      "file": "../../guidelines-platform/src/content/chapters_split/05/images/5.3.2.5-tpt-dosing-chart-1.png",
+      "markdown_path": "images/chapter-05-tb-preventive-treatment-dosing-chart-part-1.png",
+      "alternative_text": "TB preventive treatment dosing chart part 1",
+      "caption": "TB preventive treatment dosing chart part 1",
+      "source": "Uganda Clinical Guidelines 2023",
+      "attribution": "Ministry of Health Uganda",
+      "license": "",
+      "clinically_sensitive": true
+    },
+    {
+      "file": "../../guidelines-platform/src/content/chapters_split/05/images/5.3.2.5-tpt-dosing-chart-2.png",
+      "markdown_path": "images/chapter-05-tb-preventive-treatment-dosing-chart-part-2.png",
+      "alternative_text": "TB preventive treatment dosing chart part 2",
+      "caption": "TB preventive treatment dosing chart part 2",
+      "source": "Uganda Clinical Guidelines 2023",
+      "attribution": "Ministry of Health Uganda",
+      "license": "",
+      "clinically_sensitive": true
+    },
+    {
+      "file": "../../guidelines-platform/src/content/chapters_split/05/images/5.3.2.5-tpt-dosing-chart-3.png",
+      "markdown_path": "images/chapter-05-tb-preventive-treatment-dosing-chart-part-3.png",
+      "alternative_text": "TB preventive treatment dosing chart part 3",
+      "caption": "TB preventive treatment dosing chart part 3",
+      "source": "Uganda Clinical Guidelines 2023",
+      "attribution": "Ministry of Health Uganda",
+      "license": "",
+      "clinically_sensitive": true
+    },
+    {
+      "file": "../../guidelines-platform/src/content/chapters_split/13/images/imageFile28.png",
+      "markdown_path": "images/chapter-13-who-analgesic-ladder.png",
+      "alternative_text": "WHO analgesic ladder",
+      "caption": "WHO analgesic ladder",
+      "source": "Uganda Clinical Guidelines 2023",
+      "attribution": "Ministry of Health Uganda",
+      "license": "",
+      "clinically_sensitive": true
+    },
+    {
+      "file": "../../guidelines-platform/src/content/chapters_split/17/images/imageFile38.png",
+      "markdown_path": "images/chapter-17-arm-circumference-for-age-boys-3-months-to-5-years.png",
+      "alternative_text": "Arm circumference-for-age boys, 3 months to 5 years",
+      "caption": "Arm circumference-for-age boys, 3 months to 5 years",
+      "source": "Uganda Clinical Guidelines 2023",
+      "attribution": "Ministry of Health Uganda",
+      "license": "",
+      "clinically_sensitive": true
+    },
+    {
+      "file": "../../guidelines-platform/src/content/chapters_split/17/images/imageFile40.png",
+      "markdown_path": "images/chapter-17-arm-circumference-for-age-girls-3-months-to-5-years.png",
+      "alternative_text": "Arm circumference-for-age girls, 3 months to 5 years",
+      "caption": "Arm circumference-for-age girls, 3 months to 5 years",
+      "source": "Uganda Clinical Guidelines 2023",
+      "attribution": "Ministry of Health Uganda",
+      "license": "",
+      "clinically_sensitive": true
+    },
+    {
+      "file": "../../guidelines-platform/src/content/chapters_split/17/images/imageFile29.png",
+      "markdown_path": "images/chapter-17-weight-for-age-boys-birth-to-5-years.png",
+      "alternative_text": "Weight-for-age boys, birth to 5 years",
+      "caption": "Weight-for-age boys, birth to 5 years",
+      "source": "Uganda Clinical Guidelines 2023",
+      "attribution": "Ministry of Health Uganda",
+      "license": "",
+      "clinically_sensitive": true
+    },
+    {
+      "file": "../../guidelines-platform/src/content/chapters_split/17/images/imageFile32.png",
+      "markdown_path": "images/chapter-17-weight-for-age-girls-birth-to-5-years.png",
+      "alternative_text": "Weight-for-age girls, birth to 5 years",
+      "caption": "Weight-for-age girls, birth to 5 years",
+      "source": "Uganda Clinical Guidelines 2023",
+      "attribution": "Ministry of Health Uganda",
+      "license": "",
+      "clinically_sensitive": true
+    },
+    {
+      "file": "../../guidelines-platform/src/content/chapters_split/17/images/imageFile34.png",
+      "markdown_path": "images/chapter-17-weight-for-height-boys-2-to-5-years.png",
+      "alternative_text": "Weight-for-height boys, 2 to 5 years",
+      "caption": "Weight-for-height boys, 2 to 5 years",
+      "source": "Uganda Clinical Guidelines 2023",
+      "attribution": "Ministry of Health Uganda",
+      "license": "",
+      "clinically_sensitive": true
+    },
+    {
+      "file": "../../guidelines-platform/src/content/chapters_split/18/images/imageFile41.png",
+      "markdown_path": "images/chapter-18-covid-19-vaccine-administration-schedule.png",
+      "alternative_text": "COVID-19 vaccine administration schedule",
+      "caption": "COVID-19 vaccine administration schedule",
+      "source": "Uganda Clinical Guidelines 2023",
+      "attribution": "Ministry of Health Uganda",
+      "license": "",
+      "clinically_sensitive": true
+    },
+    {
+      "file": "../../guidelines-platform/src/content/chapters_split/24/images/24-3-suspected-adverse-drug-reaction-reporting-form.png",
+      "markdown_path": "images/chapter-24-suspected-adverse-drug-reaction-reporting-form.png",
+      "alternative_text": "Suspected Adverse Drug Reaction Reporting Form",
+      "caption": "Suspected Adverse Drug Reaction Reporting Form",
+      "source": "Uganda Clinical Guidelines 2023",
+      "attribution": "Ministry of Health Uganda",
+      "license": "",
+      "clinically_sensitive": true
+    }
+  ],
+  "missing_sources": [
+    {
+      "markdown_path": "images/chapter-17-weight-for-height-girls-2-to-5-years.png",
+      "alternative_text": "Weight-for-height girls, 2 to 5 years",
+      "reason": "The authoritative source image is not present in the repository; do not substitute or fabricate it."
+    }
+  ]
+}

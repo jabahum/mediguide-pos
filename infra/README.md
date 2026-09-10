@@ -171,6 +171,12 @@ the complete MediGuide stack.
 Distributed rate-limit and cache tuning, failure behavior, and data exclusions
 are documented in [`../docs/rate-limits-and-cache.md`](../docs/rate-limits-and-cache.md).
 
+The optional, one-time production deployment hook for importing governed
+guideline images is documented in
+[`../docs/guideline-asset-production-import.md`](../docs/guideline-asset-production-import.md).
+It runs only when explicitly enabled after the public services become healthy;
+it never reviews or publishes imported clinical content.
+
 ## Public guideline API
 
 The public site reads published content through the backend policy boundary:

@@ -1,4 +1,5 @@
 import pytest
+from collections import defaultdict, deque
 
 from app.document_processing.types import ExtractedAsset
 from app.repositories.guideline_repo import GuidelineRepository
@@ -91,3 +92,66 @@ def test_prepare_asset_rows_rejects_one_fingerprint_for_different_objects():
             ],
             section_id_by_order={},
         )
+
+
+def test_review_identity_requires_matching_type_and_content():
+    previously_reviewed = defaultdict(deque)
+    identity = GuidelineRepository._stable_block_identity(
+        "paragraph", {"type": "paragraph", "text": "same content"}
+    )
+    previously_reviewed[identity].append(("reviewed", "reviewer-id", "reviewed-at"))
+
+    review = GuidelineRepository._regenerated_block_review
+
+    assert review(
+        block_type="paragraph",
+        content={"text": "same content", "type": "paragraph"},
+        previous_reviews=previously_reviewed,
+    ) == ("reviewed", "reviewer-id", "reviewed-at")
+    assert review(
+        block_type="table",
+        content={"text": "same content", "type": "paragraph"},
+        previous_reviews=previously_reviewed,
+    ) == ("draft", None, None)
+
+
+def test_review_identity_preserves_occurrence_order_for_duplicate_content():
+    previous_reviews = defaultdict(deque)
+    identity = GuidelineRepository._stable_block_identity(
+        "heading", {"type": "heading", "text": "Summary", "level": 3}
+    )
+    previous_reviews[identity].extend(
+        [
+            ("draft", None, None),
+            ("reviewed", "reviewer-id", "reviewed-at"),
+        ]
+    )
+
+    review = GuidelineRepository._regenerated_block_review
+    assert review(
+        block_type="heading",
+        content={"level": 3, "text": "Summary", "type": "heading"},
+        previous_reviews=previous_reviews,
+    ) == ("draft", None, None)
+    assert review(
+        block_type="heading",
+        content={"level": 3, "text": "Summary", "type": "heading"},
+        previous_reviews=previous_reviews,
+    ) == ("reviewed", "reviewer-id", "reviewed-at")
+
+
+def test_regenerated_chunk_inherits_its_block_review_status():
+    status = GuidelineRepository._regenerated_chunk_review_status
+
+    assert status(
+        block_order=42,
+        block_review_status_by_order={42: "reviewed"},
+    ) == "reviewed"
+    assert status(
+        block_order=43,
+        block_review_status_by_order={42: "reviewed"},
+    ) == "draft"
+    assert status(
+        block_order=None,
+        block_review_status_by_order={42: "reviewed"},
+    ) == "draft"

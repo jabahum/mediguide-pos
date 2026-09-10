@@ -119,14 +119,15 @@ export function MarkdownPreview({ content, className, assets = [] }: MarkdownPre
               </a>
             )
           },
-          img: ({ src, alt, node, ...props }) => {
+          img: ({ src, alt, title, node, ...props }) => {
             void node
             const source = typeof src === "string" ? src : ""
             const asset = assets.find((item) => item.reference === source)
             if (source.startsWith("guideline-asset://") && !asset) {
               return <span role="img" aria-label={alt || "Broken guideline image"} className="my-3 block rounded border border-destructive p-3 text-destructive">Broken guideline asset reference</span>
             }
-            return <img {...props} src={asset?.url || source} alt={alt || asset?.alternative_text || ""} loading="lazy" />
+            const image = <img {...props} src={asset?.url || source} alt={alt || asset?.alternative_text || ""} loading="lazy" />
+            return title ? <figure className="my-4">{image}<figcaption className="mt-2 text-sm text-muted-foreground">{title}</figcaption></figure> : image
           },
         }}
       >

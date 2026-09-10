@@ -299,13 +299,14 @@ class GuidelineRepository:
             cur.execute("DELETE FROM guideline_content_blocks WHERE version_id = %s", (version_id,))
             cur.execute(
                 """
-                SELECT id FROM guideline_assets
+                SELECT id, alternative_text, caption FROM guideline_assets
                 WHERE version_id = %s AND deleted_at IS NULL
                   AND (source_fingerprint LIKE 'editor:%%' OR type='original_pdf')
                 """,
                 (version_id,),
             )
-            authored_asset_ids = {str(row["id"]) for row in cur.fetchall()}
+            authored_assets = {str(row["id"]): row for row in cur.fetchall()}
+            authored_asset_ids = set(authored_assets)
             cur.execute(
                 """
                 DELETE FROM guideline_assets
@@ -397,6 +398,10 @@ class GuidelineRepository:
                         "Structured block references an asset outside this version: "
                         f"{direct_asset_id}"
                     )
+                if block.type == "figure" and direct_asset_id in authored_assets:
+                    content = self._enrich_authored_figure_content(
+                        content, authored_assets[direct_asset_id]
+                    )
                 page_start = block.page_start
                 page_end = block.page_end
                 provenance = dict(block.provenance)
@@ -413,7 +418,7 @@ class GuidelineRepository:
                     preserved_page_citations += 1
                 review_status, reviewed_by, reviewed_at = self._regenerated_block_review(
                     block_type=block.type,
-                    content=block.content,
+                    content=content,
                     previous_reviews=previous_block_reviews,
                 )
                 if review_status == "reviewed":
@@ -895,6 +900,19 @@ class GuidelineRepository:
             raise ValueError(
                 f"Conflicting extracted asset metadata for {storage_key}: " + ", ".join(mismatches)
             )
+
+    @staticmethod
+    def _enrich_authored_figure_content(
+        content: dict[str, Any], asset: dict[str, Any]
+    ) -> dict[str, Any]:
+        enriched = dict(content)
+        alternative_text = str(asset.get("alternative_text") or "").strip()
+        caption = str(asset.get("caption") or "").strip()
+        if alternative_text:
+            enriched["alternative_text"] = alternative_text
+        if caption:
+            enriched["caption"] = caption
+        return enriched
 
     @staticmethod
     def _section_id_for_page(

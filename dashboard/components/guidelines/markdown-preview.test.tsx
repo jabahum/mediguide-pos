@@ -72,6 +72,42 @@ Confirm renal function before treatment.
     expect(screen.getByText("Confirm renal function before treatment.")).toBeInTheDocument()
   })
 
+  it("resolves governed image references and displays their caption", () => {
+    render(
+      <MarkdownPreview
+        content={'![Treatment pathway](guideline-asset://3b9dfdf2-6ffc-42f4-bbd3-0bab9a6305fe "Treatment pathway caption")'}
+        assets={[{
+          id: "asset-id",
+          version_id: "version-id",
+          type: "figure",
+          mime_type: "image/png",
+          checksum: "checksum",
+          size_bytes: 12,
+          original_filename: "flow.png",
+          alternative_text: "Treatment pathway",
+          caption: "Treatment pathway caption",
+          source: "UCG 2023",
+          attribution: "Ministry of Health Uganda",
+          license: "",
+          clinically_sensitive: true,
+          review_status: "draft",
+          reference: "guideline-asset://3b9dfdf2-6ffc-42f4-bbd3-0bab9a6305fe",
+          referenced: true,
+          url: "https://example.test/flow.png",
+          url_expires_at: "2026-09-10T12:00:00Z",
+          created_at: "2026-09-10T10:00:00Z",
+          updated_at: "2026-09-10T10:00:00Z",
+        }]}
+      />,
+    )
+
+    expect(screen.getByRole("img", { name: "Treatment pathway" })).toHaveAttribute(
+      "src",
+      "https://example.test/flow.png",
+    )
+    expect(screen.getByText("Treatment pathway caption")).toBeInTheDocument()
+  })
+
   it("shows a clear empty Markdown state", () => {
     render(<MarkdownPreview content={`  
  `} />)

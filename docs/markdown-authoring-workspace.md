@@ -205,6 +205,20 @@ only a stable opaque reference:
 ![Alternative text](guideline-asset://00000000-0000-0000-0000-000000000000)
 ```
 
+When a caption is supplied, the editor stores it as the optional Markdown image
+title so it remains part of the immutable revision and becomes the structured
+figure caption:
+
+```md
+![Alternative text](guideline-asset://00000000-0000-0000-0000-000000000000 "Figure caption")
+```
+
+Alternative text is required before upload or insertion. The editor separates
+the figure from adjacent blocks with blank lines and includes available source,
+attribution and licence information immediately after it. During regeneration,
+current governed asset metadata is authoritative for the structured figure;
+changing that metadata changes the figure identity and requires review again.
+
 Replacing an image uploads a new asset and changes the draft reference; it does
 not overwrite the previous object. Deleted asset rows are soft-deleted and the
 stored object is retained for immutable historical revisions. Published

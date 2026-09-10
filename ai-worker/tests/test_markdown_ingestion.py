@@ -102,6 +102,20 @@ def test_markdown_guideline_asset_reference_becomes_typed_figure(tmp_path: Path)
     }
 
 
+def test_markdown_guideline_asset_reference_preserves_caption(tmp_path: Path):
+    asset_id = "3b9dfdf2-6ffc-42f4-bbd3-0bab9a6305fe"
+    path = tmp_path / "captioned-asset.md"
+    path.write_text(
+        f'# Care\n\n![Treatment pathway](guideline-asset://{asset_id} "Confirm the \\"yes\\" branch")\n',
+        encoding="utf-8",
+    )
+
+    extracted = extract_markdown(path)
+
+    figure = next(block for block in extracted.blocks if block.type == "figure")
+    assert figure.content["caption"] == 'Confirm the "yes" branch'
+
+
 def test_markdown_source_requires_utf8(tmp_path: Path):
     path = tmp_path / "invalid.md"
     path.write_bytes(b"# Guidance\n\xff")

@@ -114,6 +114,17 @@ func TestValidateMarkdownDocumentResolvesRelativeImageByUniqueUploadedFilename(t
 	}
 }
 
+func TestValidateMarkdownDocumentAcceptsGovernedImageCaption(t *testing.T) {
+	assetID := uuid.New()
+	content := "# Care\n\n![Treatment pathway](guideline-asset://" + assetID.String() + ` "Confirm the \"yes\" branch")`
+	result := validateMarkdownDocument(uuid.New(), content, models.GuidelineDocument{SourceOrg: "Ministry"}, []models.GuidelineAsset{{Base: models.Base{ID: assetID}}})
+	for _, issue := range result.Issues {
+		if issue.Severity == "error" || issue.Code == "broken_asset_reference" {
+			t.Fatalf("valid governed image caption was rejected: %#v", result.Issues)
+		}
+	}
+}
+
 func TestValidateMarkdownDocumentDoesNotGuessAmbiguousUploadedFilename(t *testing.T) {
 	first := "chapter-1/clinical-algorithm.png"
 	second := "chapter-2/clinical-algorithm.png"

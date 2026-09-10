@@ -123,6 +123,12 @@ image:
 ![Algorithm for management of severe malaria](guideline-asset://ASSET_UUID)
 ```
 
+An optional reviewed caption can be included as the Markdown image title:
+
+```markdown
+![Algorithm for management of severe malaria](guideline-asset://ASSET_UUID "Severe malaria management pathway")
+```
+
 Do not use a filename as alternative text. If an image is purely decorative,
 confirm with the accessibility reviewer before treating it as decorative.
 

@@ -155,3 +155,28 @@ def test_regenerated_chunk_inherits_its_block_review_status():
         block_order=None,
         block_review_status_by_order={42: "reviewed"},
     ) == "draft"
+
+
+def test_authored_asset_metadata_enriches_figure_content():
+    content = {
+        "type": "figure",
+        "asset_id": "asset-id",
+        "caption": "Markdown fallback",
+        "alternative_text": "Markdown alternative text",
+    }
+
+    enriched = GuidelineRepository._enrich_authored_figure_content(
+        content,
+        {
+            "caption": "Reviewed asset caption",
+            "alternative_text": "Reviewed asset alternative text",
+        },
+    )
+
+    assert enriched == {
+        "type": "figure",
+        "asset_id": "asset-id",
+        "caption": "Reviewed asset caption",
+        "alternative_text": "Reviewed asset alternative text",
+    }
+    assert content["caption"] == "Markdown fallback"

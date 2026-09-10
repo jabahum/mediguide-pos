@@ -66,4 +66,20 @@ describe("GuidelineBlockRenderer", () => {
     expect(html).toContain("Reviewed figure unavailable");
     expect(html).not.toContain("javascript:");
   });
+
+  it("renders a reviewed figure with its alternative text and caption", () => {
+    const html = renderToStaticMarkup(<GuidelineBlockRenderer
+      block={block({ type: "figure", content: { alternative_text: "Clinical flow", caption: "Treatment pathway" } })}
+      figure={{
+        id: "block-id",
+        sort_order: 1,
+        content: { type: "figure", asset_id: "asset-id", alternative_text: "Clinical flow", caption: "Treatment pathway" },
+        asset: { type: "figure", mime_type: "image/png", url: "https://mediguide.test/figure.png", expires_at: "2026-09-10T10:00:00Z" },
+      }}
+    />);
+
+    expect(html).toContain('src="https://mediguide.test/figure.png"');
+    expect(html).toContain('alt="Clinical flow"');
+    expect(html).toContain("Treatment pathway");
+  });
 });

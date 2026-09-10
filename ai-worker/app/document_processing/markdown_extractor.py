@@ -23,7 +23,8 @@ _ORDERED_RE = re.compile(r"^\s*\d+[.)]\s+(.+)$")
 _TABLE_SEPARATOR_RE = re.compile(r"^\s*\|?\s*:?-{3,}:?\s*(?:\|\s*:?-{3,}:?\s*)+\|?\s*$")
 _ASSET_IMAGE_RE = re.compile(
     r"^!\[([^\]]*)\]\(guideline-asset://"
-    r"([0-9a-fA-F]{8}(?:-[0-9a-fA-F]{4}){3}-[0-9a-fA-F]{12})\)\s*$"
+    r"([0-9a-fA-F]{8}(?:-[0-9a-fA-F]{4}){3}-[0-9a-fA-F]{12})"
+    r'(?:\s+"((?:[^"\\]|\\.)*)")?\)\s*$'
 )
 _CALLOUT_RE = re.compile(
     r"^(?:>\s*)?(recommendation|recommended action|warning|caution|key point|important note)\s*[:\-]?\s*(.*)$",
@@ -273,6 +274,7 @@ def _section_blocks(section: _MarkdownSection) -> list[ExtractedContentBlock]:
         if asset_image:
             flush_paragraph()
             alternative_text = asset_image.group(1).strip()
+            caption = (asset_image.group(3) or "").replace(r'\"', '"').replace(r"\\", "\\")
             if not alternative_text:
                 raise ValueError(f"Guideline image on line {line_number} requires alternative text")
             blocks.append(
@@ -282,7 +284,7 @@ def _section_blocks(section: _MarkdownSection) -> list[ExtractedContentBlock]:
                     {
                         "type": "figure",
                         "asset_id": asset_image.group(2).lower(),
-                        "caption": "",
+                        "caption": caption,
                         "alternative_text": alternative_text,
                     },
                     local_order,

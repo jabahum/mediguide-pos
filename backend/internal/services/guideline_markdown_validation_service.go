@@ -36,7 +36,7 @@ type MarkdownValidationResult struct {
 
 var (
 	mdHeadingRE      = regexp.MustCompile(`^(#{1,6})\s+(.+?)\s*#*\s*$`)
-	mdLinkRE         = regexp.MustCompile(`!?\[([^]]*)\]\(([^)\s]+)(?:\s+["'][^"']*["'])?\)`)
+	mdLinkRE         = regexp.MustCompile(`!?\[([^]]*)\]\(([^)\s]+)(?:\s+(?:"(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*'))?\)`)
 	mdHTMLRE         = regexp.MustCompile(`(?i)<\s*/?\s*([a-z][a-z0-9-]*)\b[^>]*>`)
 	mdUnsafeRE       = regexp.MustCompile(`(?i)<\s*(script|iframe|object|embed)\b|\bon[a-z]+\s*=|javascript\s*:`)
 	mdReferenceUseRE = regexp.MustCompile(`\[[^]]+\]\[([^]]+)\]`)

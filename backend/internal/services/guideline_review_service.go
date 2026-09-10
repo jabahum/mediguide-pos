@@ -631,7 +631,22 @@ func validateGuidelinePublication(tx *gorm.DB, version *models.GuidelineVersion)
 	if err := tx.Where("version_id = ?", version.ID).Find(&assets).Error; err != nil {
 		return nil, err
 	}
+	referencedFigureAssetIDs := make(map[uuid.UUID]bool)
+	for _, block := range blocks {
+		if block.Type != models.GuidelineBlockFigure || block.ReviewStatus == models.GuidelineBlockRejected {
+			continue
+		}
+		var figure models.GuidelineFigureBlockPayload
+		if json.Unmarshal(block.ContentJSON, &figure) == nil && figure.AssetID != uuid.Nil {
+			referencedFigureAssetIDs[figure.AssetID] = true
+		}
+	}
 	for _, asset := range assets {
+		// Unused assets are retained for draft history and replacement workflows,
+		// but they are not part of the public projection and must not block it.
+		if asset.Type == models.GuidelineAssetFigure && !referencedFigureAssetIDs[asset.ID] {
+			continue
+		}
 		current := asset
 		if asset.Type == models.GuidelineAssetFigure && strings.TrimSpace(asset.AlternativeText) == "" {
 			result.Warnings = append(result.Warnings, GuidelineReviewIssue{Code: "missing_asset_alternative_text", Message: fmt.Sprintf("Image %s is missing alternative text.", asset.ID)})

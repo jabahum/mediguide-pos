@@ -39,6 +39,7 @@ import {
   GuidelineAssetRecord,
   GuidelineContentBlockRecord,
   GuidelineDocumentsService,
+  GuidelineReviewIssue,
   GuidelineSectionRecord,
 } from "@/services/guideline-documents.service";
 
@@ -404,6 +405,29 @@ export default function GuidelineReviewPage() {
       setSelectedBlockId(block.id);
     },
     [],
+  );
+
+  const focusReviewIssue = React.useCallback(
+    (issue: GuidelineReviewIssue) => {
+      const affectedBlock = issue.block_id
+        ? blocks.find((block) => block.id === issue.block_id)
+        : issue.asset_id
+          ? blocks.find(
+              (block) =>
+                block.type === "figure" &&
+                block.content.asset_id === issue.asset_id,
+            )
+          : undefined;
+      if (affectedBlock) {
+        // A previously reviewed figure can still have a draft asset after its
+        // metadata changes, so reveal it even when the pending filter is active.
+        setBlockReviewFilter("all");
+        selectBlock(affectedBlock);
+        return;
+      }
+      if (issue.section_id) setSelectedSectionId(issue.section_id);
+    },
+    [blocks, selectBlock],
   );
 
   React.useEffect(() => {
@@ -793,10 +817,7 @@ export default function GuidelineReviewPage() {
               <button
                 key={`${issue.code}-${index}`}
                 className="block text-left text-destructive underline-offset-2 hover:underline"
-                onClick={() => {
-                  if (issue.section_id) setSelectedSectionId(issue.section_id);
-                  if (issue.block_id) setSelectedBlockId(issue.block_id);
-                }}
+                onClick={() => focusReviewIssue(issue)}
               >
                 <span className="block font-medium">{issue.message}</span>
                 {issue.remediation ? (

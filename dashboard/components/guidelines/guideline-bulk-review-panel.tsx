@@ -76,6 +76,21 @@ export function GuidelineBulkReviewPanel({
 
   React.useEffect(() => setPage(1), [status, risk, blockType, sectionId]);
 
+  function changeBlockType(value: string) {
+    const nextType = value as GuidelineBlockType | "all";
+    setBlockType(nextType);
+    // A low-risk queue can never contain figures or other individually
+    // reviewed types. Reveal them instead of leaving an impossible empty
+    // filter combination on screen.
+    if (
+      nextType !== "all" &&
+      !eligible.has(nextType) &&
+      risk === "low-risk-pending"
+    ) {
+      setRisk("all");
+    }
+  }
+
   function setBlockSelected(block: GuidelineContentBlockRecord, checked: boolean) {
     if (!selectable(block)) return;
     setSelected((current) => {
@@ -186,7 +201,7 @@ export function GuidelineBulkReviewPanel({
         <div className="grid gap-2 md:grid-cols-4">
           <Filter label="Status" value={status} onChange={(value) => setStatus(value as typeof status)} options={["all", "pending", "reviewed", "rejected"]} />
           <Filter label="Risk" value={risk} onChange={(value) => setRisk(value as typeof risk)} options={["all", "low-risk-pending", "high-risk", "pending-high-risk"]} />
-          <Filter label="Block type" value={blockType} onChange={(value) => setBlockType(value as GuidelineBlockType | "all")} options={["all", ...availableTypes]} />
+          <Filter label="Block type" value={blockType} onChange={changeBlockType} options={["all", ...availableTypes]} />
           <div><Label htmlFor="review-section-filter">Section or chapter</Label><select id="review-section-filter" className="mt-1 h-9 w-full rounded-md border bg-background px-2 text-sm" value={sectionId} onChange={(event) => setSectionId(event.target.value)}><option value="">All sections</option>{sections.map((section) => <option key={section.id} value={section.id}>{"—".repeat(Math.max(0, section.level - 1))} {section.title}</option>)}</select></div>
         </div>
         <div className="flex flex-wrap gap-2">

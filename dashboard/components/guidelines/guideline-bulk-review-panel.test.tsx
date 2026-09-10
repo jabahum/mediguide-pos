@@ -88,6 +88,27 @@ describe("GuidelineBulkReviewPanel", () => {
     }));
   });
 
+  it("clears the incompatible low-risk filter when figures are selected", async () => {
+    const getReviewBlocks = vi.mocked(GuidelineDocumentsService.getReviewBlocks);
+    const user = userEvent.setup();
+    renderPanel();
+    await screen.findByText("Pending low risk");
+
+    await user.selectOptions(screen.getByLabelText("Block type"), "figure");
+
+    expect(screen.getByLabelText("Risk")).toHaveValue("all");
+    await waitFor(() =>
+      expect(getReviewBlocks).toHaveBeenCalledWith("version-1", {
+        page: 1,
+        per_page: 50,
+        status: "all",
+        risk: "all",
+        block_type: "figure",
+        section_id: undefined,
+      }),
+    );
+  });
+
   it("loads every page when selecting low-risk blocks in the current section", async () => {
     const user = userEvent.setup();
     const secondParagraph = { ...paragraph, id: "block-paragraph-2", sort_order: 2 };

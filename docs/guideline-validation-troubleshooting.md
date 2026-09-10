@@ -444,7 +444,10 @@ A clinically sensitive figure has not been reviewed. Confirm the image, caption,
 alternative text, labels, source, attribution and licence before approval. Open
 **Editorial Review**, choose **Pending individual review only**, select the
 figure and use **Approve figure**. The decision applies to both the figure block
-and its linked asset; figures cannot be bulk-approved.
+and its linked asset; figures cannot be bulk-approved. An unused asset that is
+not referenced by an active figure block is not part of the public projection
+and must not block publication. It remains labelled **Unused** in the asset
+library so an editor can remove it from the draft when appropriate.
 
 ## Publication warnings
 

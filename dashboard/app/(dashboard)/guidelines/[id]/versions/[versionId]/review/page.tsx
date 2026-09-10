@@ -36,6 +36,7 @@ import { GuidelineCompletenessReport } from "@/components/guidelines/guideline-c
 import {
   guidelineDocumentsQueryKey,
   GuidelineBlockType,
+  GuidelineAssetRecord,
   GuidelineContentBlockRecord,
   GuidelineDocumentsService,
   GuidelineSectionRecord,
@@ -79,10 +80,18 @@ function blockText(block: GuidelineContentBlockRecord) {
       .join("\n");
   if (typeof content.title === "string") return content.title;
   if (typeof content.caption === "string") return content.caption;
+  if (typeof content.alternative_text === "string")
+    return content.alternative_text;
   return "";
 }
 
-function BlockPreview({ block }: { block: GuidelineContentBlockRecord }) {
+function BlockPreview({
+  block,
+  asset,
+}: {
+  block: GuidelineContentBlockRecord;
+  asset?: GuidelineAssetRecord;
+}) {
   const content = block.content;
   const text = blockText(block);
   if (block.type === "heading") {
@@ -155,7 +164,8 @@ function BlockPreview({ block }: { block: GuidelineContentBlockRecord }) {
       </div>
     );
   }
-  if (block.type === "figure") return <FigureBlockPreview block={block} />;
+  if (block.type === "figure")
+    return <FigureBlockPreview block={block} asset={asset} />;
   if (block.type === "algorithm")
     return (
       <div className="rounded-md border border-dashed p-6 text-center text-sm">
@@ -176,7 +186,13 @@ function BlockPreview({ block }: { block: GuidelineContentBlockRecord }) {
   );
 }
 
-function FigureBlockPreview({ block }: { block: GuidelineContentBlockRecord }) {
+function FigureBlockPreview({
+  block,
+  asset,
+}: {
+  block: GuidelineContentBlockRecord;
+  asset?: GuidelineAssetRecord;
+}) {
   const assetId =
     typeof block.content.asset_id === "string" ? block.content.asset_id : "";
   const [url, setUrl] = React.useState<string | null>(null);
@@ -200,11 +216,29 @@ function FigureBlockPreview({ block }: { block: GuidelineContentBlockRecord }) {
     [url],
   );
   const caption =
-    typeof block.content.caption === "string" ? block.content.caption : "";
+    (typeof block.content.caption === "string" ? block.content.caption : "") ||
+    asset?.caption ||
+    "";
   const alternativeText =
-    typeof block.content.alternative_text === "string"
+    (typeof block.content.alternative_text === "string"
       ? block.content.alternative_text
-      : caption;
+      : "") ||
+    asset?.alternative_text ||
+    caption;
+  const source =
+    (typeof block.content.source === "string" ? block.content.source : "") ||
+    asset?.source ||
+    "";
+  const attribution =
+    (typeof block.content.attribution === "string"
+      ? block.content.attribution
+      : "") ||
+    asset?.attribution ||
+    "";
+  const license =
+    (typeof block.content.license === "string" ? block.content.license : "") ||
+    asset?.license ||
+    "";
   return (
     <figure className="space-y-2 rounded-md border p-2">
       {url ? (
@@ -227,6 +261,32 @@ function FigureBlockPreview({ block }: { block: GuidelineContentBlockRecord }) {
       <figcaption className="text-xs text-muted-foreground">
         {caption || "Caption required before review"}
       </figcaption>
+      <dl className="grid gap-1 border-t pt-2 text-xs">
+        <div>
+          <dt className="inline font-medium">Alternative text: </dt>
+          <dd className="inline">
+            {alternativeText || "Missing — add it before approval"}
+          </dd>
+        </div>
+        {source && (
+          <div>
+            <dt className="inline font-medium">Source: </dt>
+            <dd className="inline">{source}</dd>
+          </div>
+        )}
+        {attribution && (
+          <div>
+            <dt className="inline font-medium">Attribution: </dt>
+            <dd className="inline">{attribution}</dd>
+          </div>
+        )}
+        {license && (
+          <div>
+            <dt className="inline font-medium">License: </dt>
+            <dd className="inline">{license}</dd>
+          </div>
+        )}
+      </dl>
     </figure>
   );
 }
@@ -300,18 +360,25 @@ export default function GuidelineReviewPage() {
     () => workspace?.blocks || [],
     [workspace?.blocks],
   );
-  const highRiskBlockTypes = React.useMemo(
-    () => new Set(workspace?.block_review_policy?.high_risk_types || []),
-    [workspace?.block_review_policy?.high_risk_types],
+  const individualReviewBlockTypes = React.useMemo(
+    () =>
+      new Set([
+        ...(workspace?.block_review_policy?.high_risk_types || []),
+        ...(workspace?.block_review_policy?.conditional_risk_types || []),
+      ]),
+    [
+      workspace?.block_review_policy?.conditional_risk_types,
+      workspace?.block_review_policy?.high_risk_types,
+    ],
   );
-  const pendingHighRiskBlocks = React.useMemo(
+  const pendingIndividualReviewBlocks = React.useMemo(
     () =>
       blocks.filter(
         (block) =>
-          highRiskBlockTypes.has(block.type) &&
+          individualReviewBlockTypes.has(block.type) &&
           block.review_status !== "reviewed",
       ),
-    [blocks, highRiskBlockTypes],
+    [blocks, individualReviewBlockTypes],
   );
   const selectedSection =
     sections.find((section) => section.id === selectedSectionId) || sections[0];
@@ -320,7 +387,7 @@ export default function GuidelineReviewPage() {
   );
   const visibleSectionBlocks = sectionBlocks.filter((block) => {
     if (blockReviewFilter === "all") return true;
-    if (!highRiskBlockTypes.has(block.type)) return false;
+    if (!individualReviewBlockTypes.has(block.type)) return false;
     return blockReviewFilter !== "pending-high-risk" || block.review_status !== "reviewed";
   });
   const selectedBlock =
@@ -343,12 +410,12 @@ export default function GuidelineReviewPage() {
     if (
       searchParams.get("focus") !== "pending-high-risk" ||
       pendingQueueInitialized.current ||
-      pendingHighRiskBlocks.length === 0
+      pendingIndividualReviewBlocks.length === 0
     )
       return;
     pendingQueueInitialized.current = true;
-    selectBlock(pendingHighRiskBlocks[0]);
-  }, [pendingHighRiskBlocks, searchParams, selectBlock]);
+    selectBlock(pendingIndividualReviewBlocks[0]);
+  }, [pendingIndividualReviewBlocks, searchParams, selectBlock]);
 
   React.useEffect(() => {
     if (!selectedSection) return;
@@ -480,7 +547,7 @@ export default function GuidelineReviewPage() {
 
   async function decide(status: "reviewed" | "rejected") {
     if (!selectedBlock) return;
-    const remainingBeforeDecision = pendingHighRiskBlocks.filter(
+    const remainingBeforeDecision = pendingIndividualReviewBlocks.filter(
       (block) => block.id !== selectedBlock.id,
     );
     await action.mutateAsync(() =>
@@ -492,17 +559,17 @@ export default function GuidelineReviewPage() {
     );
     if (status === "reviewed") {
       showToast.success(
-        "Block approved",
+        selectedBlock.type === "figure" ? "Figure approved" : "Block approved",
         remainingBeforeDecision.length === 0
-          ? "All high-risk blocks are approved. Return to the Markdown editor and refresh the regeneration review."
-          : `${remainingBeforeDecision.length} high-risk block${remainingBeforeDecision.length === 1 ? "" : "s"} still require approval.`,
+          ? "All blocks requiring individual review are approved. Return to the Markdown editor and refresh the regeneration review."
+          : `${remainingBeforeDecision.length} block${remainingBeforeDecision.length === 1 ? "" : "s"} still require individual review.`,
       );
       if (remainingBeforeDecision[0]) selectBlock(remainingBeforeDecision[0]);
       return;
     }
     showToast.error(
       "Block rejected",
-      "A rejected high-risk block remains a publication blocker. Correct it, compare it with the source again, and approve the corrected block.",
+      "A rejected block remains unavailable to readers and may block publication. Correct it, compare it with the source again, and approve the corrected block.",
     );
   }
 
@@ -653,10 +720,10 @@ export default function GuidelineReviewPage() {
       </div>
 
       {(searchParams.get("focus") === "pending-high-risk" ||
-        pendingHighRiskBlocks.length > 0) && (
+        pendingIndividualReviewBlocks.length > 0) && (
         <Card
           className={
-            pendingHighRiskBlocks.length > 0
+            pendingIndividualReviewBlocks.length > 0
               ? "border-amber-300 bg-amber-50/40"
               : "border-emerald-300 bg-emerald-50/40"
           }
@@ -664,21 +731,21 @@ export default function GuidelineReviewPage() {
           <CardContent className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <div className="font-medium">
-                {pendingHighRiskBlocks.length > 0
-                  ? `${pendingHighRiskBlocks.length} high-risk block${pendingHighRiskBlocks.length === 1 ? "" : "s"} require approval`
-                  : "All high-risk blocks are approved"}
+                {pendingIndividualReviewBlocks.length > 0
+                  ? `${pendingIndividualReviewBlocks.length} block${pendingIndividualReviewBlocks.length === 1 ? "" : "s"} require individual review`
+                  : "All individually reviewed blocks are approved"}
               </div>
               <p className="mt-1 text-sm text-muted-foreground">
-                {pendingHighRiskBlocks.length > 0
-                  ? "Compare each pending table or clinical block with the original source. Rejected blocks remain pending until corrected and approved."
+                {pendingIndividualReviewBlocks.length > 0
+                  ? "Compare each pending table, figure, or clinical block with the original source. Figures cannot be bulk-approved. Rejected blocks remain pending until corrected and approved."
                   : "Return to the regeneration review, refresh its approval status, and accept the regenerated projection."}
               </p>
             </div>
             <div className="flex flex-wrap gap-2">
               <Button
                 size="sm"
-                disabled={pendingHighRiskBlocks.length === 0}
-                onClick={() => selectBlock(pendingHighRiskBlocks[0])}
+                disabled={pendingIndividualReviewBlocks.length === 0}
+                onClick={() => selectBlock(pendingIndividualReviewBlocks[0])}
               >
                 <Check className="h-4 w-4" /> Review next pending
               </Button>
@@ -795,6 +862,7 @@ export default function GuidelineReviewPage() {
             blocks={sectionBlocks.filter(
               (block) => block.review_status !== "rejected",
             )}
+            assets={workspace.assets}
             mode={previewMode}
             setMode={setPreviewMode}
           />
@@ -830,6 +898,7 @@ export default function GuidelineReviewPage() {
         />
         <PreviewPanel
           blocks={sectionBlocks.filter((block) => block.review_status !== "rejected")}
+          assets={workspace.assets}
           mode={previewMode}
           setMode={setPreviewMode}
         />
@@ -1014,8 +1083,10 @@ function EditorPanel(props: EditorPanelProps) {
                 props.setBlockReviewFilter(event.target.value as BlockReviewFilter)
               }
             >
-              <option value="high-risk">High-risk only</option>
-              <option value="pending-high-risk">Pending high-risk only</option>
+              <option value="high-risk">Individual review only</option>
+              <option value="pending-high-risk">
+                Pending individual review only
+              </option>
               <option value="all">All blocks</option>
             </select>
           </div>
@@ -1058,6 +1129,16 @@ function EditorPanel(props: EditorPanelProps) {
         </div>
         {props.selectedBlock && (
           <div className="space-y-3 rounded-md border p-3">
+            {props.selectedBlock.type === "figure" && (
+              <div className="rounded-md border border-blue-200 bg-blue-50 p-3 text-sm text-blue-950">
+                <div className="font-medium">Individual figure review</div>
+                <p className="mt-1 text-xs leading-5">
+                  Compare the image, caption, alternative text, source,
+                  attribution, and licence with the authoritative document.
+                  Approving this figure block also approves its linked asset.
+                </p>
+              </div>
+            )}
             <div className="grid gap-2 sm:grid-cols-2">
               <div>
                 <Label>Content type</Label>
@@ -1106,14 +1187,20 @@ function EditorPanel(props: EditorPanelProps) {
                 variant="outline"
                 onClick={() => props.decide("reviewed")}
               >
-                <Check className="h-3.5 w-3.5" /> Approve
+                <Check className="h-3.5 w-3.5" />{" "}
+                {props.selectedBlock.type === "figure"
+                  ? "Approve figure"
+                  : "Approve block"}
               </Button>
               <Button
                 size="sm"
                 variant="outline"
                 onClick={() => props.decide("rejected")}
               >
-                <X className="h-3.5 w-3.5" /> Reject
+                <X className="h-3.5 w-3.5" />{" "}
+                {props.selectedBlock.type === "figure"
+                  ? "Reject figure"
+                  : "Reject block"}
               </Button>
               <Button
                 size="sm"
@@ -1132,10 +1219,12 @@ function EditorPanel(props: EditorPanelProps) {
 
 function PreviewPanel({
   blocks,
+  assets,
   mode,
   setMode,
 }: {
   blocks: GuidelineContentBlockRecord[];
+  assets: GuidelineAssetRecord[];
   mode: "web" | "mobile";
   setMode: (mode: "web" | "mobile") => void;
 }) {
@@ -1167,7 +1256,19 @@ function PreviewPanel({
           className={`mx-auto space-y-4 bg-background p-5 shadow-sm transition-all ${mode === "mobile" ? "max-w-[390px] rounded-[24px]" : "w-full rounded-md"}`}
         >
           {blocks.length ? (
-            blocks.map((block) => <BlockPreview key={block.id} block={block} />)
+            blocks.map((block) => {
+              const assetId =
+                typeof block.content.asset_id === "string"
+                  ? block.content.asset_id
+                  : "";
+              return (
+                <BlockPreview
+                  key={block.id}
+                  block={block}
+                  asset={assets.find((item) => item.id === assetId)}
+                />
+              );
+            })
           ) : (
             <div className="py-20 text-center text-sm text-muted-foreground">
               No active blocks to preview.

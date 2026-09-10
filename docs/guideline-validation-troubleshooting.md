@@ -441,7 +441,10 @@ assignment alone does not approve a block.
 ### `unreviewed_clinical_asset`
 
 A clinically sensitive figure has not been reviewed. Confirm the image, caption,
-alternative text, labels, and source before approval.
+alternative text, labels, source, attribution and licence before approval. Open
+**Editorial Review**, choose **Pending individual review only**, select the
+figure and use **Approve figure**. The decision applies to both the figure block
+and its linked asset; figures cannot be bulk-approved.
 
 ## Publication warnings
 

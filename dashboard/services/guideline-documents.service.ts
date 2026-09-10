@@ -161,6 +161,16 @@ export interface GuidelineAssetRecord {
   checksum: string;
   size_bytes: number;
   original_filename?: string | null;
+  alternative_text: string;
+  caption: string;
+  source: string;
+  attribution: string;
+  license: string;
+  figure_number?: number | null;
+  clinically_sensitive: boolean;
+  review_status: GuidelineBlockReviewStatus;
+  reviewed_by?: string | null;
+  reviewed_at?: string | null;
   page_start?: number | null;
   page_end?: number | null;
 }

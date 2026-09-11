@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:user_app/core/config/app_config.dart';
 import 'package:user_app/core/utils/app_message.dart';
+import 'package:user_app/core/widgets/app_loading_view.dart';
 import 'package:user_app/features/calculators/presentation/controllers/calculator_review_controller.dart';
 import 'package:user_app/features/calculators/presentation/widgets/native_clinical_tool.dart';
 
@@ -16,7 +17,8 @@ class CalculatorReviewPage extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(title: const Text('Clinical tool review')),
       body: state.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
+        loading: () =>
+            const AppLoadingView(message: 'Loading clinical tool preview...'),
         error: (error, _) => Center(
           child: Padding(
             padding: const EdgeInsets.all(24),

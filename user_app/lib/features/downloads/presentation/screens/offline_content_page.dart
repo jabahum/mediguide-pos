@@ -6,6 +6,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:user_app/app/router/route_names.dart';
 import 'package:user_app/core/constants/app_spacing.dart';
 import 'package:user_app/core/utils/app_message.dart';
+import 'package:user_app/core/widgets/app_loading_view.dart';
 import 'package:user_app/features/downloads/data/models/offline_download.dart';
 import 'package:user_app/features/downloads/presentation/controllers/guideline_downloads_controller.dart';
 import 'package:user_app/shared/widgets/clinical_icon_tile.dart';

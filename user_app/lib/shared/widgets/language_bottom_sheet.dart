@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:user_app/core/utils/app_extensions.dart';
+import 'package:user_app/core/widgets/app_skeleton.dart';
 import 'package:user_app/app/router/app_navigator.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
@@ -40,10 +41,18 @@ class LanguageBottomSheet extends ConsumerWidget {
           ),
           AppSpacing.gapMd,
           languages.when(
-            loading: () => Center(
-              child: Padding(
-                padding: EdgeInsets.symmetric(vertical: AppSpacing.lg),
-                child: const CircularProgressIndicator(),
+            loading: () => const Padding(
+              padding: EdgeInsets.symmetric(vertical: AppSpacing.md),
+              child: AppShimmer(
+                child: Column(
+                  children: [
+                    _LanguageSkeletonRow(),
+                    AppSpacing.gapSm,
+                    _LanguageSkeletonRow(),
+                    AppSpacing.gapSm,
+                    _LanguageSkeletonRow(),
+                  ],
+                ),
               ),
             ),
             error: (error, stackTrace) => Center(
@@ -103,6 +112,22 @@ class LanguageBottomSheet extends ConsumerWidget {
       isDismissible: true,
     );
   }
+}
+
+class _LanguageSkeletonRow extends StatelessWidget {
+  const _LanguageSkeletonRow();
+
+  @override
+  Widget build(BuildContext context) => const SizedBox(
+    height: 48,
+    child: Row(
+      children: [
+        ClipOval(child: AppSkeleton(width: 36, height: 36)),
+        AppSpacing.hGapMd,
+        Expanded(child: AppSkeleton(height: 16)),
+      ],
+    ),
+  );
 }
 
 class _LanguageOption extends ConsumerWidget {

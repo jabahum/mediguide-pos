@@ -3,7 +3,8 @@ import 'package:user_app/core/utils/app_extensions.dart';
 import 'package:user_app/app/router/app_navigator.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:user_app/core/constants/app_spacing.dart';
-import 'package:user_app/core/utils/loading.dart';
+import 'package:user_app/core/widgets/app_loading_view.dart';
+import 'package:user_app/core/widgets/app_skeleton.dart';
 
 /// Collection of reusable pagination indicator widgets for infinite scroll
 class PaginationIndicators {
@@ -80,19 +81,22 @@ class PaginationIndicators {
 
   /// First page loading indicator - shown while initial data loads
   static Widget firstPageProgress({String? loadingText}) {
-    return Center(
-      child: Padding(
-        padding: AppSpacing.paddingXl,
-        child: Loading.large(text: loadingText),
-      ),
-    );
+    return AppLoadingView(message: loadingText, padding: AppSpacing.paddingXl);
   }
 
   /// New page loading indicator - shown while loading additional pages
   static Widget newPageProgress({String? loadingText}) {
-    return Padding(
+    return const Padding(
       padding: AppSpacing.paddingMd,
-      child: Center(child: Loading.medium(text: loadingText)),
+      child: AppShimmer(
+        child: Row(
+          children: [
+            AppSkeleton(width: 40, height: 40),
+            AppSpacing.hGapMd,
+            Expanded(child: AppSkeleton(height: 14)),
+          ],
+        ),
+      ),
     );
   }
 

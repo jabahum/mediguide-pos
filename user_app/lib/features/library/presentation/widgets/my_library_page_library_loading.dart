@@ -5,6 +5,6 @@ class _LibraryLoading extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Center(child: CircularProgressIndicator());
+    return const AppLoadingView(message: 'Loading your library...');
   }
 }

@@ -11,11 +11,7 @@ class _PdfRenderingOverlay extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const SizedBox(
-            width: 30,
-            height: 30,
-            child: CircularProgressIndicator(strokeWidth: 2.5),
-          ),
+          const AppShimmer(child: AppSkeleton(width: 180, height: 220)),
 
           AppSpacing.gapMd,
 

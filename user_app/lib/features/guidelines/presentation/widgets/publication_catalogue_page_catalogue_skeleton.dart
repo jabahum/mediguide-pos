@@ -12,37 +12,39 @@ class _CatalogueSkeleton extends StatelessWidget {
         Responsive.horizontalPadding(context),
         AppSpacing.xxxl,
       ),
-      child: Column(
-        children: [
-          for (var index = 0; index < 6; index++) ...[
-            const Card(
-              margin: EdgeInsets.zero,
-              child: Padding(
-                padding: AppSpacing.cardPadding,
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    AppSkeleton(height: 42, width: 42),
-                    AppSpacing.hGapMd,
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          AppSkeleton(height: 18, width: 240),
-                          AppSpacing.gapSm,
-                          AppSkeleton(height: 13, width: 160),
-                          AppSpacing.gapSm,
-                          AppSkeleton(height: 13),
-                        ],
+      child: AppShimmer(
+        child: Column(
+          children: [
+            for (var index = 0; index < 6; index++) ...[
+              const Card(
+                margin: EdgeInsets.zero,
+                child: Padding(
+                  padding: AppSpacing.cardPadding,
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      AppSkeleton(height: 42, width: 42),
+                      AppSpacing.hGapMd,
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            AppSkeleton(height: 18, width: 240),
+                            AppSpacing.gapSm,
+                            AppSkeleton(height: 13, width: 160),
+                            AppSpacing.gapSm,
+                            AppSkeleton(height: 13),
+                          ],
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
-            ),
-            if (index < 5) AppSpacing.gapSm,
+              if (index < 5) AppSpacing.gapSm,
+            ],
           ],
-        ],
+        ),
       ),
     );
   }

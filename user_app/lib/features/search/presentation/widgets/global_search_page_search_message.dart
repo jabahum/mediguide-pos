@@ -27,23 +27,20 @@ class _SearchMessage extends StatelessWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Container(
-                width: 68,
-                height: 68,
-                decoration: BoxDecoration(
-                  color: colors.primaryContainer,
-                  shape: BoxShape.circle,
+              if (loading)
+                const AppShimmer(
+                  child: ClipOval(child: AppSkeleton(width: 68, height: 68)),
+                )
+              else
+                Container(
+                  width: 68,
+                  height: 68,
+                  decoration: BoxDecoration(
+                    color: colors.primaryContainer,
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(icon, size: 30, color: colors.primary),
                 ),
-                child: loading
-                    ? Padding(
-                        padding: const EdgeInsets.all(21),
-                        child: CircularProgressIndicator(
-                          strokeWidth: 3,
-                          color: colors.primary,
-                        ),
-                      )
-                    : Icon(icon, size: 30, color: colors.primary),
-              ),
 
               AppSpacing.gapMd,
 

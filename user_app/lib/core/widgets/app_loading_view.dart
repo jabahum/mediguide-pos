@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:user_app/core/utils/app_extensions.dart';
+import 'package:user_app/core/widgets/app_skeleton.dart';
 
 class AppLoadingView extends StatelessWidget {
   const AppLoadingView({
@@ -13,26 +13,66 @@ class AppLoadingView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: padding,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const CircularProgressIndicator.adaptive(),
-            if (message?.trim().isNotEmpty == true) ...[
-              const SizedBox(height: 16),
-              Text(
-                message!,
-                textAlign: TextAlign.center,
-                style: context.textTheme.bodyMedium?.copyWith(
-                  color: context.theme.colorScheme.onSurfaceVariant,
+    final semanticsLabel = message?.trim().isNotEmpty == true
+        ? message!.trim()
+        : 'Loading content';
+    return Semantics(
+      container: true,
+      liveRegion: true,
+      label: semanticsLabel,
+      child: ExcludeSemantics(
+        child: Center(
+          child: Padding(
+            padding: padding,
+            child: AppShimmer(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 720),
+                child: const Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    AppSkeleton(height: 24, width: 220),
+                    SizedBox(height: 12),
+                    AppSkeleton(height: 14, width: 320),
+                    SizedBox(height: 24),
+                    _LoadingCardSkeleton(),
+                    SizedBox(height: 12),
+                    _LoadingCardSkeleton(),
+                    SizedBox(height: 12),
+                    _LoadingCardSkeleton(),
+                  ],
                 ),
               ),
-            ],
-          ],
+            ),
+          ),
         ),
       ),
     );
   }
+}
+
+class _LoadingCardSkeleton extends StatelessWidget {
+  const _LoadingCardSkeleton();
+
+  @override
+  Widget build(BuildContext context) => const SizedBox(
+    height: 72,
+    child: Row(
+      children: [
+        AppSkeleton(height: 48, width: 48),
+        SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              AppSkeleton(height: 16, width: 240),
+              SizedBox(height: 10),
+              AppSkeleton(height: 12, width: 160),
+            ],
+          ),
+        ),
+      ],
+    ),
+  );
 }

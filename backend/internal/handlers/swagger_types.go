@@ -318,6 +318,18 @@ type PaginatedGuidelineCategoriesEnvelope struct {
 	Success bool                                          `json:"success"`
 	Data    services.PageResult[models.GuidelineCategory] `json:"data"`
 }
+type DiseaseEnvelope struct {
+	Success bool           `json:"success"`
+	Data    models.Disease `json:"data"`
+}
+type PaginatedDiseasesEnvelope struct {
+	Success bool                                `json:"success"`
+	Data    services.PageResult[models.Disease] `json:"data"`
+}
+type PaginatedDiseaseMigrationReportEnvelope struct {
+	Success bool                                                       `json:"success"`
+	Data    services.PageResult[models.DiseaseTaxonomyMigrationReport] `json:"data"`
+}
 type PaginatedGuidelineTagsEnvelope struct {
 	Success bool                                     `json:"success"`
 	Data    services.PageResult[models.GuidelineTag] `json:"data"`

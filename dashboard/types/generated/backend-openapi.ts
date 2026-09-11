@@ -282,6 +282,11 @@ export interface HandlersDeletedResult {
   deleted?: boolean;
 }
 
+export interface HandlersDiseaseEnvelope {
+  data?: ModelsDisease;
+  success?: boolean;
+}
+
 export interface HandlersDocumentationEnvelope {
   data?: ModelsDocumentation;
   success?: boolean;
@@ -781,6 +786,16 @@ export interface HandlersPaginatedClinicalProtocolsEnvelope {
 
 export interface HandlersPaginatedConversationsEnvelope {
   data?: ServicesPageResultServicesConversationView;
+  success?: boolean;
+}
+
+export interface HandlersPaginatedDiseaseMigrationReportEnvelope {
+  data?: ServicesPageResultModelsDiseaseTaxonomyMigrationReport;
+  success?: boolean;
+}
+
+export interface HandlersPaginatedDiseasesEnvelope {
+  data?: ServicesPageResultModelsDisease;
   success?: boolean;
 }
 
@@ -1576,6 +1591,57 @@ export interface ModelsClinicalProtocol {
   title?: string;
   updated_at?: string;
   version?: string;
+}
+
+export interface ModelsDisease {
+  aliases?: ModelsDiseaseAlias[];
+  codes?: ModelsDiseaseCode[];
+  color?: string;
+  created_at?: string;
+  created_by?: string;
+  description?: string;
+  icon?: string;
+  id?: string;
+  name?: string;
+  parent_id?: string;
+  parent_name?: string;
+  short_name?: string;
+  slug?: string;
+  sort_order?: number;
+  status?: string;
+  updated_at?: string;
+  updated_by?: string;
+}
+
+export interface ModelsDiseaseAlias {
+  alias?: string;
+  created_at?: string;
+  disease_id?: string;
+  id?: string;
+  updated_at?: string;
+}
+
+export interface ModelsDiseaseCode {
+  code?: string;
+  code_system?: string;
+  created_at?: string;
+  disease_id?: string;
+  display_name?: string;
+  id?: string;
+  updated_at?: string;
+}
+
+export interface ModelsDiseaseTaxonomyMigrationReport {
+  candidate_disease_ids?: string[];
+  created_at?: string;
+  disease_id?: string;
+  id?: string;
+  normalized_value?: string;
+  resolution_status?: string;
+  source_field?: string;
+  source_id?: string;
+  source_table?: string;
+  source_value?: string;
 }
 
 export interface ModelsDocumentation {
@@ -2743,6 +2809,30 @@ export interface ServicesCreateVersionInput {
   publication_date?: string;
   review_date?: string;
   version?: string;
+}
+
+export interface ServicesDiseaseAliasInput {
+  alias?: string;
+}
+
+export interface ServicesDiseaseCodeInput {
+  code?: string;
+  code_system?: string;
+  display_name?: string;
+}
+
+export interface ServicesDiseaseInput {
+  aliases?: ServicesDiseaseAliasInput[];
+  codes?: ServicesDiseaseCodeInput[];
+  color?: string;
+  description?: string;
+  icon?: string;
+  name?: string;
+  parent_id?: string;
+  short_name?: string;
+  slug?: string;
+  sort_order?: number;
+  status?: string;
 }
 
 export interface ServicesDocumentationInput {
@@ -4072,6 +4162,22 @@ export interface ServicesOutbreakUpdateAdminDTO {
 
 export interface ServicesPageResultModelsAbbreviation {
   items?: ModelsAbbreviation[];
+  page?: number;
+  per_page?: number;
+  total_items?: number;
+  total_pages?: number;
+}
+
+export interface ServicesPageResultModelsDisease {
+  items?: ModelsDisease[];
+  page?: number;
+  per_page?: number;
+  total_items?: number;
+  total_pages?: number;
+}
+
+export interface ServicesPageResultModelsDiseaseTaxonomyMigrationReport {
+  items?: ModelsDiseaseTaxonomyMigrationReport[];
   page?: number;
   per_page?: number;
   total_items?: number;

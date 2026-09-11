@@ -61,7 +61,7 @@ func TestOutbreakAdministrationMigrationUpDownUp(t *testing.T) {
 	if err := goose.DownTo(testDB, "../../migrations", 35); err != nil {
 		t.Fatal(err)
 	}
-	if err := goose.UpTo(testDB, "../../migrations", 47); err != nil {
+	if err := goose.UpTo(testDB, "../../migrations", 48); err != nil {
 		t.Fatal(err)
 	}
 	var count int
@@ -101,6 +101,23 @@ func TestOutbreakAdministrationMigrationUpDownUp(t *testing.T) {
 	}
 	if err := testDB.QueryRowContext(ctx, `SELECT count(*) FROM pg_indexes WHERE schemaname = $1 AND indexname = 'idx_calculator_versions_one_published'`, schema).Scan(&count); err != nil || count != 1 {
 		t.Fatalf("single-published-version index missing after up/down/up: count=%d err=%v", count, err)
+	}
+	if err := testDB.QueryRowContext(ctx, `SELECT count(*) FROM information_schema.tables WHERE table_schema = $1 AND table_name IN ('diseases','disease_aliases','disease_codes','disease_taxonomy_migration_report')`, schema).Scan(&count); err != nil || count != 4 {
+		t.Fatalf("disease taxonomy tables missing after up/down/up: count=%d err=%v", count, err)
+	}
+	if err := testDB.QueryRowContext(ctx, `SELECT count(*) FROM diseases WHERE status = 'active' AND deleted_at IS NULL`).Scan(&count); err != nil || count != 7 {
+		t.Fatalf("initial disease taxonomy seed mismatch: count=%d err=%v", count, err)
+	}
+	if _, err := testDB.ExecContext(ctx, `INSERT INTO diseases (id, name, normalized_name, slug) VALUES
+		('92000000-0000-4000-8000-000000000001', 'Cycle parent', 'cycle parent', 'cycle-parent'),
+		('92000000-0000-4000-8000-000000000002', 'Cycle child', 'cycle child', 'cycle-child')`); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := testDB.ExecContext(ctx, `UPDATE diseases SET parent_id = '92000000-0000-4000-8000-000000000001' WHERE id = '92000000-0000-4000-8000-000000000002'`); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := testDB.ExecContext(ctx, `UPDATE diseases SET parent_id = '92000000-0000-4000-8000-000000000002' WHERE id = '92000000-0000-4000-8000-000000000001'`); err == nil {
+		t.Fatal("PostgreSQL disease hierarchy trigger accepted a cycle")
 	}
 
 	// Exercise the real PostgreSQL discovery query, not the SQLite fallback.

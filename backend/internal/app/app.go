@@ -148,6 +148,7 @@ func New(cfg config.Config) (*App, error) {
 	supportSvc := services.SupportService{DB: database}
 	helpContentSvc := services.HelpContentService{DB: database, Cache: cacheStore}
 	guidelineContentSvc := services.GuidelineContentService{DB: database, Cache: cacheStore}
+	diseaseSvc := services.DiseaseService{DB: database}
 	emergencyProtocolSvc := services.EmergencyProtocolService{DB: database}
 	contentReferenceSvc := services.ContentReferenceService{DB: database, Cache: cacheStore}
 	consultantSvc := services.ConsultantService{DB: database}
@@ -176,6 +177,7 @@ func New(cfg config.Config) (*App, error) {
 	supportH := handlers.SupportHandler{Service: supportSvc}
 	helpContentH := handlers.HelpContentHandler{Service: helpContentSvc}
 	guidelineContentH := handlers.GuidelineContentHandler{Service: guidelineContentSvc}
+	diseaseH := handlers.DiseaseHandler{Service: diseaseSvc}
 	emergencyProtocolH := handlers.EmergencyProtocolHandler{Service: emergencyProtocolSvc}
 	contentReferenceH := handlers.ContentReferenceHandler{Service: contentReferenceSvc}
 	progressUsageH := handlers.ProgressUsageHandler{Service: services.ProgressUsageService{DB: database}}
@@ -484,6 +486,13 @@ func New(cfg config.Config) (*App, error) {
 		protected.POST("/guideline-categories", middleware.RequirePermission("guideline.write"), guidelineContentH.CreateCategory)
 		protected.PATCH("/guideline-categories/:id", middleware.RequirePermission("guideline.write"), guidelineContentH.UpdateCategory)
 		protected.DELETE("/guideline-categories/:id", middleware.RequirePermission("guideline.write"), guidelineContentH.DeleteCategory)
+		protected.GET("/diseases", middleware.RequirePermission("guideline.read"), diseaseH.List)
+		protected.GET("/diseases/migration-report", middleware.RequirePermission("guideline.write"), diseaseH.MigrationReport)
+		protected.POST("/diseases/migration-report/refresh", middleware.RequirePermission("guideline.write"), diseaseH.RefreshMigrationReport)
+		protected.GET("/diseases/:id", middleware.RequirePermission("guideline.read"), diseaseH.Get)
+		protected.POST("/diseases", middleware.RequirePermission("guideline.write"), diseaseH.Create)
+		protected.PATCH("/diseases/:id", middleware.RequirePermission("guideline.write"), diseaseH.Update)
+		protected.DELETE("/diseases/:id", middleware.RequirePermission("guideline.write"), diseaseH.Archive)
 		protected.GET("/guideline-tags", middleware.RequirePermission("guideline.read"), guidelineContentH.ListTags)
 		protected.GET("/guideline-tags/:id", middleware.RequirePermission("guideline.read"), guidelineContentH.GetTag)
 		protected.POST("/guideline-tags", middleware.RequirePermission("guideline.write"), guidelineContentH.CreateTag)

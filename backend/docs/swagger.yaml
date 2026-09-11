@@ -480,6 +480,13 @@ definitions:
         example: true
         type: boolean
     type: object
+  handlers.DiseaseEnvelope:
+    properties:
+      data:
+        $ref: '#/definitions/models.Disease'
+      success:
+        type: boolean
+    type: object
   handlers.DocumentationEnvelope:
     properties:
       data:
@@ -1222,6 +1229,20 @@ definitions:
     properties:
       data:
         $ref: '#/definitions/services.PageResult-services_ConversationView'
+      success:
+        type: boolean
+    type: object
+  handlers.PaginatedDiseaseMigrationReportEnvelope:
+    properties:
+      data:
+        $ref: '#/definitions/services.PageResult-models_DiseaseTaxonomyMigrationReport'
+      success:
+        type: boolean
+    type: object
+  handlers.PaginatedDiseasesEnvelope:
+    properties:
+      data:
+        $ref: '#/definitions/services.PageResult-models_Disease'
       success:
         type: boolean
     type: object
@@ -2442,6 +2463,102 @@ definitions:
       updated_at:
         type: string
       version:
+        type: string
+    type: object
+  models.Disease:
+    properties:
+      aliases:
+        items:
+          $ref: '#/definitions/models.DiseaseAlias'
+        type: array
+      codes:
+        items:
+          $ref: '#/definitions/models.DiseaseCode'
+        type: array
+      color:
+        type: string
+      created_at:
+        type: string
+      created_by:
+        type: string
+      description:
+        type: string
+      icon:
+        type: string
+      id:
+        type: string
+      name:
+        type: string
+      parent_id:
+        type: string
+      parent_name:
+        type: string
+      short_name:
+        type: string
+      slug:
+        type: string
+      sort_order:
+        type: integer
+      status:
+        type: string
+      updated_at:
+        type: string
+      updated_by:
+        type: string
+    type: object
+  models.DiseaseAlias:
+    properties:
+      alias:
+        type: string
+      created_at:
+        type: string
+      disease_id:
+        type: string
+      id:
+        type: string
+      updated_at:
+        type: string
+    type: object
+  models.DiseaseCode:
+    properties:
+      code:
+        type: string
+      code_system:
+        type: string
+      created_at:
+        type: string
+      disease_id:
+        type: string
+      display_name:
+        type: string
+      id:
+        type: string
+      updated_at:
+        type: string
+    type: object
+  models.DiseaseTaxonomyMigrationReport:
+    properties:
+      candidate_disease_ids:
+        items:
+          type: string
+        type: array
+      created_at:
+        type: string
+      disease_id:
+        type: string
+      id:
+        type: string
+      normalized_value:
+        type: string
+      resolution_status:
+        type: string
+      source_field:
+        type: string
+      source_id:
+        type: string
+      source_table:
+        type: string
+      source_value:
         type: string
     type: object
   models.Documentation:
@@ -4615,6 +4732,49 @@ definitions:
       review_date:
         type: string
       version:
+        type: string
+    type: object
+  services.DiseaseAliasInput:
+    properties:
+      alias:
+        type: string
+    type: object
+  services.DiseaseCodeInput:
+    properties:
+      code:
+        type: string
+      code_system:
+        type: string
+      display_name:
+        type: string
+    type: object
+  services.DiseaseInput:
+    properties:
+      aliases:
+        items:
+          $ref: '#/definitions/services.DiseaseAliasInput'
+        type: array
+      codes:
+        items:
+          $ref: '#/definitions/services.DiseaseCodeInput'
+        type: array
+      color:
+        type: string
+      description:
+        type: string
+      icon:
+        type: string
+      name:
+        type: string
+      parent_id:
+        type: string
+      short_name:
+        type: string
+      slug:
+        type: string
+      sort_order:
+        type: integer
+      status:
         type: string
     type: object
   services.DocumentationInput:
@@ -7057,6 +7217,36 @@ definitions:
       items:
         items:
           $ref: '#/definitions/models.Abbreviation'
+        type: array
+      page:
+        type: integer
+      per_page:
+        type: integer
+      total_items:
+        type: integer
+      total_pages:
+        type: integer
+    type: object
+  services.PageResult-models_Disease:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/models.Disease'
+        type: array
+      page:
+        type: integer
+      per_page:
+        type: integer
+      total_items:
+        type: integer
+      total_pages:
+        type: integer
+    type: object
+  services.PageResult-models_DiseaseTaxonomyMigrationReport:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/models.DiseaseTaxonomyMigrationReport'
         type: array
       page:
         type: integer
@@ -11225,6 +11415,148 @@ paths:
       summary: Mark a message read for the authenticated participant
       tags:
       - conversations
+  /api/v2/diseases:
+    get:
+      parameters:
+      - description: Page number
+        in: query
+        name: page
+        type: integer
+      - description: Items per page
+        in: query
+        name: per_page
+        type: integer
+      - description: Canonical name, alias, or slug
+        in: query
+        name: search
+        type: string
+      - description: active, inactive, or archived
+        in: query
+        name: status
+        type: string
+      - description: Parent disease UUID
+        in: query
+        name: parent_id
+        type: string
+      - description: Return only root diseases
+        in: query
+        name: root_only
+        type: boolean
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.PaginatedDiseasesEnvelope'
+      security:
+      - BearerAuth: []
+      summary: List diseases and clinical conditions
+      tags:
+      - disease-taxonomy
+    post:
+      parameters:
+      - description: Disease taxonomy entry
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/services.DiseaseInput'
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/handlers.DiseaseEnvelope'
+      security:
+      - BearerAuth: []
+      summary: Create a disease or clinical condition
+      tags:
+      - disease-taxonomy
+  /api/v2/diseases/{id}:
+    delete:
+      parameters:
+      - description: Disease UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+      security:
+      - BearerAuth: []
+      summary: Archive a disease or clinical condition
+      tags:
+      - disease-taxonomy
+    get:
+      parameters:
+      - description: Disease UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.DiseaseEnvelope'
+      security:
+      - BearerAuth: []
+      summary: Get a disease or clinical condition
+      tags:
+      - disease-taxonomy
+    patch:
+      parameters:
+      - description: Disease UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Disease taxonomy changes
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/services.DiseaseInput'
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.DiseaseEnvelope'
+      security:
+      - BearerAuth: []
+      summary: Update a disease or clinical condition
+      tags:
+      - disease-taxonomy
+  /api/v2/diseases/migration-report:
+    get:
+      parameters:
+      - description: matched, ambiguous, or unmatched
+        in: query
+        name: status
+        type: string
+      - description: Legacy source table
+        in: query
+        name: source_table
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.PaginatedDiseaseMigrationReportEnvelope'
+      security:
+      - BearerAuth: []
+      summary: List legacy disease-name migration resolutions
+      tags:
+      - disease-taxonomy
+  /api/v2/diseases/migration-report/refresh:
+    post:
+      responses:
+        "204":
+          description: No Content
+      security:
+      - BearerAuth: []
+      summary: Refresh legacy disease-name migration resolutions
+      tags:
+      - disease-taxonomy
   /api/v2/documentation:
     get:
       parameters:

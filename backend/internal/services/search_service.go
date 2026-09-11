@@ -38,10 +38,20 @@ type SearchResult struct {
 	IsStale        bool       `json:"is_stale,omitempty"`
 }
 
+type PublicSearchFilter struct {
+	ProgramArea string
+	CategoryID  string
+	DiseaseID   string
+}
+
 // PublicSearchContext searches only approved chunks belonging to the current
 // published version of a published guideline. This explicit projection keeps
 // draft and superseded clinical text out of guest search results.
 func (s SearchService) PublicSearchContext(ctx context.Context, q, programArea string, limit int) ([]SearchResult, error) {
+	return s.PublicSearchContextFiltered(ctx, q, PublicSearchFilter{ProgramArea: programArea}, limit)
+}
+
+func (s SearchService) PublicSearchContextFiltered(ctx context.Context, q string, filter PublicSearchFilter, limit int) ([]SearchResult, error) {
 	if limit <= 0 || limit > 50 {
 		limit = 20
 	}
@@ -83,8 +93,31 @@ func (s SearchService) PublicSearchContext(ctx context.Context, q, programArea s
 		pattern := "%" + strings.ToLower(normalizedQuery) + "%"
 		query = query.Where("lower(gc.content) LIKE ? OR lower(gc.title) LIKE ?", pattern, pattern)
 	}
-	if strings.TrimSpace(programArea) != "" {
-		query = query.Where("gc.program_area = ?", strings.TrimSpace(programArea))
+	if strings.TrimSpace(filter.ProgramArea) != "" {
+		query = query.Where("gc.program_area = ?", strings.TrimSpace(filter.ProgramArea))
+	}
+	if value := strings.TrimSpace(filter.CategoryID); value != "" {
+		id, err := uuid.Parse(value)
+		if err != nil {
+			return nil, ErrPublicGuidelineQuery
+		}
+		query = query.Where(`EXISTS (SELECT 1 FROM guideline_document_categories gdc
+			JOIN guideline_categories cat ON cat.id = gdc.category_id
+			WHERE gdc.guideline_document_id = gd.id AND gdc.category_id = ?
+			AND cat.deleted_at IS NULL AND cat.status = 'active')`, id)
+	}
+	var diseaseID *uuid.UUID
+	if value := strings.TrimSpace(filter.DiseaseID); value != "" {
+		id, err := uuid.Parse(value)
+		if err != nil {
+			return nil, ErrPublicGuidelineQuery
+		}
+		diseaseID = &id
+		query = query.Where(`EXISTS (SELECT 1 FROM content_disease_assignments cda
+			JOIN diseases d ON d.id = cda.disease_id
+			WHERE cda.content_type = 'guideline' AND cda.content_id = gd.id
+			AND cda.disease_id = ? AND cda.deleted_at IS NULL
+			AND d.deleted_at IS NULL AND d.status = 'active')`, id)
 	}
 	var rows []row
 	if err := query.Order("gc.updated_at DESC, gc.id ASC").Limit(limit).Scan(&rows).Error; err != nil {
@@ -106,11 +139,18 @@ func (s SearchService) PublicSearchContext(ctx context.Context, q, programArea s
 	}
 	pattern := "%" + strings.ToLower(normalizedQuery) + "%"
 	var outbreaks []discoveryRow
-	err := s.DB.WithContext(ctx).Table("outbreaks").
+	outbreakQuery := s.DB.WithContext(ctx).Table("outbreaks").
 		Select("CAST(id AS TEXT) AS id, title, summary AS snippet, source_organization AS source_name, status, last_verified_at, last_update AS sort_date").
 		Where("deleted_at IS NULL AND published_at IS NOT NULL AND published_at <= ? AND withdrawn_at IS NULL AND status IN ?", time.Now(), []string{"published", "active", "monitoring", "contained", "closed"}).
-		Where("lower(title) LIKE ? OR lower(summary) LIKE ? OR lower(disease_type) LIKE ? OR lower(geographic_area) LIKE ? OR lower(source_organization) LIKE ? OR lower(source_reference) LIKE ?", pattern, pattern, pattern, pattern, pattern, pattern).
-		Limit(limit).Scan(&outbreaks).Error
+		Where("lower(title) LIKE ? OR lower(summary) LIKE ? OR lower(disease_type) LIKE ? OR lower(geographic_area) LIKE ? OR lower(source_organization) LIKE ? OR lower(source_reference) LIKE ?", pattern, pattern, pattern, pattern, pattern, pattern)
+	if diseaseID != nil {
+		outbreakQuery = outbreakQuery.Where(`EXISTS (SELECT 1 FROM content_disease_assignments cda
+			JOIN diseases d ON d.id = cda.disease_id
+			WHERE cda.content_type = 'outbreak' AND cda.content_id = outbreaks.id
+			AND cda.disease_id = ? AND cda.deleted_at IS NULL
+			AND d.deleted_at IS NULL AND d.status = 'active')`, *diseaseID)
+	}
+	err := outbreakQuery.Limit(limit).Scan(&outbreaks).Error
 	if err != nil {
 		return nil, err
 	}
@@ -118,12 +158,19 @@ func (s SearchService) PublicSearchContext(ctx context.Context, q, programArea s
 		results = append(results, SearchResult{ID: row.ID, ResultType: "outbreak", Title: row.Title, Snippet: row.Snippet, SourceName: row.SourceName, Status: row.Status, LastVerifiedAt: row.LastVerifiedAt, IsStale: discoveryStale(row.Status, row.LastVerifiedAt)})
 	}
 	var reports []discoveryRow
-	err = s.DB.WithContext(ctx).Table("situation_reports").
+	reportQuery := s.DB.WithContext(ctx).Table("situation_reports").
 		Select("CAST(id AS TEXT) AS id, title, summary AS snippet, source_organization AS source_name, status, last_verified_at, publication_date AS sort_date").
 		Where("deleted_at IS NULL AND status = ? AND published_at IS NOT NULL AND published_at <= ? AND withdrawn_at IS NULL", "published", time.Now()).
 		Where("outbreak_id IS NULL OR EXISTS (SELECT 1 FROM outbreaks o WHERE o.id = situation_reports.outbreak_id AND o.deleted_at IS NULL AND o.withdrawn_at IS NULL AND o.published_at IS NOT NULL AND o.published_at <= ? AND o.status IN ?)", time.Now(), []string{"published", "active", "monitoring", "contained", "closed"}).
-		Where("lower(title) LIKE ? OR lower(summary) LIKE ? OR lower(geographic_area) LIKE ? OR lower(source_organization) LIKE ? OR lower(source_reference) LIKE ? OR lower(CAST(key_highlights AS TEXT)) LIKE ?", pattern, pattern, pattern, pattern, pattern, pattern).
-		Limit(limit).Scan(&reports).Error
+		Where("lower(title) LIKE ? OR lower(summary) LIKE ? OR lower(geographic_area) LIKE ? OR lower(source_organization) LIKE ? OR lower(source_reference) LIKE ? OR lower(CAST(key_highlights AS TEXT)) LIKE ?", pattern, pattern, pattern, pattern, pattern, pattern)
+	if diseaseID != nil {
+		reportQuery = reportQuery.Where(`EXISTS (SELECT 1 FROM content_disease_assignments cda
+			JOIN diseases d ON d.id = cda.disease_id
+			WHERE cda.content_type = 'situation_report' AND cda.content_id = situation_reports.id
+			AND cda.disease_id = ? AND cda.deleted_at IS NULL
+			AND d.deleted_at IS NULL AND d.status = 'active')`, *diseaseID)
+	}
+	err = reportQuery.Limit(limit).Scan(&reports).Error
 	if err != nil {
 		return nil, err
 	}

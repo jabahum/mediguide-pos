@@ -60,6 +60,7 @@ func (h GuidelineHandler) Create(c *gin.Context) {
 // @Produce json
 // @Security BearerAuth
 // @Param program_area query string false "Program area filter"
+// @Param category_id query string false "Assigned category UUID"
 // @Param page query int false "Page number" minimum(1)
 // @Param per_page query int false "Page size" minimum(1) maximum(100)
 // @Success 200 {object} handlers.PaginatedGuidelineDocumentsEnvelope
@@ -74,7 +75,16 @@ func (h GuidelineHandler) List(c *gin.Context) {
 		return
 	}
 
-	rows, err := h.Service.ListDocuments(c.Query("program_area"), page)
+	var categoryID *uuid.UUID
+	if raw := strings.TrimSpace(c.Query("category_id")); raw != "" {
+		parsed, parseErr := uuid.Parse(raw)
+		if parseErr != nil {
+			httpx.Error(c, http.StatusBadRequest, "invalid category id")
+			return
+		}
+		categoryID = &parsed
+	}
+	rows, err := h.Service.ListDocuments(services.GuidelineDocumentFilter{ProgramArea: c.Query("program_area"), CategoryID: categoryID, Page: page})
 	if err != nil {
 		httpx.Error(c, 500, "internal server error")
 		return
@@ -134,6 +144,10 @@ func (h GuidelineHandler) Update(c *gin.Context) {
 	}
 	document, err := h.Service.UpdateDocument(id, input)
 	if err != nil {
+		if errors.Is(err, services.ErrGuidelineCategoryAssignment) {
+			httpx.Error(c, http.StatusBadRequest, "categories must be active and not deleted")
+			return
+		}
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			httpx.Error(c, http.StatusNotFound, "not found")
 			return

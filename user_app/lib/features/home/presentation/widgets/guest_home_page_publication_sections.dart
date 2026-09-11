@@ -15,10 +15,24 @@ class _PublicationSections extends StatelessWidget {
       );
     }
 
-    final areas = publications
-        .map((item) => item.programArea.trim())
-        .where((value) => value.isNotEmpty)
-        .toSet()
+    final categoryById = <String, String>{};
+    for (final publication in publications) {
+      for (final category in publication.categories) {
+        if (category.id.trim().isNotEmpty && category.name.trim().isNotEmpty) {
+          categoryById[category.id.trim()] = category.name.trim();
+        }
+      }
+    }
+    // Program-area fallback keeps browsing useful against older cached/API
+    // payloads while categories are progressively assigned.
+    if (categoryById.isEmpty) {
+      for (final publication in publications) {
+        final area = publication.programArea.trim();
+        if (area.isNotEmpty) categoryById['program-area:$area'] = area;
+      }
+    }
+    final areas = categoryById.entries
+        .map((entry) => (id: entry.key, name: entry.value))
         .take(8)
         .toList(growable: false);
 
@@ -44,8 +58,12 @@ class _PublicationSections extends StatelessWidget {
 
           _CategoryQuickAccessGrid(
             categories: areas,
-            onCategory: (area) {
-              context.push(AppRoutes.publicGuidelinesForProgramArea(area));
+            onCategory: (category) {
+              if (category.id.startsWith('program-area:')) {
+                context.push(AppRoutes.publicGuidelinesForProgramArea(category.name));
+              } else {
+                context.push(AppRoutes.publicGuidelinesForCategory(category.id, category.name));
+              }
             },
           ),
 

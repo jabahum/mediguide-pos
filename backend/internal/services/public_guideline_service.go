@@ -36,6 +36,8 @@ type PublicGuidelineService struct {
 type PublicGuidelineFilter struct {
 	Search      string
 	ProgramArea string
+	CategoryID  string
+	DiseaseID   string
 	Country     string
 	Language    string
 	UpdatedFrom *time.Time
@@ -45,20 +47,32 @@ type PublicGuidelineFilter struct {
 }
 
 type PublicGuideline struct {
-	ID                 uuid.UUID `json:"id"`
-	Slug               string    `json:"slug"`
-	Title              string    `json:"title"`
-	Description        string    `json:"description"`
-	Country            string    `json:"country"`
-	SourceOrg          string    `json:"source_org"`
-	ProgramArea        string    `json:"program_area"`
-	Language           string    `json:"language"`
-	PublicationDate    string    `json:"publication_date"`
-	ReviewDate         string    `json:"review_date"`
-	Version            string    `json:"version"`
-	LastUpdated        time.Time `json:"last_updated"`
-	IntendedPopulation string    `json:"intended_population"`
-	HealthcareLevel    string    `json:"healthcare_level"`
+	ID                 uuid.UUID                 `json:"id"`
+	Slug               string                    `json:"slug"`
+	Title              string                    `json:"title"`
+	Description        string                    `json:"description"`
+	Country            string                    `json:"country"`
+	SourceOrg          string                    `json:"source_org"`
+	ProgramArea        string                    `json:"program_area"`
+	Language           string                    `json:"language"`
+	PublicationDate    string                    `json:"publication_date"`
+	ReviewDate         string                    `json:"review_date"`
+	Version            string                    `json:"version"`
+	LastUpdated        time.Time                 `json:"last_updated"`
+	IntendedPopulation string                    `json:"intended_population"`
+	HealthcareLevel    string                    `json:"healthcare_level"`
+	Categories         []PublicGuidelineCategory `json:"categories"`
+}
+
+type PublicGuidelineCategory struct {
+	ID               uuid.UUID  `json:"id"`
+	ParentCategoryID *uuid.UUID `json:"parent_category_id,omitempty"`
+	Name             string     `json:"name"`
+	Slug             string     `json:"slug"`
+	Description      string     `json:"description,omitempty"`
+	Icon             string     `json:"icon,omitempty"`
+	Color            string     `json:"color,omitempty"`
+	SortOrder        int        `json:"sort_order"`
 }
 
 type PublicGuidelineMarkdown struct {
@@ -126,6 +140,9 @@ func (s PublicGuidelineService) listUncached(ctx context.Context, filter PublicG
 	for _, row := range rows {
 		items = append(items, row.public())
 	}
+	if err := s.attachPublicGuidelineCategories(ctx, items); err != nil {
+		return nil, err
+	}
 	return NewPageResult(items, page, total), nil
 }
 
@@ -144,6 +161,11 @@ func (s PublicGuidelineService) getUncached(ctx context.Context, id uuid.UUID) (
 		return nil, ErrPublicGuidelineNotFound
 	}
 	result := row.public()
+	items := []PublicGuideline{result}
+	if err := s.attachPublicGuidelineCategories(ctx, items); err != nil {
+		return nil, err
+	}
+	result = items[0]
 	return &result, nil
 }
 
@@ -216,6 +238,33 @@ func applyPublicGuidelineFilters(query *gorm.DB, filter PublicGuidelineFilter) *
 	if value := strings.TrimSpace(filter.ProgramArea); value != "" {
 		query = query.Where("LOWER(gd.program_area) = ?", strings.ToLower(value))
 	}
+	if value := strings.TrimSpace(filter.CategoryID); value != "" {
+		id, err := uuid.Parse(value)
+		if err != nil {
+			query.AddError(ErrPublicGuidelineQuery)
+			return query
+		}
+		query = query.Where(`EXISTS (
+			SELECT 1 FROM guideline_document_categories gdc
+			JOIN guideline_categories gc ON gc.id = gdc.category_id
+			WHERE gdc.guideline_document_id = gd.id AND gdc.category_id = ?
+			  AND gc.deleted_at IS NULL AND gc.status = 'active'
+		)`, id)
+	}
+	if value := strings.TrimSpace(filter.DiseaseID); value != "" {
+		id, err := uuid.Parse(value)
+		if err != nil {
+			query.AddError(ErrPublicGuidelineQuery)
+			return query
+		}
+		query = query.Where(`EXISTS (
+			SELECT 1 FROM content_disease_assignments cda
+			JOIN diseases d ON d.id = cda.disease_id
+			WHERE cda.content_type = 'guideline' AND cda.content_id = gd.id
+			  AND cda.disease_id = ? AND cda.deleted_at IS NULL
+			  AND d.deleted_at IS NULL AND d.status = 'active'
+		)`, id)
+	}
 	if value := strings.TrimSpace(filter.Country); value != "" {
 		query = query.Where("LOWER(gd.country) = ?", strings.ToLower(value))
 	}
@@ -226,6 +275,58 @@ func applyPublicGuidelineFilters(query *gorm.DB, filter PublicGuidelineFilter) *
 		query = query.Where("gv.updated_at >= ?", filter.UpdatedFrom.UTC())
 	}
 	return query
+}
+
+func (s PublicGuidelineService) attachPublicGuidelineCategories(ctx context.Context, items []PublicGuideline) error {
+	if len(items) == 0 {
+		return nil
+	}
+	ids := make([]uuid.UUID, 0, len(items))
+	for i := range items {
+		ids = append(ids, items[i].ID)
+		items[i].Categories = []PublicGuidelineCategory{}
+	}
+	type row struct {
+		DocumentID       uuid.UUID
+		ID               uuid.UUID
+		ParentCategoryID *uuid.UUID
+		Name             string
+		Slug             *string
+		Description      *string
+		Icon             *string
+		Color            *string
+		SortOrder        int
+	}
+	var rows []row
+	if err := s.DB.WithContext(ctx).Table("guideline_document_categories gdc").
+		Select(`gdc.guideline_document_id AS document_id, gc.id, gc.parent_category_id,
+			gc.name, gc.slug, gc.description, gc.icon, gc.color, gc.sort_order`).
+		Joins("JOIN guideline_categories gc ON gc.id = gdc.category_id").
+		Where("gdc.guideline_document_id IN ? AND gc.deleted_at IS NULL AND gc.status = ?", ids, "active").
+		Order("gc.sort_order ASC, gc.name ASC").Scan(&rows).Error; err != nil {
+		return err
+	}
+	byDocument := make(map[uuid.UUID][]PublicGuidelineCategory, len(items))
+	for _, value := range rows {
+		byDocument[value.DocumentID] = append(byDocument[value.DocumentID], PublicGuidelineCategory{
+			ID: value.ID, ParentCategoryID: value.ParentCategoryID, Name: value.Name,
+			Slug: publicStringValue(value.Slug), Description: publicStringValue(value.Description),
+			Icon: publicStringValue(value.Icon), Color: publicStringValue(value.Color), SortOrder: value.SortOrder,
+		})
+	}
+	for i := range items {
+		if categories, ok := byDocument[items[i].ID]; ok {
+			items[i].Categories = categories
+		}
+	}
+	return nil
+}
+
+func publicStringValue(value *string) string {
+	if value == nil {
+		return ""
+	}
+	return *value
 }
 
 func (row publicGuidelineRow) public() PublicGuideline {

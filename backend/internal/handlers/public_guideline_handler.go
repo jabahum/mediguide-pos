@@ -69,6 +69,8 @@ type PublicGuidelineHandler struct {
 // @Produce json
 // @Param search query string false "Search title, description, or source"
 // @Param program_area query string false "Program area"
+// @Param category_id query string false "Guideline category UUID"
+// @Param disease_id query string false "Disease UUID"
 // @Param country query string false "Country"
 // @Param language query string false "Language"
 // @Param updated_from query string false "RFC3339 lower update bound"
@@ -87,6 +89,8 @@ func (h PublicGuidelineHandler) List(c *gin.Context) {
 	filter := services.PublicGuidelineFilter{
 		Search:      c.Query("search"),
 		ProgramArea: c.Query("program_area"),
+		CategoryID:  c.Query("category_id"),
+		DiseaseID:   c.Query("disease_id"),
 		Country:     c.Query("country"),
 		Language:    c.Query("language"),
 		Sort:        c.Query("sort"),
@@ -102,6 +106,18 @@ func (h PublicGuidelineHandler) List(c *gin.Context) {
 		filter.UpdatedFrom = &updatedFrom
 	}
 
+	if filter.CategoryID != "" {
+		if _, parseErr := uuid.Parse(filter.CategoryID); parseErr != nil {
+			httpx.Error(c, http.StatusBadRequest, "invalid category_id")
+			return
+		}
+	}
+	if filter.DiseaseID != "" {
+		if _, parseErr := uuid.Parse(filter.DiseaseID); parseErr != nil {
+			httpx.Error(c, http.StatusBadRequest, "invalid disease_id")
+			return
+		}
+	}
 	result, err := h.Service.List(c.Request.Context(), filter)
 	if err != nil {
 		httpx.Error(c, http.StatusInternalServerError, "unable to load guidelines")

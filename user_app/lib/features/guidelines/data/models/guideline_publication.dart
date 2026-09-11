@@ -13,6 +13,23 @@ enum GuidelineReaderMode {
 }
 
 @freezed
+abstract class PublicationCategory with _$PublicationCategory {
+  const factory PublicationCategory({
+    required String id,
+    @JsonKey(name: 'parent_category_id') String? parentCategoryId,
+    @Default('') String name,
+    @Default('') String slug,
+    @Default('') String description,
+    @Default('') String icon,
+    @Default('') String color,
+    @JsonKey(name: 'sort_order') @Default(0) int sortOrder,
+  }) = _PublicationCategory;
+
+  factory PublicationCategory.fromJson(Map<String, dynamic> json) =>
+      _$PublicationCategoryFromJson(json);
+}
+
+@freezed
 abstract class GuidelinePublication with _$GuidelinePublication {
   const factory GuidelinePublication({
     required String id,
@@ -31,6 +48,7 @@ abstract class GuidelinePublication with _$GuidelinePublication {
     @Default('')
     String intendedPopulation,
     @JsonKey(name: 'healthcare_level') @Default('') String healthcareLevel,
+    @Default(<PublicationCategory>[]) List<PublicationCategory> categories,
   }) = _GuidelinePublication;
 
   factory GuidelinePublication.fromJson(Map<String, dynamic> json) =>

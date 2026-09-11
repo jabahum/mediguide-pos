@@ -30,17 +30,34 @@ type GuidelineService struct {
 }
 
 type CreateGuidelineInput struct {
-	Title              string `json:"title"`
-	Country            string `json:"country"`
-	SourceOrg          string `json:"source_org"`
-	ProgramArea        string `json:"program_area"`
-	Language           string `json:"language"`
-	Description        string `json:"description"`
-	IntendedPopulation string `json:"intended_population"`
-	HealthcareLevel    string `json:"healthcare_level"`
+	Title              string      `json:"title"`
+	Country            string      `json:"country"`
+	SourceOrg          string      `json:"source_org"`
+	ProgramArea        string      `json:"program_area"`
+	Language           string      `json:"language"`
+	Description        string      `json:"description"`
+	IntendedPopulation string      `json:"intended_population"`
+	HealthcareLevel    string      `json:"healthcare_level"`
+	CategoryIDs        []uuid.UUID `json:"category_ids"`
 }
 
-type UpdateGuidelineInput = CreateGuidelineInput
+type UpdateGuidelineInput struct {
+	Title              *string      `json:"title"`
+	Country            *string      `json:"country"`
+	SourceOrg          *string      `json:"source_org"`
+	ProgramArea        *string      `json:"program_area"`
+	Language           *string      `json:"language"`
+	Description        *string      `json:"description"`
+	IntendedPopulation *string      `json:"intended_population"`
+	HealthcareLevel    *string      `json:"healthcare_level"`
+	CategoryIDs        *[]uuid.UUID `json:"category_ids"`
+}
+
+type GuidelineDocumentFilter struct {
+	ProgramArea string
+	CategoryID  *uuid.UUID
+	Page        PageInput
+}
 
 type CreateVersionInput struct {
 	Version         string `json:"version"`
@@ -62,6 +79,7 @@ var (
 	ErrPublishedMarkdownImmutable   = errors.New("published guideline markdown cannot be edited")
 	ErrPublishedVersionImmutable    = errors.New("published guideline version cannot be re-ingested")
 	ErrUnsupportedGuidelineSource   = errors.New("guideline source must be a PDF or Markdown file")
+	ErrGuidelineCategoryAssignment  = errors.New("guideline category assignment is invalid")
 )
 
 func (s GuidelineService) CreateDocument(in CreateGuidelineInput) (*models.GuidelineDocument, error) {
@@ -69,48 +87,87 @@ func (s GuidelineService) CreateDocument(in CreateGuidelineInput) (*models.Guide
 	if d.Language == "" {
 		d.Language = "en"
 	}
-	return &d, s.DB.Create(&d).Error
+	err := s.DB.Transaction(func(tx *gorm.DB) error {
+		categories, err := activeGuidelineCategories(tx, in.CategoryIDs)
+		if err != nil {
+			return err
+		}
+		if err := tx.Create(&d).Error; err != nil {
+			return err
+		}
+		return tx.Model(&d).Association("Categories").Replace(categories)
+	})
+	if err != nil {
+		return nil, err
+	}
+	return s.GetDocument(d.ID)
 }
-func (s GuidelineService) ListDocuments(programArea string, page PageInput) (*PageResult[models.GuidelineDocument], error) {
+func (s GuidelineService) ListDocuments(filter GuidelineDocumentFilter) (*PageResult[models.GuidelineDocument], error) {
 	var docs []models.GuidelineDocument
-	normalized := page.Normalize(20, 100)
+	normalized := filter.Page.Normalize(20, 100)
 	q := s.DB.Model(&models.GuidelineDocument{})
-	if programArea != "" {
-		q = q.Where("program_area = ?", programArea)
+	if filter.ProgramArea != "" {
+		q = q.Where("program_area = ?", filter.ProgramArea)
+	}
+	if filter.CategoryID != nil {
+		q = q.Where(`EXISTS (SELECT 1 FROM guideline_document_categories gdc
+			WHERE gdc.guideline_document_id = guideline_documents.id AND gdc.category_id = ?)`, *filter.CategoryID)
 	}
 
 	var total int64
 	if err := q.Session(&gorm.Session{}).Count(&total).Error; err != nil {
 		return nil, err
 	}
-	if err := q.Session(&gorm.Session{}).Preload("Versions").Order("created_at desc").Limit(normalized.PerPage).Offset(normalized.Offset()).Find(&docs).Error; err != nil {
+	if err := q.Session(&gorm.Session{}).Preload("Versions").Preload("Categories", func(db *gorm.DB) *gorm.DB {
+		return db.Order("sort_order ASC, name ASC")
+	}).Order("created_at desc").Limit(normalized.PerPage).Offset(normalized.Offset()).Find(&docs).Error; err != nil {
 		return nil, err
 	}
 	return NewPageResult(docs, normalized, total), nil
 }
 func (s GuidelineService) GetDocument(id uuid.UUID) (*models.GuidelineDocument, error) {
 	var d models.GuidelineDocument
-	return &d, s.DB.Preload("Versions").First(&d, "id = ?", id).Error
+	return &d, s.DB.Preload("Versions").Preload("Categories", func(db *gorm.DB) *gorm.DB {
+		return db.Order("sort_order ASC, name ASC")
+	}).First(&d, "id = ?", id).Error
 }
 func (s GuidelineService) UpdateDocument(id uuid.UUID, in UpdateGuidelineInput) (*models.GuidelineDocument, error) {
 	var document models.GuidelineDocument
 	if err := s.DB.First(&document, "id = ?", id).Error; err != nil {
 		return nil, err
 	}
-	language := strings.TrimSpace(in.Language)
-	if language == "" {
-		language = "en"
-	}
-	if err := s.DB.Model(&document).Updates(map[string]any{
-		"title":               strings.TrimSpace(in.Title),
-		"country":             strings.TrimSpace(in.Country),
-		"source_org":          strings.TrimSpace(in.SourceOrg),
-		"program_area":        strings.TrimSpace(in.ProgramArea),
-		"language":            language,
-		"description":         strings.TrimSpace(in.Description),
-		"intended_population": strings.TrimSpace(in.IntendedPopulation),
-		"healthcare_level":    strings.TrimSpace(in.HealthcareLevel),
-	}).Error; err != nil {
+	err := s.DB.Transaction(func(tx *gorm.DB) error {
+		updates := map[string]any{}
+		for column, value := range map[string]*string{
+			"title": in.Title, "country": in.Country, "source_org": in.SourceOrg,
+			"program_area": in.ProgramArea, "language": in.Language,
+			"description": in.Description, "intended_population": in.IntendedPopulation,
+			"healthcare_level": in.HealthcareLevel,
+		} {
+			if value != nil {
+				updates[column] = strings.TrimSpace(*value)
+			}
+		}
+		if value, ok := updates["language"]; ok && value == "" {
+			updates["language"] = "en"
+		}
+		if len(updates) > 0 {
+			if err := tx.Model(&document).Updates(updates).Error; err != nil {
+				return err
+			}
+		}
+		if in.CategoryIDs != nil {
+			categories, err := activeGuidelineCategories(tx, *in.CategoryIDs)
+			if err != nil {
+				return err
+			}
+			if err := tx.Model(&document).Association("Categories").Replace(categories); err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+	if err != nil {
 		return nil, err
 	}
 	result, err := s.GetDocument(id)
@@ -118,6 +175,31 @@ func (s GuidelineService) UpdateDocument(id uuid.UUID, in UpdateGuidelineInput) 
 		s.invalidatePublishedCaches(context.Background())
 	}
 	return result, err
+}
+
+func activeGuidelineCategories(tx *gorm.DB, ids []uuid.UUID) ([]models.GuidelineCategory, error) {
+	unique := make(map[uuid.UUID]struct{}, len(ids))
+	for _, id := range ids {
+		if id == uuid.Nil {
+			return nil, ErrGuidelineCategoryAssignment
+		}
+		unique[id] = struct{}{}
+	}
+	if len(unique) == 0 {
+		return []models.GuidelineCategory{}, nil
+	}
+	values := make([]uuid.UUID, 0, len(unique))
+	for id := range unique {
+		values = append(values, id)
+	}
+	var categories []models.GuidelineCategory
+	if err := tx.Where("id IN ? AND status = ? AND deleted_at IS NULL", values, "active").Find(&categories).Error; err != nil {
+		return nil, err
+	}
+	if len(categories) != len(values) {
+		return nil, ErrGuidelineCategoryAssignment
+	}
+	return categories, nil
 }
 func (s GuidelineService) CreateVersion(docID uuid.UUID, in CreateVersionInput) (*models.GuidelineVersion, error) {
 	v := models.GuidelineVersion{DocumentID: docID, Version: in.Version, PublicationDate: in.PublicationDate, ReviewDate: in.ReviewDate, Status: "draft"}

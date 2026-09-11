@@ -149,6 +149,7 @@ func New(cfg config.Config) (*App, error) {
 	helpContentSvc := services.HelpContentService{DB: database, Cache: cacheStore}
 	guidelineContentSvc := services.GuidelineContentService{DB: database, Cache: cacheStore}
 	diseaseSvc := services.DiseaseService{DB: database}
+	contentDiseaseSvc := services.ContentDiseaseService{DB: database}
 	emergencyProtocolSvc := services.EmergencyProtocolService{DB: database}
 	contentReferenceSvc := services.ContentReferenceService{DB: database, Cache: cacheStore}
 	consultantSvc := services.ConsultantService{DB: database}
@@ -178,6 +179,7 @@ func New(cfg config.Config) (*App, error) {
 	helpContentH := handlers.HelpContentHandler{Service: helpContentSvc}
 	guidelineContentH := handlers.GuidelineContentHandler{Service: guidelineContentSvc}
 	diseaseH := handlers.DiseaseHandler{Service: diseaseSvc}
+	contentDiseaseH := handlers.ContentDiseaseHandler{Service: contentDiseaseSvc}
 	emergencyProtocolH := handlers.EmergencyProtocolHandler{Service: emergencyProtocolSvc}
 	contentReferenceH := handlers.ContentReferenceHandler{Service: contentReferenceSvc}
 	progressUsageH := handlers.ProgressUsageHandler{Service: services.ProgressUsageService{DB: database}}
@@ -493,6 +495,9 @@ func New(cfg config.Config) (*App, error) {
 		protected.POST("/diseases", middleware.RequirePermission("guideline.write"), diseaseH.Create)
 		protected.PATCH("/diseases/:id", middleware.RequirePermission("guideline.write"), diseaseH.Update)
 		protected.DELETE("/diseases/:id", middleware.RequirePermission("guideline.write"), diseaseH.Archive)
+		protected.GET("/content-disease-assignments", middleware.RequirePermission("guideline.read"), contentDiseaseH.List)
+		protected.POST("/content-disease-assignments", middleware.RequirePermission("guideline.write"), contentDiseaseH.Create)
+		protected.DELETE("/content-disease-assignments/:id", middleware.RequirePermission("guideline.write"), contentDiseaseH.Delete)
 		protected.GET("/guideline-tags", middleware.RequirePermission("guideline.read"), guidelineContentH.ListTags)
 		protected.GET("/guideline-tags/:id", middleware.RequirePermission("guideline.read"), guidelineContentH.GetTag)
 		protected.POST("/guideline-tags", middleware.RequirePermission("guideline.write"), guidelineContentH.CreateTag)

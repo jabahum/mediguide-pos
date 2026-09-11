@@ -64,6 +64,7 @@ export default function EditGuidelinePage() {
           program_area: document.program_area,
           language: document.language,
           description: document.description,
+          category_ids: document.categories.map((category) => category.id),
         }}
         submitting={submitting}
         submitLabel="Save Changes"

@@ -144,6 +144,8 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         path: AppRoutes.publicGuidelines,
         builder: (_, state) => PublicationCataloguePage(
           programArea: state.uri.queryParameters['program_area'] ?? '',
+          categoryId: state.uri.queryParameters['category_id'] ?? '',
+          categoryName: state.uri.queryParameters['category_name'] ?? '',
         ),
       ),
       GoRoute(

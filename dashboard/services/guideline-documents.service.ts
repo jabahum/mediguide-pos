@@ -58,8 +58,17 @@ export interface GuidelineDocumentRecord {
   description?: string;
   current_version_id?: string | null;
   versions: GuidelineVersionRecord[];
+  categories: GuidelineDocumentCategoryRecord[];
   created_at: string;
   updated_at: string;
+}
+
+export interface GuidelineDocumentCategoryRecord {
+  id: string;
+  parent_category_id?: string | null;
+  name: string;
+  slug?: string | null;
+  status: string;
 }
 
 export interface GuidelineDocumentsPage {
@@ -77,6 +86,7 @@ export interface GuidelineDocumentInput {
   program_area?: string;
   language?: string;
   description?: string;
+  category_ids?: string[];
 }
 
 export interface CreateGuidelineVersionInput {
@@ -385,7 +395,11 @@ function sortVersions(versions: GuidelineVersionRecord[]) {
 function normalizeDocument(
   document: GuidelineDocumentRecord,
 ): GuidelineDocumentRecord {
-  return { ...document, versions: sortVersions(document.versions || []) };
+  return {
+    ...document,
+    versions: sortVersions(document.versions || []),
+    categories: Array.isArray(document.categories) ? document.categories : [],
+  };
 }
 
 function downloadBlob(blob: Blob, filename: string) {

@@ -1070,3 +1070,13 @@ type RegenerationCommentEnvelope struct {
 	Success bool                          `json:"success"`
 	Data    models.GuidelineReviewComment `json:"data"`
 }
+
+type ContentDiseaseAssignmentEnvelope struct {
+	Success bool                            `json:"success"`
+	Data    models.ContentDiseaseAssignment `json:"data"`
+}
+
+type PaginatedContentDiseaseAssignmentsEnvelope struct {
+	Success bool                                                 `json:"success"`
+	Data    services.PageResult[models.ContentDiseaseAssignment] `json:"data"`
+}

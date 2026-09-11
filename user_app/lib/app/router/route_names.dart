@@ -155,6 +155,16 @@ abstract final class AppRoutes {
     ).toString();
   }
 
+  static String publicGuidelinesForCategory(String categoryId, String name) {
+    return Uri(
+      path: publicGuidelines,
+      queryParameters: {
+        'category_id': categoryId.trim(),
+        if (name.trim().isNotEmpty) 'category_name': name.trim(),
+      },
+    ).toString();
+  }
+
   static String readPublicGuideline(String guidelineId) {
     return '${publicGuideline(guidelineId)}/read';
   }

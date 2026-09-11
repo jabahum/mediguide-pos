@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"errors"
 	"strconv"
 
 	"mediguide/internal/httpx"
@@ -17,14 +18,20 @@ type SearchHandler struct{ Service services.SearchService }
 // @Produce json
 // @Param q query string true "Search query" minlength(2)
 // @Param program_area query string false "Program area filter"
+// @Param category_id query string false "Guideline category UUID"
+// @Param disease_id query string false "Disease UUID"
 // @Param limit query int false "Maximum results" minimum(1) maximum(50)
 // @Success 200 {object} handlers.SearchResultsEnvelope
 // @Failure 500 {object} handlers.ErrorResponse
 // @Router /api/public/search [get]
 func (h SearchHandler) PublicSearch(c *gin.Context) {
 	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "20"))
-	rows, err := h.Service.PublicSearchContext(c.Request.Context(), c.Query("q"), c.Query("program_area"), limit)
+	rows, err := h.Service.PublicSearchContextFiltered(c.Request.Context(), c.Query("q"), services.PublicSearchFilter{ProgramArea: c.Query("program_area"), CategoryID: c.Query("category_id"), DiseaseID: c.Query("disease_id")}, limit)
 	if err != nil {
+		if errors.Is(err, services.ErrPublicGuidelineQuery) {
+			httpx.Error(c, 400, "invalid search filter")
+			return
+		}
 		httpx.Error(c, 500, "internal server error")
 		return
 	}

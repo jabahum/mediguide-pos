@@ -227,6 +227,15 @@ export default function GuidelineDetailsPage() {
       </div>
 
       <Card>
+        <CardHeader><CardTitle>Categories</CardTitle></CardHeader>
+        <CardContent className="flex flex-wrap gap-2">
+          {document.categories.length ? document.categories.map((category) => (
+            <Badge key={category.id} variant="secondary">{category.name}</Badge>
+          )) : <span className="text-sm text-muted-foreground">Uncategorized</span>}
+        </CardContent>
+      </Card>
+
+      <Card>
         <CardHeader>
           <CardTitle>Versions</CardTitle>
         </CardHeader>

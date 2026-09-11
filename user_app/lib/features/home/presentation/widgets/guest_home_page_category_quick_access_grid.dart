@@ -6,8 +6,8 @@ class _CategoryQuickAccessGrid extends StatelessWidget {
     required this.onCategory,
   });
 
-  final List<String> categories;
-  final ValueChanged<String> onCategory;
+  final List<({String id, String name})> categories;
+  final ValueChanged<({String id, String name})> onCategory;
 
   @override
   Widget build(BuildContext context) {
@@ -44,7 +44,7 @@ class _CategoryQuickAccessGrid extends StatelessWidget {
             final category = categories[index];
 
             return _CategoryQuickAccessTile(
-              label: category,
+              label: category.name,
               onTap: () {
                 onCategory(category);
               },

@@ -466,6 +466,61 @@ definitions:
       success:
         type: boolean
     type: object
+  handlers.ContentHubEnvelope:
+    properties:
+      data:
+        $ref: '#/definitions/models.ContentHub'
+      success:
+        type: boolean
+    type: object
+  handlers.ContentHubTemplateEnvelope:
+    properties:
+      data:
+        $ref: '#/definitions/services.ContentHubTemplateDetail'
+      success:
+        type: boolean
+    type: object
+  handlers.ContentHubTemplatesEnvelope:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/services.ContentHubTemplateDetail'
+        type: array
+      success:
+        type: boolean
+    type: object
+  handlers.ContentPillarEnvelope:
+    properties:
+      data:
+        $ref: '#/definitions/models.ContentPillar'
+      success:
+        type: boolean
+    type: object
+  handlers.ContentPillarItemEnvelope:
+    properties:
+      data:
+        $ref: '#/definitions/models.ContentPillarItem'
+      success:
+        type: boolean
+    type: object
+  handlers.ContentPillarItemsEnvelope:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/models.ContentPillarItem'
+        type: array
+      success:
+        type: boolean
+    type: object
+  handlers.ContentPillarsEnvelope:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/models.ContentPillar'
+        type: array
+      success:
+        type: boolean
+    type: object
   handlers.ConversationEnvelope:
     properties:
       data:
@@ -1239,6 +1294,13 @@ definitions:
       success:
         type: boolean
     type: object
+  handlers.PaginatedContentHubsEnvelope:
+    properties:
+      data:
+        $ref: '#/definitions/services.PageResult-models_ContentHub'
+      success:
+        type: boolean
+    type: object
   handlers.PaginatedConversationsEnvelope:
     properties:
       data:
@@ -1756,6 +1818,13 @@ definitions:
       success:
         type: boolean
     type: object
+  handlers.PaginatedPublicContentHubsEnvelope:
+    properties:
+      data:
+        $ref: '#/definitions/services.PageResult-services_PublicContentHub'
+      success:
+        type: boolean
+    type: object
   handlers.PaginatedPublicGuidelineAlgorithms:
     properties:
       items:
@@ -2006,6 +2075,20 @@ definitions:
         $ref: '#/definitions/services.RunProtocolResult'
       success:
         example: true
+        type: boolean
+    type: object
+  handlers.PublicContentHubEnvelope:
+    properties:
+      data:
+        $ref: '#/definitions/services.PublicContentHub'
+      success:
+        type: boolean
+    type: object
+  handlers.PublicContentPillarEnvelope:
+    properties:
+      data:
+        $ref: '#/definitions/services.PublicContentPillar'
+      success:
         type: boolean
     type: object
   handlers.PublicGuidelineAssetEnvelope:
@@ -2497,6 +2580,134 @@ definitions:
         type: string
       primary:
         type: boolean
+      updated_at:
+        type: string
+    type: object
+  models.ContentHub:
+    properties:
+      audience:
+        type: string
+      color:
+        type: string
+      created_at:
+        type: string
+      created_by:
+        type: string
+      description:
+        type: string
+      diseases:
+        items:
+          $ref: '#/definitions/models.Disease'
+        type: array
+      icon:
+        type: string
+      id:
+        type: string
+      lock_version:
+        type: integer
+      name:
+        type: string
+      published_at:
+        type: string
+      slug:
+        type: string
+      sort_order:
+        type: integer
+      status:
+        type: string
+      updated_at:
+        type: string
+      updated_by:
+        type: string
+    type: object
+  models.ContentHubTemplatePillar:
+    properties:
+      color:
+        type: string
+      created_at:
+        type: string
+      description:
+        type: string
+      icon:
+        type: string
+      id:
+        type: string
+      name:
+        type: string
+      parent_id:
+        type: string
+      slug:
+        type: string
+      sort_order:
+        type: integer
+      template_id:
+        type: string
+      updated_at:
+        type: string
+    type: object
+  models.ContentPillar:
+    properties:
+      color:
+        type: string
+      created_at:
+        type: string
+      description:
+        type: string
+      hub_id:
+        type: string
+      icon:
+        type: string
+      id:
+        type: string
+      lock_version:
+        type: integer
+      name:
+        type: string
+      parent_id:
+        type: string
+      slug:
+        type: string
+      sort_order:
+        type: integer
+      status:
+        type: string
+      updated_at:
+        type: string
+    type: object
+  models.ContentPillarItem:
+    properties:
+      content_id:
+        type: string
+      content_type:
+        type: string
+      created_at:
+        type: string
+      created_by:
+        type: string
+      description_override:
+        type: string
+      ends_at:
+        type: string
+      featured:
+        type: boolean
+      icon_override:
+        type: string
+      id:
+        type: string
+      label_override:
+        type: string
+      lock_version:
+        type: integer
+      pillar_id:
+        type: string
+      sort_order:
+        type: integer
+      starts_at:
+        type: string
+      status:
+        type: string
+      target:
+        type: string
       updated_at:
         type: string
     type: object
@@ -4124,6 +4335,17 @@ definitions:
       development_token:
         type: string
     type: object
+  services.ApplyContentHubTemplateInput:
+    properties:
+      lock_version:
+        minimum: 1
+        type: integer
+      template_id:
+        type: string
+    required:
+    - lock_version
+    - template_id
+    type: object
   services.AskRequest:
     properties:
       country:
@@ -4610,6 +4832,125 @@ definitions:
     - content_type
     - disease_id
     type: object
+  services.ContentHubTemplateDetail:
+    properties:
+      audience:
+        type: string
+      color:
+        type: string
+      created_at:
+        type: string
+      description:
+        type: string
+      icon:
+        type: string
+      id:
+        type: string
+      name:
+        type: string
+      pillars:
+        items:
+          $ref: '#/definitions/models.ContentHubTemplatePillar'
+        type: array
+      slug:
+        type: string
+      sort_order:
+        type: integer
+      status:
+        type: string
+      updated_at:
+        type: string
+    type: object
+  services.ContentHubTransitionInput:
+    properties:
+      lock_version:
+        minimum: 1
+        type: integer
+    required:
+    - lock_version
+    type: object
+  services.ContentPillarInput:
+    properties:
+      clear_parent:
+        type: boolean
+      color:
+        type: string
+      description:
+        type: string
+      icon:
+        type: string
+      lock_version:
+        type: integer
+      name:
+        type: string
+      parent_id:
+        type: string
+      slug:
+        type: string
+      sort_order:
+        type: integer
+      status:
+        type: string
+    required:
+    - name
+    type: object
+  services.ContentPillarItemInput:
+    properties:
+      content_id:
+        type: string
+      content_type:
+        type: string
+      description_override:
+        type: string
+      ends_at:
+        type: string
+      featured:
+        type: boolean
+      icon_override:
+        type: string
+      label_override:
+        type: string
+      lock_version:
+        type: integer
+      sort_order:
+        type: integer
+      starts_at:
+        type: string
+      status:
+        type: string
+      target:
+        type: string
+    required:
+    - content_type
+    type: object
+  services.ContentPillarItemOrderInput:
+    properties:
+      id:
+        type: string
+      lock_version:
+        minimum: 1
+        type: integer
+      sort_order:
+        minimum: 0
+        type: integer
+    required:
+    - id
+    - lock_version
+    type: object
+  services.ContentPillarOrderInput:
+    properties:
+      id:
+        type: string
+      lock_version:
+        minimum: 1
+        type: integer
+      sort_order:
+        minimum: 0
+        type: integer
+    required:
+    - id
+    - lock_version
+    type: object
   services.ConversationCreate:
     properties:
       other_participant_id:
@@ -4679,6 +5020,29 @@ definitions:
         type: string
       definition:
         type: object
+    type: object
+  services.CreateContentHubInput:
+    properties:
+      audience:
+        type: string
+      color:
+        type: string
+      description:
+        type: string
+      disease_ids:
+        items:
+          type: string
+        type: array
+      icon:
+        type: string
+      name:
+        type: string
+      slug:
+        type: string
+      sort_order:
+        type: integer
+    required:
+    - name
     type: object
   services.CreateGuidelineBlockInput:
     properties:
@@ -7300,6 +7664,21 @@ definitions:
       total_pages:
         type: integer
     type: object
+  services.PageResult-models_ContentHub:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/models.ContentHub'
+        type: array
+      page:
+        type: integer
+      per_page:
+        type: integer
+      total_items:
+        type: integer
+      total_pages:
+        type: integer
+    type: object
   services.PageResult-models_Disease:
     properties:
       items:
@@ -7660,6 +8039,21 @@ definitions:
       total_pages:
         type: integer
     type: object
+  services.PageResult-services_PublicContentHub:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/services.PublicContentHub'
+        type: array
+      page:
+        type: integer
+      per_page:
+        type: integer
+      total_items:
+        type: integer
+      total_pages:
+        type: integer
+    type: object
   services.PageResult-services_PublicOutbreak:
     properties:
       items:
@@ -7800,6 +8194,87 @@ definitions:
       question:
         type: string
       type:
+        type: string
+    type: object
+  services.PublicContentHub:
+    properties:
+      audience:
+        type: string
+      color:
+        type: string
+      description:
+        type: string
+      diseases:
+        items:
+          $ref: '#/definitions/services.PublicHubDisease'
+        type: array
+      icon:
+        type: string
+      id:
+        type: string
+      name:
+        type: string
+      pillars:
+        items:
+          $ref: '#/definitions/services.PublicContentPillar'
+        type: array
+      published_at:
+        type: string
+      slug:
+        type: string
+      sort_order:
+        type: integer
+    type: object
+  services.PublicContentPillar:
+    properties:
+      children:
+        items:
+          $ref: '#/definitions/services.PublicContentPillar'
+        type: array
+      color:
+        type: string
+      description:
+        type: string
+      icon:
+        type: string
+      id:
+        type: string
+      items:
+        items:
+          $ref: '#/definitions/services.PublicContentPillarItem'
+        type: array
+      name:
+        type: string
+      parent_id:
+        type: string
+      slug:
+        type: string
+      sort_order:
+        type: integer
+    type: object
+  services.PublicContentPillarItem:
+    properties:
+      content_id:
+        type: string
+      content_type:
+        type: string
+      description_override:
+        type: string
+      ends_at:
+        type: string
+      featured:
+        type: boolean
+      icon_override:
+        type: string
+      id:
+        type: string
+      label_override:
+        type: string
+      sort_order:
+        type: integer
+      starts_at:
+        type: string
+      target:
         type: string
     type: object
   services.PublicGuideline:
@@ -8054,6 +8529,17 @@ definitions:
         type: string
       sort_order:
         type: integer
+    type: object
+  services.PublicHubDisease:
+    properties:
+      id:
+        type: string
+      name:
+        type: string
+      short_name:
+        type: string
+      slug:
+        type: string
     type: object
   services.PublicOutbreak:
     properties:
@@ -8725,6 +9211,32 @@ definitions:
       lock_version:
         type: integer
     type: object
+  services.UpdateContentHubInput:
+    properties:
+      audience:
+        type: string
+      color:
+        type: string
+      description:
+        type: string
+      disease_ids:
+        items:
+          type: string
+        type: array
+      icon:
+        type: string
+      lock_version:
+        minimum: 1
+        type: integer
+      name:
+        type: string
+      slug:
+        type: string
+      sort_order:
+        type: integer
+    required:
+    - lock_version
+    type: object
   services.UpdateGuidelineBlockInput:
     properties:
       content:
@@ -9368,6 +9880,74 @@ paths:
       summary: List reviewed tables in a published guideline
       tags:
       - Public Guidelines
+  /api/public/hubs:
+    get:
+      parameters:
+      - description: Name or description search
+        in: query
+        name: search
+        type: string
+      - description: Disease UUID
+        in: query
+        name: disease_id
+        type: string
+      - description: Disease slug
+        in: query
+        name: disease_slug
+        type: string
+      - description: Page number
+        in: query
+        name: page
+        type: integer
+      - description: Items per page
+        in: query
+        name: per_page
+        type: integer
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.PaginatedPublicContentHubsEnvelope'
+      summary: List published content hubs
+      tags:
+      - public-content-hubs
+  /api/public/hubs/{slug}:
+    get:
+      parameters:
+      - description: Content hub slug
+        in: path
+        name: slug
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.PublicContentHubEnvelope'
+      summary: Get a published content hub with its nested pillars
+      tags:
+      - public-content-hubs
+  /api/public/hubs/{slug}/pillars/{pillarSlug}:
+    get:
+      parameters:
+      - description: Content hub slug
+        in: path
+        name: slug
+        required: true
+        type: string
+      - description: Content pillar slug
+        in: path
+        name: pillarSlug
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.PublicContentPillarEnvelope'
+      summary: Get an active pillar from a published content hub
+      tags:
+      - public-content-hubs
   /api/public/outbreak-documents:
     get:
       parameters:
@@ -11431,6 +12011,473 @@ paths:
       summary: Remove a disease-content assignment
       tags:
       - disease-taxonomy
+  /api/v2/content-hub-templates:
+    get:
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.ContentHubTemplatesEnvelope'
+      security:
+      - BearerAuth: []
+      summary: List reusable content hub templates
+      tags:
+      - content-hubs
+  /api/v2/content-hub-templates/{id}:
+    get:
+      parameters:
+      - description: Template UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.ContentHubTemplateEnvelope'
+      security:
+      - BearerAuth: []
+      summary: Get a reusable content hub template
+      tags:
+      - content-hubs
+  /api/v2/content-hubs:
+    get:
+      parameters:
+      - description: Name or description search
+        in: query
+        name: search
+        type: string
+      - description: Hub status
+        in: query
+        name: status
+        type: string
+      - description: Disease UUID
+        in: query
+        name: disease_id
+        type: string
+      - description: Page number
+        in: query
+        name: page
+        type: integer
+      - description: Items per page
+        in: query
+        name: per_page
+        type: integer
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.PaginatedContentHubsEnvelope'
+      security:
+      - BearerAuth: []
+      summary: List content hubs
+      tags:
+      - content-hubs
+    post:
+      parameters:
+      - description: Content hub
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/services.CreateContentHubInput'
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/handlers.ContentHubEnvelope'
+      security:
+      - BearerAuth: []
+      summary: Create a draft content hub
+      tags:
+      - content-hubs
+  /api/v2/content-hubs/{id}:
+    delete:
+      parameters:
+      - description: Content hub UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Current lock version
+        in: query
+        name: lock_version
+        required: true
+        type: integer
+      responses: {}
+      security:
+      - BearerAuth: []
+      summary: Delete a draft content hub
+      tags:
+      - content-hubs
+    get:
+      parameters:
+      - description: Content hub UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.ContentHubEnvelope'
+      security:
+      - BearerAuth: []
+      summary: Get a content hub
+      tags:
+      - content-hubs
+    patch:
+      parameters:
+      - description: Content hub UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Content hub
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/services.UpdateContentHubInput'
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.ContentHubEnvelope'
+      security:
+      - BearerAuth: []
+      summary: Update a content hub
+      tags:
+      - content-hubs
+  /api/v2/content-hubs/{id}/apply-template:
+    post:
+      parameters:
+      - description: Content hub UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Template application
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/services.ApplyContentHubTemplateInput'
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.ContentPillarsEnvelope'
+      security:
+      - BearerAuth: []
+      summary: Copy a template into an empty draft hub
+      tags:
+      - content-hubs
+  /api/v2/content-hubs/{id}/archive:
+    post:
+      parameters:
+      - description: Content hub UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Archive transition
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/services.ContentHubTransitionInput'
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.ContentHubEnvelope'
+      security:
+      - BearerAuth: []
+      summary: Archive a content hub
+      tags:
+      - content-hubs
+  /api/v2/content-hubs/{id}/pillars:
+    get:
+      parameters:
+      - description: Content hub UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.ContentPillarsEnvelope'
+      security:
+      - BearerAuth: []
+      summary: List a hub's pillars
+      tags:
+      - content-hubs
+    post:
+      parameters:
+      - description: Content hub UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Content pillar
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/services.ContentPillarInput'
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/handlers.ContentPillarEnvelope'
+      security:
+      - BearerAuth: []
+      summary: Create a content pillar
+      tags:
+      - content-hubs
+  /api/v2/content-hubs/{id}/pillars/{pillarId}:
+    delete:
+      parameters:
+      - description: Content hub UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Content pillar UUID
+        in: path
+        name: pillarId
+        required: true
+        type: string
+      - description: Current lock version
+        in: query
+        name: lock_version
+        required: true
+        type: integer
+      responses: {}
+      security:
+      - BearerAuth: []
+      summary: Remove a content pillar and its nested associations
+      tags:
+      - content-hubs
+    patch:
+      parameters:
+      - description: Content hub UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Content pillar UUID
+        in: path
+        name: pillarId
+        required: true
+        type: string
+      - description: Content pillar
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/services.ContentPillarInput'
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.ContentPillarEnvelope'
+      security:
+      - BearerAuth: []
+      summary: Update a content pillar
+      tags:
+      - content-hubs
+  /api/v2/content-hubs/{id}/pillars/{pillarId}/items:
+    get:
+      parameters:
+      - description: Content hub UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Content pillar UUID
+        in: path
+        name: pillarId
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.ContentPillarItemsEnvelope'
+      security:
+      - BearerAuth: []
+      summary: List a pillar's resource assignments
+      tags:
+      - content-hubs
+    post:
+      parameters:
+      - description: Content hub UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Content pillar UUID
+        in: path
+        name: pillarId
+        required: true
+        type: string
+      - description: Pillar item
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/services.ContentPillarItemInput'
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/handlers.ContentPillarItemEnvelope'
+      security:
+      - BearerAuth: []
+      summary: Assign a resource to a content pillar
+      tags:
+      - content-hubs
+  /api/v2/content-hubs/{id}/pillars/{pillarId}/items/{itemId}:
+    delete:
+      parameters:
+      - description: Content hub UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Content pillar UUID
+        in: path
+        name: pillarId
+        required: true
+        type: string
+      - description: Pillar item UUID
+        in: path
+        name: itemId
+        required: true
+        type: string
+      - description: Current lock version
+        in: query
+        name: lock_version
+        required: true
+        type: integer
+      responses: {}
+      security:
+      - BearerAuth: []
+      summary: Remove a resource assignment without deleting its source
+      tags:
+      - content-hubs
+    patch:
+      parameters:
+      - description: Content hub UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Content pillar UUID
+        in: path
+        name: pillarId
+        required: true
+        type: string
+      - description: Pillar item UUID
+        in: path
+        name: itemId
+        required: true
+        type: string
+      - description: Pillar item
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/services.ContentPillarItemInput'
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.ContentPillarItemEnvelope'
+      security:
+      - BearerAuth: []
+      summary: Update a pillar resource assignment
+      tags:
+      - content-hubs
+  /api/v2/content-hubs/{id}/pillars/{pillarId}/items/reorder:
+    put:
+      parameters:
+      - description: Content hub UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Content pillar UUID
+        in: path
+        name: pillarId
+        required: true
+        type: string
+      - description: Pillar item order
+        in: body
+        name: payload
+        required: true
+        schema:
+          items:
+            $ref: '#/definitions/services.ContentPillarItemOrderInput'
+          type: array
+      responses: {}
+      security:
+      - BearerAuth: []
+      summary: Reorder pillar resource assignments
+      tags:
+      - content-hubs
+  /api/v2/content-hubs/{id}/pillars/reorder:
+    put:
+      parameters:
+      - description: Content hub UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Pillar order
+        in: body
+        name: payload
+        required: true
+        schema:
+          items:
+            $ref: '#/definitions/services.ContentPillarOrderInput'
+          type: array
+      responses: {}
+      security:
+      - BearerAuth: []
+      summary: Reorder content pillars
+      tags:
+      - content-hubs
+  /api/v2/content-hubs/{id}/publish:
+    post:
+      parameters:
+      - description: Content hub UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Publication transition
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/services.ContentHubTransitionInput'
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.ContentHubEnvelope'
+      security:
+      - BearerAuth: []
+      summary: Publish a content hub
+      tags:
+      - content-hubs
   /api/v2/conversations:
     get:
       parameters:

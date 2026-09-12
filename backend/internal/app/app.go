@@ -150,6 +150,7 @@ func New(cfg config.Config) (*App, error) {
 	guidelineContentSvc := services.GuidelineContentService{DB: database, Cache: cacheStore}
 	diseaseSvc := services.DiseaseService{DB: database}
 	contentDiseaseSvc := services.ContentDiseaseService{DB: database}
+	contentHubSvc := services.ContentHubService{DB: database, AllowedExternalHosts: cfg.NotificationActionExternalHosts}
 	emergencyProtocolSvc := services.EmergencyProtocolService{DB: database}
 	contentReferenceSvc := services.ContentReferenceService{DB: database, Cache: cacheStore}
 	consultantSvc := services.ConsultantService{DB: database}
@@ -180,6 +181,7 @@ func New(cfg config.Config) (*App, error) {
 	guidelineContentH := handlers.GuidelineContentHandler{Service: guidelineContentSvc}
 	diseaseH := handlers.DiseaseHandler{Service: diseaseSvc}
 	contentDiseaseH := handlers.ContentDiseaseHandler{Service: contentDiseaseSvc}
+	contentHubH := handlers.ContentHubHandler{Service: contentHubSvc}
 	emergencyProtocolH := handlers.EmergencyProtocolHandler{Service: emergencyProtocolSvc}
 	contentReferenceH := handlers.ContentReferenceHandler{Service: contentReferenceSvc}
 	progressUsageH := handlers.ProgressUsageHandler{Service: services.ProgressUsageService{DB: database}}
@@ -222,6 +224,9 @@ func New(cfg config.Config) (*App, error) {
 		public.GET("/guidelines/:id/offline-package/download", rateLimiter.Limit(middleware.Policy("public-guideline-offline-download", 10, time.Minute, 2), middleware.IPIdentity), publicGuidelineH.OfflinePackageDownload)
 		public.GET("/guidelines/:id/assets/:assetId/download", rateLimiter.Limit(middleware.Policy("public-guideline-asset-download", 60, time.Minute, 10), middleware.IPIdentity), publicGuidelineH.AssetDownload)
 		public.GET("/guidelines/:id/markdown", rateLimiter.Limit(middleware.Policy("public-markdown", 60, time.Minute, 10), middleware.IPIdentity), publicGuidelineH.Markdown)
+		public.GET("/hubs", contentHubH.PublicList)
+		public.GET("/hubs/:slug", contentHubH.PublicGet)
+		public.GET("/hubs/:slug/pillars/:pillarSlug", contentHubH.PublicPillar)
 		public.POST("/assistant/ask",
 			middleware.PrivateNoStore(),
 			rateLimiter.Limit(middleware.Policy("public-general-ai-chat-minute", 6, time.Minute, 1), middleware.IPIdentity),
@@ -498,6 +503,26 @@ func New(cfg config.Config) (*App, error) {
 		protected.GET("/content-disease-assignments", middleware.RequirePermission("guideline.read"), contentDiseaseH.List)
 		protected.POST("/content-disease-assignments", middleware.RequirePermission("guideline.write"), contentDiseaseH.Create)
 		protected.DELETE("/content-disease-assignments/:id", middleware.RequirePermission("guideline.write"), contentDiseaseH.Delete)
+		protected.GET("/content-hubs", middleware.RequireAnyPermission("admin.all", "guideline.read", "outbreak.read"), contentHubH.List)
+		protected.GET("/content-hubs/:id", middleware.RequireAnyPermission("admin.all", "guideline.read", "outbreak.read"), contentHubH.Get)
+		protected.POST("/content-hubs", middleware.RequireAnyPermission("admin.all", "guideline.write", "outbreak.manage"), contentHubH.Create)
+		protected.PATCH("/content-hubs/:id", middleware.RequireAnyPermission("admin.all", "guideline.write", "outbreak.manage"), contentHubH.Update)
+		protected.DELETE("/content-hubs/:id", middleware.RequireAnyPermission("admin.all", "guideline.write", "outbreak.manage"), contentHubH.Delete)
+		protected.POST("/content-hubs/:id/publish", middleware.RequireAnyPermission("admin.all", "guideline.write", "outbreak.manage"), contentHubH.Publish)
+		protected.POST("/content-hubs/:id/archive", middleware.RequireAnyPermission("admin.all", "guideline.write", "outbreak.manage"), contentHubH.Archive)
+		protected.GET("/content-hubs/:id/pillars", middleware.RequireAnyPermission("admin.all", "guideline.read", "outbreak.read"), contentHubH.ListPillars)
+		protected.POST("/content-hubs/:id/pillars", middleware.RequireAnyPermission("admin.all", "guideline.write", "outbreak.manage"), contentHubH.CreatePillar)
+		protected.PATCH("/content-hubs/:id/pillars/:pillarId", middleware.RequireAnyPermission("admin.all", "guideline.write", "outbreak.manage"), contentHubH.UpdatePillar)
+		protected.DELETE("/content-hubs/:id/pillars/:pillarId", middleware.RequireAnyPermission("admin.all", "guideline.write", "outbreak.manage"), contentHubH.DeletePillar)
+		protected.PUT("/content-hubs/:id/pillars/reorder", middleware.RequireAnyPermission("admin.all", "guideline.write", "outbreak.manage"), contentHubH.ReorderPillars)
+		protected.GET("/content-hubs/:id/pillars/:pillarId/items", middleware.RequireAnyPermission("admin.all", "guideline.read", "outbreak.read"), contentHubH.ListPillarItems)
+		protected.POST("/content-hubs/:id/pillars/:pillarId/items", middleware.RequireAnyPermission("admin.all", "guideline.write", "outbreak.manage"), contentHubH.CreatePillarItem)
+		protected.PATCH("/content-hubs/:id/pillars/:pillarId/items/:itemId", middleware.RequireAnyPermission("admin.all", "guideline.write", "outbreak.manage"), contentHubH.UpdatePillarItem)
+		protected.DELETE("/content-hubs/:id/pillars/:pillarId/items/:itemId", middleware.RequireAnyPermission("admin.all", "guideline.write", "outbreak.manage"), contentHubH.DeletePillarItem)
+		protected.PUT("/content-hubs/:id/pillars/:pillarId/items/reorder", middleware.RequireAnyPermission("admin.all", "guideline.write", "outbreak.manage"), contentHubH.ReorderPillarItems)
+		protected.GET("/content-hub-templates", middleware.RequireAnyPermission("admin.all", "guideline.read", "outbreak.read"), contentHubH.ListTemplates)
+		protected.GET("/content-hub-templates/:id", middleware.RequireAnyPermission("admin.all", "guideline.read", "outbreak.read"), contentHubH.GetTemplate)
+		protected.POST("/content-hubs/:id/apply-template", middleware.RequireAnyPermission("admin.all", "guideline.write", "outbreak.manage"), contentHubH.ApplyTemplate)
 		protected.GET("/guideline-tags", middleware.RequirePermission("guideline.read"), guidelineContentH.ListTags)
 		protected.GET("/guideline-tags/:id", middleware.RequirePermission("guideline.read"), guidelineContentH.GetTag)
 		protected.POST("/guideline-tags", middleware.RequirePermission("guideline.write"), guidelineContentH.CreateTag)

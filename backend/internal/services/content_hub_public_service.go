@@ -1,0 +1,212 @@
+package services
+
+import (
+	"context"
+	"strings"
+	"time"
+
+	"mediguide/internal/models"
+
+	"github.com/google/uuid"
+	"gorm.io/gorm"
+)
+
+type PublicContentHub struct {
+	ID          uuid.UUID             `json:"id"`
+	Name        string                `json:"name"`
+	Slug        string                `json:"slug"`
+	Description string                `json:"description,omitempty"`
+	Icon        string                `json:"icon,omitempty"`
+	Color       string                `json:"color,omitempty"`
+	Audience    string                `json:"audience,omitempty"`
+	SortOrder   int                   `json:"sort_order"`
+	PublishedAt *time.Time            `json:"published_at,omitempty"`
+	Diseases    []PublicHubDisease    `json:"diseases"`
+	Pillars     []PublicContentPillar `json:"pillars,omitempty"`
+}
+
+type PublicHubDisease struct {
+	ID        uuid.UUID `json:"id"`
+	Name      string    `json:"name"`
+	Slug      string    `json:"slug"`
+	ShortName *string   `json:"short_name,omitempty"`
+}
+
+type PublicContentPillar struct {
+	ID          uuid.UUID                 `json:"id"`
+	ParentID    *uuid.UUID                `json:"parent_id,omitempty"`
+	Name        string                    `json:"name"`
+	Slug        string                    `json:"slug"`
+	Description string                    `json:"description,omitempty"`
+	Icon        string                    `json:"icon,omitempty"`
+	Color       string                    `json:"color,omitempty"`
+	SortOrder   int                       `json:"sort_order"`
+	Items       []PublicContentPillarItem `json:"items"`
+	Children    []PublicContentPillar     `json:"children"`
+}
+
+type PublicContentPillarItem struct {
+	ID                  uuid.UUID  `json:"id"`
+	ContentType         string     `json:"content_type"`
+	ContentID           *uuid.UUID `json:"content_id,omitempty"`
+	Target              string     `json:"target,omitempty"`
+	LabelOverride       string     `json:"label_override,omitempty"`
+	DescriptionOverride string     `json:"description_override,omitempty"`
+	IconOverride        string     `json:"icon_override,omitempty"`
+	SortOrder           int        `json:"sort_order"`
+	Featured            bool       `json:"featured"`
+	StartsAt            *time.Time `json:"starts_at,omitempty"`
+	EndsAt              *time.Time `json:"ends_at,omitempty"`
+}
+
+type PublicContentHubQuery struct {
+	Page        PageInput
+	Search      string
+	DiseaseID   string
+	DiseaseSlug string
+}
+
+func (s ContentHubService) ListPublicHubs(_ context.Context, in PublicContentHubQuery) (*PageResult[PublicContentHub], error) {
+	p := in.Page.Normalize(20, 100)
+	now := time.Now().UTC()
+	query := s.DB.Model(&models.ContentHub{}).
+		Where("content_hubs.deleted_at IS NULL AND content_hubs.status = ? AND content_hubs.published_at IS NOT NULL AND content_hubs.published_at <= ?", models.ContentHubStatusActive, now)
+	if search := strings.TrimSpace(in.Search); search != "" {
+		like := "%" + strings.ToLower(search) + "%"
+		query = query.Where("lower(content_hubs.name) LIKE ? OR lower(content_hubs.description) LIKE ?", like, like)
+	}
+	if raw := strings.TrimSpace(in.DiseaseID); raw != "" {
+		id, err := uuid.Parse(raw)
+		if err != nil {
+			return nil, ErrContentHubInvalid
+		}
+		query = query.Where("EXISTS (SELECT 1 FROM content_hub_diseases chd JOIN diseases d ON d.id = chd.disease_id AND d.deleted_at IS NULL AND d.status = ? WHERE chd.content_hub_id = content_hubs.id AND chd.disease_id = ?)", models.DiseaseStatusActive, id)
+	}
+	if slug := strings.TrimSpace(in.DiseaseSlug); slug != "" {
+		query = query.Where("EXISTS (SELECT 1 FROM content_hub_diseases chd JOIN diseases d ON d.id = chd.disease_id AND d.deleted_at IS NULL AND d.status = ? WHERE chd.content_hub_id = content_hubs.id AND lower(d.slug) = lower(?))", models.DiseaseStatusActive, slug)
+	}
+	var total int64
+	if err := query.Count(&total).Error; err != nil {
+		return nil, err
+	}
+	hubs := []models.ContentHub{}
+	if err := query.Order("content_hubs.sort_order ASC, content_hubs.name ASC, content_hubs.id ASC").Limit(p.PerPage).Offset(p.Offset()).Find(&hubs).Error; err != nil {
+		return nil, err
+	}
+	items := make([]PublicContentHub, 0, len(hubs))
+	for _, hub := range hubs {
+		publicHub, err := s.buildPublicHub(hub, now, false)
+		if err != nil {
+			return nil, err
+		}
+		items = append(items, *publicHub)
+	}
+	return NewPageResult(items, p, total), nil
+}
+
+func (s ContentHubService) GetPublicHub(_ context.Context, slug string) (*PublicContentHub, error) {
+	now := time.Now().UTC()
+	var hub models.ContentHub
+	if err := s.DB.Where("lower(slug) = lower(?) AND deleted_at IS NULL AND status = ? AND published_at IS NOT NULL AND published_at <= ?", strings.TrimSpace(slug), models.ContentHubStatusActive, now).First(&hub).Error; err != nil {
+		return nil, err
+	}
+	return s.buildPublicHub(hub, now, true)
+}
+
+func (s ContentHubService) GetPublicPillar(ctx context.Context, hubSlug, pillarSlug string) (*PublicContentPillar, error) {
+	hub, err := s.GetPublicHub(ctx, hubSlug)
+	if err != nil {
+		return nil, err
+	}
+	var find func([]PublicContentPillar) *PublicContentPillar
+	find = func(rows []PublicContentPillar) *PublicContentPillar {
+		for i := range rows {
+			if strings.EqualFold(rows[i].Slug, strings.TrimSpace(pillarSlug)) {
+				return &rows[i]
+			}
+			if child := find(rows[i].Children); child != nil {
+				return child
+			}
+		}
+		return nil
+	}
+	if result := find(hub.Pillars); result != nil {
+		return result, nil
+	}
+	return nil, gorm.ErrRecordNotFound
+}
+
+func (s ContentHubService) buildPublicHub(hub models.ContentHub, now time.Time, includePillars bool) (*PublicContentHub, error) {
+	diseases := []models.Disease{}
+	if err := s.DB.Table("diseases d").Joins("JOIN content_hub_diseases chd ON chd.disease_id = d.id").Where("chd.content_hub_id = ? AND d.deleted_at IS NULL AND d.status = ?", hub.ID, models.DiseaseStatusActive).Order("d.sort_order ASC, d.name ASC, d.id ASC").Find(&diseases).Error; err != nil {
+		return nil, err
+	}
+	result := &PublicContentHub{ID: hub.ID, Name: hub.Name, Slug: hub.Slug, Description: hub.Description, Icon: hub.Icon, Color: hub.Color, Audience: hub.Audience, SortOrder: hub.SortOrder, PublishedAt: hub.PublishedAt, Diseases: make([]PublicHubDisease, 0, len(diseases))}
+	for _, disease := range diseases {
+		result.Diseases = append(result.Diseases, PublicHubDisease{ID: disease.ID, Name: disease.Name, Slug: disease.Slug, ShortName: disease.ShortName})
+	}
+	if !includePillars {
+		return result, nil
+	}
+	pillars := []models.ContentPillar{}
+	if err := s.DB.Where("hub_id = ? AND deleted_at IS NULL AND status = ?", hub.ID, models.ContentPillarStatusActive).Order("sort_order ASC, name ASC, id ASC").Find(&pillars).Error; err != nil {
+		return nil, err
+	}
+	byParent := map[uuid.UUID][]models.ContentPillar{}
+	roots := []models.ContentPillar{}
+	for _, pillar := range pillars {
+		if pillar.ParentID == nil {
+			roots = append(roots, pillar)
+		} else {
+			byParent[*pillar.ParentID] = append(byParent[*pillar.ParentID], pillar)
+		}
+	}
+	var build func(models.ContentPillar) (PublicContentPillar, error)
+	build = func(pillar models.ContentPillar) (PublicContentPillar, error) {
+		out := PublicContentPillar{ID: pillar.ID, ParentID: pillar.ParentID, Name: pillar.Name, Slug: pillar.Slug, Description: pillar.Description, Icon: pillar.Icon, Color: pillar.Color, SortOrder: pillar.SortOrder, Items: []PublicContentPillarItem{}, Children: []PublicContentPillar{}}
+		items := []models.ContentPillarItem{}
+		if err := s.DB.Where("pillar_id = ? AND deleted_at IS NULL AND status = ? AND (starts_at IS NULL OR starts_at <= ?) AND (ends_at IS NULL OR ends_at > ?)", pillar.ID, models.ContentPillarItemStatusActive, now, now).Order("sort_order ASC, id ASC").Find(&items).Error; err != nil {
+			return out, err
+		}
+		for _, item := range items {
+			eligible, err := s.publicPillarItemEligible(item, now)
+			if err != nil {
+				return out, err
+			}
+			if !eligible {
+				continue
+			}
+			out.Items = append(out.Items, PublicContentPillarItem{ID: item.ID, ContentType: item.ContentType, ContentID: item.ContentID, Target: item.Target, LabelOverride: item.LabelOverride, DescriptionOverride: item.DescriptionOverride, IconOverride: item.IconOverride, SortOrder: item.SortOrder, Featured: item.Featured, StartsAt: item.StartsAt, EndsAt: item.EndsAt})
+		}
+		for _, child := range byParent[pillar.ID] {
+			built, err := build(child)
+			if err != nil {
+				return out, err
+			}
+			out.Children = append(out.Children, built)
+		}
+		return out, nil
+	}
+	for _, root := range roots {
+		built, err := build(root)
+		if err != nil {
+			return nil, err
+		}
+		result.Pillars = append(result.Pillars, built)
+	}
+	return result, nil
+}
+
+func (s ContentHubService) publicPillarItemEligible(item models.ContentPillarItem, now time.Time) (bool, error) {
+	switch item.ContentType {
+	case models.ContentPillarItemInternalRoute:
+		return validContentHubInternalRoute(item.Target), nil
+	case models.ContentPillarItemApprovedExternalURL:
+		return validApprovedHTTPSURL(item.Target, s.AllowedExternalHosts, false), nil
+	default:
+		if item.ContentID == nil {
+			return false, nil
+		}
+		return (ContentDiseaseService{DB: s.DB}).PubliclyEligible(models.ContentDiseaseAssignment{ContentType: item.ContentType, ContentID: *item.ContentID}, now)
+	}
+}

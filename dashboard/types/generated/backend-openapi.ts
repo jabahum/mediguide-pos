@@ -271,6 +271,41 @@ export interface HandlersContentDiseaseAssignmentEnvelope {
   success?: boolean;
 }
 
+export interface HandlersContentHubEnvelope {
+  data?: ModelsContentHub;
+  success?: boolean;
+}
+
+export interface HandlersContentHubTemplateEnvelope {
+  data?: ServicesContentHubTemplateDetail;
+  success?: boolean;
+}
+
+export interface HandlersContentHubTemplatesEnvelope {
+  data?: ServicesContentHubTemplateDetail[];
+  success?: boolean;
+}
+
+export interface HandlersContentPillarEnvelope {
+  data?: ModelsContentPillar;
+  success?: boolean;
+}
+
+export interface HandlersContentPillarItemEnvelope {
+  data?: ModelsContentPillarItem;
+  success?: boolean;
+}
+
+export interface HandlersContentPillarItemsEnvelope {
+  data?: ModelsContentPillarItem[];
+  success?: boolean;
+}
+
+export interface HandlersContentPillarsEnvelope {
+  data?: ModelsContentPillar[];
+  success?: boolean;
+}
+
 export interface HandlersConversationEnvelope {
   data?: ServicesConversationView;
   success?: boolean;
@@ -794,6 +829,11 @@ export interface HandlersPaginatedContentDiseaseAssignmentsEnvelope {
   success?: boolean;
 }
 
+export interface HandlersPaginatedContentHubsEnvelope {
+  data?: ServicesPageResultModelsContentHub;
+  success?: boolean;
+}
+
 export interface HandlersPaginatedConversationsEnvelope {
   data?: ServicesPageResultServicesConversationView;
   success?: boolean;
@@ -1129,6 +1169,11 @@ export interface HandlersPaginatedOutbreaksEnvelope {
   success?: boolean;
 }
 
+export interface HandlersPaginatedPublicContentHubsEnvelope {
+  data?: ServicesPageResultServicesPublicContentHub;
+  success?: boolean;
+}
+
 export interface HandlersPaginatedPublicGuidelineAlgorithms {
   items?: ServicesPublicGuidelineAlgorithm[];
   page?: number;
@@ -1288,6 +1333,16 @@ export interface HandlersPermissionsEnvelope {
 export interface HandlersProtocolRunEnvelope {
   data?: ServicesRunProtocolResult;
   /** @example true */
+  success?: boolean;
+}
+
+export interface HandlersPublicContentHubEnvelope {
+  data?: ServicesPublicContentHub;
+  success?: boolean;
+}
+
+export interface HandlersPublicContentPillarEnvelope {
+  data?: ServicesPublicContentPillar;
   success?: boolean;
 }
 
@@ -1612,6 +1667,75 @@ export interface ModelsContentDiseaseAssignment {
   disease_id?: string;
   id?: string;
   primary?: boolean;
+  updated_at?: string;
+}
+
+export interface ModelsContentHub {
+  audience?: string;
+  color?: string;
+  created_at?: string;
+  created_by?: string;
+  description?: string;
+  diseases?: ModelsDisease[];
+  icon?: string;
+  id?: string;
+  lock_version?: number;
+  name?: string;
+  published_at?: string;
+  slug?: string;
+  sort_order?: number;
+  status?: string;
+  updated_at?: string;
+  updated_by?: string;
+}
+
+export interface ModelsContentHubTemplatePillar {
+  color?: string;
+  created_at?: string;
+  description?: string;
+  icon?: string;
+  id?: string;
+  name?: string;
+  parent_id?: string;
+  slug?: string;
+  sort_order?: number;
+  template_id?: string;
+  updated_at?: string;
+}
+
+export interface ModelsContentPillar {
+  color?: string;
+  created_at?: string;
+  description?: string;
+  hub_id?: string;
+  icon?: string;
+  id?: string;
+  lock_version?: number;
+  name?: string;
+  parent_id?: string;
+  slug?: string;
+  sort_order?: number;
+  status?: string;
+  updated_at?: string;
+}
+
+export interface ModelsContentPillarItem {
+  content_id?: string;
+  content_type?: string;
+  created_at?: string;
+  created_by?: string;
+  description_override?: string;
+  ends_at?: string;
+  featured?: boolean;
+  icon_override?: string;
+  id?: string;
+  label_override?: string;
+  lock_version?: number;
+  pillar_id?: string;
+  sort_order?: number;
+  starts_at?: string;
+  status?: string;
+  target?: string;
   updated_at?: string;
 }
 
@@ -2482,6 +2606,12 @@ export interface ServicesAccountActionResult {
   development_token?: string;
 }
 
+export interface ServicesApplyContentHubTemplateInput {
+  /** @min 1 */
+  lock_version: number;
+  template_id: string;
+}
+
 export interface ServicesAskRequest {
   country?: string;
   language?: string;
@@ -2738,6 +2868,70 @@ export interface ServicesContentDiseaseInput {
   primary?: boolean;
 }
 
+export interface ServicesContentHubTemplateDetail {
+  audience?: string;
+  color?: string;
+  created_at?: string;
+  description?: string;
+  icon?: string;
+  id?: string;
+  name?: string;
+  pillars?: ModelsContentHubTemplatePillar[];
+  slug?: string;
+  sort_order?: number;
+  status?: string;
+  updated_at?: string;
+}
+
+export interface ServicesContentHubTransitionInput {
+  /** @min 1 */
+  lock_version: number;
+}
+
+export interface ServicesContentPillarInput {
+  clear_parent?: boolean;
+  color?: string;
+  description?: string;
+  icon?: string;
+  lock_version?: number;
+  name: string;
+  parent_id?: string;
+  slug?: string;
+  sort_order?: number;
+  status?: string;
+}
+
+export interface ServicesContentPillarItemInput {
+  content_id?: string;
+  content_type: string;
+  description_override?: string;
+  ends_at?: string;
+  featured?: boolean;
+  icon_override?: string;
+  label_override?: string;
+  lock_version?: number;
+  sort_order?: number;
+  starts_at?: string;
+  status?: string;
+  target?: string;
+}
+
+export interface ServicesContentPillarItemOrderInput {
+  id: string;
+  /** @min 1 */
+  lock_version: number;
+  /** @min 0 */
+  sort_order?: number;
+}
+
+export interface ServicesContentPillarOrderInput {
+  id: string;
+  /** @min 1 */
+  lock_version: number;
+  /** @min 0 */
+  sort_order?: number;
+}
+
 export interface ServicesConversationCreate {
   other_participant_id?: string;
 }
@@ -2777,6 +2971,17 @@ export interface ServicesCreateCalculatorInput {
 export interface ServicesCreateCalculatorVersionInput {
   change_summary?: string;
   definition?: object;
+}
+
+export interface ServicesCreateContentHubInput {
+  audience?: string;
+  color?: string;
+  description?: string;
+  disease_ids?: string[];
+  icon?: string;
+  name: string;
+  slug?: string;
+  sort_order?: number;
 }
 
 export interface ServicesCreateGuidelineBlockInput {
@@ -4207,6 +4412,14 @@ export interface ServicesPageResultModelsContentDiseaseAssignment {
   total_pages?: number;
 }
 
+export interface ServicesPageResultModelsContentHub {
+  items?: ModelsContentHub[];
+  page?: number;
+  per_page?: number;
+  total_items?: number;
+  total_pages?: number;
+}
+
 export interface ServicesPageResultModelsDisease {
   items?: ModelsDisease[];
   page?: number;
@@ -4399,6 +4612,14 @@ export interface ServicesPageResultServicesOutbreakUpdateAdminDTO {
   total_pages?: number;
 }
 
+export interface ServicesPageResultServicesPublicContentHub {
+  items?: ServicesPublicContentHub[];
+  page?: number;
+  per_page?: number;
+  total_items?: number;
+  total_pages?: number;
+}
+
 export interface ServicesPageResultServicesPublicOutbreak {
   items?: ServicesPublicOutbreak[];
   page?: number;
@@ -4471,6 +4692,47 @@ export interface ServicesProtocolStep {
   options?: string[];
   question?: string;
   type?: string;
+}
+
+export interface ServicesPublicContentHub {
+  audience?: string;
+  color?: string;
+  description?: string;
+  diseases?: ServicesPublicHubDisease[];
+  icon?: string;
+  id?: string;
+  name?: string;
+  pillars?: ServicesPublicContentPillar[];
+  published_at?: string;
+  slug?: string;
+  sort_order?: number;
+}
+
+export interface ServicesPublicContentPillar {
+  children?: ServicesPublicContentPillar[];
+  color?: string;
+  description?: string;
+  icon?: string;
+  id?: string;
+  items?: ServicesPublicContentPillarItem[];
+  name?: string;
+  parent_id?: string;
+  slug?: string;
+  sort_order?: number;
+}
+
+export interface ServicesPublicContentPillarItem {
+  content_id?: string;
+  content_type?: string;
+  description_override?: string;
+  ends_at?: string;
+  featured?: boolean;
+  icon_override?: string;
+  id?: string;
+  label_override?: string;
+  sort_order?: number;
+  starts_at?: string;
+  target?: string;
 }
 
 export interface ServicesPublicGuideline {
@@ -4613,6 +4875,13 @@ export interface ServicesPublicGuidelineTable {
   page_start?: number;
   section_id?: string;
   sort_order?: number;
+}
+
+export interface ServicesPublicHubDisease {
+  id?: string;
+  name?: string;
+  short_name?: string;
+  slug?: string;
 }
 
 export interface ServicesPublicOutbreak {
@@ -4978,6 +5247,19 @@ export interface ServicesUpdateCalculatorVersionInput {
   change_summary?: string;
   definition?: object;
   lock_version?: number;
+}
+
+export interface ServicesUpdateContentHubInput {
+  audience?: string;
+  color?: string;
+  description?: string;
+  disease_ids?: string[];
+  icon?: string;
+  /** @min 1 */
+  lock_version: number;
+  name?: string;
+  slug?: string;
+  sort_order?: number;
 }
 
 export interface ServicesUpdateGuidelineBlockInput {

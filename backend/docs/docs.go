@@ -699,6 +699,111 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/public/hubs": {
+            "get": {
+                "tags": [
+                    "public-content-hubs"
+                ],
+                "summary": "List published content hubs",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Name or description search",
+                        "name": "search",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Disease UUID",
+                        "name": "disease_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Disease slug",
+                        "name": "disease_slug",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Page number",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Items per page",
+                        "name": "per_page",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.PaginatedPublicContentHubsEnvelope"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/public/hubs/{slug}": {
+            "get": {
+                "tags": [
+                    "public-content-hubs"
+                ],
+                "summary": "Get a published content hub with its nested pillars",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Content hub slug",
+                        "name": "slug",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.PublicContentHubEnvelope"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/public/hubs/{slug}/pillars/{pillarSlug}": {
+            "get": {
+                "tags": [
+                    "public-content-hubs"
+                ],
+                "summary": "Get an active pillar from a published content hub",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Content hub slug",
+                        "name": "slug",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Content pillar slug",
+                        "name": "pillarSlug",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.PublicContentPillarEnvelope"
+                        }
+                    }
+                }
+            }
+        },
         "/api/public/outbreak-documents": {
             "get": {
                 "tags": [
@@ -3904,6 +4009,753 @@ const docTemplate = `{
                 "responses": {
                     "204": {
                         "description": "No Content"
+                    }
+                }
+            }
+        },
+        "/api/v2/content-hub-templates": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "content-hubs"
+                ],
+                "summary": "List reusable content hub templates",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ContentHubTemplatesEnvelope"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v2/content-hub-templates/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "content-hubs"
+                ],
+                "summary": "Get a reusable content hub template",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Template UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ContentHubTemplateEnvelope"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v2/content-hubs": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "content-hubs"
+                ],
+                "summary": "List content hubs",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Name or description search",
+                        "name": "search",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Hub status",
+                        "name": "status",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Disease UUID",
+                        "name": "disease_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Page number",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Items per page",
+                        "name": "per_page",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.PaginatedContentHubsEnvelope"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "content-hubs"
+                ],
+                "summary": "Create a draft content hub",
+                "parameters": [
+                    {
+                        "description": "Content hub",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/services.CreateContentHubInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ContentHubEnvelope"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v2/content-hubs/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "content-hubs"
+                ],
+                "summary": "Get a content hub",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Content hub UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ContentHubEnvelope"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "content-hubs"
+                ],
+                "summary": "Delete a draft content hub",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Content hub UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Current lock version",
+                        "name": "lock_version",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {}
+            },
+            "patch": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "content-hubs"
+                ],
+                "summary": "Update a content hub",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Content hub UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Content hub",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/services.UpdateContentHubInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ContentHubEnvelope"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v2/content-hubs/{id}/apply-template": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "content-hubs"
+                ],
+                "summary": "Copy a template into an empty draft hub",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Content hub UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Template application",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/services.ApplyContentHubTemplateInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ContentPillarsEnvelope"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v2/content-hubs/{id}/archive": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "content-hubs"
+                ],
+                "summary": "Archive a content hub",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Content hub UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Archive transition",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/services.ContentHubTransitionInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ContentHubEnvelope"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v2/content-hubs/{id}/pillars": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "content-hubs"
+                ],
+                "summary": "List a hub's pillars",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Content hub UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ContentPillarsEnvelope"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "content-hubs"
+                ],
+                "summary": "Create a content pillar",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Content hub UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Content pillar",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/services.ContentPillarInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ContentPillarEnvelope"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v2/content-hubs/{id}/pillars/reorder": {
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "content-hubs"
+                ],
+                "summary": "Reorder content pillars",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Content hub UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Pillar order",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/services.ContentPillarOrderInput"
+                            }
+                        }
+                    }
+                ],
+                "responses": {}
+            }
+        },
+        "/api/v2/content-hubs/{id}/pillars/{pillarId}": {
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "content-hubs"
+                ],
+                "summary": "Remove a content pillar and its nested associations",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Content hub UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Content pillar UUID",
+                        "name": "pillarId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Current lock version",
+                        "name": "lock_version",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {}
+            },
+            "patch": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "content-hubs"
+                ],
+                "summary": "Update a content pillar",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Content hub UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Content pillar UUID",
+                        "name": "pillarId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Content pillar",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/services.ContentPillarInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ContentPillarEnvelope"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v2/content-hubs/{id}/pillars/{pillarId}/items": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "content-hubs"
+                ],
+                "summary": "List a pillar's resource assignments",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Content hub UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Content pillar UUID",
+                        "name": "pillarId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ContentPillarItemsEnvelope"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "content-hubs"
+                ],
+                "summary": "Assign a resource to a content pillar",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Content hub UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Content pillar UUID",
+                        "name": "pillarId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Pillar item",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/services.ContentPillarItemInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ContentPillarItemEnvelope"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v2/content-hubs/{id}/pillars/{pillarId}/items/reorder": {
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "content-hubs"
+                ],
+                "summary": "Reorder pillar resource assignments",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Content hub UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Content pillar UUID",
+                        "name": "pillarId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Pillar item order",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/services.ContentPillarItemOrderInput"
+                            }
+                        }
+                    }
+                ],
+                "responses": {}
+            }
+        },
+        "/api/v2/content-hubs/{id}/pillars/{pillarId}/items/{itemId}": {
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "content-hubs"
+                ],
+                "summary": "Remove a resource assignment without deleting its source",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Content hub UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Content pillar UUID",
+                        "name": "pillarId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Pillar item UUID",
+                        "name": "itemId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Current lock version",
+                        "name": "lock_version",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {}
+            },
+            "patch": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "content-hubs"
+                ],
+                "summary": "Update a pillar resource assignment",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Content hub UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Content pillar UUID",
+                        "name": "pillarId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Pillar item UUID",
+                        "name": "itemId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Pillar item",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/services.ContentPillarItemInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ContentPillarItemEnvelope"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v2/content-hubs/{id}/publish": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "content-hubs"
+                ],
+                "summary": "Publish a content hub",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Content hub UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Publication transition",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/services.ContentHubTransitionInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ContentHubEnvelope"
+                        }
                     }
                 }
             }
@@ -17235,6 +18087,92 @@ const docTemplate = `{
                 }
             }
         },
+        "handlers.ContentHubEnvelope": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/models.ContentHub"
+                },
+                "success": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "handlers.ContentHubTemplateEnvelope": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/services.ContentHubTemplateDetail"
+                },
+                "success": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "handlers.ContentHubTemplatesEnvelope": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/services.ContentHubTemplateDetail"
+                    }
+                },
+                "success": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "handlers.ContentPillarEnvelope": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/models.ContentPillar"
+                },
+                "success": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "handlers.ContentPillarItemEnvelope": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/models.ContentPillarItem"
+                },
+                "success": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "handlers.ContentPillarItemsEnvelope": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.ContentPillarItem"
+                    }
+                },
+                "success": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "handlers.ContentPillarsEnvelope": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.ContentPillar"
+                    }
+                },
+                "success": {
+                    "type": "boolean"
+                }
+            }
+        },
         "handlers.ConversationEnvelope": {
             "type": "object",
             "properties": {
@@ -18405,6 +19343,17 @@ const docTemplate = `{
                 }
             }
         },
+        "handlers.PaginatedContentHubsEnvelope": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/services.PageResult-models_ContentHub"
+                },
+                "success": {
+                    "type": "boolean"
+                }
+            }
+        },
         "handlers.PaginatedConversationsEnvelope": {
             "type": "object",
             "properties": {
@@ -19187,6 +20136,17 @@ const docTemplate = `{
                 }
             }
         },
+        "handlers.PaginatedPublicContentHubsEnvelope": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/services.PageResult-services_PublicContentHub"
+                },
+                "success": {
+                    "type": "boolean"
+                }
+            }
+        },
         "handlers.PaginatedPublicGuidelineAlgorithms": {
             "type": "object",
             "properties": {
@@ -19569,6 +20529,28 @@ const docTemplate = `{
                 "success": {
                     "type": "boolean",
                     "example": true
+                }
+            }
+        },
+        "handlers.PublicContentHubEnvelope": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/services.PublicContentHub"
+                },
+                "success": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "handlers.PublicContentPillarEnvelope": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/services.PublicContentPillar"
+                },
+                "success": {
+                    "type": "boolean"
                 }
             }
         },
@@ -20306,6 +21288,200 @@ const docTemplate = `{
                 },
                 "primary": {
                     "type": "boolean"
+                },
+                "updated_at": {
+                    "type": "string"
+                }
+            }
+        },
+        "models.ContentHub": {
+            "type": "object",
+            "properties": {
+                "audience": {
+                    "type": "string"
+                },
+                "color": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "created_by": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "diseases": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.Disease"
+                    }
+                },
+                "icon": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "lock_version": {
+                    "type": "integer"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "published_at": {
+                    "type": "string"
+                },
+                "slug": {
+                    "type": "string"
+                },
+                "sort_order": {
+                    "type": "integer"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                },
+                "updated_by": {
+                    "type": "string"
+                }
+            }
+        },
+        "models.ContentHubTemplatePillar": {
+            "type": "object",
+            "properties": {
+                "color": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "icon": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "parent_id": {
+                    "type": "string"
+                },
+                "slug": {
+                    "type": "string"
+                },
+                "sort_order": {
+                    "type": "integer"
+                },
+                "template_id": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                }
+            }
+        },
+        "models.ContentPillar": {
+            "type": "object",
+            "properties": {
+                "color": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "hub_id": {
+                    "type": "string"
+                },
+                "icon": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "lock_version": {
+                    "type": "integer"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "parent_id": {
+                    "type": "string"
+                },
+                "slug": {
+                    "type": "string"
+                },
+                "sort_order": {
+                    "type": "integer"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                }
+            }
+        },
+        "models.ContentPillarItem": {
+            "type": "object",
+            "properties": {
+                "content_id": {
+                    "type": "string"
+                },
+                "content_type": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "created_by": {
+                    "type": "string"
+                },
+                "description_override": {
+                    "type": "string"
+                },
+                "ends_at": {
+                    "type": "string"
+                },
+                "featured": {
+                    "type": "boolean"
+                },
+                "icon_override": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "label_override": {
+                    "type": "string"
+                },
+                "lock_version": {
+                    "type": "integer"
+                },
+                "pillar_id": {
+                    "type": "string"
+                },
+                "sort_order": {
+                    "type": "integer"
+                },
+                "starts_at": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "target": {
+                    "type": "string"
                 },
                 "updated_at": {
                     "type": "string"
@@ -22733,6 +23909,22 @@ const docTemplate = `{
                 }
             }
         },
+        "services.ApplyContentHubTemplateInput": {
+            "type": "object",
+            "required": [
+                "lock_version",
+                "template_id"
+            ],
+            "properties": {
+                "lock_version": {
+                    "type": "integer",
+                    "minimum": 1
+                },
+                "template_id": {
+                    "type": "string"
+                }
+            }
+        },
         "services.AskRequest": {
             "type": "object",
             "properties": {
@@ -23467,6 +24659,184 @@ const docTemplate = `{
                 }
             }
         },
+        "services.ContentHubTemplateDetail": {
+            "type": "object",
+            "properties": {
+                "audience": {
+                    "type": "string"
+                },
+                "color": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "icon": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "pillars": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.ContentHubTemplatePillar"
+                    }
+                },
+                "slug": {
+                    "type": "string"
+                },
+                "sort_order": {
+                    "type": "integer"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                }
+            }
+        },
+        "services.ContentHubTransitionInput": {
+            "type": "object",
+            "required": [
+                "lock_version"
+            ],
+            "properties": {
+                "lock_version": {
+                    "type": "integer",
+                    "minimum": 1
+                }
+            }
+        },
+        "services.ContentPillarInput": {
+            "type": "object",
+            "required": [
+                "name"
+            ],
+            "properties": {
+                "clear_parent": {
+                    "type": "boolean"
+                },
+                "color": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "icon": {
+                    "type": "string"
+                },
+                "lock_version": {
+                    "type": "integer"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "parent_id": {
+                    "type": "string"
+                },
+                "slug": {
+                    "type": "string"
+                },
+                "sort_order": {
+                    "type": "integer"
+                },
+                "status": {
+                    "type": "string"
+                }
+            }
+        },
+        "services.ContentPillarItemInput": {
+            "type": "object",
+            "required": [
+                "content_type"
+            ],
+            "properties": {
+                "content_id": {
+                    "type": "string"
+                },
+                "content_type": {
+                    "type": "string"
+                },
+                "description_override": {
+                    "type": "string"
+                },
+                "ends_at": {
+                    "type": "string"
+                },
+                "featured": {
+                    "type": "boolean"
+                },
+                "icon_override": {
+                    "type": "string"
+                },
+                "label_override": {
+                    "type": "string"
+                },
+                "lock_version": {
+                    "type": "integer"
+                },
+                "sort_order": {
+                    "type": "integer"
+                },
+                "starts_at": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "target": {
+                    "type": "string"
+                }
+            }
+        },
+        "services.ContentPillarItemOrderInput": {
+            "type": "object",
+            "required": [
+                "id",
+                "lock_version"
+            ],
+            "properties": {
+                "id": {
+                    "type": "string"
+                },
+                "lock_version": {
+                    "type": "integer",
+                    "minimum": 1
+                },
+                "sort_order": {
+                    "type": "integer",
+                    "minimum": 0
+                }
+            }
+        },
+        "services.ContentPillarOrderInput": {
+            "type": "object",
+            "required": [
+                "id",
+                "lock_version"
+            ],
+            "properties": {
+                "id": {
+                    "type": "string"
+                },
+                "lock_version": {
+                    "type": "integer",
+                    "minimum": 1
+                },
+                "sort_order": {
+                    "type": "integer",
+                    "minimum": 0
+                }
+            }
+        },
         "services.ConversationCreate": {
             "type": "object",
             "properties": {
@@ -23571,6 +24941,41 @@ const docTemplate = `{
                 },
                 "definition": {
                     "type": "object"
+                }
+            }
+        },
+        "services.CreateContentHubInput": {
+            "type": "object",
+            "required": [
+                "name"
+            ],
+            "properties": {
+                "audience": {
+                    "type": "string"
+                },
+                "color": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "disease_ids": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "icon": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "slug": {
+                    "type": "string"
+                },
+                "sort_order": {
+                    "type": "integer"
                 }
             }
         },
@@ -27553,6 +28958,29 @@ const docTemplate = `{
                 }
             }
         },
+        "services.PageResult-models_ContentHub": {
+            "type": "object",
+            "properties": {
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.ContentHub"
+                    }
+                },
+                "page": {
+                    "type": "integer"
+                },
+                "per_page": {
+                    "type": "integer"
+                },
+                "total_items": {
+                    "type": "integer"
+                },
+                "total_pages": {
+                    "type": "integer"
+                }
+            }
+        },
         "services.PageResult-models_Disease": {
             "type": "object",
             "properties": {
@@ -28105,6 +29533,29 @@ const docTemplate = `{
                 }
             }
         },
+        "services.PageResult-services_PublicContentHub": {
+            "type": "object",
+            "properties": {
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/services.PublicContentHub"
+                    }
+                },
+                "page": {
+                    "type": "integer"
+                },
+                "per_page": {
+                    "type": "integer"
+                },
+                "total_items": {
+                    "type": "integer"
+                },
+                "total_pages": {
+                    "type": "integer"
+                }
+            }
+        },
         "services.PageResult-services_PublicOutbreak": {
             "type": "object",
             "properties": {
@@ -28318,6 +29769,129 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "type": {
+                    "type": "string"
+                }
+            }
+        },
+        "services.PublicContentHub": {
+            "type": "object",
+            "properties": {
+                "audience": {
+                    "type": "string"
+                },
+                "color": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "diseases": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/services.PublicHubDisease"
+                    }
+                },
+                "icon": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "pillars": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/services.PublicContentPillar"
+                    }
+                },
+                "published_at": {
+                    "type": "string"
+                },
+                "slug": {
+                    "type": "string"
+                },
+                "sort_order": {
+                    "type": "integer"
+                }
+            }
+        },
+        "services.PublicContentPillar": {
+            "type": "object",
+            "properties": {
+                "children": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/services.PublicContentPillar"
+                    }
+                },
+                "color": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "icon": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/services.PublicContentPillarItem"
+                    }
+                },
+                "name": {
+                    "type": "string"
+                },
+                "parent_id": {
+                    "type": "string"
+                },
+                "slug": {
+                    "type": "string"
+                },
+                "sort_order": {
+                    "type": "integer"
+                }
+            }
+        },
+        "services.PublicContentPillarItem": {
+            "type": "object",
+            "properties": {
+                "content_id": {
+                    "type": "string"
+                },
+                "content_type": {
+                    "type": "string"
+                },
+                "description_override": {
+                    "type": "string"
+                },
+                "ends_at": {
+                    "type": "string"
+                },
+                "featured": {
+                    "type": "boolean"
+                },
+                "icon_override": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "label_override": {
+                    "type": "string"
+                },
+                "sort_order": {
+                    "type": "integer"
+                },
+                "starts_at": {
+                    "type": "string"
+                },
+                "target": {
                     "type": "string"
                 }
             }
@@ -28703,6 +30277,23 @@ const docTemplate = `{
                 },
                 "sort_order": {
                     "type": "integer"
+                }
+            }
+        },
+        "services.PublicHubDisease": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "short_name": {
+                    "type": "string"
+                },
+                "slug": {
+                    "type": "string"
                 }
             }
         },
@@ -29722,6 +31313,45 @@ const docTemplate = `{
                     "type": "object"
                 },
                 "lock_version": {
+                    "type": "integer"
+                }
+            }
+        },
+        "services.UpdateContentHubInput": {
+            "type": "object",
+            "required": [
+                "lock_version"
+            ],
+            "properties": {
+                "audience": {
+                    "type": "string"
+                },
+                "color": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "disease_ids": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "icon": {
+                    "type": "string"
+                },
+                "lock_version": {
+                    "type": "integer",
+                    "minimum": 1
+                },
+                "name": {
+                    "type": "string"
+                },
+                "slug": {
+                    "type": "string"
+                },
+                "sort_order": {
                     "type": "integer"
                 }
             }

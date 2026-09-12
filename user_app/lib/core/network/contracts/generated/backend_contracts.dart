@@ -997,6 +997,168 @@ final class HandlersContentDiseaseAssignmentEnvelope {
   Map<String, dynamic> toJson() => Map.of(value);
 }
 
+final class HandlersContentHubEnvelope {
+  HandlersContentHubEnvelope(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory HandlersContentHubEnvelope.fromJson(Map<String, dynamic> json) =>
+      HandlersContentHubEnvelope(json);
+
+  static const schemaName = 'handlers.ContentHubEnvelope';
+  final Map<String, dynamic> value;
+
+  ModelsContentHub? get data {
+    final raw = value['data'];
+    if (raw is! Map) return null;
+    return ModelsContentHub.fromJson(_jsonMap(raw));
+  }
+
+  bool? get success => value['success'] as bool?;
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
+final class HandlersContentHubTemplateEnvelope {
+  HandlersContentHubTemplateEnvelope(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory HandlersContentHubTemplateEnvelope.fromJson(
+    Map<String, dynamic> json,
+  ) => HandlersContentHubTemplateEnvelope(json);
+
+  static const schemaName = 'handlers.ContentHubTemplateEnvelope';
+  final Map<String, dynamic> value;
+
+  ServicesContentHubTemplateDetail? get data {
+    final raw = value['data'];
+    if (raw is! Map) return null;
+    return ServicesContentHubTemplateDetail.fromJson(_jsonMap(raw));
+  }
+
+  bool? get success => value['success'] as bool?;
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
+final class HandlersContentHubTemplatesEnvelope {
+  HandlersContentHubTemplatesEnvelope(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory HandlersContentHubTemplatesEnvelope.fromJson(
+    Map<String, dynamic> json,
+  ) => HandlersContentHubTemplatesEnvelope(json);
+
+  static const schemaName = 'handlers.ContentHubTemplatesEnvelope';
+  final Map<String, dynamic> value;
+
+  List<ServicesContentHubTemplateDetail> get data {
+    final raw = value['data'];
+    if (raw is! List) return const [];
+    return raw
+        .whereType<Map>()
+        .map(
+          (item) => ServicesContentHubTemplateDetail.fromJson(_jsonMap(item)),
+        )
+        .toList(growable: false);
+  }
+
+  bool? get success => value['success'] as bool?;
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
+final class HandlersContentPillarEnvelope {
+  HandlersContentPillarEnvelope(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory HandlersContentPillarEnvelope.fromJson(Map<String, dynamic> json) =>
+      HandlersContentPillarEnvelope(json);
+
+  static const schemaName = 'handlers.ContentPillarEnvelope';
+  final Map<String, dynamic> value;
+
+  ModelsContentPillar? get data {
+    final raw = value['data'];
+    if (raw is! Map) return null;
+    return ModelsContentPillar.fromJson(_jsonMap(raw));
+  }
+
+  bool? get success => value['success'] as bool?;
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
+final class HandlersContentPillarItemEnvelope {
+  HandlersContentPillarItemEnvelope(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory HandlersContentPillarItemEnvelope.fromJson(
+    Map<String, dynamic> json,
+  ) => HandlersContentPillarItemEnvelope(json);
+
+  static const schemaName = 'handlers.ContentPillarItemEnvelope';
+  final Map<String, dynamic> value;
+
+  ModelsContentPillarItem? get data {
+    final raw = value['data'];
+    if (raw is! Map) return null;
+    return ModelsContentPillarItem.fromJson(_jsonMap(raw));
+  }
+
+  bool? get success => value['success'] as bool?;
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
+final class HandlersContentPillarItemsEnvelope {
+  HandlersContentPillarItemsEnvelope(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory HandlersContentPillarItemsEnvelope.fromJson(
+    Map<String, dynamic> json,
+  ) => HandlersContentPillarItemsEnvelope(json);
+
+  static const schemaName = 'handlers.ContentPillarItemsEnvelope';
+  final Map<String, dynamic> value;
+
+  List<ModelsContentPillarItem> get data {
+    final raw = value['data'];
+    if (raw is! List) return const [];
+    return raw
+        .whereType<Map>()
+        .map((item) => ModelsContentPillarItem.fromJson(_jsonMap(item)))
+        .toList(growable: false);
+  }
+
+  bool? get success => value['success'] as bool?;
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
+final class HandlersContentPillarsEnvelope {
+  HandlersContentPillarsEnvelope(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory HandlersContentPillarsEnvelope.fromJson(Map<String, dynamic> json) =>
+      HandlersContentPillarsEnvelope(json);
+
+  static const schemaName = 'handlers.ContentPillarsEnvelope';
+  final Map<String, dynamic> value;
+
+  List<ModelsContentPillar> get data {
+    final raw = value['data'];
+    if (raw is! List) return const [];
+    return raw
+        .whereType<Map>()
+        .map((item) => ModelsContentPillar.fromJson(_jsonMap(item)))
+        .toList(growable: false);
+  }
+
+  bool? get success => value['success'] as bool?;
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
 final class HandlersConversationEnvelope {
   HandlersConversationEnvelope(Map<String, dynamic> value)
     : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
@@ -2898,6 +3060,28 @@ final class HandlersPaginatedContentDiseaseAssignmentsEnvelope {
   Map<String, dynamic> toJson() => Map.of(value);
 }
 
+final class HandlersPaginatedContentHubsEnvelope {
+  HandlersPaginatedContentHubsEnvelope(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory HandlersPaginatedContentHubsEnvelope.fromJson(
+    Map<String, dynamic> json,
+  ) => HandlersPaginatedContentHubsEnvelope(json);
+
+  static const schemaName = 'handlers.PaginatedContentHubsEnvelope';
+  final Map<String, dynamic> value;
+
+  ServicesPageResultModelsContentHub? get data {
+    final raw = value['data'];
+    if (raw is! Map) return null;
+    return ServicesPageResultModelsContentHub.fromJson(_jsonMap(raw));
+  }
+
+  bool? get success => value['success'] as bool?;
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
 final class HandlersPaginatedConversationsEnvelope {
   HandlersPaginatedConversationsEnvelope(Map<String, dynamic> value)
     : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
@@ -4071,6 +4255,28 @@ final class HandlersPaginatedOutbreaksEnvelope {
   Map<String, dynamic> toJson() => Map.of(value);
 }
 
+final class HandlersPaginatedPublicContentHubsEnvelope {
+  HandlersPaginatedPublicContentHubsEnvelope(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory HandlersPaginatedPublicContentHubsEnvelope.fromJson(
+    Map<String, dynamic> json,
+  ) => HandlersPaginatedPublicContentHubsEnvelope(json);
+
+  static const schemaName = 'handlers.PaginatedPublicContentHubsEnvelope';
+  final Map<String, dynamic> value;
+
+  ServicesPageResultServicesPublicContentHub? get data {
+    final raw = value['data'];
+    if (raw is! Map) return null;
+    return ServicesPageResultServicesPublicContentHub.fromJson(_jsonMap(raw));
+  }
+
+  bool? get success => value['success'] as bool?;
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
 final class HandlersPaginatedPublicGuidelineAlgorithms {
   HandlersPaginatedPublicGuidelineAlgorithms(Map<String, dynamic> value)
     : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
@@ -4651,6 +4857,50 @@ final class HandlersProtocolRunEnvelope {
     final raw = value['data'];
     if (raw is! Map) return null;
     return ServicesRunProtocolResult.fromJson(_jsonMap(raw));
+  }
+
+  bool? get success => value['success'] as bool?;
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
+final class HandlersPublicContentHubEnvelope {
+  HandlersPublicContentHubEnvelope(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory HandlersPublicContentHubEnvelope.fromJson(
+    Map<String, dynamic> json,
+  ) => HandlersPublicContentHubEnvelope(json);
+
+  static const schemaName = 'handlers.PublicContentHubEnvelope';
+  final Map<String, dynamic> value;
+
+  ServicesPublicContentHub? get data {
+    final raw = value['data'];
+    if (raw is! Map) return null;
+    return ServicesPublicContentHub.fromJson(_jsonMap(raw));
+  }
+
+  bool? get success => value['success'] as bool?;
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
+final class HandlersPublicContentPillarEnvelope {
+  HandlersPublicContentPillarEnvelope(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory HandlersPublicContentPillarEnvelope.fromJson(
+    Map<String, dynamic> json,
+  ) => HandlersPublicContentPillarEnvelope(json);
+
+  static const schemaName = 'handlers.PublicContentPillarEnvelope';
+  final Map<String, dynamic> value;
+
+  ServicesPublicContentPillar? get data {
+    final raw = value['data'];
+    if (raw is! Map) return null;
+    return ServicesPublicContentPillar.fromJson(_jsonMap(raw));
   }
 
   bool? get success => value['success'] as bool?;
@@ -5676,6 +5926,179 @@ final class ModelsContentDiseaseAssignment {
   String? get id => value['id']?.toString();
 
   bool? get primary => value['primary'] as bool?;
+
+  String? get updatedAt => value['updated_at']?.toString();
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
+final class ModelsContentHub {
+  ModelsContentHub(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory ModelsContentHub.fromJson(Map<String, dynamic> json) =>
+      ModelsContentHub(json);
+
+  static const schemaName = 'models.ContentHub';
+  final Map<String, dynamic> value;
+
+  String? get audience => value['audience']?.toString();
+
+  String? get color => value['color']?.toString();
+
+  String? get createdAt => value['created_at']?.toString();
+
+  String? get createdBy => value['created_by']?.toString();
+
+  String? get description => value['description']?.toString();
+
+  List<ModelsDisease> get diseases {
+    final raw = value['diseases'];
+    if (raw is! List) return const [];
+    return raw
+        .whereType<Map>()
+        .map((item) => ModelsDisease.fromJson(_jsonMap(item)))
+        .toList(growable: false);
+  }
+
+  String? get icon => value['icon']?.toString();
+
+  String? get id => value['id']?.toString();
+
+  int? get lockVersion => (value['lock_version'] as num?)?.toInt();
+
+  String? get name => value['name']?.toString();
+
+  String? get publishedAt => value['published_at']?.toString();
+
+  String? get slug => value['slug']?.toString();
+
+  int? get sortOrder => (value['sort_order'] as num?)?.toInt();
+
+  String? get status => value['status']?.toString();
+
+  String? get updatedAt => value['updated_at']?.toString();
+
+  String? get updatedBy => value['updated_by']?.toString();
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
+final class ModelsContentHubTemplatePillar {
+  ModelsContentHubTemplatePillar(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory ModelsContentHubTemplatePillar.fromJson(Map<String, dynamic> json) =>
+      ModelsContentHubTemplatePillar(json);
+
+  static const schemaName = 'models.ContentHubTemplatePillar';
+  final Map<String, dynamic> value;
+
+  String? get color => value['color']?.toString();
+
+  String? get createdAt => value['created_at']?.toString();
+
+  String? get description => value['description']?.toString();
+
+  String? get icon => value['icon']?.toString();
+
+  String? get id => value['id']?.toString();
+
+  String? get name => value['name']?.toString();
+
+  String? get parentId => value['parent_id']?.toString();
+
+  String? get slug => value['slug']?.toString();
+
+  int? get sortOrder => (value['sort_order'] as num?)?.toInt();
+
+  String? get templateId => value['template_id']?.toString();
+
+  String? get updatedAt => value['updated_at']?.toString();
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
+final class ModelsContentPillar {
+  ModelsContentPillar(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory ModelsContentPillar.fromJson(Map<String, dynamic> json) =>
+      ModelsContentPillar(json);
+
+  static const schemaName = 'models.ContentPillar';
+  final Map<String, dynamic> value;
+
+  String? get color => value['color']?.toString();
+
+  String? get createdAt => value['created_at']?.toString();
+
+  String? get description => value['description']?.toString();
+
+  String? get hubId => value['hub_id']?.toString();
+
+  String? get icon => value['icon']?.toString();
+
+  String? get id => value['id']?.toString();
+
+  int? get lockVersion => (value['lock_version'] as num?)?.toInt();
+
+  String? get name => value['name']?.toString();
+
+  String? get parentId => value['parent_id']?.toString();
+
+  String? get slug => value['slug']?.toString();
+
+  int? get sortOrder => (value['sort_order'] as num?)?.toInt();
+
+  String? get status => value['status']?.toString();
+
+  String? get updatedAt => value['updated_at']?.toString();
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
+final class ModelsContentPillarItem {
+  ModelsContentPillarItem(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory ModelsContentPillarItem.fromJson(Map<String, dynamic> json) =>
+      ModelsContentPillarItem(json);
+
+  static const schemaName = 'models.ContentPillarItem';
+  final Map<String, dynamic> value;
+
+  String? get contentId => value['content_id']?.toString();
+
+  String? get contentType => value['content_type']?.toString();
+
+  String? get createdAt => value['created_at']?.toString();
+
+  String? get createdBy => value['created_by']?.toString();
+
+  String? get descriptionOverride => value['description_override']?.toString();
+
+  String? get endsAt => value['ends_at']?.toString();
+
+  bool? get featured => value['featured'] as bool?;
+
+  String? get iconOverride => value['icon_override']?.toString();
+
+  String? get id => value['id']?.toString();
+
+  String? get labelOverride => value['label_override']?.toString();
+
+  int? get lockVersion => (value['lock_version'] as num?)?.toInt();
+
+  String? get pillarId => value['pillar_id']?.toString();
+
+  int? get sortOrder => (value['sort_order'] as num?)?.toInt();
+
+  String? get startsAt => value['starts_at']?.toString();
+
+  String? get status => value['status']?.toString();
+
+  String? get target => value['target']?.toString();
 
   String? get updatedAt => value['updated_at']?.toString();
 
@@ -7925,6 +8348,24 @@ final class ServicesAccountActionResult {
   Map<String, dynamic> toJson() => Map.of(value);
 }
 
+final class ServicesApplyContentHubTemplateInput {
+  ServicesApplyContentHubTemplateInput(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory ServicesApplyContentHubTemplateInput.fromJson(
+    Map<String, dynamic> json,
+  ) => ServicesApplyContentHubTemplateInput(json);
+
+  static const schemaName = 'services.ApplyContentHubTemplateInput';
+  final Map<String, dynamic> value;
+
+  int? get lockVersion => (value['lock_version'] as num?)?.toInt();
+
+  String? get templateId => value['template_id']?.toString();
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
 final class ServicesAskRequest {
   ServicesAskRequest(Map<String, dynamic> value)
     : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
@@ -8681,6 +9122,176 @@ final class ServicesContentDiseaseInput {
   Map<String, dynamic> toJson() => Map.of(value);
 }
 
+final class ServicesContentHubTemplateDetail {
+  ServicesContentHubTemplateDetail(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory ServicesContentHubTemplateDetail.fromJson(
+    Map<String, dynamic> json,
+  ) => ServicesContentHubTemplateDetail(json);
+
+  static const schemaName = 'services.ContentHubTemplateDetail';
+  final Map<String, dynamic> value;
+
+  String? get audience => value['audience']?.toString();
+
+  String? get color => value['color']?.toString();
+
+  String? get createdAt => value['created_at']?.toString();
+
+  String? get description => value['description']?.toString();
+
+  String? get icon => value['icon']?.toString();
+
+  String? get id => value['id']?.toString();
+
+  String? get name => value['name']?.toString();
+
+  List<ModelsContentHubTemplatePillar> get pillars {
+    final raw = value['pillars'];
+    if (raw is! List) return const [];
+    return raw
+        .whereType<Map>()
+        .map((item) => ModelsContentHubTemplatePillar.fromJson(_jsonMap(item)))
+        .toList(growable: false);
+  }
+
+  String? get slug => value['slug']?.toString();
+
+  int? get sortOrder => (value['sort_order'] as num?)?.toInt();
+
+  String? get status => value['status']?.toString();
+
+  String? get updatedAt => value['updated_at']?.toString();
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
+final class ServicesContentHubTransitionInput {
+  ServicesContentHubTransitionInput(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory ServicesContentHubTransitionInput.fromJson(
+    Map<String, dynamic> json,
+  ) => ServicesContentHubTransitionInput(json);
+
+  static const schemaName = 'services.ContentHubTransitionInput';
+  final Map<String, dynamic> value;
+
+  int? get lockVersion => (value['lock_version'] as num?)?.toInt();
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
+final class ServicesContentPillarInput {
+  ServicesContentPillarInput(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory ServicesContentPillarInput.fromJson(Map<String, dynamic> json) =>
+      ServicesContentPillarInput(json);
+
+  static const schemaName = 'services.ContentPillarInput';
+  final Map<String, dynamic> value;
+
+  bool? get clearParent => value['clear_parent'] as bool?;
+
+  String? get color => value['color']?.toString();
+
+  String? get description => value['description']?.toString();
+
+  String? get icon => value['icon']?.toString();
+
+  int? get lockVersion => (value['lock_version'] as num?)?.toInt();
+
+  String? get name => value['name']?.toString();
+
+  String? get parentId => value['parent_id']?.toString();
+
+  String? get slug => value['slug']?.toString();
+
+  int? get sortOrder => (value['sort_order'] as num?)?.toInt();
+
+  String? get status => value['status']?.toString();
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
+final class ServicesContentPillarItemInput {
+  ServicesContentPillarItemInput(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory ServicesContentPillarItemInput.fromJson(Map<String, dynamic> json) =>
+      ServicesContentPillarItemInput(json);
+
+  static const schemaName = 'services.ContentPillarItemInput';
+  final Map<String, dynamic> value;
+
+  String? get contentId => value['content_id']?.toString();
+
+  String? get contentType => value['content_type']?.toString();
+
+  String? get descriptionOverride => value['description_override']?.toString();
+
+  String? get endsAt => value['ends_at']?.toString();
+
+  bool? get featured => value['featured'] as bool?;
+
+  String? get iconOverride => value['icon_override']?.toString();
+
+  String? get labelOverride => value['label_override']?.toString();
+
+  int? get lockVersion => (value['lock_version'] as num?)?.toInt();
+
+  int? get sortOrder => (value['sort_order'] as num?)?.toInt();
+
+  String? get startsAt => value['starts_at']?.toString();
+
+  String? get status => value['status']?.toString();
+
+  String? get target => value['target']?.toString();
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
+final class ServicesContentPillarItemOrderInput {
+  ServicesContentPillarItemOrderInput(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory ServicesContentPillarItemOrderInput.fromJson(
+    Map<String, dynamic> json,
+  ) => ServicesContentPillarItemOrderInput(json);
+
+  static const schemaName = 'services.ContentPillarItemOrderInput';
+  final Map<String, dynamic> value;
+
+  String? get id => value['id']?.toString();
+
+  int? get lockVersion => (value['lock_version'] as num?)?.toInt();
+
+  int? get sortOrder => (value['sort_order'] as num?)?.toInt();
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
+final class ServicesContentPillarOrderInput {
+  ServicesContentPillarOrderInput(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory ServicesContentPillarOrderInput.fromJson(Map<String, dynamic> json) =>
+      ServicesContentPillarOrderInput(json);
+
+  static const schemaName = 'services.ContentPillarOrderInput';
+  final Map<String, dynamic> value;
+
+  String? get id => value['id']?.toString();
+
+  int? get lockVersion => (value['lock_version'] as num?)?.toInt();
+
+  int? get sortOrder => (value['sort_order'] as num?)?.toInt();
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
 final class ServicesConversationCreate {
   ServicesConversationCreate(Map<String, dynamic> value)
     : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
@@ -8788,6 +9399,39 @@ final class ServicesCreateCalculatorVersionInput {
   String? get changeSummary => value['change_summary']?.toString();
 
   Map<String, dynamic> get definition => _jsonMap(value['definition']);
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
+final class ServicesCreateContentHubInput {
+  ServicesCreateContentHubInput(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory ServicesCreateContentHubInput.fromJson(Map<String, dynamic> json) =>
+      ServicesCreateContentHubInput(json);
+
+  static const schemaName = 'services.CreateContentHubInput';
+  final Map<String, dynamic> value;
+
+  String? get audience => value['audience']?.toString();
+
+  String? get color => value['color']?.toString();
+
+  String? get description => value['description']?.toString();
+
+  List<String> get diseaseIds {
+    final raw = value['disease_ids'];
+    if (raw is! List) return const [];
+    return raw.whereType<String>().toList(growable: false);
+  }
+
+  String? get icon => value['icon']?.toString();
+
+  String? get name => value['name']?.toString();
+
+  String? get slug => value['slug']?.toString();
+
+  int? get sortOrder => (value['sort_order'] as num?)?.toInt();
 
   Map<String, dynamic> toJson() => Map.of(value);
 }
@@ -13057,6 +13701,37 @@ final class ServicesPageResultModelsContentDiseaseAssignment {
   Map<String, dynamic> toJson() => Map.of(value);
 }
 
+final class ServicesPageResultModelsContentHub {
+  ServicesPageResultModelsContentHub(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory ServicesPageResultModelsContentHub.fromJson(
+    Map<String, dynamic> json,
+  ) => ServicesPageResultModelsContentHub(json);
+
+  static const schemaName = 'services.PageResult-models_ContentHub';
+  final Map<String, dynamic> value;
+
+  List<ModelsContentHub> get items {
+    final raw = value['items'];
+    if (raw is! List) return const [];
+    return raw
+        .whereType<Map>()
+        .map((item) => ModelsContentHub.fromJson(_jsonMap(item)))
+        .toList(growable: false);
+  }
+
+  int? get page => (value['page'] as num?)?.toInt();
+
+  int? get perPage => (value['per_page'] as num?)?.toInt();
+
+  int? get totalItems => (value['total_items'] as num?)?.toInt();
+
+  int? get totalPages => (value['total_pages'] as num?)?.toInt();
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
 final class ServicesPageResultModelsDisease {
   ServicesPageResultModelsDisease(Map<String, dynamic> value)
     : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
@@ -13815,6 +14490,37 @@ final class ServicesPageResultServicesOutbreakUpdateAdminDTO {
   Map<String, dynamic> toJson() => Map.of(value);
 }
 
+final class ServicesPageResultServicesPublicContentHub {
+  ServicesPageResultServicesPublicContentHub(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory ServicesPageResultServicesPublicContentHub.fromJson(
+    Map<String, dynamic> json,
+  ) => ServicesPageResultServicesPublicContentHub(json);
+
+  static const schemaName = 'services.PageResult-services_PublicContentHub';
+  final Map<String, dynamic> value;
+
+  List<ServicesPublicContentHub> get items {
+    final raw = value['items'];
+    if (raw is! List) return const [];
+    return raw
+        .whereType<Map>()
+        .map((item) => ServicesPublicContentHub.fromJson(_jsonMap(item)))
+        .toList(growable: false);
+  }
+
+  int? get page => (value['page'] as num?)?.toInt();
+
+  int? get perPage => (value['per_page'] as num?)?.toInt();
+
+  int? get totalItems => (value['total_items'] as num?)?.toInt();
+
+  int? get totalPages => (value['total_pages'] as num?)?.toInt();
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
 final class ServicesPageResultServicesPublicOutbreak {
   ServicesPageResultServicesPublicOutbreak(Map<String, dynamic> value)
     : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
@@ -14094,6 +14800,137 @@ final class ServicesProtocolStep {
   String? get question => value['question']?.toString();
 
   String? get type => value['type']?.toString();
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
+final class ServicesPublicContentHub {
+  ServicesPublicContentHub(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory ServicesPublicContentHub.fromJson(Map<String, dynamic> json) =>
+      ServicesPublicContentHub(json);
+
+  static const schemaName = 'services.PublicContentHub';
+  final Map<String, dynamic> value;
+
+  String? get audience => value['audience']?.toString();
+
+  String? get color => value['color']?.toString();
+
+  String? get description => value['description']?.toString();
+
+  List<ServicesPublicHubDisease> get diseases {
+    final raw = value['diseases'];
+    if (raw is! List) return const [];
+    return raw
+        .whereType<Map>()
+        .map((item) => ServicesPublicHubDisease.fromJson(_jsonMap(item)))
+        .toList(growable: false);
+  }
+
+  String? get icon => value['icon']?.toString();
+
+  String? get id => value['id']?.toString();
+
+  String? get name => value['name']?.toString();
+
+  List<ServicesPublicContentPillar> get pillars {
+    final raw = value['pillars'];
+    if (raw is! List) return const [];
+    return raw
+        .whereType<Map>()
+        .map((item) => ServicesPublicContentPillar.fromJson(_jsonMap(item)))
+        .toList(growable: false);
+  }
+
+  String? get publishedAt => value['published_at']?.toString();
+
+  String? get slug => value['slug']?.toString();
+
+  int? get sortOrder => (value['sort_order'] as num?)?.toInt();
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
+final class ServicesPublicContentPillar {
+  ServicesPublicContentPillar(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory ServicesPublicContentPillar.fromJson(Map<String, dynamic> json) =>
+      ServicesPublicContentPillar(json);
+
+  static const schemaName = 'services.PublicContentPillar';
+  final Map<String, dynamic> value;
+
+  List<ServicesPublicContentPillar> get children {
+    final raw = value['children'];
+    if (raw is! List) return const [];
+    return raw
+        .whereType<Map>()
+        .map((item) => ServicesPublicContentPillar.fromJson(_jsonMap(item)))
+        .toList(growable: false);
+  }
+
+  String? get color => value['color']?.toString();
+
+  String? get description => value['description']?.toString();
+
+  String? get icon => value['icon']?.toString();
+
+  String? get id => value['id']?.toString();
+
+  List<ServicesPublicContentPillarItem> get items {
+    final raw = value['items'];
+    if (raw is! List) return const [];
+    return raw
+        .whereType<Map>()
+        .map((item) => ServicesPublicContentPillarItem.fromJson(_jsonMap(item)))
+        .toList(growable: false);
+  }
+
+  String? get name => value['name']?.toString();
+
+  String? get parentId => value['parent_id']?.toString();
+
+  String? get slug => value['slug']?.toString();
+
+  int? get sortOrder => (value['sort_order'] as num?)?.toInt();
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
+final class ServicesPublicContentPillarItem {
+  ServicesPublicContentPillarItem(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory ServicesPublicContentPillarItem.fromJson(Map<String, dynamic> json) =>
+      ServicesPublicContentPillarItem(json);
+
+  static const schemaName = 'services.PublicContentPillarItem';
+  final Map<String, dynamic> value;
+
+  String? get contentId => value['content_id']?.toString();
+
+  String? get contentType => value['content_type']?.toString();
+
+  String? get descriptionOverride => value['description_override']?.toString();
+
+  String? get endsAt => value['ends_at']?.toString();
+
+  bool? get featured => value['featured'] as bool?;
+
+  String? get iconOverride => value['icon_override']?.toString();
+
+  String? get id => value['id']?.toString();
+
+  String? get labelOverride => value['label_override']?.toString();
+
+  int? get sortOrder => (value['sort_order'] as num?)?.toInt();
+
+  String? get startsAt => value['starts_at']?.toString();
+
+  String? get target => value['target']?.toString();
 
   Map<String, dynamic> toJson() => Map.of(value);
 }
@@ -14500,6 +15337,27 @@ final class ServicesPublicGuidelineTable {
   String? get sectionId => value['section_id']?.toString();
 
   int? get sortOrder => (value['sort_order'] as num?)?.toInt();
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
+final class ServicesPublicHubDisease {
+  ServicesPublicHubDisease(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory ServicesPublicHubDisease.fromJson(Map<String, dynamic> json) =>
+      ServicesPublicHubDisease(json);
+
+  static const schemaName = 'services.PublicHubDisease';
+  final Map<String, dynamic> value;
+
+  String? get id => value['id']?.toString();
+
+  String? get name => value['name']?.toString();
+
+  String? get shortName => value['short_name']?.toString();
+
+  String? get slug => value['slug']?.toString();
 
   Map<String, dynamic> toJson() => Map.of(value);
 }
@@ -15572,6 +16430,41 @@ final class ServicesUpdateCalculatorVersionInput {
   Map<String, dynamic> get definition => _jsonMap(value['definition']);
 
   int? get lockVersion => (value['lock_version'] as num?)?.toInt();
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
+final class ServicesUpdateContentHubInput {
+  ServicesUpdateContentHubInput(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory ServicesUpdateContentHubInput.fromJson(Map<String, dynamic> json) =>
+      ServicesUpdateContentHubInput(json);
+
+  static const schemaName = 'services.UpdateContentHubInput';
+  final Map<String, dynamic> value;
+
+  String? get audience => value['audience']?.toString();
+
+  String? get color => value['color']?.toString();
+
+  String? get description => value['description']?.toString();
+
+  List<String> get diseaseIds {
+    final raw = value['disease_ids'];
+    if (raw is! List) return const [];
+    return raw.whereType<String>().toList(growable: false);
+  }
+
+  String? get icon => value['icon']?.toString();
+
+  int? get lockVersion => (value['lock_version'] as num?)?.toInt();
+
+  String? get name => value['name']?.toString();
+
+  String? get slug => value['slug']?.toString();
+
+  int? get sortOrder => (value['sort_order'] as num?)?.toInt();
 
   Map<String, dynamic> toJson() => Map.of(value);
 }

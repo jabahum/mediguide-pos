@@ -61,7 +61,7 @@ func TestOutbreakAdministrationMigrationUpDownUp(t *testing.T) {
 	if err := goose.DownTo(testDB, "../../migrations", 35); err != nil {
 		t.Fatal(err)
 	}
-	if err := goose.UpTo(testDB, "../../migrations", 49); err != nil {
+	if err := goose.UpTo(testDB, "../../migrations", 51); err != nil {
 		t.Fatal(err)
 	}
 	var count int
@@ -113,6 +113,19 @@ func TestOutbreakAdministrationMigrationUpDownUp(t *testing.T) {
 	}
 	if err := testDB.QueryRowContext(ctx, `SELECT count(*) FROM pg_indexes WHERE schemaname = $1 AND indexname IN ('idx_guideline_document_categories_category','idx_content_disease_assignment_unique','idx_content_disease_assignment_primary','idx_content_disease_assignment_disease','idx_content_disease_assignment_resource')`, schema).Scan(&count); err != nil || count != 5 {
 		t.Fatalf("content classification indexes missing after up/down/up: count=%d err=%v", count, err)
+	}
+	if err := testDB.QueryRowContext(ctx, `SELECT count(*) FROM information_schema.tables WHERE table_schema = $1 AND table_name IN ('content_hubs','content_hub_diseases','content_pillars','content_pillar_items','content_hub_templates','content_hub_template_pillars')`, schema).Scan(&count); err != nil || count != 6 {
+		t.Fatalf("content hub tables missing after up/down/up: count=%d err=%v", count, err)
+	}
+	if err := testDB.QueryRowContext(ctx, `SELECT count(*) FROM content_hub_templates WHERE status = 'active' AND deleted_at IS NULL`).Scan(&count); err != nil || count != 3 {
+		t.Fatalf("content hub template seed mismatch: count=%d err=%v", count, err)
+	}
+	if err := testDB.QueryRowContext(ctx, `SELECT count(*) FROM content_hub_template_pillars WHERE deleted_at IS NULL`).Scan(&count); err != nil || count != 32 {
+		t.Fatalf("content hub template pillar seed mismatch: count=%d err=%v", count, err)
+	}
+	var pillarItemDefault string
+	if err := testDB.QueryRowContext(ctx, `SELECT column_default FROM information_schema.columns WHERE table_schema = $1 AND table_name = 'content_pillar_items' AND column_name = 'status'`, schema).Scan(&pillarItemDefault); err != nil || !strings.Contains(pillarItemDefault, "draft") {
+		t.Fatalf("content pillar items do not default to draft: default=%q err=%v", pillarItemDefault, err)
 	}
 	if _, err := testDB.ExecContext(ctx, `INSERT INTO diseases (id, name, normalized_name, slug) VALUES
 		('92000000-0000-4000-8000-000000000001', 'Cycle parent', 'cycle parent', 'cycle-parent'),

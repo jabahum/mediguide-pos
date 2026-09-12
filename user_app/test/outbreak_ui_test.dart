@@ -184,6 +184,61 @@ void main() {
   });
 
   testWidgets(
+    'API-driven outbreak hub renders configured pillars without legacy content',
+    (tester) async {
+      const detail = PublicOutbreakDetail(outbreak: _outbreak);
+      const hub = PublicOutbreakHub(
+        id: 'hub-1',
+        name: 'Regional response hub',
+        slug: 'regional-response-hub',
+        pillars: [
+          PublicOutbreakPillar(
+            id: 'pillar-1',
+            name: 'Surveillance Guidance',
+            slug: 'surveillance-guidance',
+            description: 'Case finding and reporting guidance',
+            icon: 'activity',
+            color: '',
+            items: [],
+            children: [],
+          ),
+        ],
+      );
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            backendManagedOutbreakHubsEnabledProvider.overrideWithValue(true),
+            publicOutbreakProvider('outbreak-1').overrideWith(
+              (_) async => const PublicContent(
+                value: detail,
+                cache: PublicCacheMetadata.online(),
+              ),
+            ),
+            publicOutbreakHubProvider(
+              'outbreak-1',
+            ).overrideWith((_) async => hub),
+          ],
+          child: const MaterialApp(
+            home: OutbreakDetailPage(outbreakId: 'outbreak-1'),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.scrollUntilVisible(
+        find.text('Surveillance Guidance'),
+        250,
+        scrollable: find.byType(Scrollable).last,
+      );
+      expect(find.text('Quick access'), findsOneWidget);
+      expect(find.text('Surveillance Guidance'), findsOneWidget);
+      expect(find.text('Clinical Care'), findsNothing);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
     'guest outbreak hub opens the complete Clinical Care section workflow',
     (tester) async {
       tester.view.physicalSize = const Size(390, 844);

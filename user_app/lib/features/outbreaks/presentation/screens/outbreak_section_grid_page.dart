@@ -46,6 +46,11 @@ class OutbreakSectionGridPage extends ConsumerWidget {
         data: (content) {
           if (ref.watch(backendManagedOutbreakHubsEnabledProvider)) {
             final configured = ref.watch(publicOutbreakHubProvider(outbreakId));
+            if (configured.isLoading) {
+              return const AppLoadingView(
+                message: 'Loading configured outbreak section...',
+              );
+            }
             final pillar = configured.valueOrNull?.findPillar(sectionId);
             if (pillar != null) {
               return _ConfiguredPillarGrid(

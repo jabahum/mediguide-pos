@@ -164,7 +164,14 @@ export const contentDiseaseService = {
   list(contentType: string, contentId: string) {
     return client().send<Page<DiseaseAssignment>>(
       "/api/v2/content-disease-assignments",
-      { query: { page: 1, per_page: 100, content_type: contentType, content_id: contentId } },
+      {
+        query: {
+          page: 1,
+          per_page: 100,
+          content_type: contentType,
+          content_id: contentId,
+        },
+      },
     );
   },
   replace(

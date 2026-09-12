@@ -106,11 +106,25 @@ String _configuredItemTitle(PublicOutbreakPillarItem item) {
 IconData _configuredSectionIcon(String configured, String fallback) {
   final value = configured.isEmpty ? fallback : configured;
   return switch (value) {
+    'case-definition' || 'case_definitions' => LucideIcons.badgeHelp,
+    'screening-triage' || 'screening' => LucideIcons.listChecks,
+    'surveillance-guidance' || 'surveillance' => LucideIcons.radioTower,
+    'ipc-ppe' || 'shield-check' => LucideIcons.shieldCheck,
+    'isolation' => LucideIcons.squareActivity,
+    'clinical-management' || 'clinical-care' => LucideIcons.stethoscope,
+    'laboratory' || 'flask' => LucideIcons.flaskConical,
+    'medicines' || 'pill' => LucideIcons.pill,
+    'training' || 'graduation-cap' => LucideIcons.graduationCap,
+    'contacts' || 'users' => LucideIcons.users,
+    'faqs' || 'help-circle' => LucideIcons.messageCircleQuestion,
     'outbreak_document' ||
     'guideline' ||
     'form' ||
+    'forms' ||
     'file-text' => LucideIcons.fileText,
-    'situation_report' || 'file-chart' => LucideIcons.fileChartColumn,
+    'situation_report' ||
+    'situation-reports' ||
+    'file-chart' => LucideIcons.fileChartColumn,
     'algorithm' => LucideIcons.gitBranch,
     'clinical_tool' => LucideIcons.calculator,
     'drug_reference' || 'pill' => LucideIcons.pill,

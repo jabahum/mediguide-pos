@@ -112,6 +112,8 @@ const data: { navMain: NavItem[] } = {
         { title: "Create Guideline", url: "/guidelines/create", permission: { resource: "content", action: "create:any" } },
         { title: "Index", url: "/guidelines/index" },
         { title: "Categories", url: "/guidelines/categories" },
+        { title: "Diseases", url: "/diseases", backendPermissions: ["guideline.read"] },
+        { title: "Content Hubs", url: "/content-hubs", backendPermissions: ["guideline.read", "outbreak.read"] },
         { title: "Tags", url: "/guidelines/tags" },
         { title: "Abbreviations", url: "/guidelines/abbreviations" },
       ],

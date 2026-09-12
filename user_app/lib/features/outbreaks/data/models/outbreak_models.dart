@@ -251,6 +251,132 @@ final class PublicContent<T> {
   final List<String> partialFailures;
 }
 
+/// Backend-managed navigation for an outbreak. These plain models keep the
+/// rollout independent from the legacy outbreak payload and its fallback UI.
+final class PublicOutbreakHub {
+  const PublicOutbreakHub({
+    required this.id,
+    required this.name,
+    required this.slug,
+    required this.pillars,
+  });
+
+  final String id;
+  final String name;
+  final String slug;
+  final List<PublicOutbreakPillar> pillars;
+
+  factory PublicOutbreakHub.fromJson(
+    Map<String, dynamic> json,
+  ) => PublicOutbreakHub(
+    id: json['id']?.toString() ?? '',
+    name: json['name']?.toString() ?? '',
+    slug: json['slug']?.toString() ?? '',
+    pillars: (json['pillars'] as List? ?? const [])
+        .whereType<Map>()
+        .map(
+          (value) =>
+              PublicOutbreakPillar.fromJson(Map<String, dynamic>.from(value)),
+        )
+        .toList(growable: false),
+  );
+
+  PublicOutbreakPillar? findPillar(String targetSlug) {
+    PublicOutbreakPillar? visit(List<PublicOutbreakPillar> values) {
+      for (final value in values) {
+        if (value.slug == targetSlug) return value;
+        final nested = visit(value.children);
+        if (nested != null) return nested;
+      }
+      return null;
+    }
+
+    return visit(pillars);
+  }
+}
+
+final class PublicOutbreakPillar {
+  const PublicOutbreakPillar({
+    required this.id,
+    required this.name,
+    required this.slug,
+    required this.description,
+    required this.icon,
+    required this.color,
+    required this.items,
+    required this.children,
+  });
+
+  final String id;
+  final String name;
+  final String slug;
+  final String description;
+  final String icon;
+  final String color;
+  final List<PublicOutbreakPillarItem> items;
+  final List<PublicOutbreakPillar> children;
+
+  factory PublicOutbreakPillar.fromJson(
+    Map<String, dynamic> json,
+  ) => PublicOutbreakPillar(
+    id: json['id']?.toString() ?? '',
+    name: json['name']?.toString() ?? '',
+    slug: json['slug']?.toString() ?? '',
+    description: json['description']?.toString() ?? '',
+    icon: json['icon']?.toString() ?? '',
+    color: json['color']?.toString() ?? '',
+    items: (json['items'] as List? ?? const [])
+        .whereType<Map>()
+        .map(
+          (value) => PublicOutbreakPillarItem.fromJson(
+            Map<String, dynamic>.from(value),
+          ),
+        )
+        .toList(growable: false),
+    children: (json['children'] as List? ?? const [])
+        .whereType<Map>()
+        .map(
+          (value) =>
+              PublicOutbreakPillar.fromJson(Map<String, dynamic>.from(value)),
+        )
+        .toList(growable: false),
+  );
+}
+
+final class PublicOutbreakPillarItem {
+  const PublicOutbreakPillarItem({
+    required this.id,
+    required this.contentType,
+    required this.contentId,
+    required this.target,
+    required this.label,
+    required this.description,
+    required this.icon,
+    required this.featured,
+  });
+
+  final String id;
+  final String contentType;
+  final String contentId;
+  final String target;
+  final String label;
+  final String description;
+  final String icon;
+  final bool featured;
+
+  factory PublicOutbreakPillarItem.fromJson(Map<String, dynamic> json) =>
+      PublicOutbreakPillarItem(
+        id: json['id']?.toString() ?? '',
+        contentType: json['content_type']?.toString() ?? '',
+        contentId: json['content_id']?.toString() ?? '',
+        target: json['target']?.toString() ?? '',
+        label: json['label_override']?.toString() ?? '',
+        description: json['description_override']?.toString() ?? '',
+        icon: json['icon_override']?.toString() ?? '',
+        featured: json['featured'] == true,
+      );
+}
+
 final class PublicPage<T> {
   const PublicPage({
     required this.items,

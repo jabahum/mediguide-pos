@@ -2,7 +2,8 @@
 
 import * as React from "react"
 import Link from "next/link"
-import { AlertCircle, CheckCircle2, ExternalLink, Loader2, Plus, Save, ShieldCheck } from "lucide-react"
+import { useRouter } from "next/navigation"
+import { AlertCircle, CheckCircle2, ExternalLink, FolderKanban, Loader2, Plus, Save, ShieldCheck } from "lucide-react"
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -14,6 +15,7 @@ import { showToast } from "@/lib/toast"
 import { healthFacilitiesService } from "@/services/health-facilities.service"
 import { outbreaksService, type OutbreakAuditRecord, type OutbreakRecord, type OutbreakResourceRecord, type OutbreakUpdateRecord, type PublishedGuidelineRecord } from "@/services/outbreaks.service"
 import { situationReportsService, type SituationReportRecord } from "@/services/situation-reports.service"
+import { contentHubService } from "@/services/content-hubs.service"
 import type { DistrictsResponse, RegionsResponse } from "@/types/backend-types"
 import { CampaignDraftBuilder } from "./campaign-draft-builder"
 import { ChildContentWorkflow } from "./child-content-workflow"
@@ -24,6 +26,7 @@ type MetricDraft = { key: string; label: string; value: string; numeric_value?: 
 const emptyMetric = (): MetricDraft => ({ key: "", label: "", value: "", unit: "", as_of: new Date().toISOString(), source_reference: "", sort_order: 1 })
 
 export function OutbreakEditor({ id, initialDocumentId }: { id?: string; initialDocumentId?: string }) {
+  const router = useRouter()
   const [item, setItem] = React.useState<OutbreakRecord | null>(null)
   const [updates, setUpdates] = React.useState<OutbreakUpdateRecord[]>([])
   const [resources, setResources] = React.useState<OutbreakResourceRecord[]>([])
@@ -88,6 +91,20 @@ export function OutbreakEditor({ id, initialDocumentId }: { id?: string; initial
     finally { setSaving(false) }
   }
 
+  async function configureContentHub() {
+    if (!item?.id) return
+    setSaving(true)
+    try {
+      const workspace = await contentHubService.configureOutbreak(item.id)
+      showToast.success("Outbreak hub ready", "Published resources were mapped into editable pillars.")
+      router.push(`/content-hubs/${workspace.hub.id}`)
+    } catch (value) {
+      showToast.error("Hub not configured", conflictMessage(value))
+    } finally {
+      setSaving(false)
+    }
+  }
+
   async function addUpdate() {
     if (!item || !updateDraft.title.trim()) return
     try { const created = await outbreaksService.createUpdate(item.id!, updateDraft); setUpdates(current => [...current, created]); setUpdateDraft({ title: "", summary: "" }); showToast.success("Update draft created", "Submit it independently when it is ready.") } catch (value) { showToast.error("Update not created", conflictMessage(value)) }
@@ -107,7 +124,7 @@ export function OutbreakEditor({ id, initialDocumentId }: { id?: string; initial
   if (error) return <div className="rounded-md border border-destructive/40 p-5 text-destructive" role="alert">{error}<Button className="ml-3" variant="outline" onClick={() => void hydrate()}>Retry</Button></div>
 
   return <div className="space-y-6">
-    <div className="flex flex-wrap items-start justify-between gap-3"><div><div className="flex items-center gap-2"><h1 className="text-2xl font-semibold">{item ? item.title || "Untitled outbreak" : "New outbreak"}</h1>{item ? <Badge variant="outline">{item.status}</Badge> : null}</div><p className="text-sm text-muted-foreground">Draft, review, publish, correct and distribute verified outbreak content.</p></div><div className="flex flex-wrap gap-2"><Button variant="outline" asChild><Link href="/outbreaks">Back to list</Link></Button><Button disabled={saving || immutable} onClick={() => void save()}><Save className="mr-2 h-4 w-4" />Save draft</Button></div></div>
+    <div className="flex flex-wrap items-start justify-between gap-3"><div><div className="flex items-center gap-2"><h1 className="text-2xl font-semibold">{item ? item.title || "Untitled outbreak" : "New outbreak"}</h1>{item ? <Badge variant="outline">{item.status}</Badge> : null}</div><p className="text-sm text-muted-foreground">Draft, review, publish, correct and distribute verified outbreak content.</p></div><div className="flex flex-wrap gap-2"><Button variant="outline" asChild><Link href="/outbreaks">Back to list</Link></Button>{item ? <Button variant="outline" disabled={saving} onClick={() => void configureContentHub()}><FolderKanban className="mr-2 h-4 w-4" />Configure hub</Button> : null}<Button disabled={saving || immutable} onClick={() => void save()}><Save className="mr-2 h-4 w-4" />Save draft</Button></div></div>
     {item ? <OutbreakDocumentsWorkspace outbreakId={item.id!} initialDocumentId={initialDocumentId} /> : null}
     {immutable ? <div className="flex gap-3 rounded-md border border-amber-300 bg-amber-50 p-4 text-sm text-amber-950"><ShieldCheck className="h-5 w-5" /><div><strong>Published content is immutable.</strong> Create a correction to make changes.</div></div> : null}
     <Card><CardHeader><CardTitle>Core metadata and source</CardTitle></CardHeader><CardContent className="grid gap-4 md:grid-cols-2"><Field label="Title" value={form.title} onChange={value => field("title", value)} /><Field label="Disease" value={form.disease_type} onChange={value => field("disease_type", value)} /><Field label="Geographic coverage" value={form.geographic_area} onChange={value => field("geographic_area", value)} /><SelectField label="Region" value={form.region_id} onChange={value => { field("region_id", value); field("district_id", "") }} options={regions.map(value => ({ id: value.id, name: value.name }))} empty="Select region" /><SelectField label="District" value={form.district_id} onChange={value => field("district_id", value)} options={districts.map(value => ({ id: value.id, name: value.name }))} empty="Select district" /><Field label="Source organization" value={form.source_organization} onChange={value => field("source_organization", value)} /><Field label="Source reference" value={form.source_reference} onChange={value => field("source_reference", value)} /><Field label="Source HTTPS URL" value={form.source_url} onChange={value => field("source_url", value)} /><Field label="Start date" type="datetime-local" value={form.start_date} onChange={value => field("start_date", value)} /><Field label="Last update" type="datetime-local" value={form.last_update} onChange={value => field("last_update", value)} /><Field label="Effective at" type="datetime-local" value={form.effective_at} onChange={value => field("effective_at", value)} /><Field label="Data as of" type="datetime-local" value={form.data_as_of} onChange={value => field("data_as_of", value)} /><Field label="Last verified" type="datetime-local" value={form.last_verified_at} onChange={value => field("last_verified_at", value)} /><div><Label>Visual tone</Label><select className="mt-2 h-10 w-full rounded-md border bg-background px-3" value={form.visual_tone} onChange={event => field("visual_tone", event.target.value)}>{["neutral","info","warning","critical","success"].map(value => <option key={value}>{value}</option>)}</select></div><div className="md:col-span-2"><Label>Summary</Label><Textarea className="mt-2" rows={5} value={form.summary} onChange={event => field("summary", event.target.value)} /></div><div className="md:col-span-2"><Label>Change summary</Label><Input className="mt-2" value={form.change_summary} onChange={event => field("change_summary", event.target.value)} placeholder="Explain the reason for this editorial change" /></div></CardContent></Card>

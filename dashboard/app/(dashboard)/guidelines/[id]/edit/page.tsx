@@ -14,6 +14,7 @@ import {
   guidelineDocumentsQueryKey,
 } from "@/services/guideline-documents.service"
 import { GuidelineDocumentForm } from "../../components/guideline-document-form"
+import { contentDiseaseService } from "@/services/content-hubs.service"
 
 export default function EditGuidelinePage() {
   const { id } = useParams<{ id: string }>()
@@ -26,6 +27,11 @@ export default function EditGuidelinePage() {
     queryFn: () => GuidelineDocumentsService.getDocument(id),
     enabled: Boolean(id),
   })
+  const classificationQuery = useQuery({
+    queryKey: ["content-disease-assignments", "guideline", id],
+    queryFn: () => contentDiseaseService.list("guideline", id),
+    enabled: Boolean(id),
+  })
 
   React.useEffect(() => {
     if (!permissionsLoading && !hasPermission("content", "update:any")) {
@@ -36,7 +42,9 @@ export default function EditGuidelinePage() {
   async function submit(payload: GuidelineDocumentInput) {
     setSubmitting(true)
     try {
-      await GuidelineDocumentsService.updateDocument(id, payload)
+      const { disease_ids = [], primary_disease_id, ...documentPayload } = payload
+      await GuidelineDocumentsService.updateDocument(id, documentPayload)
+      await contentDiseaseService.replace("guideline", id, disease_ids, primary_disease_id)
       await queryClient.invalidateQueries({ queryKey: guidelineDocumentsQueryKey })
       showToast.success("Guideline updated", "Document metadata has been saved.")
       router.push(`/guidelines/${id}`)
@@ -47,12 +55,13 @@ export default function EditGuidelinePage() {
     }
   }
 
-  if (documentQuery.isLoading) return <LoadingState message="Loading guideline..." />
+  if (documentQuery.isLoading || classificationQuery.isLoading) return <LoadingState message="Loading guideline..." />
   if (!documentQuery.data) {
     return <div className="p-6 text-destructive">Guideline document could not be loaded.</div>
   }
 
   const document = documentQuery.data
+  const assignments = classificationQuery.data?.items || []
   return (
     <div className="space-y-6">
       <PageHeader title={`Edit ${document.title}`} description="Update v2 guideline document metadata." />
@@ -65,6 +74,8 @@ export default function EditGuidelinePage() {
           language: document.language,
           description: document.description,
           category_ids: document.categories.map((category) => category.id),
+          disease_ids: assignments.map((assignment) => assignment.disease_id),
+          primary_disease_id: assignments.find((assignment) => assignment.is_primary)?.disease_id || "",
         }}
         submitting={submitting}
         submitLabel="Save Changes"

@@ -34,7 +34,7 @@ func (h ContentHubHandler) List(c *gin.Context) {
 		httpx.Error(c, http.StatusBadRequest, "invalid pagination")
 		return
 	}
-	result, err := h.Service.ListHubs(services.ContentHubQuery{Page: page, Search: c.Query("search"), Status: c.Query("status"), DiseaseID: c.Query("disease_id")})
+	result, err := h.Service.ListHubs(services.ContentHubQuery{Page: page, Search: c.Query("search"), Status: c.Query("status"), DiseaseID: c.Query("disease_id"), OutbreakID: c.Query("outbreak_id")})
 	if err != nil {
 		h.writeError(c, err)
 		return
@@ -514,6 +514,89 @@ func (h ContentHubHandler) ApplyTemplate(c *gin.Context) {
 	httpx.OK(c, result)
 }
 
+// Workspace godoc
+// @Summary Get a hub, all pillars and all resource assignments
+// @Tags content-hubs
+// @Security BearerAuth
+// @Router /api/v2/content-hubs/{id}/workspace [get]
+func (h ContentHubHandler) Workspace(c *gin.Context) {
+	id, ok := contentHubUUID(c, "id")
+	if !ok {
+		return
+	}
+	result, err := h.Service.GetWorkspace(id)
+	if err != nil {
+		h.writeError(c, err)
+		return
+	}
+	httpx.OK(c, result)
+}
+
+// Audit godoc
+// @Summary View content hub audit history
+// @Tags content-hubs
+// @Security BearerAuth
+// @Router /api/v2/content-hubs/{id}/audit [get]
+func (h ContentHubHandler) Audit(c *gin.Context) {
+	id, ok := contentHubUUID(c, "id")
+	if !ok {
+		return
+	}
+	page, err := parsePageQuery(c, 50, 200)
+	if err != nil {
+		httpx.Error(c, http.StatusBadRequest, "invalid pagination")
+		return
+	}
+	result, err := h.Service.ListAudit(id, page)
+	if err != nil {
+		h.writeError(c, err)
+		return
+	}
+	httpx.OK(c, result)
+}
+
+// SearchResources godoc
+// @Summary Search resources that can be assigned to a content pillar
+// @Tags content-hubs
+// @Security BearerAuth
+// @Router /api/v2/content-hub-resources [get]
+func (h ContentHubHandler) SearchResources(c *gin.Context) {
+	page, err := parsePageQuery(c, 20, 100)
+	if err != nil {
+		httpx.Error(c, http.StatusBadRequest, "invalid pagination")
+		return
+	}
+	result, err := h.Service.SearchAssignableResources(services.ContentHubResourceQuery{Page: page, Search: c.Query("search"), ContentType: c.Query("content_type"), OutbreakID: c.Query("outbreak_id")})
+	if err != nil {
+		h.writeError(c, err)
+		return
+	}
+	httpx.OK(c, result)
+}
+
+// ConfigureOutbreak godoc
+// @Summary Create an outbreak hub from the default template and map published resources
+// @Tags content-hubs
+// @Security BearerAuth
+// @Router /api/v2/outbreaks/{id}/content-hub [post]
+func (h ContentHubHandler) ConfigureOutbreak(c *gin.Context) {
+	id, ok := contentHubUUID(c, "id")
+	if !ok {
+		return
+	}
+	var input services.ConfigureOutbreakHubInput
+	if c.ShouldBindJSON(&input) != nil {
+		httpx.Error(c, http.StatusBadRequest, "invalid outbreak hub request body")
+		return
+	}
+	result, err := h.Service.ConfigureOutbreakHub(contentHubActor(c), id, input)
+	if err != nil {
+		h.writeError(c, err)
+		return
+	}
+	httpx.OK(c, result)
+}
+
 // PublicList godoc
 // @Summary List published content hubs
 // @Tags public-content-hubs
@@ -562,6 +645,23 @@ func (h ContentHubHandler) PublicGet(c *gin.Context) {
 // @Router /api/public/hubs/{slug}/pillars/{pillarSlug} [get]
 func (h ContentHubHandler) PublicPillar(c *gin.Context) {
 	result, err := h.Service.GetPublicPillar(c.Request.Context(), c.Param("slug"), c.Param("pillarSlug"))
+	if err != nil {
+		h.writeError(c, err)
+		return
+	}
+	httpx.OK(c, result)
+}
+
+// PublicOutbreakHub godoc
+// @Summary Get the explicitly configured published hub for an outbreak
+// @Tags public-content-hubs
+// @Router /api/public/outbreaks/{id}/hub [get]
+func (h ContentHubHandler) PublicOutbreakHub(c *gin.Context) {
+	id, ok := contentHubUUID(c, "id")
+	if !ok {
+		return
+	}
+	result, err := h.Service.GetPublicOutbreakHub(c.Request.Context(), id)
 	if err != nil {
 		h.writeError(c, err)
 		return

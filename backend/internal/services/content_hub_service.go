@@ -37,10 +37,11 @@ type ContentHubActor struct {
 }
 
 type ContentHubQuery struct {
-	Page      PageInput
-	Search    string
-	Status    string
-	DiseaseID string
+	Page       PageInput
+	Search     string
+	Status     string
+	DiseaseID  string
+	OutbreakID string
 }
 
 type CreateContentHubInput struct {
@@ -52,6 +53,7 @@ type CreateContentHubInput struct {
 	Audience    string      `json:"audience"`
 	SortOrder   int         `json:"sort_order"`
 	DiseaseIDs  []uuid.UUID `json:"disease_ids"`
+	OutbreakIDs []uuid.UUID `json:"outbreak_ids"`
 }
 
 type UpdateContentHubInput struct {
@@ -63,6 +65,7 @@ type UpdateContentHubInput struct {
 	Audience    *string      `json:"audience"`
 	SortOrder   *int         `json:"sort_order"`
 	DiseaseIDs  *[]uuid.UUID `json:"disease_ids"`
+	OutbreakIDs *[]uuid.UUID `json:"outbreak_ids"`
 	LockVersion int          `json:"lock_version" binding:"required,min=1"`
 }
 
@@ -72,7 +75,7 @@ type ContentHubTransitionInput struct {
 
 func (s ContentHubService) ListHubs(in ContentHubQuery) (*PageResult[models.ContentHub], error) {
 	p := in.Page.Normalize(20, 100)
-	query := s.DB.Model(&models.ContentHub{}).Where("content_hubs.deleted_at IS NULL").Preload("Diseases", "diseases.deleted_at IS NULL")
+	query := s.DB.Model(&models.ContentHub{}).Where("content_hubs.deleted_at IS NULL").Preload("Diseases", "diseases.deleted_at IS NULL").Preload("Outbreaks", "outbreaks.deleted_at IS NULL")
 	if search := strings.TrimSpace(in.Search); search != "" {
 		like := "%" + strings.ToLower(search) + "%"
 		query = query.Where("lower(content_hubs.name) LIKE ? OR lower(content_hubs.description) LIKE ?", like, like)
@@ -90,12 +93,19 @@ func (s ContentHubService) ListHubs(in ContentHubQuery) (*PageResult[models.Cont
 		}
 		query = query.Where("EXISTS (SELECT 1 FROM content_hub_diseases chd WHERE chd.content_hub_id = content_hubs.id AND chd.disease_id = ?)", id)
 	}
+	if raw := strings.TrimSpace(in.OutbreakID); raw != "" {
+		id, err := uuid.Parse(raw)
+		if err != nil {
+			return nil, ErrContentHubInvalid
+		}
+		query = query.Where("EXISTS (SELECT 1 FROM content_hub_outbreaks cho WHERE cho.content_hub_id = content_hubs.id AND cho.outbreak_id = ?)", id)
+	}
 	return pageHelp[models.ContentHub](query, p, nil, "", "", "content_hubs.sort_order ASC, content_hubs.name ASC, content_hubs.id ASC")
 }
 
 func (s ContentHubService) GetHub(id uuid.UUID) (*models.ContentHub, error) {
 	var hub models.ContentHub
-	if err := s.DB.Preload("Diseases", "diseases.deleted_at IS NULL").Where("id = ? AND deleted_at IS NULL", id).First(&hub).Error; err != nil {
+	if err := s.DB.Preload("Diseases", "diseases.deleted_at IS NULL").Preload("Outbreaks", "outbreaks.deleted_at IS NULL").Where("id = ? AND deleted_at IS NULL", id).First(&hub).Error; err != nil {
 		return nil, err
 	}
 	return &hub, nil
@@ -117,10 +127,16 @@ func (s ContentHubService) CreateHub(actor ContentHubActor, in CreateContentHubI
 		if err := validateActiveDiseaseIDs(tx, in.DiseaseIDs); err != nil {
 			return err
 		}
+		if err := validateOutbreakIDs(tx, in.OutbreakIDs); err != nil {
+			return err
+		}
 		if err := tx.Create(&hub).Error; err != nil {
 			return mapContentHubConstraint(err)
 		}
 		if err := replaceHubDiseases(tx, &hub, in.DiseaseIDs); err != nil {
+			return err
+		}
+		if err := replaceHubOutbreaks(tx, &hub, in.OutbreakIDs); err != nil {
 			return err
 		}
 		return auditContentHub(tx, actor, "content_hub.create", "content_hub", hub.ID, hub)
@@ -175,6 +191,11 @@ func (s ContentHubService) UpdateHub(actor ContentHubActor, id uuid.UUID, in Upd
 				return err
 			}
 		}
+		if in.OutbreakIDs != nil {
+			if err := validateOutbreakIDs(tx, *in.OutbreakIDs); err != nil {
+				return err
+			}
+		}
 		updates := map[string]any{
 			"name": hub.Name, "slug": hub.Slug, "description": hub.Description, "icon": hub.Icon,
 			"color": hub.Color, "audience": hub.Audience, "sort_order": hub.SortOrder,
@@ -189,6 +210,11 @@ func (s ContentHubService) UpdateHub(actor ContentHubActor, id uuid.UUID, in Upd
 		}
 		if in.DiseaseIDs != nil {
 			if err := replaceHubDiseases(tx, &hub, *in.DiseaseIDs); err != nil {
+				return err
+			}
+		}
+		if in.OutbreakIDs != nil {
+			if err := replaceHubOutbreaks(tx, &hub, *in.OutbreakIDs); err != nil {
 				return err
 			}
 		}
@@ -309,6 +335,44 @@ func replaceHubDiseases(tx *gorm.DB, hub *models.ContentHub, ids []uuid.UUID) er
 		diseases = append(diseases, models.Disease{Base: models.Base{ID: id}})
 	}
 	return tx.Model(hub).Association("Diseases").Replace(&diseases)
+}
+
+func validateOutbreakIDs(tx *gorm.DB, ids []uuid.UUID) error {
+	seen := map[uuid.UUID]struct{}{}
+	for _, id := range ids {
+		if id == uuid.Nil {
+			return ErrContentHubInvalid
+		}
+		if _, ok := seen[id]; ok {
+			return ErrContentHubDuplicate
+		}
+		seen[id] = struct{}{}
+		var count int64
+		if err := tx.Model(&models.Outbreak{}).Where("id = ? AND deleted_at IS NULL", id).Count(&count).Error; err != nil {
+			return err
+		}
+		if count != 1 {
+			return ErrContentPillarResource
+		}
+	}
+	return nil
+}
+
+func replaceHubOutbreaks(tx *gorm.DB, hub *models.ContentHub, ids []uuid.UUID) error {
+	if err := tx.Model(hub).Association("Outbreaks").Clear(); err != nil {
+		return err
+	}
+	if len(ids) == 0 {
+		return nil
+	}
+	rows := make([]models.Outbreak, len(ids))
+	for i, id := range ids {
+		rows[i].ID = id
+	}
+	if err := tx.Model(hub).Association("Outbreaks").Append(&rows); err != nil {
+		return mapContentHubConstraint(err)
+	}
+	return nil
 }
 
 func validHubStatus(value string) bool {

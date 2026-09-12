@@ -94,6 +94,9 @@ final class MediGuideFirebaseService {
   bool get outbreakBannerEnabled =>
       !_enabled ||
       FirebaseRemoteConfig.instance.getBool('outbreak_banner_enabled');
+  bool get backendManagedOutbreakHubsEnabled =>
+      _enabled &&
+      FirebaseRemoteConfig.instance.getBool('api_driven_outbreak_pillars');
   bool get maintenanceMode =>
       _enabled && FirebaseRemoteConfig.instance.getBool('maintenance_mode');
   String get maintenanceMessage => _enabled
@@ -234,6 +237,9 @@ final class MediGuideFirebaseService {
       'enable_push_notifications': true,
       'minimum_supported_version': '',
       'outbreak_banner_enabled': true,
+      // Enable after configured hubs are verified in production. Until then
+      // every outbreak retains the existing compatibility presentation.
+      'api_driven_outbreak_pillars': false,
     });
     await config.setConfigSettings(
       RemoteConfigSettings(

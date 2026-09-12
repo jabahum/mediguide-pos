@@ -546,7 +546,7 @@ void main() {
         ),
       );
 
-      expect(find.text('Loading document...'), findsOneWidget);
+      expect(find.bySemanticsLabel('Loading document...'), findsOneWidget);
       await tester.pumpAndSettle();
       expect(find.text('Document unavailable'), findsOneWidget);
       await tester.tap(find.text('Try Again'));

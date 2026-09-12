@@ -7,10 +7,12 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { MultiSelect } from "@/components/ui/multi-select"
 import { Textarea } from "@/components/ui/textarea"
 import { GuidelineDocumentInput } from "@/services/guideline-documents.service"
 import { guidelineCategoryService } from "@/services/guideline-content.service"
 import { useQuery } from "@tanstack/react-query"
+import { diseaseService } from "@/services/content-hubs.service"
 
 const emptyDocument: GuidelineDocumentInput = {
   title: "",
@@ -20,6 +22,8 @@ const emptyDocument: GuidelineDocumentInput = {
   language: "en",
   description: "",
   category_ids: [],
+  disease_ids: [],
+  primary_disease_id: "",
 }
 
 export function GuidelineDocumentForm({
@@ -39,6 +43,10 @@ export function GuidelineDocumentForm({
   const categories = useQuery({
     queryKey: ["guideline-categories", "active", "document-form"],
     queryFn: () => guidelineCategoryService.all({ status: "active" }),
+  })
+  const diseases = useQuery({
+    queryKey: ["diseases", "active", "guideline-document-form"],
+    queryFn: () => diseaseService.list("", "active"),
   })
 
   React.useEffect(() => {
@@ -64,13 +72,14 @@ export function GuidelineDocumentForm({
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="program-area">Program area</Label>
+            <Label htmlFor="program-area">Legacy program area (optional)</Label>
             <Input
               id="program-area"
               value={value.program_area || ""}
               onChange={(event) => setField("program_area", event.target.value)}
               placeholder="Malaria"
             />
+            <p className="text-xs text-muted-foreground">Retained for older integrations. Use diseases and categories for new classification.</p>
           </div>
           <div className="space-y-2">
             <Label htmlFor="source-org">Source organization</Label>
@@ -105,32 +114,50 @@ export function GuidelineDocumentForm({
             <p className="text-sm text-muted-foreground">
               Select every browsing category that applies. Program area remains available for backward compatibility.
             </p>
-            <div className="grid gap-2 rounded-md border p-3 sm:grid-cols-2 lg:grid-cols-3">
-              {categories.isLoading ? (
-                <span className="text-sm text-muted-foreground">Loading categories…</span>
-              ) : categories.data?.length ? (
-                categories.data.map((category) => {
-                  const selected = (value.category_ids || []).includes(category.id)
-                  return (
-                    <label key={category.id} className="flex cursor-pointer items-center gap-2 rounded p-2 hover:bg-muted">
-                      <input
-                        type="checkbox"
-                        checked={selected}
-                        onChange={(event) => setValue((current) => ({
-                          ...current,
-                          category_ids: event.target.checked
-                            ? [...new Set([...(current.category_ids || []), category.id])]
-                            : (current.category_ids || []).filter((id) => id !== category.id),
-                        }))}
-                      />
-                      <span className="text-sm">{category.name}</span>
-                    </label>
-                  )
-                })
-              ) : (
-                <span className="text-sm text-muted-foreground">No active categories are available.</span>
-              )}
-            </div>
+            <MultiSelect
+              options={(categories.data || []).map((category) => ({
+                value: category.id,
+                label: `${category.expand?.parent_category?.name ? `${category.expand.parent_category.name} › ` : ""}${category.name}`,
+              }))}
+              value={value.category_ids || []}
+              onValueChange={(category_ids) => setValue((current) => ({ ...current, category_ids }))}
+              placeholder={categories.isLoading ? "Loading categories…" : "Search categories"}
+              disabled={categories.isLoading}
+            />
+          </div>
+          <div className="space-y-2 md:col-span-2">
+            <Label>Diseases</Label>
+            <p className="text-sm text-muted-foreground">Assign every applicable disease, then choose one primary disease for discovery and hub placement.</p>
+            <MultiSelect
+              options={(diseases.data?.items || []).map((disease) => ({
+                value: disease.id,
+                label: `${disease.parent_name ? `${disease.parent_name} › ` : ""}${disease.name}`,
+                color: disease.color,
+              }))}
+              value={value.disease_ids || []}
+              onValueChange={(disease_ids) => setValue((current) => ({
+                ...current,
+                disease_ids,
+                primary_disease_id: disease_ids.includes(current.primary_disease_id || "") ? current.primary_disease_id : "",
+              }))}
+              placeholder={diseases.isLoading ? "Loading diseases…" : "Search diseases"}
+              disabled={diseases.isLoading}
+            />
+          </div>
+          <div className="space-y-2 md:col-span-2">
+            <Label htmlFor="primary-disease">Primary disease</Label>
+            <select
+              id="primary-disease"
+              className="h-10 w-full rounded-md border bg-background px-3"
+              value={value.primary_disease_id || ""}
+              onChange={(event) => setField("primary_disease_id", event.target.value)}
+              disabled={!(value.disease_ids || []).length}
+            >
+              <option value="">No primary disease</option>
+              {(diseases.data?.items || []).filter((disease) => (value.disease_ids || []).includes(disease.id)).map((disease) => (
+                <option key={disease.id} value={disease.id}>{disease.name}</option>
+              ))}
+            </select>
           </div>
           <div className="space-y-2 md:col-span-2">
             <Label htmlFor="description">Description</Label>

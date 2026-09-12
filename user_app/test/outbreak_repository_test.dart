@@ -240,6 +240,41 @@ class FakeOutbreakApi extends BackendApiService {
     if (path == '/api/public/outbreaks/outbreak-1') {
       return {'data': outbreak};
     }
+    if (path == '/api/public/outbreaks/outbreak-1/hub') {
+      return {
+        'data': {
+          'id': 'hub-1',
+          'name': 'Ebola response hub',
+          'slug': 'ebola-response',
+          'pillars': [
+            {
+              'id': 'pillar-1',
+              'name': 'Surveillance Guidance',
+              'slug': 'surveillance-guidance',
+              'description': 'Approved surveillance knowledge',
+              'icon': 'radar',
+              'items': [
+                {
+                  'id': 'item-1',
+                  'content_type': 'outbreak_document',
+                  'content_id': 'document-1',
+                  'label_override': 'Surveillance protocol',
+                },
+              ],
+              'children': [
+                {
+                  'id': 'pillar-2',
+                  'name': 'Forms',
+                  'slug': 'forms',
+                  'items': [],
+                  'children': [],
+                },
+              ],
+            },
+          ],
+        },
+      };
+    }
     if (path == '/api/public/situation-reports/report-1') {
       return {
         'data': {
@@ -255,6 +290,24 @@ class FakeOutbreakApi extends BackendApiService {
 }
 
 void main() {
+  test(
+    'backend-managed outbreak hub preserves order and nested pillars',
+    () async {
+      final store = TestLocalStore();
+      addTearDown(store.close);
+      final api = FakeOutbreakApi();
+      final repository = OutbreakRepository(api, store.cache);
+
+      final hub = await repository.hubForOutbreak('outbreak-1');
+
+      expect(hub.name, 'Ebola response hub');
+      expect(hub.pillars.single.slug, 'surveillance-guidance');
+      expect(hub.findPillar('forms')?.name, 'Forms');
+      expect(hub.pillars.single.items.single.contentId, 'document-1');
+      expect(api.calls, contains('/api/public/outbreaks/outbreak-1/hub'));
+    },
+  );
+
   test('default outbreak document query uses the server safe sort', () {
     final defaultQuery = const OutbreakDocumentQuery(search: 'ebola').toQuery();
     final explicitQuery = const OutbreakDocumentQuery(

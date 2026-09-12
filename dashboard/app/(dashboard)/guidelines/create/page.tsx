@@ -21,6 +21,7 @@ import {
   GuidelineDocumentsService,
   GuidelineVersionRecord,
 } from "@/services/guideline-documents.service"
+import { contentDiseaseService } from "@/services/content-hubs.service"
 
 const stages = [
   "Create guideline",
@@ -62,7 +63,11 @@ export default function CreateGuidelinePage() {
   async function createDocument(payload: GuidelineDocumentInput) {
     setSubmitting(true)
     try {
-      const created = await GuidelineDocumentsService.createDocument(payload)
+      const { disease_ids = [], primary_disease_id, ...documentPayload } = payload
+      const created = await GuidelineDocumentsService.createDocument(documentPayload)
+      if (disease_ids.length) {
+        await contentDiseaseService.replace("guideline", created.id, disease_ids, primary_disease_id)
+      }
       setDocument({ ...created, versions: created.versions || [] })
       setStage(1)
       showToast.success("Guideline created", "Now add the first version.")

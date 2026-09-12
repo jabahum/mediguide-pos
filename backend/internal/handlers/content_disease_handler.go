@@ -82,6 +82,25 @@ func (h ContentDiseaseHandler) Delete(c *gin.Context) {
 	c.Status(http.StatusNoContent)
 }
 
+// Replace godoc
+// @Summary Atomically replace disease assignments for one content resource
+// @Tags disease-taxonomy
+// @Security BearerAuth
+// @Router /api/v2/content-disease-assignments/replace [put]
+func (h ContentDiseaseHandler) Replace(c *gin.Context) {
+	var input services.ReplaceContentDiseaseAssignmentsInput
+	if c.ShouldBindJSON(&input) != nil {
+		httpx.Error(c, http.StatusBadRequest, "invalid disease assignment request body")
+		return
+	}
+	result, err := h.Service.ReplaceResourceAssignments(contentDiseaseActor(c), input)
+	if err != nil {
+		h.writeError(c, err)
+		return
+	}
+	httpx.OK(c, result)
+}
+
 func contentDiseaseActor(c *gin.Context) services.ContentDiseaseActor {
 	return services.ContentDiseaseActor{ID: supportClaims(c).UserID, IP: c.ClientIP()}
 }

@@ -39,6 +39,7 @@ type ContentHub struct {
 	PublishedAt *time.Time `json:"published_at,omitempty"`
 	LockVersion int        `gorm:"not null;default:1" json:"lock_version"`
 	Diseases    []Disease  `gorm:"many2many:content_hub_diseases;joinForeignKey:ContentHubID;joinReferences:DiseaseID" json:"diseases,omitempty"`
+	Outbreaks   []Outbreak `gorm:"many2many:content_hub_outbreaks;joinForeignKey:ContentHubID;joinReferences:OutbreakID" json:"outbreaks,omitempty"`
 }
 
 type ContentHubDisease struct {
@@ -49,6 +50,18 @@ type ContentHubDisease struct {
 }
 
 func (ContentHubDisease) TableName() string { return "content_hub_diseases" }
+
+// ContentHubOutbreak explicitly selects the curated presentation for an
+// outbreak. Disease associations remain useful for discovery but are not used
+// to guess which of several disease hubs should render an outbreak.
+type ContentHubOutbreak struct {
+	ContentHubID uuid.UUID `gorm:"type:uuid;primaryKey" json:"content_hub_id"`
+	OutbreakID   uuid.UUID `gorm:"type:uuid;primaryKey" json:"outbreak_id"`
+	CreatedAt    time.Time `json:"created_at"`
+	UpdatedAt    time.Time `json:"updated_at"`
+}
+
+func (ContentHubOutbreak) TableName() string { return "content_hub_outbreaks" }
 
 type ContentPillar struct {
 	Base

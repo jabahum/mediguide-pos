@@ -6,6 +6,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import 'package:user_app/app/router/route_names.dart';
+import 'package:user_app/app/providers/app_providers.dart';
 import 'package:user_app/core/constants/app_spacing.dart';
 import 'package:user_app/core/config/app_config.dart';
 import 'package:user_app/core/utils/app_message.dart';
@@ -565,15 +566,26 @@ class _OutbreakCard extends StatelessWidget {
 // OUTBREAK DETAIL
 // ===========================================================================
 
-class _OutbreakDetail extends StatelessWidget {
+class _OutbreakDetail extends ConsumerWidget {
   const _OutbreakDetail({required this.content});
 
   final PublicContent<PublicOutbreakDetail> content;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final detail = content.value;
     final outbreak = detail.outbreak;
+    final apiDrivenHubsEnabled = ref.watch(
+      backendManagedOutbreakHubsEnabledProvider,
+    );
+    final configuredHub = apiDrivenHubsEnabled
+        ? ref.watch(publicOutbreakHubProvider(outbreak.id)).valueOrNull
+        : null;
+    final hasQuickAccess =
+        detail.documents.isNotEmpty ||
+        detail.resources.isNotEmpty ||
+        detail.reports.isNotEmpty ||
+        (configuredHub?.pillars.isNotEmpty ?? false);
 
     final tone = _statusTone(
       context,
@@ -609,9 +621,7 @@ class _OutbreakDetail extends StatelessWidget {
           OutbreakMetricGrid(metrics: outbreak.metrics),
         ],
 
-        if (detail.documents.isNotEmpty ||
-            detail.resources.isNotEmpty ||
-            detail.reports.isNotEmpty) ...[
+        if (hasQuickAccess) ...[
           AppSpacing.gapLg,
           const SectionHeader(
             title: 'Quick access',
@@ -619,7 +629,10 @@ class _OutbreakDetail extends StatelessWidget {
             icon: LucideIcons.layoutGrid,
           ),
           AppSpacing.gapSm,
-          _OutbreakQuickAccessGrid(detail: detail),
+          _OutbreakQuickAccessGrid(
+            detail: detail,
+            configuredHub: configuredHub,
+          ),
         ],
 
         if (detail.updates.isNotEmpty) ...[
@@ -710,12 +723,27 @@ class _OutbreakDetail extends StatelessWidget {
 }
 
 class _OutbreakQuickAccessGrid extends StatelessWidget {
-  const _OutbreakQuickAccessGrid({required this.detail});
+  const _OutbreakQuickAccessGrid({required this.detail, this.configuredHub});
 
   final PublicOutbreakDetail detail;
+  final PublicOutbreakHub? configuredHub;
 
   @override
   Widget build(BuildContext context) {
+    if (configuredHub != null && configuredHub!.pillars.isNotEmpty) {
+      final actions = configuredHub!.pillars
+          .map(
+            (pillar) => _OutbreakQuickAction(
+              label: pillar.name,
+              icon: _configuredPillarIcon(pillar.icon, pillar.slug),
+              onTap: () => context.push(
+                AppRoutes.outbreakSectionFor(detail.outbreak.id, pillar.slug),
+              ),
+            ),
+          )
+          .toList(growable: false);
+      return _OutbreakQuickActionWrap(actions: actions);
+    }
     final clinicalCare = _firstOutbreakDocument(detail.documents, const [
       'treatment_protocol',
       'sop',
@@ -805,29 +833,58 @@ class _OutbreakQuickAccessGrid extends StatelessWidget {
         ),
     ];
 
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final columns = constraints.maxWidth >= 700
-            ? 4
-            : constraints.maxWidth >= 340
-            ? 3
-            : 2;
-        final width =
-            (constraints.maxWidth - AppSpacing.sm * (columns - 1)) / columns;
-        return Wrap(
-          spacing: AppSpacing.sm,
-          runSpacing: AppSpacing.sm,
-          children: [
-            for (final action in actions)
-              SizedBox(
-                width: width,
-                child: _OutbreakQuickAccessTile(action: action),
-              ),
-          ],
-        );
-      },
-    );
+    return _OutbreakQuickActionWrap(actions: actions);
   }
+}
+
+class _OutbreakQuickActionWrap extends StatelessWidget {
+  const _OutbreakQuickActionWrap({required this.actions});
+
+  final List<_OutbreakQuickAction> actions;
+
+  @override
+  Widget build(BuildContext context) => LayoutBuilder(
+    builder: (context, constraints) {
+      final columns = constraints.maxWidth >= 700
+          ? 4
+          : constraints.maxWidth >= 340
+          ? 3
+          : 2;
+      final width =
+          (constraints.maxWidth - AppSpacing.sm * (columns - 1)) / columns;
+      return Wrap(
+        spacing: AppSpacing.sm,
+        runSpacing: AppSpacing.sm,
+        children: [
+          for (final action in actions)
+            SizedBox(
+              width: width,
+              child: _OutbreakQuickAccessTile(action: action),
+            ),
+        ],
+      );
+    },
+  );
+}
+
+IconData _configuredPillarIcon(String configured, String slug) {
+  final value = configured.trim().isEmpty ? slug : configured.trim();
+  return switch (value) {
+    'case-definition' || 'case_definitions' => LucideIcons.badgeHelp,
+    'screening-triage' || 'screening' => LucideIcons.listChecks,
+    'surveillance-guidance' || 'surveillance' => LucideIcons.radioTower,
+    'ipc-ppe' || 'shield-check' => LucideIcons.shieldCheck,
+    'isolation' => LucideIcons.squareActivity,
+    'clinical-management' || 'clinical-care' => LucideIcons.stethoscope,
+    'laboratory' || 'flask' => LucideIcons.flaskConical,
+    'medicines' || 'pill' => LucideIcons.pill,
+    'forms' || 'file-text' => LucideIcons.fileText,
+    'training' || 'graduation-cap' => LucideIcons.graduationCap,
+    'situation-reports' || 'file-chart' => LucideIcons.fileChartColumn,
+    'contacts' || 'users' => LucideIcons.users,
+    'faqs' || 'help-circle' => LucideIcons.messageCircleQuestion,
+    _ => LucideIcons.folderOpen,
+  };
 }
 
 _OutbreakQuickAction _documentQuickAction(

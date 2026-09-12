@@ -42,6 +42,13 @@ type ContentDiseaseQuery struct {
 	ContentID   string
 }
 
+type ReplaceContentDiseaseAssignmentsInput struct {
+	ContentType      string      `json:"content_type" binding:"required"`
+	ContentID        uuid.UUID   `json:"content_id" binding:"required"`
+	DiseaseIDs       []uuid.UUID `json:"disease_ids"`
+	PrimaryDiseaseID *uuid.UUID  `json:"primary_disease_id"`
+}
+
 var supportedDiseaseContentTypes = map[string]string{
 	models.ContentDiseaseGuideline:        "guideline_documents",
 	models.ContentDiseaseOutbreak:         "outbreaks",
@@ -150,6 +157,61 @@ func (s ContentDiseaseService) Delete(actor ContentDiseaseActor, id uuid.UUID) e
 		}
 		return auditContentDisease(tx, actor, "content_disease_assignment.delete", item.ID, item)
 	})
+}
+
+// ReplaceResourceAssignments atomically synchronizes an editor's complete
+// selection. The source resource is never changed or deleted.
+func (s ContentDiseaseService) ReplaceResourceAssignments(actor ContentDiseaseActor, in ReplaceContentDiseaseAssignmentsInput) ([]models.ContentDiseaseAssignment, error) {
+	kind, err := normalizeDiseaseContentType(in.ContentType)
+	if err != nil || in.ContentID == uuid.Nil {
+		return nil, ErrContentDiseaseInvalid
+	}
+	seen := map[uuid.UUID]struct{}{}
+	for _, id := range in.DiseaseIDs {
+		if id == uuid.Nil {
+			return nil, ErrContentDiseaseInvalid
+		}
+		if _, ok := seen[id]; ok {
+			return nil, ErrContentDiseaseDuplicate
+		}
+		seen[id] = struct{}{}
+	}
+	if in.PrimaryDiseaseID != nil {
+		if _, ok := seen[*in.PrimaryDiseaseID]; !ok {
+			return nil, ErrContentDiseaseInvalid
+		}
+	}
+	err = s.DB.Transaction(func(tx *gorm.DB) error {
+		if err := validateDiseaseContentResource(tx, kind, in.ContentID); err != nil {
+			return err
+		}
+		for _, id := range in.DiseaseIDs {
+			if err := validateAssignableDisease(tx, id); err != nil {
+				return err
+			}
+		}
+		if err := tx.Where("content_type = ? AND content_id = ? AND deleted_at IS NULL", kind, in.ContentID).Delete(&models.ContentDiseaseAssignment{}).Error; err != nil {
+			return err
+		}
+		for _, id := range in.DiseaseIDs {
+			row := models.ContentDiseaseAssignment{DiseaseID: id, ContentType: kind, ContentID: in.ContentID, IsPrimary: in.PrimaryDiseaseID != nil && id == *in.PrimaryDiseaseID}
+			if actor.ID != uuid.Nil {
+				row.CreatedBy = &actor.ID
+			}
+			if err := tx.Create(&row).Error; err != nil {
+				return mapContentDiseaseConstraint(err)
+			}
+		}
+		return auditContentDisease(tx, actor, "content_disease_assignment.replace", in.ContentID, in)
+	})
+	if err != nil {
+		return nil, err
+	}
+	result, err := s.List(ContentDiseaseQuery{Page: PageInput{Page: 1, PerPage: 100}, ContentType: kind, ContentID: in.ContentID.String()})
+	if err != nil {
+		return nil, err
+	}
+	return result.Items, nil
 }
 
 func normalizeDiseaseContentType(value string) (string, error) {

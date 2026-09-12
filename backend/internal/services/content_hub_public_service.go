@@ -22,6 +22,7 @@ type PublicContentHub struct {
 	SortOrder   int                   `json:"sort_order"`
 	PublishedAt *time.Time            `json:"published_at,omitempty"`
 	Diseases    []PublicHubDisease    `json:"diseases"`
+	OutbreakID  *uuid.UUID            `json:"outbreak_id,omitempty"`
 	Pillars     []PublicContentPillar `json:"pillars,omitempty"`
 }
 
@@ -111,6 +112,26 @@ func (s ContentHubService) GetPublicHub(_ context.Context, slug string) (*Public
 		return nil, err
 	}
 	return s.buildPublicHub(hub, now, true)
+}
+
+// GetPublicOutbreakHub resolves only an explicit outbreak-to-hub assignment.
+// Callers treat not-found as the signal to retain the legacy presentation.
+func (s ContentHubService) GetPublicOutbreakHub(_ context.Context, outbreakID uuid.UUID) (*PublicContentHub, error) {
+	now := time.Now().UTC()
+	var hub models.ContentHub
+	err := s.DB.Joins("JOIN content_hub_outbreaks cho ON cho.content_hub_id = content_hubs.id").
+		Joins("JOIN outbreaks o ON o.id = cho.outbreak_id AND o.deleted_at IS NULL").
+		Where("cho.outbreak_id = ? AND content_hubs.deleted_at IS NULL AND content_hubs.status = ? AND content_hubs.published_at IS NOT NULL AND content_hubs.published_at <= ? AND o.published_at IS NOT NULL AND o.published_at <= ? AND o.withdrawn_at IS NULL AND o.status IN ?", outbreakID, models.ContentHubStatusActive, now, now, []string{"published", "active", "monitoring", "contained", "closed"}).
+		First(&hub).Error
+	if err != nil {
+		return nil, err
+	}
+	result, err := s.buildPublicHub(hub, now, true)
+	if err != nil {
+		return nil, err
+	}
+	result.OutbreakID = &outbreakID
+	return result, nil
 }
 
 func (s ContentHubService) GetPublicPillar(ctx context.Context, hubSlug, pillarSlug string) (*PublicContentPillar, error) {

@@ -212,6 +212,13 @@ final class OutbreakRepository {
   final Future<void> Function(String, Map<String, Object>)? _recordMetric;
   final Future<void> Function(Map<String, String>)? _reconcileDocumentDownloads;
 
+  Future<PublicOutbreakHub> hubForOutbreak(String outbreakId) async {
+    final id = _id(outbreakId);
+    return PublicOutbreakHub.fromJson(
+      _data(await _public('/api/public/outbreaks/$id/hub')),
+    );
+  }
+
   Future<PublicPage<PublicOutbreakDocument>> documents(
     String outbreakId, {
     int page = 1,

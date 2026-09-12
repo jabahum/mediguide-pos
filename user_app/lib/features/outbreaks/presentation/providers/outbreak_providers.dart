@@ -14,6 +14,10 @@ final publicOutbreakProvider = FutureProvider.autoDispose.family(
   (ref, String id) => ref.watch(outbreakRepositoryProvider).outbreak(id),
 );
 
+final publicOutbreakHubProvider = FutureProvider.autoDispose.family(
+  (ref, String id) => ref.watch(outbreakRepositoryProvider).hubForOutbreak(id),
+);
+
 final publicSituationReportsProvider =
     AsyncNotifierProvider.autoDispose<
       PublicSituationReportsController,

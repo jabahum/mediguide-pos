@@ -87,6 +87,8 @@ export interface GuidelineDocumentInput {
   language?: string;
   description?: string;
   category_ids?: string[];
+  disease_ids?: string[];
+  primary_disease_id?: string;
 }
 
 export interface CreateGuidelineVersionInput {

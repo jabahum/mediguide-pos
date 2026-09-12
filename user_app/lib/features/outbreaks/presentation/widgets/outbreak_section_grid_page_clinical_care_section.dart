@@ -67,5 +67,10 @@ PublicOutbreakDocument? _documentForKinds(
 
 String _sectionTitle(String sectionId) => switch (sectionId) {
   'clinical-care' => 'Clinical Care',
-  _ => 'Outbreak guidance',
+  _ =>
+    sectionId
+        .split('-')
+        .where((value) => value.isNotEmpty)
+        .map((value) => '${value[0].toUpperCase()}${value.substring(1)}')
+        .join(' '),
 };

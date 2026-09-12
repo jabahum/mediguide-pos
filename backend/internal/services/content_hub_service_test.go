@@ -18,6 +18,7 @@ func contentHubTestDB(t *testing.T) *gorm.DB {
 	if err := db.AutoMigrate(
 		&models.ContentHub{},
 		&models.ContentHubDisease{},
+		&models.ContentHubOutbreak{},
 		&models.ContentPillar{},
 		&models.ContentPillarItem{},
 		&models.ContentHubTemplate{},
@@ -26,6 +27,61 @@ func contentHubTestDB(t *testing.T) *gorm.DB {
 		t.Fatal(err)
 	}
 	return db
+}
+
+func TestConfigureOutbreakHubMapsPublishedResourcesAndSurveillance(t *testing.T) {
+	db := contentHubTestDB(t)
+	template := models.ContentHubTemplate{Base: models.Base{ID: defaultOutbreakHubTemplateID}, Name: "Outbreak response", Slug: "outbreak-emergency-response", Status: models.ContentHubStatusActive}
+	if err := db.Create(&template).Error; err != nil {
+		t.Fatal(err)
+	}
+	definitions := []models.ContentHubTemplatePillar{
+		{TemplateID: template.ID, Name: "Surveillance Guidance", Slug: "surveillance-guidance", SortOrder: 10},
+		{TemplateID: template.ID, Name: "Clinical Management", Slug: "clinical-management", SortOrder: 20},
+		{TemplateID: template.ID, Name: "Situation Reports", Slug: "situation-reports", SortOrder: 30},
+	}
+	if err := db.Create(&definitions).Error; err != nil {
+		t.Fatal(err)
+	}
+	now := time.Now().UTC()
+	outbreak := models.Outbreak{Title: "Ebola", DiseaseType: "Ebola virus disease", Status: "active", LastUpdate: now, PublishedAt: &now}
+	if err := db.Create(&outbreak).Error; err != nil {
+		t.Fatal(err)
+	}
+	document := models.OutbreakResource{OutbreakID: outbreak.ID, Title: "Surveillance protocol", ResourceType: "managed_document", DocumentKind: "surveillance_protocol", Status: "published", PublishedAt: &now, ApprovedAt: &now}
+	if err := db.Create(&document).Error; err != nil {
+		t.Fatal(err)
+	}
+	report := models.SituationReport{OutbreakID: &outbreak.ID, Title: "Situation report", Status: "published", PublicationDate: now, PublishedAt: &now, ApprovedAt: &now}
+	if err := db.Create(&report).Error; err != nil {
+		t.Fatal(err)
+	}
+	service := ContentHubService{DB: db}
+	workspace, err := service.ConfigureOutbreakHub(ContentHubActor{}, outbreak.ID, ConfigureOutbreakHubInput{Publish: true})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if workspace.Hub.Status != models.ContentHubStatusActive || len(workspace.Hub.Outbreaks) != 1 {
+		t.Fatalf("outbreak hub not published or linked: %#v", workspace.Hub)
+	}
+	bySlug := map[string]ContentHubAdminPillar{}
+	for _, pillar := range workspace.Pillars {
+		bySlug[pillar.Slug] = pillar
+	}
+	if got := bySlug["surveillance-guidance"].Items; len(got) != 1 || got[0].ContentID == nil || *got[0].ContentID != document.ID {
+		t.Fatalf("surveillance mapping failed: %#v", got)
+	}
+	if got := bySlug["situation-reports"].Items; len(got) != 1 || got[0].ContentID == nil || *got[0].ContentID != report.ID {
+		t.Fatalf("report mapping failed: %#v", got)
+	}
+	publicHub, err := service.GetPublicOutbreakHub(context.Background(), outbreak.ID)
+	if err != nil || publicHub.OutbreakID == nil || *publicHub.OutbreakID != outbreak.ID {
+		t.Fatalf("public outbreak lookup failed: %#v %v", publicHub, err)
+	}
+	again, err := service.ConfigureOutbreakHub(ContentHubActor{}, outbreak.ID, ConfigureOutbreakHubInput{})
+	if err != nil || again.Hub.ID != workspace.Hub.ID {
+		t.Fatalf("configuration should be idempotent: %#v %v", again, err)
+	}
 }
 
 func TestContentHubSupportsNeutralAndMultipleDiseaseHubs(t *testing.T) {

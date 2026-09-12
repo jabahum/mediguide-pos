@@ -87,6 +87,17 @@ final outbreakFeatureEnabledProvider = Provider<bool>((ref) {
       ref.watch(firebaseServiceProvider).outbreakBannerEnabled;
 });
 
+final backendManagedOutbreakHubsEnabledProvider = Provider<bool>((ref) {
+  try {
+    return ref.watch(firebaseServiceProvider).backendManagedOutbreakHubsEnabled;
+  } on StateError {
+    // Isolated previews and widget tests intentionally do not initialize
+    // Firebase. The rollout-safe behavior in that environment is the legacy
+    // outbreak presentation.
+    return false;
+  }
+});
+
 final notificationPermissionProvider =
     StreamProvider<AppNotificationPermissionState>((ref) async* {
       final service = ref.watch(firebaseServiceProvider);

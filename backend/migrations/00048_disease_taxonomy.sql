@@ -67,6 +67,7 @@ CREATE UNIQUE INDEX idx_disease_codes_system_code
 CREATE INDEX idx_disease_codes_disease
   ON disease_codes (disease_id, code_system, code) WHERE deleted_at IS NULL;
 
+-- +goose StatementBegin
 CREATE OR REPLACE FUNCTION reject_disease_hierarchy_cycle()
 RETURNS trigger LANGUAGE plpgsql AS $$
 DECLARE
@@ -104,6 +105,7 @@ BEGIN
   RETURN NEW;
 END;
 $$;
+-- +goose StatementEnd
 
 CREATE TRIGGER trg_reject_disease_hierarchy_cycle
 BEFORE INSERT OR UPDATE OF parent_id ON diseases
@@ -146,6 +148,7 @@ CREATE TABLE disease_taxonomy_migration_report (
 CREATE INDEX idx_disease_migration_report_status
   ON disease_taxonomy_migration_report (resolution_status, source_table);
 
+-- +goose StatementBegin
 CREATE OR REPLACE FUNCTION refresh_disease_taxonomy_migration_report()
 RETURNS void LANGUAGE plpgsql AS $$
 BEGIN
@@ -184,6 +187,7 @@ BEGIN
   FROM matches;
 END;
 $$;
+-- +goose StatementEnd
 
 SELECT refresh_disease_taxonomy_migration_report();
 

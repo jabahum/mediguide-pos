@@ -72,7 +72,9 @@ final class GuidelinePublicationRepository {
         type: _publicationType,
         scope: _cacheScope,
         search: search.trim().isNotEmpty ? search : programArea,
-        limit: programArea.trim().isEmpty && categoryId.trim().isEmpty ? perPage : 1000,
+        limit: programArea.trim().isEmpty && categoryId.trim().isEmpty
+            ? perPage
+            : 1000,
         offset: programArea.trim().isEmpty && categoryId.trim().isEmpty
             ? (page - 1).clamp(0, 1 << 30) * perPage
             : 0,
@@ -87,7 +89,13 @@ final class GuidelinePublicationRepository {
                 normalizedArea.isEmpty ||
                 item.programArea.trim().toLowerCase() == normalizedArea,
           )
-          .where((item) => normalizedCategory.isEmpty || item.categories.any((category) => category.id.toLowerCase() == normalizedCategory))
+          .where(
+            (item) =>
+                normalizedCategory.isEmpty ||
+                item.categories.any(
+                  (category) => category.id.toLowerCase() == normalizedCategory,
+                ),
+          )
           .toList(growable: false);
       final items = filtered
           .skip((page - 1).clamp(0, 1 << 30) * perPage)
@@ -410,9 +418,9 @@ GuidelinePublication _publicationFromContract(Map<String, dynamic> json) {
     lastUpdated: DateTime.tryParse(dto.lastUpdated ?? ''),
     intendedPopulation: dto.intendedPopulation ?? '',
     healthcareLevel: dto.healthcareLevel ?? '',
-    categories: _maps(json['categories'])
-        .map(PublicationCategory.fromJson)
-        .toList(growable: false),
+    categories: _maps(
+      json['categories'],
+    ).map(PublicationCategory.fromJson).toList(growable: false),
   );
 }
 

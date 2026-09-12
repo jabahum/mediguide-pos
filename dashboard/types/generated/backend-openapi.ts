@@ -266,6 +266,11 @@ export interface HandlersClinicalProtocolEnvelope {
   success?: boolean;
 }
 
+export interface HandlersContentDiseaseAssignmentEnvelope {
+  data?: ModelsContentDiseaseAssignment;
+  success?: boolean;
+}
+
 export interface HandlersConversationEnvelope {
   data?: ServicesConversationView;
   success?: boolean;
@@ -781,6 +786,11 @@ export interface HandlersPaginatedClinicalProtocols {
 export interface HandlersPaginatedClinicalProtocolsEnvelope {
   data?: HandlersPaginatedClinicalProtocols;
   /** @example true */
+  success?: boolean;
+}
+
+export interface HandlersPaginatedContentDiseaseAssignmentsEnvelope {
+  data?: ServicesPageResultModelsContentDiseaseAssignment;
   success?: boolean;
 }
 
@@ -1593,6 +1603,18 @@ export interface ModelsClinicalProtocol {
   version?: string;
 }
 
+export interface ModelsContentDiseaseAssignment {
+  content_id?: string;
+  content_type?: string;
+  created_at?: string;
+  created_by?: string;
+  disease?: ModelsDisease;
+  disease_id?: string;
+  id?: string;
+  primary?: boolean;
+  updated_at?: string;
+}
+
 export interface ModelsDisease {
   aliases?: ModelsDiseaseAlias[];
   codes?: ModelsDiseaseCode[];
@@ -1960,6 +1982,7 @@ export interface ModelsGuidelineContentBlock {
 }
 
 export interface ModelsGuidelineDocument {
+  categories?: ModelsGuidelineCategory[];
   country?: string;
   created_at?: string;
   current_version_id?: string;
@@ -2708,6 +2731,13 @@ export interface ServicesConsultantView {
   years_of_experience?: number;
 }
 
+export interface ServicesContentDiseaseInput {
+  content_id: string;
+  content_type: string;
+  disease_id: string;
+  primary?: boolean;
+}
+
 export interface ServicesConversationCreate {
   other_participant_id?: string;
 }
@@ -2764,6 +2794,7 @@ export interface ServicesCreateGuidelineEditorCommentInput {
 }
 
 export interface ServicesCreateGuidelineInput {
+  category_ids?: string[];
   country?: string;
   description?: string;
   healthcare_level?: string;
@@ -4168,6 +4199,14 @@ export interface ServicesPageResultModelsAbbreviation {
   total_pages?: number;
 }
 
+export interface ServicesPageResultModelsContentDiseaseAssignment {
+  items?: ModelsContentDiseaseAssignment[];
+  page?: number;
+  per_page?: number;
+  total_items?: number;
+  total_pages?: number;
+}
+
 export interface ServicesPageResultModelsDisease {
   items?: ModelsDisease[];
   page?: number;
@@ -4435,6 +4474,7 @@ export interface ServicesProtocolStep {
 }
 
 export interface ServicesPublicGuideline {
+  categories?: ServicesPublicGuidelineCategory[];
   country?: string;
   description?: string;
   healthcare_level?: string;
@@ -4479,6 +4519,17 @@ export interface ServicesPublicGuidelineBlock {
   section_id?: string;
   sort_order?: number;
   type?: ModelsGuidelineBlockType;
+}
+
+export interface ServicesPublicGuidelineCategory {
+  color?: string;
+  description?: string;
+  icon?: string;
+  id?: string;
+  name?: string;
+  parent_category_id?: string;
+  slug?: string;
+  sort_order?: number;
 }
 
 export interface ServicesPublicGuidelineContent {
@@ -4937,6 +4988,7 @@ export interface ServicesUpdateGuidelineBlockInput {
 }
 
 export interface ServicesUpdateGuidelineInput {
+  category_ids?: string[];
   country?: string;
   description?: string;
   healthcare_level?: string;

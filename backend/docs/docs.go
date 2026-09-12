@@ -104,6 +104,18 @@ const docTemplate = `{
                     },
                     {
                         "type": "string",
+                        "description": "Guideline category UUID",
+                        "name": "category_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Disease UUID",
+                        "name": "disease_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
                         "description": "Country",
                         "name": "country",
                         "in": "query"
@@ -1203,6 +1215,30 @@ const docTemplate = `{
                         "type": "string",
                         "description": "Program area filter",
                         "name": "program_area",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Guideline category UUID",
+                        "name": "category_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Disease UUID",
+                        "name": "disease_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Guideline category UUID",
+                        "name": "category_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Disease UUID",
+                        "name": "disease_id",
                         "in": "query"
                     },
                     {
@@ -3758,6 +3794,116 @@ const docTemplate = `{
                         "schema": {
                             "$ref": "#/definitions/handlers.ErrorResponse"
                         }
+                    }
+                }
+            }
+        },
+        "/api/v2/content-disease-assignments": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "disease-taxonomy"
+                ],
+                "summary": "List disease-content assignments",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Disease UUID",
+                        "name": "disease_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Supported resource type",
+                        "name": "content_type",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Resource UUID",
+                        "name": "content_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Page number",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Items per page",
+                        "name": "per_page",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.PaginatedContentDiseaseAssignmentsEnvelope"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "disease-taxonomy"
+                ],
+                "summary": "Assign a disease to a content resource",
+                "parameters": [
+                    {
+                        "description": "Disease assignment",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/services.ContentDiseaseInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ContentDiseaseAssignmentEnvelope"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v2/content-disease-assignments/{id}": {
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "disease-taxonomy"
+                ],
+                "summary": "Remove a disease-content assignment",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Assignment UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
                     }
                 }
             }
@@ -9950,6 +10096,12 @@ const docTemplate = `{
                         "type": "string",
                         "description": "Program area filter",
                         "name": "program_area",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Assigned category UUID",
+                        "name": "category_id",
                         "in": "query"
                     },
                     {
@@ -17072,6 +17224,17 @@ const docTemplate = `{
                 }
             }
         },
+        "handlers.ContentDiseaseAssignmentEnvelope": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/models.ContentDiseaseAssignment"
+                },
+                "success": {
+                    "type": "boolean"
+                }
+            }
+        },
         "handlers.ConversationEnvelope": {
             "type": "object",
             "properties": {
@@ -18228,6 +18391,17 @@ const docTemplate = `{
                 "success": {
                     "type": "boolean",
                     "example": true
+                }
+            }
+        },
+        "handlers.PaginatedContentDiseaseAssignmentsEnvelope": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/services.PageResult-models_ContentDiseaseAssignment"
+                },
+                "success": {
+                    "type": "boolean"
                 }
             }
         },
@@ -20106,6 +20280,38 @@ const docTemplate = `{
                 }
             }
         },
+        "models.ContentDiseaseAssignment": {
+            "type": "object",
+            "properties": {
+                "content_id": {
+                    "type": "string"
+                },
+                "content_type": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "created_by": {
+                    "type": "string"
+                },
+                "disease": {
+                    "$ref": "#/definitions/models.Disease"
+                },
+                "disease_id": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "primary": {
+                    "type": "boolean"
+                },
+                "updated_at": {
+                    "type": "string"
+                }
+            }
+        },
         "models.Disease": {
             "type": "object",
             "properties": {
@@ -21127,6 +21333,12 @@ const docTemplate = `{
         "models.GuidelineDocument": {
             "type": "object",
             "properties": {
+                "categories": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.GuidelineCategory"
+                    }
+                },
                 "country": {
                     "type": "string"
                 },
@@ -23233,6 +23445,28 @@ const docTemplate = `{
                 }
             }
         },
+        "services.ContentDiseaseInput": {
+            "type": "object",
+            "required": [
+                "content_id",
+                "content_type",
+                "disease_id"
+            ],
+            "properties": {
+                "content_id": {
+                    "type": "string"
+                },
+                "content_type": {
+                    "type": "string"
+                },
+                "disease_id": {
+                    "type": "string"
+                },
+                "primary": {
+                    "type": "boolean"
+                }
+            }
+        },
         "services.ConversationCreate": {
             "type": "object",
             "properties": {
@@ -23384,6 +23618,12 @@ const docTemplate = `{
         "services.CreateGuidelineInput": {
             "type": "object",
             "properties": {
+                "category_ids": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
                 "country": {
                     "type": "string"
                 },
@@ -27290,6 +27530,29 @@ const docTemplate = `{
                 }
             }
         },
+        "services.PageResult-models_ContentDiseaseAssignment": {
+            "type": "object",
+            "properties": {
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.ContentDiseaseAssignment"
+                    }
+                },
+                "page": {
+                    "type": "integer"
+                },
+                "per_page": {
+                    "type": "integer"
+                },
+                "total_items": {
+                    "type": "integer"
+                },
+                "total_pages": {
+                    "type": "integer"
+                }
+            }
+        },
         "services.PageResult-models_Disease": {
             "type": "object",
             "properties": {
@@ -28062,6 +28325,12 @@ const docTemplate = `{
         "services.PublicGuideline": {
             "type": "object",
             "properties": {
+                "categories": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/services.PublicGuidelineCategory"
+                    }
+                },
                 "country": {
                     "type": "string"
                 },
@@ -28181,6 +28450,35 @@ const docTemplate = `{
                 },
                 "type": {
                     "$ref": "#/definitions/models.GuidelineBlockType"
+                }
+            }
+        },
+        "services.PublicGuidelineCategory": {
+            "type": "object",
+            "properties": {
+                "color": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "icon": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "parent_category_id": {
+                    "type": "string"
+                },
+                "slug": {
+                    "type": "string"
+                },
+                "sort_order": {
+                    "type": "integer"
                 }
             }
         },
@@ -29448,6 +29746,12 @@ const docTemplate = `{
         "services.UpdateGuidelineInput": {
             "type": "object",
             "properties": {
+                "category_ids": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
                 "country": {
                     "type": "string"
                 },

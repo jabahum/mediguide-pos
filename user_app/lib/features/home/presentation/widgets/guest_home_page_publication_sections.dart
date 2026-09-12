@@ -60,9 +60,16 @@ class _PublicationSections extends StatelessWidget {
             categories: areas,
             onCategory: (category) {
               if (category.id.startsWith('program-area:')) {
-                context.push(AppRoutes.publicGuidelinesForProgramArea(category.name));
+                context.push(
+                  AppRoutes.publicGuidelinesForProgramArea(category.name),
+                );
               } else {
-                context.push(AppRoutes.publicGuidelinesForCategory(category.id, category.name));
+                context.push(
+                  AppRoutes.publicGuidelinesForCategory(
+                    category.id,
+                    category.name,
+                  ),
+                );
               }
             },
           ),

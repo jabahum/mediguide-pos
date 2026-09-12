@@ -25,6 +25,9 @@ final class _PublicationApi extends BackendApiService {
             'title': 'Malaria treatment guideline',
             'program_area': 'Malaria',
             'version': '1',
+            'categories': [
+              {'id': 'category-malaria', 'name': 'Communicable diseases'},
+            ],
           },
         ],
         'page': 1,
@@ -51,5 +54,20 @@ void main() {
     expect(api.query?['program_area'], 'Malaria');
     expect(page.items, hasLength(1));
     expect(page.items.single.programArea, 'Malaria');
+  });
+
+  test('publications sends and parses the canonical category filter', () async {
+    final store = TestLocalStore();
+    addTearDown(store.close);
+    final api = _PublicationApi();
+    final repository = GuidelinePublicationRepository(api, store.cache);
+
+    final page = await repository.publications(
+      categoryId: 'category-malaria',
+      perPage: 100,
+    );
+
+    expect(api.query?['category_id'], 'category-malaria');
+    expect(page.items.single.categories.single.name, 'Communicable diseases');
   });
 }

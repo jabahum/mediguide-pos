@@ -20,6 +20,8 @@ type SearchHandler struct{ Service services.SearchService }
 // @Param program_area query string false "Program area filter"
 // @Param category_id query string false "Guideline category UUID"
 // @Param disease_id query string false "Disease UUID"
+// @Param category_id query string false "Guideline category UUID"
+// @Param disease_id query string false "Disease UUID"
 // @Param limit query int false "Maximum results" minimum(1) maximum(50)
 // @Success 200 {object} handlers.SearchResultsEnvelope
 // @Failure 500 {object} handlers.ErrorResponse
@@ -53,8 +55,12 @@ func (h SearchHandler) PublicSearch(c *gin.Context) {
 // @Router /api/v2/search [get]
 func (h SearchHandler) Search(c *gin.Context) {
 	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "10"))
-	rows, err := h.Service.SearchContext(c.Request.Context(), c.Query("q"), c.Query("program_area"), limit)
+	rows, err := h.Service.SearchContextFiltered(c.Request.Context(), c.Query("q"), services.PublicSearchFilter{ProgramArea: c.Query("program_area"), CategoryID: c.Query("category_id"), DiseaseID: c.Query("disease_id")}, limit)
 	if err != nil {
+		if errors.Is(err, services.ErrPublicGuidelineQuery) {
+			httpx.Error(c, 400, "invalid search filter")
+			return
+		}
 		httpx.Error(c, 500, "internal server error")
 		return
 	}

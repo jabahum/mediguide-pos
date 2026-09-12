@@ -26,6 +26,8 @@ void main() {
           path: AppRoutes.publicGuidelines,
           builder: (_, state) => PublicationCataloguePage(
             programArea: state.uri.queryParameters['program_area'] ?? '',
+            categoryId: state.uri.queryParameters['category_id'] ?? '',
+            categoryName: state.uri.queryParameters['category_name'] ?? '',
           ),
         ),
       ],
@@ -42,6 +44,12 @@ void main() {
                 id: 'guideline-1',
                 title: 'Primary care guideline',
                 programArea: 'Primary care',
+                categories: [
+                  PublicationCategory(
+                    id: 'primary-care-id',
+                    name: 'Primary care',
+                  ),
+                ],
                 version: '1',
               ),
             ],

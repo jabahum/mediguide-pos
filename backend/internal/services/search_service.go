@@ -132,6 +132,12 @@ func (s SearchService) PublicSearchContextFiltered(ctx context.Context, q string
 			SourceVersion: value.SourceVersion, PageStart: value.PageStart, PageEnd: value.PageEnd,
 		})
 	}
+	// Categories currently classify guideline documents only. When this exact
+	// filter is present, unrelated outbreak/report result types must not leak
+	// into an otherwise category-scoped result set.
+	if strings.TrimSpace(filter.CategoryID) != "" {
+		return results, nil
+	}
 	type discoveryRow struct {
 		ID, Title, Snippet, SourceName, Status string
 		LastVerifiedAt                         *time.Time
@@ -339,15 +345,23 @@ func (s SearchService) Search(q, programArea string, limit int) ([]SearchResult,
 }
 
 func (s SearchService) SearchContext(ctx context.Context, q, programArea string, limit int) ([]SearchResult, error) {
+	return s.SearchContextFiltered(ctx, q, PublicSearchFilter{ProgramArea: programArea}, limit)
+}
+
+func (s SearchService) SearchContextFiltered(ctx context.Context, q string, filter PublicSearchFilter, limit int) ([]SearchResult, error) {
 	normalizedQuery := strings.ToLower(strings.TrimSpace(q))
-	normalizedArea := strings.ToLower(strings.TrimSpace(programArea))
-	key := normalizedQuery + "|" + normalizedArea + "|" + strconv.Itoa(limit)
+	normalizedArea := strings.ToLower(strings.TrimSpace(filter.ProgramArea))
+	key := normalizedQuery + "|" + normalizedArea + "|" + strings.TrimSpace(filter.CategoryID) + "|" + strings.TrimSpace(filter.DiseaseID) + "|" + strconv.Itoa(limit)
 	return cachepkg.GetOrLoad(ctx, s.Cache, "guideline-search", key, 45*time.Second, func() ([]SearchResult, error) {
-		return s.searchUncached(ctx, q, programArea, limit)
+		return s.searchUncachedFiltered(ctx, q, filter, limit)
 	})
 }
 
 func (s SearchService) searchUncached(ctx context.Context, q, programArea string, limit int) ([]SearchResult, error) {
+	return s.searchUncachedFiltered(ctx, q, PublicSearchFilter{ProgramArea: programArea}, limit)
+}
+
+func (s SearchService) searchUncachedFiltered(ctx context.Context, q string, filter PublicSearchFilter, limit int) ([]SearchResult, error) {
 	if limit <= 0 || limit > 50 {
 		limit = 10
 	}
@@ -356,8 +370,29 @@ func (s SearchService) searchUncached(ctx context.Context, q, programArea string
 		Joins("JOIN guideline_documents gd ON gd.id = guideline_chunks.document_id AND gd.deleted_at IS NULL").
 		Joins("JOIN guideline_versions gv ON gv.id = guideline_chunks.version_id AND gv.deleted_at IS NULL AND gd.current_version_id = gv.id").
 		Where("guideline_chunks.deleted_at IS NULL AND guideline_chunks.review_status = ? AND LOWER(gv.status) = ?", "approved", "published")
-	if programArea != "" {
-		db = db.Where("guideline_chunks.program_area = ?", programArea)
+	if filter.ProgramArea != "" {
+		db = db.Where("guideline_chunks.program_area = ?", filter.ProgramArea)
+	}
+	if value := strings.TrimSpace(filter.CategoryID); value != "" {
+		id, err := uuid.Parse(value)
+		if err != nil {
+			return nil, ErrPublicGuidelineQuery
+		}
+		db = db.Where(`EXISTS (SELECT 1 FROM guideline_document_categories gdc
+			JOIN guideline_categories cat ON cat.id = gdc.category_id
+			WHERE gdc.guideline_document_id = gd.id AND gdc.category_id = ?
+			AND cat.deleted_at IS NULL AND cat.status = 'active')`, id)
+	}
+	if value := strings.TrimSpace(filter.DiseaseID); value != "" {
+		id, err := uuid.Parse(value)
+		if err != nil {
+			return nil, ErrPublicGuidelineQuery
+		}
+		db = db.Where(`EXISTS (SELECT 1 FROM content_disease_assignments cda
+			JOIN diseases d ON d.id = cda.disease_id
+			WHERE cda.content_type = 'guideline' AND cda.content_id = gd.id
+			AND cda.disease_id = ? AND cda.deleted_at IS NULL
+			AND d.deleted_at IS NULL AND d.status = 'active')`, id)
 	}
 	if q != "" {
 		if s.DB.Dialector.Name() == "postgres" {

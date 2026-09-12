@@ -61,7 +61,7 @@ func TestOutbreakAdministrationMigrationUpDownUp(t *testing.T) {
 	if err := goose.DownTo(testDB, "../../migrations", 35); err != nil {
 		t.Fatal(err)
 	}
-	if err := goose.UpTo(testDB, "../../migrations", 48); err != nil {
+	if err := goose.UpTo(testDB, "../../migrations", 49); err != nil {
 		t.Fatal(err)
 	}
 	var count int
@@ -107,6 +107,12 @@ func TestOutbreakAdministrationMigrationUpDownUp(t *testing.T) {
 	}
 	if err := testDB.QueryRowContext(ctx, `SELECT count(*) FROM diseases WHERE status = 'active' AND deleted_at IS NULL`).Scan(&count); err != nil || count != 7 {
 		t.Fatalf("initial disease taxonomy seed mismatch: count=%d err=%v", count, err)
+	}
+	if err := testDB.QueryRowContext(ctx, `SELECT count(*) FROM information_schema.tables WHERE table_schema = $1 AND table_name IN ('guideline_document_categories','content_disease_assignments')`, schema).Scan(&count); err != nil || count != 2 {
+		t.Fatalf("content classification tables missing after up/down/up: count=%d err=%v", count, err)
+	}
+	if err := testDB.QueryRowContext(ctx, `SELECT count(*) FROM pg_indexes WHERE schemaname = $1 AND indexname IN ('idx_guideline_document_categories_category','idx_content_disease_assignment_unique','idx_content_disease_assignment_primary','idx_content_disease_assignment_disease','idx_content_disease_assignment_resource')`, schema).Scan(&count); err != nil || count != 5 {
+		t.Fatalf("content classification indexes missing after up/down/up: count=%d err=%v", count, err)
 	}
 	if _, err := testDB.ExecContext(ctx, `INSERT INTO diseases (id, name, normalized_name, slug) VALUES
 		('92000000-0000-4000-8000-000000000001', 'Cycle parent', 'cycle parent', 'cycle-parent'),

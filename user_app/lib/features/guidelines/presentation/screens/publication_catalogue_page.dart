@@ -20,10 +20,10 @@ part '../widgets/publication_catalogue_page_catalogue_empty_state.dart';
 part '../widgets/publication_catalogue_page_catalogue_skeleton.dart';
 
 final _publicationCatalogueProvider = FutureProvider.autoDispose
-    .family<List<GuidelinePublication>, ({String search, String programArea, String categoryId})>((
-      ref,
-      query,
-    ) async {
+    .family<
+      List<GuidelinePublication>,
+      ({String search, String programArea, String categoryId})
+    >((ref, query) async {
       final page = await ref
           .watch(guidelinePublicationRepositoryProvider)
           .publications(
@@ -62,8 +62,11 @@ class _PublicationCataloguePageState
 
   String _search = '';
 
-  ({String search, String programArea, String categoryId}) get _query =>
-      (search: _search, programArea: widget.programArea.trim(), categoryId: widget.categoryId.trim());
+  ({String search, String programArea, String categoryId}) get _query => (
+    search: _search,
+    programArea: widget.programArea.trim(),
+    categoryId: widget.categoryId.trim(),
+  );
 
   @override
   void dispose() {
@@ -221,9 +224,7 @@ class _PublicationCataloguePageState
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              filterName.isEmpty
-                  ? 'All Guidelines'
-                  : '$filterName Guidelines',
+              filterName.isEmpty ? 'All Guidelines' : '$filterName Guidelines',
               style: Theme.of(
                 context,
               ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),

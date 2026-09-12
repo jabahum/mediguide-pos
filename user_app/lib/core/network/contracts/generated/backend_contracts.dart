@@ -975,6 +975,28 @@ final class HandlersClinicalProtocolEnvelope {
   Map<String, dynamic> toJson() => Map.of(value);
 }
 
+final class HandlersContentDiseaseAssignmentEnvelope {
+  HandlersContentDiseaseAssignmentEnvelope(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory HandlersContentDiseaseAssignmentEnvelope.fromJson(
+    Map<String, dynamic> json,
+  ) => HandlersContentDiseaseAssignmentEnvelope(json);
+
+  static const schemaName = 'handlers.ContentDiseaseAssignmentEnvelope';
+  final Map<String, dynamic> value;
+
+  ModelsContentDiseaseAssignment? get data {
+    final raw = value['data'];
+    if (raw is! Map) return null;
+    return ModelsContentDiseaseAssignment.fromJson(_jsonMap(raw));
+  }
+
+  bool? get success => value['success'] as bool?;
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
 final class HandlersConversationEnvelope {
   HandlersConversationEnvelope(Map<String, dynamic> value)
     : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
@@ -2844,6 +2866,31 @@ final class HandlersPaginatedClinicalProtocolsEnvelope {
     final raw = value['data'];
     if (raw is! Map) return null;
     return HandlersPaginatedClinicalProtocols.fromJson(_jsonMap(raw));
+  }
+
+  bool? get success => value['success'] as bool?;
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
+final class HandlersPaginatedContentDiseaseAssignmentsEnvelope {
+  HandlersPaginatedContentDiseaseAssignmentsEnvelope(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory HandlersPaginatedContentDiseaseAssignmentsEnvelope.fromJson(
+    Map<String, dynamic> json,
+  ) => HandlersPaginatedContentDiseaseAssignmentsEnvelope(json);
+
+  static const schemaName =
+      'handlers.PaginatedContentDiseaseAssignmentsEnvelope';
+  final Map<String, dynamic> value;
+
+  ServicesPageResultModelsContentDiseaseAssignment? get data {
+    final raw = value['data'];
+    if (raw is! Map) return null;
+    return ServicesPageResultModelsContentDiseaseAssignment.fromJson(
+      _jsonMap(raw),
+    );
   }
 
   bool? get success => value['success'] as bool?;
@@ -5600,6 +5647,41 @@ final class ModelsClinicalProtocol {
   Map<String, dynamic> toJson() => Map.of(value);
 }
 
+final class ModelsContentDiseaseAssignment {
+  ModelsContentDiseaseAssignment(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory ModelsContentDiseaseAssignment.fromJson(Map<String, dynamic> json) =>
+      ModelsContentDiseaseAssignment(json);
+
+  static const schemaName = 'models.ContentDiseaseAssignment';
+  final Map<String, dynamic> value;
+
+  String? get contentId => value['content_id']?.toString();
+
+  String? get contentType => value['content_type']?.toString();
+
+  String? get createdAt => value['created_at']?.toString();
+
+  String? get createdBy => value['created_by']?.toString();
+
+  ModelsDisease? get disease {
+    final raw = value['disease'];
+    if (raw is! Map) return null;
+    return ModelsDisease.fromJson(_jsonMap(raw));
+  }
+
+  String? get diseaseId => value['disease_id']?.toString();
+
+  String? get id => value['id']?.toString();
+
+  bool? get primary => value['primary'] as bool?;
+
+  String? get updatedAt => value['updated_at']?.toString();
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
 final class ModelsDisease {
   ModelsDisease(Map<String, dynamic> value)
     : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
@@ -6530,6 +6612,15 @@ final class ModelsGuidelineDocument {
 
   static const schemaName = 'models.GuidelineDocument';
   final Map<String, dynamic> value;
+
+  List<ModelsGuidelineCategory> get categories {
+    final raw = value['categories'];
+    if (raw is! List) return const [];
+    return raw
+        .whereType<Map>()
+        .map((item) => ModelsGuidelineCategory.fromJson(_jsonMap(item)))
+        .toList(growable: false);
+  }
 
   String? get country => value['country']?.toString();
 
@@ -8569,6 +8660,27 @@ final class ServicesConsultantView {
   Map<String, dynamic> toJson() => Map.of(value);
 }
 
+final class ServicesContentDiseaseInput {
+  ServicesContentDiseaseInput(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory ServicesContentDiseaseInput.fromJson(Map<String, dynamic> json) =>
+      ServicesContentDiseaseInput(json);
+
+  static const schemaName = 'services.ContentDiseaseInput';
+  final Map<String, dynamic> value;
+
+  String? get contentId => value['content_id']?.toString();
+
+  String? get contentType => value['content_type']?.toString();
+
+  String? get diseaseId => value['disease_id']?.toString();
+
+  bool? get primary => value['primary'] as bool?;
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
 final class ServicesConversationCreate {
   ServicesConversationCreate(Map<String, dynamic> value)
     : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
@@ -8733,6 +8845,12 @@ final class ServicesCreateGuidelineInput {
 
   static const schemaName = 'services.CreateGuidelineInput';
   final Map<String, dynamic> value;
+
+  List<String> get categoryIds {
+    final raw = value['category_ids'];
+    if (raw is! List) return const [];
+    return raw.whereType<String>().toList(growable: false);
+  }
 
   String? get country => value['country']?.toString();
 
@@ -12907,6 +13025,38 @@ final class ServicesPageResultModelsAbbreviation {
   Map<String, dynamic> toJson() => Map.of(value);
 }
 
+final class ServicesPageResultModelsContentDiseaseAssignment {
+  ServicesPageResultModelsContentDiseaseAssignment(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory ServicesPageResultModelsContentDiseaseAssignment.fromJson(
+    Map<String, dynamic> json,
+  ) => ServicesPageResultModelsContentDiseaseAssignment(json);
+
+  static const schemaName =
+      'services.PageResult-models_ContentDiseaseAssignment';
+  final Map<String, dynamic> value;
+
+  List<ModelsContentDiseaseAssignment> get items {
+    final raw = value['items'];
+    if (raw is! List) return const [];
+    return raw
+        .whereType<Map>()
+        .map((item) => ModelsContentDiseaseAssignment.fromJson(_jsonMap(item)))
+        .toList(growable: false);
+  }
+
+  int? get page => (value['page'] as num?)?.toInt();
+
+  int? get perPage => (value['per_page'] as num?)?.toInt();
+
+  int? get totalItems => (value['total_items'] as num?)?.toInt();
+
+  int? get totalPages => (value['total_pages'] as num?)?.toInt();
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
 final class ServicesPageResultModelsDisease {
   ServicesPageResultModelsDisease(Map<String, dynamic> value)
     : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
@@ -13958,6 +14108,15 @@ final class ServicesPublicGuideline {
   static const schemaName = 'services.PublicGuideline';
   final Map<String, dynamic> value;
 
+  List<ServicesPublicGuidelineCategory> get categories {
+    final raw = value['categories'];
+    if (raw is! List) return const [];
+    return raw
+        .whereType<Map>()
+        .map((item) => ServicesPublicGuidelineCategory.fromJson(_jsonMap(item)))
+        .toList(growable: false);
+  }
+
   String? get country => value['country']?.toString();
 
   String? get description => value['description']?.toString();
@@ -14072,6 +14231,35 @@ final class ServicesPublicGuidelineBlock {
   int? get sortOrder => (value['sort_order'] as num?)?.toInt();
 
   String? get type => value['type']?.toString();
+
+  Map<String, dynamic> toJson() => Map.of(value);
+}
+
+final class ServicesPublicGuidelineCategory {
+  ServicesPublicGuidelineCategory(Map<String, dynamic> value)
+    : value = UnmodifiableMapView<String, dynamic>(Map.of(value));
+
+  factory ServicesPublicGuidelineCategory.fromJson(Map<String, dynamic> json) =>
+      ServicesPublicGuidelineCategory(json);
+
+  static const schemaName = 'services.PublicGuidelineCategory';
+  final Map<String, dynamic> value;
+
+  String? get color => value['color']?.toString();
+
+  String? get description => value['description']?.toString();
+
+  String? get icon => value['icon']?.toString();
+
+  String? get id => value['id']?.toString();
+
+  String? get name => value['name']?.toString();
+
+  String? get parentCategoryId => value['parent_category_id']?.toString();
+
+  String? get slug => value['slug']?.toString();
+
+  int? get sortOrder => (value['sort_order'] as num?)?.toInt();
 
   Map<String, dynamic> toJson() => Map.of(value);
 }
@@ -15419,6 +15607,12 @@ final class ServicesUpdateGuidelineInput {
 
   static const schemaName = 'services.UpdateGuidelineInput';
   final Map<String, dynamic> value;
+
+  List<String> get categoryIds {
+    final raw = value['category_ids'];
+    if (raw is! List) return const [];
+    return raw.whereType<String>().toList(growable: false);
+  }
 
   String? get country => value['country']?.toString();
 

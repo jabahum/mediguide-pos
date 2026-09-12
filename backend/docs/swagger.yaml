@@ -459,6 +459,13 @@ definitions:
         example: true
         type: boolean
     type: object
+  handlers.ContentDiseaseAssignmentEnvelope:
+    properties:
+      data:
+        $ref: '#/definitions/models.ContentDiseaseAssignment'
+      success:
+        type: boolean
+    type: object
   handlers.ConversationEnvelope:
     properties:
       data:
@@ -1223,6 +1230,13 @@ definitions:
         $ref: '#/definitions/handlers.PaginatedClinicalProtocols'
       success:
         example: true
+        type: boolean
+    type: object
+  handlers.PaginatedContentDiseaseAssignmentsEnvelope:
+    properties:
+      data:
+        $ref: '#/definitions/services.PageResult-models_ContentDiseaseAssignment'
+      success:
         type: boolean
     type: object
   handlers.PaginatedConversationsEnvelope:
@@ -2465,6 +2479,27 @@ definitions:
       version:
         type: string
     type: object
+  models.ContentDiseaseAssignment:
+    properties:
+      content_id:
+        type: string
+      content_type:
+        type: string
+      created_at:
+        type: string
+      created_by:
+        type: string
+      disease:
+        $ref: '#/definitions/models.Disease'
+      disease_id:
+        type: string
+      id:
+        type: string
+      primary:
+        type: boolean
+      updated_at:
+        type: string
+    type: object
   models.Disease:
     properties:
       aliases:
@@ -3157,6 +3192,10 @@ definitions:
     type: object
   models.GuidelineDocument:
     properties:
+      categories:
+        items:
+          $ref: '#/definitions/models.GuidelineCategory'
+        type: array
       country:
         type: string
       created_at:
@@ -4556,6 +4595,21 @@ definitions:
       years_of_experience:
         type: number
     type: object
+  services.ContentDiseaseInput:
+    properties:
+      content_id:
+        type: string
+      content_type:
+        type: string
+      disease_id:
+        type: string
+      primary:
+        type: boolean
+    required:
+    - content_id
+    - content_type
+    - disease_id
+    type: object
   services.ConversationCreate:
     properties:
       other_participant_id:
@@ -4655,6 +4709,10 @@ definitions:
     type: object
   services.CreateGuidelineInput:
     properties:
+      category_ids:
+        items:
+          type: string
+        type: array
       country:
         type: string
       description:
@@ -7227,6 +7285,21 @@ definitions:
       total_pages:
         type: integer
     type: object
+  services.PageResult-models_ContentDiseaseAssignment:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/models.ContentDiseaseAssignment'
+        type: array
+      page:
+        type: integer
+      per_page:
+        type: integer
+      total_items:
+        type: integer
+      total_pages:
+        type: integer
+    type: object
   services.PageResult-models_Disease:
     properties:
       items:
@@ -7731,6 +7804,10 @@ definitions:
     type: object
   services.PublicGuideline:
     properties:
+      categories:
+        items:
+          $ref: '#/definitions/services.PublicGuidelineCategory'
+        type: array
       country:
         type: string
       description:
@@ -7810,6 +7887,25 @@ definitions:
         type: integer
       type:
         $ref: '#/definitions/models.GuidelineBlockType'
+    type: object
+  services.PublicGuidelineCategory:
+    properties:
+      color:
+        type: string
+      description:
+        type: string
+      icon:
+        type: string
+      id:
+        type: string
+      name:
+        type: string
+      parent_category_id:
+        type: string
+      slug:
+        type: string
+      sort_order:
+        type: integer
     type: object
   services.PublicGuidelineContent:
     properties:
@@ -8642,6 +8738,10 @@ definitions:
     type: object
   services.UpdateGuidelineInput:
     properties:
+      category_ids:
+        items:
+          type: string
+        type: array
       country:
         type: string
       description:
@@ -8873,6 +8973,14 @@ paths:
       - description: Program area
         in: query
         name: program_area
+        type: string
+      - description: Guideline category UUID
+        in: query
+        name: category_id
+        type: string
+      - description: Disease UUID
+        in: query
+        name: disease_id
         type: string
       - description: Country
         in: query
@@ -9593,6 +9701,22 @@ paths:
       - description: Program area filter
         in: query
         name: program_area
+        type: string
+      - description: Guideline category UUID
+        in: query
+        name: category_id
+        type: string
+      - description: Disease UUID
+        in: query
+        name: disease_id
+        type: string
+      - description: Guideline category UUID
+        in: query
+        name: category_id
+        type: string
+      - description: Disease UUID
+        in: query
+        name: disease_id
         type: string
       - description: Maximum results
         in: query
@@ -11240,6 +11364,73 @@ paths:
       summary: Update a consultant
       tags:
       - consultants
+  /api/v2/content-disease-assignments:
+    get:
+      parameters:
+      - description: Disease UUID
+        in: query
+        name: disease_id
+        type: string
+      - description: Supported resource type
+        in: query
+        name: content_type
+        type: string
+      - description: Resource UUID
+        in: query
+        name: content_id
+        type: string
+      - description: Page number
+        in: query
+        name: page
+        type: integer
+      - description: Items per page
+        in: query
+        name: per_page
+        type: integer
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.PaginatedContentDiseaseAssignmentsEnvelope'
+      security:
+      - BearerAuth: []
+      summary: List disease-content assignments
+      tags:
+      - disease-taxonomy
+    post:
+      parameters:
+      - description: Disease assignment
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/services.ContentDiseaseInput'
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/handlers.ContentDiseaseAssignmentEnvelope'
+      security:
+      - BearerAuth: []
+      summary: Assign a disease to a content resource
+      tags:
+      - disease-taxonomy
+  /api/v2/content-disease-assignments/{id}:
+    delete:
+      parameters:
+      - description: Assignment UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+      security:
+      - BearerAuth: []
+      summary: Remove a disease-content assignment
+      tags:
+      - disease-taxonomy
   /api/v2/conversations:
     get:
       parameters:
@@ -15133,6 +15324,10 @@ paths:
       - description: Program area filter
         in: query
         name: program_area
+        type: string
+      - description: Assigned category UUID
+        in: query
+        name: category_id
         type: string
       - description: Page number
         in: query

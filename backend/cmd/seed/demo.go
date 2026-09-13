@@ -52,6 +52,7 @@ func seedDemoData(ctx context.Context, database *gorm.DB, store storage.ObjectSt
 	return database.Transaction(func(tx *gorm.DB) error {
 		steps := []func() error{
 			func() error { return seedDemoReferenceContent(tx) },
+			func() error { return seedDemoApplicationMetadata(tx) },
 			func() error { return seedDemoCalculators(tx, admin.ID) },
 			func() error { return seedDemoDrugs(tx) },
 			func() error { return seedDemoGuidelines(ctx, tx, store, reviewer.ID) },
@@ -622,6 +623,9 @@ func seedDemoOutbreaks(ctx context.Context, database *gorm.DB, store storage.Obj
 		"url": "/situation-reports/" + demoID("situation-report", "who-bvd-11-2026-07-26").String(), "asset_url": "",
 		"sort_order": 4, "status": "published", "published_at": reportDate,
 	}); err != nil {
+		return err
+	}
+	if err := seedAdditionalDemoOutbreaks(database, authorID, clinicianID); err != nil {
 		return err
 	}
 	publicResources, err := (services.OutbreakService{DB: database}).ListResources(services.OutbreakResourceQuery{Page: services.PageInput{Page: 1, PerPage: 20}, OutbreakID: &ebolaID})

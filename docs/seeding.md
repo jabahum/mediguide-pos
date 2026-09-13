@@ -82,14 +82,32 @@ The same scope also creates disease-aware discovery data so the dashboard,
 public web application and mobile application can be tested without manually
 classifying content:
 
-- active Ebola, Malaria, Marburg and Hypertension disease metadata, aliases and
-  representative ICD-10 codes;
+- active Ebola, Malaria, Cholera, Marburg, Measles and Hypertension disease
+  metadata, aliases and representative ICD-10 codes;
 - Infectious Diseases, Emergency Preparedness and Non-Communicable Diseases
   guideline-category links;
 - disease assignments for the demo guidelines, outbreak, situation report and
   all managed outbreak documents;
 - published `demo-ebola-response`, `demo-malaria-care` and
   `demo-hypertension-care` content hubs with usable pillars and items.
+
+Outbreak testing includes the reviewed Bundibugyo response fixture plus two
+clearly labelled synthetic scenarios: a monitoring Cholera response and a
+contained Measles response. Together they exercise list/search, status styling,
+metrics, timelines, quick resources, situation reports and disease filtering.
+Every synthetic title and source reference says that it is demo data; none of
+its figures should be interpreted as operational surveillance.
+
+Application-wide metadata is also populated for local administration and
+client integration testing:
+
+- public application identity, support, clinical-safety, content-discovery,
+  content-review, offline-capability and outbreak-display settings;
+- a private `development.fixtures` marker;
+- guideline categories and tags spanning maternal health, child health,
+  emergency care, medicines, point-of-care use, emergency response, WHO
+  references and offline readiness;
+- drug categories and tags for classification, safety and review workflows.
 
 These are deterministic development fixtures. Rerunning `SEED_SCOPE=demo`
 restores their repository-defined state and does not create duplicate hubs,
@@ -161,6 +179,10 @@ curl --fail --silent \
 curl --fail --silent \
   'http://localhost:8080/api/public/hubs/demo-ebola-response' \
   | jq '.data | {name, diseases, pillars}'
+
+curl --fail --silent \
+  'http://localhost:8080/api/public/outbreaks?page=1&per_page=20' \
+  | jq '.data.items[] | {title, disease_type, status, data_as_of, metrics}'
 ```
 
 Check deterministic outbreak-document metadata directly when troubleshooting:
@@ -176,6 +198,26 @@ docker compose \
        FROM outbreak_resources
       WHERE document_number LIKE '\''DEMO-EVD-%'\''
       ORDER BY sort_order;"'
+```
+
+Inspect the seeded application metadata directly:
+
+```bash
+docker compose \
+  --env-file infra/development.env \
+  -f infra/docker-compose.yml \
+  -f infra/docker-compose.dev.yml \
+  exec -T postgres sh -eu -c \
+  'psql --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" -c \
+    "SELECT key,category,is_public,value_json
+       FROM settings
+      WHERE key LIKE '\''application.%'\''
+         OR key LIKE '\''clinical.%'\''
+         OR key LIKE '\''content.%'\''
+         OR key LIKE '\''offline.%'\''
+         OR key LIKE '\''outbreak.%'\''
+         OR key LIKE '\''development.%'\''
+      ORDER BY key;"'
 ```
 
 Open the local applications after seeding:

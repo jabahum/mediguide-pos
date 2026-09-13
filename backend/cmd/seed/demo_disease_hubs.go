@@ -13,7 +13,9 @@ import (
 var (
 	demoEbolaDiseaseID        = uuid.MustParse("90000000-0000-4000-8000-000000000001")
 	demoMalariaDiseaseID      = uuid.MustParse("90000000-0000-4000-8000-000000000002")
+	demoCholeraDiseaseID      = uuid.MustParse("90000000-0000-4000-8000-000000000003")
 	demoMarburgDiseaseID      = uuid.MustParse("90000000-0000-4000-8000-000000000004")
+	demoMeaslesDiseaseID      = uuid.MustParse("90000000-0000-4000-8000-000000000005")
 	demoHypertensionDiseaseID = uuid.MustParse("90000000-0000-4000-8000-000000000007")
 )
 
@@ -27,7 +29,9 @@ func seedDemoDiseaseHubs(database *gorm.DB, adminID uuid.UUID) error {
 	diseases := []map[string]any{
 		{"id": demoEbolaDiseaseID, "name": "Ebola virus disease", "normalized_name": "ebola virus disease", "slug": "ebola-virus-disease", "short_name": "EVD", "description": "Viral haemorrhagic fever guidance and approved response resources.", "icon": "shield-alert", "color": "#C62828", "status": "active", "sort_order": 10, "updated_by": adminID, "deleted_at": nil},
 		{"id": demoMalariaDiseaseID, "name": "Malaria", "normalized_name": "malaria", "slug": "malaria", "description": "Approved prevention, diagnosis and treatment resources for malaria.", "icon": "mosquito", "color": "#1565C0", "status": "active", "sort_order": 20, "updated_by": adminID, "deleted_at": nil},
+		{"id": demoCholeraDiseaseID, "name": "Cholera", "normalized_name": "cholera", "slug": "cholera", "description": "Prevention, case management and response resources for cholera.", "icon": "droplets", "color": "#00838F", "status": "active", "sort_order": 30, "updated_by": adminID, "deleted_at": nil},
 		{"id": demoMarburgDiseaseID, "name": "Marburg virus disease", "normalized_name": "marburg virus disease", "slug": "marburg-virus-disease", "short_name": "MVD", "description": "Preparedness and clinical guidance for Marburg virus disease.", "icon": "shield-alert", "color": "#AD1457", "status": "active", "sort_order": 40, "updated_by": adminID, "deleted_at": nil},
+		{"id": demoMeaslesDiseaseID, "name": "Measles", "normalized_name": "measles", "slug": "measles", "description": "Vaccination, recognition and response resources for measles.", "icon": "shield-check", "color": "#EF6C00", "status": "active", "sort_order": 50, "updated_by": adminID, "deleted_at": nil},
 		{"id": demoHypertensionDiseaseID, "name": "Hypertension", "normalized_name": "hypertension", "slug": "hypertension", "short_name": "HTN", "description": "Screening, cardiovascular-risk and longitudinal management resources.", "icon": "heart-pulse", "color": "#6A1B9A", "status": "active", "sort_order": 70, "updated_by": adminID, "deleted_at": nil},
 	}
 	for _, row := range diseases {
@@ -38,6 +42,8 @@ func seedDemoDiseaseHubs(database *gorm.DB, adminID uuid.UUID) error {
 
 	aliases := []map[string]any{
 		{"id": demoID("disease-alias", "bundibugyo-virus-disease"), "disease_id": demoEbolaDiseaseID, "alias": "Bundibugyo virus disease", "normalized_alias": "bundibugyo virus disease", "deleted_at": nil},
+		{"id": demoID("disease-alias", "vibrio-cholerae-infection"), "disease_id": demoCholeraDiseaseID, "alias": "Vibrio cholerae infection", "normalized_alias": "vibrio cholerae infection", "deleted_at": nil},
+		{"id": demoID("disease-alias", "rubeola"), "disease_id": demoMeaslesDiseaseID, "alias": "Rubeola", "normalized_alias": "rubeola", "deleted_at": nil},
 	}
 	for _, row := range aliases {
 		if err := upsertByID(database, "disease_aliases", row); err != nil {
@@ -47,7 +53,9 @@ func seedDemoDiseaseHubs(database *gorm.DB, adminID uuid.UUID) error {
 	codes := []map[string]any{
 		{"id": demoID("disease-code", "icd10-a98-4"), "disease_id": demoEbolaDiseaseID, "code_system": "ICD-10", "code": "A98.4", "display_name": "Ebola virus disease", "deleted_at": nil},
 		{"id": demoID("disease-code", "icd10-b50-b54"), "disease_id": demoMalariaDiseaseID, "code_system": "ICD-10", "code": "B50-B54", "display_name": "Malaria", "deleted_at": nil},
+		{"id": demoID("disease-code", "icd10-a00"), "disease_id": demoCholeraDiseaseID, "code_system": "ICD-10", "code": "A00", "display_name": "Cholera", "deleted_at": nil},
 		{"id": demoID("disease-code", "icd10-a98-3"), "disease_id": demoMarburgDiseaseID, "code_system": "ICD-10", "code": "A98.3", "display_name": "Marburg virus disease", "deleted_at": nil},
+		{"id": demoID("disease-code", "icd10-b05"), "disease_id": demoMeaslesDiseaseID, "code_system": "ICD-10", "code": "B05", "display_name": "Measles", "deleted_at": nil},
 		{"id": demoID("disease-code", "icd10-i10"), "disease_id": demoHypertensionDiseaseID, "code_system": "ICD-10", "code": "I10", "display_name": "Essential hypertension", "deleted_at": nil},
 	}
 	for _, row := range codes {
@@ -85,6 +93,10 @@ func seedDemoDiseaseHubs(database *gorm.DB, adminID uuid.UUID) error {
 		demoDiseaseAssignment("guideline-hypertension", demoHypertensionDiseaseID, models.ContentDiseaseGuideline, demoID("guideline", "hypertension"), true, adminID),
 		demoDiseaseAssignment("outbreak-ebola", demoEbolaDiseaseID, models.ContentDiseaseOutbreak, demoID("outbreak", "bundibugyo-uganda-2026"), true, adminID),
 		demoDiseaseAssignment("sitrep-ebola", demoEbolaDiseaseID, models.ContentDiseaseSituationReport, demoID("situation-report", "who-bvd-11-2026-07-26"), true, adminID),
+		demoDiseaseAssignment("outbreak-cholera", demoCholeraDiseaseID, models.ContentDiseaseOutbreak, demoID("outbreak", "development-cholera-kampala-2026"), true, adminID),
+		demoDiseaseAssignment("sitrep-cholera", demoCholeraDiseaseID, models.ContentDiseaseSituationReport, demoID("situation-report", "demo-cholera-kampala-2026-08-18"), true, adminID),
+		demoDiseaseAssignment("outbreak-measles", demoMeaslesDiseaseID, models.ContentDiseaseOutbreak, demoID("outbreak", "development-measles-gulu-2026"), true, adminID),
+		demoDiseaseAssignment("sitrep-measles", demoMeaslesDiseaseID, models.ContentDiseaseSituationReport, demoID("situation-report", "demo-measles-gulu-2026-07-08"), true, adminID),
 	}
 	for _, document := range demoOutbreakDocuments() {
 		assignments = append(assignments, demoDiseaseAssignment("outbreak-document-"+document.Key, demoEbolaDiseaseID, models.ContentDiseaseOutbreakDocument, demoID("outbreak-document", document.Key), true, adminID))

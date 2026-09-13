@@ -44,6 +44,18 @@ func TestSeedDemoDiseaseHubsIsCompleteAndIdempotent(t *testing.T) {
 	).Error; err != nil {
 		t.Fatal(err)
 	}
+	// Simulate an alias created by an older seed revision with a different ID.
+	// The current seed must resolve the natural key instead of violating the
+	// production unique index on (disease_id, normalized_alias).
+	if err := database.Exec(
+		`INSERT INTO disease_aliases (id, disease_id, alias, normalized_alias) VALUES (?, ?, ?, ?)`,
+		"91000000-0000-4000-8000-000000000099",
+		demoEbolaDiseaseID,
+		"Bundibugyo virus disease",
+		"bundibugyo virus disease",
+	).Error; err != nil {
+		t.Fatal(err)
+	}
 	if err := database.Exec(
 		`INSERT INTO guideline_categories (id, name, slug, status) VALUES (?, ?, ?, ?)`,
 		guidelineCategoryID,

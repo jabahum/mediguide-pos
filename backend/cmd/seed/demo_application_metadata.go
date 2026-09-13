@@ -67,9 +67,9 @@ func seedDemoApplicationMetadata(database *gorm.DB) error {
 	}
 
 	for index, row := range []struct{ key, name, description, category, color string }{
-		{"essential-medicine", "Essential medicine", "Representative medicine from an essential-medicines workflow.", "classification", "#2E7D32"},
+		{"essential-medicine", "Essential medicine", "Representative medicine from an essential-medicines workflow.", "clinical", "#2E7D32"},
 		{"antimicrobial", "Antimicrobial", "Medicine requiring antimicrobial-stewardship consideration.", "safety", "#D84315"},
-		{"dose-verification", "Dose verification", "Dose must be verified against the approved source and patient context.", "review", "#F9A825"},
+		{"dose-verification", "Dose verification", "Dose must be verified against the approved source and patient context.", "safety", "#F9A825"},
 	} {
 		if err := upsertByID(database, "drug_tags", map[string]any{
 			"id": demoID("drug-tag", row.key), "name": row.name, "description": row.description,

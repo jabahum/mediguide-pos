@@ -271,6 +271,11 @@ export interface HandlersContentDiseaseAssignmentEnvelope {
   success?: boolean;
 }
 
+export interface HandlersContentHubDiseasesEnvelope {
+  data?: ModelsDisease[];
+  success?: boolean;
+}
+
 export interface HandlersContentHubEnvelope {
   data?: ModelsContentHub;
   success?: boolean;
@@ -322,8 +327,23 @@ export interface HandlersDeletedResult {
   deleted?: boolean;
 }
 
+export interface HandlersDiseaseAliasesEnvelope {
+  data?: ModelsDiseaseAlias[];
+  success?: boolean;
+}
+
+export interface HandlersDiseaseCodesEnvelope {
+  data?: ModelsDiseaseCode[];
+  success?: boolean;
+}
+
 export interface HandlersDiseaseEnvelope {
   data?: ModelsDisease;
+  success?: boolean;
+}
+
+export interface HandlersDiseaseHierarchyEnvelope {
+  data?: ServicesDiseaseTreeNode[];
   success?: boolean;
 }
 
@@ -1174,6 +1194,11 @@ export interface HandlersPaginatedPublicContentHubsEnvelope {
   success?: boolean;
 }
 
+export interface HandlersPaginatedPublicDiseasesEnvelope {
+  data?: ServicesPageResultServicesPublicDiseaseSummary;
+  success?: boolean;
+}
+
 export interface HandlersPaginatedPublicGuidelineAlgorithms {
   items?: ServicesPublicGuidelineAlgorithm[];
   page?: number;
@@ -1343,6 +1368,16 @@ export interface HandlersPublicContentHubEnvelope {
 
 export interface HandlersPublicContentPillarEnvelope {
   data?: ServicesPublicContentPillar;
+  success?: boolean;
+}
+
+export interface HandlersPublicDiseaseEnvelope {
+  data?: ServicesPublicDisease;
+  success?: boolean;
+}
+
+export interface HandlersPublicDiseaseHierarchyEnvelope {
+  data?: ServicesPublicDiseaseTreeNode[];
   success?: boolean;
 }
 
@@ -1681,6 +1716,7 @@ export interface ModelsContentHub {
   id?: string;
   lock_version?: number;
   name?: string;
+  outbreaks?: ModelsOutbreak[];
   published_at?: string;
   slug?: string;
   sort_order?: number;
@@ -2465,6 +2501,39 @@ export type ModelsNotificationActionTypeEnum =
   | "internal_route"
   | "approved_external_url";
 
+export interface ModelsOutbreak {
+  approved_at?: string;
+  approved_by?: string;
+  author_id?: string;
+  created_at?: string;
+  data_as_of?: string;
+  disease_type?: string;
+  district_id?: string;
+  effective_at?: string;
+  geographic_area?: string;
+  id?: string;
+  last_update?: string;
+  last_verified_at?: string;
+  lock_version?: number;
+  metrics?: object[];
+  published_at?: string;
+  region_id?: string;
+  reviewed_at?: string;
+  reviewed_by?: string;
+  source_organization?: string;
+  source_reference?: string;
+  source_url?: string;
+  start_date?: string;
+  status?: string;
+  summary?: string;
+  supersedes_id?: string;
+  title?: string;
+  updated_at?: string;
+  visual_tone?: string;
+  withdrawal_reason?: string;
+  withdrawn_at?: string;
+}
+
 export interface ModelsPermission {
   code?: string;
   created_at?: string;
@@ -2613,8 +2682,16 @@ export interface ServicesApplyContentHubTemplateInput {
 }
 
 export interface ServicesAskRequest {
+  category_id?: string;
+  content_type?: string;
   country?: string;
+  disease_id?: string;
+  disease_slug?: string;
+  hub_id?: string;
+  hub_slug?: string;
   language?: string;
+  pillar_id?: string;
+  pillar_slug?: string;
   program_area?: string;
   question?: string;
   session_id?: string;
@@ -2764,10 +2841,18 @@ export interface ServicesChildContentInput {
 
 export interface ServicesCitation {
   block_id?: string;
+  categories?: ServicesSearchFacet[];
   chunk_id?: string;
+  content_type?: string;
+  diseases?: ServicesSearchFacet[];
   guideline_id?: string;
+  guideline_version_id?: string;
+  hubs?: ServicesSearchFacet[];
+  metadata?: object;
   page_end?: number;
   page_start?: number;
+  pillars?: ServicesSearchFacet[];
+  route?: string;
   section_id?: string;
   source_name?: string;
   source_version?: string;
@@ -2980,6 +3065,7 @@ export interface ServicesCreateContentHubInput {
   disease_ids?: string[];
   icon?: string;
   name: string;
+  outbreak_ids?: string[];
   slug?: string;
   sort_order?: number;
 }
@@ -3069,6 +3155,27 @@ export interface ServicesDiseaseInput {
   slug?: string;
   sort_order?: number;
   status?: string;
+}
+
+export interface ServicesDiseaseTreeNode {
+  aliases?: ModelsDiseaseAlias[];
+  children?: ServicesDiseaseTreeNode[];
+  codes?: ModelsDiseaseCode[];
+  color?: string;
+  created_at?: string;
+  created_by?: string;
+  description?: string;
+  icon?: string;
+  id?: string;
+  name?: string;
+  parent_id?: string;
+  parent_name?: string;
+  short_name?: string;
+  slug?: string;
+  sort_order?: number;
+  status?: string;
+  updated_at?: string;
+  updated_by?: string;
 }
 
 export interface ServicesDocumentationInput {
@@ -4620,6 +4727,14 @@ export interface ServicesPageResultServicesPublicContentHub {
   total_pages?: number;
 }
 
+export interface ServicesPageResultServicesPublicDiseaseSummary {
+  items?: ServicesPublicDiseaseSummary[];
+  page?: number;
+  per_page?: number;
+  total_items?: number;
+  total_pages?: number;
+}
+
 export interface ServicesPageResultServicesPublicOutbreak {
   items?: ServicesPublicOutbreak[];
   page?: number;
@@ -4702,6 +4817,8 @@ export interface ServicesPublicContentHub {
   icon?: string;
   id?: string;
   name?: string;
+  outbreak?: ServicesPublicHubOutbreak;
+  outbreak_id?: string;
   pillars?: ServicesPublicContentPillar[];
   published_at?: string;
   slug?: string;
@@ -4730,9 +4847,75 @@ export interface ServicesPublicContentPillarItem {
   icon_override?: string;
   id?: string;
   label_override?: string;
+  resource?: ServicesPublicContentResource;
   sort_order?: number;
   starts_at?: string;
   target?: string;
+}
+
+export interface ServicesPublicContentResource {
+  content_type?: string;
+  description?: string;
+  effective_at?: string;
+  expires_at?: string;
+  id?: string;
+  issuing_authority?: string;
+  provenance?: string;
+  publication_date?: string;
+  review_at?: string;
+  review_state?: string;
+  route?: string;
+  source_organization?: string;
+  title?: string;
+  version?: string;
+}
+
+export interface ServicesPublicDisease {
+  aliases?: string[];
+  children?: ServicesPublicDiseaseSummary[];
+  codes?: ServicesPublicDiseaseCode[];
+  color?: string;
+  description?: string;
+  hubs?: ServicesPublicContentHub[];
+  icon?: string;
+  id?: string;
+  name?: string;
+  parent_id?: string;
+  resources?: ServicesPublicContentResource[];
+  short_name?: string;
+  slug?: string;
+  sort_order?: number;
+}
+
+export interface ServicesPublicDiseaseCode {
+  code?: string;
+  code_system?: string;
+  display_name?: string;
+}
+
+export interface ServicesPublicDiseaseSummary {
+  color?: string;
+  description?: string;
+  icon?: string;
+  id?: string;
+  name?: string;
+  parent_id?: string;
+  short_name?: string;
+  slug?: string;
+  sort_order?: number;
+}
+
+export interface ServicesPublicDiseaseTreeNode {
+  children?: ServicesPublicDiseaseTreeNode[];
+  color?: string;
+  description?: string;
+  icon?: string;
+  id?: string;
+  name?: string;
+  parent_id?: string;
+  short_name?: string;
+  slug?: string;
+  sort_order?: number;
 }
 
 export interface ServicesPublicGuideline {
@@ -4882,6 +5065,20 @@ export interface ServicesPublicHubDisease {
   name?: string;
   short_name?: string;
   slug?: string;
+}
+
+export interface ServicesPublicHubOutbreak {
+  data_as_of?: string;
+  disease_type?: string;
+  geographic_area?: string;
+  id?: string;
+  last_verified_at?: string;
+  metrics?: object[];
+  source_organization?: string;
+  status?: string;
+  summary?: string;
+  title?: string;
+  visual_tone?: string;
 }
 
 export interface ServicesPublicOutbreak {
@@ -5052,6 +5249,12 @@ export interface ServicesReorderGuidelineSectionsInput {
   sections: ServicesGuidelineSectionOrderInput[];
 }
 
+export interface ServicesReplaceContentHubDiseasesInput {
+  disease_ids: string[];
+  /** @min 1 */
+  lock_version: number;
+}
+
 export interface ServicesResolveGuidelineEditorCommentInput {
   resolved?: boolean;
 }
@@ -5091,16 +5294,30 @@ export interface ServicesRunProtocolResult {
   protocol?: string;
 }
 
+export interface ServicesSearchFacet {
+  aliases?: string[];
+  id?: string;
+  name?: string;
+  slug?: string;
+}
+
 export interface ServicesSearchResult {
   block_id?: string;
+  categories?: ServicesSearchFacet[];
   content_type?: string;
+  diseases?: ServicesSearchFacet[];
   guideline_id?: string;
+  guideline_version_id?: string;
+  hubs?: ServicesSearchFacet[];
   id?: string;
   is_stale?: boolean;
   last_verified_at?: string;
+  metadata?: object;
   page_end?: number;
   page_start?: number;
+  pillars?: ServicesSearchFacet[];
   result_type?: string;
+  route?: string;
   section_id?: string;
   snippet?: string;
   source_name?: string;
@@ -5258,6 +5475,7 @@ export interface ServicesUpdateContentHubInput {
   /** @min 1 */
   lock_version: number;
   name?: string;
+  outbreak_ids?: string[];
   slug?: string;
   sort_order?: number;
 }

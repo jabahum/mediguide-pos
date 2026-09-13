@@ -99,6 +99,44 @@ final backendManagedOutbreakHubsEnabledProvider = Provider<bool>((ref) {
   }
 });
 
+bool _firebaseFlag(Ref ref, bool Function(MediGuideFirebaseService) read) {
+  try {
+    return read(ref.watch(firebaseServiceProvider));
+  } on StateError {
+    // Isolated previews and widget tests do not always initialize Firebase.
+    // Preserve the local/test experience; configured environments still use
+    // the rollout-safe Remote Config defaults.
+    return true;
+  }
+}
+
+final diseaseTaxonomyEnabledProvider = Provider<bool>(
+  (ref) => _firebaseFlag(ref, (service) => service.diseaseTaxonomyEnabled),
+);
+final diseaseContentAssignmentEnabledProvider = Provider<bool>(
+  (ref) =>
+      _firebaseFlag(ref, (service) => service.diseaseContentAssignmentEnabled),
+);
+final diseaseHubsEnabledProvider = Provider<bool>(
+  (ref) => _firebaseFlag(ref, (service) => service.diseaseHubsEnabled),
+);
+final genericHubsEnabledProvider = Provider<bool>(
+  (ref) => _firebaseFlag(ref, (service) => service.genericHubsEnabled),
+);
+final guidelineCategoryAssignmentEnabledProvider = Provider<bool>(
+  (ref) => _firebaseFlag(
+    ref,
+    (service) => service.guidelineCategoryAssignmentEnabled,
+  ),
+);
+final unifiedDocumentSearchEnabledProvider = Provider<bool>(
+  (ref) =>
+      _firebaseFlag(ref, (service) => service.unifiedDocumentSearchEnabled),
+);
+final pillarRagMetadataEnabledProvider = Provider<bool>(
+  (ref) => _firebaseFlag(ref, (service) => service.pillarRagMetadataEnabled),
+);
+
 final notificationPermissionProvider =
     StreamProvider<AppNotificationPermissionState>((ref) async* {
       final service = ref.watch(firebaseServiceProvider);

@@ -107,6 +107,27 @@ func TestDerivedRolePermissionsSeparateNotificationAuthorAndApprover(t *testing.
 	}
 }
 
+func TestDerivedRolePermissionsSeparateHubManagementFromPublication(t *testing.T) {
+	author := deriveRolePermissions("content_manager", "")
+	for _, permission := range []string{"disease.taxonomy.manage", "disease.assignment.manage", "content_hub.manage", "content_pillar.manage", "content_hub.template.manage"} {
+		if !containsPermission(author, permission) {
+			t.Fatalf("content manager missing %s: %v", permission, author)
+		}
+	}
+	if containsPermission(author, "content_hub.publish") || containsPermission(author, "content_hub.archive") {
+		t.Fatalf("content manager must not publish or archive hubs: %v", author)
+	}
+	reviewer := deriveRolePermissions("reviewer", "")
+	for _, permission := range []string{"disease.taxonomy.read", "disease.assignment.read", "content_hub.read", "content_pillar.read", "content_hub.template.read"} {
+		if !containsPermission(reviewer, permission) {
+			t.Fatalf("reviewer missing %s: %v", permission, reviewer)
+		}
+	}
+	if containsPermission(reviewer, "content_hub.manage") || containsPermission(reviewer, "disease.assignment.manage") {
+		t.Fatalf("reviewer received hub authoring permissions: %v", reviewer)
+	}
+}
+
 func containsPermission(values []string, expected string) bool {
 	for _, value := range values {
 		if value == expected {

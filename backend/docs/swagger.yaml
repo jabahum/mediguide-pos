@@ -466,6 +466,15 @@ definitions:
       success:
         type: boolean
     type: object
+  handlers.ContentHubDiseasesEnvelope:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/models.Disease'
+        type: array
+      success:
+        type: boolean
+    type: object
   handlers.ContentHubEnvelope:
     properties:
       data:
@@ -542,10 +551,37 @@ definitions:
         example: true
         type: boolean
     type: object
+  handlers.DiseaseAliasesEnvelope:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/models.DiseaseAlias'
+        type: array
+      success:
+        type: boolean
+    type: object
+  handlers.DiseaseCodesEnvelope:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/models.DiseaseCode'
+        type: array
+      success:
+        type: boolean
+    type: object
   handlers.DiseaseEnvelope:
     properties:
       data:
         $ref: '#/definitions/models.Disease'
+      success:
+        type: boolean
+    type: object
+  handlers.DiseaseHierarchyEnvelope:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/services.DiseaseTreeNode'
+        type: array
       success:
         type: boolean
     type: object
@@ -1825,6 +1861,13 @@ definitions:
       success:
         type: boolean
     type: object
+  handlers.PaginatedPublicDiseasesEnvelope:
+    properties:
+      data:
+        $ref: '#/definitions/services.PageResult-services_PublicDiseaseSummary'
+      success:
+        type: boolean
+    type: object
   handlers.PaginatedPublicGuidelineAlgorithms:
     properties:
       items:
@@ -2088,6 +2131,22 @@ definitions:
     properties:
       data:
         $ref: '#/definitions/services.PublicContentPillar'
+      success:
+        type: boolean
+    type: object
+  handlers.PublicDiseaseEnvelope:
+    properties:
+      data:
+        $ref: '#/definitions/services.PublicDisease'
+      success:
+        type: boolean
+    type: object
+  handlers.PublicDiseaseHierarchyEnvelope:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/services.PublicDiseaseTreeNode'
+        type: array
       success:
         type: boolean
     type: object
@@ -2607,6 +2666,10 @@ definitions:
         type: integer
       name:
         type: string
+      outbreaks:
+        items:
+          $ref: '#/definitions/models.Outbreak'
+        type: array
       published_at:
         type: string
       slug:
@@ -4076,6 +4139,71 @@ definitions:
         - approved_external_url
         type: string
     type: object
+  models.Outbreak:
+    properties:
+      approved_at:
+        type: string
+      approved_by:
+        type: string
+      author_id:
+        type: string
+      created_at:
+        type: string
+      data_as_of:
+        type: string
+      disease_type:
+        type: string
+      district_id:
+        type: string
+      effective_at:
+        type: string
+      geographic_area:
+        type: string
+      id:
+        type: string
+      last_update:
+        type: string
+      last_verified_at:
+        type: string
+      lock_version:
+        type: integer
+      metrics:
+        items:
+          type: object
+        type: array
+      published_at:
+        type: string
+      region_id:
+        type: string
+      reviewed_at:
+        type: string
+      reviewed_by:
+        type: string
+      source_organization:
+        type: string
+      source_reference:
+        type: string
+      source_url:
+        type: string
+      start_date:
+        type: string
+      status:
+        type: string
+      summary:
+        type: string
+      supersedes_id:
+        type: string
+      title:
+        type: string
+      updated_at:
+        type: string
+      visual_tone:
+        type: string
+      withdrawal_reason:
+        type: string
+      withdrawn_at:
+        type: string
+    type: object
   models.Permission:
     properties:
       code:
@@ -4348,9 +4476,25 @@ definitions:
     type: object
   services.AskRequest:
     properties:
+      category_id:
+        type: string
+      content_type:
+        type: string
       country:
         type: string
+      disease_id:
+        type: string
+      disease_slug:
+        type: string
+      hub_id:
+        type: string
+      hub_slug:
+        type: string
       language:
+        type: string
+      pillar_id:
+        type: string
+      pillar_slug:
         type: string
       program_area:
         type: string
@@ -4631,14 +4775,38 @@ definitions:
     properties:
       block_id:
         type: string
+      categories:
+        items:
+          $ref: '#/definitions/services.SearchFacet'
+        type: array
       chunk_id:
         type: string
+      content_type:
+        type: string
+      diseases:
+        items:
+          $ref: '#/definitions/services.SearchFacet'
+        type: array
       guideline_id:
         type: string
+      guideline_version_id:
+        type: string
+      hubs:
+        items:
+          $ref: '#/definitions/services.SearchFacet'
+        type: array
+      metadata:
+        type: object
       page_end:
         type: integer
       page_start:
         type: integer
+      pillars:
+        items:
+          $ref: '#/definitions/services.SearchFacet'
+        type: array
+      route:
+        type: string
       section_id:
         type: string
       source_name:
@@ -5037,6 +5205,10 @@ definitions:
         type: string
       name:
         type: string
+      outbreak_ids:
+        items:
+          type: string
+        type: array
       slug:
         type: string
       sort_order:
@@ -5197,6 +5369,51 @@ definitions:
       sort_order:
         type: integer
       status:
+        type: string
+    type: object
+  services.DiseaseTreeNode:
+    properties:
+      aliases:
+        items:
+          $ref: '#/definitions/models.DiseaseAlias'
+        type: array
+      children:
+        items:
+          $ref: '#/definitions/services.DiseaseTreeNode'
+        type: array
+      codes:
+        items:
+          $ref: '#/definitions/models.DiseaseCode'
+        type: array
+      color:
+        type: string
+      created_at:
+        type: string
+      created_by:
+        type: string
+      description:
+        type: string
+      icon:
+        type: string
+      id:
+        type: string
+      name:
+        type: string
+      parent_id:
+        type: string
+      parent_name:
+        type: string
+      short_name:
+        type: string
+      slug:
+        type: string
+      sort_order:
+        type: integer
+      status:
+        type: string
+      updated_at:
+        type: string
+      updated_by:
         type: string
     type: object
   services.DocumentationInput:
@@ -8054,6 +8271,21 @@ definitions:
       total_pages:
         type: integer
     type: object
+  services.PageResult-services_PublicDiseaseSummary:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/services.PublicDiseaseSummary'
+        type: array
+      page:
+        type: integer
+      per_page:
+        type: integer
+      total_items:
+        type: integer
+      total_pages:
+        type: integer
+    type: object
   services.PageResult-services_PublicOutbreak:
     properties:
       items:
@@ -8214,6 +8446,10 @@ definitions:
         type: string
       name:
         type: string
+      outbreak:
+        $ref: '#/definitions/services.PublicHubOutbreak'
+      outbreak_id:
+        type: string
       pillars:
         items:
           $ref: '#/definitions/services.PublicContentPillar'
@@ -8270,12 +8506,141 @@ definitions:
         type: string
       label_override:
         type: string
+      resource:
+        $ref: '#/definitions/services.PublicContentResource'
       sort_order:
         type: integer
       starts_at:
         type: string
       target:
         type: string
+    type: object
+  services.PublicContentResource:
+    properties:
+      content_type:
+        type: string
+      description:
+        type: string
+      effective_at:
+        type: string
+      expires_at:
+        type: string
+      id:
+        type: string
+      issuing_authority:
+        type: string
+      provenance:
+        type: string
+      publication_date:
+        type: string
+      review_at:
+        type: string
+      review_state:
+        type: string
+      route:
+        type: string
+      source_organization:
+        type: string
+      title:
+        type: string
+      version:
+        type: string
+    type: object
+  services.PublicDisease:
+    properties:
+      aliases:
+        items:
+          type: string
+        type: array
+      children:
+        items:
+          $ref: '#/definitions/services.PublicDiseaseSummary'
+        type: array
+      codes:
+        items:
+          $ref: '#/definitions/services.PublicDiseaseCode'
+        type: array
+      color:
+        type: string
+      description:
+        type: string
+      hubs:
+        items:
+          $ref: '#/definitions/services.PublicContentHub'
+        type: array
+      icon:
+        type: string
+      id:
+        type: string
+      name:
+        type: string
+      parent_id:
+        type: string
+      resources:
+        items:
+          $ref: '#/definitions/services.PublicContentResource'
+        type: array
+      short_name:
+        type: string
+      slug:
+        type: string
+      sort_order:
+        type: integer
+    type: object
+  services.PublicDiseaseCode:
+    properties:
+      code:
+        type: string
+      code_system:
+        type: string
+      display_name:
+        type: string
+    type: object
+  services.PublicDiseaseSummary:
+    properties:
+      color:
+        type: string
+      description:
+        type: string
+      icon:
+        type: string
+      id:
+        type: string
+      name:
+        type: string
+      parent_id:
+        type: string
+      short_name:
+        type: string
+      slug:
+        type: string
+      sort_order:
+        type: integer
+    type: object
+  services.PublicDiseaseTreeNode:
+    properties:
+      children:
+        items:
+          $ref: '#/definitions/services.PublicDiseaseTreeNode'
+        type: array
+      color:
+        type: string
+      description:
+        type: string
+      icon:
+        type: string
+      id:
+        type: string
+      name:
+        type: string
+      parent_id:
+        type: string
+      short_name:
+        type: string
+      slug:
+        type: string
+      sort_order:
+        type: integer
     type: object
   services.PublicGuideline:
     properties:
@@ -8539,6 +8904,33 @@ definitions:
       short_name:
         type: string
       slug:
+        type: string
+    type: object
+  services.PublicHubOutbreak:
+    properties:
+      data_as_of:
+        type: string
+      disease_type:
+        type: string
+      geographic_area:
+        type: string
+      id:
+        type: string
+      last_verified_at:
+        type: string
+      metrics:
+        items:
+          type: object
+        type: array
+      source_organization:
+        type: string
+      status:
+        type: string
+      summary:
+        type: string
+      title:
+        type: string
+      visual_tone:
         type: string
     type: object
   services.PublicOutbreak:
@@ -8860,6 +9252,19 @@ definitions:
     required:
     - sections
     type: object
+  services.ReplaceContentHubDiseasesInput:
+    properties:
+      disease_ids:
+        items:
+          type: string
+        type: array
+      lock_version:
+        minimum: 1
+        type: integer
+    required:
+    - disease_ids
+    - lock_version
+    type: object
   services.ResolveGuidelineEditorCommentInput:
     properties:
       resolved:
@@ -8925,25 +9330,60 @@ definitions:
       protocol:
         type: string
     type: object
+  services.SearchFacet:
+    properties:
+      aliases:
+        items:
+          type: string
+        type: array
+      id:
+        type: string
+      name:
+        type: string
+      slug:
+        type: string
+    type: object
   services.SearchResult:
     properties:
       block_id:
         type: string
+      categories:
+        items:
+          $ref: '#/definitions/services.SearchFacet'
+        type: array
       content_type:
         type: string
+      diseases:
+        items:
+          $ref: '#/definitions/services.SearchFacet'
+        type: array
       guideline_id:
         type: string
+      guideline_version_id:
+        type: string
+      hubs:
+        items:
+          $ref: '#/definitions/services.SearchFacet'
+        type: array
       id:
         type: string
       is_stale:
         type: boolean
       last_verified_at:
         type: string
+      metadata:
+        type: object
       page_end:
         type: integer
       page_start:
         type: integer
+      pillars:
+        items:
+          $ref: '#/definitions/services.SearchFacet'
+        type: array
       result_type:
+        type: string
+      route:
         type: string
       section_id:
         type: string
@@ -9230,6 +9670,10 @@ definitions:
         type: integer
       name:
         type: string
+      outbreak_ids:
+        items:
+          type: string
+        type: array
       slug:
         type: string
       sort_order:
@@ -9475,6 +9919,69 @@ paths:
       summary: Ask the public assistant across approved guidelines
       tags:
       - public-guidelines
+  /api/public/diseases:
+    get:
+      parameters:
+      - description: Canonical name, alias, or slug
+        in: query
+        name: search
+        type: string
+      - description: Parent disease UUID
+        in: query
+        name: parent_id
+        type: string
+      - description: Return root diseases only
+        in: query
+        name: root_only
+        type: boolean
+      - description: Page number
+        in: query
+        name: page
+        type: integer
+      - description: Items per page
+        in: query
+        name: per_page
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.PaginatedPublicDiseasesEnvelope'
+      summary: Browse diseases with eligible public content
+      tags:
+      - public-diseases
+  /api/public/diseases/{slug}:
+    get:
+      parameters:
+      - description: Disease slug
+        in: path
+        name: slug
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.PublicDiseaseEnvelope'
+      summary: Get a disease and its eligible hubs and resources
+      tags:
+      - public-diseases
+  /api/public/diseases/hierarchy:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.PublicDiseaseHierarchyEnvelope'
+      summary: Browse the eligible public disease hierarchy
+      tags:
+      - public-diseases
   /api/public/guidelines:
     get:
       parameters:
@@ -10237,6 +10744,12 @@ paths:
       summary: Download a published outbreak document
       tags:
       - public-outbreaks
+  /api/public/outbreaks/{id}/hub:
+    get:
+      responses: {}
+      summary: Get the explicitly configured published hub for an outbreak
+      tags:
+      - public-content-hubs
   /api/public/outbreaks/{id}/resources:
     get:
       parameters:
@@ -10290,13 +10803,29 @@ paths:
         in: query
         name: disease_id
         type: string
-      - description: Guideline category UUID
+      - description: Canonical disease slug or alias
         in: query
-        name: category_id
+        name: disease_slug
         type: string
-      - description: Disease UUID
+      - description: Content hub UUID
         in: query
-        name: disease_id
+        name: hub_id
+        type: string
+      - description: Content hub slug
+        in: query
+        name: hub_slug
+        type: string
+      - description: Content pillar UUID
+        in: query
+        name: pillar_id
+        type: string
+      - description: Content pillar slug
+        in: query
+        name: pillar_slug
+        type: string
+      - description: Resource type
+        in: query
+        name: content_type
         type: string
       - description: Maximum results
         in: query
@@ -12011,6 +12540,22 @@ paths:
       summary: Remove a disease-content assignment
       tags:
       - disease-taxonomy
+  /api/v2/content-disease-assignments/replace:
+    put:
+      responses: {}
+      security:
+      - BearerAuth: []
+      summary: Atomically replace disease assignments for one content resource
+      tags:
+      - disease-taxonomy
+  /api/v2/content-hub-resources:
+    get:
+      responses: {}
+      security:
+      - BearerAuth: []
+      summary: Search resources that can be assigned to a content pillar
+      tags:
+      - content-hubs
   /api/v2/content-hub-templates:
     get:
       responses:
@@ -12197,6 +12742,55 @@ paths:
       security:
       - BearerAuth: []
       summary: Archive a content hub
+      tags:
+      - content-hubs
+  /api/v2/content-hubs/{id}/audit:
+    get:
+      responses: {}
+      security:
+      - BearerAuth: []
+      summary: View content hub audit history
+      tags:
+      - content-hubs
+  /api/v2/content-hubs/{id}/diseases:
+    get:
+      parameters:
+      - description: Content hub UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.ContentHubDiseasesEnvelope'
+      security:
+      - BearerAuth: []
+      summary: List diseases assigned to a content hub
+      tags:
+      - content-hubs
+    put:
+      parameters:
+      - description: Content hub UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Disease assignments and lock version
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/services.ReplaceContentHubDiseasesInput'
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.ContentHubEnvelope'
+      security:
+      - BearerAuth: []
+      summary: Replace a content hub's disease assignments
       tags:
       - content-hubs
   /api/v2/content-hubs/{id}/pillars:
@@ -12454,6 +13048,24 @@ paths:
       summary: Reorder content pillars
       tags:
       - content-hubs
+  /api/v2/content-hubs/{id}/preview:
+    get:
+      parameters:
+      - description: Content hub UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.PublicContentHubEnvelope'
+      security:
+      - BearerAuth: []
+      summary: Preview a hub using public eligibility rules
+      tags:
+      - content-hubs
   /api/v2/content-hubs/{id}/publish:
     post:
       parameters:
@@ -12476,6 +13088,14 @@ paths:
       security:
       - BearerAuth: []
       summary: Publish a content hub
+      tags:
+      - content-hubs
+  /api/v2/content-hubs/{id}/workspace:
+    get:
+      responses: {}
+      security:
+      - BearerAuth: []
+      summary: Get a hub, all pillars and all resource assignments
       tags:
       - content-hubs
   /api/v2/conversations:
@@ -12762,6 +13382,109 @@ paths:
       security:
       - BearerAuth: []
       summary: Update a disease or clinical condition
+      tags:
+      - disease-taxonomy
+  /api/v2/diseases/{id}/aliases:
+    get:
+      parameters:
+      - description: Disease UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.DiseaseAliasesEnvelope'
+      security:
+      - BearerAuth: []
+      summary: List aliases for a disease
+      tags:
+      - disease-taxonomy
+    put:
+      parameters:
+      - description: Disease UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Disease aliases
+        in: body
+        name: payload
+        required: true
+        schema:
+          items:
+            $ref: '#/definitions/services.DiseaseAliasInput'
+          type: array
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.DiseaseAliasesEnvelope'
+      security:
+      - BearerAuth: []
+      summary: Replace all aliases for a disease
+      tags:
+      - disease-taxonomy
+  /api/v2/diseases/{id}/codes:
+    get:
+      parameters:
+      - description: Disease UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.DiseaseCodesEnvelope'
+      security:
+      - BearerAuth: []
+      summary: List external codes for a disease
+      tags:
+      - disease-taxonomy
+    put:
+      parameters:
+      - description: Disease UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Disease codes
+        in: body
+        name: payload
+        required: true
+        schema:
+          items:
+            $ref: '#/definitions/services.DiseaseCodeInput'
+          type: array
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.DiseaseCodesEnvelope'
+      security:
+      - BearerAuth: []
+      summary: Replace all external codes for a disease
+      tags:
+      - disease-taxonomy
+  /api/v2/diseases/hierarchy:
+    get:
+      parameters:
+      - description: active, inactive, or archived
+        in: query
+        name: status
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.DiseaseHierarchyEnvelope'
+      security:
+      - BearerAuth: []
+      summary: Get the disease taxonomy hierarchy
       tags:
       - disease-taxonomy
   /api/v2/diseases/migration-report:
@@ -17886,6 +18609,15 @@ paths:
       summary: List immutable audit history for outbreak content
       tags:
       - outbreak-administration
+  /api/v2/outbreaks/{id}/content-hub:
+    post:
+      responses: {}
+      security:
+      - BearerAuth: []
+      summary: Create an outbreak hub from the default template and map published
+        resources
+      tags:
+      - content-hubs
   /api/v2/outbreaks/{id}/correct:
     post:
       parameters:

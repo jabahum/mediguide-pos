@@ -291,6 +291,18 @@ func seedAuthorization(database *gorm.DB) (seedAuthorizationState, error) {
 		{Code: "firebase.push.test", Name: "Send Firebase test pushes"},
 		{Code: "firebase.config.manage", Name: "Manage Firebase Remote Config"},
 		{Code: "admin.all", Name: "All administration permissions"},
+		{Code: "disease.taxonomy.read", Name: "Read the disease taxonomy"},
+		{Code: "disease.taxonomy.manage", Name: "Manage diseases, aliases and codes"},
+		{Code: "disease.assignment.read", Name: "Read disease-content assignments"},
+		{Code: "disease.assignment.manage", Name: "Manage disease-content assignments"},
+		{Code: "content_hub.read", Name: "Read content hub administration data"},
+		{Code: "content_hub.manage", Name: "Manage content hub metadata and disease relationships"},
+		{Code: "content_hub.publish", Name: "Publish content hubs"},
+		{Code: "content_hub.archive", Name: "Archive content hubs"},
+		{Code: "content_pillar.read", Name: "Read content pillars and assignments"},
+		{Code: "content_pillar.manage", Name: "Manage content pillars and assignments"},
+		{Code: "content_hub.template.read", Name: "Read content hub templates"},
+		{Code: "content_hub.template.manage", Name: "Apply and manage content hub templates"},
 	}
 	for i := range permissions {
 		if err := database.Where(models.Permission{Code: permissions[i].Code}).Assign(permissions[i]).FirstOrCreate(&permissions[i]).Error; err != nil {
@@ -577,6 +589,9 @@ func deriveBackendPermissions(roleKey, permissionsJSON string) []string {
 			"notification.campaign.read", "notification.campaign.manage",
 			"notification.campaign.approve", "notification.analytics.read",
 			"firebase.status.read", "firebase.push.test", "firebase.config.manage",
+			"disease.taxonomy.read", "disease.taxonomy.manage", "disease.assignment.read", "disease.assignment.manage",
+			"content_hub.read", "content_hub.manage", "content_hub.publish", "content_hub.archive",
+			"content_pillar.read", "content_pillar.manage", "content_hub.template.read", "content_hub.template.manage",
 		}
 	case "content_manager":
 		return []string{
@@ -595,6 +610,9 @@ func deriveBackendPermissions(roleKey, permissionsJSON string) []string {
 			"notification.template.read", "notification.template.manage",
 			"notification.campaign.read", "notification.campaign.manage",
 			"firebase.status.read",
+			"disease.taxonomy.read", "disease.taxonomy.manage", "disease.assignment.read", "disease.assignment.manage",
+			"content_hub.read", "content_hub.manage", "content_pillar.read", "content_pillar.manage",
+			"content_hub.template.read", "content_hub.template.manage",
 		}
 	case "reviewer":
 		return []string{
@@ -602,6 +620,7 @@ func deriveBackendPermissions(roleKey, permissionsJSON string) []string {
 			"guideline.review", "guideline.high_risk.approve", "protocol.read", "sync.read",
 			"notification.read", "notification.template.read", "notification.campaign.read",
 			"notification.campaign.approve", "notification.analytics.read", "firebase.status.read",
+			"disease.taxonomy.read", "disease.assignment.read", "content_hub.read", "content_pillar.read", "content_hub.template.read",
 		}
 	case "healthcare_provider":
 		return []string{

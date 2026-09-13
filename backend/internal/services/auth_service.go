@@ -501,6 +501,9 @@ func deriveRolePermissions(roleKey, permissionsJSON string) []string {
 			"notification.campaign.read", "notification.campaign.manage",
 			"notification.campaign.approve", "notification.analytics.read",
 			"firebase.status.read", "firebase.push.test", "firebase.config.manage",
+			"disease.taxonomy.read", "disease.taxonomy.manage", "disease.assignment.read", "disease.assignment.manage",
+			"content_hub.read", "content_hub.manage", "content_hub.publish", "content_hub.archive",
+			"content_pillar.read", "content_pillar.manage", "content_hub.template.read", "content_hub.template.manage",
 		}
 	case "content_manager":
 		return []string{
@@ -524,6 +527,9 @@ func deriveRolePermissions(roleKey, permissionsJSON string) []string {
 			"notification.template.read", "notification.template.manage",
 			"notification.campaign.read", "notification.campaign.manage",
 			"firebase.status.read",
+			"disease.taxonomy.read", "disease.taxonomy.manage", "disease.assignment.read", "disease.assignment.manage",
+			"content_hub.read", "content_hub.manage", "content_pillar.read", "content_pillar.manage",
+			"content_hub.template.read", "content_hub.template.manage",
 		}
 	case "reviewer":
 		return []string{
@@ -532,6 +538,7 @@ func deriveRolePermissions(roleKey, permissionsJSON string) []string {
 			"guideline.publish", "protocol.read", "sync.read", "notification.read",
 			"notification.template.read", "notification.campaign.read",
 			"notification.campaign.approve", "notification.analytics.read", "firebase.status.read",
+			"disease.taxonomy.read", "disease.assignment.read", "content_hub.read", "content_pillar.read", "content_hub.template.read",
 		}
 	case "healthcare_provider":
 		return []string{

@@ -44,6 +44,11 @@ type PublicDiseaseSummary struct {
 	SortOrder   int        `json:"sort_order"`
 }
 
+type PublicDiseaseTreeNode struct {
+	PublicDiseaseSummary
+	Children []PublicDiseaseTreeNode `json:"children"`
+}
+
 type PublicDiseaseCode struct {
 	CodeSystem  string  `json:"code_system"`
 	Code        string  `json:"code"`
@@ -120,6 +125,56 @@ func (s DiseaseService) ListPublic(ctx context.Context, in PublicDiseaseQuery) (
 		end = len(eligible)
 	}
 	return NewPageResult(eligible[start:end], p, total), nil
+}
+
+func (s DiseaseService) PublicHierarchy(ctx context.Context) ([]PublicDiseaseTreeNode, error) {
+	var diseases []models.Disease
+	if err := s.DB.WithContext(ctx).
+		Where("deleted_at IS NULL AND status = ?", models.DiseaseStatusActive).
+		Order("sort_order ASC, name ASC, id ASC").Find(&diseases).Error; err != nil {
+		return nil, err
+	}
+	now := time.Now().UTC()
+	eligible := make([]models.Disease, 0, len(diseases))
+	for _, disease := range diseases {
+		visible, err := s.hasPublicDiseaseContent(ctx, disease.ID, now)
+		if err != nil {
+			return nil, err
+		}
+		if visible {
+			eligible = append(eligible, disease)
+		}
+	}
+	included := make(map[uuid.UUID]struct{}, len(eligible))
+	for _, disease := range eligible {
+		included[disease.ID] = struct{}{}
+	}
+	children := make(map[uuid.UUID][]models.Disease)
+	roots := make([]models.Disease, 0)
+	for _, disease := range eligible {
+		if disease.ParentID == nil {
+			roots = append(roots, disease)
+			continue
+		}
+		if _, ok := included[*disease.ParentID]; !ok {
+			roots = append(roots, disease)
+			continue
+		}
+		children[*disease.ParentID] = append(children[*disease.ParentID], disease)
+	}
+	var build func(models.Disease) PublicDiseaseTreeNode
+	build = func(disease models.Disease) PublicDiseaseTreeNode {
+		node := PublicDiseaseTreeNode{PublicDiseaseSummary: publicDiseaseSummary(disease), Children: []PublicDiseaseTreeNode{}}
+		for _, child := range children[disease.ID] {
+			node.Children = append(node.Children, build(child))
+		}
+		return node
+	}
+	result := make([]PublicDiseaseTreeNode, 0, len(roots))
+	for _, root := range roots {
+		result = append(result, build(root))
+	}
+	return result, nil
 }
 
 func (s DiseaseService) GetPublic(ctx context.Context, slug string) (*PublicDisease, error) {

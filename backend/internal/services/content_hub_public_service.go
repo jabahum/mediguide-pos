@@ -131,6 +131,16 @@ func (s ContentHubService) GetPublicHub(ctx context.Context, slug string) (*Publ
 	return s.buildPublicHub(ctx, hub, now, true)
 }
 
+// PreviewHub renders an administrative preview through the same eligibility
+// pipeline as the public API while allowing the hub itself to remain a draft.
+func (s ContentHubService) PreviewHub(ctx context.Context, id uuid.UUID) (*PublicContentHub, error) {
+	hub, err := s.GetHub(id)
+	if err != nil {
+		return nil, err
+	}
+	return s.buildPublicHub(ctx, *hub, time.Now().UTC(), true)
+}
+
 // GetPublicOutbreakHub resolves only an explicit outbreak-to-hub assignment.
 // Callers treat not-found as the signal to retain the legacy presentation.
 func (s ContentHubService) GetPublicOutbreakHub(ctx context.Context, outbreakID uuid.UUID) (*PublicContentHub, error) {

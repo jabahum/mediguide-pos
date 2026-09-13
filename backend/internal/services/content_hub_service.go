@@ -73,6 +73,16 @@ type ContentHubTransitionInput struct {
 	LockVersion int `json:"lock_version" binding:"required,min=1"`
 }
 
+type ReplaceContentHubDiseasesInput struct {
+	DiseaseIDs  []uuid.UUID `json:"disease_ids" binding:"required"`
+	LockVersion int         `json:"lock_version" binding:"required,min=1"`
+}
+
+func (s ContentHubService) ReplaceHubDiseases(actor ContentHubActor, id uuid.UUID, in ReplaceContentHubDiseasesInput) (*models.ContentHub, error) {
+	ids := in.DiseaseIDs
+	return s.UpdateHub(actor, id, UpdateContentHubInput{DiseaseIDs: &ids, LockVersion: in.LockVersion})
+}
+
 func (s ContentHubService) ListHubs(in ContentHubQuery) (*PageResult[models.ContentHub], error) {
 	p := in.Page.Normalize(20, 100)
 	query := s.DB.Model(&models.ContentHub{}).Where("content_hubs.deleted_at IS NULL").Preload("Diseases", "diseases.deleted_at IS NULL").Preload("Outbreaks", "outbreaks.deleted_at IS NULL")

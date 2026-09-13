@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"mediguide/internal/httpx"
+	"mediguide/internal/models"
 	"mediguide/internal/services"
 
 	"github.com/gin-gonic/gin"
@@ -12,8 +13,8 @@ import (
 	"gorm.io/gorm"
 )
 
-// DiseaseHandler manages the canonical disease taxonomy. Public disease
-// discovery is intentionally deferred to the public experience phase.
+// DiseaseHandler manages the canonical disease taxonomy and its read-only
+// public discovery projection.
 type DiseaseHandler struct{ Service services.DiseaseService }
 
 // PublicList godoc
@@ -42,6 +43,17 @@ func (h DiseaseHandler) PublicList(c *gin.Context) {
 		Page: page, Search: c.Query("search"), ParentID: c.Query("parent_id"), RootOnly: rootOnly,
 	})
 	h.write(c, http.StatusOK, result, serviceErr)
+}
+
+// PublicHierarchy godoc
+// @Summary Browse the eligible public disease hierarchy
+// @Tags public-diseases
+// @Produce json
+// @Success 200 {object} handlers.PublicDiseaseHierarchyEnvelope
+// @Router /api/public/diseases/hierarchy [get]
+func (h DiseaseHandler) PublicHierarchy(c *gin.Context) {
+	result, err := h.Service.PublicHierarchy(c.Request.Context())
+	h.write(c, http.StatusOK, result, err)
 }
 
 // PublicGet godoc
@@ -73,7 +85,19 @@ func (h DiseaseHandler) List(c *gin.Context) {
 	if !ok {
 		return
 	}
-	result, err := h.Service.List(guidelineContentEditor(c), query)
+	result, err := h.Service.List(true, query)
+	h.write(c, http.StatusOK, result, err)
+}
+
+// Hierarchy godoc
+// @Summary Get the disease taxonomy hierarchy
+// @Tags disease-taxonomy
+// @Security BearerAuth
+// @Param status query string false "active, inactive, or archived"
+// @Success 200 {object} handlers.DiseaseHierarchyEnvelope
+// @Router /api/v2/diseases/hierarchy [get]
+func (h DiseaseHandler) Hierarchy(c *gin.Context) {
+	result, err := h.Service.Hierarchy(c.Query("status"))
 	h.write(c, http.StatusOK, result, err)
 }
 
@@ -89,8 +113,90 @@ func (h DiseaseHandler) Get(c *gin.Context) {
 	if !ok {
 		return
 	}
-	result, err := h.Service.Get(id, guidelineContentEditor(c))
+	result, err := h.Service.Get(id, true)
 	h.write(c, http.StatusOK, result, err)
+}
+
+// ListAliases godoc
+// @Summary List aliases for a disease
+// @Tags disease-taxonomy
+// @Security BearerAuth
+// @Param id path string true "Disease UUID"
+// @Success 200 {object} handlers.DiseaseAliasesEnvelope
+// @Router /api/v2/diseases/{id}/aliases [get]
+func (h DiseaseHandler) ListAliases(c *gin.Context) {
+	disease, ok := h.getDisease(c)
+	if !ok {
+		return
+	}
+	httpx.OK(c, disease.Aliases)
+}
+
+// ReplaceAliases godoc
+// @Summary Replace all aliases for a disease
+// @Tags disease-taxonomy
+// @Security BearerAuth
+// @Param id path string true "Disease UUID"
+// @Param payload body []services.DiseaseAliasInput true "Disease aliases"
+// @Success 200 {object} handlers.DiseaseAliasesEnvelope
+// @Router /api/v2/diseases/{id}/aliases [put]
+func (h DiseaseHandler) ReplaceAliases(c *gin.Context) {
+	id, ok := diseaseID(c)
+	if !ok {
+		return
+	}
+	var input []services.DiseaseAliasInput
+	if c.ShouldBindJSON(&input) != nil {
+		httpx.Error(c, http.StatusBadRequest, "invalid disease aliases request body")
+		return
+	}
+	result, err := h.Service.Save(diseaseActor(c), &id, services.DiseaseInput{Aliases: &input})
+	if err != nil {
+		h.writeError(c, err)
+		return
+	}
+	httpx.OK(c, result.Aliases)
+}
+
+// ListCodes godoc
+// @Summary List external codes for a disease
+// @Tags disease-taxonomy
+// @Security BearerAuth
+// @Param id path string true "Disease UUID"
+// @Success 200 {object} handlers.DiseaseCodesEnvelope
+// @Router /api/v2/diseases/{id}/codes [get]
+func (h DiseaseHandler) ListCodes(c *gin.Context) {
+	disease, ok := h.getDisease(c)
+	if !ok {
+		return
+	}
+	httpx.OK(c, disease.Codes)
+}
+
+// ReplaceCodes godoc
+// @Summary Replace all external codes for a disease
+// @Tags disease-taxonomy
+// @Security BearerAuth
+// @Param id path string true "Disease UUID"
+// @Param payload body []services.DiseaseCodeInput true "Disease codes"
+// @Success 200 {object} handlers.DiseaseCodesEnvelope
+// @Router /api/v2/diseases/{id}/codes [put]
+func (h DiseaseHandler) ReplaceCodes(c *gin.Context) {
+	id, ok := diseaseID(c)
+	if !ok {
+		return
+	}
+	var input []services.DiseaseCodeInput
+	if c.ShouldBindJSON(&input) != nil {
+		httpx.Error(c, http.StatusBadRequest, "invalid disease codes request body")
+		return
+	}
+	result, err := h.Service.Save(diseaseActor(c), &id, services.DiseaseInput{Codes: &input})
+	if err != nil {
+		h.writeError(c, err)
+		return
+	}
+	httpx.OK(c, result.Codes)
 }
 
 // Create godoc
@@ -196,6 +302,19 @@ func diseaseID(c *gin.Context) (uuid.UUID, bool) {
 		return uuid.Nil, false
 	}
 	return id, true
+}
+
+func (h DiseaseHandler) getDisease(c *gin.Context) (*models.Disease, bool) {
+	id, ok := diseaseID(c)
+	if !ok {
+		return nil, false
+	}
+	result, err := h.Service.Get(id, true)
+	if err != nil {
+		h.writeError(c, err)
+		return nil, false
+	}
+	return result, true
 }
 
 func diseaseQuery(c *gin.Context) (services.DiseaseQuery, bool) {

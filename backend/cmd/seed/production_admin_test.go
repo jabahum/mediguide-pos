@@ -140,7 +140,7 @@ func TestSeedAuthorizationCreatesReviewerRoleWithReviewPermission(t *testing.T) 
 	for _, permission := range reviewer.Permissions {
 		permissionCodes[permission.Code] = true
 	}
-	for _, required := range []string{"guideline.markdown.read", "guideline.review", "guideline.high_risk.approve"} {
+	for _, required := range []string{"guideline.markdown.read", "guideline.review", "guideline.high_risk.approve", "disease.taxonomy.read", "content_hub.read", "content_pillar.read"} {
 		if !permissionCodes[required] {
 			t.Fatalf("reviewer role is missing %q: %#v", required, permissionCodes)
 		}

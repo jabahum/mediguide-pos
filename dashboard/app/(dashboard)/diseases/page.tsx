@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { PageHeader } from "@/components/ui/page-header";
 import { Textarea } from "@/components/ui/textarea";
+import { hasBackendPermission } from "@/lib/backend-client";
 import { showToast } from "@/lib/toast";
 import {
   Disease,
@@ -31,6 +32,7 @@ const empty = {
 };
 
 export default function DiseasesPage() {
+  const canManage = hasBackendPermission("disease.taxonomy.manage");
   const [rows, setRows] = React.useState<Disease[]>([]);
   const [search, setSearch] = React.useState("");
   const [editing, setEditing] = React.useState<Disease | null>(null);
@@ -120,10 +122,12 @@ export default function DiseasesPage() {
           onChange={(event) => setSearch(event.target.value)}
           placeholder="Search names, aliases or codes"
         />
-        <Button onClick={() => edit()}>
-          <Plus className="mr-2 h-4 w-4" />
-          New disease
-        </Button>
+        {canManage ? (
+          <Button onClick={() => edit()}>
+            <Plus className="mr-2 h-4 w-4" />
+            New disease
+          </Button>
+        ) : null}
       </div>
       <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
         {rows.map((row) => (
@@ -140,7 +144,7 @@ export default function DiseasesPage() {
                 {row.aliases.length} aliases · {row.codes.length} codes ·{" "}
                 {row.status}
               </div>
-              <div className="flex gap-2">
+              {canManage ? <div className="flex gap-2">
                 <Button size="sm" variant="outline" onClick={() => edit(row)}>
                   <Pencil className="mr-2 h-3 w-3" />
                   Edit
@@ -169,12 +173,12 @@ export default function DiseasesPage() {
                     Archive
                   </Button>
                 ) : null}
-              </div>
+              </div> : null}
             </CardContent>
           </Card>
         ))}
       </div>
-      {editorOpen ? (
+      {canManage && editorOpen ? (
         <DiseaseEditor
           form={form}
           setForm={setForm}

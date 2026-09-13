@@ -120,6 +120,9 @@ GlobalSearchDataSource globalSearchDataSource(GlobalSearchDataSourceRef ref) {
     helpContent: ref.watch(helpContentRepositoryProvider),
     calculators: ref.watch(calculatorRepositoryProvider),
     outbreaks: ref.watch(outbreakRepositoryProvider),
+    unifiedDocumentSearchEnabled: ref.watch(
+      unifiedDocumentSearchEnabledProvider,
+    ),
     recordMetric: ref.watch(firebaseServiceProvider).recordOperationalEvent,
   );
 }
@@ -255,6 +258,7 @@ final class RepositoryGlobalSearchDataSource implements GlobalSearchDataSource {
     required HelpContentRepository helpContent,
     required CalculatorRepository calculators,
     required OutbreakRepository outbreaks,
+    required bool unifiedDocumentSearchEnabled,
     Future<void> Function(String, Map<String, Object>)? recordMetric,
   }) : _api = api,
        _drugs = drugs,
@@ -265,6 +269,7 @@ final class RepositoryGlobalSearchDataSource implements GlobalSearchDataSource {
        _helpContent = helpContent,
        _calculators = calculators,
        _outbreaks = outbreaks,
+       _unifiedDocumentSearchEnabled = unifiedDocumentSearchEnabled,
        _recordMetric = recordMetric;
 
   final DrugRepository _drugs;
@@ -276,6 +281,7 @@ final class RepositoryGlobalSearchDataSource implements GlobalSearchDataSource {
   final HelpContentRepository _helpContent;
   final CalculatorRepository _calculators;
   final OutbreakRepository _outbreaks;
+  final bool _unifiedDocumentSearchEnabled;
   final Future<void> Function(String, Map<String, Object>)? _recordMetric;
 
   @override
@@ -324,7 +330,9 @@ final class RepositoryGlobalSearchDataSource implements GlobalSearchDataSource {
   ) async {
     switch (category) {
       case SearchCategory.diseases:
-        return _searchDiscovery(query);
+        return _unifiedDocumentSearchEnabled
+            ? _searchDiscovery(query)
+            : _searchDiseaseDirectory(query);
       case SearchCategory.hubs:
       case SearchCategory.pillars:
         return const [];
@@ -619,6 +627,37 @@ final class RepositoryGlobalSearchDataSource implements GlobalSearchDataSource {
             query,
           );
         })
+        .toList(growable: false);
+  }
+
+  Future<List<SearchResult>> _searchDiseaseDirectory(String query) async {
+    final response = await _api.requestJson(
+      '/api/public/diseases',
+      method: 'GET',
+      includeAuth: false,
+      query: {'search': query, 'page': '1', 'per_page': '20'},
+    );
+    final data = response['data'] is Map
+        ? Map<String, dynamic>.from(response['data'] as Map)
+        : <String, dynamic>{};
+    final raw = data['items'] as List? ?? const [];
+    return raw
+        .whereType<Map>()
+        .map((entry) => Map<String, dynamic>.from(entry))
+        .map(
+          (entry) => _withRelevance(
+            SearchResult(
+              id: '${entry['id'] ?? ''}',
+              title: '${entry['name'] ?? ''}',
+              description: '${entry['description'] ?? ''}',
+              subtitle: 'disease',
+              category: SearchCategory.diseases,
+              route: AppRoutes.disease('${entry['slug'] ?? ''}'),
+              item: entry,
+            ),
+            query,
+          ),
+        )
         .toList(growable: false);
   }
 

@@ -41,6 +41,30 @@ func TestDiseaseTaxonomyCreatesSearchableAliasesAndCodes(t *testing.T) {
 	}
 }
 
+func TestDiseaseHierarchyIsNestedAndDeterministic(t *testing.T) {
+	service := diseaseTestService(t)
+	parent, err := service.Save(DiseaseActor{}, nil, DiseaseInput{Name: stringPtr("Communicable diseases")})
+	if err != nil {
+		t.Fatal(err)
+	}
+	parentID := parent.ID.String()
+	for _, name := range []string{"Malaria", "Ebola virus disease"} {
+		if _, err := service.Save(DiseaseActor{}, nil, DiseaseInput{Name: stringPtr(name), ParentID: &parentID}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	tree, err := service.Hierarchy(models.DiseaseStatusActive)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(tree) != 1 || tree[0].ID != parent.ID || len(tree[0].Children) != 2 {
+		t.Fatalf("unexpected hierarchy: %#v", tree)
+	}
+	if tree[0].Children[0].Name != "Ebola virus disease" || tree[0].Children[1].Name != "Malaria" {
+		t.Fatalf("children are not deterministically ordered: %#v", tree[0].Children)
+	}
+}
+
 func TestDiseaseTaxonomyRejectsHierarchyCyclesAndInactiveNewParents(t *testing.T) {
 	service := diseaseTestService(t)
 	parent, err := service.Save(DiseaseActor{}, nil, DiseaseInput{Name: stringPtr("Parent condition")})

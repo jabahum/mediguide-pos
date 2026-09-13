@@ -97,6 +97,26 @@ final class MediGuideFirebaseService {
   bool get backendManagedOutbreakHubsEnabled =>
       _enabled &&
       FirebaseRemoteConfig.instance.getBool('api_driven_outbreak_pillars');
+  bool get diseaseTaxonomyEnabled =>
+      !_enabled ||
+      FirebaseRemoteConfig.instance.getBool('disease_taxonomy_enabled');
+  bool get diseaseContentAssignmentEnabled =>
+      !_enabled ||
+      FirebaseRemoteConfig.instance.getBool('disease_content_assignment');
+  bool get diseaseHubsEnabled =>
+      !_enabled ||
+      FirebaseRemoteConfig.instance.getBool('disease_hubs_enabled');
+  bool get genericHubsEnabled =>
+      !_enabled ||
+      FirebaseRemoteConfig.instance.getBool('generic_hubs_enabled');
+  bool get guidelineCategoryAssignmentEnabled =>
+      !_enabled ||
+      FirebaseRemoteConfig.instance.getBool('guideline_category_assignment');
+  bool get unifiedDocumentSearchEnabled =>
+      !_enabled ||
+      FirebaseRemoteConfig.instance.getBool('unified_document_search');
+  bool get pillarRagMetadataEnabled =>
+      !_enabled || FirebaseRemoteConfig.instance.getBool('pillar_rag_metadata');
   bool get maintenanceMode =>
       _enabled && FirebaseRemoteConfig.instance.getBool('maintenance_mode');
   String get maintenanceMessage => _enabled
@@ -240,6 +260,15 @@ final class MediGuideFirebaseService {
       // Enable after configured hubs are verified in production. Until then
       // every outbreak retains the existing compatibility presentation.
       'api_driven_outbreak_pillars': false,
+      // Disease-aware discovery is deployed dark and enabled environment by
+      // environment after API, taxonomy and public-eligibility verification.
+      'disease_taxonomy_enabled': false,
+      'disease_content_assignment': false,
+      'disease_hubs_enabled': false,
+      'generic_hubs_enabled': false,
+      'guideline_category_assignment': false,
+      'unified_document_search': false,
+      'pillar_rag_metadata': false,
     });
     await config.setConfigSettings(
       RemoteConfigSettings(

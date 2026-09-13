@@ -63,6 +63,63 @@ type DiseaseMigrationReportQuery struct {
 	Status, SourceTable string
 }
 
+// DiseaseTreeNode is the deterministic admin representation of the disease
+// taxonomy. Aliases and codes remain attached to each canonical disease.
+type DiseaseTreeNode struct {
+	models.Disease
+	Children []DiseaseTreeNode `json:"children"`
+}
+
+func (s DiseaseService) Hierarchy(status string) ([]DiseaseTreeNode, error) {
+	q := s.DB.Model(&models.Disease{}).
+		Where("diseases.deleted_at IS NULL").
+		Preload("Aliases", func(db *gorm.DB) *gorm.DB { return db.Order("alias ASC") }).
+		Preload("Codes", func(db *gorm.DB) *gorm.DB { return db.Order("code_system ASC, code ASC") })
+	if status = strings.ToLower(strings.TrimSpace(status)); status != "" {
+		if !validDiseaseStatus(status) {
+			return nil, ErrDiseaseInvalid
+		}
+		q = q.Where("diseases.status = ?", status)
+	}
+	diseases := []models.Disease{}
+	if err := q.Order("diseases.sort_order ASC, diseases.name ASC, diseases.id ASC").Find(&diseases).Error; err != nil {
+		return nil, err
+	}
+
+	included := make(map[uuid.UUID]struct{}, len(diseases))
+	for _, disease := range diseases {
+		included[disease.ID] = struct{}{}
+	}
+	children := make(map[uuid.UUID][]models.Disease)
+	roots := make([]models.Disease, 0)
+	for _, disease := range diseases {
+		if disease.ParentID == nil {
+			roots = append(roots, disease)
+			continue
+		}
+		if _, ok := included[*disease.ParentID]; !ok {
+			// A status filter may exclude the parent. Returning the matching child
+			// as a root keeps filtered results discoverable.
+			roots = append(roots, disease)
+			continue
+		}
+		children[*disease.ParentID] = append(children[*disease.ParentID], disease)
+	}
+	var build func(models.Disease) DiseaseTreeNode
+	build = func(disease models.Disease) DiseaseTreeNode {
+		node := DiseaseTreeNode{Disease: disease, Children: []DiseaseTreeNode{}}
+		for _, child := range children[disease.ID] {
+			node.Children = append(node.Children, build(child))
+		}
+		return node
+	}
+	result := make([]DiseaseTreeNode, 0, len(roots))
+	for _, root := range roots {
+		result = append(result, build(root))
+	}
+	return result, nil
+}
+
 func (s DiseaseService) List(editor bool, in DiseaseQuery) (*PageResult[models.Disease], error) {
 	p := in.Page.Normalize(20, 100)
 	q := s.DB.Model(&models.Disease{}).

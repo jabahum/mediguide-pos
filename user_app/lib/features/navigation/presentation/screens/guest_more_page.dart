@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import 'package:user_app/app/router/route_names.dart';
+import 'package:user_app/app/providers/app_providers.dart';
 import 'package:user_app/core/constants/app_spacing.dart';
 import 'package:user_app/core/utils/responsive.dart';
 
@@ -12,11 +14,12 @@ part '../widgets/guest_more_page_more_section.dart';
 part '../widgets/guest_more_page_more_item.dart';
 part '../widgets/guest_more_page_guest_access_info.dart';
 
-class GuestMorePage extends StatelessWidget {
+class GuestMorePage extends ConsumerWidget {
   const GuestMorePage({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final diseaseTaxonomyEnabled = ref.watch(diseaseTaxonomyEnabledProvider);
     return Scaffold(
       appBar: AppBar(
         automaticallyImplyLeading: false,
@@ -53,12 +56,13 @@ class GuestMorePage extends StatelessWidget {
           _MoreSection(
             title: 'Directories',
             children: [
-              _MoreItem(
-                icon: LucideIcons.activity,
-                title: 'Diseases & Conditions',
-                subtitle: 'Browse approved guidance by disease',
-                onTap: () => context.push(AppRoutes.diseases),
-              ),
+              if (diseaseTaxonomyEnabled)
+                _MoreItem(
+                  icon: LucideIcons.activity,
+                  title: 'Diseases & Conditions',
+                  subtitle: 'Browse approved guidance by disease',
+                  onTap: () => context.push(AppRoutes.diseases),
+                ),
               _MoreItem(
                 icon: LucideIcons.hospital,
                 title: 'Health Facilities',

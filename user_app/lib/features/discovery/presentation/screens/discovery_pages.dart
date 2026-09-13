@@ -34,58 +34,66 @@ class _DiseaseDirectoryPageState extends ConsumerState<DiseaseDirectoryPage> {
       .read(discoveryRepositoryProvider)
       .diseases(search: search.text);
   @override
-  Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(title: const Text('Diseases & conditions')),
-    body: RefreshIndicator(
-      onRefresh: () async {
-        setState(reload);
-        await request;
-      },
-      child: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          TextField(
-            controller: search,
-            textInputAction: TextInputAction.search,
-            decoration: const InputDecoration(
-              prefixIcon: Icon(LucideIcons.search),
-              hintText: 'Search official names or aliases',
+  Widget build(BuildContext context) {
+    if (!ref.watch(diseaseTaxonomyEnabledProvider)) {
+      return Scaffold(
+        appBar: AppBar(title: const Text('Diseases & conditions')),
+        body: const EmptyState('Disease discovery is not enabled yet.'),
+      );
+    }
+    return Scaffold(
+      appBar: AppBar(title: const Text('Diseases & conditions')),
+      body: RefreshIndicator(
+        onRefresh: () async {
+          setState(reload);
+          await request;
+        },
+        child: ListView(
+          padding: const EdgeInsets.all(16),
+          children: [
+            TextField(
+              controller: search,
+              textInputAction: TextInputAction.search,
+              decoration: const InputDecoration(
+                prefixIcon: Icon(LucideIcons.search),
+                hintText: 'Search official names or aliases',
+              ),
+              onSubmitted: (_) => setState(reload),
             ),
-            onSubmitted: (_) => setState(reload),
-          ),
-          const SizedBox(height: 16),
-          FutureBuilder<DiscoveryValue<List<DiscoveryDisease>>>(
-            future: request,
-            builder: (context, snapshot) {
-              if (snapshot.connectionState != ConnectionState.done) {
-                return const DiscoverySkeleton();
-              }
-              if (snapshot.hasError) {
-                return ErrorState(onRetry: () => setState(reload));
-              }
-              final result = snapshot.data!;
-              if (result.offline) {
-                WidgetsBinding.instance.addPostFrameCallback((_) {
-                  if (mounted) {
-                    AppMessage.warning(
-                      context,
-                      'Offline: showing saved disease content.',
-                    );
-                  }
-                });
-              }
-              if (result.value.isEmpty) {
-                return const EmptyState(
-                  'No active diseases with public content found.',
-                );
-              }
-              return Column(children: diseaseTiles(context, result.value));
-            },
-          ),
-        ],
+            const SizedBox(height: 16),
+            FutureBuilder<DiscoveryValue<List<DiscoveryDisease>>>(
+              future: request,
+              builder: (context, snapshot) {
+                if (snapshot.connectionState != ConnectionState.done) {
+                  return const DiscoverySkeleton();
+                }
+                if (snapshot.hasError) {
+                  return ErrorState(onRetry: () => setState(reload));
+                }
+                final result = snapshot.data!;
+                if (result.offline) {
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    if (mounted) {
+                      AppMessage.warning(
+                        context,
+                        'Offline: showing saved disease content.',
+                      );
+                    }
+                  });
+                }
+                if (result.value.isEmpty) {
+                  return const EmptyState(
+                    'No active diseases with public content found.',
+                  );
+                }
+                return Column(children: diseaseTiles(context, result.value));
+              },
+            ),
+          ],
+        ),
       ),
-    ),
-  );
+    );
+  }
 }
 
 class DiseaseDetailPage extends ConsumerStatefulWidget {
@@ -109,9 +117,16 @@ class _DiseaseDetailPageState extends ConsumerState<DiseaseDetailPage> {
       request = ref.read(discoveryRepositoryProvider).disease(widget.slug);
 
   @override
-  Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(title: const Text('Disease')),
-    body: FutureBuilder<DiscoveryValue<DiscoveryDisease>>(
+  Widget build(BuildContext context) {
+    if (!ref.watch(diseaseTaxonomyEnabledProvider)) {
+      return Scaffold(
+        appBar: AppBar(title: const Text('Disease')),
+        body: const EmptyState('Disease discovery is not enabled yet.'),
+      );
+    }
+    return Scaffold(
+      appBar: AppBar(title: const Text('Disease')),
+      body: FutureBuilder<DiscoveryValue<DiscoveryDisease>>(
       future: request,
       builder: (context, snapshot) {
         if (snapshot.connectionState != ConnectionState.done) {
@@ -149,11 +164,13 @@ class _DiseaseDetailPageState extends ConsumerState<DiseaseDetailPage> {
                 ),
               ),
             ],
-            const SectionHeading('Content hubs'),
-            if (disease.hubs.isEmpty)
-              const Text('No dedicated hub is currently published.')
-            else
-              ...disease.hubs.map((hub) => HubTile(hub)),
+            if (ref.watch(diseaseHubsEnabledProvider)) ...[
+              const SectionHeading('Content hubs'),
+              if (disease.hubs.isEmpty)
+                const Text('No dedicated hub is currently published.')
+              else
+                ...disease.hubs.map((hub) => HubTile(hub)),
+            ],
             const SectionHeading('Approved resources'),
             if (disease.resources.isEmpty)
               const Text('No public resources are currently available.')
@@ -162,8 +179,9 @@ class _DiseaseDetailPageState extends ConsumerState<DiseaseDetailPage> {
           ],
         );
       },
-    ),
-  );
+      ),
+    );
+  }
 }
 
 class ContentHubPage extends ConsumerStatefulWidget {
@@ -199,6 +217,12 @@ class _ContentHubPageState extends ConsumerState<ContentHubPage> {
           return ErrorState(onRetry: () => setState(reload));
         }
         final hub = snapshot.data!.value;
+        final enabled = hub.diseases.isEmpty
+            ? ref.watch(genericHubsEnabledProvider)
+            : ref.watch(diseaseHubsEnabledProvider);
+        if (!enabled) {
+          return const EmptyState('This content hub is not enabled yet.');
+        }
         return ListView(
           padding: const EdgeInsets.all(16),
           children: [
@@ -335,6 +359,14 @@ class _ContentPillarPageState extends ConsumerState<ContentPillarPage> {
           return ErrorState(onRetry: () => setState(reload));
         }
         final hub = snapshot.data?.value;
+        if (hub != null) {
+          final enabled = hub.diseases.isEmpty
+              ? ref.watch(genericHubsEnabledProvider)
+              : ref.watch(diseaseHubsEnabledProvider);
+          if (!enabled) {
+            return const EmptyState('This content hub is not enabled yet.');
+          }
+        }
         final matches = hub == null
             ? <DiscoveryPillar>[]
             : flatten(

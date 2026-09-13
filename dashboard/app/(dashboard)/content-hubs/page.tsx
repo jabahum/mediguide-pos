@@ -8,10 +8,12 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { PageHeader } from "@/components/ui/page-header";
+import { hasBackendPermission } from "@/lib/backend-client";
 import { showToast } from "@/lib/toast";
 import { ContentHub, contentHubService } from "@/services/content-hubs.service";
 
 export default function ContentHubsPage() {
+  const canManage = hasBackendPermission("content_hub.manage");
   const [rows, setRows] = React.useState<ContentHub[]>([]);
   const [search, setSearch] = React.useState("");
   React.useEffect(() => {
@@ -40,12 +42,12 @@ export default function ContentHubsPage() {
           onChange={(event) => setSearch(event.target.value)}
           placeholder="Search hubs"
         />
-        <Button asChild>
+        {canManage ? <Button asChild>
           <Link href="/content-hubs/new">
             <Plus className="mr-2 h-4 w-4" />
             New hub
           </Link>
-        </Button>
+        </Button> : null}
       </div>
       <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
         {rows.map((row) => (
@@ -65,7 +67,9 @@ export default function ContentHubsPage() {
                   "General hub"}
               </p>
               <Button variant="outline" size="sm" asChild>
-                <Link href={`/content-hubs/${row.id}`}>Manage hub</Link>
+                <Link href={`/content-hubs/${row.id}`}>
+                  {canManage ? "Manage hub" : "View hub"}
+                </Link>
               </Button>
             </CardContent>
           </Card>

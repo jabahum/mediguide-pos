@@ -62,6 +62,72 @@ func (h ContentHubHandler) Get(c *gin.Context) {
 	httpx.OK(c, result)
 }
 
+// Preview godoc
+// @Summary Preview a hub using public eligibility rules
+// @Tags content-hubs
+// @Security BearerAuth
+// @Param id path string true "Content hub UUID"
+// @Success 200 {object} handlers.PublicContentHubEnvelope
+// @Router /api/v2/content-hubs/{id}/preview [get]
+func (h ContentHubHandler) Preview(c *gin.Context) {
+	id, ok := contentHubUUID(c, "id")
+	if !ok {
+		return
+	}
+	result, err := h.Service.PreviewHub(c.Request.Context(), id)
+	if err != nil {
+		h.writeError(c, err)
+		return
+	}
+	httpx.OK(c, result)
+}
+
+// ListDiseases godoc
+// @Summary List diseases assigned to a content hub
+// @Tags content-hubs
+// @Security BearerAuth
+// @Param id path string true "Content hub UUID"
+// @Success 200 {object} handlers.ContentHubDiseasesEnvelope
+// @Router /api/v2/content-hubs/{id}/diseases [get]
+func (h ContentHubHandler) ListDiseases(c *gin.Context) {
+	id, ok := contentHubUUID(c, "id")
+	if !ok {
+		return
+	}
+	hub, err := h.Service.GetHub(id)
+	if err != nil {
+		h.writeError(c, err)
+		return
+	}
+	httpx.OK(c, hub.Diseases)
+}
+
+// ReplaceDiseases godoc
+// @Summary Replace a content hub's disease assignments
+// @Tags content-hubs
+// @Security BearerAuth
+// @Param id path string true "Content hub UUID"
+// @Param payload body services.ReplaceContentHubDiseasesInput true "Disease assignments and lock version"
+// @Success 200 {object} handlers.ContentHubEnvelope
+// @Router /api/v2/content-hubs/{id}/diseases [put]
+func (h ContentHubHandler) ReplaceDiseases(c *gin.Context) {
+	id, ok := contentHubUUID(c, "id")
+	if !ok {
+		return
+	}
+	var input services.ReplaceContentHubDiseasesInput
+	if c.ShouldBindJSON(&input) != nil {
+		httpx.Error(c, http.StatusBadRequest, "invalid content hub disease assignment request body")
+		return
+	}
+	result, err := h.Service.ReplaceHubDiseases(contentHubActor(c), id, input)
+	if err != nil {
+		h.writeError(c, err)
+		return
+	}
+	httpx.OK(c, result)
+}
+
 // Create godoc
 // @Summary Create a draft content hub
 // @Tags content-hubs

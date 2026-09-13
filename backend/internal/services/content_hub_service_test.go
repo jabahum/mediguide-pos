@@ -90,6 +90,30 @@ func TestConfigureOutbreakHubMapsPublishedResourcesAndSurveillance(t *testing.T)
 	}
 }
 
+func TestContentHubDiseaseReplacementUsesLockVersionAndPreviewEligibility(t *testing.T) {
+	db := contentHubTestDB(t)
+	disease := models.Disease{Name: "Malaria", Slug: "malaria", NormalizedName: "malaria", Status: models.DiseaseStatusActive}
+	if err := db.Create(&disease).Error; err != nil {
+		t.Fatal(err)
+	}
+	service := ContentHubService{DB: db}
+	hub, err := service.CreateHub(ContentHubActor{}, CreateContentHubInput{Name: "Malaria hub"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	hub, err = service.ReplaceHubDiseases(ContentHubActor{}, hub.ID, ReplaceContentHubDiseasesInput{DiseaseIDs: []uuid.UUID{disease.ID}, LockVersion: hub.LockVersion})
+	if err != nil || len(hub.Diseases) != 1 {
+		t.Fatalf("disease relationship was not replaced: %#v %v", hub, err)
+	}
+	if _, err := service.ReplaceHubDiseases(ContentHubActor{}, hub.ID, ReplaceContentHubDiseasesInput{DiseaseIDs: nil, LockVersion: 1}); !errors.Is(err, ErrContentHubConflict) {
+		t.Fatalf("expected stale relationship update conflict, got %v", err)
+	}
+	preview, err := service.PreviewHub(context.Background(), hub.ID)
+	if err != nil || len(preview.Diseases) != 1 || preview.Diseases[0].ID != disease.ID {
+		t.Fatalf("draft preview did not use public projection: %#v %v", preview, err)
+	}
+}
+
 func TestPublicDiseaseDirectoryKeepsParentsWithEligibleDescendants(t *testing.T) {
 	db := contentHubTestDB(t)
 	parent := models.Disease{Name: "Communicable infection", Slug: "communicable-infection", NormalizedName: "communicable infection", Status: models.DiseaseStatusActive}
@@ -116,6 +140,10 @@ func TestPublicDiseaseDirectoryKeepsParentsWithEligibleDescendants(t *testing.T)
 	page, err := service.ListPublic(context.Background(), PublicDiseaseQuery{Page: PageInput{Page: 1, PerPage: 20}})
 	if err != nil || len(page.Items) != 2 || page.Items[0].ID != parent.ID || page.Items[1].ID != child.ID {
 		t.Fatalf("eligible hierarchy was flattened or parent hidden: %#v %v", page, err)
+	}
+	tree, err := service.PublicHierarchy(context.Background())
+	if err != nil || len(tree) != 1 || tree[0].ID != parent.ID || len(tree[0].Children) != 1 || tree[0].Children[0].ID != child.ID {
+		t.Fatalf("eligible public hierarchy is incorrect: %#v %v", tree, err)
 	}
 	resolved, err := service.GetPublic(context.Background(), "EVD")
 	if err != nil || resolved.ID != child.ID {

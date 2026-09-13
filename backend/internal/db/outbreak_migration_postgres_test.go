@@ -61,7 +61,7 @@ func TestOutbreakAdministrationMigrationUpDownUp(t *testing.T) {
 	if err := goose.DownTo(testDB, "../../migrations", 35); err != nil {
 		t.Fatal(err)
 	}
-	if err := goose.UpTo(testDB, "../../migrations", 51); err != nil {
+	if err := goose.UpTo(testDB, "../../migrations", 53); err != nil {
 		t.Fatal(err)
 	}
 	var count int
@@ -122,6 +122,16 @@ func TestOutbreakAdministrationMigrationUpDownUp(t *testing.T) {
 	}
 	if err := testDB.QueryRowContext(ctx, `SELECT count(*) FROM content_hub_template_pillars WHERE deleted_at IS NULL`).Scan(&count); err != nil || count != 32 {
 		t.Fatalf("content hub template pillar seed mismatch: count=%d err=%v", count, err)
+	}
+	if err := testDB.QueryRowContext(ctx, `SELECT count(*) FROM permissions WHERE code IN (
+		'disease.taxonomy.read','disease.taxonomy.manage','disease.assignment.read','disease.assignment.manage',
+		'content_hub.read','content_hub.manage','content_hub.publish','content_hub.archive',
+		'content_pillar.read','content_pillar.manage','content_hub.template.read','content_hub.template.manage'
+	) AND deleted_at IS NULL`).Scan(&count); err != nil || count != 12 {
+		t.Fatalf("disease/hub permissions missing after up/down/up: count=%d err=%v", count, err)
+	}
+	if err := testDB.QueryRowContext(ctx, `SELECT count(*) FROM role_permissions rp JOIN roles r ON r.id = rp.role_id JOIN permissions p ON p.id = rp.permission_id WHERE lower(coalesce(r.role_key, r.name)) IN ('content_manager','editor') AND p.code IN ('content_hub.publish','content_hub.archive')`).Scan(&count); err != nil || count != 0 {
+		t.Fatalf("ordinary editors received hub publication permissions: count=%d err=%v", count, err)
 	}
 	var pillarItemDefault string
 	if err := testDB.QueryRowContext(ctx, `SELECT column_default FROM information_schema.columns WHERE table_schema = $1 AND table_name = 'content_pillar_items' AND column_name = 'status'`, schema).Scan(&pillarItemDefault); err != nil || !strings.Contains(pillarItemDefault, "draft") {

@@ -12,6 +12,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { emptyNotificationAction, NotificationActionFields } from "@/components/notifications/notification-action-fields"
 import { showToast } from "@/lib/toast"
 import { hasBackendPermission } from "@/lib/backend-client"
+import { addMissingDiseaseHubFeatureFlags } from "@/lib/disease-hub-feature-flags"
 import { firebaseService, type FirebaseStatus, type FirebaseTestRecipient, type TestPushResult } from "@/services/firebase.service"
 import type { NotificationAction } from "@/services/notifications.service"
 
@@ -88,6 +89,16 @@ export default function FirebaseSettingsPage() {
     }
   }
 
+  function addRolloutFlags() {
+    try {
+      const parsed = JSON.parse(template) as Record<string, unknown>
+      setTemplate(JSON.stringify(addMissingDiseaseHubFeatureFlags(parsed), null, 2))
+      showToast.success("Remote Config", "Missing disease and hub rollout flags were added as disabled")
+    } catch (error) {
+      showToast.error("Remote Config", error instanceof Error ? error.message : "Template is not valid JSON")
+    }
+  }
+
   async function sendPush(dryRun: boolean) {
     setSending(true)
     try {
@@ -148,6 +159,7 @@ export default function FirebaseSettingsPage() {
             <CardContent className="space-y-4">
               <Textarea className="min-h-[420px] font-mono text-xs" value={template} onChange={(event) => setTemplate(event.target.value)} spellCheck={false} />
               <div className="flex gap-2">
+                <Button variant="outline" disabled={saving} onClick={addRolloutFlags}>Add rollout flags</Button>
                 <Button variant="outline" disabled={saving} onClick={() => void save(true)}>Validate</Button>
                 <Button disabled={saving || !etag} onClick={() => {
                   if (window.confirm("Publish this Remote Config template to the configured Firebase project?")) void save(false)

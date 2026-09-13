@@ -21,6 +21,7 @@ import { MultiSelect } from "@/components/ui/multi-select";
 import { PageHeader } from "@/components/ui/page-header";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
+import { hasBackendPermission } from "@/lib/backend-client";
 import { showToast } from "@/lib/toast";
 import { outbreaksService } from "@/services/outbreaks.service";
 import {
@@ -58,6 +59,11 @@ const emptyHub = {
 
 export function ContentHubEditor({ id }: { id?: string }) {
   const router = useRouter();
+  const canManageHub = hasBackendPermission("content_hub.manage");
+  const canPublishHub = hasBackendPermission("content_hub.publish");
+  const canArchiveHub = hasBackendPermission("content_hub.archive");
+  const canManagePillars = hasBackendPermission("content_pillar.manage");
+  const canApplyTemplate = hasBackendPermission("content_hub.template.manage");
   const [workspace, setWorkspace] = React.useState<ContentHubWorkspace | null>(
     null,
   );
@@ -172,30 +178,30 @@ export function ContentHubEditor({ id }: { id?: string }) {
         <Button variant="outline" asChild>
           <Link href="/content-hubs">Back to hubs</Link>
         </Button>
-        <Button
+        {canManageHub ? <Button
           disabled={busy || !form.name.trim()}
           onClick={() => void save()}
         >
           <Save className="mr-2 h-4 w-4" />
           Save
-        </Button>
+        </Button> : null}
         {workspace ? (
           <>
-            <Button
+            {canPublishHub ? <Button
               disabled={workspace.hub.status !== "draft"}
               onClick={() => void transition("publish")}
             >
               <Send className="mr-2 h-4 w-4" />
               Publish
-            </Button>
-            <Button
+            </Button> : null}
+            {canArchiveHub ? <Button
               variant="outline"
               disabled={workspace.hub.status === "archived"}
               onClick={() => void transition("archive")}
             >
               <Archive className="mr-2 h-4 w-4" />
               Archive
-            </Button>
+            </Button> : null}
           </>
         ) : null}
       </div>
@@ -207,6 +213,7 @@ export function ContentHubEditor({ id }: { id?: string }) {
           <Field
             label="Name"
             value={form.name}
+            disabled={!canManageHub}
             onChange={(value) =>
               setForm((current) => ({ ...current, name: value }))
             }
@@ -214,6 +221,7 @@ export function ContentHubEditor({ id }: { id?: string }) {
           <Field
             label="Slug"
             value={form.slug}
+            disabled={!canManageHub}
             onChange={(value) =>
               setForm((current) => ({ ...current, slug: value }))
             }
@@ -221,6 +229,7 @@ export function ContentHubEditor({ id }: { id?: string }) {
           <Field
             label="Icon key"
             value={form.icon}
+            disabled={!canManageHub}
             onChange={(value) =>
               setForm((current) => ({ ...current, icon: value }))
             }
@@ -228,6 +237,7 @@ export function ContentHubEditor({ id }: { id?: string }) {
           <Field
             label="Colour or tone"
             value={form.color}
+            disabled={!canManageHub}
             onChange={(value) =>
               setForm((current) => ({ ...current, color: value }))
             }
@@ -237,6 +247,7 @@ export function ContentHubEditor({ id }: { id?: string }) {
             <select
               className="mt-2 h-10 w-full rounded-md border bg-background px-3"
               value={form.audience}
+              disabled={!canManageHub}
               onChange={(event) =>
                 setForm((current) => ({
                   ...current,
@@ -259,6 +270,7 @@ export function ContentHubEditor({ id }: { id?: string }) {
                 color: value.color,
               }))}
               value={form.disease_ids}
+              disabled={!canManageHub}
               onValueChange={(value) =>
                 setForm((current) => ({ ...current, disease_ids: value }))
               }
@@ -275,6 +287,7 @@ export function ContentHubEditor({ id }: { id?: string }) {
                 label: value.title,
               }))}
               value={form.outbreak_ids}
+              disabled={!canManageHub}
               onValueChange={(value) =>
                 setForm((current) => ({ ...current, outbreak_ids: value }))
               }
@@ -286,6 +299,7 @@ export function ContentHubEditor({ id }: { id?: string }) {
             <Textarea
               className="mt-2"
               value={form.description}
+              disabled={!canManageHub}
               onChange={(event) =>
                 setForm((current) => ({
                   ...current,
@@ -303,7 +317,7 @@ export function ContentHubEditor({ id }: { id?: string }) {
               <CardTitle>Template and pillars</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="flex gap-2">
+              {canApplyTemplate ? <div className="flex gap-2">
                 <select
                   className="h-10 flex-1 rounded-md border bg-background px-3"
                   value={templateId}
@@ -345,11 +359,19 @@ export function ContentHubEditor({ id }: { id?: string }) {
                 >
                   Apply template
                 </Button>
-              </div>
-              <PillarEditor workspace={workspace} reload={load} />
+              </div> : null}
+              {canManagePillars ? (
+                <PillarEditor workspace={workspace} reload={load} />
+              ) : (
+                <p className="text-sm text-muted-foreground">
+                  Pillars are read only for your role.
+                </p>
+              )}
             </CardContent>
           </Card>
-          <ResourceAssignment workspace={workspace} reload={load} />
+          {canManagePillars ? (
+            <ResourceAssignment workspace={workspace} reload={load} />
+          ) : null}
           <HubPreview workspace={workspace} />
           <Card>
             <CardHeader>
@@ -935,10 +957,12 @@ function Field({
   label,
   value,
   onChange,
+  disabled = false,
 }: {
   label: string;
   value: string;
   onChange: (value: string) => void;
+  disabled?: boolean;
 }) {
   return (
     <div>
@@ -946,6 +970,7 @@ function Field({
       <Input
         className="mt-2"
         value={value}
+        disabled={disabled}
         onChange={(event) => onChange(event.target.value)}
       />
     </div>

@@ -1094,6 +1094,31 @@ type ContentHubEnvelope struct {
 	Data    models.ContentHub `json:"data"`
 }
 
+type DiseaseHierarchyEnvelope struct {
+	Success bool                       `json:"success"`
+	Data    []services.DiseaseTreeNode `json:"data"`
+}
+
+type PublicDiseaseHierarchyEnvelope struct {
+	Success bool                             `json:"success"`
+	Data    []services.PublicDiseaseTreeNode `json:"data"`
+}
+
+type DiseaseAliasesEnvelope struct {
+	Success bool                  `json:"success"`
+	Data    []models.DiseaseAlias `json:"data"`
+}
+
+type DiseaseCodesEnvelope struct {
+	Success bool                 `json:"success"`
+	Data    []models.DiseaseCode `json:"data"`
+}
+
+type ContentHubDiseasesEnvelope struct {
+	Success bool             `json:"success"`
+	Data    []models.Disease `json:"data"`
+}
+
 type PaginatedContentHubsEnvelope struct {
 	Success bool                                   `json:"success"`
 	Data    services.PageResult[models.ContentHub] `json:"data"`

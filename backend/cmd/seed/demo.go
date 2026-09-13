@@ -625,7 +625,7 @@ func seedDemoOutbreaks(ctx context.Context, database *gorm.DB, store storage.Obj
 	}); err != nil {
 		return err
 	}
-	if err := seedAdditionalDemoOutbreaks(database, authorID, clinicianID); err != nil {
+	if err := seedAdditionalDemoOutbreaks(ctx, database, store, authorID, clinicianID); err != nil {
 		return err
 	}
 	publicResources, err := (services.OutbreakService{DB: database}).ListResources(services.OutbreakResourceQuery{Page: services.PageInput{Page: 1, PerPage: 20}, OutbreakID: &ebolaID})

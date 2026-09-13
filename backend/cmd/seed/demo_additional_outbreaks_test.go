@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"testing"
 
 	"mediguide/internal/models"
@@ -20,15 +21,20 @@ func TestSeedAdditionalDemoOutbreaksIsPublicAndIdempotent(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	store := &demoSeedObjectStore{objects: map[string][]byte{}}
+	authorID, clinicianID := uuid.New(), uuid.New()
 	for range 2 {
-		if err := seedAdditionalDemoOutbreaks(database, uuid.New(), uuid.New()); err != nil {
+		if err := seedAdditionalDemoOutbreaks(context.Background(), database, store, authorID, clinicianID); err != nil {
 			t.Fatal(err)
 		}
 	}
 	assertSeedTableCount(t, database, "outbreaks", 2)
 	assertSeedTableCount(t, database, "outbreak_updates", 4)
-	assertSeedTableCount(t, database, "outbreak_resources", 4)
+	assertSeedTableCount(t, database, "outbreak_resources", 16)
 	assertSeedTableCount(t, database, "situation_reports", 2)
+	if len(store.objects) != 12 {
+		t.Fatalf("expected twelve managed files in object storage, got %d", len(store.objects))
+	}
 
 	publicOutbreaks, err := (services.OutbreakService{DB: database}).List(services.OutbreakQuery{Page: services.PageInput{Page: 1, PerPage: 20}})
 	if err != nil {
@@ -43,6 +49,13 @@ func TestSeedAdditionalDemoOutbreaksIsPublicAndIdempotent(t *testing.T) {
 	}
 	if publicResources.TotalItems != 4 {
 		t.Fatalf("expected four safe public quick resources, got %d", publicResources.TotalItems)
+	}
+	publicDocuments, err := (services.OutbreakService{DB: database}).SearchDocuments(services.OutbreakDocumentQuery{Page: services.PageInput{Page: 1, PerPage: 20}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if publicDocuments.TotalItems != 12 {
+		t.Fatalf("expected twelve public managed documents, got %d", publicDocuments.TotalItems)
 	}
 	publicReports, err := (services.OutbreakService{DB: database}).ListReports(services.SituationReportQuery{Page: services.PageInput{Page: 1, PerPage: 20}})
 	if err != nil {

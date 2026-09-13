@@ -101,6 +101,12 @@ func seedDemoDiseaseHubs(database *gorm.DB, adminID uuid.UUID) error {
 	for _, document := range demoOutbreakDocuments() {
 		assignments = append(assignments, demoDiseaseAssignment("outbreak-document-"+document.Key, demoEbolaDiseaseID, models.ContentDiseaseOutbreakDocument, demoID("outbreak-document", document.Key), true, adminID))
 	}
+	for _, document := range demoCholeraOutbreakDocuments() {
+		assignments = append(assignments, demoDiseaseAssignment("outbreak-document-"+document.Key, demoCholeraDiseaseID, models.ContentDiseaseOutbreakDocument, demoID("outbreak-document", document.Key), true, adminID))
+	}
+	for _, document := range demoMeaslesOutbreakDocuments() {
+		assignments = append(assignments, demoDiseaseAssignment("outbreak-document-"+document.Key, demoMeaslesDiseaseID, models.ContentDiseaseOutbreakDocument, demoID("outbreak-document", document.Key), true, adminID))
+	}
 	for _, row := range assignments {
 		if err := upsertByID(database, "content_disease_assignments", row); err != nil {
 			return err

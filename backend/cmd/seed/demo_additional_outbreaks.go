@@ -1,7 +1,10 @@
 package main
 
 import (
+	"context"
 	"time"
+
+	"mediguide/internal/storage"
 
 	"github.com/google/uuid"
 	"gorm.io/gorm"
@@ -11,7 +14,7 @@ import (
 // exercising multiple outbreak lifecycle states. Figures are fixed test data,
 // not operational surveillance data, and this function is reachable only from
 // the production-guarded demo seed scope.
-func seedAdditionalDemoOutbreaks(database *gorm.DB, authorID, clinicianID uuid.UUID) error {
+func seedAdditionalDemoOutbreaks(ctx context.Context, database *gorm.DB, store storage.ObjectStore, authorID, clinicianID uuid.UUID) error {
 	publishedAt := time.Date(2026, time.June, 1, 9, 0, 0, 0, time.UTC)
 	choleraAsOf := time.Date(2026, time.August, 18, 9, 0, 0, 0, time.UTC)
 	measlesAsOf := time.Date(2026, time.July, 8, 9, 0, 0, 0, time.UTC)
@@ -42,6 +45,12 @@ func seedAdditionalDemoOutbreaks(database *gorm.DB, authorID, clinicianID uuid.U
 		if err := upsertByID(database, "outbreaks", row); err != nil {
 			return err
 		}
+	}
+	if err := seedDemoManagedOutbreakDocuments(ctx, database, store, choleraID, authorID, clinicianID, demoCholeraOutbreakDocuments(), "cholera case-definition"); err != nil {
+		return err
+	}
+	if err := seedDemoManagedOutbreakDocuments(ctx, database, store, measlesID, authorID, clinicianID, demoMeaslesOutbreakDocuments(), "measles case-definition"); err != nil {
+		return err
 	}
 
 	updates := []map[string]any{

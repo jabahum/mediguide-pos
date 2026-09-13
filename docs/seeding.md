@@ -113,6 +113,14 @@ These are deterministic development fixtures. Rerunning `SEED_SCOPE=demo`
 restores their repository-defined state and does not create duplicate hubs,
 pillars, category links or disease assignments.
 
+The additional Cholera and Measles scenarios each include six published,
+searchable managed-document fixtures stored in MinIO: case definition,
+case-management SOP, IPC SOP, health-worker checklist, response form and
+situation-report attachment. They are prominently marked as synthetic
+development content and intentionally omit clinical thresholds, treatment and
+dosing instructions. Replace them through the governed dashboard workflow
+before any operational or clinical use.
+
 ### Exercise the guideline review workflow
 
 The demo scope leaves the public `Malaria in Adults` version `1.4` published and creates a separate editable `1.5-review` version. That review draft includes:

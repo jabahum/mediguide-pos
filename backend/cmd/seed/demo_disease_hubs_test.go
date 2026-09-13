@@ -77,7 +77,7 @@ func TestSeedDemoDiseaseHubsIsCompleteAndIdempotent(t *testing.T) {
 		assertSeedTableCount(t, database, "disease_codes", 6)
 		assertSeedTableCount(t, database, "guideline_categories", 3)
 		assertSeedTableCount(t, database, "guideline_document_categories", 4)
-		assertSeedTableCount(t, database, "content_disease_assignments", 23)
+		assertSeedTableCount(t, database, "content_disease_assignments", 35)
 		assertSeedTableCount(t, database, "content_hubs", 3)
 		assertSeedTableCount(t, database, "content_hub_diseases", 3)
 		assertSeedTableCount(t, database, "content_hub_outbreaks", 1)

@@ -62,12 +62,47 @@ func demoOutbreakDocuments() []demoOutbreakDocument {
 	}
 }
 
+func demoCholeraOutbreakDocuments() []demoOutbreakDocument {
+	effective := time.Date(2026, time.August, 10, 0, 0, 0, 0, time.UTC)
+	review := time.Date(2027, time.August, 10, 0, 0, 0, 0, time.UTC)
+	expires := time.Date(2028, time.August, 10, 0, 0, 0, 0, time.UTC)
+	return []demoOutbreakDocument{
+		{Key: "cholera-case-definition", Fixture: "cholera-case-definition.md", Title: "[Demo] Cholera case-definition reference", Description: "Synthetic governed-document fixture for case-definition discovery and review testing.", Kind: "case_definition", DocumentNumber: "DEMO-CHOL-CASE-001", Version: "1.0", Audience: "Frontline clinicians and surveillance teams", EffectiveDate: effective, ReviewDate: review, ExpiresAt: expires, SortOrder: 10},
+		{Key: "cholera-case-management-sop", Fixture: "cholera-case-management-sop.md", Title: "[Demo] Cholera case-management SOP", Description: "Synthetic managed SOP containing no approved treatment or dosing instruction.", Kind: "sop", DocumentNumber: "DEMO-CHOL-SOP-001", Version: "1.0", Audience: "Clinical response teams", EffectiveDate: effective, ReviewDate: review, ExpiresAt: expires, SortOrder: 20},
+		{Key: "cholera-ipc-sop", Fixture: "cholera-ipc-sop.md", Title: "[Demo] Cholera IPC SOP", Description: "Synthetic managed IPC document for workflow testing.", Kind: "ipc_protocol", DocumentNumber: "DEMO-CHOL-IPC-001", Version: "1.0", Audience: "IPC focal persons and health workers", EffectiveDate: effective, ReviewDate: review, ExpiresAt: expires, SortOrder: 30},
+		{Key: "cholera-health-worker-checklist", Fixture: "cholera-health-worker-checklist.md", Title: "[Demo] Cholera health-worker checklist", Description: "Synthetic point-of-care checklist shell for managed-document testing.", Kind: "checklist", DocumentNumber: "DEMO-CHOL-CHK-001", Version: "1.0", Audience: "Frontline health workers", EffectiveDate: effective, ReviewDate: review, ExpiresAt: expires, SortOrder: 40},
+		{Key: "cholera-response-form", Fixture: "cholera-response-form.md", Title: "[Demo] Cholera response form", Description: "Synthetic, non-identifiable response-form fixture.", Kind: "form", DocumentNumber: "DEMO-CHOL-FORM-001", Version: "1.0", Audience: "Response teams", EffectiveDate: effective, ReviewDate: review, ExpiresAt: expires, SortOrder: 50},
+		{Key: "cholera-situation-report", Fixture: "cholera-situation-report.md", Title: "[Demo] Cholera situation-report attachment", Description: "Synthetic report attachment for preview, download, search and audit testing.", Kind: "situation_report_attachment", DocumentNumber: "DEMO-CHOL-SITREP-001", Version: "1.0", Audience: "Response coordinators", EffectiveDate: effective, ReviewDate: review, ExpiresAt: expires, SortOrder: 60},
+	}
+}
+
+func demoMeaslesOutbreakDocuments() []demoOutbreakDocument {
+	effective := time.Date(2026, time.June, 12, 0, 0, 0, 0, time.UTC)
+	review := time.Date(2027, time.June, 12, 0, 0, 0, 0, time.UTC)
+	expires := time.Date(2028, time.June, 12, 0, 0, 0, 0, time.UTC)
+	return []demoOutbreakDocument{
+		{Key: "measles-case-definition", Fixture: "measles-case-definition.md", Title: "[Demo] Measles case-definition reference", Description: "Synthetic governed-document fixture for case-definition discovery and review testing.", Kind: "case_definition", DocumentNumber: "DEMO-MEAS-CASE-001", Version: "1.0", Audience: "Frontline clinicians and surveillance teams", EffectiveDate: effective, ReviewDate: review, ExpiresAt: expires, SortOrder: 10},
+		{Key: "measles-case-management-sop", Fixture: "measles-case-management-sop.md", Title: "[Demo] Measles case-management SOP", Description: "Synthetic managed SOP containing no approved treatment or dosing instruction.", Kind: "sop", DocumentNumber: "DEMO-MEAS-SOP-001", Version: "1.0", Audience: "Clinical response teams", EffectiveDate: effective, ReviewDate: review, ExpiresAt: expires, SortOrder: 20},
+		{Key: "measles-ipc-sop", Fixture: "measles-ipc-sop.md", Title: "[Demo] Measles IPC SOP", Description: "Synthetic managed IPC document for workflow testing.", Kind: "ipc_protocol", DocumentNumber: "DEMO-MEAS-IPC-001", Version: "1.0", Audience: "IPC focal persons and health workers", EffectiveDate: effective, ReviewDate: review, ExpiresAt: expires, SortOrder: 30},
+		{Key: "measles-health-worker-checklist", Fixture: "measles-health-worker-checklist.md", Title: "[Demo] Measles health-worker checklist", Description: "Synthetic point-of-care checklist shell for managed-document testing.", Kind: "checklist", DocumentNumber: "DEMO-MEAS-CHK-001", Version: "1.0", Audience: "Frontline health workers", EffectiveDate: effective, ReviewDate: review, ExpiresAt: expires, SortOrder: 40},
+		{Key: "measles-response-form", Fixture: "measles-response-form.md", Title: "[Demo] Measles response form", Description: "Synthetic, non-identifiable response-form fixture.", Kind: "form", DocumentNumber: "DEMO-MEAS-FORM-001", Version: "1.0", Audience: "Response teams", EffectiveDate: effective, ReviewDate: review, ExpiresAt: expires, SortOrder: 50},
+		{Key: "measles-situation-report", Fixture: "measles-situation-report.md", Title: "[Demo] Measles situation-report attachment", Description: "Synthetic report attachment for preview, download, search and audit testing.", Kind: "situation_report_attachment", DocumentNumber: "DEMO-MEAS-SITREP-001", Version: "1.0", Audience: "Response coordinators", EffectiveDate: effective, ReviewDate: review, ExpiresAt: expires, SortOrder: 60},
+	}
+}
+
 func seedDemoOutbreakDocuments(ctx context.Context, database *gorm.DB, store storage.ObjectStore, outbreakID, authorID, clinicianID uuid.UUID) error {
+	return seedDemoManagedOutbreakDocuments(ctx, database, store, outbreakID, authorID, clinicianID, demoOutbreakDocuments(), "environmental decontamination")
+}
+
+func seedDemoManagedOutbreakDocuments(ctx context.Context, database *gorm.DB, store storage.ObjectStore, outbreakID, authorID, clinicianID uuid.UUID, documents []demoOutbreakDocument, searchTerm string) error {
 	if store == nil {
 		return fmt.Errorf("outbreak document seed requires object storage")
 	}
+	if len(documents) == 0 {
+		return fmt.Errorf("outbreak document seed requires at least one fixture")
+	}
 	publishedAt := time.Date(2026, time.May, 16, 12, 0, 0, 0, time.UTC)
-	for _, document := range demoOutbreakDocuments() {
+	for _, document := range documents {
 		fixturePath := path.Join("fixtures/outbreak-documents", document.Fixture)
 		content, err := demoOutbreakDocumentFiles.ReadFile(fixturePath)
 		if err != nil {
@@ -132,7 +167,7 @@ func seedDemoOutbreakDocuments(ctx context.Context, database *gorm.DB, store sto
 		}
 	}
 	service := services.OutbreakService{DB: database, Store: store}
-	firstID := demoID("outbreak-document", demoOutbreakDocuments()[0].Key)
+	firstID := demoID("outbreak-document", documents[0].Key)
 	if _, err := service.GetDocumentGlobal(firstID); err != nil {
 		return fmt.Errorf("verify public outbreak document metadata: %w", err)
 	}
@@ -146,7 +181,7 @@ func seedDemoOutbreakDocuments(ctx context.Context, database *gorm.DB, store sto
 	if content, err := service.DocumentContent(firstID); err != nil || !content.CanReadInline || strings.TrimSpace(content.Content) == "" {
 		return fmt.Errorf("verify public outbreak document content: %w", err)
 	}
-	result, err := service.SearchDocuments(services.OutbreakDocumentQuery{Page: services.PageInput{Page: 1, PerPage: 10}, Search: "environmental decontamination"})
+	result, err := service.SearchDocuments(services.OutbreakDocumentQuery{Page: services.PageInput{Page: 1, PerPage: 10}, Search: searchTerm})
 	if err != nil || result.TotalItems == 0 {
 		return fmt.Errorf("verify body-only outbreak document search: %w", err)
 	}

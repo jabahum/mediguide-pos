@@ -19,6 +19,7 @@ import { emptyNotificationAction, NotificationActionFields } from "@/components/
 import { hasBackendPermission } from "@/lib/backend-client"
 import { usePermissionContext } from "@/lib/permission-context"
 import { showToast } from "@/lib/toast"
+import { withDashboardBasePath } from "@/lib/dashboard-path"
 import { firebaseService, type FirebaseStatus } from "@/services/firebase.service"
 import { notificationsService, type NotificationAction, type NotificationAudienceDefinition, type NotificationAudienceEstimate, type NotificationCampaignDto, type NotificationCampaignInput, type NotificationDeliveryAnalytics, type NotificationDeliveryDto, type NotificationOutboxJobDto, type NotificationPreferenceAggregates, type NotificationPriority, type NotificationTemplateDto, type NotificationTemplateInput, type NotificationTemplateVersionDto, type NotificationType } from "@/services/notifications.service"
 
@@ -214,7 +215,7 @@ export default function NotificationAdministrationPage() {
     try {
       const preview = await notificationsService.previewTemplateVersion(template.version.id, variables)
       const query = new URLSearchParams({ title: preview.title, body: preview.body, action: JSON.stringify(preview.action) })
-      window.location.assign(`/settings/firebase?${query}`)
+      window.location.assign(withDashboardBasePath(`/settings/firebase?${query}`))
     } catch (error) { showToast.error("Template test", error instanceof Error ? error.message : "Unable to validate template") }
   }
 

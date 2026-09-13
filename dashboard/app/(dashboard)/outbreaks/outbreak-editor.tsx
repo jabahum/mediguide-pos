@@ -21,6 +21,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { showToast } from "@/lib/toast";
+import { withDashboardBasePath } from "@/lib/dashboard-path";
 import { healthFacilitiesService } from "@/services/health-facilities.service";
 import {
   outbreaksService,
@@ -236,7 +237,7 @@ export function OutbreakEditor({
         "The draft was saved without publishing it.",
       );
       if (!item) {
-        window.location.assign(`/outbreaks/${saved.id}`);
+        window.location.assign(withDashboardBasePath(`/outbreaks/${saved.id}`));
         return;
       }
       setItem(saved);
@@ -277,7 +278,8 @@ export function OutbreakEditor({
             });
       setItem(next);
       showToast.success("Workflow updated", `Outbreak is now ${next.status}.`);
-      if (action === "correct") window.location.assign(`/outbreaks/${next.id}`);
+      if (action === "correct")
+        window.location.assign(withDashboardBasePath(`/outbreaks/${next.id}`));
     } catch (value) {
       showToast.error("Workflow failed", conflictMessage(value));
     } finally {

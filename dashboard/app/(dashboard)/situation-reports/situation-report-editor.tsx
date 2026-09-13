@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { showToast } from "@/lib/toast"
+import { withDashboardBasePath } from "@/lib/dashboard-path"
 import { healthFacilitiesService } from "@/services/health-facilities.service"
 import { outbreaksService, type OutbreakMetric, type OutbreakRecord } from "@/services/outbreaks.service"
 import { situationReportsService, type OutbreakAuditRecord, type SituationReportRecord } from "@/services/situation-reports.service"
@@ -61,7 +62,7 @@ export function SituationReportEditor({ id }: { id?: string }) {
       const input = { outbreak_id: form.outbreak_id || undefined, region_id: form.region_id || undefined, district_id: form.district_id || undefined, title: form.title, geographic_area: form.geographic_area, summary: form.summary, source_organization: form.source_organization, source_url: form.source_url, source_reference: form.source_reference, publication_date: iso(form.publication_date), effective_at: iso(form.effective_at), data_as_of: iso(form.data_as_of), last_verified_at: iso(form.last_verified_at), standalone_allowed: form.standalone_allowed, key_highlights: form.highlights.split("\n").map(value => value.trim()).filter(Boolean), metrics, ...(item ? { lock_version: item.lock_version } : {}) }
       const saved = item ? await situationReportsService.update(item.id!, input) : await situationReportsService.create(input)
       showToast.success("Report saved", "The report remains unpublished.")
-      if (!item) window.location.assign(`/situation-reports/${saved.id}`); else setItem(saved)
+      if (!item) window.location.assign(withDashboardBasePath(`/situation-reports/${saved.id}`)); else setItem(saved)
     } catch (value) { showToast.error("Unable to save", message(value)) }
     finally { setSaving(false) }
   }
@@ -75,7 +76,7 @@ export function SituationReportEditor({ id }: { id?: string }) {
     try {
       const next = action === "correct" ? await situationReportsService.correct(item.id!, { lock_version: item.lock_version!, reason }) : await situationReportsService.transition(item.id!, action, { lock_version: item.lock_version!, reason })
       setItem(next); await refreshAudit()
-      if (action === "correct") window.location.assign(`/situation-reports/${next.id}`)
+      if (action === "correct") window.location.assign(withDashboardBasePath(`/situation-reports/${next.id}`))
     } catch (value) { showToast.error("Workflow failed", message(value)) }
     finally { setSaving(false) }
   }

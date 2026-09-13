@@ -14,15 +14,17 @@ Production always disables the inspector overlay in application code, even if
 
 Staging is built in release mode and uses the production API with the staging
 Firebase project, staging native identifiers, staging signing profiles and
-staging Remote Config. Development also defaults to the production API. The
+staging Remote Config. Development defaults to the locally running API. The
 draggable diagnostic overlay remains enabled for staging even if
 `MEDIGUIDE_DEBUG_TOOLS_ENABLED=false` is supplied accidentally.
 
 ## Run each environment
 
-Development uses the production API by default. A developer can still provide
-an explicit local `MEDIGUIDE_API_BASE_URL`; Android rewrites a supplied
-loopback URL to the emulator host at `10.0.2.2`.
+Development uses `http://localhost:8080` by default. Android rewrites that
+loopback URL to the emulator host at `http://10.0.2.2:8080`. For a physical
+device, provide the development machine's LAN URL through
+`MEDIGUIDE_API_BASE_URL`. A development build ignores the production URL to
+prevent test traffic and credentials from reaching production accidentally.
 
 ```bash
 cd user_app
@@ -51,9 +53,9 @@ Override the endpoint when required:
 --dart-define=MEDIGUIDE_API_BASE_URL=https://staging-api.example.org
 ```
 
-The default development, staging and production endpoint is
-`https://mediguide.health.go.ug`. Overrides are intended only for deliberate
-isolated testing.
+The staging and production default is `https://mediguide.health.go.ug`.
+Development defaults to `http://localhost:8080`. Non-production overrides are
+intended for deliberate isolated testing.
 
 Firebase configuration files contain client identifiers but must remain outside
 Git because every environment must map to the correct registered Firebase apps.

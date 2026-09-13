@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -96,14 +97,23 @@ void main() {
     },
   );
 
-  test('all flavors default to the production API', () {
-    for (final flavor in Flavor.values) {
+  test('development is isolated while hosted flavors use production API', () {
+    AppConfig.configure(Flavor.development);
+    expect(
+      AppConfig.current.apiBaseUrl,
+      normalizeApiBaseUrlForPlatform(
+        'http://localhost:8080',
+        defaultTargetPlatform,
+      ),
+    );
+    expect(
+      AppConfig.current.apiBaseUrl,
+      isNot('https://mediguide.health.go.ug'),
+    );
+
+    for (final flavor in [Flavor.staging, Flavor.production]) {
       AppConfig.configure(flavor);
-      expect(
-        AppConfig.current.apiBaseUrl,
-        'https://mediguide.health.go.ug',
-        reason: '$flavor must use the production API by default',
-      );
+      expect(AppConfig.current.apiBaseUrl, 'https://mediguide.health.go.ug');
     }
   });
 }

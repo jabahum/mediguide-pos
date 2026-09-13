@@ -29,9 +29,7 @@ final class AppConfig {
       AppConfig(
         flavor: flavor,
         apiBaseUrl: normalizeApiBaseUrlForPlatform(
-          Environment.configuredApiBaseUrl.isNotEmpty
-              ? Environment.configuredApiBaseUrl
-              : Environment.defaultApiBaseUrl(flavor),
+          Environment.apiBaseUrlForFlavor(flavor),
           defaultTargetPlatform,
         ),
         // Staging is a release-mode replica of the hosted staging platform,

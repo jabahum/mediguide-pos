@@ -78,6 +78,23 @@ The demo scope creates these development-only accounts:
 
 Never reuse these credentials outside local development or a controlled demonstration environment. The production `admin` and `facilities` scopes do not create this demo reviewer account.
 
+The same scope also creates disease-aware discovery data so the dashboard,
+public web application and mobile application can be tested without manually
+classifying content:
+
+- active Ebola, Malaria, Marburg and Hypertension disease metadata, aliases and
+  representative ICD-10 codes;
+- Infectious Diseases, Emergency Preparedness and Non-Communicable Diseases
+  guideline-category links;
+- disease assignments for the demo guidelines, outbreak, situation report and
+  all managed outbreak documents;
+- published `demo-ebola-response`, `demo-malaria-care` and
+  `demo-hypertension-care` content hubs with usable pillars and items.
+
+These are deterministic development fixtures. Rerunning `SEED_SCOPE=demo`
+restores their repository-defined state and does not create duplicate hubs,
+pillars, category links or disease assignments.
+
 ### Exercise the guideline review workflow
 
 The demo scope leaves the public `Malaria in Adults` version `1.4` published and creates a separate editable `1.5-review` version. That review draft includes:
@@ -132,6 +149,18 @@ curl --fail --silent \
 curl --fail --silent \
   'http://localhost:8080/api/public/outbreak-documents?search=environmental%20decontamination&page=1&per_page=20' \
   | jq '.data | {total_items, documents: [.items[] | {document_number, title, extraction_status}]}'
+
+curl --fail --silent \
+  'http://localhost:8080/api/public/diseases' \
+  | jq '.data'
+
+curl --fail --silent \
+  'http://localhost:8080/api/public/hubs' \
+  | jq '.data'
+
+curl --fail --silent \
+  'http://localhost:8080/api/public/hubs/demo-ebola-response' \
+  | jq '.data | {name, diseases, pillars}'
 ```
 
 Check deterministic outbreak-document metadata directly when troubleshooting:

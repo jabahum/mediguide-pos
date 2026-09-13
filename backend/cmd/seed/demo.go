@@ -57,6 +57,7 @@ func seedDemoData(ctx context.Context, database *gorm.DB, store storage.ObjectSt
 			func() error { return seedDemoGuidelines(ctx, tx, store, reviewer.ID) },
 			func() error { return seedDemoGuidelineReviewWorkflow(ctx, tx, store, admin.ID, reviewer.ID) },
 			func() error { return seedDemoOutbreaks(ctx, tx, store, admin.ID, clinician.ID) },
+			func() error { return seedDemoDiseaseHubs(tx, admin.ID) },
 			func() error { return seedDemoPeopleAndHelp(tx, admin.ID, clinician.ID) },
 		}
 		for _, step := range steps {

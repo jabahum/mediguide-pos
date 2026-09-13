@@ -58,6 +58,12 @@ fvm flutter run \
   --target lib/main_production.dart
 ```
 
+Development defaults to `http://localhost:8080`; Android emulators resolve it
+through `http://10.0.2.2:8080`. Supply a LAN or dedicated development URL with
+`--dart-define=MEDIGUIDE_API_BASE_URL=...` when testing on a physical device.
+Development builds refuse the production API URL. Staging and production keep
+the hosted production API default.
+
 Fastlane already passes `MOBILE_FLAVOR` to Flutter, so Firebase, TestFlight,
 and production builds automatically select the matching application ID,
 bundle ID, display name, and launcher icon.

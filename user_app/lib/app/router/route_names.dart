@@ -33,6 +33,10 @@ abstract final class AppRoutes {
   static const String outbreakDocumentDetails =
       '/outbreak-hub/:outbreakId/documents/:documentId';
   static const String situationReportDetails = '/situation-reports/:reportId';
+  static const String diseases = '/diseases';
+  static const String diseaseDetails = '/diseases/:slug';
+  static const String contentHub = '/hubs/:slug';
+  static const String contentPillar = '/hubs/:slug/pillars/:pillarSlug';
 
   // Clinical content
   static const String drugIndex = '/drug-index';
@@ -105,6 +109,7 @@ abstract final class AppRoutes {
     faq,
     aboutUs,
     termsAndConditions,
+    diseases,
   };
 
   static bool isPublic(String location) {
@@ -113,7 +118,9 @@ abstract final class AppRoutes {
         path.startsWith('$publicGuidelines/') ||
         path.startsWith('$outbreakHub/') ||
         path.startsWith('$situationReports/') ||
-        path.startsWith('$healthFacilities/');
+        path.startsWith('$healthFacilities/') ||
+        path.startsWith('$diseases/') ||
+        path.startsWith('/hubs/');
   }
 
   /// Accepts only in-app absolute paths for post-authentication navigation.
@@ -199,6 +206,12 @@ abstract final class AppRoutes {
   static String situationReport(String reportId) {
     return '$situationReports/${Uri.encodeComponent(reportId)}';
   }
+
+  static String disease(String slug) =>
+      '$diseases/${Uri.encodeComponent(slug)}';
+  static String hub(String slug) => '/hubs/${Uri.encodeComponent(slug)}';
+  static String hubPillar(String hubSlug, String pillarSlug) =>
+      '${hub(hubSlug)}/pillars/${Uri.encodeComponent(pillarSlug)}';
 
   static String calculator(String calculatorId) {
     return '/calculators/${Uri.encodeComponent(calculatorId)}';

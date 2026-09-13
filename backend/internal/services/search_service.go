@@ -2,14 +2,12 @@ package services
 
 import (
 	"context"
-	"sort"
 	"strconv"
 	"strings"
 	"time"
 	"unicode"
 
 	cachepkg "mediguide/internal/cache"
-	"mediguide/internal/models"
 
 	"github.com/google/uuid"
 	"gorm.io/gorm"
@@ -21,27 +19,47 @@ type SearchService struct {
 }
 
 type SearchResult struct {
-	ID             string     `json:"id"`
-	ResultType     string     `json:"result_type"`
-	GuidelineID    string     `json:"guideline_id,omitempty"`
-	SectionID      string     `json:"section_id,omitempty"`
-	BlockID        string     `json:"block_id,omitempty"`
-	ContentType    string     `json:"content_type,omitempty"`
-	Title          string     `json:"title"`
-	Snippet        string     `json:"snippet"`
-	SourceName     string     `json:"source_name"`
-	SourceVersion  string     `json:"source_version"`
-	PageStart      *int       `json:"page_start"`
-	PageEnd        *int       `json:"page_end"`
-	Status         string     `json:"status,omitempty"`
-	LastVerifiedAt *time.Time `json:"last_verified_at,omitempty"`
-	IsStale        bool       `json:"is_stale,omitempty"`
+	ID                 string         `json:"id"`
+	ResultType         string         `json:"result_type"`
+	GuidelineID        string         `json:"guideline_id,omitempty"`
+	GuidelineVersionID string         `json:"guideline_version_id,omitempty"`
+	SectionID          string         `json:"section_id,omitempty"`
+	BlockID            string         `json:"block_id,omitempty"`
+	ContentType        string         `json:"content_type,omitempty"`
+	Title              string         `json:"title"`
+	Snippet            string         `json:"snippet"`
+	SourceName         string         `json:"source_name"`
+	SourceVersion      string         `json:"source_version"`
+	PageStart          *int           `json:"page_start"`
+	PageEnd            *int           `json:"page_end"`
+	Status             string         `json:"status,omitempty"`
+	LastVerifiedAt     *time.Time     `json:"last_verified_at,omitempty"`
+	IsStale            bool           `json:"is_stale,omitempty"`
+	Route              string         `json:"route,omitempty"`
+	Categories         []SearchFacet  `json:"categories,omitempty"`
+	Diseases           []SearchFacet  `json:"diseases,omitempty"`
+	Hubs               []SearchFacet  `json:"hubs,omitempty"`
+	Pillars            []SearchFacet  `json:"pillars,omitempty"`
+	Metadata           map[string]any `json:"metadata,omitempty" swaggertype:"object"`
+}
+
+type SearchFacet struct {
+	ID      string   `json:"id"`
+	Name    string   `json:"name"`
+	Slug    string   `json:"slug,omitempty"`
+	Aliases []string `json:"aliases,omitempty"`
 }
 
 type PublicSearchFilter struct {
 	ProgramArea string
 	CategoryID  string
 	DiseaseID   string
+	DiseaseSlug string
+	HubID       string
+	HubSlug     string
+	PillarID    string
+	PillarSlug  string
+	ContentType string
 }
 
 // PublicSearchContext searches only approved chunks belonging to the current
@@ -59,25 +77,31 @@ func (s SearchService) PublicSearchContextFiltered(ctx context.Context, q string
 	if normalizedQuery == "" {
 		return []SearchResult{}, nil
 	}
+	resolved, err := s.resolvePublicSearchFilter(ctx, filter)
+	if err != nil {
+		return nil, err
+	}
+	filter = resolved
 	type row struct {
-		ID            string
-		GuidelineID   string
-		SectionID     string
-		BlockID       string
-		ContentType   string
-		Title         string
-		Snippet       string
-		SourceName    string
-		SourceVersion string
-		PageStart     *int
-		PageEnd       *int
+		ID                 string
+		GuidelineID        string
+		GuidelineVersionID string
+		SectionID          string
+		BlockID            string
+		ContentType        string
+		Title              string
+		Snippet            string
+		SourceName         string
+		SourceVersion      string
+		PageStart          *int
+		PageEnd            *int
 	}
 	snippetExpression := "LEFT(gc.content, 350)"
 	if s.DB.Dialector.Name() != "postgres" {
 		snippetExpression = "substr(gc.content, 1, 350)"
 	}
 	query := s.DB.WithContext(ctx).Table("guideline_chunks AS gc").
-		Select(`CAST(gc.id AS TEXT) AS id, CAST(gc.document_id AS TEXT) AS guideline_id,
+		Select(`CAST(gc.id AS TEXT) AS id, CAST(gc.document_id AS TEXT) AS guideline_id, CAST(gc.version_id AS TEXT) AS guideline_version_id,
 			COALESCE(CAST(gc.section_id AS TEXT), '') AS section_id,
 			COALESCE(CAST(gc.block_id AS TEXT), '') AS block_id,
 			COALESCE(CAST(gcb.type AS TEXT), 'section') AS content_type,
@@ -119,6 +143,13 @@ func (s SearchService) PublicSearchContextFiltered(ctx context.Context, q string
 			AND cda.disease_id = ? AND cda.deleted_at IS NULL
 			AND d.deleted_at IS NULL AND d.status = 'active')`, id)
 	}
+	query, err = applyHubSearchScope(query, "gd.id", "guideline", filter)
+	if err != nil {
+		return nil, err
+	}
+	if kind := strings.TrimSpace(filter.ContentType); kind != "" && kind != "guideline" {
+		query = query.Where("1 = 0")
+	}
 	var rows []row
 	if err := query.Order("gc.updated_at DESC, gc.id ASC").Limit(limit).Scan(&rows).Error; err != nil {
 		return nil, err
@@ -126,7 +157,7 @@ func (s SearchService) PublicSearchContextFiltered(ctx context.Context, q string
 	results := make([]SearchResult, 0, len(rows)+limit)
 	for _, value := range rows {
 		results = append(results, SearchResult{
-			ID: value.ID, ResultType: "guideline", GuidelineID: value.GuidelineID, SectionID: value.SectionID,
+			ID: value.ID, ResultType: "guideline", GuidelineID: value.GuidelineID, GuidelineVersionID: value.GuidelineVersionID, SectionID: value.SectionID,
 			BlockID: value.BlockID, ContentType: value.ContentType, Title: value.Title,
 			Snippet: value.Snippet, SourceName: value.SourceName,
 			SourceVersion: value.SourceVersion, PageStart: value.PageStart, PageEnd: value.PageEnd,
@@ -136,7 +167,7 @@ func (s SearchService) PublicSearchContextFiltered(ctx context.Context, q string
 	// filter is present, unrelated outbreak/report result types must not leak
 	// into an otherwise category-scoped result set.
 	if strings.TrimSpace(filter.CategoryID) != "" {
-		return results, nil
+		return s.finishPublicSearch(ctx, results, normalizedQuery, filter, limit)
 	}
 	type discoveryRow struct {
 		ID, Title, Snippet, SourceName, Status string
@@ -156,7 +187,14 @@ func (s SearchService) PublicSearchContextFiltered(ctx context.Context, q string
 			AND cda.disease_id = ? AND cda.deleted_at IS NULL
 			AND d.deleted_at IS NULL AND d.status = 'active')`, *diseaseID)
 	}
-	err := outbreakQuery.Limit(limit).Scan(&outbreaks).Error
+	outbreakQuery, err = applyHubSearchScope(outbreakQuery, "outbreaks.id", "outbreak", filter)
+	if err != nil {
+		return nil, err
+	}
+	if kind := strings.TrimSpace(filter.ContentType); kind != "" && kind != "outbreak" {
+		outbreakQuery = outbreakQuery.Where("1 = 0")
+	}
+	err = outbreakQuery.Limit(limit).Scan(&outbreaks).Error
 	if err != nil {
 		return nil, err
 	}
@@ -176,6 +214,13 @@ func (s SearchService) PublicSearchContextFiltered(ctx context.Context, q string
 			AND cda.disease_id = ? AND cda.deleted_at IS NULL
 			AND d.deleted_at IS NULL AND d.status = 'active')`, *diseaseID)
 	}
+	reportQuery, err = applyHubSearchScope(reportQuery, "situation_reports.id", "situation_report", filter)
+	if err != nil {
+		return nil, err
+	}
+	if kind := strings.TrimSpace(filter.ContentType); kind != "" && kind != "situation_report" {
+		reportQuery = reportQuery.Where("1 = 0")
+	}
 	err = reportQuery.Limit(limit).Scan(&reports).Error
 	if err != nil {
 		return nil, err
@@ -183,17 +228,7 @@ func (s SearchService) PublicSearchContextFiltered(ctx context.Context, q string
 	for _, row := range reports {
 		results = append(results, SearchResult{ID: row.ID, ResultType: "situation_report", Title: row.Title, Snippet: row.Snippet, SourceName: row.SourceName, Status: row.Status, LastVerifiedAt: row.LastVerifiedAt, IsStale: discoveryStale(row.Status, row.LastVerifiedAt)})
 	}
-	sort.SliceStable(results, func(i, j int) bool {
-		left, right := discoveryRank(results[i], normalizedQuery), discoveryRank(results[j], normalizedQuery)
-		if left != right {
-			return left > right
-		}
-		return strings.ToLower(results[i].Title) < strings.ToLower(results[j].Title)
-	})
-	if len(results) > limit {
-		results = results[:limit]
-	}
-	return results, nil
+	return s.finishPublicSearch(ctx, results, normalizedQuery, filter, limit)
 }
 
 // SearchPublishedGuidelineContext is the public-assistant retrieval boundary.
@@ -207,15 +242,15 @@ func (s SearchService) SearchPublishedGuidelineContext(ctx context.Context, guid
 		return []SearchResult{}, nil
 	}
 	type row struct {
-		ID, GuidelineID, SectionID, BlockID, Title, Snippet, SourceName, SourceVersion string
-		PageStart, PageEnd                                                             *int
+		ID, GuidelineID, GuidelineVersionID, SectionID, BlockID, Title, Snippet, SourceName, SourceVersion string
+		PageStart, PageEnd                                                                                 *int
 	}
 	snippetExpression := "LEFT(gc.content, 350)"
 	if s.DB.Dialector.Name() != "postgres" {
 		snippetExpression = "substr(gc.content, 1, 350)"
 	}
 	query := s.DB.WithContext(ctx).Table("guideline_chunks AS gc").
-		Select(`CAST(gc.id AS TEXT) AS id, CAST(gc.document_id AS TEXT) AS guideline_id,
+		Select(`CAST(gc.id AS TEXT) AS id, CAST(gc.document_id AS TEXT) AS guideline_id, CAST(gc.version_id AS TEXT) AS guideline_version_id,
 			COALESCE(CAST(gc.section_id AS TEXT), '') AS section_id,
 			COALESCE(CAST(gc.block_id AS TEXT), '') AS block_id,
 			gc.title, `+snippetExpression+` AS snippet, gc.source_name, gc.source_version,
@@ -237,7 +272,7 @@ func (s SearchService) SearchPublishedGuidelineContext(ctx context.Context, guid
 	}
 	results := make([]SearchResult, 0, len(rows))
 	for _, value := range rows {
-		results = append(results, SearchResult{ID: value.ID, ResultType: "guideline", GuidelineID: value.GuidelineID, SectionID: value.SectionID, BlockID: value.BlockID, Title: value.Title, Snippet: value.Snippet, SourceName: value.SourceName, SourceVersion: value.SourceVersion, PageStart: value.PageStart, PageEnd: value.PageEnd})
+		results = append(results, SearchResult{ID: value.ID, ResultType: "guideline", GuidelineID: value.GuidelineID, GuidelineVersionID: value.GuidelineVersionID, SectionID: value.SectionID, BlockID: value.BlockID, Title: value.Title, Snippet: value.Snippet, SourceName: value.SourceName, SourceVersion: value.SourceVersion, PageStart: value.PageStart, PageEnd: value.PageEnd})
 	}
 	return results, nil
 }
@@ -247,23 +282,38 @@ func (s SearchService) SearchPublishedGuidelineContext(ctx context.Context, guid
 // program-area hint when it does not match the source taxonomy and matches
 // meaningful question terms instead of requiring the full sentence verbatim.
 func (s SearchService) SearchApprovedGuidelineContext(ctx context.Context, question string, limit int) ([]SearchResult, error) {
+	return s.SearchApprovedGuidelineContextFiltered(ctx, question, PublicSearchFilter{}, limit)
+}
+
+// SearchApprovedGuidelineContextFiltered is the RAG retrieval boundary for the
+// general assistant. Taxonomy assignments narrow eligible published content;
+// they never make an unreviewed or non-current source eligible.
+func (s SearchService) SearchApprovedGuidelineContextFiltered(ctx context.Context, question string, filter PublicSearchFilter, limit int) ([]SearchResult, error) {
 	if limit <= 0 || limit > 10 {
 		limit = 5
+	}
+	resolved, err := s.resolvePublicSearchFilter(ctx, filter)
+	if err != nil {
+		return nil, err
+	}
+	filter = resolved
+	if filter.ContentType != "" && filter.ContentType != "guideline" {
+		return []SearchResult{}, nil
 	}
 	terms := publicAssistantTerms(question)
 	if len(terms) == 0 {
 		return []SearchResult{}, nil
 	}
 	type row struct {
-		ID, GuidelineID, SectionID, BlockID, Title, Snippet, SourceName, SourceVersion string
-		PageStart, PageEnd                                                             *int
+		ID, GuidelineID, GuidelineVersionID, SectionID, BlockID, Title, Snippet, SourceName, SourceVersion string
+		PageStart, PageEnd                                                                                 *int
 	}
 	snippetExpression := "LEFT(gc.content, 350)"
 	if s.DB.Dialector.Name() != "postgres" {
 		snippetExpression = "substr(gc.content, 1, 350)"
 	}
 	query := s.DB.WithContext(ctx).Table("guideline_chunks AS gc").
-		Select(`CAST(gc.id AS TEXT) AS id, CAST(gc.document_id AS TEXT) AS guideline_id,
+		Select(`CAST(gc.id AS TEXT) AS id, CAST(gc.document_id AS TEXT) AS guideline_id, CAST(gc.version_id AS TEXT) AS guideline_version_id,
 			COALESCE(CAST(gc.section_id AS TEXT), '') AS section_id,
 			COALESCE(CAST(gc.block_id AS TEXT), '') AS block_id,
 			gc.title, `+snippetExpression+` AS snippet, gc.source_name, gc.source_version,
@@ -271,6 +321,34 @@ func (s SearchService) SearchApprovedGuidelineContext(ctx context.Context, quest
 		Joins("JOIN guideline_documents gd ON gd.id = gc.document_id AND gd.deleted_at IS NULL").
 		Joins("JOIN guideline_versions gv ON gv.id = gc.version_id AND gv.deleted_at IS NULL AND gd.current_version_id = gv.id").
 		Where("gc.deleted_at IS NULL AND gc.review_status = ? AND LOWER(gv.status) = ?", "approved", "published")
+	if filter.ProgramArea != "" {
+		query = query.Where("gc.program_area = ?", filter.ProgramArea)
+	}
+	if filter.CategoryID != "" {
+		id, parseErr := uuid.Parse(filter.CategoryID)
+		if parseErr != nil {
+			return nil, ErrPublicGuidelineQuery
+		}
+		query = query.Where(`EXISTS (SELECT 1 FROM guideline_document_categories gdc
+			JOIN guideline_categories cat ON cat.id = gdc.category_id
+			WHERE gdc.guideline_document_id = gd.id AND gdc.category_id = ?
+			AND cat.deleted_at IS NULL AND cat.status = 'active')`, id)
+	}
+	if filter.DiseaseID != "" {
+		id, parseErr := uuid.Parse(filter.DiseaseID)
+		if parseErr != nil {
+			return nil, ErrPublicGuidelineQuery
+		}
+		query = query.Where(`EXISTS (SELECT 1 FROM content_disease_assignments cda
+			JOIN diseases d ON d.id = cda.disease_id
+			WHERE cda.content_type = 'guideline' AND cda.content_id = gd.id
+			AND cda.disease_id = ? AND cda.deleted_at IS NULL
+			AND d.deleted_at IS NULL AND d.status = 'active')`, id)
+	}
+	query, err = applyHubSearchScope(query, "gd.id", "guideline", filter)
+	if err != nil {
+		return nil, err
+	}
 	conditions := make([]string, 0, len(terms))
 	arguments := make([]any, 0, len(terms)*2)
 	for _, term := range terms {
@@ -285,7 +363,7 @@ func (s SearchService) SearchApprovedGuidelineContext(ctx context.Context, quest
 	}
 	results := make([]SearchResult, 0, len(rows))
 	for _, value := range rows {
-		results = append(results, SearchResult{ID: value.ID, ResultType: "guideline", GuidelineID: value.GuidelineID, SectionID: value.SectionID, BlockID: value.BlockID, Title: value.Title, Snippet: value.Snippet, SourceName: value.SourceName, SourceVersion: value.SourceVersion, PageStart: value.PageStart, PageEnd: value.PageEnd})
+		results = append(results, SearchResult{ID: value.ID, ResultType: "guideline", GuidelineID: value.GuidelineID, GuidelineVersionID: value.GuidelineVersionID, SectionID: value.SectionID, BlockID: value.BlockID, Title: value.Title, Snippet: value.Snippet, SourceName: value.SourceName, SourceVersion: value.SourceVersion, PageStart: value.PageStart, PageEnd: value.PageEnd})
 	}
 	return results, nil
 }
@@ -351,7 +429,7 @@ func (s SearchService) SearchContext(ctx context.Context, q, programArea string,
 func (s SearchService) SearchContextFiltered(ctx context.Context, q string, filter PublicSearchFilter, limit int) ([]SearchResult, error) {
 	normalizedQuery := strings.ToLower(strings.TrimSpace(q))
 	normalizedArea := strings.ToLower(strings.TrimSpace(filter.ProgramArea))
-	key := normalizedQuery + "|" + normalizedArea + "|" + strings.TrimSpace(filter.CategoryID) + "|" + strings.TrimSpace(filter.DiseaseID) + "|" + strconv.Itoa(limit)
+	key := normalizedQuery + "|" + normalizedArea + "|" + strings.Join([]string{filter.CategoryID, filter.DiseaseID, filter.DiseaseSlug, filter.HubID, filter.HubSlug, filter.PillarID, filter.PillarSlug, filter.ContentType}, "|") + "|" + strconv.Itoa(limit)
 	return cachepkg.GetOrLoad(ctx, s.Cache, "guideline-search", key, 45*time.Second, func() ([]SearchResult, error) {
 		return s.searchUncachedFiltered(ctx, q, filter, limit)
 	})
@@ -362,55 +440,8 @@ func (s SearchService) searchUncached(ctx context.Context, q, programArea string
 }
 
 func (s SearchService) searchUncachedFiltered(ctx context.Context, q string, filter PublicSearchFilter, limit int) ([]SearchResult, error) {
-	if limit <= 0 || limit > 50 {
-		limit = 10
-	}
-	var chunks []models.GuidelineChunk
-	db := s.DB.WithContext(ctx).Model(&models.GuidelineChunk{}).
-		Joins("JOIN guideline_documents gd ON gd.id = guideline_chunks.document_id AND gd.deleted_at IS NULL").
-		Joins("JOIN guideline_versions gv ON gv.id = guideline_chunks.version_id AND gv.deleted_at IS NULL AND gd.current_version_id = gv.id").
-		Where("guideline_chunks.deleted_at IS NULL AND guideline_chunks.review_status = ? AND LOWER(gv.status) = ?", "approved", "published")
-	if filter.ProgramArea != "" {
-		db = db.Where("guideline_chunks.program_area = ?", filter.ProgramArea)
-	}
-	if value := strings.TrimSpace(filter.CategoryID); value != "" {
-		id, err := uuid.Parse(value)
-		if err != nil {
-			return nil, ErrPublicGuidelineQuery
-		}
-		db = db.Where(`EXISTS (SELECT 1 FROM guideline_document_categories gdc
-			JOIN guideline_categories cat ON cat.id = gdc.category_id
-			WHERE gdc.guideline_document_id = gd.id AND gdc.category_id = ?
-			AND cat.deleted_at IS NULL AND cat.status = 'active')`, id)
-	}
-	if value := strings.TrimSpace(filter.DiseaseID); value != "" {
-		id, err := uuid.Parse(value)
-		if err != nil {
-			return nil, ErrPublicGuidelineQuery
-		}
-		db = db.Where(`EXISTS (SELECT 1 FROM content_disease_assignments cda
-			JOIN diseases d ON d.id = cda.disease_id
-			WHERE cda.content_type = 'guideline' AND cda.content_id = gd.id
-			AND cda.disease_id = ? AND cda.deleted_at IS NULL
-			AND d.deleted_at IS NULL AND d.status = 'active')`, id)
-	}
-	if q != "" {
-		if s.DB.Dialector.Name() == "postgres" {
-			db = db.Where("guideline_chunks.content ILIKE ? OR guideline_chunks.title ILIKE ?", "%"+q+"%", "%"+q+"%")
-		} else {
-			db = db.Where("lower(guideline_chunks.content) LIKE ? OR lower(guideline_chunks.title) LIKE ?", "%"+strings.ToLower(q)+"%", "%"+strings.ToLower(q)+"%")
-		}
-	}
-	if err := db.Limit(limit).Find(&chunks).Error; err != nil {
-		return nil, err
-	}
-	out := []SearchResult{}
-	for _, c := range chunks {
-		snippet := c.Content
-		if len(snippet) > 350 {
-			snippet = snippet[:350] + "..."
-		}
-		out = append(out, SearchResult{ID: c.ID.String(), ResultType: "guideline", Title: c.Title, Snippet: snippet, SourceName: c.SourceName, SourceVersion: c.SourceVersion, PageStart: c.PageStart, PageEnd: c.PageEnd})
-	}
-	return out, nil
+	// Signed-in users receive the same publication-safe corpus and taxonomy
+	// routing as guests. Authentication adds saved/history features, never access
+	// to draft, superseded, withdrawn, expired, or inactive clinical content.
+	return s.PublicSearchContextFiltered(ctx, q, filter, limit)
 }

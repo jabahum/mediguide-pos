@@ -133,3 +133,81 @@ func TestPublicAssistantTermsRemovesQuestionNoise(t *testing.T) {
 		t.Fatalf("unexpected terms: %#v", terms)
 	}
 }
+
+func TestRAGRetrievalResolvesDiseaseAliasesAndHubScopeWithoutLeakingDrafts(t *testing.T) {
+	db := classificationTestDB(t)
+	if err := db.AutoMigrate(
+		&models.DiseaseAlias{},
+		&models.ContentHub{},
+		&models.ContentHubDisease{},
+		&models.ContentPillar{},
+		&models.ContentPillarItem{},
+		&models.GuidelineChunk{},
+	); err != nil {
+		t.Fatal(err)
+	}
+	disease := models.Disease{Name: "Ebola virus disease", NormalizedName: "ebola virus disease", Slug: "ebola-virus-disease", Status: models.DiseaseStatusActive}
+	if err := db.Create(&disease).Error; err != nil {
+		t.Fatal(err)
+	}
+	if err := db.Create(&models.DiseaseAlias{DiseaseID: disease.ID, Alias: "EVD", NormalizedAlias: "evd"}).Error; err != nil {
+		t.Fatal(err)
+	}
+	document := models.GuidelineDocument{Title: "Ebola clinical care", SourceOrg: "Ministry of Health"}
+	other := models.GuidelineDocument{Title: "Other infection"}
+	outsideHub := models.GuidelineDocument{Title: "Ebola community treatment", SourceOrg: "Ministry of Health"}
+	for _, value := range []*models.GuidelineDocument{&document, &other, &outsideHub} {
+		if err := db.Create(value).Error; err != nil {
+			t.Fatal(err)
+		}
+		version := models.GuidelineVersion{DocumentID: value.ID, Version: "1", Status: "published"}
+		if err := db.Create(&version).Error; err != nil {
+			t.Fatal(err)
+		}
+		if err := db.Model(value).Update("current_version_id", version.ID).Error; err != nil {
+			t.Fatal(err)
+		}
+		status := "approved"
+		if value.ID == document.ID || value.ID == outsideHub.ID {
+			if err := db.Create(&models.ContentDiseaseAssignment{DiseaseID: disease.ID, ContentType: models.ContentDiseaseGuideline, ContentID: value.ID, IsPrimary: true}).Error; err != nil {
+				t.Fatal(err)
+			}
+		} else {
+			status = "draft"
+		}
+		if err := db.Create(&models.GuidelineChunk{DocumentID: value.ID, VersionID: version.ID, Title: value.Title, Content: "Ebola clinical treatment", ReviewStatus: status}).Error; err != nil {
+			t.Fatal(err)
+		}
+	}
+	now := time.Now().UTC()
+	hub := models.ContentHub{Name: "Ebola response", Slug: "ebola-response", Status: models.ContentHubStatusActive, PublishedAt: &now}
+	if err := db.Create(&hub).Error; err != nil {
+		t.Fatal(err)
+	}
+	pillar := models.ContentPillar{HubID: hub.ID, Name: "Clinical care", Slug: "clinical-care", Status: models.ContentPillarStatusActive}
+	if err := db.Create(&pillar).Error; err != nil {
+		t.Fatal(err)
+	}
+	if err := db.Create(&models.ContentPillarItem{PillarID: pillar.ID, ContentType: models.ContentDiseaseGuideline, ContentID: &document.ID, Status: models.ContentPillarItemStatusActive}).Error; err != nil {
+		t.Fatal(err)
+	}
+
+	service := SearchService{DB: db}
+	byAlias, err := service.SearchApprovedGuidelineContextFiltered(t.Context(), "Ebola treatment", PublicSearchFilter{DiseaseSlug: "EVD"}, 5)
+	if err != nil || len(byAlias) != 2 {
+		t.Fatalf("alias-scoped RAG retrieval failed: %#v %v", byAlias, err)
+	}
+	byPillar, err := service.SearchApprovedGuidelineContextFiltered(t.Context(), "Ebola treatment", PublicSearchFilter{HubSlug: hub.Slug, PillarSlug: pillar.Slug}, 5)
+	if err != nil || len(byPillar) != 1 || byPillar[0].GuidelineID != document.ID.String() {
+		t.Fatalf("pillar-scoped RAG retrieval failed: %#v %v", byPillar, err)
+	}
+	publicByHub, err := service.PublicSearchContextFiltered(t.Context(), "Ebola treatment", PublicSearchFilter{HubSlug: hub.Slug}, 20)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, result := range publicByHub {
+		if result.GuidelineID == outsideHub.ID.String() || result.ID == outsideHub.ID.String() {
+			t.Fatalf("disease-assigned resource outside the requested hub leaked into search: %#v", publicByHub)
+		}
+	}
+}

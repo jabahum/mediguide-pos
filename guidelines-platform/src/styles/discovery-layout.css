@@ -1,0 +1,44 @@
+.disease-hierarchy {
+  align-items: start;
+}
+
+.disease-children {
+  display: grid;
+  gap: 0.7rem;
+  margin: 0.7rem 0 0 1.2rem;
+}
+
+.disease-children .discovery-card {
+  box-shadow: none;
+}
+
+.search-filter-panel {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.75rem;
+  margin: 2rem 0;
+}
+
+.search-filter-panel input,
+.search-filter-panel select {
+  min-height: 3rem;
+  padding: 0 0.9rem;
+  color: inherit;
+  background: var(--color-surface);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-sm);
+}
+
+.search-filter-panel [aria-label="Search"] {
+  grid-column: span 2;
+}
+
+@media (max-width: 760px) {
+  .search-filter-panel {
+    grid-template-columns: 1fr;
+  }
+
+  .search-filter-panel [aria-label="Search"] {
+    grid-column: auto;
+  }
+}

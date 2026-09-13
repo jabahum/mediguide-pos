@@ -16,6 +16,46 @@ import (
 // discovery is intentionally deferred to the public experience phase.
 type DiseaseHandler struct{ Service services.DiseaseService }
 
+// PublicList godoc
+// @Summary Browse diseases with eligible public content
+// @Tags public-diseases
+// @Produce json
+// @Param search query string false "Canonical name, alias, or slug"
+// @Param parent_id query string false "Parent disease UUID"
+// @Param root_only query bool false "Return root diseases only"
+// @Param page query int false "Page number"
+// @Param per_page query int false "Items per page"
+// @Success 200 {object} handlers.PaginatedPublicDiseasesEnvelope
+// @Router /api/public/diseases [get]
+func (h DiseaseHandler) PublicList(c *gin.Context) {
+	page, err := parsePageQuery(c, 20, 100)
+	if err != nil {
+		httpx.Error(c, http.StatusBadRequest, "invalid pagination")
+		return
+	}
+	rootOnly, err := optionalBool(c.Query("root_only"))
+	if err != nil {
+		httpx.Error(c, http.StatusBadRequest, "invalid root-only filter")
+		return
+	}
+	result, serviceErr := h.Service.ListPublic(c.Request.Context(), services.PublicDiseaseQuery{
+		Page: page, Search: c.Query("search"), ParentID: c.Query("parent_id"), RootOnly: rootOnly,
+	})
+	h.write(c, http.StatusOK, result, serviceErr)
+}
+
+// PublicGet godoc
+// @Summary Get a disease and its eligible hubs and resources
+// @Tags public-diseases
+// @Produce json
+// @Param slug path string true "Disease slug"
+// @Success 200 {object} handlers.PublicDiseaseEnvelope
+// @Router /api/public/diseases/{slug} [get]
+func (h DiseaseHandler) PublicGet(c *gin.Context) {
+	result, err := h.Service.GetPublic(c.Request.Context(), c.Param("slug"))
+	h.write(c, http.StatusOK, result, err)
+}
+
 // List godoc
 // @Summary List diseases and clinical conditions
 // @Tags disease-taxonomy

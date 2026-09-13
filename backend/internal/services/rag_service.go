@@ -32,6 +32,14 @@ type AskRequest struct {
 	Country     string `json:"country"`
 	ProgramArea string `json:"program_area"`
 	SessionID   string `json:"session_id"`
+	CategoryID  string `json:"category_id,omitempty"`
+	DiseaseID   string `json:"disease_id,omitempty"`
+	DiseaseSlug string `json:"disease_slug,omitempty"`
+	HubID       string `json:"hub_id,omitempty"`
+	HubSlug     string `json:"hub_slug,omitempty"`
+	PillarID    string `json:"pillar_id,omitempty"`
+	PillarSlug  string `json:"pillar_slug,omitempty"`
+	ContentType string `json:"content_type,omitempty"`
 }
 
 type workerAskRequest struct {
@@ -41,6 +49,7 @@ type workerAskRequest struct {
 	ProgramArea    string              `json:"program_area"`
 	HistorySummary string              `json:"history_summary,omitempty"`
 	RecentMessages []workerChatMessage `json:"recent_messages,omitempty"`
+	Filter         PublicSearchFilter  `json:"-"`
 }
 
 type workerChatMessage struct {
@@ -49,15 +58,23 @@ type workerChatMessage struct {
 }
 
 type Citation struct {
-	ChunkID       string `json:"chunk_id"`
-	GuidelineID   string `json:"guideline_id,omitempty"`
-	SectionID     string `json:"section_id,omitempty"`
-	BlockID       string `json:"block_id,omitempty"`
-	Title         string `json:"title"`
-	SourceName    string `json:"source_name"`
-	SourceVersion string `json:"source_version"`
-	PageStart     *int   `json:"page_start"`
-	PageEnd       *int   `json:"page_end"`
+	ChunkID            string         `json:"chunk_id"`
+	GuidelineID        string         `json:"guideline_id,omitempty"`
+	GuidelineVersionID string         `json:"guideline_version_id,omitempty"`
+	SectionID          string         `json:"section_id,omitempty"`
+	BlockID            string         `json:"block_id,omitempty"`
+	Title              string         `json:"title"`
+	SourceName         string         `json:"source_name"`
+	SourceVersion      string         `json:"source_version"`
+	PageStart          *int           `json:"page_start"`
+	PageEnd            *int           `json:"page_end"`
+	ContentType        string         `json:"content_type,omitempty"`
+	Route              string         `json:"route,omitempty"`
+	Categories         []SearchFacet  `json:"categories,omitempty"`
+	Diseases           []SearchFacet  `json:"diseases,omitempty"`
+	Hubs               []SearchFacet  `json:"hubs,omitempty"`
+	Pillars            []SearchFacet  `json:"pillars,omitempty"`
+	Metadata           map[string]any `json:"metadata,omitempty" swaggertype:"object"`
 }
 type AskResponse struct {
 	Answer         string     `json:"answer"`
@@ -103,7 +120,7 @@ func (s RAGService) AskPublishedGuideline(ctx context.Context, guidelineID uuid.
 	citations := make([]Citation, 0, len(results))
 	parts := make([]string, 0, len(results))
 	for _, result := range results {
-		citations = append(citations, Citation{ChunkID: result.ID, GuidelineID: result.GuidelineID, SectionID: result.SectionID, BlockID: result.BlockID, Title: result.Title, SourceName: result.SourceName, SourceVersion: result.SourceVersion, PageStart: result.PageStart, PageEnd: result.PageEnd})
+		citations = append(citations, Citation{ChunkID: result.ID, GuidelineID: result.GuidelineID, GuidelineVersionID: result.GuidelineVersionID, SectionID: result.SectionID, BlockID: result.BlockID, Title: result.Title, SourceName: result.SourceName, SourceVersion: result.SourceVersion, PageStart: result.PageStart, PageEnd: result.PageEnd, ContentType: "guideline"})
 		parts = append(parts, "- "+result.Snippet)
 	}
 	answer := "I could not find an answer in this published guideline. Review the guideline or consult a senior clinician."
@@ -111,7 +128,7 @@ func (s RAGService) AskPublishedGuideline(ctx context.Context, guidelineID uuid.
 		answer = "I found the following relevant content in this published guideline. Verify the cited sections before clinical use:\n\n" + strings.Join(parts, "\n")
 	}
 	coverage := "Only approved content in the current published guideline was searched. Unreviewed sections were excluded."
-	return &AskResponse{Answer: answer, Citations: citations, SearchScope: "current_published_reviewed_content", CoverageNotice: coverage}, nil
+	return &AskResponse{Answer: answer, Citations: s.enrichCitations(citations), SearchScope: "current_published_reviewed_content", CoverageNotice: coverage}, nil
 }
 
 func (s RAGService) Ask(userID *uuid.UUID, req AskRequest) (*AskResponse, error) {
@@ -199,7 +216,7 @@ func (s RAGService) enrichCitations(citations []Citation) []Citation {
 	}
 	var chunks []models.GuidelineChunk
 	if err := s.DB.Model(&models.GuidelineChunk{}).
-		Select("guideline_chunks.id", "guideline_chunks.document_id", "guideline_chunks.section_id", "guideline_chunks.block_id").
+		Select("guideline_chunks.id", "guideline_chunks.document_id", "guideline_chunks.version_id", "guideline_chunks.section_id", "guideline_chunks.block_id").
 		Joins("JOIN guideline_documents gd ON gd.id = guideline_chunks.document_id AND gd.current_version_id = guideline_chunks.version_id AND gd.deleted_at IS NULL").
 		Joins("JOIN guideline_versions gv ON gv.id = guideline_chunks.version_id AND gv.deleted_at IS NULL AND LOWER(gv.status) = 'published'").
 		Where("guideline_chunks.id IN ? AND guideline_chunks.review_status = ?", ids, "approved").Find(&chunks).Error; err != nil {
@@ -223,12 +240,36 @@ func (s RAGService) enrichCitations(citations []Citation) []Citation {
 		if chunk.BlockID != nil {
 			citations[index].BlockID = chunk.BlockID.String()
 		}
+		citations[index].ContentType = "guideline"
+		citations[index].GuidelineVersionID = chunk.VersionID.String()
+		searchResult := SearchResult{ID: chunk.ID.String(), ResultType: "guideline", GuidelineID: chunk.DocumentID.String(), GuidelineVersionID: chunk.VersionID.String(), SourceName: citations[index].SourceName, SourceVersion: citations[index].SourceVersion}
+		metadataSearch := s.Search
+		if metadataSearch.DB == nil {
+			metadataSearch.DB = s.DB
+		}
+		if err := metadataSearch.attachSearchMetadata(context.Background(), &searchResult); err != nil {
+			log.Warn().Err(err).Str("chunk_id", chunk.ID.String()).Msg("failed to attach RAG citation taxonomy")
+			verified = append(verified, citations[index])
+			continue
+		}
+		citations[index].Route = searchResult.Route
+		citations[index].Categories = searchResult.Categories
+		citations[index].Diseases = searchResult.Diseases
+		citations[index].Hubs = searchResult.Hubs
+		citations[index].Pillars = searchResult.Pillars
+		citations[index].Metadata = searchResult.Metadata
 		verified = append(verified, citations[index])
 	}
 	return verified
 }
 
 func (s RAGService) askWithConfiguredProvider(req workerAskRequest) (*AskResponse, error) {
+	// The worker protocol currently has no taxonomy-filter fields. Sending a
+	// scoped request there would risk returning otherwise-public but out-of-scope
+	// evidence, so scoped questions always use the authoritative local query.
+	if hasPublicSearchScope(req.Filter) {
+		return s.askLocal(req)
+	}
 	provider := strings.ToLower(strings.TrimSpace(s.Cfg.AIRAGProvider))
 	if provider == "worker" || provider == "ai-worker" {
 		if res, err := s.askWorker(req); err == nil {
@@ -317,7 +358,7 @@ func toGRPCChatMessages(messages []workerChatMessage) []*aiworkerpb.ChatMessage 
 }
 
 func (s RAGService) askLocal(req workerAskRequest) (*AskResponse, error) {
-	results, err := s.Search.SearchApprovedGuidelineContext(context.Background(), s.buildLocalSearchQuestion(req), 5)
+	results, err := s.Search.SearchApprovedGuidelineContextFiltered(context.Background(), s.buildLocalSearchQuestion(req), req.Filter, 5)
 	if err != nil {
 		return nil, err
 	}
@@ -378,7 +419,18 @@ func (s RAGService) buildWorkerAskRequest(sessionID uuid.UUID, req AskRequest) (
 		ProgramArea:    req.ProgramArea,
 		HistorySummary: historySummary,
 		RecentMessages: recentMessages,
+		Filter: PublicSearchFilter{
+			ProgramArea: req.ProgramArea, CategoryID: req.CategoryID,
+			DiseaseID: req.DiseaseID, DiseaseSlug: req.DiseaseSlug,
+			HubID: req.HubID, HubSlug: req.HubSlug,
+			PillarID: req.PillarID, PillarSlug: req.PillarSlug,
+			ContentType: req.ContentType,
+		},
 	}, nil
+}
+
+func hasPublicSearchScope(filter PublicSearchFilter) bool {
+	return strings.TrimSpace(filter.CategoryID+filter.DiseaseID+filter.DiseaseSlug+filter.HubID+filter.HubSlug+filter.PillarID+filter.PillarSlug+filter.ContentType) != ""
 }
 
 func (s RAGService) loadConversationContext(sessionID uuid.UUID) (string, []workerChatMessage, error) {

@@ -326,6 +326,14 @@ type PaginatedDiseasesEnvelope struct {
 	Success bool                                `json:"success"`
 	Data    services.PageResult[models.Disease] `json:"data"`
 }
+type PublicDiseaseEnvelope struct {
+	Success bool                   `json:"success"`
+	Data    services.PublicDisease `json:"data"`
+}
+type PaginatedPublicDiseasesEnvelope struct {
+	Success bool                                               `json:"success"`
+	Data    services.PageResult[services.PublicDiseaseSummary] `json:"data"`
+}
 type PaginatedDiseaseMigrationReportEnvelope struct {
 	Success bool                                                       `json:"success"`
 	Data    services.PageResult[models.DiseaseTaxonomyMigrationReport] `json:"data"`

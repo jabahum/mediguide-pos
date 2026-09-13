@@ -29,6 +29,7 @@ import 'package:user_app/features/guidelines/data/repositories/progress_usage_re
 import 'package:user_app/features/library/data/repositories/guideline_library_repository.dart';
 import 'package:user_app/features/outbreaks/data/repositories/outbreak_repository.dart';
 import 'package:user_app/features/ai_assistant/data/repositories/rag_repository.dart';
+import 'package:user_app/features/discovery/data/repositories/discovery_repository.dart';
 import 'package:user_app/features/support/data/repositories/support_repository.dart';
 import 'package:user_app/features/support/data/repositories/support_local_repository.dart';
 import 'package:user_app/features/authentication/data/repositories/user_repository.dart';
@@ -111,6 +112,13 @@ final ragRepositoryProvider = Provider.autoDispose<RagAssistant>(
   (ref) => RagRepository(
     ref.watch(backendApiServiceProvider),
     ref.watch(sharedPreferencesProvider),
+  ),
+);
+
+final discoveryRepositoryProvider = Provider<DiscoveryRepository>(
+  (ref) => DiscoveryRepository(
+    ref.watch(backendApiServiceProvider),
+    ref.watch(localCacheServiceProvider),
   ),
 );
 

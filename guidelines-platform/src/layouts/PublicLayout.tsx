@@ -1,4 +1,4 @@
-import { Outlet } from "react-router-dom";
+import { Link, Outlet } from "react-router-dom";
 
 import { Brand } from "../components/common/Brand";
 import { ThemeToggle } from "../components/common/ThemeToggle";
@@ -14,8 +14,9 @@ export function PublicLayout() {
         <div className="page-shell public-header-inner">
           <Brand />
           <nav className="public-nav" aria-label="Main navigation">
-            <a href="#guidelines">Guidelines</a>
-            <a href="#about">About</a>
+            <Link to="/">Guidelines</Link>
+            <Link to="/diseases">Diseases</Link>
+            <Link to="/search">Search</Link>
             <ThemeToggle />
             <a
               className="button button-small button-outline"

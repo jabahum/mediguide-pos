@@ -7,6 +7,7 @@ import {
   getPublicGuidelineContent,
   getPublicGuidelineMarkdown,
   listPublicGuidelines,
+  searchPublicContent,
 } from "./public-guidelines";
 
 describe("public guideline API client", () => {
@@ -32,6 +33,34 @@ describe("public guideline API client", () => {
     expect(url).toContain("search=maternal+%26+child");
     expect(url).toContain("program_area=Care");
     expect(url).not.toContain("/markdown");
+  });
+
+  it("sends every disease and hub discovery filter to unified public search", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify({ success: true, data: [] }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    await searchPublicContent("EVD care", {
+      categoryId: "category-id",
+      diseaseSlug: "evd",
+      hubSlug: "ebola-response",
+      pillarSlug: "clinical-care",
+      contentType: "guideline",
+      limit: 17,
+    });
+
+    const url = String(fetchMock.mock.calls[0][0]);
+    expect(url).toContain("q=EVD+care");
+    expect(url).toContain("category_id=category-id");
+    expect(url).toContain("disease_slug=evd");
+    expect(url).toContain("hub_slug=ebola-response");
+    expect(url).toContain("pillar_slug=clinical-care");
+    expect(url).toContain("content_type=guideline");
+    expect(url).toContain("limit=17");
   });
 
   it("revalidates cached Markdown with an ETag and reuses it on 304", async () => {

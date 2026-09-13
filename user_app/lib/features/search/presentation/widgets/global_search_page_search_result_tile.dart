@@ -184,6 +184,9 @@ class _SearchResultTile extends ConsumerWidget {
   static IconData iconFor(SearchCategory category) {
     return switch (category) {
       SearchCategory.drugs => LucideIcons.pill,
+      SearchCategory.diseases => LucideIcons.activity,
+      SearchCategory.hubs => LucideIcons.layoutGrid,
+      SearchCategory.pillars => LucideIcons.folderOpen,
       SearchCategory.guidelines => LucideIcons.bookOpenText,
       SearchCategory.consultants => LucideIcons.stethoscope,
       SearchCategory.healthFacilities => LucideIcons.hospital,

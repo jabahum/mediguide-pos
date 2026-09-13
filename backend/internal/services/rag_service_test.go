@@ -84,7 +84,10 @@ func TestRAGCitationEnrichmentUsesAuthoritativeChunkNavigation(t *testing.T) {
 		{ChunkID: uuid.NewString(), Title: "Stale worker citation"},
 	})
 
-	if len(citations) != 1 || citations[0].GuidelineID != chunk.DocumentID.String() || citations[0].SectionID != sectionID.String() || citations[0].BlockID != blockID.String() {
+	if len(citations) != 1 || citations[0].GuidelineID != chunk.DocumentID.String() || citations[0].GuidelineVersionID != version.ID.String() || citations[0].ContentType != "guideline" || citations[0].SectionID != sectionID.String() || citations[0].BlockID != blockID.String() {
 		t.Fatalf("unexpected citation navigation: %+v", citations)
+	}
+	if citations[0].Route != "/guidelines/"+document.ID.String() || citations[0].Metadata["review_state"] != "approved" {
+		t.Fatalf("citation metadata is incomplete: %+v", citations[0])
 	}
 }

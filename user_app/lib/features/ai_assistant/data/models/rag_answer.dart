@@ -40,13 +40,23 @@ abstract class RagCitation with _$RagCitation {
   const factory RagCitation({
     @JsonKey(name: 'chunk_id') @Default('') String chunkId,
     @JsonKey(name: 'guideline_id') @Default('') String guidelineId,
+    @JsonKey(name: 'guideline_version_id')
+    @Default('')
+    String guidelineVersionId,
     @JsonKey(name: 'section_id') @Default('') String sectionId,
     @JsonKey(name: 'block_id') @Default('') String blockId,
+    @JsonKey(name: 'content_type') @Default('') String contentType,
+    @Default('') String route,
     @Default('') String title,
     @JsonKey(name: 'source_name') @Default('') String sourceName,
     @JsonKey(name: 'source_version') @Default('') String sourceVersion,
     @JsonKey(name: 'page_start') int? pageStart,
     @JsonKey(name: 'page_end') int? pageEnd,
+    @Default(<Map<String, dynamic>>[]) List<Map<String, dynamic>> categories,
+    @Default(<Map<String, dynamic>>[]) List<Map<String, dynamic>> diseases,
+    @Default(<Map<String, dynamic>>[]) List<Map<String, dynamic>> hubs,
+    @Default(<Map<String, dynamic>>[]) List<Map<String, dynamic>> pillars,
+    @Default(<String, dynamic>{}) Map<String, dynamic> metadata,
   }) = _RagCitation;
 
   factory RagCitation.fromJson(Map<String, dynamic> json) =>

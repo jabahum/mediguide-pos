@@ -1,6 +1,9 @@
 /// Enum representing different search categories
 enum SearchCategory {
   all(value: 'all', displayName: 'All Results'),
+  diseases(value: 'diseases', displayName: 'Diseases'),
+  hubs(value: 'hubs', displayName: 'Content Hubs'),
+  pillars(value: 'pillars', displayName: 'Hub Sections'),
   drugs(value: 'drugs', displayName: 'Drugs'),
   guidelines(value: 'guidelines', displayName: 'Guidelines'),
   consultants(value: 'consultants', displayName: 'Consultants'),

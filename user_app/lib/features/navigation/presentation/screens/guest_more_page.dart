@@ -54,6 +54,12 @@ class GuestMorePage extends StatelessWidget {
             title: 'Directories',
             children: [
               _MoreItem(
+                icon: LucideIcons.activity,
+                title: 'Diseases & Conditions',
+                subtitle: 'Browse approved guidance by disease',
+                onTap: () => context.push(AppRoutes.diseases),
+              ),
+              _MoreItem(
                 icon: LucideIcons.hospital,
                 title: 'Health Facilities',
                 subtitle: 'Find health facilities and available services',

@@ -227,6 +227,8 @@ func New(cfg config.Config) (*App, error) {
 		public.GET("/hubs", contentHubH.PublicList)
 		public.GET("/hubs/:slug", contentHubH.PublicGet)
 		public.GET("/hubs/:slug/pillars/:pillarSlug", contentHubH.PublicPillar)
+		public.GET("/diseases", diseaseH.PublicList)
+		public.GET("/diseases/:slug", diseaseH.PublicGet)
 		public.POST("/assistant/ask",
 			middleware.PrivateNoStore(),
 			rateLimiter.Limit(middleware.Policy("public-general-ai-chat-minute", 6, time.Minute, 1), middleware.IPIdentity),

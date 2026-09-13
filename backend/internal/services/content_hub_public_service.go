@@ -8,6 +8,7 @@ import (
 	"mediguide/internal/models"
 
 	"github.com/google/uuid"
+	"gorm.io/datatypes"
 	"gorm.io/gorm"
 )
 
@@ -23,7 +24,22 @@ type PublicContentHub struct {
 	PublishedAt *time.Time            `json:"published_at,omitempty"`
 	Diseases    []PublicHubDisease    `json:"diseases"`
 	OutbreakID  *uuid.UUID            `json:"outbreak_id,omitempty"`
+	Outbreak    *PublicHubOutbreak    `json:"outbreak,omitempty"`
 	Pillars     []PublicContentPillar `json:"pillars,omitempty"`
+}
+
+type PublicHubOutbreak struct {
+	ID                 uuid.UUID      `json:"id"`
+	Title              string         `json:"title"`
+	Status             string         `json:"status"`
+	DiseaseType        string         `json:"disease_type,omitempty"`
+	GeographicArea     string         `json:"geographic_area,omitempty"`
+	Summary            string         `json:"summary,omitempty"`
+	VisualTone         string         `json:"visual_tone,omitempty"`
+	SourceOrganization string         `json:"source_organization,omitempty"`
+	DataAsOf           *time.Time     `json:"data_as_of,omitempty"`
+	LastVerifiedAt     *time.Time     `json:"last_verified_at,omitempty"`
+	Metrics            datatypes.JSON `json:"metrics,omitempty" swaggertype:"array,object"`
 }
 
 type PublicHubDisease struct {
@@ -47,17 +63,18 @@ type PublicContentPillar struct {
 }
 
 type PublicContentPillarItem struct {
-	ID                  uuid.UUID  `json:"id"`
-	ContentType         string     `json:"content_type"`
-	ContentID           *uuid.UUID `json:"content_id,omitempty"`
-	Target              string     `json:"target,omitempty"`
-	LabelOverride       string     `json:"label_override,omitempty"`
-	DescriptionOverride string     `json:"description_override,omitempty"`
-	IconOverride        string     `json:"icon_override,omitempty"`
-	SortOrder           int        `json:"sort_order"`
-	Featured            bool       `json:"featured"`
-	StartsAt            *time.Time `json:"starts_at,omitempty"`
-	EndsAt              *time.Time `json:"ends_at,omitempty"`
+	ID                  uuid.UUID              `json:"id"`
+	ContentType         string                 `json:"content_type"`
+	ContentID           *uuid.UUID             `json:"content_id,omitempty"`
+	Target              string                 `json:"target,omitempty"`
+	LabelOverride       string                 `json:"label_override,omitempty"`
+	DescriptionOverride string                 `json:"description_override,omitempty"`
+	IconOverride        string                 `json:"icon_override,omitempty"`
+	SortOrder           int                    `json:"sort_order"`
+	Featured            bool                   `json:"featured"`
+	StartsAt            *time.Time             `json:"starts_at,omitempty"`
+	EndsAt              *time.Time             `json:"ends_at,omitempty"`
+	Resource            *PublicContentResource `json:"resource,omitempty"`
 }
 
 type PublicContentHubQuery struct {
@@ -67,10 +84,10 @@ type PublicContentHubQuery struct {
 	DiseaseSlug string
 }
 
-func (s ContentHubService) ListPublicHubs(_ context.Context, in PublicContentHubQuery) (*PageResult[PublicContentHub], error) {
+func (s ContentHubService) ListPublicHubs(ctx context.Context, in PublicContentHubQuery) (*PageResult[PublicContentHub], error) {
 	p := in.Page.Normalize(20, 100)
 	now := time.Now().UTC()
-	query := s.DB.Model(&models.ContentHub{}).
+	query := s.DB.WithContext(ctx).Model(&models.ContentHub{}).
 		Where("content_hubs.deleted_at IS NULL AND content_hubs.status = ? AND content_hubs.published_at IS NOT NULL AND content_hubs.published_at <= ?", models.ContentHubStatusActive, now)
 	if search := strings.TrimSpace(in.Search); search != "" {
 		like := "%" + strings.ToLower(search) + "%"
@@ -96,7 +113,7 @@ func (s ContentHubService) ListPublicHubs(_ context.Context, in PublicContentHub
 	}
 	items := make([]PublicContentHub, 0, len(hubs))
 	for _, hub := range hubs {
-		publicHub, err := s.buildPublicHub(hub, now, false)
+		publicHub, err := s.buildPublicHub(ctx, hub, now, false)
 		if err != nil {
 			return nil, err
 		}
@@ -105,32 +122,43 @@ func (s ContentHubService) ListPublicHubs(_ context.Context, in PublicContentHub
 	return NewPageResult(items, p, total), nil
 }
 
-func (s ContentHubService) GetPublicHub(_ context.Context, slug string) (*PublicContentHub, error) {
+func (s ContentHubService) GetPublicHub(ctx context.Context, slug string) (*PublicContentHub, error) {
 	now := time.Now().UTC()
 	var hub models.ContentHub
-	if err := s.DB.Where("lower(slug) = lower(?) AND deleted_at IS NULL AND status = ? AND published_at IS NOT NULL AND published_at <= ?", strings.TrimSpace(slug), models.ContentHubStatusActive, now).First(&hub).Error; err != nil {
+	if err := s.DB.WithContext(ctx).Where("lower(slug) = lower(?) AND deleted_at IS NULL AND status = ? AND published_at IS NOT NULL AND published_at <= ?", strings.TrimSpace(slug), models.ContentHubStatusActive, now).First(&hub).Error; err != nil {
 		return nil, err
 	}
-	return s.buildPublicHub(hub, now, true)
+	return s.buildPublicHub(ctx, hub, now, true)
 }
 
 // GetPublicOutbreakHub resolves only an explicit outbreak-to-hub assignment.
 // Callers treat not-found as the signal to retain the legacy presentation.
-func (s ContentHubService) GetPublicOutbreakHub(_ context.Context, outbreakID uuid.UUID) (*PublicContentHub, error) {
+func (s ContentHubService) GetPublicOutbreakHub(ctx context.Context, outbreakID uuid.UUID) (*PublicContentHub, error) {
 	now := time.Now().UTC()
 	var hub models.ContentHub
-	err := s.DB.Joins("JOIN content_hub_outbreaks cho ON cho.content_hub_id = content_hubs.id").
+	err := s.DB.WithContext(ctx).Joins("JOIN content_hub_outbreaks cho ON cho.content_hub_id = content_hubs.id").
 		Joins("JOIN outbreaks o ON o.id = cho.outbreak_id AND o.deleted_at IS NULL").
 		Where("cho.outbreak_id = ? AND content_hubs.deleted_at IS NULL AND content_hubs.status = ? AND content_hubs.published_at IS NOT NULL AND content_hubs.published_at <= ? AND o.published_at IS NOT NULL AND o.published_at <= ? AND o.withdrawn_at IS NULL AND o.status IN ?", outbreakID, models.ContentHubStatusActive, now, now, []string{"published", "active", "monitoring", "contained", "closed"}).
 		First(&hub).Error
 	if err != nil {
 		return nil, err
 	}
-	result, err := s.buildPublicHub(hub, now, true)
+	result, err := s.buildPublicHub(ctx, hub, now, true)
 	if err != nil {
 		return nil, err
 	}
 	result.OutbreakID = &outbreakID
+	var outbreak models.Outbreak
+	if err := s.DB.WithContext(ctx).Where("id = ?", outbreakID).First(&outbreak).Error; err != nil {
+		return nil, err
+	}
+	result.Outbreak = &PublicHubOutbreak{
+		ID: outbreak.ID, Title: outbreak.Title, Status: outbreak.Status,
+		DiseaseType: outbreak.DiseaseType, GeographicArea: outbreak.GeographicArea,
+		Summary: outbreak.Summary, VisualTone: outbreak.VisualTone,
+		SourceOrganization: outbreak.SourceOrganization, DataAsOf: outbreak.DataAsOf,
+		LastVerifiedAt: outbreak.LastVerifiedAt, Metrics: outbreak.Metrics,
+	}
 	return result, nil
 }
 
@@ -157,20 +185,37 @@ func (s ContentHubService) GetPublicPillar(ctx context.Context, hubSlug, pillarS
 	return nil, gorm.ErrRecordNotFound
 }
 
-func (s ContentHubService) buildPublicHub(hub models.ContentHub, now time.Time, includePillars bool) (*PublicContentHub, error) {
+func (s ContentHubService) buildPublicHub(ctx context.Context, hub models.ContentHub, now time.Time, includePillars bool) (*PublicContentHub, error) {
 	diseases := []models.Disease{}
-	if err := s.DB.Table("diseases d").Joins("JOIN content_hub_diseases chd ON chd.disease_id = d.id").Where("chd.content_hub_id = ? AND d.deleted_at IS NULL AND d.status = ?", hub.ID, models.DiseaseStatusActive).Order("d.sort_order ASC, d.name ASC, d.id ASC").Find(&diseases).Error; err != nil {
+	if err := s.DB.WithContext(ctx).Table("diseases d").Joins("JOIN content_hub_diseases chd ON chd.disease_id = d.id").Where("chd.content_hub_id = ? AND d.deleted_at IS NULL AND d.status = ?", hub.ID, models.DiseaseStatusActive).Order("d.sort_order ASC, d.name ASC, d.id ASC").Find(&diseases).Error; err != nil {
 		return nil, err
 	}
 	result := &PublicContentHub{ID: hub.ID, Name: hub.Name, Slug: hub.Slug, Description: hub.Description, Icon: hub.Icon, Color: hub.Color, Audience: hub.Audience, SortOrder: hub.SortOrder, PublishedAt: hub.PublishedAt, Diseases: make([]PublicHubDisease, 0, len(diseases))}
 	for _, disease := range diseases {
 		result.Diseases = append(result.Diseases, PublicHubDisease{ID: disease.ID, Name: disease.Name, Slug: disease.Slug, ShortName: disease.ShortName})
 	}
+	var outbreak models.Outbreak
+	outbreakErr := s.DB.WithContext(ctx).Joins("JOIN content_hub_outbreaks cho ON cho.outbreak_id = outbreaks.id").
+		Where("cho.content_hub_id = ? AND outbreaks.deleted_at IS NULL AND outbreaks.published_at IS NOT NULL AND outbreaks.published_at <= ? AND outbreaks.withdrawn_at IS NULL AND outbreaks.status IN ?", hub.ID, now, []string{"published", "active", "monitoring", "contained", "closed"}).
+		Order("outbreaks.last_update DESC, outbreaks.id ASC").First(&outbreak).Error
+	if outbreakErr != nil && outbreakErr != gorm.ErrRecordNotFound {
+		return nil, outbreakErr
+	}
+	if outbreakErr == nil {
+		result.OutbreakID = &outbreak.ID
+		result.Outbreak = &PublicHubOutbreak{
+			ID: outbreak.ID, Title: outbreak.Title, Status: outbreak.Status,
+			DiseaseType: outbreak.DiseaseType, GeographicArea: outbreak.GeographicArea,
+			Summary: outbreak.Summary, VisualTone: outbreak.VisualTone,
+			SourceOrganization: outbreak.SourceOrganization, DataAsOf: outbreak.DataAsOf,
+			LastVerifiedAt: outbreak.LastVerifiedAt, Metrics: outbreak.Metrics,
+		}
+	}
 	if !includePillars {
 		return result, nil
 	}
 	pillars := []models.ContentPillar{}
-	if err := s.DB.Where("hub_id = ? AND deleted_at IS NULL AND status = ?", hub.ID, models.ContentPillarStatusActive).Order("sort_order ASC, name ASC, id ASC").Find(&pillars).Error; err != nil {
+	if err := s.DB.WithContext(ctx).Where("hub_id = ? AND deleted_at IS NULL AND status = ?", hub.ID, models.ContentPillarStatusActive).Order("sort_order ASC, name ASC, id ASC").Find(&pillars).Error; err != nil {
 		return nil, err
 	}
 	byParent := map[uuid.UUID][]models.ContentPillar{}
@@ -186,7 +231,7 @@ func (s ContentHubService) buildPublicHub(hub models.ContentHub, now time.Time, 
 	build = func(pillar models.ContentPillar) (PublicContentPillar, error) {
 		out := PublicContentPillar{ID: pillar.ID, ParentID: pillar.ParentID, Name: pillar.Name, Slug: pillar.Slug, Description: pillar.Description, Icon: pillar.Icon, Color: pillar.Color, SortOrder: pillar.SortOrder, Items: []PublicContentPillarItem{}, Children: []PublicContentPillar{}}
 		items := []models.ContentPillarItem{}
-		if err := s.DB.Where("pillar_id = ? AND deleted_at IS NULL AND status = ? AND (starts_at IS NULL OR starts_at <= ?) AND (ends_at IS NULL OR ends_at > ?)", pillar.ID, models.ContentPillarItemStatusActive, now, now).Order("sort_order ASC, id ASC").Find(&items).Error; err != nil {
+		if err := s.DB.WithContext(ctx).Where("pillar_id = ? AND deleted_at IS NULL AND status = ? AND (starts_at IS NULL OR starts_at <= ?) AND (ends_at IS NULL OR ends_at > ?)", pillar.ID, models.ContentPillarItemStatusActive, now, now).Order("sort_order ASC, id ASC").Find(&items).Error; err != nil {
 			return out, err
 		}
 		for _, item := range items {
@@ -197,7 +242,17 @@ func (s ContentHubService) buildPublicHub(hub models.ContentHub, now time.Time, 
 			if !eligible {
 				continue
 			}
-			out.Items = append(out.Items, PublicContentPillarItem{ID: item.ID, ContentType: item.ContentType, ContentID: item.ContentID, Target: item.Target, LabelOverride: item.LabelOverride, DescriptionOverride: item.DescriptionOverride, IconOverride: item.IconOverride, SortOrder: item.SortOrder, Featured: item.Featured, StartsAt: item.StartsAt, EndsAt: item.EndsAt})
+			publicItem := PublicContentPillarItem{ID: item.ID, ContentType: item.ContentType, ContentID: item.ContentID, Target: item.Target, LabelOverride: item.LabelOverride, DescriptionOverride: item.DescriptionOverride, IconOverride: item.IconOverride, SortOrder: item.SortOrder, Featured: item.Featured, StartsAt: item.StartsAt, EndsAt: item.EndsAt}
+			if item.ContentID != nil {
+				resource, resolveErr := resolvePublicContentResource(ctx, s.DB, item.ContentType, *item.ContentID)
+				if resolveErr != nil && resolveErr != gorm.ErrRecordNotFound {
+					return out, resolveErr
+				}
+				publicItem.Resource = resource
+			} else if item.ContentType == models.ContentPillarItemInternalRoute || item.ContentType == models.ContentPillarItemApprovedExternalURL {
+				publicItem.Resource = &PublicContentResource{ID: item.ID, ContentType: item.ContentType, Title: item.LabelOverride, Description: item.DescriptionOverride, Route: item.Target, ReviewState: "approved"}
+			}
+			out.Items = append(out.Items, publicItem)
 		}
 		for _, child := range byParent[pillar.ID] {
 			built, err := build(child)

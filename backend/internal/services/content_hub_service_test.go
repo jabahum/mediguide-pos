@@ -16,6 +16,8 @@ func contentHubTestDB(t *testing.T) *gorm.DB {
 	t.Helper()
 	db := classificationTestDB(t)
 	if err := db.AutoMigrate(
+		&models.DiseaseAlias{},
+		&models.DiseaseCode{},
 		&models.ContentHub{},
 		&models.ContentHubDisease{},
 		&models.ContentHubOutbreak{},
@@ -78,9 +80,46 @@ func TestConfigureOutbreakHubMapsPublishedResourcesAndSurveillance(t *testing.T)
 	if err != nil || publicHub.OutbreakID == nil || *publicHub.OutbreakID != outbreak.ID {
 		t.Fatalf("public outbreak lookup failed: %#v %v", publicHub, err)
 	}
+	publicBySlug, err := service.GetPublicHub(context.Background(), workspace.Hub.Slug)
+	if err != nil || publicBySlug.Outbreak == nil || publicBySlug.Outbreak.ID != outbreak.ID {
+		t.Fatalf("normal public hub route omitted its outbreak banner: %#v %v", publicBySlug, err)
+	}
 	again, err := service.ConfigureOutbreakHub(ContentHubActor{}, outbreak.ID, ConfigureOutbreakHubInput{})
 	if err != nil || again.Hub.ID != workspace.Hub.ID {
 		t.Fatalf("configuration should be idempotent: %#v %v", again, err)
+	}
+}
+
+func TestPublicDiseaseDirectoryKeepsParentsWithEligibleDescendants(t *testing.T) {
+	db := contentHubTestDB(t)
+	parent := models.Disease{Name: "Communicable infection", Slug: "communicable-infection", NormalizedName: "communicable infection", Status: models.DiseaseStatusActive}
+	if err := db.Create(&parent).Error; err != nil {
+		t.Fatal(err)
+	}
+	child := models.Disease{Name: "Ebola virus disease", Slug: "ebola-virus-disease", NormalizedName: "ebola virus disease", ParentID: &parent.ID, Status: models.DiseaseStatusActive}
+	if err := db.Create(&child).Error; err != nil {
+		t.Fatal(err)
+	}
+	alias := models.DiseaseAlias{DiseaseID: child.ID, Alias: "EVD", NormalizedAlias: "evd"}
+	if err := db.Create(&alias).Error; err != nil {
+		t.Fatal(err)
+	}
+	now := time.Now().UTC()
+	hub := models.ContentHub{Name: "Ebola care", Slug: "ebola-care", Status: models.ContentHubStatusActive, PublishedAt: &now}
+	if err := db.Create(&hub).Error; err != nil {
+		t.Fatal(err)
+	}
+	if err := db.Create(&models.ContentHubDisease{ContentHubID: hub.ID, DiseaseID: child.ID}).Error; err != nil {
+		t.Fatal(err)
+	}
+	service := DiseaseService{DB: db}
+	page, err := service.ListPublic(context.Background(), PublicDiseaseQuery{Page: PageInput{Page: 1, PerPage: 20}})
+	if err != nil || len(page.Items) != 2 || page.Items[0].ID != parent.ID || page.Items[1].ID != child.ID {
+		t.Fatalf("eligible hierarchy was flattened or parent hidden: %#v %v", page, err)
+	}
+	resolved, err := service.GetPublic(context.Background(), "EVD")
+	if err != nil || resolved.ID != child.ID {
+		t.Fatalf("public alias did not resolve to the canonical disease: %#v %v", resolved, err)
 	}
 }
 

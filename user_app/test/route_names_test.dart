@@ -34,6 +34,23 @@ void main() {
       expect(AppRoutes.isPublic(route), isTrue);
     });
 
+    test('builds public disease, hub and nested pillar routes', () {
+      expect(AppRoutes.disease('Ebola care'), '/diseases/Ebola%20care');
+      expect(AppRoutes.hub('ebola-response'), '/hubs/ebola-response');
+      expect(
+        AppRoutes.hubPillar('ebola-response', 'IPC & PPE'),
+        '/hubs/ebola-response/pillars/IPC%20%26%20PPE',
+      );
+      expect(AppRoutes.isPublic(AppRoutes.disease('ebola')), isTrue);
+      expect(AppRoutes.isPublic(AppRoutes.hub('ebola-response')), isTrue);
+      expect(
+        AppRoutes.isPublic(
+          AppRoutes.hubPillar('ebola-response', 'clinical-care'),
+        ),
+        isTrue,
+      );
+    });
+
     test('allows guests to open the general MediGuide Assistant', () {
       expect(AppRoutes.isPublic(AppRoutes.aiAssistant), isTrue);
     });

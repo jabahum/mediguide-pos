@@ -201,13 +201,21 @@ export type PublicMarkdown = {
 export type PublicAICitation = {
   chunk_id: string;
   guideline_id?: string;
+  guideline_version_id?: string;
   section_id?: string;
   block_id?: string;
+  content_type?: string;
+  route?: string;
   title: string;
   source_name: string;
   source_version: string;
   page_start?: number;
   page_end?: number;
+  categories?: DiscoveryFacet[];
+  diseases?: DiscoveryFacet[];
+  hubs?: DiscoveryFacet[];
+  pillars?: DiscoveryFacet[];
+  metadata?: Record<string, unknown>;
 };
 
 export type PublicAIAnswer = {
@@ -217,6 +225,45 @@ export type PublicAIAnswer = {
   search_scope?: string;
   coverage_notice?: string;
 };
+
+export type DiscoveryFacet = { id: string; name: string; slug?: string };
+export type PublicResource = {
+  id: string; content_type: string; title: string; description?: string; route?: string;
+  source_organization?: string; issuing_authority?: string; version?: string;
+  publication_date?: string; effective_at?: string; review_at?: string; expires_at?: string;
+  review_state?: string; provenance?: string;
+};
+export type PublicPillarItem = {
+  id: string; content_type: string; label_override?: string; description_override?: string;
+  icon_override?: string; sort_order: number; featured: boolean; resource?: PublicResource;
+};
+export type PublicPillar = {
+  id: string; parent_id?: string; name: string; slug: string; description?: string;
+  icon?: string; color?: string; sort_order: number; items: PublicPillarItem[]; children: PublicPillar[];
+};
+export type PublicHub = {
+  id: string; name: string; slug: string; description?: string; icon?: string; color?: string;
+  audience?: string; published_at?: string; diseases: DiscoveryFacet[]; pillars?: PublicPillar[];
+  outbreak?: { id: string; title: string; status: string; disease_type?: string; geographic_area?: string;
+    summary?: string; source_organization?: string; data_as_of?: string; last_verified_at?: string;
+    metrics?: Array<Record<string, unknown>> };
+};
+export type PublicDiseaseSummary = DiscoveryFacet & {
+  parent_id?: string; short_name?: string; description?: string; icon?: string; color?: string; sort_order: number;
+};
+export type PublicDisease = PublicDiseaseSummary & {
+  aliases: string[]; codes: Array<{ code_system: string; code: string; display_name?: string }>;
+  children: PublicDiseaseSummary[]; hubs: PublicHub[]; resources: PublicResource[];
+};
+export type PublicDiseasePage = { items: PublicDiseaseSummary[]; page: number; per_page: number; total_items: number; total_pages: number };
+export type PublicHubPage = { items: PublicHub[]; page: number; per_page: number; total_items: number; total_pages: number };
+export type PublicSearchResult = PublicResource & {
+  result_type: string; guideline_id?: string; section_id?: string; block_id?: string;
+  snippet: string; source_name: string; source_version: string; status?: string;
+  categories?: DiscoveryFacet[]; diseases?: DiscoveryFacet[]; hubs?: DiscoveryFacet[]; pillars?: DiscoveryFacet[];
+  metadata?: Record<string, unknown>;
+};
+export type PublicSearchFilters = { categoryId?: string; diseaseSlug?: string; hubSlug?: string; pillarSlug?: string; contentType?: string; limit?: number };
 
 export type PublicApiErrorKind =
   | "not-found"
@@ -594,6 +641,51 @@ export async function askPublicGuideline(
   );
   if (!isAIAnswer(answer)) throw new PublicApiError("invalid-response");
   return answer;
+}
+
+async function requestDiscovery<T>(key: string, url: string, signal?: AbortSignal): Promise<T & { offline?: boolean }> {
+  try {
+    const value = await requestJson<T>(url, signal);
+    try { localStorage.setItem(`mediguide:${key}`, JSON.stringify(value)); } catch { /* storage is optional */ }
+    return value as T & { offline?: boolean };
+  } catch (error) {
+    if (signal?.aborted) throw error;
+    try {
+      const stored = localStorage.getItem(`mediguide:${key}`);
+      if (stored) return { ...(JSON.parse(stored) as T), offline: true };
+    } catch { /* retain the original network error */ }
+    throw error;
+  }
+}
+
+export function listPublicDiseases(search = "", signal?: AbortSignal) {
+  const query = new URLSearchParams({ page: "1", per_page: "100" });
+  if (search.trim()) query.set("search", search.trim());
+  return requestDiscovery<PublicDiseasePage>(`diseases:${search.trim().toLowerCase()}`, publicUrl("/diseases", query), signal);
+}
+
+export function getPublicDisease(slug: string, signal?: AbortSignal) {
+  return requestDiscovery<PublicDisease>(`disease:${slug}`, publicUrl(`/diseases/${encodeURIComponent(slug)}`), signal);
+}
+
+export function listPublicHubs(diseaseSlug = "", signal?: AbortSignal) {
+  const query = new URLSearchParams({ page: "1", per_page: "100" });
+  if (diseaseSlug) query.set("disease_slug", diseaseSlug);
+  return requestDiscovery<PublicHubPage>(`hubs:${diseaseSlug}`, publicUrl("/hubs", query), signal);
+}
+
+export function getPublicHub(slug: string, signal?: AbortSignal) {
+  return requestDiscovery<PublicHub>(`hub:${slug}`, publicUrl(`/hubs/${encodeURIComponent(slug)}`), signal);
+}
+
+export async function searchPublicContent(queryText: string, filters: PublicSearchFilters = {}, signal?: AbortSignal) {
+  const query = new URLSearchParams({ q: queryText.trim(), limit: String(filters.limit ?? 30) });
+  if (filters.categoryId) query.set("category_id", filters.categoryId);
+  if (filters.diseaseSlug) query.set("disease_slug", filters.diseaseSlug);
+  if (filters.hubSlug) query.set("hub_slug", filters.hubSlug);
+  if (filters.pillarSlug) query.set("pillar_slug", filters.pillarSlug);
+  if (filters.contentType) query.set("content_type", filters.contentType);
+  return requestJson<PublicSearchResult[]>(publicUrl("/search", query), signal);
 }
 
 export function clearPublicMarkdownCache() {

@@ -1,5 +1,9 @@
 # Outbreak operations runbook
 
+For the end-to-end dashboard sequence that creates an outbreak hub, uploads and
+reviews its documents, assigns pillar items and verifies mobile visibility, use
+the [content hub and document publishing workflow](content-hub-and-document-publishing-workflow.md).
+
 ## Discovery and freshness
 
 Public search returns only published, non-withdrawn guidelines, outbreaks, and situation reports. Results use the explicit `result_type` values `guideline`, `outbreak`, and `situation_report`. Search covers approved editorial fields: title, summary, disease, geography, source organization, source reference, and situation-report highlights.

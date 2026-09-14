@@ -2,6 +2,9 @@
 
 This runbook completes Phases 11 and 12 of the disease-aware content workflow. It covers canonical diseases, disease-to-content assignments, generic and disease hubs, outbreak hubs, pillars, templates, public discovery and staged rollout. Operational surveillance remains out of scope.
 
+For the dashboard steps used by authors, reviewers and publishers, use the
+[content hub and document publishing workflow](content-hub-and-document-publishing-workflow.md).
+
 ## API surface
 
 All administrative routes require a bearer token. List routes support bounded pagination and filters; service queries use stable ordering so repeated requests are deterministic. Hub and pillar mutations use `lock_version` where concurrent editing can overwrite state and return `409 Conflict` for a stale version.

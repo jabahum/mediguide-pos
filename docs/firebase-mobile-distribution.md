@@ -270,12 +270,27 @@ Create and publish these parameters in every Firebase project:
 | `enable_push_notifications` | Boolean | `true` |
 | `minimum_supported_version` | String | empty |
 | `outbreak_banner_enabled` | Boolean | `true` |
+| `disease_taxonomy_enabled` | Boolean | `true` |
+| `disease_content_assignment` | Boolean | `false` |
+| `disease_hubs_enabled` | Boolean | `true` |
+| `generic_hubs_enabled` | Boolean | `true` |
+| `api_driven_outbreak_pillars` | Boolean | `false` |
+| `guideline_category_assignment` | Boolean | `false` |
+| `unified_document_search` | Boolean | `false` |
+| `pillar_rag_metadata` | Boolean | `false` |
 
 The app has the same safe defaults in code, fetches at startup, and subscribes
 to real-time updates. Development fetches may occur every five minutes;
 production uses a one-hour minimum interval. Staff with `admin.all` can inspect,
 validate and publish templates at **Dashboard → Settings → Firebase**. Backend
 updates use Firebase ETags to avoid overwriting concurrent edits.
+
+The disease directory and public hub reader are complete and therefore default
+to enabled when Remote Config is unavailable. The remaining disease-assignment,
+API-driven outbreak layout, unified-search and RAG-context flags stay disabled
+until their production rollout is explicitly approved. In the dashboard,
+**Add rollout flags** adds missing keys without replacing existing parameter
+values. Always select **Validate** before publishing the template.
 
 ## Backend Firebase Admin setup
 

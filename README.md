@@ -283,6 +283,7 @@ complete Android and iOS operator runbook from prerelease through store rollout.
 | [`docs/mobile-user-messaging.md`](docs/mobile-user-messaging.md) | Canonical Flutter user-message API and usage boundaries |
 | [`docs/release-process.md`](docs/release-process.md) | Unified release, deployment and rollback |
 | [`docs/seeding.md`](docs/seeding.md) | Local demo data and guarded production metadata/admin seeding |
+| [`docs/content-hub-and-document-publishing-workflow.md`](docs/content-hub-and-document-publishing-workflow.md) | Operator runbook for diseases, general and outbreak hubs, document upload, review, publication and mobile visibility |
 | [`docs/guideline-publication-architecture.md`](docs/guideline-publication-architecture.md) | Guideline ingestion and publication architecture |
 | [`docs/guideline-collections.md`](docs/guideline-collections.md) | Private guideline collections architecture, user workflow, API, offline behavior, rollout and troubleshooting |
 | [`docs/markdown-authoring-workspace.md`](docs/markdown-authoring-workspace.md) | Dashboard Markdown editor and review workflow |

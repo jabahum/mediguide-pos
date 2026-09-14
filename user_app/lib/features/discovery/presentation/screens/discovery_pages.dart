@@ -8,6 +8,102 @@ import 'package:user_app/core/utils/app_message.dart';
 import 'package:user_app/core/widgets/app_skeleton.dart';
 import 'package:user_app/features/discovery/data/models/discovery_models.dart';
 
+class ContentHubDirectoryPage extends ConsumerStatefulWidget {
+  const ContentHubDirectoryPage({super.key});
+
+  @override
+  ConsumerState<ContentHubDirectoryPage> createState() =>
+      _ContentHubDirectoryPageState();
+}
+
+class _ContentHubDirectoryPageState
+    extends ConsumerState<ContentHubDirectoryPage> {
+  final search = TextEditingController();
+  late Future<DiscoveryValue<List<DiscoveryHub>>> request;
+
+  @override
+  void initState() {
+    super.initState();
+    reload();
+  }
+
+  @override
+  void dispose() {
+    search.dispose();
+    super.dispose();
+  }
+
+  void reload() =>
+      request = ref.read(discoveryRepositoryProvider).hubs(search: search.text);
+
+  @override
+  Widget build(BuildContext context) {
+    final diseaseHubsEnabled = ref.watch(diseaseHubsEnabledProvider);
+    final genericHubsEnabled = ref.watch(genericHubsEnabledProvider);
+    return Scaffold(
+      appBar: AppBar(title: const Text('Content hubs')),
+      body: !diseaseHubsEnabled && !genericHubsEnabled
+          ? const EmptyState('Content hubs are not enabled yet.')
+          : RefreshIndicator(
+              onRefresh: () async {
+                setState(reload);
+                await request;
+              },
+              child: ListView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: const EdgeInsets.all(16),
+                children: [
+                  TextField(
+                    controller: search,
+                    textInputAction: TextInputAction.search,
+                    decoration: const InputDecoration(
+                      prefixIcon: Icon(LucideIcons.search),
+                      hintText: 'Search disease and clinical hubs',
+                    ),
+                    onSubmitted: (_) => setState(reload),
+                  ),
+                  const SizedBox(height: 16),
+                  FutureBuilder<DiscoveryValue<List<DiscoveryHub>>>(
+                    future: request,
+                    builder: (context, snapshot) {
+                      if (snapshot.connectionState != ConnectionState.done) {
+                        return const DiscoverySkeleton();
+                      }
+                      if (snapshot.hasError) {
+                        return ErrorState(onRetry: () => setState(reload));
+                      }
+                      final result = snapshot.data!;
+                      final hubs = result.value.where((hub) {
+                        final diseaseHub = hub.diseases.isNotEmpty;
+                        return diseaseHub
+                            ? diseaseHubsEnabled
+                            : genericHubsEnabled;
+                      }).toList();
+                      if (result.offline) {
+                        WidgetsBinding.instance.addPostFrameCallback((_) {
+                          if (mounted) {
+                            AppMessage.warning(
+                              context,
+                              'Offline: showing saved content hubs.',
+                            );
+                          }
+                        });
+                      }
+                      if (hubs.isEmpty) {
+                        return const EmptyState(
+                          'No published content hubs are available.',
+                        );
+                      }
+                      return Column(children: hubs.map(HubTile.new).toList());
+                    },
+                  ),
+                ],
+              ),
+            ),
+    );
+  }
+}
+
 class DiseaseDirectoryPage extends ConsumerStatefulWidget {
   const DiseaseDirectoryPage({super.key});
   @override
@@ -127,58 +223,58 @@ class _DiseaseDetailPageState extends ConsumerState<DiseaseDetailPage> {
     return Scaffold(
       appBar: AppBar(title: const Text('Disease')),
       body: FutureBuilder<DiscoveryValue<DiscoveryDisease>>(
-      future: request,
-      builder: (context, snapshot) {
-        if (snapshot.connectionState != ConnectionState.done) {
-          return const DiscoverySkeleton();
-        }
-        if (snapshot.hasError) {
-          return ErrorState(onRetry: () => setState(reload));
-        }
-        final disease = snapshot.data!.value;
-        return ListView(
-          padding: const EdgeInsets.all(16),
-          children: [
-            Text(
-              disease.name,
-              style: Theme.of(
-                context,
-              ).textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.w800),
-            ),
-            if (disease.description.isNotEmpty) Text(disease.description),
-            if (snapshot.data!.offline)
-              const Card(
-                child: ListTile(
-                  leading: Icon(LucideIcons.cloudOff),
-                  title: Text('Showing saved disease content'),
+        future: request,
+        builder: (context, snapshot) {
+          if (snapshot.connectionState != ConnectionState.done) {
+            return const DiscoverySkeleton();
+          }
+          if (snapshot.hasError) {
+            return ErrorState(onRetry: () => setState(reload));
+          }
+          final disease = snapshot.data!.value;
+          return ListView(
+            padding: const EdgeInsets.all(16),
+            children: [
+              Text(
+                disease.name,
+                style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                  fontWeight: FontWeight.w800,
                 ),
               ),
-            if (disease.aliases.isNotEmpty)
-              Text('Also known as: ${disease.aliases.join(', ')}'),
-            if (disease.children.isNotEmpty) ...[
-              const SectionHeading('Related conditions'),
-              ...disease.children.map(
-                (item) => ListTile(
-                  title: Text(item.name),
-                  onTap: () => context.push(AppRoutes.disease(item.slug)),
+              if (disease.description.isNotEmpty) Text(disease.description),
+              if (snapshot.data!.offline)
+                const Card(
+                  child: ListTile(
+                    leading: Icon(LucideIcons.cloudOff),
+                    title: Text('Showing saved disease content'),
+                  ),
                 ),
-              ),
-            ],
-            if (ref.watch(diseaseHubsEnabledProvider)) ...[
-              const SectionHeading('Content hubs'),
-              if (disease.hubs.isEmpty)
-                const Text('No dedicated hub is currently published.')
+              if (disease.aliases.isNotEmpty)
+                Text('Also known as: ${disease.aliases.join(', ')}'),
+              if (disease.children.isNotEmpty) ...[
+                const SectionHeading('Related conditions'),
+                ...disease.children.map(
+                  (item) => ListTile(
+                    title: Text(item.name),
+                    onTap: () => context.push(AppRoutes.disease(item.slug)),
+                  ),
+                ),
+              ],
+              if (ref.watch(diseaseHubsEnabledProvider)) ...[
+                const SectionHeading('Content hubs'),
+                if (disease.hubs.isEmpty)
+                  const Text('No dedicated hub is currently published.')
+                else
+                  ...disease.hubs.map((hub) => HubTile(hub)),
+              ],
+              const SectionHeading('Approved resources'),
+              if (disease.resources.isEmpty)
+                const Text('No public resources are currently available.')
               else
-                ...disease.hubs.map((hub) => HubTile(hub)),
+                ...disease.resources.map((item) => ResourceTile(item)),
             ],
-            const SectionHeading('Approved resources'),
-            if (disease.resources.isEmpty)
-              const Text('No public resources are currently available.')
-            else
-              ...disease.resources.map((item) => ResourceTile(item)),
-          ],
-        );
-      },
+          );
+        },
       ),
     );
   }
@@ -447,7 +543,16 @@ class HubTile extends StatelessWidget {
     child: ListTile(
       leading: const Icon(LucideIcons.layoutGrid),
       title: Text(hub.name),
-      subtitle: Text(hub.description, maxLines: 2),
+      subtitle: Text(
+        [
+          if (hub.diseases.isNotEmpty)
+            hub.diseases.map((disease) => disease.name).join(', '),
+          if (hub.outbreak != null) 'Outbreak response',
+          hub.description,
+        ].where((value) => value.isNotEmpty).join(' · '),
+        maxLines: 3,
+        overflow: TextOverflow.ellipsis,
+      ),
       trailing: const Icon(LucideIcons.chevronRight),
       onTap: () => context.push(AppRoutes.hub(hub.slug)),
     ),

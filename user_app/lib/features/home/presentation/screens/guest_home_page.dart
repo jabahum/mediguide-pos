@@ -178,11 +178,13 @@ class GuestHomePage extends ConsumerWidget {
                   icon: LucideIcons.gitBranch,
                   route: AppRoutes.publicGuidelines,
                 ),
-                _QuickAction(
-                  label: 'Procedures',
-                  icon: LucideIcons.clipboardList,
-                  route: AppRoutes.publicGuidelines,
-                ),
+                if (ref.watch(diseaseHubsEnabledProvider) ||
+                    ref.watch(genericHubsEnabledProvider))
+                  _QuickAction(
+                    label: 'Content hubs',
+                    icon: LucideIcons.layoutGrid,
+                    route: AppRoutes.contentHubs,
+                  ),
               ],
             ),
 

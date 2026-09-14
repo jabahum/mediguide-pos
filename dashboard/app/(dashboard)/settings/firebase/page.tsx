@@ -93,7 +93,7 @@ export default function FirebaseSettingsPage() {
     try {
       const parsed = JSON.parse(template) as Record<string, unknown>
       setTemplate(JSON.stringify(addMissingDiseaseHubFeatureFlags(parsed), null, 2))
-      showToast.success("Remote Config", "Missing disease and hub rollout flags were added as disabled")
+      showToast.success("Remote Config", "Missing disease and hub rollout flags were added with safe product defaults")
     } catch (error) {
       showToast.error("Remote Config", error instanceof Error ? error.message : "Template is not valid JSON")
     }

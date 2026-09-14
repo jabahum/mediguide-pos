@@ -35,6 +35,7 @@ abstract final class AppRoutes {
   static const String situationReportDetails = '/situation-reports/:reportId';
   static const String diseases = '/diseases';
   static const String diseaseDetails = '/diseases/:slug';
+  static const String contentHubs = '/hubs';
   static const String contentHub = '/hubs/:slug';
   static const String contentPillar = '/hubs/:slug/pillars/:pillarSlug';
 
@@ -110,6 +111,7 @@ abstract final class AppRoutes {
     aboutUs,
     termsAndConditions,
     diseases,
+    contentHubs,
   };
 
   static bool isPublic(String location) {

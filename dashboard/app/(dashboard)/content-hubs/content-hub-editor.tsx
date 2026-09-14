@@ -8,6 +8,7 @@ import {
   ArrowDown,
   ArrowUp,
   Eye,
+  FileUp,
   Plus,
   Save,
   Send,
@@ -715,6 +716,36 @@ function ResourceAssignment({
         <CardTitle>Resource assignments and availability</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
+        <div className="rounded-md border bg-muted/30 p-4">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div className="max-w-3xl">
+              <div className="font-medium">Add source documents first</div>
+              <p className="mt-1 text-sm text-muted-foreground">
+                A hub curates approved resources; it does not upload or publish
+                files directly. Create and publish a guideline for general
+                disease guidance, or upload a managed document inside the
+                linked outbreak. Return here, search for the published resource,
+                assign it to a pillar, and activate the assignment.
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <Button variant="outline" asChild>
+                <Link href="/guidelines/create">
+                  <FileUp className="mr-2 h-4 w-4" />
+                  Create guideline
+                </Link>
+              </Button>
+              {workspace.hub.outbreaks?.[0]?.id ? (
+                <Button variant="outline" asChild>
+                  <Link href={`/outbreaks/${workspace.hub.outbreaks[0].id}`}>
+                    <FileUp className="mr-2 h-4 w-4" />
+                    Upload outbreak document
+                  </Link>
+                </Button>
+              ) : null}
+            </div>
+          </div>
+        </div>
         <div className="grid gap-2 md:grid-cols-4">
           <select
             className="h-10 rounded-md border bg-background px-3"

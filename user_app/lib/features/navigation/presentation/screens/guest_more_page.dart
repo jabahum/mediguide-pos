@@ -20,6 +20,9 @@ class GuestMorePage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final diseaseTaxonomyEnabled = ref.watch(diseaseTaxonomyEnabledProvider);
+    final contentHubsEnabled =
+        ref.watch(diseaseHubsEnabledProvider) ||
+        ref.watch(genericHubsEnabledProvider);
     return Scaffold(
       appBar: AppBar(
         automaticallyImplyLeading: false,
@@ -62,6 +65,13 @@ class GuestMorePage extends ConsumerWidget {
                   title: 'Diseases & Conditions',
                   subtitle: 'Browse approved guidance by disease',
                   onTap: () => context.push(AppRoutes.diseases),
+                ),
+              if (contentHubsEnabled)
+                _MoreItem(
+                  icon: LucideIcons.layoutGrid,
+                  title: 'Content Hubs',
+                  subtitle: 'Browse approved resources by disease or topic',
+                  onTap: () => context.push(AppRoutes.contentHubs),
                 ),
               _MoreItem(
                 icon: LucideIcons.hospital,

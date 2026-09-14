@@ -228,14 +228,16 @@ class HomePage extends ConsumerWidget {
                 },
               ),
 
-              _HomeQuickAction(
-                icon: LucideIcons.hospital,
-                title: 'Facilities',
-                subtitle: 'Find health services',
-                onTap: () async {
-                  await AppNavigator.push(AppRoutes.healthFacilities);
-                },
-              ),
+              if (ref.watch(diseaseHubsEnabledProvider) ||
+                  ref.watch(genericHubsEnabledProvider))
+                _HomeQuickAction(
+                  icon: LucideIcons.layoutGrid,
+                  title: 'Content hubs',
+                  subtitle: 'Disease resources',
+                  onTap: () async {
+                    await AppNavigator.push(AppRoutes.contentHubs);
+                  },
+                ),
             ],
           ),
 

@@ -46,7 +46,9 @@ These permissions do not replace the existing document upload, clinical review, 
 
 ## Feature flags
 
-The rollout flags are Firebase Remote Config Boolean parameters. Their production defaults are `false`.
+The rollout flags are Firebase Remote Config Boolean parameters. Public disease
+and hub discovery now default to `true`; mutating and integration capabilities
+remain `false` until separately rolled out.
 
 | Flag | Controls | Compatibility behavior while off |
 |---|---|---|
@@ -59,7 +61,7 @@ The rollout flags are Firebase Remote Config Boolean parameters. Their productio
 | `unified_document_search` | Taxonomy/hub/pillar-aware mobile search | Disease search uses the dedicated disease directory API; other existing per-domain searches continue |
 | `pillar_rag_metadata` | Pillar context in RAG retrieval metadata | RAG uses existing approved-document metadata |
 
-The mobile client defines safe defaults in `user_app/lib/core/services/firebase_service.dart`. When Firebase is configured, new capabilities stay dark until explicitly enabled. Local builds without Firebase retain discoverability for development. The dashboard Firebase page has an **Add rollout flags** action that merges missing disabled parameters into the current template without overwriting existing values. Validate before publishing. A standalone template is available at `firebase/remote-config.disease-hubs.defaults.json`.
+The mobile client defines safe defaults in `user_app/lib/core/services/firebase_service.dart`. Public disease taxonomy and content-hub discovery default to enabled now that their public eligibility checks and reader paths are complete; Remote Config still provides an emergency rollback. Mutating assignment, API-driven outbreak presentation, unified search and RAG metadata capabilities remain dark until explicitly enabled. The dashboard Firebase page has an **Add rollout flags** action that merges missing parameters without overwriting existing values. Validate before publishing. A standalone template is available at `firebase/remote-config.disease-hubs.defaults.json`.
 
 Flags control presentation and gradual adoption; they do not weaken server-side authorization, clinical review or public eligibility.
 
@@ -83,6 +85,57 @@ The procedure is idempotent: migrations use conflict-safe inserts, seeds upsert 
 ## Rollback
 
 Turn off the affected Remote Config flag first. For outbreak hubs, the client immediately returns to the legacy presentation. Do not roll back additive production schema migrations merely to disable a feature. Keep canonical taxonomy and assignments; they are inert while their UI flags are off. If an incorrect hub was published, archive it with an authorized publisher/admin account and keep its audit history.
+
+## Publishing documents into a content hub
+
+Content hubs are public navigation and curation surfaces. They do not own an
+uploaded file and they never bypass clinical review. A source resource must be
+created, reviewed and published first; an editor then assigns it to a hub
+pillar.
+
+### General disease guidance
+
+1. Open **Clinical Guidelines → Create Guideline**.
+2. Enter its metadata, create a version and upload/load the authoritative
+   Markdown. Upload the original PDF where available.
+3. Format and validate the Markdown, regenerate its structured projection and
+   complete editorial review.
+4. Publish the guideline version.
+5. Open **Clinical Guidelines → Content Hubs**, select the hub and a pillar,
+   select resource type `guideline`, and search for the publication.
+6. Assign it, activate the assignment and publish the hub.
+
+There is currently no generic review-governed standalone file uploader for a
+non-outbreak hub. Clinical PDFs, protocols and manuals must use the guideline
+workflow. A suitable externally hosted resource can use
+`approved_external_url` when its HTTPS host is allow-listed.
+
+### Outbreak-response documents
+
+1. Open **Outbreak Management → Outbreaks** and select the outbreak.
+2. Under **Outbreak documents and SOPs**, select **Document draft**.
+3. Enter its title, document kind, issuing authority, version, language,
+   audience and lifecycle dates, then save the draft.
+4. Select **Upload original**, submit the resource for review, have a different
+   authorized reviewer approve it, and publish it with an authorized publisher.
+5. Open the linked content hub, choose a pillar and resource type
+   `outbreak_document` or `form`, find the published resource and assign it.
+6. Activate the assignment and publish the hub. Situation reports follow their
+   own review/publish workflow and are assigned as `situation_report`.
+
+### Mobile visibility checklist
+
+- The disease is active.
+- The hub is active, published and its publication time has passed.
+- The hub is linked to the intended disease (an outbreak link is optional).
+- Pillars and item assignments are active; scheduling dates do not hide them.
+- The source resource is approved, published, effective and not expired or
+  withdrawn.
+- In **Settings → Firebase**, `disease_taxonomy_enabled`,
+  `disease_hubs_enabled` and `generic_hubs_enabled` are `true`; validate and
+  publish the Remote Config template after changing an existing value.
+- Refresh or relaunch mobile. Both guest and authenticated Home screens expose
+  **Content hubs**; guests can also use **More → Content Hubs**.
 
 ## Verification checklist
 

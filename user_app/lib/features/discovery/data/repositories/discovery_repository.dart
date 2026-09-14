@@ -71,6 +71,59 @@ final class DiscoveryRepository {
     DiscoveryDisease.fromJson,
     (value) => value.toJson(),
   );
+
+  Future<DiscoveryValue<List<DiscoveryHub>>> hubs({String search = ''}) async {
+    const cacheId = 'directory';
+    try {
+      final response = await _api.requestJson(
+        '/api/public/hubs',
+        method: 'GET',
+        includeAuth: false,
+        query: {
+          'page': '1',
+          'per_page': '100',
+          if (search.trim().isNotEmpty) 'search': search.trim(),
+        },
+      );
+      final values = _maps(
+        _data(response)['items'],
+      ).map(DiscoveryHub.fromJson).toList();
+      if (search.trim().isEmpty) {
+        await _cache.put(
+          type: 'public_content_hub_directory',
+          id: cacheId,
+          scope: _scope,
+          ttl: _ttl,
+          data: {'items': values.map((value) => value.toJson()).toList()},
+        );
+      }
+      return DiscoveryValue(values);
+    } catch (_) {
+      final cached = await _cache.get(
+        type: 'public_content_hub_directory',
+        id: cacheId,
+        scope: _scope,
+      );
+      if (cached == null) rethrow;
+      final all = _maps(cached['items']).map(DiscoveryHub.fromJson).toList();
+      final needle = search.trim().toLowerCase();
+      return DiscoveryValue(
+        needle.isEmpty
+            ? all
+            : all
+                  .where(
+                    (hub) =>
+                        '${hub.name} ${hub.description} '
+                                '${hub.diseases.map((disease) => disease.name).join(' ')}'
+                            .toLowerCase()
+                            .contains(needle),
+                  )
+                  .toList(),
+        offline: true,
+      );
+    }
+  }
+
   Future<DiscoveryValue<DiscoveryHub>> hub(String slug) => _detail(
     slug,
     'public_content_hub',

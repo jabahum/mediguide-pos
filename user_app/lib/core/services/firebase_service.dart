@@ -260,12 +260,13 @@ final class MediGuideFirebaseService {
       // Enable after configured hubs are verified in production. Until then
       // every outbreak retains the existing compatibility presentation.
       'api_driven_outbreak_pillars': false,
-      // Disease-aware discovery is deployed dark and enabled environment by
-      // environment after API, taxonomy and public-eligibility verification.
-      'disease_taxonomy_enabled': false,
+      // Public disease and hub discovery is a stable reader capability. It
+      // remains remotely reversible, but a missing/failing Remote Config
+      // value must not hide already-published clinical content.
+      'disease_taxonomy_enabled': true,
       'disease_content_assignment': false,
-      'disease_hubs_enabled': false,
-      'generic_hubs_enabled': false,
+      'disease_hubs_enabled': true,
+      'generic_hubs_enabled': true,
       'guideline_category_assignment': false,
       'unified_document_search': false,
       'pillar_rag_metadata': false,

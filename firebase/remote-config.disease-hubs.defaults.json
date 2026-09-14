@@ -1,9 +1,9 @@
 {
   "parameters": {
-    "disease_taxonomy_enabled": { "defaultValue": { "value": "false" }, "valueType": "BOOLEAN", "description": "Show canonical disease discovery" },
+    "disease_taxonomy_enabled": { "defaultValue": { "value": "true" }, "valueType": "BOOLEAN", "description": "Show canonical disease discovery" },
     "disease_content_assignment": { "defaultValue": { "value": "false" }, "valueType": "BOOLEAN", "description": "Enable disease-to-content assignment workflow" },
-    "disease_hubs_enabled": { "defaultValue": { "value": "false" }, "valueType": "BOOLEAN", "description": "Show disease-specific content hubs" },
-    "generic_hubs_enabled": { "defaultValue": { "value": "false" }, "valueType": "BOOLEAN", "description": "Show non-disease content hubs" },
+    "disease_hubs_enabled": { "defaultValue": { "value": "true" }, "valueType": "BOOLEAN", "description": "Show disease-specific content hubs" },
+    "generic_hubs_enabled": { "defaultValue": { "value": "true" }, "valueType": "BOOLEAN", "description": "Show non-disease content hubs" },
     "api_driven_outbreak_pillars": { "defaultValue": { "value": "false" }, "valueType": "BOOLEAN", "description": "Use API-configured outbreak pillars with legacy fallback" },
     "guideline_category_assignment": { "defaultValue": { "value": "false" }, "valueType": "BOOLEAN", "description": "Enable guideline category assignment workflow" },
     "unified_document_search": { "defaultValue": { "value": "false" }, "valueType": "BOOLEAN", "description": "Include taxonomy, hubs, pillars and documents in unified search" },

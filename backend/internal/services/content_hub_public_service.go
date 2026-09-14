@@ -196,14 +196,18 @@ func (s ContentHubService) GetPublicPillar(ctx context.Context, hubSlug, pillarS
 }
 
 func (s ContentHubService) buildPublicHub(ctx context.Context, hub models.ContentHub, now time.Time, includePillars bool) (*PublicContentHub, error) {
-	diseases := []models.Disease{}
-	if err := s.DB.WithContext(ctx).Table("diseases d").Joins("JOIN content_hub_diseases chd ON chd.disease_id = d.id").Where("chd.content_hub_id = ? AND d.deleted_at IS NULL AND d.status = ?", hub.ID, models.DiseaseStatusActive).Order("d.sort_order ASC, d.name ASC, d.id ASC").Find(&diseases).Error; err != nil {
+	diseases := []PublicHubDisease{}
+	if err := s.DB.WithContext(ctx).
+		Table("diseases d").
+		Select("d.id, d.name, d.slug, d.short_name").
+		Joins("JOIN content_hub_diseases chd ON chd.disease_id = d.id").
+		Where("chd.content_hub_id = ? AND d.deleted_at IS NULL AND d.status = ?", hub.ID, models.DiseaseStatusActive).
+		Order("d.sort_order ASC, d.name ASC, d.id ASC").
+		Scan(&diseases).Error; err != nil {
 		return nil, err
 	}
 	result := &PublicContentHub{ID: hub.ID, Name: hub.Name, Slug: hub.Slug, Description: hub.Description, Icon: hub.Icon, Color: hub.Color, Audience: hub.Audience, SortOrder: hub.SortOrder, PublishedAt: hub.PublishedAt, Diseases: make([]PublicHubDisease, 0, len(diseases))}
-	for _, disease := range diseases {
-		result.Diseases = append(result.Diseases, PublicHubDisease{ID: disease.ID, Name: disease.Name, Slug: disease.Slug, ShortName: disease.ShortName})
-	}
+	result.Diseases = append(result.Diseases, diseases...)
 	var outbreak models.Outbreak
 	outbreakErr := s.DB.WithContext(ctx).Joins("JOIN content_hub_outbreaks cho ON cho.outbreak_id = outbreaks.id").
 		Where("cho.content_hub_id = ? AND outbreaks.deleted_at IS NULL AND outbreaks.published_at IS NOT NULL AND outbreaks.published_at <= ? AND outbreaks.withdrawn_at IS NULL AND outbreaks.status IN ?", hub.ID, now, []string{"published", "active", "monitoring", "contained", "closed"}).

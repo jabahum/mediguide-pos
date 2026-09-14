@@ -229,6 +229,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             DiseaseDetailPage(slug: state.pathParameters['slug'] ?? ''),
       ),
       GoRoute(
+        path: AppRoutes.contentHubs,
+        builder: (_, _) => const ContentHubDirectoryPage(),
+      ),
+      GoRoute(
         path: AppRoutes.contentHub,
         builder: (_, state) =>
             ContentHubPage(slug: state.pathParameters['slug'] ?? ''),

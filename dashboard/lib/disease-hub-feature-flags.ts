@@ -1,8 +1,8 @@
 export const diseaseHubFeatureFlagDefaults = {
-  disease_taxonomy_enabled: false,
+  disease_taxonomy_enabled: true,
   disease_content_assignment: false,
-  disease_hubs_enabled: false,
-  generic_hubs_enabled: false,
+  disease_hubs_enabled: true,
+  generic_hubs_enabled: true,
   api_driven_outbreak_pillars: false,
   guideline_category_assignment: false,
   unified_document_search: false,
